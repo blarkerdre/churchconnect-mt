@@ -1,73 +1,39 @@
-# Welcome to your Lovable project
+**Welcome to your Base44 project** 
 
-## Project info
+**About**
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+View and Edit  your app on [Base44.com](http://Base44.com) 
 
-## How can I edit this code?
+This project contains everything you need to run your app locally.
 
-There are several ways of editing your application.
+**Edit the code in your local development environment**
 
-**Use Lovable**
+Any change pushed to the repo will also be reflected in the Base44 Builder.
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+**Prerequisites:** 
 
-Changes made via Lovable will be committed automatically to this repo.
+1. Clone the repository using the project's Git URL 
+2. Navigate to the project directory
+3. Install dependencies: `npm install`
+4. Create an `.env.local` file and set the right environment variables
 
-**Use your preferred IDE**
+```
+VITE_BASE44_APP_ID=your_app_id
+VITE_BASE44_APP_BASE_URL=your_backend_url
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+e.g.
+VITE_BASE44_APP_ID=cbef744a8545c389ef439ea6
+VITE_BASE44_APP_BASE_URL=https://my-to-do-list-81bfaad7.base44.app
 ```
 
-**Edit a file directly in GitHub**
+Run the app: `npm run dev`
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+**Publish your changes**
 
-**Use GitHub Codespaces**
+Open [Base44.com](http://Base44.com) and click on Publish.
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+**Docs & Support**
 
-## What technologies are used for this project?
+Documentation: [https://docs.base44.com/Integrations/Using-GitHub](https://docs.base44.com/Integrations/Using-GitHub)
 
-This project is built with:
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+Support: [https://app.base44.com/support](https://app.base44.com/support)
