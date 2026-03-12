@@ -1,165 +1,98 @@
-import React, { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { base44 } from "@/api/base44Client";
-import { Users, CalendarDays, UserPlus, HeartHandshake } from "lucide-react";
-import StatCard from "@/components/dashboard/StatCard";
-import RecentActivity from "@/components/dashboard/RecentActivity";
-import GrowthIndices from "@/components/dashboard/GrowthIndices";
-import MemberDashboard from "@/components/dashboard/MemberDashboard.jsx";
-import { Skeleton } from "@/components/ui/skeleton";
+import React from "react";
+import { Users, CalendarDays, HeartHandshake, Heart, TrendingUp, UserPlus } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+
+const stats = [
+  { title: "Total Members", value: "248", change: "+12 this month", icon: Users, color: "text-primary" },
+  { title: "Upcoming Events", value: "5", change: "Next: Sunday Service", icon: CalendarDays, color: "text-accent" },
+  { title: "First Timers", value: "8", change: "Awaiting follow-up", icon: UserPlus, color: "text-chart-3" },
+  { title: "Pastoral Cases", value: "14", change: "3 urgent", icon: Heart, color: "text-chart-5" },
+];
+
+const recentActivity = [
+  { type: "member", text: "Sarah Johnson registered", sub: "Active Member", time: "2 hours ago" },
+  { type: "event", text: "Youth Bible Study created", sub: "Youth Ministry", time: "4 hours ago" },
+  { type: "followup", text: "Follow-up with David Obi", sub: "Phone call scheduled", time: "Yesterday" },
+  { type: "pastoral", text: "Prayer request from Grace Eze", sub: "Pastoral Care", time: "Yesterday" },
+  { type: "member", text: "James Adeyemi updated profile", sub: "Growth milestone: BFC", time: "2 days ago" },
+  { type: "event", text: "Easter Conference registration open", sub: "248 capacity", time: "3 days ago" },
+];
+
+const growthMetrics = [
+  { label: "Water Baptism", value: 72, total: 248 },
+  { label: "Holy Spirit Baptism", value: 58, total: 248 },
+  { label: "BFC Completed", value: 95, total: 248 },
+  { label: "Winners Satellite", value: 120, total: 248 },
+];
 
 export default function Dashboard() {
-  const [currentUser, setCurrentUser] = useState(null);
-
-  useEffect(() => {
-    base44.auth.me().then(setCurrentUser).catch(() => {});
-  }, []);
-
-  const isAdmin = currentUser?.role === "admin";
-  const isUnitLeader = currentUser?.role === "unit_leader";
-  const isLeaderOrAdmin = isAdmin || isUnitLeader;
-
-  // For non-admin users: find their member profile (for unit info)
-  const { data: myMemberArr = [] } = useQuery({
-    queryKey: ["my-member-profile", currentUser?.email],
-    queryFn: () => base44.entities.Member.filter({ email: currentUser.email }),
-    enabled: !!currentUser?.email,
-  });
-  const myMember = myMemberArr[0] || null;
-  const myUnits = myMember?.church_units || [];
-  const myUnit = myUnits[0] || null; // primary unit is first in array
-
-  // All members (admin only for full list; unit leaders get all to filter client-side)
-  const { data: members = [], isLoading: loadingMembers } = useQuery({
-    queryKey: ["members"],
-    queryFn: () => base44.entities.Member.list("-created_date", 500),
-    enabled: isLeaderOrAdmin,
-  });
-
-  const { data: events = [], isLoading: loadingEvents } = useQuery({
-    queryKey: ["events"],
-    queryFn: () => base44.entities.Event.list("-date", 100),
-    enabled: isLeaderOrAdmin,
-  });
-
-  const { data: firstTimers = [], isLoading: loadingFirstTimers } = useQuery({
-    queryKey: ["firstTimers"],
-    queryFn: () => base44.entities.FirstTimer.list("-visit_date", 100),
-    enabled: isAdmin, // only admin sees first timers on dashboard
-  });
-
-  const { data: followups = [], isLoading: loadingFollowups } = useQuery({
-    queryKey: ["followups"],
-    queryFn: () => base44.entities.Followup.list("-created_date", 100),
-    enabled: isAdmin, // only admin sees all follow-ups on dashboard
-  });
-
-  if (!currentUser) {
-    return (
-      <div className="space-y-6">
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-          {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-32 rounded-xl" />)}
-        </div>
-      </div>
-    );
-  }
-
-  // Regular member view
-  if (!isLeaderOrAdmin) {
-    return <MemberDashboard currentUser={currentUser} myMember={myMember} />;
-  }
-
-  const isLoading = loadingMembers || loadingEvents || (isAdmin && (loadingFirstTimers || loadingFollowups));
-
-  // Unit leader: filter stats to their primary unit
-  const unitMembers = isUnitLeader && myUnit
-    ? members.filter(m => m.church_units && m.church_units.includes(myUnit))
-    : members;
-
-  // Unit leaders only see events for their unit (filter by category)
-  const unitCategoryMap = {
-    "Youth Ministry": "Youth Event",
-    "Women's Ministry": "Women's Event",
-    "Men's Ministry": "Men's Event",
-    "Children's Ministry": "Children's Event",
-    "Evangelism": "Outreach",
-  };
-  const unitEventCategory = isUnitLeader && myUnit ? unitCategoryMap[myUnit] : null;
-  const unitEvents = isUnitLeader && unitEventCategory
-    ? events.filter(e => e.category === unitEventCategory)
-    : events;
-
-  const upcomingEvents = unitEvents.filter(e => e.status === "Upcoming").length;
-  const pendingFollowups = isUnitLeader ? 0 : followups.filter(f => f.status === "Pending" || f.status === "In Progress").length;
-  const newFirstTimers = isUnitLeader ? 0 : firstTimers.filter(f => f.status === "New").length;
-
-  const activities = [
-    ...unitMembers.slice(0, 3).map(m => ({
-      type: "member",
-      label: `${m.first_name} ${m.last_name} registered`,
-      sub: m.membership_status || "Member",
-      date: m.created_date,
-    })),
-    ...unitEvents.slice(0, 3).map(e => ({
-      type: "event",
-      label: `Event: ${e.title}`,
-      sub: `${e.category} — ${e.status}`,
-      date: e.date,
-    })),
-    ...(isAdmin && !isUnitLeader ? firstTimers.slice(0, 3).map(ft => ({
-      type: "firsttimer",
-      label: `${ft.first_name} ${ft.last_name} visited`,
-      sub: ft.status,
-      date: ft.visit_date,
-    })) : []),
-    ...(isAdmin && !isUnitLeader ? followups.slice(0, 3).map(fu => ({
-      type: "followup",
-      label: `Follow-up: ${fu.person_name}`,
-      sub: `${fu.type} — ${fu.status}`,
-      date: fu.scheduled_date,
-    })) : []),
-  ]
-    .sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0))
-    .slice(0, 8);
-
-  if (isLoading) {
-    return (
-      <div className="space-y-6">
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-          {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-32 rounded-xl" />)}
-        </div>
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <Skeleton className="h-80 rounded-xl lg:col-span-2" />
-          <Skeleton className="h-80 rounded-xl" />
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-6">
-      {isUnitLeader && myUnit && (
-        <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-2.5 text-sm text-amber-700 font-medium">
-          Showing dashboard for: <span className="font-bold">{myUnit}</span> unit
-        </div>
-      )}
+      {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-        <StatCard
-          title={isUnitLeader ? `${myUnit || "Unit"} Members` : "Total Members"}
-          value={unitMembers.length}
-          subtitle={isUnitLeader ? "In your unit" : "Active congregation"}
-          icon={Users} color="blue"
-        />
-        <StatCard title="Upcoming Events" value={upcomingEvents} subtitle={isUnitLeader ? `${myUnit} events` : "Scheduled events"} icon={CalendarDays} color="emerald" />
-        {isAdmin && !isUnitLeader && <StatCard title="New First Timers" value={newFirstTimers} subtitle="Awaiting follow-up" icon={UserPlus} color="amber" />}
-        {isAdmin && !isUnitLeader && <StatCard title="Pending Follow-ups" value={pendingFollowups} subtitle="Requires attention" icon={HeartHandshake} color="violet" />}
+        {stats.map((stat) => (
+          <Card key={stat.title} className="border-0 shadow-sm">
+            <CardContent className="p-5">
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">{stat.title}</p>
+                  <p className="text-3xl font-display font-bold text-foreground mt-1">{stat.value}</p>
+                  <p className="text-xs text-muted-foreground mt-1">{stat.change}</p>
+                </div>
+                <div className={`h-10 w-10 rounded-xl bg-muted flex items-center justify-center ${stat.color}`}>
+                  <stat.icon className="h-5 w-5" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-6">
-          <GrowthIndices members={unitMembers} />
-        </div>
-        <RecentActivity activities={activities} />
+        {/* Growth Indices */}
+        <Card className="border-0 shadow-sm lg:col-span-2">
+          <CardHeader>
+            <CardTitle className="text-base font-display flex items-center gap-2">
+              <TrendingUp className="h-4 w-4 text-accent" />
+              Growth Milestones
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {growthMetrics.map((m) => (
+              <div key={m.label}>
+                <div className="flex justify-between text-sm mb-1.5">
+                  <span className="font-medium text-foreground">{m.label}</span>
+                  <span className="text-muted-foreground">{m.value} / {m.total} ({Math.round(m.value / m.total * 100)}%)</span>
+                </div>
+                <div className="h-2.5 bg-muted rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-accent rounded-full transition-all"
+                    style={{ width: `${(m.value / m.total) * 100}%` }}
+                  />
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+
+        {/* Recent Activity */}
+        <Card className="border-0 shadow-sm">
+          <CardHeader>
+            <CardTitle className="text-base font-display">Recent Activity</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {recentActivity.map((a, i) => (
+              <div key={i} className="flex items-start gap-3 py-2 border-b border-border last:border-0">
+                <div className="h-2 w-2 rounded-full bg-accent mt-2 shrink-0" />
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-foreground leading-tight">{a.text}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">{a.sub} · {a.time}</p>
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
