@@ -1,241 +1,99 @@
-import React, { useState, useEffect } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { base44 } from "@/api/base44Client";
+import React, { useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, CalendarCheck, Users, TrendingUp, Bell, ChevronRight, Lock, CheckCircle2, Clock } from "lucide-react";
-import SessionFormDialog from "@/components/attendance/SessionFormDialog";
-import CheckInPanel from "@/components/attendance/CheckInPanel";
-import SelfCheckIn from "@/components/attendance/SelfCheckIn";
+import { CheckCircle2, Clock, Users, CalendarCheck } from "lucide-react";
 
-const STATUS_BADGE = {
-  Open:   "bg-emerald-100 text-emerald-700",
-  Closed: "bg-slate-100 text-slate-500",
-};
+const SESSIONS = [
+  { id: 1, title: "Sunday Worship – 10 Mar", date: "2025-03-10", type: "Sunday Service", total: 185, present: 162, late: 8, absent: 15 },
+  { id: 2, title: "Midweek Bible Study – 12 Mar", date: "2025-03-12", type: "Bible Study", total: 90, present: 72, late: 5, absent: 13 },
+  { id: 3, title: "Sunday Worship – 3 Mar", date: "2025-03-03", type: "Sunday Service", total: 185, present: 170, late: 6, absent: 9 },
+  { id: 4, title: "Youth Fellowship – 7 Mar", date: "2025-03-07", type: "Youth Event", total: 45, present: 38, late: 3, absent: 4 },
+];
+
+const RECENT_CHECKINS = [
+  { name: "Sarah Johnson", time: "10:02 AM", status: "Present" },
+  { name: "David Obi", time: "10:15 AM", status: "Late" },
+  { name: "Grace Eze", time: "9:58 AM", status: "Present" },
+  { name: "James Adeyemi", time: "10:05 AM", status: "Present" },
+  { name: "Emmanuel Okoro", time: "10:22 AM", status: "Late" },
+];
 
 export default function Attendance() {
-  const [currentUser, setCurrentUser] = useState(null);
-  const [sessionDialogOpen, setSessionDialogOpen] = useState(false);
-  const [activeSession, setActiveSession] = useState(null);
-  const [typeFilter, setTypeFilter] = useState("All");
-  const [sendingReminders, setSendingReminders] = useState(null);
-  const queryClient = useQueryClient();
+  const [selectedSession, setSelectedSession] = useState(SESSIONS[0]);
 
-  useEffect(() => { base44.auth.me().then(setCurrentUser).catch(() => {}); }, []);
-
-  const isAdmin = currentUser?.role === "admin";
-  const isUnitLeader = currentUser?.role === "unit_leader";
-  const canManage = isAdmin || isUnitLeader;
-
-  const { data: myMemberArr = [] } = useQuery({
-    queryKey: ["my-member-att", currentUser?.email],
-    queryFn: () => base44.entities.Member.filter({ email: currentUser.email }),
-    enabled: !!currentUser?.email,
-  });
-  const myMember = myMemberArr[0] || null;
-  const myUnits = myMember?.church_units || [];
-
-  const { data: sessions = [], isLoading } = useQuery({
-    queryKey: ["attendance-sessions"],
-    queryFn: () => base44.entities.AttendanceSession.list("-date", 100),
-  });
-
-  const { data: allRecords = [] } = useQuery({
-    queryKey: ["attendance-records-all"],
-    queryFn: () => base44.entities.AttendanceRecord.list("-created_date", 2000),
-  });
-
-  const createSession = useMutation({
-    mutationFn: (data) => base44.entities.AttendanceSession.create({ ...data, created_by_name: currentUser?.full_name || "" }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["attendance-sessions"] }),
-  });
-
-  const deleteSession = useMutation({
-    mutationFn: (id) => base44.entities.AttendanceSession.delete(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["attendance-sessions"] }),
-  });
-
-  const handleSendReminders = async (session) => {
-    setSendingReminders(session.id);
-    await base44.functions.invoke("sendAbsenceReminders", { session_id: session.id });
-    setSendingReminders(null);
-    alert("Absence reminders sent!");
-  };
-
-  // All users can see open sessions relevant to them; leaders/admins see all
-  const visibleSessions = sessions.filter(s => {
-    if (isAdmin) return true;
-    if (isUnitLeader) {
-      if (s.session_type === "Unit Meeting" && s.unit) return myUnits.includes(s.unit);
-      return true;
-    }
-    // Regular members: see open sessions only (for self-check-in)
-    if (s.status !== "Open") return false;
-    if (s.session_type === "Unit Meeting" && s.unit) return myUnits.includes(s.unit);
-    return true;
-  }).filter(s => typeFilter === "All" || s.session_type === typeFilter);
-
-  const getSessionStats = (sessionId) => {
-    const recs = allRecords.filter(r => r.session_id === sessionId);
-    return {
-      total: recs.length,
-      present: recs.filter(r => r.status === "Present").length,
-      late: recs.filter(r => r.status === "Late").length,
-    };
-  };
-
-  // Overall stats
-  const totalSessions = sessions.length;
-  const openSessions = sessions.filter(s => s.status === "Open").length;
-  const totalPresent = allRecords.filter(r => r.status === "Present").length;
-
-  const SESSION_TYPES = ["All", "Sunday Service", "Midweek Service", "Unit Meeting", "Special Event", "Prayer Meeting"];
-
-  if (activeSession) {
-    // Regular members get a simple self-check-in view
-    if (!canManage) {
-      return (
-        <SelfCheckIn
-          session={activeSession}
-          member={myMember}
-          onClose={() => { setActiveSession(null); queryClient.invalidateQueries({ queryKey: ["attendance-sessions"] }); }}
-        />
-      );
-    }
-    return (
-      <div className="max-w-2xl mx-auto">
-        <Card className="border-0 shadow-sm p-6">
-          <CheckInPanel
-            session={activeSession}
-            onClose={() => { setActiveSession(null); queryClient.invalidateQueries({ queryKey: ["attendance-sessions"] }); }}
-          />
-        </Card>
-      </div>
-    );
-  }
+  const attendanceRate = Math.round(((selectedSession.present + selectedSession.late) / selectedSession.total) * 100);
 
   return (
     <div className="space-y-6">
-      {/* Stats */}
-      <div className="grid grid-cols-3 gap-3">
-        <Card className="border-0 shadow-sm p-4 text-center">
-          <CalendarCheck className="h-5 w-5 mx-auto mb-1 text-[#1e3a5f]" />
-          <p className="text-2xl font-bold text-slate-800">{totalSessions}</p>
-          <p className="text-xs text-slate-400">Total Sessions</p>
-        </Card>
-        <Card className="border-0 shadow-sm p-4 text-center">
-          <Clock className="h-5 w-5 mx-auto mb-1 text-emerald-500" />
-          <p className="text-2xl font-bold text-emerald-600">{openSessions}</p>
-          <p className="text-xs text-slate-400">Open Sessions</p>
-        </Card>
-        <Card className="border-0 shadow-sm p-4 text-center">
-          <CheckCircle2 className="h-5 w-5 mx-auto mb-1 text-blue-500" />
-          <p className="text-2xl font-bold text-blue-600">{totalPresent}</p>
-          <p className="text-xs text-slate-400">Check-ins Total</p>
-        </Card>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <Card className="border-0 shadow-sm"><CardContent className="p-4 text-center"><p className="text-2xl font-display font-bold text-chart-3">{selectedSession.present}</p><p className="text-xs text-muted-foreground">Present</p></CardContent></Card>
+        <Card className="border-0 shadow-sm"><CardContent className="p-4 text-center"><p className="text-2xl font-display font-bold text-accent">{selectedSession.late}</p><p className="text-xs text-muted-foreground">Late</p></CardContent></Card>
+        <Card className="border-0 shadow-sm"><CardContent className="p-4 text-center"><p className="text-2xl font-display font-bold text-destructive">{selectedSession.absent}</p><p className="text-xs text-muted-foreground">Absent</p></CardContent></Card>
+        <Card className="border-0 shadow-sm"><CardContent className="p-4 text-center"><p className="text-2xl font-display font-bold text-primary">{attendanceRate}%</p><p className="text-xs text-muted-foreground">Rate</p></CardContent></Card>
       </div>
 
-      {/* Controls */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-        <Select value={typeFilter} onValueChange={setTypeFilter}>
-          <SelectTrigger className="w-full sm:w-52">
-            <SelectValue />
-          </SelectTrigger>
+      <div className="flex items-center gap-3">
+        <Select value={String(selectedSession.id)} onValueChange={v => setSelectedSession(SESSIONS.find(s => s.id === parseInt(v)))}>
+          <SelectTrigger className="w-72"><SelectValue /></SelectTrigger>
           <SelectContent>
-            {SESSION_TYPES.map(t => <SelectItem key={t} value={t}>{t === "All" ? "All Types" : t}</SelectItem>)}
+            {SESSIONS.map(s => <SelectItem key={s.id} value={String(s.id)}>{s.title}</SelectItem>)}
           </SelectContent>
         </Select>
-        {canManage && (
-          <Button onClick={() => setSessionDialogOpen(true)} className="bg-[#1e3a5f] hover:bg-[#152d4a]">
-            <Plus className="h-4 w-4 mr-2" /> New Session
-          </Button>
-        )}
+        <Badge className="bg-primary/10 text-primary border-0">{selectedSession.type}</Badge>
       </div>
 
-      {/* Sessions list */}
-      {isLoading ? (
-        <p className="text-slate-400 text-sm">Loading sessions…</p>
-      ) : visibleSessions.length === 0 ? (
-        <Card className="border-0 shadow-sm p-16 text-center text-slate-400">
-          <CalendarCheck className="h-10 w-10 mx-auto mb-3 opacity-20" />
-          <p className="text-lg font-medium">No sessions yet</p>
-          {canManage && <p className="text-sm mt-1">Click "New Session" to start taking attendance</p>}
-        </Card>
-      ) : (
-        <div className="space-y-3">
-          {visibleSessions.map(session => {
-            const stats = getSessionStats(session.id);
-            const attendanceRate = stats.total > 0 ? Math.round(((stats.present + stats.late) / stats.total) * 100) : null;
-            return (
-              <Card key={session.id} className="border-0 shadow-sm p-4 hover:shadow-md transition-shadow">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap mb-1">
-                      <span className="text-sm font-semibold text-slate-800">{session.title}</span>
-                      <Badge className={`text-[10px] px-2 py-0.5 ${STATUS_BADGE[session.status] || STATUS_BADGE.Closed}`}>
-                        {session.status}
-                      </Badge>
-                    </div>
-                    <p className="text-xs text-slate-400">{session.date} · {session.session_type}{session.unit ? ` · ${session.unit}` : ""}</p>
-                    {stats.total > 0 && (
-                      <div className="flex items-center gap-3 mt-2">
-                        <span className="text-xs text-slate-500"><span className="font-semibold text-emerald-600">{stats.present}</span> present</span>
-                        {stats.late > 0 && <span className="text-xs text-slate-500"><span className="font-semibold text-amber-500">{stats.late}</span> late</span>}
-                        {attendanceRate !== null && (
-                          <span className="text-xs text-slate-400">{attendanceRate}% attendance</span>
-                        )}
-                      </div>
-                    )}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card className="border-0 shadow-sm">
+          <CardHeader><CardTitle className="text-base font-display flex items-center gap-2"><CalendarCheck className="h-4 w-4 text-accent" /> All Sessions</CardTitle></CardHeader>
+          <CardContent className="space-y-2">
+            {SESSIONS.map(s => {
+              const rate = Math.round(((s.present + s.late) / s.total) * 100);
+              return (
+                <button
+                  key={s.id}
+                  onClick={() => setSelectedSession(s)}
+                  className={`w-full flex items-center justify-between p-3 rounded-lg text-left transition-colors ${
+                    selectedSession.id === s.id ? "bg-primary/10 border border-primary/20" : "bg-muted/50 hover:bg-muted"
+                  }`}
+                >
+                  <div>
+                    <p className="font-medium text-sm text-foreground">{s.title}</p>
+                    <p className="text-xs text-muted-foreground">{s.type} · {s.date}</p>
                   </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    {session.status === "Closed" && isAdmin && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleSendReminders(session)}
-                        disabled={sendingReminders === session.id}
-                        className="gap-1.5 text-xs"
-                      >
-                        <Bell className="h-3.5 w-3.5" />
-                        {sendingReminders === session.id ? "Sending…" : "Send Reminders"}
-                      </Button>
-                    )}
-                    {(canManage || session.status === "Open") && (
-                      <Button
-                        size="sm"
-                        variant={session.status === "Open" ? "default" : "outline"}
-                        className={session.status === "Open" ? "bg-[#1e3a5f] hover:bg-[#152d4a] gap-1.5 text-xs" : "gap-1.5 text-xs"}
-                        onClick={() => setActiveSession(session)}
-                      >
-                        <Users className="h-3.5 w-3.5" />
-                        {session.status === "Open" ? (canManage ? "Check In" : "Check In") : "View"}
-                      </Button>
-                    )}
-                    {isAdmin && (
-                      <button
-                        onClick={() => { if (window.confirm("Delete this session?")) deleteSession.mutate(session.id); }}
-                        className="text-slate-300 hover:text-red-400 transition-colors p-1"
-                      >
-                        ×
-                      </button>
-                    )}
+                  <div className="text-right">
+                    <p className="text-sm font-bold text-foreground">{rate}%</p>
+                    <p className="text-xs text-muted-foreground">{s.present + s.late}/{s.total}</p>
+                  </div>
+                </button>
+              );
+            })}
+          </CardContent>
+        </Card>
+
+        <Card className="border-0 shadow-sm">
+          <CardHeader><CardTitle className="text-base font-display flex items-center gap-2"><Users className="h-4 w-4 text-accent" /> Recent Check-ins</CardTitle></CardHeader>
+          <CardContent className="space-y-2">
+            {RECENT_CHECKINS.map((c, i) => (
+              <div key={i} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                <div className="flex items-center gap-3">
+                  <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary text-xs font-bold">
+                    {c.name.split(" ").map(n => n[0]).join("")}
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-foreground">{c.name}</p>
+                    <p className="text-xs text-muted-foreground flex items-center gap-1"><Clock className="h-3 w-3" /> {c.time}</p>
                   </div>
                 </div>
-              </Card>
-            );
-          })}
-        </div>
-      )}
-
-      <SessionFormDialog
-        open={sessionDialogOpen}
-        onOpenChange={setSessionDialogOpen}
-        onSave={createSession.mutateAsync}
-        isAdmin={isAdmin}
-        myUnits={myUnits}
-      />
+                <Badge className={`border-0 ${c.status === "Present" ? "bg-chart-3/10 text-chart-3" : "bg-accent/10 text-accent"}`}>
+                  {c.status}
+                </Badge>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

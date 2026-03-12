@@ -1,202 +1,110 @@
-import React, { useState, useEffect } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { base44 } from "@/api/base44Client";
+import React, { useState } from "react";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Megaphone, Send, Pin, Search, Plus } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card } from "@/components/ui/card";
-import { Plus, Megaphone, Pin, Mail } from "lucide-react";
-import EmailAlertForm from "@/components/comms/EmailAlertForm";
-import { Skeleton } from "@/components/ui/skeleton";
-import AnnouncementForm from "@/components/comms/AnnouncementForm";
-import AnnouncementCard from "@/components/comms/AnnouncementCard";
 
-const AUDIENCES = [
-  "All", "All Members", "Ushering", "Choir", "Media", "Children's Ministry", "Protocol",
-  "Sanctuary Keepers", "Prayer & Intercession", "Evangelism", "Follow-up",
-  "Youth Ministry", "Men's Ministry", "Women's Ministry", "Drama & Creative Arts",
-  "Altar Ministers", "Pastoral Care", "Welfare", "CSR", "Transportation", "Leaders Only"
+const ANNOUNCEMENTS = [
+  { id: 1, title: "Easter Conference Registration Now Open", body: "Register for our annual Easter Conference 2025. Guest ministers from Nigeria and Ghana. Limited seats available.", audience: "All Members", pinned: true, date: "2025-03-10" },
+  { id: 2, title: "Midweek Service Time Change", body: "Please note that Wednesday Bible Study will now start at 7:00 PM instead of 6:30 PM effective immediately.", audience: "All Members", pinned: false, date: "2025-03-08" },
+  { id: 3, title: "Youth Camp Applications", body: "Youth camp applications are now open for ages 13-25. Please see the youth pastor for forms.", audience: "Youth Ministry", pinned: false, date: "2025-03-05" },
+  { id: 4, title: "Leaders Meeting – Saturday", body: "All unit leaders are to attend the quarterly leaders meeting this Saturday at 2:00 PM.", audience: "Leaders Only", pinned: true, date: "2025-03-07" },
 ];
 
 export default function Communications() {
-  const [currentUser, setCurrentUser] = useState(null);
+  const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [editing, setEditing] = useState(null);
-  const [audienceFilter, setAudienceFilter] = useState("All");
+  const [form, setForm] = useState({ title: "", body: "", audience: "All Members" });
 
-  const queryClient = useQueryClient();
+  const filtered = ANNOUNCEMENTS.filter(a =>
+    `${a.title} ${a.body}`.toLowerCase().includes(search.toLowerCase())
+  );
 
-  useEffect(() => {
-    base44.auth.me().then(setCurrentUser).catch(() => {});
-  }, []);
-
-  const { data: announcements = [], isLoading } = useQuery({
-    queryKey: ["announcements"],
-    queryFn: () => base44.entities.Announcement.list("-created_date", 100),
-  });
-
-  const createMutation = useMutation({
-    mutationFn: (data) => base44.entities.Announcement.create(data),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["announcements"] }),
-  });
-
-  const updateMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.Announcement.update(id, data),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["announcements"] }),
-  });
-
-  const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.Announcement.delete(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["announcements"] }),
-  });
-
-  const handleSave = async (data) => {
-    const payload = {
-      ...data,
-      author_name: currentUser?.full_name || currentUser?.email || "Admin",
-      author_email: currentUser?.email || "",
-    };
-    if (editing) {
-      await updateMutation.mutateAsync({ id: editing.id, data: payload });
-    } else {
-      await createMutation.mutateAsync(payload);
-    }
-    setEditing(null);
-  };
-
-  const handleDelete = (a) => {
-    if (window.confirm(`Delete "${a.title}"?`)) deleteMutation.mutate(a.id);
-  };
-
-  const isAdmin = currentUser?.role === "admin";
-  const isLeader = currentUser?.role === "unit_leader";
-  const isRegularUser = currentUser?.role === "user";
-
-  // Fetch member profile for unit-based filtering
-  const { data: myMemberArr = [] } = useQuery({
-    queryKey: ["my-member-comms", currentUser?.email],
-    queryFn: () => base44.entities.Member.filter({ email: currentUser.email }),
-    enabled: !!(currentUser?.email && !isAdmin),
-  });
-  const myMember = myMemberArr[0] || null;
-  const myUnits = myMember?.church_units || [];
-
-  // Members only see announcements relevant to them (by unit + all-members)
-  const visibleAnnouncements = announcements.filter(a => {
-    if (isAdmin) return true;
-    if (a.audience === "Leaders Only") return isLeader;
-    if (a.audience === "All Members") return true;
-    // Check if member's units match the announcement audience
-    if (myUnits.includes(a.audience)) return true;
-    // For backward compatibility with old single-unit announcements
-    if (myMember?.church_unit && myMember.church_unit !== "None" && a.audience === myMember.church_unit) return true;
-    return false;
-  });
-
-  const filtered = visibleAnnouncements
-    .filter(a => audienceFilter === "All" || a.audience === audienceFilter)
-    .sort((a, b) => {
-      if (a.pinned && !b.pinned) return -1;
-      if (!a.pinned && b.pinned) return 1;
-      return 0;
-    });
-
-  const pinnedCount = visibleAnnouncements.filter(a => a.pinned).length;
+  const pinned = filtered.filter(a => a.pinned);
+  const regular = filtered.filter(a => !a.pinned);
 
   return (
     <div className="space-y-6">
-      <Tabs defaultValue="announcements">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-2">
-          <TabsList className="bg-slate-100">
-            <TabsTrigger value="announcements" className="flex items-center gap-2">
-              <Megaphone className="h-4 w-4" /> Announcements
-            </TabsTrigger>
-            {(isAdmin || isLeader) && (
-              <TabsTrigger value="email-alerts" className="flex items-center gap-2">
-                <Mail className="h-4 w-4" /> Email Alerts
-              </TabsTrigger>
-            )}
-          </TabsList>
-          <div className="flex items-center gap-3">
-            {(isAdmin || isLeader) && (
-                <Button onClick={() => { setEditing(null); setDialogOpen(true); }} className="bg-[#1e3a5f] hover:bg-[#152d4a]">
-                  <Plus className="h-4 w-4 mr-2" /> New Announcement
-                </Button>
-              )}
-          </div>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="relative w-full sm:w-72">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input placeholder="Search announcements..." value={search} onChange={e => setSearch(e.target.value)} className="pl-10" />
         </div>
+        <Button onClick={() => setDialogOpen(true)} className="bg-primary hover:bg-primary/90">
+          <Plus className="h-4 w-4 mr-2" /> New Announcement
+        </Button>
+      </div>
 
-        <TabsContent value="announcements" className="space-y-4 mt-0">
-          {/* Stats */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-            <Card className="border-0 shadow-sm p-4 text-center">
-              <p className="text-2xl font-bold text-slate-800">{visibleAnnouncements.length}</p>
-              <p className="text-xs text-slate-400">Total</p>
+      {pinned.length > 0 && (
+        <div className="space-y-3">
+          <h3 className="text-sm font-semibold text-muted-foreground flex items-center gap-1.5"><Pin className="h-3.5 w-3.5" /> Pinned</h3>
+          {pinned.map(a => (
+            <Card key={a.id} className="border-0 shadow-sm border-l-4 border-l-accent">
+              <CardContent className="p-5">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <h3 className="font-display font-bold text-foreground">{a.title}</h3>
+                      <Badge className="bg-accent/10 text-accent border-0">{a.audience}</Badge>
+                    </div>
+                    <p className="text-sm text-muted-foreground">{a.body}</p>
+                    <p className="text-xs text-muted-foreground mt-2">{a.date}</p>
+                  </div>
+                  <Megaphone className="h-5 w-5 text-accent shrink-0" />
+                </div>
+              </CardContent>
             </Card>
-            <Card className="border-0 shadow-sm p-4 text-center">
-              <p className="text-2xl font-bold text-[#c9a84c] flex items-center justify-center gap-1"><Pin className="h-5 w-5" />{pinnedCount}</p>
-              <p className="text-xs text-slate-400">Pinned</p>
-            </Card>
-            <Card className="border-0 shadow-sm p-4 text-center sm:block hidden">
-              <p className="text-2xl font-bold text-indigo-600">{[...new Set(visibleAnnouncements.map(a => a.audience))].length}</p>
-              <p className="text-xs text-slate-400">Groups Reached</p>
-            </Card>
-          </div>
+          ))}
+        </div>
+      )}
 
-          {/* Filter */}
-          <div className="flex items-center gap-3">
-            <Select value={audienceFilter} onValueChange={setAudienceFilter}>
-              <SelectTrigger className="w-52">
-                <SelectValue placeholder="Filter by audience" />
-              </SelectTrigger>
-              <SelectContent>
-                {AUDIENCES.map(a => <SelectItem key={a} value={a}>{a === "All" ? "All Audiences" : a}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* List */}
-          {isLoading ? (
-            <div className="space-y-3">{[1, 2, 3].map(i => <Skeleton key={i} className="h-28 rounded-xl" />)}</div>
-          ) : filtered.length === 0 ? (
-            <Card className="border-0 shadow-sm p-16 text-center text-slate-400">
-              <Megaphone className="h-10 w-10 mx-auto mb-3 opacity-20" />
-              <p className="text-lg font-medium">No announcements yet</p>
-              {isAdmin && <p className="text-sm mt-1">Click "New Announcement" to post one</p>}
-            </Card>
-          ) : (
-            <div className="space-y-3">
-              {filtered.map(a => (
-                <AnnouncementCard
-                  key={a.id}
-                  announcement={a}
-                  isAdmin={isAdmin || (isLeader && a.author_email === currentUser?.email)}
-                  onEdit={(ann) => { setEditing(ann); setDialogOpen(true); }}
-                  onDelete={handleDelete}
-                />
-              ))}
-            </div>
-          )}
-        </TabsContent>
-
-        {(isAdmin || isLeader) && (
-          <TabsContent value="email-alerts" className="mt-4">
-            <EmailAlertForm
-              currentUser={currentUser}
-              myUnits={myUnits}
-              isAdmin={isAdmin}
-            />
-          </TabsContent>
+      <div className="space-y-3">
+        {regular.map(a => (
+          <Card key={a.id} className="border-0 shadow-sm">
+            <CardContent className="p-5">
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <h3 className="font-display font-bold text-foreground">{a.title}</h3>
+                  <Badge variant="secondary">{a.audience}</Badge>
+                </div>
+                <p className="text-sm text-muted-foreground">{a.body}</p>
+                <p className="text-xs text-muted-foreground mt-2">{a.date}</p>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+        {filtered.length === 0 && (
+          <Card className="border-0 shadow-sm p-16 text-center text-muted-foreground">
+            <Megaphone className="h-10 w-10 mx-auto mb-3 opacity-20" />
+            <p className="text-lg font-medium">No announcements found</p>
+          </Card>
         )}
-      </Tabs>
+      </div>
 
-      <AnnouncementForm
-        open={dialogOpen}
-        onOpenChange={setDialogOpen}
-        announcement={editing}
-        onSave={handleSave}
-        lockedAudience={isLeader ? myUnits[0] : null}
-      />
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader><DialogTitle className="font-display">New Announcement</DialogTitle></DialogHeader>
+          <div className="space-y-4 mt-2">
+            <div><Label>Title</Label><Input value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} /></div>
+            <div><Label>Message</Label><Textarea value={form.body} onChange={e => setForm(f => ({ ...f, body: e.target.value }))} rows={4} /></div>
+            <div>
+              <Label>Audience</Label>
+              <Select value={form.audience} onValueChange={v => setForm(f => ({ ...f, audience: v }))}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {["All Members", "Leaders Only", "Youth Ministry", "Women's Ministry", "Men's Ministry"].map(a => <SelectItem key={a} value={a}>{a}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <Button className="w-full bg-primary"><Send className="h-4 w-4 mr-2" /> Publish</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
