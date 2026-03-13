@@ -165,7 +165,7 @@ export default function WSFManagement() {
         </TabsList>
 
         <TabsContent value="attendance">
-          <WSFAttendanceTab centres={centres} />
+          <WSFAttendanceTab centres={!isAdmin && isWSFLeader && myCentreIds.length > 0 ? centres.filter(c => myCentreIds.includes(c.id)) : centres} />
         </TabsContent>
 
         {canManageWSF && (
