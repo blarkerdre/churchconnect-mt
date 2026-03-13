@@ -194,6 +194,7 @@ export default function Followups() {
     category: f.followup_type,
     type: f.description || "General",
     assigned_to: f.assigned_to || "Unassigned",
+    assigned_to_name: f.assigned_to ? (profileMap[f.assigned_to] || "Unknown") : "Unassigned",
     scheduled_date: f.due_date,
   });
 
