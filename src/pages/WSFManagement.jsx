@@ -192,8 +192,12 @@ export default function WSFManagement() {
                             </Badge>
                           </div>
                           <div className="flex gap-1">
-                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(c)}><Edit className="h-3.5 w-3.5" /></Button>
-                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { if (window.confirm("Delete this centre?")) deleteMutation.mutate(c.id); }}><Trash2 className="h-3.5 w-3.5 text-destructive" /></Button>
+                            {canEditCentre(c) && (
+                              <>
+                                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(c)}><Edit className="h-3.5 w-3.5" /></Button>
+                                {isAdmin && <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { if (window.confirm("Delete this centre?")) deleteMutation.mutate(c.id); }}><Trash2 className="h-3.5 w-3.5 text-destructive" /></Button>}
+                              </>
+                            )}
                           </div>
                         </div>
                       </CardHeader>
