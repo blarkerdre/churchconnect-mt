@@ -93,6 +93,7 @@ export default function MyProfile() {
       gender: member.gender || "",
       emergency_contact_name: member.emergency_contact_name || "",
       emergency_contact_phone: member.emergency_contact_phone || "",
+      wsf_centre_id: member.wsf_centre_id || "",
     });
     setEditing(true);
   };
