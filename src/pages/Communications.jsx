@@ -20,7 +20,7 @@ const AUDIENCES = [
 ];
 
 export default function Communications() {
-  const { user, isAdmin, isUnitLeader } = useAuth();
+  const { user, isAdmin, isUnitLeader, leaderUnits } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
