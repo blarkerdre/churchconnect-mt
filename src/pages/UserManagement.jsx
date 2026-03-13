@@ -143,7 +143,7 @@ export default function UserManagement() {
                               value={currentRole}
                               onValueChange={(newRole) => {
                                 if (newRole !== currentRole) {
-                                  updateRoleMutation.mutate({ userId: p.user_id, newRole });
+                                  updateRoleMutation.mutate({ userId: p.user_id, newRole, oldRole: currentRole, targetName: p.full_name || p.email });
                                 }
                               }}
                             >
