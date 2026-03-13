@@ -142,12 +142,13 @@ export default function UserManagement() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border bg-muted/50">
-                  <th className="text-left p-4 font-medium text-muted-foreground">User</th>
-                  <th className="text-left p-4 font-medium text-muted-foreground">Email</th>
-                  <th className="text-left p-4 font-medium text-muted-foreground">Current Role</th>
-                  <th className="text-left p-4 font-medium text-muted-foreground">Change Role</th>
-                  <th className="text-right p-4 font-medium text-muted-foreground">Actions</th>
-                </tr>
+                   <th className="text-left p-4 font-medium text-muted-foreground">User</th>
+                   <th className="text-left p-4 font-medium text-muted-foreground">Email</th>
+                   <th className="text-left p-4 font-medium text-muted-foreground">Current Role</th>
+                   <th className="text-left p-4 font-medium text-muted-foreground">Led Units</th>
+                   <th className="text-left p-4 font-medium text-muted-foreground">Change Role</th>
+                   <th className="text-right p-4 font-medium text-muted-foreground">Actions</th>
+                 </tr>
               </thead>
               <tbody>
                 {profiles.map(p => {
