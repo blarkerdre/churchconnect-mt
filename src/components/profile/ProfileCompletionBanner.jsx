@@ -31,7 +31,15 @@ export default function ProfileCompletionBanner() {
     enabled: !!user?.id,
   });
 
-  if (!member) return null;
+  const [dismissed, setDismissed] = useState(false);
+
+  useEffect(() => {
+    if (!member) return;
+    const timer = setTimeout(() => setDismissed(true), 15000);
+    return () => clearTimeout(timer);
+  }, [member]);
+
+  if (!member || dismissed) return null;
 
   const filled = PROFILE_FIELDS.filter((f) => member[f] && String(member[f]).trim() !== "").length;
   const pct = Math.round((filled / PROFILE_FIELDS.length) * 100);
