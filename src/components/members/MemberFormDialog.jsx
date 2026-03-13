@@ -95,9 +95,20 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
         if (error) throw error;
         toast({ title: "Member updated" });
       } else {
-        const { error } = await supabase.from("members").insert(payload);
+        const { data: inserted, error } = await supabase.from("members").insert(payload).select().single();
         if (error) throw error;
         toast({ title: "Member registered" });
+
+        // Auto-create followup for First Timer / New Convert
+        if (inserted && (form.membership_status === "First Timer" || form.membership_status === "New Convert")) {
+          await supabase.from("followups").insert({
+            member_id: inserted.id,
+            followup_type: form.membership_status === "First Timer" ? "First Timer" : "New Convert",
+            description: `New ${form.membership_status.toLowerCase()} registered: ${form.first_name} ${form.last_name}`,
+            status: "Pending",
+            priority: "High",
+          });
+        }
       }
       onSaved();
     } catch (err) {
