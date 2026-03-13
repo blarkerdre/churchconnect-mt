@@ -42,6 +42,15 @@ export default function MyProfile() {
     enabled: !!user?.id,
   });
 
+  const { data: wsfCentres = [] } = useQuery({
+    queryKey: ["wsf-centres-active"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("wsf_centres").select("*").eq("is_active", true).order("name");
+      if (error) throw error;
+      return data;
+    },
+  });
+
   const { data: attendanceRecords = [] } = useQuery({
     queryKey: ["my-attendance", member?.id],
     queryFn: async () => {
