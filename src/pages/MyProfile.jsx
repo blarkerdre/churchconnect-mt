@@ -14,6 +14,13 @@ import { toast } from "@/components/ui/use-toast";
 
 const GENDERS = ["Male", "Female"];
 
+const statusColors = {
+  "Active": "bg-chart-3/10 text-chart-3",
+  "Inactive": "bg-muted text-muted-foreground",
+  "New Convert": "bg-accent/10 text-accent",
+  "First Timer": "bg-chart-4/10 text-chart-4",
+};
+
 export default function MyProfile() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -178,8 +185,12 @@ export default function MyProfile() {
                   </div>
                 ) : (
                   <>
-                    <h2 className="text-xl font-bold text-foreground">{member.first_name} {member.last_name}</h2>
-                    <Badge variant="outline" className="mt-1">{member.membership_status}</Badge>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h2 className="text-xl font-bold text-foreground">{member.first_name} {member.last_name}</h2>
+                      <Badge className={`${statusColors[member.membership_status] || "bg-muted text-muted-foreground"} border-0`}>
+                        {member.membership_status}
+                      </Badge>
+                    </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-4 text-sm text-muted-foreground">
                       {member.email && <div className="flex items-center gap-2"><Mail className="h-4 w-4" />{member.email}</div>}
                       {member.phone && <div className="flex items-center gap-2"><Phone className="h-4 w-4" />{member.phone}</div>}

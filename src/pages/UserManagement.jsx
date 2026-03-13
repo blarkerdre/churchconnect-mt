@@ -2,8 +2,11 @@ import React, { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Shield, ShieldCheck, UserCog, User } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Loader2, Shield, ShieldCheck, UserCog, User, Plus, Trash2 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
@@ -30,6 +33,8 @@ export default function UserManagement() {
   const { isAdmin, roles, user } = useAuth();
   const isSuperAdmin = roles.includes("super_admin");
   const queryClient = useQueryClient();
+  const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [addForm, setAddForm] = useState({ email: "", password: "", full_name: "", role: "member" });
 
   const { data: profiles = [], isLoading } = useQuery({
     queryKey: ["all-profiles"],
@@ -65,6 +70,42 @@ export default function UserManagement() {
     onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
 
+  const addUserMutation = useMutation({
+    mutationFn: async (formData) => {
+      // Use edge function to create user (admin can't directly create via client SDK)
+      const { data, error } = await supabase.functions.invoke("admin-create-user", {
+        body: { email: formData.email, password: formData.password, full_name: formData.full_name, role: formData.role },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      await logAudit("user_create", "profiles", null, { email: formData.email, full_name: formData.full_name, role: formData.role });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["all-profiles"] });
+      queryClient.invalidateQueries({ queryKey: ["all-user-roles"] });
+      toast({ title: "User created" });
+      setAddDialogOpen(false);
+    },
+    onError: (err) => toast({ title: "Error creating user", description: err.message, variant: "destructive" }),
+  });
+
+  const deleteUserMutation = useMutation({
+    mutationFn: async ({ userId, targetName }) => {
+      const { data, error } = await supabase.functions.invoke("admin-delete-user", {
+        body: { user_id: userId },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      await logAudit("user_delete", "profiles", userId, { target_name: targetName });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["all-profiles"] });
+      queryClient.invalidateQueries({ queryKey: ["all-user-roles"] });
+      toast({ title: "User deleted" });
+    },
+    onError: (err) => toast({ title: "Error deleting user", description: err.message, variant: "destructive" }),
+  });
+
   const getUserRole = (userId) => {
     const role = allRoles.find(r => r.user_id === userId);
     return role?.role || "member";
@@ -82,9 +123,14 @@ export default function UserManagement() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-lg font-display font-bold text-foreground">User Management</h2>
-        <p className="text-sm text-muted-foreground">Manage user roles and permissions</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-lg font-display font-bold text-foreground">User Management</h2>
+          <p className="text-sm text-muted-foreground">Manage user roles and permissions</p>
+        </div>
+        <Button onClick={() => { setAddForm({ email: "", password: "", full_name: "", role: "member" }); setAddDialogOpen(true); }} className="bg-primary hover:bg-primary/90">
+          <Plus className="h-4 w-4 mr-2" /> Add User
+        </Button>
       </div>
 
       {isLoading ? (
@@ -99,12 +145,14 @@ export default function UserManagement() {
                   <th className="text-left p-4 font-medium text-muted-foreground">Email</th>
                   <th className="text-left p-4 font-medium text-muted-foreground">Current Role</th>
                   <th className="text-left p-4 font-medium text-muted-foreground">Change Role</th>
+                  <th className="text-right p-4 font-medium text-muted-foreground">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {profiles.map(p => {
                   const currentRole = getUserRole(p.user_id);
                   const RoleIcon = roleIcons[currentRole] || User;
+                  const isCurrentUser = p.user_id === user?.id;
                   return (
                     <tr key={p.id} className="border-b border-border hover:bg-muted/30 transition-colors">
                       <td className="p-4">
@@ -124,11 +172,8 @@ export default function UserManagement() {
                       </td>
                       <td className="p-4">
                         {(() => {
-                          // Only super_admin can change admin/super_admin roles
                           const isTargetAdmin = ["admin", "super_admin"].includes(currentRole);
-                          const isCurrentUser = p.user_id === user?.id;
                           const canChangeRole = isSuperAdmin && !isCurrentUser;
-                          const canChangeToAdmin = isSuperAdmin;
                           
                           if (!canChangeRole && !(!isTargetAdmin && isAdmin)) {
                             return <span className="text-sm text-muted-foreground italic">No permission</span>;
@@ -159,17 +204,55 @@ export default function UserManagement() {
                           );
                         })()}
                       </td>
+                      <td className="p-4 text-right">
+                        {!isCurrentUser && (
+                          <Button variant="ghost" size="icon" onClick={() => {
+                            if (window.confirm(`Delete user ${p.full_name || p.email}? This cannot be undone.`)) {
+                              deleteUserMutation.mutate({ userId: p.user_id, targetName: p.full_name || p.email });
+                            }
+                          }}>
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        )}
+                      </td>
                     </tr>
                   );
                 })}
                 {profiles.length === 0 && (
-                  <tr><td colSpan={4} className="p-8 text-center text-muted-foreground">No users found</td></tr>
+                  <tr><td colSpan={5} className="p-8 text-center text-muted-foreground">No users found</td></tr>
                 )}
               </tbody>
             </table>
           </div>
         </Card>
       )}
+
+      {/* Add User Dialog */}
+      <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader><DialogTitle className="font-display">Add New User</DialogTitle></DialogHeader>
+          <div className="space-y-4 mt-2">
+            <div><Label>Full Name</Label><Input value={addForm.full_name} onChange={e => setAddForm(f => ({ ...f, full_name: e.target.value }))} /></div>
+            <div><Label>Email</Label><Input type="email" value={addForm.email} onChange={e => setAddForm(f => ({ ...f, email: e.target.value }))} /></div>
+            <div><Label>Password</Label><Input type="password" value={addForm.password} onChange={e => setAddForm(f => ({ ...f, password: e.target.value }))} /></div>
+            <div>
+              <Label>Role</Label>
+              <Select value={addForm.role} onValueChange={v => setAddForm(f => ({ ...f, role: v }))}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {(isSuperAdmin ? ROLES : ROLES.filter(r => !["super_admin", "admin"].includes(r))).map(r => (
+                    <SelectItem key={r} value={r}>{r.replace("_", " ")}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <Button onClick={() => addUserMutation.mutate(addForm)} disabled={addUserMutation.isPending || !addForm.email || !addForm.password} className="w-full bg-primary">
+              {addUserMutation.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+              Create User
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
