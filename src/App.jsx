@@ -86,6 +86,7 @@ function AuthRoutes() {
                 <Route path="/wsf" element={<WSFRoute><WSFManagement /></WSFRoute>} />
                 <Route path="/user-management" element={<AdminRoute><UserManagement /></AdminRoute>} />
                 <Route path="/audit-log" element={<SuperAdminRoute><AuditLog /></SuperAdminRoute>} />
+                <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
             </Layout>
           </ProtectedRoute>
