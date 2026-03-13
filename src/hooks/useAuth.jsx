@@ -8,6 +8,7 @@ export function AuthProvider({ children }) {
   const [profile, setProfile] = useState(null);
   const [roles, setRoles] = useState([]);
   const [leaderUnits, setLeaderUnits] = useState([]);
+  const [myMember, setMyMember] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -15,11 +16,12 @@ export function AuthProvider({ children }) {
       async (event, session) => {
         setUser(session?.user ?? null);
         if (session?.user) {
-          setTimeout(() => fetchUserData(session.user.id), 0);
+          setTimeout(() => fetchUserData(session.user.id, session.user.email), 0);
         } else {
           setProfile(null);
           setRoles([]);
           setLeaderUnits([]);
+          setMyMember(null);
           setLoading(false);
         }
       }
@@ -28,7 +30,7 @@ export function AuthProvider({ children }) {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
       if (session?.user) {
-        fetchUserData(session.user.id);
+        fetchUserData(session.user.id, session.user.email);
       } else {
         setLoading(false);
       }
@@ -37,16 +39,41 @@ export function AuthProvider({ children }) {
     return () => subscription.unsubscribe();
   }, []);
 
-  async function fetchUserData(userId) {
+  async function fetchUserData(userId, userEmail) {
     try {
-      const [profileRes, rolesRes, unitsRes] = await Promise.all([
+      const [profileRes, rolesRes, unitsRes, memberRes] = await Promise.all([
         supabase.from("profiles").select("*").eq("user_id", userId).single(),
         supabase.from("user_roles").select("role").eq("user_id", userId),
         supabase.from("unit_leader_assignments").select("unit_name").eq("user_id", userId),
+        supabase.from("members").select("*, wsf_centres(name)").eq("user_id", userId).maybeSingle(),
       ]);
+
       setProfile(profileRes.data);
       setRoles(rolesRes.data?.map((r) => r.role) || []);
       setLeaderUnits(unitsRes.data?.map((u) => u.unit_name) || []);
+
+      let member = memberRes.data;
+
+      // Auto-link: if no member linked by user_id, try matching by email
+      if (!member && userEmail) {
+        const { data: emailMatch } = await supabase
+          .from("members")
+          .select("*, wsf_centres(name)")
+          .eq("email", userEmail)
+          .is("user_id", null)
+          .maybeSingle();
+
+        if (emailMatch) {
+          // Link this member record to the user
+          await supabase
+            .from("members")
+            .update({ user_id: userId })
+            .eq("id", emailMatch.id);
+          member = { ...emailMatch, user_id: userId };
+        }
+      }
+
+      setMyMember(member);
     } catch (err) {
       console.error("Error fetching user data:", err);
     } finally {
@@ -77,6 +104,7 @@ export function AuthProvider({ children }) {
     setProfile(null);
     setRoles([]);
     setLeaderUnits([]);
+    setMyMember(null);
   };
 
   const resetPassword = async (email) => {
@@ -99,10 +127,10 @@ export function AuthProvider({ children }) {
   return (
     <AuthContext.Provider
       value={{
-        user, profile, roles, loading, leaderUnits,
+        user, profile, roles, loading, leaderUnits, myMember,
         signUp, signIn, signOut, resetPassword, updatePassword,
         isAdmin, isUnitLeader, isWSFLeader, isMember,
-        refreshUser: () => user && fetchUserData(user.id),
+        refreshUser: () => user && fetchUserData(user.id, user.email),
       }}
     >
       {children}
