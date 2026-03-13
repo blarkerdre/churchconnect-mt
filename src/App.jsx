@@ -77,6 +77,7 @@ function AppRoutes() {
                 <Route path="/analytics" element={<LeaderRoute><Analytics /></LeaderRoute>} />
                 <Route path="/wsf" element={<AdminRoute><WSFManagement /></AdminRoute>} />
                 <Route path="/user-management" element={<AdminRoute><UserManagement /></AdminRoute>} />
+                <Route path="/audit-log" element={<SuperAdminRoute><AuditLog /></SuperAdminRoute>} />
               </Routes>
             </Layout>
           </ProtectedRoute>
