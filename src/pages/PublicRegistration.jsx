@@ -30,6 +30,7 @@ const emptyForm = {
   winners_satellite: false, wsf_centre_id: "",
   bfc_completed: false, bcc_completed: false, lcc_completed: false, ldc_completed: false,
   gdpr_consent: false,
+  website: "", // honeypot
 };
 
 export default function PublicRegistration() {
@@ -67,43 +68,37 @@ export default function PublicRegistration() {
     }
     setSaving(true);
     try {
-      const { error } = await supabase.from("members").insert({
-        first_name: form.first_name,
-        last_name: form.last_name,
-        email: form.email || null,
-        phone: form.phone || null,
-        address: form.address || null,
-        city: form.city || null,
-        postcode: form.postcode || null,
-        date_of_birth: form.date_of_birth || null,
-        gender: form.gender || null,
-        membership_status: form.membership_status,
-        church_unit: form.church_unit || null,
-        notes: form.notes || null,
-        emergency_contact_name: form.emergency_contact_name || null,
-        emergency_contact_phone: form.emergency_contact_phone || null,
-        water_baptism: form.water_baptism,
-        holy_spirit_baptism: form.holy_spirit_baptism,
-        winners_satellite: form.winners_satellite,
-        wsf_centre_id: form.wsf_centre_id || null,
-        bfc_completed: form.bfc_completed,
-        bcc_completed: form.bcc_completed,
-        lcc_completed: form.lcc_completed,
-        ldc_completed: form.ldc_completed,
-        gdpr_consent: true,
-        gdpr_consent_date: new Date().toISOString(),
+      const res = await supabase.functions.invoke("public-register", {
+        body: {
+          first_name: form.first_name,
+          last_name: form.last_name,
+          email: form.email || null,
+          phone: form.phone || null,
+          address: form.address || null,
+          city: form.city || null,
+          postcode: form.postcode || null,
+          date_of_birth: form.date_of_birth || null,
+          gender: form.gender || null,
+          membership_status: form.membership_status,
+          church_unit: form.church_unit || null,
+          notes: form.notes || null,
+          emergency_contact_name: form.emergency_contact_name || null,
+          emergency_contact_phone: form.emergency_contact_phone || null,
+          water_baptism: form.water_baptism,
+          holy_spirit_baptism: form.holy_spirit_baptism,
+          winners_satellite: form.winners_satellite,
+          wsf_centre_id: form.wsf_centre_id || null,
+          bfc_completed: form.bfc_completed,
+          bcc_completed: form.bcc_completed,
+          lcc_completed: form.lcc_completed,
+          ldc_completed: form.ldc_completed,
+          gdpr_consent: form.gdpr_consent,
+          website: form.website, // honeypot
+        },
       });
-      if (error) throw error;
 
-      // Auto-create followup for first timer / new convert (without member_id since anon can't select back)
-      if (form.membership_status === "First Timer" || form.membership_status === "New Convert") {
-        await supabase.from("followups").insert({
-          followup_type: form.membership_status === "First Timer" ? "First Timer" : "New Convert",
-          description: `New ${form.membership_status.toLowerCase()} registered: ${form.first_name} ${form.last_name}`,
-          status: "Pending",
-          priority: "High",
-        });
-      }
+      if (res.error) throw new Error(res.error.message || "Registration failed");
+      if (res.data?.error) throw new Error(res.data.error);
 
       setSubmitted(true);
     } catch (err) {
@@ -145,17 +140,23 @@ export default function PublicRegistration() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Honeypot — hidden from real users */}
+            <div className="absolute opacity-0 pointer-events-none" aria-hidden="true" tabIndex={-1}>
+              <label htmlFor="website">Website</label>
+              <input id="website" name="website" type="text" value={form.website} onChange={e => set("website", e.target.value)} tabIndex={-1} autoComplete="off" />
+            </div>
+
             {/* Personal Details */}
             <div>
               <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Personal Details</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-1.5"><Label>First Name *</Label><Input value={form.first_name} onChange={e => set("first_name", e.target.value)} required /></div>
-                <div className="space-y-1.5"><Label>Last Name *</Label><Input value={form.last_name} onChange={e => set("last_name", e.target.value)} required /></div>
-                <div className="space-y-1.5"><Label>Email</Label><Input type="email" value={form.email} onChange={e => set("email", e.target.value)} /></div>
-                <div className="space-y-1.5"><Label>Phone</Label><Input value={form.phone} onChange={e => set("phone", e.target.value)} /></div>
-                <div className="space-y-1.5 md:col-span-2"><Label>Street Address</Label><Input value={form.address} onChange={e => set("address", e.target.value)} /></div>
-                <div className="space-y-1.5"><Label>City</Label><Input value={form.city} onChange={e => set("city", e.target.value)} /></div>
-                <div className="space-y-1.5"><Label>Post Code</Label><Input value={form.postcode} onChange={e => set("postcode", e.target.value)} /></div>
+                <div className="space-y-1.5"><Label>First Name *</Label><Input value={form.first_name} onChange={e => set("first_name", e.target.value)} maxLength={100} required /></div>
+                <div className="space-y-1.5"><Label>Last Name *</Label><Input value={form.last_name} onChange={e => set("last_name", e.target.value)} maxLength={100} required /></div>
+                <div className="space-y-1.5"><Label>Email</Label><Input type="email" value={form.email} onChange={e => set("email", e.target.value)} maxLength={255} /></div>
+                <div className="space-y-1.5"><Label>Phone</Label><Input value={form.phone} onChange={e => set("phone", e.target.value)} maxLength={20} /></div>
+                <div className="space-y-1.5 md:col-span-2"><Label>Street Address</Label><Input value={form.address} onChange={e => set("address", e.target.value)} maxLength={300} /></div>
+                <div className="space-y-1.5"><Label>City</Label><Input value={form.city} onChange={e => set("city", e.target.value)} maxLength={100} /></div>
+                <div className="space-y-1.5"><Label>Post Code</Label><Input value={form.postcode} onChange={e => set("postcode", e.target.value)} maxLength={20} /></div>
                 <div className="space-y-1.5"><Label>Date of Birth</Label><Input type="date" value={form.date_of_birth} onChange={e => set("date_of_birth", e.target.value)} /></div>
                 <div className="space-y-1.5">
                   <Label>Gender</Label>
@@ -249,15 +250,15 @@ export default function PublicRegistration() {
             <div>
               <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Emergency Contact</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-1.5"><Label>Contact Name</Label><Input value={form.emergency_contact_name} onChange={e => set("emergency_contact_name", e.target.value)} /></div>
-                <div className="space-y-1.5"><Label>Contact Phone</Label><Input value={form.emergency_contact_phone} onChange={e => set("emergency_contact_phone", e.target.value)} /></div>
+                <div className="space-y-1.5"><Label>Contact Name</Label><Input value={form.emergency_contact_name} onChange={e => set("emergency_contact_name", e.target.value)} maxLength={100} /></div>
+                <div className="space-y-1.5"><Label>Contact Phone</Label><Input value={form.emergency_contact_phone} onChange={e => set("emergency_contact_phone", e.target.value)} maxLength={20} /></div>
               </div>
             </div>
 
             {/* Notes */}
             <div className="space-y-1.5">
               <Label>Prayer Request / Notes</Label>
-              <Textarea value={form.notes} onChange={e => set("notes", e.target.value)} rows={3} />
+              <Textarea value={form.notes} onChange={e => set("notes", e.target.value)} rows={3} maxLength={2000} />
             </div>
 
             {/* GDPR Consent */}
