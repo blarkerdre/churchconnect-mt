@@ -11,6 +11,7 @@ import { useAuth } from "@/hooks/useAuth";
 // Role requirements: null = any authenticated user, "admin" = admin/super_admin, "leader" = admin or unit_leader
 const allNavItems = [
   { name: "Dashboard", icon: LayoutDashboard, path: "/", access: null },
+  { name: "My Profile", icon: Users, path: "/my-profile", access: null },
   { name: "Members", icon: Users, path: "/members", access: null },
   { name: "Events", icon: CalendarDays, path: "/events", access: null },
   { name: "Attendance", icon: ClipboardList, path: "/attendance", access: "leader" },
