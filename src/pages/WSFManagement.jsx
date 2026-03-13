@@ -18,8 +18,32 @@ import WSFAttendanceTab from "@/components/wsf/WSFAttendanceTab";
 const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
 export default function WSFManagement() {
-  const { isAdmin, isWSFLeader, leaderUnits } = useAuth();
+  const { isAdmin, isWSFLeader, leaderUnits, user } = useAuth();
   const canManageWSF = isAdmin || isWSFLeader || leaderUnits.includes("WSF");
+
+  // Find the current user's member record to determine their assigned centre
+  const { data: myMember } = useQuery({
+    queryKey: ["my-member-record", user?.id],
+    queryFn: async () => {
+      if (!user?.id) return null;
+      const { data } = await supabase.from("members").select("id").eq("user_id", user.id).single();
+      return data;
+    },
+    enabled: !!user?.id && isWSFLeader && !isAdmin,
+  });
+
+  // For WSF leaders (non-admin), find which centres they lead
+  const myCentreIds = !isAdmin && isWSFLeader && myMember
+    ? centres.filter(c => c.leader_id === myMember.id).map(c => c.id)
+    : [];
+
+  const canEditCentre = (centre) => {
+    if (isAdmin) return true;
+    if (isWSFLeader && myMember && centre.leader_id === myMember.id) return true;
+    return false;
+  };
+
+  const canCreateCentre = isAdmin;
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState({ name: "", location: "", meeting_day: "", meeting_time: "", is_active: true, leader_id: "" });
