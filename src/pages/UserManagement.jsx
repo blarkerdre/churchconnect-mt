@@ -13,6 +13,7 @@ import { toast } from "@/components/ui/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { logAudit } from "@/lib/audit";
 import UnitLeaderAssignments from "@/components/users/UnitLeaderAssignments";
+import BulkUnitAssignDialog from "@/components/users/BulkUnitAssignDialog";
 
 const ROLES = ["super_admin", "admin", "unit_leader", "wsf_leader", "member"];
 
