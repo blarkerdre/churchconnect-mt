@@ -39,12 +39,14 @@ export function AuthProvider({ children }) {
 
   async function fetchUserData(userId) {
     try {
-      const [profileRes, rolesRes] = await Promise.all([
+      const [profileRes, rolesRes, unitsRes] = await Promise.all([
         supabase.from("profiles").select("*").eq("user_id", userId).single(),
         supabase.from("user_roles").select("role").eq("user_id", userId),
+        supabase.from("unit_leader_assignments").select("unit_name").eq("user_id", userId),
       ]);
       setProfile(profileRes.data);
       setRoles(rolesRes.data?.map((r) => r.role) || []);
+      setLeaderUnits(unitsRes.data?.map((u) => u.unit_name) || []);
     } catch (err) {
       console.error("Error fetching user data:", err);
     } finally {
