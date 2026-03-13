@@ -1,0 +1,1 @@
+CREATE POLICY "Public can view wsf centres" ON public.wsf_centres FOR SELECT TO anon USING (true);
