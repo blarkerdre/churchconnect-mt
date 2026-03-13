@@ -22,7 +22,7 @@ const statusColors = {
 };
 
 export default function Members() {
-  const { isAdmin } = useAuth();
+  const { isAdmin, user } = useAuth();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -33,13 +33,25 @@ export default function Members() {
   const { data: members = [], isLoading } = useQuery({
     queryKey: ["members"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("members")
-        .select("*")
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-      return data;
+      if (isAdmin) {
+        const { data, error } = await supabase
+          .from("members")
+          .select("*")
+          .order("created_at", { ascending: false });
+        if (error) throw error;
+        return data;
+      } else {
+        // Regular members can only see their own profile
+        const { data, error } = await supabase
+          .from("members")
+          .select("*")
+          .eq("user_id", user?.id)
+          .order("created_at", { ascending: false });
+        if (error) throw error;
+        return data;
+      }
     },
+    enabled: !!user?.id,
   });
 
   const deleteMutation = useMutation({
@@ -90,6 +102,9 @@ export default function Members() {
     a.click();
   };
 
+  // Check if current member can edit (own profile or admin)
+  const canEditMember = (m) => isAdmin || m.user_id === user?.id;
+
   return (
     <div className="space-y-6">
       {/* Controls */}
@@ -99,41 +114,47 @@ export default function Members() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input placeholder="Search members..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-10" />
           </div>
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-full sm:w-40">
-              <SelectValue placeholder="All Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
-              <SelectItem value="Active">Active</SelectItem>
-              <SelectItem value="Inactive">Inactive</SelectItem>
-              <SelectItem value="New Convert">New Convert</SelectItem>
-              <SelectItem value="First Timer">First Timer</SelectItem>
-            </SelectContent>
-          </Select>
+          {isAdmin && (
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-full sm:w-40">
+                <SelectValue placeholder="All Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="Active">Active</SelectItem>
+                <SelectItem value="Inactive">Inactive</SelectItem>
+                <SelectItem value="New Convert">New Convert</SelectItem>
+                <SelectItem value="First Timer">First Timer</SelectItem>
+              </SelectContent>
+            </Select>
+          )}
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={() => setQrOpen(true)} className="gap-1.5">
-            <QrCode className="h-4 w-4" /> QR Code
-          </Button>
-          <Button variant="outline" size="sm" onClick={handleDownloadCSV} className="gap-1.5">
-            <Download className="h-4 w-4" /> CSV
-          </Button>
           {isAdmin && (
-            <Button onClick={openNew} className="bg-primary hover:bg-primary/90">
-              <Plus className="h-4 w-4 mr-2" /> Register Member
-            </Button>
+            <>
+              <Button variant="outline" size="sm" onClick={() => setQrOpen(true)} className="gap-1.5">
+                <QrCode className="h-4 w-4" /> QR Code
+              </Button>
+              <Button variant="outline" size="sm" onClick={handleDownloadCSV} className="gap-1.5">
+                <Download className="h-4 w-4" /> CSV
+              </Button>
+              <Button onClick={openNew} className="bg-primary hover:bg-primary/90">
+                <Plus className="h-4 w-4 mr-2" /> Register Member
+              </Button>
+            </>
           )}
         </div>
       </div>
 
-      {/* Stats row */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <Card className="border-0 shadow-sm"><CardContent className="p-4 text-center"><p className="text-2xl font-display font-bold text-foreground">{members.length}</p><p className="text-xs text-muted-foreground">Total</p></CardContent></Card>
-        <Card className="border-0 shadow-sm"><CardContent className="p-4 text-center"><p className="text-2xl font-display font-bold text-chart-3">{members.filter(m => m.membership_status === "Active").length}</p><p className="text-xs text-muted-foreground">Active</p></CardContent></Card>
-        <Card className="border-0 shadow-sm"><CardContent className="p-4 text-center"><p className="text-2xl font-display font-bold text-accent">{members.filter(m => m.membership_status === "New Convert").length}</p><p className="text-xs text-muted-foreground">New Converts</p></CardContent></Card>
-        <Card className="border-0 shadow-sm"><CardContent className="p-4 text-center"><p className="text-2xl font-display font-bold text-chart-4">{members.filter(m => m.membership_status === "First Timer").length}</p><p className="text-xs text-muted-foreground">First Timers</p></CardContent></Card>
-      </div>
+      {/* Stats row - only for admins */}
+      {isAdmin && (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <Card className="border-0 shadow-sm"><CardContent className="p-4 text-center"><p className="text-2xl font-display font-bold text-foreground">{members.length}</p><p className="text-xs text-muted-foreground">Total</p></CardContent></Card>
+          <Card className="border-0 shadow-sm"><CardContent className="p-4 text-center"><p className="text-2xl font-display font-bold text-chart-3">{members.filter(m => m.membership_status === "Active").length}</p><p className="text-xs text-muted-foreground">Active</p></CardContent></Card>
+          <Card className="border-0 shadow-sm"><CardContent className="p-4 text-center"><p className="text-2xl font-display font-bold text-accent">{members.filter(m => m.membership_status === "New Convert").length}</p><p className="text-xs text-muted-foreground">New Converts</p></CardContent></Card>
+          <Card className="border-0 shadow-sm"><CardContent className="p-4 text-center"><p className="text-2xl font-display font-bold text-chart-4">{members.filter(m => m.membership_status === "First Timer").length}</p><p className="text-xs text-muted-foreground">First Timers</p></CardContent></Card>
+        </div>
+      )}
 
       {/* Table */}
       {isLoading ? (
@@ -146,7 +167,7 @@ export default function Members() {
                 <tr className="border-b border-border bg-muted/50">
                   <th className="text-left p-4 font-medium text-muted-foreground">Name</th>
                   <th className="text-left p-4 font-medium text-muted-foreground hidden sm:table-cell">Contact</th>
-                  <th className="text-left p-4 font-medium text-muted-foreground hidden md:table-cell">Church Unit</th>
+                  {isAdmin && <th className="text-left p-4 font-medium text-muted-foreground hidden md:table-cell">Church Unit</th>}
                   <th className="text-left p-4 font-medium text-muted-foreground">Status</th>
                   <th className="text-right p-4 font-medium text-muted-foreground">Actions</th>
                 </tr>
@@ -171,15 +192,17 @@ export default function Members() {
                         {m.phone && <span className="flex items-center gap-1 text-muted-foreground"><Phone className="h-3 w-3" /> {m.phone}</span>}
                       </div>
                     </td>
-                    <td className="p-4 hidden md:table-cell">
-                      {m.church_unit ? (
-                        <div className="flex flex-wrap gap-1">
-                          {m.church_unit.split(",").map(u => u.trim()).filter(Boolean).map(u => (
-                            <Badge key={u} variant="secondary" className="text-xs">{u}</Badge>
-                          ))}
-                        </div>
-                      ) : <span className="text-xs text-muted-foreground">—</span>}
-                    </td>
+                    {isAdmin && (
+                      <td className="p-4 hidden md:table-cell">
+                        {m.church_unit ? (
+                          <div className="flex flex-wrap gap-1">
+                            {m.church_unit.split(",").map(u => u.trim()).filter(Boolean).map(u => (
+                              <Badge key={u} variant="secondary" className="text-xs">{u}</Badge>
+                            ))}
+                          </div>
+                        ) : <span className="text-xs text-muted-foreground">—</span>}
+                      </td>
+                    )}
                     <td className="p-4">
                       <Badge className={`${statusColors[m.membership_status] || "bg-muted text-muted-foreground"} border-0`}>
                         {m.membership_status}
@@ -191,13 +214,13 @@ export default function Members() {
                           <Button variant="ghost" size="icon"><MoreVertical className="h-4 w-4" /></Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          {isAdmin && (
+                          {canEditMember(m) && (
                             <DropdownMenuItem onClick={() => openEdit(m)}><Edit className="h-4 w-4 mr-2" /> Edit</DropdownMenuItem>
                           )}
                           {isAdmin && (
                             <DropdownMenuItem onClick={() => handleDelete(m)} className="text-destructive"><Trash2 className="h-4 w-4 mr-2" /> Delete</DropdownMenuItem>
                           )}
-                          {!isAdmin && (
+                          {!canEditMember(m) && (
                             <DropdownMenuItem disabled className="text-muted-foreground">View only</DropdownMenuItem>
                           )}
                         </DropdownMenuContent>
@@ -206,7 +229,7 @@ export default function Members() {
                   </tr>
                 ))}
                 {filtered.length === 0 && (
-                  <tr><td colSpan={5} className="p-8 text-center text-muted-foreground">No members found</td></tr>
+                  <tr><td colSpan={isAdmin ? 5 : 4} className="p-8 text-center text-muted-foreground">No members found</td></tr>
                 )}
               </tbody>
             </table>
