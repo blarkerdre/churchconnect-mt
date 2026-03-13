@@ -7,6 +7,12 @@ import { format } from "date-fns";
 export default function OverdueReminder({ overdueTasks, onSelectTask }) {
   const [dismissed, setDismissed] = useState(false);
 
+  useEffect(() => {
+    if (overdueTasks.length === 0) return;
+    const timer = setTimeout(() => setDismissed(true), 10000);
+    return () => clearTimeout(timer);
+  }, [overdueTasks]);
+
   if (dismissed || overdueTasks.length === 0) return null;
 
   return (
