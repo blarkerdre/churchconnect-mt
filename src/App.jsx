@@ -13,6 +13,8 @@ import PastoralCare from "@/pages/PastoralCare";
 import Communications from "@/pages/Communications";
 import Transportation from "@/pages/Transportation";
 import Analytics from "@/pages/Analytics";
+import WSFManagement from "@/pages/WSFManagement";
+import UserManagement from "@/pages/UserManagement";
 import Auth from "@/pages/Auth";
 import ResetPassword from "@/pages/ResetPassword";
 
