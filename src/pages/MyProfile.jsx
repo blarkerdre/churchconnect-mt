@@ -115,10 +115,20 @@ export default function MyProfile() {
       gender: form.gender || null,
       emergency_contact_name: form.emergency_contact_name || null,
       emergency_contact_phone: form.emergency_contact_phone || null,
+      wsf_centre_id: form.wsf_centre_id || null,
     });
   };
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+
+  const handleAddressChange = (key, value) => {
+    const updated = { ...form, [key]: value };
+    set(key, value);
+    if (member?.winners_satellite) {
+      const best = suggestClosestWSFCentre(wsfCentres, updated);
+      if (best) set("wsf_centre_id", best.id);
+    }
+  };
 
   if (isLoading) {
     return (
