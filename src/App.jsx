@@ -17,6 +17,7 @@ import WSFManagement from "@/pages/WSFManagement";
 import UserManagement from "@/pages/UserManagement";
 import Auth from "@/pages/Auth";
 import ResetPassword from "@/pages/ResetPassword";
+import MyProfile from "@/pages/MyProfile";
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
