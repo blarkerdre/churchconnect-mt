@@ -119,22 +119,27 @@ export default function Analytics() {
     return Object.entries(map).map(([name, value], i) => ({ name, value, color: COLORS[i % COLORS.length] })).sort((a, b) => b.value - a.value);
   }, [members]);
 
-  // WSF analytics
+  // WSF analytics from reports
   const wsfAnalytics = useMemo(() => {
     const activeCentres = wsfCentres.filter(c => c.is_active).length;
-    const totalAttendance = wsfAttendance.filter(a => a.present).length;
-    const centreAttendance = {};
-    wsfAttendance.forEach(a => {
-      if (a.present) {
-        centreAttendance[a.centre_id] = (centreAttendance[a.centre_id] || 0) + 1;
-      }
+    const centreStats = {};
+    let totalMale = 0, totalFemale = 0, totalChildren = 0, totalFirstTimers = 0, totalTestimonies = 0;
+    wsfReports.forEach(r => {
+      const total = r.male + r.female + r.children;
+      totalMale += r.male;
+      totalFemale += r.female;
+      totalChildren += r.children;
+      totalFirstTimers += r.first_timers;
+      totalTestimonies += r.testimonies;
+      centreStats[r.centre_id] = (centreStats[r.centre_id] || 0) + total;
     });
+    const totalAttendance = totalMale + totalFemale + totalChildren;
     const centreData = wsfCentres.map(c => ({
       name: c.name,
-      attendance: centreAttendance[c.id] || 0,
+      attendance: centreStats[c.id] || 0,
     })).filter(c => c.attendance > 0);
-    return { activeCentres, totalAttendance, centreData };
-  }, [wsfCentres, wsfAttendance]);
+    return { activeCentres, totalAttendance, centreData, totalMale, totalFemale, totalChildren, totalFirstTimers, totalTestimonies };
+  }, [wsfCentres, wsfReports]);
 
   // Growth over time (members created per month)
   const growthOverTime = useMemo(() => {
