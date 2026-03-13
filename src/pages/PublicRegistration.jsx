@@ -17,7 +17,7 @@ const CHURCH_UNITS = [
   "Youth Ministry", "Men's Ministry", "Women's Ministry", "Drama & Creative Arts",
   "Altar Ministers", "Pastoral Care", "Welfare", "CSR", "Transportation", "None"
 ];
-const STATUSES = ["First Timer", "New Convert"];
+const STATUSES = ["First Timer", "New Convert", "Active", "Inactive"];
 const GENDERS = ["Male", "Female"];
 
 const emptyForm = {
