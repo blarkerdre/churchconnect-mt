@@ -792,6 +792,59 @@ export type Database = {
           },
         ]
       }
+      wsf_attendance_reports: {
+        Row: {
+          centre_id: string
+          children: number
+          created_at: string
+          female: number
+          first_timers: number
+          id: string
+          male: number
+          meeting_date: string
+          notes: string | null
+          reported_by: string | null
+          testimonies: number
+          updated_at: string
+        }
+        Insert: {
+          centre_id: string
+          children?: number
+          created_at?: string
+          female?: number
+          first_timers?: number
+          id?: string
+          male?: number
+          meeting_date: string
+          notes?: string | null
+          reported_by?: string | null
+          testimonies?: number
+          updated_at?: string
+        }
+        Update: {
+          centre_id?: string
+          children?: number
+          created_at?: string
+          female?: number
+          first_timers?: number
+          id?: string
+          male?: number
+          meeting_date?: string
+          notes?: string | null
+          reported_by?: string | null
+          testimonies?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wsf_attendance_reports_centre_id_fkey"
+            columns: ["centre_id"]
+            isOneToOne: false
+            referencedRelation: "wsf_centres"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       wsf_centres: {
         Row: {
           created_at: string
