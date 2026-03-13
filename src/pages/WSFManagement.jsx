@@ -101,6 +101,10 @@ export default function WSFManagement() {
     saveMutation.mutate({
       name: form.name,
       location: form.location || null,
+      address: form.address || null,
+      postcode: form.postcode || null,
+      city: form.city || null,
+      coverage_postcodes: form.coverage_postcodes || null,
       meeting_day: form.meeting_day || null,
       meeting_time: form.meeting_time || null,
       is_active: form.is_active,
