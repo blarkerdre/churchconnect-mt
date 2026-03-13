@@ -40,10 +40,12 @@ const priorityColors = {
   Urgent: "bg-destructive/10 text-destructive",
 };
 
-export default function FollowupDetailPanel({ followup, onClose, onUpdate, currentUser, onConverted }) {
+export default function FollowupDetailPanel({ followup, onClose, onUpdate, currentUser, onConverted, isAdmin, profileMap = {}, followupUnitMembers = [] }) {
   const [progressNote, setProgressNote] = useState("");
   const [saving, setSaving] = useState(false);
   const [converting, setConverting] = useState(false);
+  const [reassigning, setReassigning] = useState(false);
+  const [showReassign, setShowReassign] = useState(false);
 
   const isConvertible = ["First Timer", "New Convert"].includes(followup.category) &&
     followup.member_id &&
