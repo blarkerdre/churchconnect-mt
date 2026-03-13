@@ -173,6 +173,13 @@ export default function UserManagement() {
                         </Badge>
                       </td>
                       <td className="p-4">
+                        {currentRole === "unit_leader" ? (
+                          <UnitLeaderAssignments userId={p.user_id} />
+                        ) : (
+                          <span className="text-xs text-muted-foreground">—</span>
+                        )}
+                      </td>
+                      <td className="p-4">
                         {(() => {
                           const isTargetAdmin = ["admin", "super_admin"].includes(currentRole);
                           const canChangeRole = isSuperAdmin && !isCurrentUser;
