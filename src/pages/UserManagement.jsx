@@ -121,23 +121,41 @@ export default function UserManagement() {
                         </Badge>
                       </td>
                       <td className="p-4">
-                        <Select
-                          value={currentRole}
-                          onValueChange={(newRole) => {
-                            if (newRole !== currentRole) {
-                              updateRoleMutation.mutate({ userId: p.user_id, newRole });
-                            }
-                          }}
-                        >
-                          <SelectTrigger className="w-40">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {ROLES.map(r => (
-                              <SelectItem key={r} value={r}>{r.replace("_", " ")}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        {(() => {
+                          // Only super_admin can change admin/super_admin roles
+                          const isTargetAdmin = ["admin", "super_admin"].includes(currentRole);
+                          const isCurrentUser = p.user_id === user?.id;
+                          const canChangeRole = isSuperAdmin && !isCurrentUser;
+                          const canChangeToAdmin = isSuperAdmin;
+                          
+                          if (!canChangeRole && !(!isTargetAdmin && isAdmin)) {
+                            return <span className="text-sm text-muted-foreground italic">No permission</span>;
+                          }
+                          
+                          const availableRoles = isSuperAdmin 
+                            ? ROLES 
+                            : ROLES.filter(r => !["super_admin", "admin"].includes(r));
+                          
+                          return (
+                            <Select
+                              value={currentRole}
+                              onValueChange={(newRole) => {
+                                if (newRole !== currentRole) {
+                                  updateRoleMutation.mutate({ userId: p.user_id, newRole });
+                                }
+                              }}
+                            >
+                              <SelectTrigger className="w-40">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {availableRoles.map(r => (
+                                  <SelectItem key={r} value={r}>{r.replace("_", " ")}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          );
+                        })()}
                       </td>
                     </tr>
                   );
