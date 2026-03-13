@@ -157,9 +157,9 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
               <div className="space-y-1.5"><Label>Last Name *</Label><Input value={form.last_name} onChange={(e) => set("last_name", e.target.value)} /></div>
               <div className="space-y-1.5"><Label>Email</Label><Input type="email" value={form.email} onChange={(e) => set("email", e.target.value)} /></div>
               <div className="space-y-1.5"><Label>Phone</Label><Input value={form.phone} onChange={(e) => set("phone", e.target.value)} /></div>
-              <div className="space-y-1.5 md:col-span-2"><Label>Street Address</Label><Input value={form.address} onChange={(e) => set("address", e.target.value)} /></div>
-              <div className="space-y-1.5"><Label>City</Label><Input value={form.city} onChange={(e) => set("city", e.target.value)} /></div>
-              <div className="space-y-1.5"><Label>Post Code</Label><Input value={form.postcode} onChange={(e) => set("postcode", e.target.value)} /></div>
+              <div className="space-y-1.5 md:col-span-2"><Label>Street Address</Label><Input value={form.address} onChange={(e) => { set("address", e.target.value); autoSuggestWSF({ ...form, address: e.target.value }); }} /></div>
+              <div className="space-y-1.5"><Label>City</Label><Input value={form.city} onChange={(e) => { set("city", e.target.value); autoSuggestWSF({ ...form, city: e.target.value }); }} /></div>
+              <div className="space-y-1.5"><Label>Post Code</Label><Input value={form.postcode} onChange={(e) => { set("postcode", e.target.value); autoSuggestWSF({ ...form, postcode: e.target.value }); }} /></div>
               <div className="space-y-1.5"><Label>Date of Birth</Label><Input type="date" value={form.date_of_birth || ""} onChange={(e) => set("date_of_birth", e.target.value)} /></div>
               <div className="space-y-1.5">
                 <Label>Gender</Label>
