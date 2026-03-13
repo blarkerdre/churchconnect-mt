@@ -48,6 +48,13 @@ function SuperAdminRoute({ children }) {
   return children;
 }
 
+function WSFRoute({ children }) {
+  const { isAdmin, isWSFLeader, loading } = useAuth();
+  if (loading) return null;
+  if (!isAdmin && !isWSFLeader) return <Navigate to="/" replace />;
+  return children;
+}
+
 function LeaderRoute({ children }) {
   const { isAdmin, isUnitLeader, loading } = useAuth();
   if (loading) return null;

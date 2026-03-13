@@ -135,7 +135,7 @@ export default function WSFManagement() {
           <WSFAttendanceTab centres={centres} />
         </TabsContent>
 
-        {isAdmin && (
+        {canManageWSF && (
           <TabsContent value="centres">
             <div className="space-y-4">
               <div className="flex justify-end">
