@@ -82,7 +82,6 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
         holy_spirit_baptism: form.holy_spirit_baptism,
         winners_satellite: form.winners_satellite,
         wsf_centre_id: form.wsf_centre_id || null,
-        workers_in_training: form.workers_in_training,
         bfc_completed: form.bfc_completed,
         bcc_completed: form.bcc_completed,
         lcc_completed: form.lcc_completed,
