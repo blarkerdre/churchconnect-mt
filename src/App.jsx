@@ -15,6 +15,7 @@ import Transportation from "@/pages/Transportation";
 import Analytics from "@/pages/Analytics";
 import WSFManagement from "@/pages/WSFManagement";
 import UserManagement from "@/pages/UserManagement";
+import AuditLog from "@/pages/AuditLog";
 import Auth from "@/pages/Auth";
 import ResetPassword from "@/pages/ResetPassword";
 import MyProfile from "@/pages/MyProfile";
@@ -36,6 +37,13 @@ function AdminRoute({ children }) {
   const { isAdmin, loading } = useAuth();
   if (loading) return null;
   if (!isAdmin) return <Navigate to="/" replace />;
+  return children;
+}
+
+function SuperAdminRoute({ children }) {
+  const { roles, loading } = useAuth();
+  if (loading) return null;
+  if (!roles.includes("super_admin")) return <Navigate to="/" replace />;
   return children;
 }
 
@@ -69,6 +77,7 @@ function AppRoutes() {
                 <Route path="/analytics" element={<LeaderRoute><Analytics /></LeaderRoute>} />
                 <Route path="/wsf" element={<AdminRoute><WSFManagement /></AdminRoute>} />
                 <Route path="/user-management" element={<AdminRoute><UserManagement /></AdminRoute>} />
+                <Route path="/audit-log" element={<SuperAdminRoute><AuditLog /></SuperAdminRoute>} />
               </Routes>
             </Layout>
           </ProtectedRoute>

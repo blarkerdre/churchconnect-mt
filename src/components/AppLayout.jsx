@@ -3,7 +3,7 @@ import { Link, useLocation } from "react-router-dom";
 import {
   LayoutDashboard, Users, CalendarDays, HeartHandshake,
   Heart, Megaphone, Menu, Church, Bell, LogOut,
-  ClipboardList, Car, BarChart2, ChevronLeft, Globe, Settings, Shield
+  ClipboardList, Car, BarChart2, ChevronLeft, Globe, Settings, Shield, FileText
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
@@ -22,17 +22,20 @@ const allNavItems = [
   { name: "Analytics", icon: BarChart2, path: "/analytics", access: "leader" },
   { name: "WSF Centres", icon: Globe, path: "/wsf", access: "admin" },
   { name: "User Management", icon: Shield, path: "/user-management", access: "admin" },
+  { name: "Audit Log", icon: FileText, path: "/audit-log", access: "super_admin" },
 ];
 
 export default function Layout({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
-  const { signOut, profile, isAdmin, isUnitLeader } = useAuth();
+  const { signOut, profile, isAdmin, isUnitLeader, roles } = useAuth();
+  const isSuperAdmin = roles.includes("super_admin");
 
   // Filter nav items based on role
   const navItems = allNavItems.filter(item => {
     if (item.access === null) return true;
+    if (item.access === "super_admin") return isSuperAdmin;
     if (item.access === "admin") return isAdmin;
     if (item.access === "leader") return isAdmin || isUnitLeader;
     return false;
