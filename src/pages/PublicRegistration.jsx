@@ -95,10 +95,9 @@ export default function PublicRegistration() {
       });
       if (error) throw error;
 
-      // Auto-create followup for first timer / new convert
-      if (inserted && (form.membership_status === "First Timer" || form.membership_status === "New Convert")) {
+      // Auto-create followup for first timer / new convert (without member_id since anon can't select back)
+      if (form.membership_status === "First Timer" || form.membership_status === "New Convert") {
         await supabase.from("followups").insert({
-          member_id: inserted.id,
           followup_type: form.membership_status === "First Timer" ? "First Timer" : "New Convert",
           description: `New ${form.membership_status.toLowerCase()} registered: ${form.first_name} ${form.last_name}`,
           status: "Pending",
