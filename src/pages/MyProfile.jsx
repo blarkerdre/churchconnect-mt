@@ -231,7 +231,6 @@ export default function MyProfile() {
             <BoolBadge value={member.bcc_completed} label="BCC Completed" />
             <BoolBadge value={member.lcc_completed} label="LCC Completed" />
             <BoolBadge value={member.ldc_completed} label="LDC Completed" />
-            <BoolBadge value={member.workers_in_training} label="Workers in Training" />
             <BoolBadge value={member.winners_satellite} label="Winners Satellite" />
           </div>
           {member.wsf_centres?.name && (
