@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Loader2, Shield, ShieldCheck, UserCog, User, Plus, Trash2, Globe, UsersRound } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -59,14 +60,17 @@ export default function UserManagement() {
     },
   });
 
-  const updateRoleMutation = useMutation({
-    mutationFn: async ({ userId, newRole, oldRole, targetName }) => {
-      await supabase.from("user_roles").delete().eq("user_id", userId);
-      const { error } = await supabase.from("user_roles").insert({ user_id: userId, role: newRole });
-      if (error) throw error;
-      await logAudit("role_change", "user_roles", userId, {
-        old_role: oldRole, new_role: newRole, target_name: targetName,
-      });
+  const toggleRoleMutation = useMutation({
+    mutationFn: async ({ userId, role, add, targetName }) => {
+      if (add) {
+        const { error } = await supabase.from("user_roles").insert({ user_id: userId, role });
+        if (error) throw error;
+        await logAudit("role_add", "user_roles", userId, { role, target_name: targetName });
+      } else {
+        const { error } = await supabase.from("user_roles").delete().eq("user_id", userId).eq("role", role);
+        if (error) throw error;
+        await logAudit("role_remove", "user_roles", userId, { role, target_name: targetName });
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["all-user-roles"] });
@@ -77,7 +81,6 @@ export default function UserManagement() {
 
   const addUserMutation = useMutation({
     mutationFn: async (formData) => {
-      // Use edge function to create user (admin can't directly create via client SDK)
       const { data, error } = await supabase.functions.invoke("admin-create-user", {
         body: { email: formData.email, password: formData.password, full_name: formData.full_name, role: formData.role },
       });
@@ -111,9 +114,8 @@ export default function UserManagement() {
     onError: (err) => toast({ title: "Error deleting user", description: err.message, variant: "destructive" }),
   });
 
-  const getUserRole = (userId) => {
-    const role = allRoles.find(r => r.user_id === userId);
-    return role?.role || "member";
+  const getUserRoles = (userId) => {
+    return allRoles.filter(r => r.user_id === userId).map(r => r.role);
   };
 
   if (!isAdmin) {
@@ -153,17 +155,23 @@ export default function UserManagement() {
                 <tr className="border-b border-border bg-muted/50">
                    <th className="text-left p-4 font-medium text-muted-foreground">User</th>
                    <th className="text-left p-4 font-medium text-muted-foreground">Email</th>
-                   <th className="text-left p-4 font-medium text-muted-foreground">Current Role</th>
+                   <th className="text-left p-4 font-medium text-muted-foreground">Roles</th>
                    <th className="text-left p-4 font-medium text-muted-foreground">Led Units</th>
-                   <th className="text-left p-4 font-medium text-muted-foreground">Change Role</th>
+                   <th className="text-left p-4 font-medium text-muted-foreground">Manage Roles</th>
                    <th className="text-right p-4 font-medium text-muted-foreground">Actions</th>
                  </tr>
               </thead>
               <tbody>
                 {profiles.map(p => {
-                  const currentRole = getUserRole(p.user_id);
-                  const RoleIcon = roleIcons[currentRole] || User;
+                  const userRoles = getUserRoles(p.user_id);
                   const isCurrentUser = p.user_id === user?.id;
+                  const hasAdminRole = userRoles.some(r => ["admin", "super_admin"].includes(r));
+                  const canChange = isCurrentUser ? false : (isSuperAdmin || (!hasAdminRole && isAdmin));
+
+                  const availableRoles = isSuperAdmin
+                    ? ROLES
+                    : ROLES.filter(r => !["super_admin", "admin"].includes(r));
+
                   return (
                     <tr key={p.id} className="border-b border-border hover:bg-muted/30 transition-colors">
                       <td className="p-4">
@@ -176,51 +184,58 @@ export default function UserManagement() {
                       </td>
                       <td className="p-4 text-muted-foreground">{p.email || "—"}</td>
                       <td className="p-4">
-                        <Badge className={`${roleColors[currentRole]} border-0 gap-1`}>
-                          <RoleIcon className="h-3 w-3" />
-                          {currentRole.replace("_", " ")}
-                        </Badge>
+                        <div className="flex flex-wrap gap-1">
+                          {userRoles.length === 0 ? (
+                            <Badge className="bg-muted text-muted-foreground border-0 gap-1">
+                              <User className="h-3 w-3" /> member
+                            </Badge>
+                          ) : userRoles.map(r => {
+                            const RoleIcon = roleIcons[r] || User;
+                            return (
+                              <Badge key={r} className={`${roleColors[r]} border-0 gap-1`}>
+                                <RoleIcon className="h-3 w-3" />
+                                {r.replace("_", " ")}
+                              </Badge>
+                            );
+                          })}
+                        </div>
                       </td>
                       <td className="p-4">
-                        {currentRole === "unit_leader" ? (
+                        {userRoles.includes("unit_leader") ? (
                           <UnitLeaderAssignments userId={p.user_id} />
                         ) : (
                           <span className="text-xs text-muted-foreground">—</span>
                         )}
                       </td>
                       <td className="p-4">
-                        {(() => {
-                          const isTargetAdmin = ["admin", "super_admin"].includes(currentRole);
-                          const canChangeRole = isSuperAdmin && !isCurrentUser;
-                          
-                          if (!canChangeRole && !(!isTargetAdmin && isAdmin)) {
-                            return <span className="text-sm text-muted-foreground italic">No permission</span>;
-                          }
-                          
-                          const availableRoles = isSuperAdmin 
-                            ? ROLES 
-                            : ROLES.filter(r => !["super_admin", "admin"].includes(r));
-                          
-                          return (
-                            <Select
-                              value={currentRole}
-                              onValueChange={(newRole) => {
-                                if (newRole !== currentRole) {
-                                  updateRoleMutation.mutate({ userId: p.user_id, newRole, oldRole: currentRole, targetName: p.full_name || p.email });
-                                }
-                              }}
-                            >
-                              <SelectTrigger className="w-40">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {availableRoles.map(r => (
-                                  <SelectItem key={r} value={r}>{r.replace("_", " ")}</SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          );
-                        })()}
+                        {canChange ? (
+                          <div className="space-y-1.5">
+                            {availableRoles.map(r => {
+                              const hasRole = userRoles.includes(r);
+                              return (
+                                <label key={r} className="flex items-center gap-2 cursor-pointer text-sm">
+                                  <Checkbox
+                                    checked={hasRole}
+                                    onCheckedChange={(checked) => {
+                                      toggleRoleMutation.mutate({
+                                        userId: p.user_id,
+                                        role: r,
+                                        add: !!checked,
+                                        targetName: p.full_name || p.email,
+                                      });
+                                    }}
+                                    disabled={toggleRoleMutation.isPending}
+                                  />
+                                  <span className="capitalize">{r.replace("_", " ")}</span>
+                                </label>
+                              );
+                            })}
+                          </div>
+                        ) : (
+                          <span className="text-sm text-muted-foreground italic">
+                            {isCurrentUser ? "Can't change own" : "No permission"}
+                          </span>
+                        )}
                       </td>
                       <td className="p-4 text-right">
                         {!isCurrentUser && (
@@ -254,7 +269,7 @@ export default function UserManagement() {
             <div><Label>Email</Label><Input type="email" value={addForm.email} onChange={e => setAddForm(f => ({ ...f, email: e.target.value }))} /></div>
             <div><Label>Password</Label><Input type="password" value={addForm.password} onChange={e => setAddForm(f => ({ ...f, password: e.target.value }))} /></div>
             <div>
-              <Label>Role</Label>
+              <Label>Initial Role</Label>
               <Select value={addForm.role} onValueChange={v => setAddForm(f => ({ ...f, role: v }))}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -263,6 +278,7 @@ export default function UserManagement() {
                   ))}
                 </SelectContent>
               </Select>
+              <p className="text-xs text-muted-foreground mt-1">You can add more roles after creation</p>
             </div>
             <Button onClick={() => addUserMutation.mutate(addForm)} disabled={addUserMutation.isPending || !addForm.email || !addForm.password} className="w-full bg-primary">
               {addUserMutation.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
