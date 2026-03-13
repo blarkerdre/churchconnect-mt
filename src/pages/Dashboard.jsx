@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format, subDays } from "date-fns";
+import SelfCheckInWidget from "@/components/attendance/SelfCheckInWidget";
 
 export default function Dashboard() {
   const { data: members = [], isLoading: membersLoading } = useQuery({
