@@ -97,7 +97,14 @@ export default function Layout({ children }) {
                 } ${collapsed ? "justify-center" : ""}`}
               >
                 <item.icon className="h-4 w-4 shrink-0" />
-                {!collapsed && item.name}
+                {!collapsed && (
+                  <span className="flex-1">{item.name}</span>
+                )}
+                {!collapsed && item.access && roleLabels[item.access] && (
+                  <span className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-full leading-none ${roleLabels[item.access].class}`}>
+                    {roleLabels[item.access].label}
+                  </span>
+                )}
               </Link>
             );
           })}
