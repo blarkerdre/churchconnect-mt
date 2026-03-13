@@ -7,22 +7,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Loader2, Heart } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { base44 } from "@/api/base44Client";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 
 const CATEGORIES = [
-  "Prayer Request",
-  "Counselling Session",
-  "Visitation",
-  "Hospital Visit",
-  "Bereavement Support",
-  "Marriage Support",
-  "Financial Support",
-  "Spiritual Direction",
-  "General Pastoral Need",
-  "Other",
+  "Prayer Request", "Counselling", "Visitation", "Hospital Visit",
+  "Bereavement", "Marriage", "Financial Support", "Other",
 ];
 
 export default function PastoralCareRequestDialog({ open, onOpenChange, currentUser, myMember }) {
+  const { user } = useAuth();
   const queryClient = useQueryClient();
   const [form, setForm] = useState({ category: "", title: "", description: "" });
   const [submitted, setSubmitted] = useState(false);
@@ -30,7 +24,10 @@ export default function PastoralCareRequestDialog({ open, onOpenChange, currentU
   const set = (key, val) => setForm(f => ({ ...f, [key]: val }));
 
   const mutation = useMutation({
-    mutationFn: (data) => base44.entities.PastoralCare.create(data),
+    mutationFn: async (data) => {
+      const { error } = await supabase.from("pastoral_care").insert(data);
+      if (error) throw error;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["pastoral-care"] });
       setSubmitted(true);
@@ -38,20 +35,14 @@ export default function PastoralCareRequestDialog({ open, onOpenChange, currentU
   });
 
   const handleSubmit = () => {
-    const memberName = myMember
-      ? `${myMember.first_name} ${myMember.last_name}`
-      : currentUser?.full_name || currentUser?.email || "Unknown";
-
     mutation.mutate({
-      member_id: myMember?.id || "",
-      member_name: memberName,
-      category: form.category,
-      title: form.title,
+      member_id: myMember?.id || null,
+      care_type: form.category,
+      subject: form.title,
       description: form.description,
       status: "Open",
-      priority: "Medium",
-      date_logged: new Date().toISOString().split("T")[0],
       confidential: true,
+      created_by: user?.id,
     });
   };
 
@@ -68,26 +59,26 @@ export default function PastoralCareRequestDialog({ open, onOpenChange, currentU
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Heart className="h-4 w-4 text-rose-500" />
+            <Heart className="h-4 w-4 text-destructive" />
             Request Pastoral Care
           </DialogTitle>
         </DialogHeader>
 
         {submitted ? (
           <div className="py-8 text-center space-y-3">
-            <div className="h-14 w-14 rounded-full bg-emerald-50 flex items-center justify-center mx-auto">
-              <Heart className="h-7 w-7 text-emerald-500" />
+            <div className="h-14 w-14 rounded-full bg-chart-3/10 flex items-center justify-center mx-auto">
+              <Heart className="h-7 w-7 text-chart-3" />
             </div>
-            <h3 className="font-semibold text-slate-800">Request Submitted</h3>
-            <p className="text-sm text-slate-500">
+            <h3 className="font-semibold text-foreground">Request Submitted</h3>
+            <p className="text-sm text-muted-foreground">
               Your pastoral care request has been received. A leader will be in touch with you soon.
             </p>
-            <Button onClick={handleClose} className="mt-2 bg-[#1e3a5f] hover:bg-[#152d4a]">Close</Button>
+            <Button onClick={handleClose} className="mt-2">Close</Button>
           </div>
         ) : (
           <>
             <div className="space-y-4 py-2">
-              <p className="text-xs text-slate-500 bg-slate-50 rounded-lg p-3 border border-slate-100">
+              <p className="text-xs text-muted-foreground bg-muted/50 rounded-lg p-3 border border-border">
                 Your request is confidential and will only be seen by pastoral leaders.
               </p>
 
@@ -103,31 +94,18 @@ export default function PastoralCareRequestDialog({ open, onOpenChange, currentU
 
               <div className="space-y-1.5">
                 <Label>Subject *</Label>
-                <Input
-                  value={form.title}
-                  onChange={(e) => set("title", e.target.value)}
-                  placeholder="Brief description of your need"
-                />
+                <Input value={form.title} onChange={(e) => set("title", e.target.value)} placeholder="Brief description of your need" />
               </div>
 
               <div className="space-y-1.5">
                 <Label>Details</Label>
-                <Textarea
-                  value={form.description}
-                  onChange={(e) => set("description", e.target.value)}
-                  placeholder="Share more details (optional)"
-                  rows={4}
-                />
+                <Textarea value={form.description} onChange={(e) => set("description", e.target.value)} placeholder="Share more details (optional)" rows={4} />
               </div>
             </div>
 
             <DialogFooter>
               <Button variant="outline" onClick={handleClose}>Cancel</Button>
-              <Button
-                onClick={handleSubmit}
-                disabled={mutation.isPending || !form.category || !form.title}
-                className="bg-[#1e3a5f] hover:bg-[#152d4a]"
-              >
+              <Button onClick={handleSubmit} disabled={mutation.isPending || !form.category || !form.title}>
                 {mutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                 Submit Request
               </Button>
