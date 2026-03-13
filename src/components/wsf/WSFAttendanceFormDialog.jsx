@@ -60,12 +60,12 @@ export default function WSFAttendanceFormDialog({ open, onOpenChange, centre, re
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
+      <DialogContent className="max-w-md max-h-[90vh] flex flex-col">
+        <DialogHeader className="flex-shrink-0">
           <DialogTitle>{report ? "Edit Attendance Report" : "Record Attendance"}</DialogTitle>
           {centre && <p className="text-sm text-muted-foreground">{centre.name}</p>}
         </DialogHeader>
-        <div className="space-y-4 py-4">
+        <div className="space-y-4 py-4 overflow-y-auto flex-1 min-h-0">
           {!centre && allCentres.length > 0 && (
             <div className="space-y-1.5">
               <Label>WSF Centre *</Label>
@@ -107,7 +107,6 @@ export default function WSFAttendanceFormDialog({ open, onOpenChange, centre, re
               <Input type="number" min={0} value={form.testimonies} onChange={e => num("testimonies", e.target.value)} />
             </div>
           </div>
-          {/* Calculated totals */}
           <div className="grid grid-cols-2 gap-4 p-3 rounded-lg bg-muted/50">
             <div className="text-center">
               <p className="text-xs text-muted-foreground">Total Adults</p>
@@ -125,7 +124,7 @@ export default function WSFAttendanceFormDialog({ open, onOpenChange, centre, re
             <Textarea value={form.notes} onChange={e => set("notes", e.target.value)} rows={2} placeholder="Meeting highlights..." />
           </div>
         </div>
-        <DialogFooter className="gap-2 sm:gap-0">
+        <DialogFooter className="flex-shrink-0 border-t pt-4">
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
           <Button size="lg" className="font-semibold px-8" onClick={handleSave} disabled={saving || !form.date || (!centre && !selectedCentreId)}>
             {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
