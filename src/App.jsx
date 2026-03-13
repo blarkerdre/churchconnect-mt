@@ -15,6 +15,7 @@ import Transportation from "@/pages/Transportation";
 import Analytics from "@/pages/Analytics";
 import WSFManagement from "@/pages/WSFManagement";
 import UserManagement from "@/pages/UserManagement";
+import AuditLog from "@/pages/AuditLog";
 import Auth from "@/pages/Auth";
 import ResetPassword from "@/pages/ResetPassword";
 import MyProfile from "@/pages/MyProfile";
