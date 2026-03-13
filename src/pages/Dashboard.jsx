@@ -3,11 +3,22 @@ import { Users, CalendarDays, HeartHandshake, Heart, TrendingUp, UserPlus, Loade
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { format, subDays } from "date-fns";
+import { format } from "date-fns";
 import SelfCheckInWidget from "@/components/attendance/SelfCheckInWidget";
 import ProfileCompletionBanner from "@/components/profile/ProfileCompletionBanner";
+import MemberDashboard from "@/components/dashboard/MemberDashboard";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function Dashboard() {
+  const { isAdmin, isUnitLeader, profile, myMember, loading: authLoading } = useAuth();
+  const isLeaderOrAdmin = isAdmin || isUnitLeader;
+
+  // Show member dashboard for regular members
+  if (!authLoading && !isLeaderOrAdmin) {
+    return <MemberDashboard currentUser={profile} myMember={myMember} />;
+  }
+
+  // Admin/Leader dashboard below
   const { data: members = [], isLoading: membersLoading } = useQuery({
     queryKey: ["dashboard-members"],
     queryFn: async () => {
@@ -15,6 +26,7 @@ export default function Dashboard() {
       if (error) throw error;
       return data;
     },
+    enabled: isLeaderOrAdmin,
   });
 
   const { data: events = [] } = useQuery({
@@ -25,6 +37,7 @@ export default function Dashboard() {
       if (error) throw error;
       return data;
     },
+    enabled: isLeaderOrAdmin,
   });
 
   const { data: pastoralCases = [] } = useQuery({
@@ -34,6 +47,7 @@ export default function Dashboard() {
       if (error) throw error;
       return data;
     },
+    enabled: isLeaderOrAdmin,
   });
 
   const { data: recentMembers = [] } = useQuery({
@@ -43,6 +57,7 @@ export default function Dashboard() {
       if (error) throw error;
       return data;
     },
+    enabled: isLeaderOrAdmin,
   });
 
   const { data: recentFollowups = [] } = useQuery({
@@ -52,6 +67,7 @@ export default function Dashboard() {
       if (error) throw error;
       return data;
     },
+    enabled: isLeaderOrAdmin,
   });
 
   const total = members.length;
@@ -83,7 +99,6 @@ export default function Dashboard() {
     { label: "Winners Satellite", value: winnersSatellite, total },
   ];
 
-  // Merge recent activity from members & followups
   const recentActivity = [
     ...recentMembers.map(m => ({
       text: `${m.first_name} ${m.last_name} registered`,
@@ -107,11 +122,8 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6">
-      {/* Profile Completion Banner */}
       <ProfileCompletionBanner />
-      {/* Self Check-In Widget */}
       <SelfCheckInWidget />
-      {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
         {stats.map((stat) => (
           <Card key={stat.title} className="border-0 shadow-sm">
@@ -132,7 +144,6 @@ export default function Dashboard() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Growth Indices */}
         <Card className="border-0 shadow-sm lg:col-span-2">
           <CardHeader>
             <CardTitle className="text-base font-display flex items-center gap-2">
@@ -158,7 +169,6 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        {/* Recent Activity */}
         <Card className="border-0 shadow-sm">
           <CardHeader>
             <CardTitle className="text-base font-display">Recent Activity</CardTitle>
