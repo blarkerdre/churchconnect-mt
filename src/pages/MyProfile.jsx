@@ -178,9 +178,9 @@ export default function MyProfile() {
                       <div className="space-y-1"><Label>Last Name *</Label><Input value={form.last_name} onChange={e => set("last_name", e.target.value)} /></div>
                       <div className="space-y-1"><Label>Email</Label><Input type="email" value={form.email} onChange={e => set("email", e.target.value)} /></div>
                       <div className="space-y-1"><Label>Phone</Label><Input value={form.phone} onChange={e => set("phone", e.target.value)} /></div>
-                      <div className="space-y-1 sm:col-span-2"><Label>Street Address</Label><Input value={form.address} onChange={e => set("address", e.target.value)} /></div>
-                      <div className="space-y-1"><Label>City</Label><Input value={form.city} onChange={e => set("city", e.target.value)} /></div>
-                      <div className="space-y-1"><Label>Postcode</Label><Input value={form.postcode} onChange={e => set("postcode", e.target.value)} /></div>
+                      <div className="space-y-1 sm:col-span-2"><Label>Street Address</Label><Input value={form.address} onChange={e => handleAddressChange("address", e.target.value)} /></div>
+                      <div className="space-y-1"><Label>City</Label><Input value={form.city} onChange={e => handleAddressChange("city", e.target.value)} /></div>
+                      <div className="space-y-1"><Label>Postcode</Label><Input value={form.postcode} onChange={e => handleAddressChange("postcode", e.target.value)} /></div>
                       <div className="space-y-1"><Label>Date of Birth</Label><Input type="date" value={form.date_of_birth} onChange={e => set("date_of_birth", e.target.value)} /></div>
                       <div className="space-y-1">
                         <Label>Gender</Label>
