@@ -45,7 +45,7 @@ export function AuthProvider({ children }) {
         supabase.from("profiles").select("*").eq("user_id", userId).single(),
         supabase.from("user_roles").select("role").eq("user_id", userId),
         supabase.from("unit_leader_assignments").select("unit_name").eq("user_id", userId),
-        supabase.from("members").select("*, wsf_centres(name)").eq("user_id", userId).maybeSingle(),
+        supabase.from("members").select("*, wsf_centres!fk_members_wsf_centre(name)").eq("user_id", userId).maybeSingle(),
       ]);
 
       setProfile(profileRes.data);
@@ -58,7 +58,7 @@ export function AuthProvider({ children }) {
       if (!member && userEmail) {
         const { data: emailMatch } = await supabase
           .from("members")
-          .select("*, wsf_centres(name)")
+          .select("*, wsf_centres!fk_members_wsf_centre(name)")
           .eq("email", userEmail)
           .is("user_id", null)
           .maybeSingle();
