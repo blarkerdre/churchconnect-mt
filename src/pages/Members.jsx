@@ -66,9 +66,12 @@ export default function Members() {
     setDialogOpen(true);
   };
 
-  const handleDelete = (id) => {
+  const handleDelete = (member) => {
     if (window.confirm("Delete this member?")) {
-      deleteMutation.mutate(id);
+      deleteMutation.mutate(member.id);
+      logAudit("member_delete", "members", member.id, {
+        member_name: `${member.first_name} ${member.last_name}`,
+      });
     }
   };
 

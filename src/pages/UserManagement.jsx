@@ -50,12 +50,13 @@ export default function UserManagement() {
   });
 
   const updateRoleMutation = useMutation({
-    mutationFn: async ({ userId, newRole }) => {
-      // Delete existing role
+    mutationFn: async ({ userId, newRole, oldRole, targetName }) => {
       await supabase.from("user_roles").delete().eq("user_id", userId);
-      // Insert new role
       const { error } = await supabase.from("user_roles").insert({ user_id: userId, role: newRole });
       if (error) throw error;
+      await logAudit("role_change", "user_roles", userId, {
+        old_role: oldRole, new_role: newRole, target_name: targetName,
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["all-user-roles"] });
