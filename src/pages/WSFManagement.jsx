@@ -34,10 +34,19 @@ export default function WSFManagement() {
     },
   });
 
-  const { data: members = [] } = useQuery({
-    queryKey: ["members-for-leaders"],
+  const { data: wsfLeaders = [] } = useQuery({
+    queryKey: ["wsf-leader-users"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("members").select("id, first_name, last_name").eq("membership_status", "Active").order("first_name");
+      // Get user_ids with wsf_leader role
+      const { data: roleData, error: roleError } = await supabase
+        .from("user_roles").select("user_id").eq("role", "wsf_leader");
+      if (roleError) throw roleError;
+      if (!roleData?.length) return [];
+      const userIds = roleData.map(r => r.user_id);
+      // Get members linked to those user_ids
+      const { data, error } = await supabase
+        .from("members").select("id, first_name, last_name, user_id")
+        .in("user_id", userIds).order("first_name");
       if (error) throw error;
       return data;
     },
