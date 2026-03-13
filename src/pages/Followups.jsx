@@ -261,6 +261,11 @@ export default function Followups() {
                       <p className="text-sm text-muted-foreground mb-1">{f.notes || f.description || "No notes"}</p>
                       <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
                         <span>{f.followup_type}</span>
+                        {f.assigned_to && (
+                          <span className="flex items-center gap-1">
+                            <User className="h-3 w-3" /> {profileMap[f.assigned_to] || "Unassigned"}
+                          </span>
+                        )}
                         {f.due_date && (
                           <span className="flex items-center gap-1"><CalendarCheck className="h-3 w-3" /> {f.due_date}</span>
                         )}
