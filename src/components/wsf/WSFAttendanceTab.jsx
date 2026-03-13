@@ -158,8 +158,8 @@ export default function WSFAttendanceTab({ centres }) {
             </Button>
           )}
         </div>
-        <Button onClick={() => openNew()}>
-          <Plus className="h-4 w-4 mr-2" /> Record Attendance
+        <Button size="lg" className="bg-primary text-primary-foreground shadow-md font-semibold px-6" onClick={() => openNew()}>
+          <Plus className="h-5 w-5 mr-2" /> Record Attendance
         </Button>
       </div>
 
