@@ -20,7 +20,7 @@ const allNavItems = [
   { name: "Communications", icon: Megaphone, path: "/communications", access: "leader" },
   { name: "Transportation", icon: Car, path: "/transportation", access: null },
   { name: "Analytics", icon: BarChart2, path: "/analytics", access: "leader" },
-  { name: "WSF Centres", icon: Globe, path: "/wsf", access: "admin" },
+  { name: "WSF Centres", icon: Globe, path: "/wsf", access: "wsf" },
   { name: "User Management", icon: Shield, path: "/user-management", access: "admin" },
   { name: "Audit Log", icon: FileText, path: "/audit-log", access: "super_admin" },
 ];
@@ -29,7 +29,7 @@ export default function Layout({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
-  const { signOut, profile, isAdmin, isUnitLeader, roles } = useAuth();
+  const { signOut, profile, isAdmin, isUnitLeader, isWSFLeader, roles } = useAuth();
   const isSuperAdmin = roles.includes("super_admin");
 
   // Filter nav items based on role
@@ -38,6 +38,7 @@ export default function Layout({ children }) {
     if (item.access === "super_admin") return isSuperAdmin;
     if (item.access === "admin") return isAdmin;
     if (item.access === "leader") return isAdmin || isUnitLeader;
+    if (item.access === "wsf") return isAdmin || isWSFLeader;
     return false;
   });
 

@@ -6,20 +6,22 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Loader2, Shield, ShieldCheck, UserCog, User, Plus, Trash2 } from "lucide-react";
+import { Loader2, Shield, ShieldCheck, UserCog, User, Plus, Trash2, Globe, UsersRound } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { logAudit } from "@/lib/audit";
 import UnitLeaderAssignments from "@/components/users/UnitLeaderAssignments";
+import BulkUnitAssignDialog from "@/components/users/BulkUnitAssignDialog";
 
-const ROLES = ["super_admin", "admin", "unit_leader", "member"];
+const ROLES = ["super_admin", "admin", "unit_leader", "wsf_leader", "member"];
 
 const roleIcons = {
   super_admin: ShieldCheck,
   admin: Shield,
   unit_leader: UserCog,
+  wsf_leader: Globe,
   member: User,
 };
 
@@ -27,6 +29,7 @@ const roleColors = {
   super_admin: "bg-destructive/10 text-destructive",
   admin: "bg-primary/10 text-primary",
   unit_leader: "bg-accent/10 text-accent",
+  wsf_leader: "bg-chart-3/10 text-chart-3",
   member: "bg-muted text-muted-foreground",
 };
 
@@ -36,6 +39,7 @@ export default function UserManagement() {
   const queryClient = useQueryClient();
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [addForm, setAddForm] = useState({ email: "", password: "", full_name: "", role: "member" });
+  const [bulkAssignOpen, setBulkAssignOpen] = useState(false);
 
   const { data: profiles = [], isLoading } = useQuery({
     queryKey: ["all-profiles"],
@@ -129,9 +133,14 @@ export default function UserManagement() {
           <h2 className="text-lg font-display font-bold text-foreground">User Management</h2>
           <p className="text-sm text-muted-foreground">Manage user roles and permissions</p>
         </div>
-        <Button onClick={() => { setAddForm({ email: "", password: "", full_name: "", role: "member" }); setAddDialogOpen(true); }} className="bg-primary hover:bg-primary/90">
-          <Plus className="h-4 w-4 mr-2" /> Add User
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setBulkAssignOpen(true)}>
+            <UsersRound className="h-4 w-4 mr-2" /> Bulk Unit Assign
+          </Button>
+          <Button onClick={() => { setAddForm({ email: "", password: "", full_name: "", role: "member" }); setAddDialogOpen(true); }} className="bg-primary hover:bg-primary/90">
+            <Plus className="h-4 w-4 mr-2" /> Add User
+          </Button>
+        </div>
       </div>
 
       {isLoading ? (
@@ -262,6 +271,8 @@ export default function UserManagement() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <BulkUnitAssignDialog open={bulkAssignOpen} onOpenChange={setBulkAssignOpen} />
     </div>
   );
 }
