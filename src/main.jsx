@@ -2,34 +2,47 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import './index.css'
 
-// Redirect /index to /
 if (window.location.pathname === '/index' || window.location.pathname === '/index.html') {
-  window.history.replaceState(null, '', '/');
+  window.history.replaceState(null, '', '/')
 }
 
-const root = ReactDOM.createRoot(document.getElementById('root'));
+const root = ReactDOM.createRoot(document.getElementById('root'))
 
-const requiredVars = ['VITE_SUPABASE_URL', 'VITE_SUPABASE_PUBLISHABLE_KEY'];
-const missing = requiredVars.filter(v => !import.meta.env[v]);
-
-if (missing.length > 0) {
+const renderConfigError = (details = '') => {
   root.render(
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', padding: 24, fontFamily: 'system-ui, sans-serif', background: '#f9fafb' }}>
-      <div style={{ maxWidth: 480, textAlign: 'center' }}>
-        <h1 style={{ fontSize: 20, marginBottom: 8, color: '#111' }}>Configuration Missing</h1>
-        <p style={{ color: '#666', fontSize: 14 }}>
-          Required environment variables are not set: <strong>{missing.join(', ')}</strong>.
-          Please re-sync your backend integration and refresh.
+    <div className="min-h-screen flex items-center justify-center bg-background p-6">
+      <div className="max-w-lg space-y-2 text-center">
+        <h1 className="text-xl font-semibold text-foreground">Configuration Missing</h1>
+        <p className="text-sm text-muted-foreground">
+          Required environment variables are not available in the current preview runtime.
+          Please re-sync backend integration and refresh.
         </p>
+        {details ? (
+          <p className="text-xs text-muted-foreground/80 break-words">{details}</p>
+        ) : null}
       </div>
     </div>
-  );
-} else {
-  import('./App.jsx').then(({ default: App }) => {
+  )
+}
+
+import('./App.jsx')
+  .then(({ default: App }) => {
     root.render(
       <React.StrictMode>
         <App />
-      </React.StrictMode>
-    );
-  });
-}
+      </React.StrictMode>,
+    )
+  })
+  .catch((error) => {
+    const message = error instanceof Error ? error.message : String(error)
+    const isEnvError =
+      /supabaseurl\s+is\s+required/i.test(message) ||
+      /VITE_SUPABASE_URL|VITE_SUPABASE_PUBLISHABLE_KEY/i.test(message)
+
+    if (isEnvError) {
+      renderConfigError(message)
+      return
+    }
+
+    throw error
+  })
