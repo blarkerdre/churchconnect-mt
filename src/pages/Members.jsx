@@ -10,6 +10,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 import MemberFormDialog from "@/components/members/MemberFormDialog";
+import { logAudit } from "@/lib/audit";
 
 const statusColors = {
   "Active": "bg-chart-3/10 text-chart-3",
