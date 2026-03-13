@@ -27,7 +27,12 @@ export default function Communications() {
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState(null);
 
-  // Get current user's member record to determine their unit (for unit leaders)
+  // Use leaderUnits from auth context for unit leaders
+  const unitLeaderUnits = (!isAdmin && isUnitLeader && leaderUnits.length > 0)
+    ? leaderUnits
+    : null;
+
+  // Fallback: if no unit_leader_assignments, check member's church_unit
   const { data: myMember } = useQuery({
     queryKey: ["my-member", user?.id],
     queryFn: async () => {
@@ -38,14 +43,13 @@ export default function Communications() {
         .single();
       return data;
     },
-    enabled: !!user?.id && isUnitLeader && !isAdmin,
+    enabled: !!user?.id && isUnitLeader && !isAdmin && !unitLeaderUnits,
   });
 
-  // Determine locked audience for unit leaders
-  const leaderUnits = (!isAdmin && isUnitLeader && myMember?.church_unit)
+  const effectiveUnits = unitLeaderUnits || (myMember?.church_unit
     ? myMember.church_unit.split(",").map(u => u.trim()).filter(Boolean)
-    : null;
-  const lockedAudience = leaderUnits?.length === 1 ? leaderUnits[0] : null;
+    : null);
+  const lockedAudience = effectiveUnits?.length === 1 ? effectiveUnits[0] : null;
 
   // Fetch announcements
   const { data: announcements = [], isLoading } = useQuery({

@@ -24,9 +24,9 @@ const statusColors = {
 const CARE_TYPES = ["Counselling", "Visitation", "Prayer Request", "Hospital Visit", "Bereavement", "Marriage", "Financial Support", "Other"];
 
 export default function PastoralCare() {
-  const { user, isAdmin } = useAuth();
+  const { user, isAdmin, leaderUnits } = useAuth();
   const { isMemberOfUnit: isPastoralUnit } = useUnitMembership("Pastoral Care");
-  const canManage = isAdmin || isPastoralUnit;
+  const canManage = isAdmin || leaderUnits.includes("Pastoral Care") || isPastoralUnit;
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [requestDialogOpen, setRequestDialogOpen] = useState(false);

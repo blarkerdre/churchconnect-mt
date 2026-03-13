@@ -22,9 +22,9 @@ const statusColors = {
 };
 
 export default function Transportation() {
-  const { user, isAdmin } = useAuth();
+  const { user, isAdmin, leaderUnits } = useAuth();
   const { isMemberOfUnit: isTransportUnit } = useUnitMembership("Transportation");
-  const canManage = isAdmin || isTransportUnit;
+  const canManage = isAdmin || leaderUnits.includes("Transportation") || isTransportUnit;
   const queryClient = useQueryClient();
   const [bookDialogOpen, setBookDialogOpen] = useState(false);
   const [manageDialogOpen, setManageDialogOpen] = useState(false);
