@@ -150,8 +150,8 @@ export default function Communications() {
   // Available audiences for the form
   const availableAudiences = isAdmin
     ? AUDIENCES
-    : leaderUnits
-      ? AUDIENCES.filter(a => leaderUnits.includes(a))
+    : effectiveUnits
+      ? AUDIENCES.filter(a => effectiveUnits.includes(a))
       : [];
 
   const renderCard = (a) => (
