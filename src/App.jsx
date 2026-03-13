@@ -40,6 +40,13 @@ function AdminRoute({ children }) {
   return children;
 }
 
+function SuperAdminRoute({ children }) {
+  const { roles, loading } = useAuth();
+  if (loading) return null;
+  if (!roles.includes("super_admin")) return <Navigate to="/" replace />;
+  return children;
+}
+
 function LeaderRoute({ children }) {
   const { isAdmin, isUnitLeader, loading } = useAuth();
   if (loading) return null;
