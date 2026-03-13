@@ -51,7 +51,7 @@ export default function MyProfile() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("members")
-        .select("*, wsf_centres(name)")
+        .select("*, wsf_centres!fk_members_wsf_centre(name)")
         .eq("user_id", user.id)
         .maybeSingle();
       if (error) throw error;
