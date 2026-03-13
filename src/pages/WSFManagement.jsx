@@ -123,7 +123,7 @@ export default function WSFManagement() {
   };
 
   const getLeaderName = (leaderId) => {
-    const m = members.find(m => m.id === leaderId);
+    const m = wsfLeaders.find(m => m.id === leaderId);
     return m ? `${m.first_name} ${m.last_name}` : "—";
   };
 
