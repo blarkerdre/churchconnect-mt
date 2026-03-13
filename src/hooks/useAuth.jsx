@@ -58,7 +58,7 @@ export function AuthProvider({ children }) {
       if (!member && userEmail) {
         const { data: emailMatch } = await supabase
           .from("members")
-          .select("*, wsf_centres(name)")
+          .select("*, wsf_centres!fk_members_wsf_centre(name)")
           .eq("email", userEmail)
           .is("user_id", null)
           .maybeSingle();
