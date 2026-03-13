@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { useAuth } from "@/hooks/useAuth";
 
 const navItems = [
   { name: "Dashboard", icon: LayoutDashboard, path: "/" },
@@ -24,6 +25,7 @@ export default function Layout({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
+  const { signOut, profile } = useAuth();
 
   const currentNav = navItems.find(n => n.path === location.pathname) || navItems[0];
 
@@ -78,15 +80,27 @@ export default function Layout({ children }) {
           })}
         </nav>
 
-        {/* Collapse toggle (desktop) */}
-        <div className="hidden lg:flex p-3 border-t border-sidebar-border">
-          <button
-            onClick={() => setCollapsed(!collapsed)}
-            className="flex items-center gap-2 text-xs text-sidebar-foreground/40 hover:text-sidebar-foreground/80 transition-colors w-full justify-center"
-          >
-            <ChevronLeft className={`h-4 w-4 transition-transform ${collapsed ? "rotate-180" : ""}`} />
-            {!collapsed && "Collapse"}
-          </button>
+        {/* User + Collapse */}
+        <div className="hidden lg:flex flex-col p-3 border-t border-sidebar-border gap-2">
+          {!collapsed && profile && (
+            <p className="text-xs text-sidebar-foreground/50 truncate px-1">{profile.email}</p>
+          )}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setCollapsed(!collapsed)}
+              className="flex items-center gap-2 text-xs text-sidebar-foreground/40 hover:text-sidebar-foreground/80 transition-colors flex-1 justify-center"
+            >
+              <ChevronLeft className={`h-4 w-4 transition-transform ${collapsed ? "rotate-180" : ""}`} />
+              {!collapsed && "Collapse"}
+            </button>
+            <button
+              onClick={signOut}
+              title="Sign out"
+              className="text-sidebar-foreground/40 hover:text-sidebar-foreground/80 transition-colors"
+            >
+              <LogOut className="h-4 w-4" />
+            </button>
+          </div>
         </div>
       </aside>
 
