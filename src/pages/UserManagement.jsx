@@ -271,6 +271,8 @@ export default function UserManagement() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <BulkUnitAssignDialog open={bulkAssignOpen} onOpenChange={setBulkAssignOpen} />
     </div>
   );
 }
