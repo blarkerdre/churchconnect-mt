@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format, subDays } from "date-fns";
+import SelfCheckInWidget from "@/components/attendance/SelfCheckInWidget";
 
 export default function Dashboard() {
   const { data: members = [], isLoading: membersLoading } = useQuery({
@@ -105,6 +106,8 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6">
+      {/* Self Check-In Widget */}
+      <SelfCheckInWidget />
       {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
         {stats.map((stat) => (
