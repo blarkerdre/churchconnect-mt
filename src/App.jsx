@@ -55,12 +55,11 @@ function LeaderRoute({ children }) {
   return children;
 }
 
-function AppRoutes() {
+function AuthRoutes() {
   return (
     <Routes>
       <Route path="/auth" element={<Auth />} />
       <Route path="/reset-password" element={<ResetPassword />} />
-      <Route path="/register" element={<PublicRegistration />} />
       <Route
         path="/*"
         element={
@@ -85,6 +84,15 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       />
+    </Routes>
+  );
+}
+
+function AppRoutes() {
+  return (
+    <Routes>
+      <Route path="/register" element={<PublicRegistration />} />
+      <Route path="/*" element={<AuthProvider><AuthRoutes /></AuthProvider>} />
     </Routes>
   );
 }
