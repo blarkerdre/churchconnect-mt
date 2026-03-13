@@ -275,6 +275,12 @@ export default function WSFManagement() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <WSFCentreMembersDialog
+        open={!!membersDialogCentre}
+        onOpenChange={(open) => { if (!open) setMembersDialogCentre(null); }}
+        centre={membersDialogCentre}
+      />
     </div>
   );
 }
