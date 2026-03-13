@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
@@ -11,10 +12,13 @@ import { Plus, Edit, Trash2, MapPin, Clock, Users, Loader2 } from "lucide-react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
+import { useAuth } from "@/hooks/useAuth";
+import WSFAttendanceTab from "@/components/wsf/WSFAttendanceTab";
 
 const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
 export default function WSFManagement() {
+  const { isAdmin } = useAuth();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState({ name: "", location: "", meeting_day: "", meeting_time: "", is_active: true, leader_id: "" });
@@ -38,7 +42,6 @@ export default function WSFManagement() {
     },
   });
 
-  // Count members per centre
   const { data: memberCounts = {} } = useQuery({
     queryKey: ["wsf-member-counts"],
     queryFn: async () => {
@@ -112,46 +115,64 @@ export default function WSFManagement() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-lg font-display font-bold text-foreground">WSF Centres</h2>
-          <p className="text-sm text-muted-foreground">Manage Winners Satellite Fellowship centres</p>
-        </div>
-        <Button onClick={openNew}><Plus className="h-4 w-4 mr-2" /> Add Centre</Button>
+      <div>
+        <h2 className="text-lg font-display font-bold text-foreground">WSF Management</h2>
+        <p className="text-sm text-muted-foreground">Manage centres and track attendance</p>
       </div>
 
-      {isLoading ? (
-        <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>
-      ) : centres.length === 0 ? (
-        <Card className="border-0 shadow-sm"><CardContent className="p-8 text-center text-muted-foreground">No WSF centres yet. Create your first centre.</CardContent></Card>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {centres.map(c => (
-            <Card key={c.id} className="border-0 shadow-sm">
-              <CardHeader className="pb-3">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <CardTitle className="text-base font-display">{c.name}</CardTitle>
-                    <Badge className={c.is_active ? "bg-chart-3/10 text-chart-3 border-0 mt-1" : "bg-muted text-muted-foreground border-0 mt-1"}>
-                      {c.is_active ? "Active" : "Inactive"}
-                    </Badge>
-                  </div>
-                  <div className="flex gap-1">
-                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(c)}><Edit className="h-3.5 w-3.5" /></Button>
-                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { if (window.confirm("Delete this centre?")) deleteMutation.mutate(c.id); }}><Trash2 className="h-3.5 w-3.5 text-destructive" /></Button>
-                  </div>
+      <Tabs defaultValue="attendance" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="attendance">Attendance</TabsTrigger>
+          {isAdmin && <TabsTrigger value="centres">Centres</TabsTrigger>}
+        </TabsList>
+
+        <TabsContent value="attendance">
+          <WSFAttendanceTab centres={centres} />
+        </TabsContent>
+
+        {isAdmin && (
+          <TabsContent value="centres">
+            <div className="space-y-4">
+              <div className="flex justify-end">
+                <Button onClick={openNew}><Plus className="h-4 w-4 mr-2" /> Add Centre</Button>
+              </div>
+
+              {isLoading ? (
+                <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>
+              ) : centres.length === 0 ? (
+                <Card className="border-0 shadow-sm"><CardContent className="p-8 text-center text-muted-foreground">No WSF centres yet.</CardContent></Card>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {centres.map(c => (
+                    <Card key={c.id} className="border-0 shadow-sm">
+                      <CardHeader className="pb-3">
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <CardTitle className="text-base font-display">{c.name}</CardTitle>
+                            <Badge className={c.is_active ? "bg-chart-3/10 text-chart-3 border-0 mt-1" : "bg-muted text-muted-foreground border-0 mt-1"}>
+                              {c.is_active ? "Active" : "Inactive"}
+                            </Badge>
+                          </div>
+                          <div className="flex gap-1">
+                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(c)}><Edit className="h-3.5 w-3.5" /></Button>
+                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { if (window.confirm("Delete this centre?")) deleteMutation.mutate(c.id); }}><Trash2 className="h-3.5 w-3.5 text-destructive" /></Button>
+                          </div>
+                        </div>
+                      </CardHeader>
+                      <CardContent className="space-y-2 text-sm">
+                        {c.location && <div className="flex items-center gap-2 text-muted-foreground"><MapPin className="h-3.5 w-3.5" />{c.location}</div>}
+                        {c.meeting_day && <div className="flex items-center gap-2 text-muted-foreground"><Clock className="h-3.5 w-3.5" />{c.meeting_day}{c.meeting_time ? ` at ${c.meeting_time}` : ""}</div>}
+                        {c.leader_id && <div className="flex items-center gap-2 text-muted-foreground"><Users className="h-3.5 w-3.5" />Leader: {getLeaderName(c.leader_id)}</div>}
+                        <div className="flex items-center gap-2 text-muted-foreground"><Users className="h-3.5 w-3.5" />{memberCounts[c.id] || 0} members</div>
+                      </CardContent>
+                    </Card>
+                  ))}
                 </div>
-              </CardHeader>
-              <CardContent className="space-y-2 text-sm">
-                {c.location && <div className="flex items-center gap-2 text-muted-foreground"><MapPin className="h-3.5 w-3.5" />{c.location}</div>}
-                {c.meeting_day && <div className="flex items-center gap-2 text-muted-foreground"><Clock className="h-3.5 w-3.5" />{c.meeting_day}{c.meeting_time ? ` at ${c.meeting_time}` : ""}</div>}
-                {c.leader_id && <div className="flex items-center gap-2 text-muted-foreground"><Users className="h-3.5 w-3.5" />Leader: {getLeaderName(c.leader_id)}</div>}
-                <div className="flex items-center gap-2 text-muted-foreground"><Users className="h-3.5 w-3.5" />{memberCounts[c.id] || 0} members</div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
+              )}
+            </div>
+          </TabsContent>
+        )}
+      </Tabs>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-md">
