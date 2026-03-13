@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { HeartHandshake, Search, Phone, MessageSquare, CalendarCheck, Plus, AlertCircle, Loader2, UserCheck } from "lucide-react";
+import { HeartHandshake, Search, Phone, MessageSquare, CalendarCheck, Plus, AlertCircle, Loader2, UserCheck, User } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
@@ -25,6 +25,35 @@ export default function Followups() {
   const [editingFollowup, setEditingFollowup] = useState(null);
   const [selectedFollowup, setSelectedFollowup] = useState(null);
   const queryClient = useQueryClient();
+
+  // Fetch profiles for resolving assigned_to user IDs to names
+  const { data: profiles = [] } = useQuery({
+    queryKey: ["all-profiles"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("profiles").select("user_id, full_name, email");
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const profileMap = React.useMemo(() => {
+    const map = {};
+    profiles.forEach(p => { map[p.user_id] = p.full_name || p.email || "Unknown"; });
+    return map;
+  }, [profiles]);
+
+  // Fetch follow-up unit members for reassignment
+  const { data: followupUnitMembers = [] } = useQuery({
+    queryKey: ["followup-unit-members"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("unit_leader_assignments")
+        .select("user_id")
+        .in("unit_name", ["Follow-up", "Follow-Up", "follow-up"]);
+      if (error) throw error;
+      return data.map(d => d.user_id);
+    },
+  });
 
   // Fetch followups with member info
   const { data: followups = [], isLoading } = useQuery({
@@ -165,6 +194,7 @@ export default function Followups() {
     category: f.followup_type,
     type: f.description || "General",
     assigned_to: f.assigned_to || "Unassigned",
+    assigned_to_name: f.assigned_to ? (profileMap[f.assigned_to] || "Unknown") : "Unassigned",
     scheduled_date: f.due_date,
   });
 
@@ -232,6 +262,11 @@ export default function Followups() {
                       <p className="text-sm text-muted-foreground mb-1">{f.notes || f.description || "No notes"}</p>
                       <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
                         <span>{f.followup_type}</span>
+                        {f.assigned_to && (
+                          <span className="flex items-center gap-1">
+                            <User className="h-3 w-3" /> {profileMap[f.assigned_to] || "Unassigned"}
+                          </span>
+                        )}
                         {f.due_date && (
                           <span className="flex items-center gap-1"><CalendarCheck className="h-3 w-3" /> {f.due_date}</span>
                         )}
@@ -280,6 +315,9 @@ export default function Followups() {
           onClose={() => setSelectedFollowup(null)}
           onUpdate={handleUpdateFollowup}
           currentUser={profile}
+          isAdmin={isAdmin}
+          profileMap={profileMap}
+          followupUnitMembers={followupUnitMembers}
           onConverted={() => {
             queryClient.invalidateQueries({ queryKey: ["followups"] });
             queryClient.invalidateQueries({ queryKey: ["members"] });
