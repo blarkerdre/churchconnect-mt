@@ -51,6 +51,8 @@ function AppRoutes() {
                 <Route path="/communications" element={<Communications />} />
                 <Route path="/transportation" element={<Transportation />} />
                 <Route path="/analytics" element={<Analytics />} />
+                <Route path="/wsf" element={<WSFManagement />} />
+                <Route path="/user-management" element={<UserManagement />} />
               </Routes>
             </Layout>
           </ProtectedRoute>
