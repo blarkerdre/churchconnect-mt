@@ -98,7 +98,7 @@ export function AuthProvider({ children }) {
   return (
     <AuthContext.Provider
       value={{
-        user, profile, roles, loading,
+        user, profile, roles, loading, leaderUnits,
         signUp, signIn, signOut, resetPassword, updatePassword,
         isAdmin, isUnitLeader, isMember,
         refreshUser: () => user && fetchUserData(user.id),
