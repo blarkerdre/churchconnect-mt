@@ -121,6 +121,16 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
 
   const set = (key, val) => setForm((p) => ({ ...p, [key]: val }));
 
+  // Auto-suggest WSF centre when address/postcode changes and WSF is enabled
+  const autoSuggestWSF = (updatedForm) => {
+    if (updatedForm.winners_satellite && (updatedForm.postcode || updatedForm.address || updatedForm.city)) {
+      const best = suggestClosestWSFCentre(wsfCentres, updatedForm);
+      if (best) {
+        setForm(f => ({ ...f, wsf_centre_id: best.id }));
+      }
+    }
+  };
+
   const SwitchRow = ({ id, label, description, checked, onChange }) => (
     <div className="flex items-center justify-between p-3 rounded-xl bg-muted/50 border border-border">
       <div>
