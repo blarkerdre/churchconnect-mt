@@ -101,7 +101,7 @@ export function AuthProvider({ children }) {
       value={{
         user, profile, roles, loading, leaderUnits,
         signUp, signIn, signOut, resetPassword, updatePassword,
-        isAdmin, isUnitLeader, isMember,
+        isAdmin, isUnitLeader, isWSFLeader, isMember,
         refreshUser: () => user && fetchUserData(user.id),
       }}
     >

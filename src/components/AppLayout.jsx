@@ -38,6 +38,7 @@ export default function Layout({ children }) {
     if (item.access === "super_admin") return isSuperAdmin;
     if (item.access === "admin") return isAdmin;
     if (item.access === "leader") return isAdmin || isUnitLeader;
+    if (item.access === "wsf") return isAdmin || isWSFLeader;
     return false;
   });
 
