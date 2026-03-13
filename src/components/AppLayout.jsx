@@ -82,27 +82,25 @@ export default function Layout({ children }) {
           })}
         </nav>
 
-        {/* User + Collapse */}
-        <div className="hidden lg:flex flex-col p-3 border-t border-sidebar-border gap-2">
+        {/* User + Sign Out */}
+        <div className="flex flex-col p-3 border-t border-sidebar-border gap-2">
           {!collapsed && profile && (
-            <p className="text-xs text-sidebar-foreground/50 truncate px-1">{profile.email}</p>
+            <p className="text-xs text-sidebar-foreground/60 truncate px-1">{profile.full_name || profile.email}</p>
           )}
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setCollapsed(!collapsed)}
-              className="flex items-center gap-2 text-xs text-sidebar-foreground/40 hover:text-sidebar-foreground/80 transition-colors flex-1 justify-center"
-            >
-              <ChevronLeft className={`h-4 w-4 transition-transform ${collapsed ? "rotate-180" : ""}`} />
-              {!collapsed && "Collapse"}
-            </button>
-            <button
-              onClick={signOut}
-              title="Sign out"
-              className="text-sidebar-foreground/40 hover:text-sidebar-foreground/80 transition-colors"
-            >
-              <LogOut className="h-4 w-4" />
-            </button>
-          </div>
+          <button
+            onClick={signOut}
+            className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors ${collapsed ? "justify-center" : ""}`}
+          >
+            <LogOut className="h-4 w-4 shrink-0" />
+            {!collapsed && "Sign Out"}
+          </button>
+          <button
+            onClick={() => setCollapsed(!collapsed)}
+            className={`hidden lg:flex items-center gap-2 text-xs text-sidebar-foreground/40 hover:text-sidebar-foreground/80 transition-colors ${collapsed ? "justify-center" : "justify-center"}`}
+          >
+            <ChevronLeft className={`h-4 w-4 transition-transform ${collapsed ? "rotate-180" : ""}`} />
+            {!collapsed && "Collapse"}
+          </button>
         </div>
       </aside>
 
