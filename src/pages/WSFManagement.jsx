@@ -243,17 +243,21 @@ export default function WSFManagement() {
               </div>
               <div className="space-y-1.5"><Label>Meeting Time</Label><Input type="time" value={form.meeting_time} onChange={e => setForm(f => ({ ...f, meeting_time: e.target.value }))} /></div>
             </div>
-            <div className="space-y-1.5">
-              <Label>Centre Leader</Label>
-              <Select value={form.leader_id} onValueChange={v => setForm(f => ({ ...f, leader_id: v }))}>
-                <SelectTrigger><SelectValue placeholder="Select leader" /></SelectTrigger>
-                <SelectContent>{wsfLeaders.map(m => <SelectItem key={m.id} value={m.id}>{m.first_name} {m.last_name}</SelectItem>)}</SelectContent>
-              </Select>
-            </div>
-            <div className="flex items-center justify-between">
-              <Label>Active</Label>
-              <Switch checked={form.is_active} onCheckedChange={v => setForm(f => ({ ...f, is_active: v }))} />
-            </div>
+            {isAdmin && (
+              <div className="space-y-1.5">
+                <Label>Centre Leader</Label>
+                <Select value={form.leader_id} onValueChange={v => setForm(f => ({ ...f, leader_id: v }))}>
+                  <SelectTrigger><SelectValue placeholder="Select leader" /></SelectTrigger>
+                  <SelectContent>{wsfLeaders.map(m => <SelectItem key={m.id} value={m.id}>{m.first_name} {m.last_name}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+            )}
+            {isAdmin && (
+              <div className="flex items-center justify-between">
+                <Label>Active</Label>
+                <Switch checked={form.is_active} onCheckedChange={v => setForm(f => ({ ...f, is_active: v }))} />
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
