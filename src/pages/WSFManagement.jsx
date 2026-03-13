@@ -86,13 +86,13 @@ export default function WSFManagement() {
 
   const openNew = () => {
     setEditing(null);
-    setForm({ name: "", location: "", meeting_day: "", meeting_time: "", is_active: true, leader_id: "" });
+    setForm({ name: "", location: "", address: "", postcode: "", city: "Cardiff", coverage_postcodes: "", meeting_day: "", meeting_time: "", is_active: true, leader_id: "" });
     setDialogOpen(true);
   };
 
   const openEdit = (c) => {
     setEditing(c);
-    setForm({ name: c.name, location: c.location || "", meeting_day: c.meeting_day || "", meeting_time: c.meeting_time || "", is_active: c.is_active, leader_id: c.leader_id || "" });
+    setForm({ name: c.name, location: c.location || "", address: c.address || "", postcode: c.postcode || "", city: c.city || "", coverage_postcodes: c.coverage_postcodes || "", meeting_day: c.meeting_day || "", meeting_time: c.meeting_time || "", is_active: c.is_active, leader_id: c.leader_id || "" });
     setDialogOpen(true);
   };
 
@@ -101,6 +101,10 @@ export default function WSFManagement() {
     saveMutation.mutate({
       name: form.name,
       location: form.location || null,
+      address: form.address || null,
+      postcode: form.postcode || null,
+      city: form.city || null,
+      coverage_postcodes: form.coverage_postcodes || null,
       meeting_day: form.meeting_day || null,
       meeting_time: form.meeting_time || null,
       is_active: form.is_active,
@@ -160,7 +164,8 @@ export default function WSFManagement() {
                         </div>
                       </CardHeader>
                       <CardContent className="space-y-2 text-sm">
-                        {c.location && <div className="flex items-center gap-2 text-muted-foreground"><MapPin className="h-3.5 w-3.5" />{c.location}</div>}
+                        {(c.address || c.location) && <div className="flex items-center gap-2 text-muted-foreground"><MapPin className="h-3.5 w-3.5" />{c.address || c.location}{c.postcode ? `, ${c.postcode}` : ""}</div>}
+                        {c.coverage_postcodes && <div className="flex items-center gap-2 text-muted-foreground"><MapPin className="h-3.5 w-3.5 opacity-50" />Covers: {c.coverage_postcodes}</div>}
                         {c.meeting_day && <div className="flex items-center gap-2 text-muted-foreground"><Clock className="h-3.5 w-3.5" />{c.meeting_day}{c.meeting_time ? ` at ${c.meeting_time}` : ""}</div>}
                         {c.leader_id && <div className="flex items-center gap-2 text-muted-foreground"><Users className="h-3.5 w-3.5" />Leader: {getLeaderName(c.leader_id)}</div>}
                         <div className="flex items-center gap-2 text-muted-foreground"><Users className="h-3.5 w-3.5" />{memberCounts[c.id] || 0} members</div>
@@ -177,9 +182,19 @@ export default function WSFManagement() {
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader><DialogTitle className="font-display">{editing ? "Edit Centre" : "New Centre"}</DialogTitle></DialogHeader>
-          <div className="space-y-4">
+          <div className="space-y-4 max-h-[70vh] overflow-y-auto">
             <div className="space-y-1.5"><Label>Centre Name *</Label><Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} /></div>
-            <div className="space-y-1.5"><Label>Location</Label><Input value={form.location} onChange={e => setForm(f => ({ ...f, location: e.target.value }))} placeholder="e.g. CF10 area" /></div>
+            <div className="space-y-1.5"><Label>Address</Label><Input value={form.address} onChange={e => setForm(f => ({ ...f, address: e.target.value }))} placeholder="Street address" /></div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5"><Label>City</Label><Input value={form.city} onChange={e => setForm(f => ({ ...f, city: e.target.value }))} placeholder="Cardiff" /></div>
+              <div className="space-y-1.5"><Label>Postcode</Label><Input value={form.postcode} onChange={e => setForm(f => ({ ...f, postcode: e.target.value }))} placeholder="CF10 1AB" /></div>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Coverage Postcodes</Label>
+              <Input value={form.coverage_postcodes} onChange={e => setForm(f => ({ ...f, coverage_postcodes: e.target.value }))} placeholder="CF10, CF11, CF14" />
+              <p className="text-xs text-muted-foreground">Comma-separated postcode prefixes this centre serves</p>
+            </div>
+            <div className="space-y-1.5"><Label>Location Description</Label><Input value={form.location} onChange={e => setForm(f => ({ ...f, location: e.target.value }))} placeholder="e.g. Near Cardiff Bay" /></div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label>Meeting Day</Label>

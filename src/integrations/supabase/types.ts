@@ -847,6 +847,9 @@ export type Database = {
       }
       wsf_centres: {
         Row: {
+          address: string | null
+          city: string | null
+          coverage_postcodes: string | null
           created_at: string
           id: string
           is_active: boolean | null
@@ -855,9 +858,13 @@ export type Database = {
           meeting_day: string | null
           meeting_time: string | null
           name: string
+          postcode: string | null
           updated_at: string
         }
         Insert: {
+          address?: string | null
+          city?: string | null
+          coverage_postcodes?: string | null
           created_at?: string
           id?: string
           is_active?: boolean | null
@@ -866,9 +873,13 @@ export type Database = {
           meeting_day?: string | null
           meeting_time?: string | null
           name: string
+          postcode?: string | null
           updated_at?: string
         }
         Update: {
+          address?: string | null
+          city?: string | null
+          coverage_postcodes?: string | null
           created_at?: string
           id?: string
           is_active?: boolean | null
@@ -877,6 +888,7 @@ export type Database = {
           meeting_day?: string | null
           meeting_time?: string | null
           name?: string
+          postcode?: string | null
           updated_at?: string
         }
         Relationships: [
