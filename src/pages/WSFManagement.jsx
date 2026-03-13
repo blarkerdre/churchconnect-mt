@@ -164,7 +164,8 @@ export default function WSFManagement() {
                         </div>
                       </CardHeader>
                       <CardContent className="space-y-2 text-sm">
-                        {c.location && <div className="flex items-center gap-2 text-muted-foreground"><MapPin className="h-3.5 w-3.5" />{c.location}</div>}
+                        {(c.address || c.location) && <div className="flex items-center gap-2 text-muted-foreground"><MapPin className="h-3.5 w-3.5" />{c.address || c.location}{c.postcode ? `, ${c.postcode}` : ""}</div>}
+                        {c.coverage_postcodes && <div className="flex items-center gap-2 text-muted-foreground"><MapPin className="h-3.5 w-3.5 opacity-50" />Covers: {c.coverage_postcodes}</div>}
                         {c.meeting_day && <div className="flex items-center gap-2 text-muted-foreground"><Clock className="h-3.5 w-3.5" />{c.meeting_day}{c.meeting_time ? ` at ${c.meeting_time}` : ""}</div>}
                         {c.leader_id && <div className="flex items-center gap-2 text-muted-foreground"><Users className="h-3.5 w-3.5" />Leader: {getLeaderName(c.leader_id)}</div>}
                         <div className="flex items-center gap-2 text-muted-foreground"><Users className="h-3.5 w-3.5" />{memberCounts[c.id] || 0} members</div>
