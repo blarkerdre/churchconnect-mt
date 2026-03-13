@@ -3,7 +3,7 @@ import { Link, useLocation } from "react-router-dom";
 import {
   LayoutDashboard, Users, CalendarDays, HeartHandshake,
   Heart, Megaphone, Menu, Church, Bell, LogOut,
-  ClipboardList, Car, BarChart2, X, ChevronLeft
+  ClipboardList, Car, BarChart2, X, ChevronLeft, Globe, Settings
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -19,6 +19,8 @@ const navItems = [
   { name: "Communications", icon: Megaphone, path: "/communications" },
   { name: "Transportation", icon: Car, path: "/transportation" },
   { name: "Analytics", icon: BarChart2, path: "/analytics" },
+  { name: "WSF Centres", icon: Globe, path: "/wsf" },
+  { name: "User Management", icon: Settings, path: "/user-management" },
 ];
 
 export default function Layout({ children }) {
