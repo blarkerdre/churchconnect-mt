@@ -213,6 +213,7 @@ export default function Members() {
           setDialogOpen(false);
         }}
       />
+      <RegistrationQRCode open={qrOpen} onOpenChange={setQrOpen} />
     </div>
   );
 }
