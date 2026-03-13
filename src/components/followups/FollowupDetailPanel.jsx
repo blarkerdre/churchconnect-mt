@@ -192,6 +192,47 @@ export default function FollowupDetailPanel({ followup, onClose, onUpdate, curre
             )}
           </div>
 
+          {/* Assigned To */}
+          <div className="bg-muted/50 rounded-xl p-3 space-y-2">
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-semibold text-muted-foreground flex items-center gap-1">
+                <User className="h-3 w-3" /> Assigned To
+              </p>
+              {isAdmin && followup.status !== "Completed" && (
+                <Button variant="ghost" size="sm" className="h-6 text-xs px-2" onClick={() => setShowReassign(!showReassign)}>
+                  <RefreshCw className="h-3 w-3 mr-1" /> Reassign
+                </Button>
+              )}
+            </div>
+            <p className="text-sm font-medium text-foreground">
+              {followup.assigned_to_name || (followup.assigned_to && profileMap[followup.assigned_to]) || "Unassigned"}
+            </p>
+            {showReassign && (
+              <div className="space-y-2 pt-1">
+                <Select
+                  onValueChange={async (userId) => {
+                    setReassigning(true);
+                    await onUpdate(followup.id, { assigned_to: userId });
+                    toast({ title: `Reassigned to ${profileMap[userId] || "member"}` });
+                    setShowReassign(false);
+                    setReassigning(false);
+                  }}
+                  disabled={reassigning}
+                >
+                  <SelectTrigger className="h-8 text-sm">
+                    <SelectValue placeholder={reassigning ? "Reassigning..." : "Select member"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {followupUnitMembers.map(uid => (
+                      <SelectItem key={uid} value={uid}>
+                        {profileMap[uid] || uid}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
           {/* Notes */}
           {followup.notes && (
             <div className="bg-muted/50 rounded-xl p-3">
