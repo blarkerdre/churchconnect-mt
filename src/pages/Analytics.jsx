@@ -56,12 +56,12 @@ export default function Analytics() {
     },
   });
 
-  const { data: wsfAttendance = [] } = useQuery({
-    queryKey: ["analytics-wsf-attendance", dateFrom, dateTo],
+  const { data: wsfReports = [] } = useQuery({
+    queryKey: ["analytics-wsf-reports", dateFrom, dateTo],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("wsf_attendance")
-        .select("centre_id, meeting_date, present")
+        .from("wsf_attendance_reports")
+        .select("centre_id, meeting_date, male, female, children, first_timers, testimonies")
         .gte("meeting_date", dateFrom)
         .lte("meeting_date", dateTo);
       if (error) throw error;
