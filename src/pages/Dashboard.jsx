@@ -106,6 +106,8 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6">
+      {/* Self Check-In Widget */}
+      <SelfCheckInWidget />
       {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
         {stats.map((stat) => (
