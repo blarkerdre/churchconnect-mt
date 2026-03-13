@@ -1,14 +1,21 @@
-import React from "react";
-import { useQuery } from "@tanstack/react-query";
+import React, { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, User, Mail, Phone, MapPin, Calendar, CheckCircle2, XCircle, Church } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Loader2, User, Mail, Phone, MapPin, Calendar, CheckCircle2, XCircle, Church, Edit, Save, X } from "lucide-react";
 import { format } from "date-fns";
+import { toast } from "@/components/ui/use-toast";
 
 export default function MyProfile() {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const [editing, setEditing] = useState(false);
+  const [form, setForm] = useState({});
 
   const { data: member, isLoading } = useQuery({
     queryKey: ["my-member-profile", user?.id],
@@ -39,6 +46,44 @@ export default function MyProfile() {
     enabled: !!member?.id,
   });
 
+  const updateMutation = useMutation({
+    mutationFn: async (updates) => {
+      const { error } = await supabase.from("members").update(updates).eq("id", member.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["my-member-profile"] });
+      toast({ title: "Profile updated successfully" });
+      setEditing(false);
+    },
+    onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+  });
+
+  const startEditing = () => {
+    setForm({
+      phone: member.phone || "",
+      address: member.address || "",
+      city: member.city || "",
+      postcode: member.postcode || "",
+      emergency_contact_name: member.emergency_contact_name || "",
+      emergency_contact_phone: member.emergency_contact_phone || "",
+    });
+    setEditing(true);
+  };
+
+  const handleSave = () => {
+    updateMutation.mutate({
+      phone: form.phone || null,
+      address: form.address || null,
+      city: form.city || null,
+      postcode: form.postcode || null,
+      emergency_contact_name: form.emergency_contact_name || null,
+      emergency_contact_phone: form.emergency_contact_phone || null,
+    });
+  };
+
+  const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+
   if (isLoading) {
     return (
       <div className="flex justify-center py-12">
@@ -59,13 +104,11 @@ export default function MyProfile() {
     );
   }
 
+  const units = member.church_unit ? member.church_unit.split(",").map(u => u.trim()).filter(Boolean) : [];
+
   const BoolBadge = ({ value, label }) => (
     <div className="flex items-center gap-2 text-sm">
-      {value ? (
-        <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-      ) : (
-        <XCircle className="h-4 w-4 text-muted-foreground/40" />
-      )}
+      {value ? <CheckCircle2 className="h-4 w-4 text-emerald-500" /> : <XCircle className="h-4 w-4 text-muted-foreground/40" />}
       <span className={value ? "text-foreground" : "text-muted-foreground"}>{label}</span>
     </div>
   );
@@ -75,40 +118,62 @@ export default function MyProfile() {
       {/* Profile Header */}
       <Card className="border-0 shadow-sm">
         <CardContent className="p-6">
-          <div className="flex items-start gap-4">
-            <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xl shrink-0">
-              {member.first_name[0]}{member.last_name[0]}
-            </div>
-            <div className="flex-1 min-w-0">
-              <h2 className="text-xl font-bold text-foreground">{member.first_name} {member.last_name}</h2>
-              <Badge variant="outline" className="mt-1">{member.membership_status}</Badge>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-4 text-sm text-muted-foreground">
-                {member.email && (
-                  <div className="flex items-center gap-2"><Mail className="h-4 w-4" />{member.email}</div>
-                )}
-                {member.phone && (
-                  <div className="flex items-center gap-2"><Phone className="h-4 w-4" />{member.phone}</div>
-                )}
-                {(member.address || member.city) && (
-                  <div className="flex items-center gap-2"><MapPin className="h-4 w-4" />{[member.address, member.city, member.postcode].filter(Boolean).join(", ")}</div>
-                )}
-                {member.membership_date && (
-                  <div className="flex items-center gap-2"><Calendar className="h-4 w-4" />Member since {format(new Date(member.membership_date), "MMM yyyy")}</div>
-                )}
-                {member.church_unit && (
-                  <div className="flex items-center gap-2"><Church className="h-4 w-4" />{member.church_unit}</div>
+          <div className="flex items-start justify-between">
+            <div className="flex items-start gap-4">
+              <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xl shrink-0">
+                {member.first_name[0]}{member.last_name[0]}
+              </div>
+              <div className="flex-1 min-w-0">
+                <h2 className="text-xl font-bold text-foreground">{member.first_name} {member.last_name}</h2>
+                <Badge variant="outline" className="mt-1">{member.membership_status}</Badge>
+
+                {editing ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
+                    <div className="space-y-1"><Label>Phone</Label><Input value={form.phone} onChange={e => set("phone", e.target.value)} /></div>
+                    <div className="space-y-1"><Label>Address</Label><Input value={form.address} onChange={e => set("address", e.target.value)} /></div>
+                    <div className="space-y-1"><Label>City</Label><Input value={form.city} onChange={e => set("city", e.target.value)} /></div>
+                    <div className="space-y-1"><Label>Postcode</Label><Input value={form.postcode} onChange={e => set("postcode", e.target.value)} /></div>
+                    <div className="space-y-1"><Label>Emergency Contact</Label><Input value={form.emergency_contact_name} onChange={e => set("emergency_contact_name", e.target.value)} /></div>
+                    <div className="space-y-1"><Label>Emergency Phone</Label><Input value={form.emergency_contact_phone} onChange={e => set("emergency_contact_phone", e.target.value)} /></div>
+                    <div className="sm:col-span-2 flex gap-2 pt-2">
+                      <Button onClick={handleSave} disabled={updateMutation.isPending} size="sm">
+                        {updateMutation.isPending ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Save className="h-4 w-4 mr-1" />} Save
+                      </Button>
+                      <Button variant="outline" size="sm" onClick={() => setEditing(false)}><X className="h-4 w-4 mr-1" /> Cancel</Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-4 text-sm text-muted-foreground">
+                    {member.email && <div className="flex items-center gap-2"><Mail className="h-4 w-4" />{member.email}</div>}
+                    {member.phone && <div className="flex items-center gap-2"><Phone className="h-4 w-4" />{member.phone}</div>}
+                    {(member.address || member.city) && (
+                      <div className="flex items-center gap-2"><MapPin className="h-4 w-4" />{[member.address, member.city, member.postcode].filter(Boolean).join(", ")}</div>
+                    )}
+                    {member.membership_date && (
+                      <div className="flex items-center gap-2"><Calendar className="h-4 w-4" />Member since {format(new Date(member.membership_date), "MMM yyyy")}</div>
+                    )}
+                    {units.length > 0 && (
+                      <div className="flex items-center gap-2 sm:col-span-2 flex-wrap">
+                        <Church className="h-4 w-4 shrink-0" />
+                        {units.map(u => <Badge key={u} variant="secondary" className="text-xs">{u}</Badge>)}
+                      </div>
+                    )}
+                  </div>
                 )}
               </div>
             </div>
+            {!editing && (
+              <Button variant="outline" size="sm" onClick={startEditing} className="shrink-0">
+                <Edit className="h-4 w-4 mr-1" /> Edit
+              </Button>
+            )}
           </div>
         </CardContent>
       </Card>
 
       {/* Growth Milestones */}
       <Card className="border-0 shadow-sm">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base">Growth Milestones</CardTitle>
-        </CardHeader>
+        <CardHeader className="pb-2"><CardTitle className="text-base">Growth Milestones</CardTitle></CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             <BoolBadge value={member.water_baptism} label="Water Baptism" />
@@ -128,9 +193,7 @@ export default function MyProfile() {
 
       {/* Attendance History */}
       <Card className="border-0 shadow-sm">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base">Recent Attendance ({attendanceRecords.length})</CardTitle>
-        </CardHeader>
+        <CardHeader className="pb-2"><CardTitle className="text-base">Recent Attendance ({attendanceRecords.length})</CardTitle></CardHeader>
         <CardContent>
           {attendanceRecords.length === 0 ? (
             <p className="text-sm text-muted-foreground py-4 text-center">No attendance records found.</p>
