@@ -76,6 +76,7 @@ export function AuthProvider({ children }) {
     setUser(null);
     setProfile(null);
     setRoles([]);
+    setLeaderUnits([]);
   };
 
   const resetPassword = async (email) => {
