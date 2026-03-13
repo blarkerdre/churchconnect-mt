@@ -12,6 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { logAudit } from "@/lib/audit";
+import UnitLeaderAssignments from "@/components/users/UnitLeaderAssignments";
 
 const ROLES = ["super_admin", "admin", "unit_leader", "member"];
 
@@ -141,12 +142,13 @@ export default function UserManagement() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border bg-muted/50">
-                  <th className="text-left p-4 font-medium text-muted-foreground">User</th>
-                  <th className="text-left p-4 font-medium text-muted-foreground">Email</th>
-                  <th className="text-left p-4 font-medium text-muted-foreground">Current Role</th>
-                  <th className="text-left p-4 font-medium text-muted-foreground">Change Role</th>
-                  <th className="text-right p-4 font-medium text-muted-foreground">Actions</th>
-                </tr>
+                   <th className="text-left p-4 font-medium text-muted-foreground">User</th>
+                   <th className="text-left p-4 font-medium text-muted-foreground">Email</th>
+                   <th className="text-left p-4 font-medium text-muted-foreground">Current Role</th>
+                   <th className="text-left p-4 font-medium text-muted-foreground">Led Units</th>
+                   <th className="text-left p-4 font-medium text-muted-foreground">Change Role</th>
+                   <th className="text-right p-4 font-medium text-muted-foreground">Actions</th>
+                 </tr>
               </thead>
               <tbody>
                 {profiles.map(p => {
@@ -169,6 +171,13 @@ export default function UserManagement() {
                           <RoleIcon className="h-3 w-3" />
                           {currentRole.replace("_", " ")}
                         </Badge>
+                      </td>
+                      <td className="p-4">
+                        {currentRole === "unit_leader" ? (
+                          <UnitLeaderAssignments userId={p.user_id} />
+                        ) : (
+                          <span className="text-xs text-muted-foreground">—</span>
+                        )}
                       </td>
                       <td className="p-4">
                         {(() => {
@@ -219,7 +228,7 @@ export default function UserManagement() {
                   );
                 })}
                 {profiles.length === 0 && (
-                  <tr><td colSpan={5} className="p-8 text-center text-muted-foreground">No users found</td></tr>
+                  <tr><td colSpan={6} className="p-8 text-center text-muted-foreground">No users found</td></tr>
                 )}
               </tbody>
             </table>
