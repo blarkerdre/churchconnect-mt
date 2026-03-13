@@ -3,7 +3,7 @@ import { Link, useLocation } from "react-router-dom";
 import {
   LayoutDashboard, Users, CalendarDays, HeartHandshake,
   Heart, Megaphone, Menu, Church, Bell, LogOut,
-  ClipboardList, Car, BarChart2, ChevronLeft, Globe, Settings, Shield
+  ClipboardList, Car, BarChart2, ChevronLeft, Globe, Settings, Shield, FileText
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
