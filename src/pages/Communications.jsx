@@ -77,8 +77,8 @@ export default function Communications() {
   // Filter by unit leader's units — they only see their own unit announcements + "All Members"
   const visibleAnnouncements = announcements.filter(a => {
     if (isAdmin) return true;
-    if (leaderUnits) {
-      return a.audience === "All Members" || leaderUnits.includes(a.audience) || a.created_by === user?.id;
+    if (effectiveUnits) {
+      return a.audience === "All Members" || effectiveUnits.includes(a.audience) || a.created_by === user?.id;
     }
     return true;
   });
