@@ -3,33 +3,41 @@ import { Link, useLocation } from "react-router-dom";
 import {
   LayoutDashboard, Users, CalendarDays, HeartHandshake,
   Heart, Megaphone, Menu, Church, Bell, LogOut,
-  ClipboardList, Car, BarChart2, X, ChevronLeft, Globe, Settings
+  ClipboardList, Car, BarChart2, ChevronLeft, Globe, Settings, Shield
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
 
-const navItems = [
-  { name: "Dashboard", icon: LayoutDashboard, path: "/" },
-  { name: "Members", icon: Users, path: "/members" },
-  { name: "Events", icon: CalendarDays, path: "/events" },
-  { name: "Attendance", icon: ClipboardList, path: "/attendance" },
-  { name: "Follow-ups", icon: HeartHandshake, path: "/followups" },
-  { name: "Pastoral Care", icon: Heart, path: "/pastoral-care" },
-  { name: "Communications", icon: Megaphone, path: "/communications" },
-  { name: "Transportation", icon: Car, path: "/transportation" },
-  { name: "Analytics", icon: BarChart2, path: "/analytics" },
-  { name: "WSF Centres", icon: Globe, path: "/wsf" },
-  { name: "User Management", icon: Settings, path: "/user-management" },
+// Role requirements: null = any authenticated user, "admin" = admin/super_admin, "leader" = admin or unit_leader
+const allNavItems = [
+  { name: "Dashboard", icon: LayoutDashboard, path: "/", access: null },
+  { name: "Members", icon: Users, path: "/members", access: null },
+  { name: "Events", icon: CalendarDays, path: "/events", access: null },
+  { name: "Attendance", icon: ClipboardList, path: "/attendance", access: "leader" },
+  { name: "Follow-ups", icon: HeartHandshake, path: "/followups", access: "leader" },
+  { name: "Pastoral Care", icon: Heart, path: "/pastoral-care", access: "leader" },
+  { name: "Communications", icon: Megaphone, path: "/communications", access: "admin" },
+  { name: "Transportation", icon: Car, path: "/transportation", access: null },
+  { name: "Analytics", icon: BarChart2, path: "/analytics", access: "leader" },
+  { name: "WSF Centres", icon: Globe, path: "/wsf", access: "admin" },
+  { name: "User Management", icon: Shield, path: "/user-management", access: "admin" },
 ];
 
 export default function Layout({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
-  const { signOut, profile } = useAuth();
+  const { signOut, profile, isAdmin, isUnitLeader } = useAuth();
 
-  const currentNav = navItems.find(n => n.path === location.pathname) || navItems[0];
+  // Filter nav items based on role
+  const navItems = allNavItems.filter(item => {
+    if (item.access === null) return true;
+    if (item.access === "admin") return isAdmin;
+    if (item.access === "leader") return isAdmin || isUnitLeader;
+    return false;
+  });
+
+  const currentNav = navItems.find(n => n.path === location.pathname) || allNavItems.find(n => n.path === location.pathname) || navItems[0];
 
   return (
     <div className="min-h-screen bg-background flex">
@@ -96,7 +104,7 @@ export default function Layout({ children }) {
           </button>
           <button
             onClick={() => setCollapsed(!collapsed)}
-            className={`hidden lg:flex items-center gap-2 text-xs text-sidebar-foreground/40 hover:text-sidebar-foreground/80 transition-colors ${collapsed ? "justify-center" : "justify-center"}`}
+            className={`hidden lg:flex items-center gap-2 text-xs text-sidebar-foreground/40 hover:text-sidebar-foreground/80 transition-colors justify-center`}
           >
             <ChevronLeft className={`h-4 w-4 transition-transform ${collapsed ? "rotate-180" : ""}`} />
             {!collapsed && "Collapse"}
