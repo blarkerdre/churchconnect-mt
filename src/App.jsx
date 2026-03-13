@@ -17,6 +17,7 @@ import WSFManagement from "@/pages/WSFManagement";
 import UserManagement from "@/pages/UserManagement";
 import Auth from "@/pages/Auth";
 import ResetPassword from "@/pages/ResetPassword";
+import MyProfile from "@/pages/MyProfile";
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
@@ -57,6 +58,7 @@ function AppRoutes() {
             <Layout>
               <Routes>
                 <Route path="/" element={<Dashboard />} />
+                <Route path="/my-profile" element={<MyProfile />} />
                 <Route path="/members" element={<Members />} />
                 <Route path="/events" element={<Events />} />
                 <Route path="/attendance" element={<LeaderRoute><Attendance /></LeaderRoute>} />
