@@ -133,9 +133,14 @@ export default function UserManagement() {
           <h2 className="text-lg font-display font-bold text-foreground">User Management</h2>
           <p className="text-sm text-muted-foreground">Manage user roles and permissions</p>
         </div>
-        <Button onClick={() => { setAddForm({ email: "", password: "", full_name: "", role: "member" }); setAddDialogOpen(true); }} className="bg-primary hover:bg-primary/90">
-          <Plus className="h-4 w-4 mr-2" /> Add User
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setBulkAssignOpen(true)}>
+            <UsersRound className="h-4 w-4 mr-2" /> Bulk Unit Assign
+          </Button>
+          <Button onClick={() => { setAddForm({ email: "", password: "", full_name: "", role: "member" }); setAddDialogOpen(true); }} className="bg-primary hover:bg-primary/90">
+            <Plus className="h-4 w-4 mr-2" /> Add User
+          </Button>
+        </div>
       </div>
 
       {isLoading ? (
