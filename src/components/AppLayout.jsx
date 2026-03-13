@@ -3,12 +3,20 @@ import { Link, useLocation } from "react-router-dom";
 import {
   LayoutDashboard, Users, CalendarDays, HeartHandshake,
   Heart, Megaphone, Menu, Church, Bell, LogOut,
-  ClipboardList, Car, BarChart2, ChevronLeft, Globe, Settings, Shield, FileText
+  ClipboardList, Car, BarChart2, ChevronLeft, Globe, Settings, Shield, FileText,
+  Lock
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 
 // Role requirements: null = any authenticated user, "admin" = admin/super_admin, "leader" = admin or unit_leader
+const roleLabels = {
+  admin: { label: "Admin", class: "bg-primary/15 text-primary" },
+  leader: { label: "Leader", class: "bg-chart-3/15 text-chart-3" },
+  wsf: { label: "WSF", class: "bg-chart-4/15 text-chart-4" },
+  super_admin: { label: "Super", class: "bg-destructive/15 text-destructive" },
+};
+
 const allNavItems = [
   { name: "Dashboard", icon: LayoutDashboard, path: "/", access: null },
   { name: "My Profile", icon: Users, path: "/my-profile", access: null },
@@ -89,7 +97,14 @@ export default function Layout({ children }) {
                 } ${collapsed ? "justify-center" : ""}`}
               >
                 <item.icon className="h-4 w-4 shrink-0" />
-                {!collapsed && item.name}
+                {!collapsed && (
+                  <span className="flex-1">{item.name}</span>
+                )}
+                {!collapsed && item.access && roleLabels[item.access] && (
+                  <span className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-full leading-none ${roleLabels[item.access].class}`}>
+                    {roleLabels[item.access].label}
+                  </span>
+                )}
               </Link>
             );
           })}
