@@ -10,6 +10,7 @@ import { Switch } from "@/components/ui/switch";
 import { Loader2, CheckCircle2, Church } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import { Toaster } from "@/components/ui/toaster";
+import { suggestClosestWSFCentre } from "@/lib/wsf-suggest";
 
 const CHURCH_UNITS = [
   "Ushering", "Choir", "Media", "Children's Ministry", "Protocol",
