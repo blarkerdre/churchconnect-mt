@@ -10,6 +10,7 @@ import { Switch } from "@/components/ui/switch";
 import { Loader2, CheckCircle2, Church } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import { Toaster } from "@/components/ui/toaster";
+import { suggestClosestWSFCentre } from "@/lib/wsf-suggest";
 
 const CHURCH_UNITS = [
   "Ushering", "Choir", "Media", "Children's Ministry", "Protocol",
@@ -154,9 +155,9 @@ export default function PublicRegistration() {
                 <div className="space-y-1.5"><Label>Last Name *</Label><Input value={form.last_name} onChange={e => set("last_name", e.target.value)} maxLength={100} required /></div>
                 <div className="space-y-1.5"><Label>Email</Label><Input type="email" value={form.email} onChange={e => set("email", e.target.value)} maxLength={255} /></div>
                 <div className="space-y-1.5"><Label>Phone</Label><Input value={form.phone} onChange={e => set("phone", e.target.value)} maxLength={20} /></div>
-                <div className="space-y-1.5 md:col-span-2"><Label>Street Address</Label><Input value={form.address} onChange={e => set("address", e.target.value)} maxLength={300} /></div>
-                <div className="space-y-1.5"><Label>City</Label><Input value={form.city} onChange={e => set("city", e.target.value)} maxLength={100} /></div>
-                <div className="space-y-1.5"><Label>Post Code</Label><Input value={form.postcode} onChange={e => set("postcode", e.target.value)} maxLength={20} /></div>
+                <div className="space-y-1.5 md:col-span-2"><Label>Street Address</Label><Input value={form.address} onChange={e => { set("address", e.target.value); if (form.winners_satellite) { const best = suggestClosestWSFCentre(wsfCentres, { ...form, address: e.target.value }); if (best) set("wsf_centre_id", best.id); } }} maxLength={300} /></div>
+                <div className="space-y-1.5"><Label>City</Label><Input value={form.city} onChange={e => { set("city", e.target.value); if (form.winners_satellite) { const best = suggestClosestWSFCentre(wsfCentres, { ...form, city: e.target.value }); if (best) set("wsf_centre_id", best.id); } }} maxLength={100} /></div>
+                <div className="space-y-1.5"><Label>Post Code</Label><Input value={form.postcode} onChange={e => { set("postcode", e.target.value); if (form.winners_satellite) { const best = suggestClosestWSFCentre(wsfCentres, { ...form, postcode: e.target.value }); if (best) set("wsf_centre_id", best.id); } }} maxLength={20} /></div>
                 <div className="space-y-1.5"><Label>Date of Birth</Label><Input type="date" value={form.date_of_birth} onChange={e => set("date_of_birth", e.target.value)} /></div>
                 <div className="space-y-1.5">
                   <Label>Gender</Label>
@@ -212,22 +213,9 @@ export default function PublicRegistration() {
                 <SwitchRow id="holy_spirit_baptism" label="Holy Spirit Baptism" checked={form.holy_spirit_baptism} onChange={v => set("holy_spirit_baptism", v)} />
                 <SwitchRow id="winners_satellite" label="Winners Satellite Fellowship" checked={form.winners_satellite} onChange={v => {
                   set("winners_satellite", v);
-                  if (v && !form.wsf_centre_id && (form.postcode || form.address || form.city)) {
-                    const memberArea = `${form.postcode || ""} ${form.address || ""} ${form.city || ""}`.toLowerCase();
-                    const postcodePrefix = (form.postcode || "").trim().split(" ")[0]?.toLowerCase();
-                    const scored = wsfCentres.map(c => {
-                      const loc = (c.location || "").toLowerCase();
-                      let score = 0;
-                      if (postcodePrefix && loc.includes(postcodePrefix)) score += 10;
-                      if (form.city && loc.includes(form.city.toLowerCase())) score += 5;
-                      if (form.postcode && loc.includes(form.postcode.toLowerCase())) score += 8;
-                      const addressWords = memberArea.split(/\s+/).filter(w => w.length > 2);
-                      addressWords.forEach(w => { if (loc.includes(w)) score += 2; });
-                      return { ...c, score };
-                    }).filter(c => c.score > 0).sort((a, b) => b.score - a.score);
-                    if (scored.length > 0) {
-                      set("wsf_centre_id", scored[0].id);
-                    }
+                  if (v && !form.wsf_centre_id) {
+                    const best = suggestClosestWSFCentre(wsfCentres, form);
+                    if (best) set("wsf_centre_id", best.id);
                   }
                 }} />
                 {form.winners_satellite && (

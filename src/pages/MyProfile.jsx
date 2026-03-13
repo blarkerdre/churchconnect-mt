@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Loader2, User, Mail, Phone, MapPin, Calendar, CheckCircle2, XCircle, Church, Edit, Save, X } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "@/components/ui/use-toast";
+import { suggestClosestWSFCentre } from "@/lib/wsf-suggest";
 
 const GENDERS = ["Male", "Female"];
 
@@ -39,6 +40,15 @@ export default function MyProfile() {
       return data;
     },
     enabled: !!user?.id,
+  });
+
+  const { data: wsfCentres = [] } = useQuery({
+    queryKey: ["wsf-centres-active"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("wsf_centres").select("*").eq("is_active", true).order("name");
+      if (error) throw error;
+      return data;
+    },
   });
 
   const { data: attendanceRecords = [] } = useQuery({
@@ -83,6 +93,7 @@ export default function MyProfile() {
       gender: member.gender || "",
       emergency_contact_name: member.emergency_contact_name || "",
       emergency_contact_phone: member.emergency_contact_phone || "",
+      wsf_centre_id: member.wsf_centre_id || "",
     });
     setEditing(true);
   };
@@ -104,10 +115,20 @@ export default function MyProfile() {
       gender: form.gender || null,
       emergency_contact_name: form.emergency_contact_name || null,
       emergency_contact_phone: form.emergency_contact_phone || null,
+      wsf_centre_id: form.wsf_centre_id || null,
     });
   };
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+
+  const handleAddressChange = (key, value) => {
+    const updated = { ...form, [key]: value };
+    set(key, value);
+    if (member?.winners_satellite) {
+      const best = suggestClosestWSFCentre(wsfCentres, updated);
+      if (best) set("wsf_centre_id", best.id);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -157,9 +178,9 @@ export default function MyProfile() {
                       <div className="space-y-1"><Label>Last Name *</Label><Input value={form.last_name} onChange={e => set("last_name", e.target.value)} /></div>
                       <div className="space-y-1"><Label>Email</Label><Input type="email" value={form.email} onChange={e => set("email", e.target.value)} /></div>
                       <div className="space-y-1"><Label>Phone</Label><Input value={form.phone} onChange={e => set("phone", e.target.value)} /></div>
-                      <div className="space-y-1 sm:col-span-2"><Label>Street Address</Label><Input value={form.address} onChange={e => set("address", e.target.value)} /></div>
-                      <div className="space-y-1"><Label>City</Label><Input value={form.city} onChange={e => set("city", e.target.value)} /></div>
-                      <div className="space-y-1"><Label>Postcode</Label><Input value={form.postcode} onChange={e => set("postcode", e.target.value)} /></div>
+                      <div className="space-y-1 sm:col-span-2"><Label>Street Address</Label><Input value={form.address} onChange={e => handleAddressChange("address", e.target.value)} /></div>
+                      <div className="space-y-1"><Label>City</Label><Input value={form.city} onChange={e => handleAddressChange("city", e.target.value)} /></div>
+                      <div className="space-y-1"><Label>Postcode</Label><Input value={form.postcode} onChange={e => handleAddressChange("postcode", e.target.value)} /></div>
                       <div className="space-y-1"><Label>Date of Birth</Label><Input type="date" value={form.date_of_birth} onChange={e => set("date_of_birth", e.target.value)} /></div>
                       <div className="space-y-1">
                         <Label>Gender</Label>
@@ -175,6 +196,24 @@ export default function MyProfile() {
                       <div className="space-y-1"><Label>Contact Name</Label><Input value={form.emergency_contact_name} onChange={e => set("emergency_contact_name", e.target.value)} /></div>
                       <div className="space-y-1"><Label>Contact Phone</Label><Input value={form.emergency_contact_phone} onChange={e => set("emergency_contact_phone", e.target.value)} /></div>
                     </div>
+
+                    {member?.winners_satellite && (
+                      <>
+                        <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground pt-2">WSF Centre</h3>
+                        <div className="space-y-1">
+                          <Label>Select closest WSF Centre</Label>
+                          <Select value={form.wsf_centre_id || ""} onValueChange={v => set("wsf_centre_id", v)}>
+                            <SelectTrigger><SelectValue placeholder="Select WSF Centre" /></SelectTrigger>
+                            <SelectContent>
+                              {wsfCentres.map(c => (
+                                <SelectItem key={c.id} value={c.id}>{c.name}{c.location ? ` — ${c.location}` : ""}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          {form.wsf_centre_id && <p className="text-xs text-muted-foreground">Auto-suggested based on your address</p>}
+                        </div>
+                      </>
+                    )}
 
                     <div className="flex gap-2 pt-2">
                       <Button onClick={handleSave} disabled={updateMutation.isPending} size="sm">
