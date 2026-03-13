@@ -121,6 +121,9 @@ export default function Layout({ children }) {
                 <Bell className="h-5 w-5 text-muted-foreground" />
                 <span className="absolute -top-0.5 -right-0.5 h-4 w-4 rounded-full bg-destructive flex items-center justify-center text-[9px] font-bold text-destructive-foreground">3</span>
               </Button>
+              <Button variant="outline" size="sm" className="lg:hidden gap-1.5 text-destructive border-destructive/30 hover:bg-destructive/10" onClick={signOut}>
+                <LogOut className="h-4 w-4" /> Sign Out
+              </Button>
             </div>
           </div>
         </header>
