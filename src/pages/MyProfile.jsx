@@ -7,9 +7,12 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2, User, Mail, Phone, MapPin, Calendar, CheckCircle2, XCircle, Church, Edit, Save, X } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "@/components/ui/use-toast";
+
+const GENDERS = ["Male", "Female"];
 
 export default function MyProfile() {
   const { user } = useAuth();
@@ -53,6 +56,7 @@ export default function MyProfile() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["my-member-profile"] });
+      queryClient.invalidateQueries({ queryKey: ["profile-completion"] });
       toast({ title: "Profile updated successfully" });
       setEditing(false);
     },
@@ -61,10 +65,15 @@ export default function MyProfile() {
 
   const startEditing = () => {
     setForm({
+      first_name: member.first_name || "",
+      last_name: member.last_name || "",
+      email: member.email || "",
       phone: member.phone || "",
       address: member.address || "",
       city: member.city || "",
       postcode: member.postcode || "",
+      date_of_birth: member.date_of_birth || "",
+      gender: member.gender || "",
       emergency_contact_name: member.emergency_contact_name || "",
       emergency_contact_phone: member.emergency_contact_phone || "",
     });
@@ -72,11 +81,20 @@ export default function MyProfile() {
   };
 
   const handleSave = () => {
+    if (!form.first_name || !form.last_name) {
+      toast({ title: "First and last name are required", variant: "destructive" });
+      return;
+    }
     updateMutation.mutate({
+      first_name: form.first_name,
+      last_name: form.last_name,
+      email: form.email || null,
       phone: form.phone || null,
       address: form.address || null,
       city: form.city || null,
       postcode: form.postcode || null,
+      date_of_birth: form.date_of_birth || null,
+      gender: form.gender || null,
       emergency_contact_name: form.emergency_contact_name || null,
       emergency_contact_phone: form.emergency_contact_phone || null,
     });
@@ -124,18 +142,34 @@ export default function MyProfile() {
                 {member.first_name[0]}{member.last_name[0]}
               </div>
               <div className="flex-1 min-w-0">
-                <h2 className="text-xl font-bold text-foreground">{member.first_name} {member.last_name}</h2>
-                <Badge variant="outline" className="mt-1">{member.membership_status}</Badge>
-
                 {editing ? (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
-                    <div className="space-y-1"><Label>Phone</Label><Input value={form.phone} onChange={e => set("phone", e.target.value)} /></div>
-                    <div className="space-y-1"><Label>Address</Label><Input value={form.address} onChange={e => set("address", e.target.value)} /></div>
-                    <div className="space-y-1"><Label>City</Label><Input value={form.city} onChange={e => set("city", e.target.value)} /></div>
-                    <div className="space-y-1"><Label>Postcode</Label><Input value={form.postcode} onChange={e => set("postcode", e.target.value)} /></div>
-                    <div className="space-y-1"><Label>Emergency Contact</Label><Input value={form.emergency_contact_name} onChange={e => set("emergency_contact_name", e.target.value)} /></div>
-                    <div className="space-y-1"><Label>Emergency Phone</Label><Input value={form.emergency_contact_phone} onChange={e => set("emergency_contact_phone", e.target.value)} /></div>
-                    <div className="sm:col-span-2 flex gap-2 pt-2">
+                  <div className="space-y-4">
+                    <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Personal Details</h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div className="space-y-1"><Label>First Name *</Label><Input value={form.first_name} onChange={e => set("first_name", e.target.value)} /></div>
+                      <div className="space-y-1"><Label>Last Name *</Label><Input value={form.last_name} onChange={e => set("last_name", e.target.value)} /></div>
+                      <div className="space-y-1"><Label>Email</Label><Input type="email" value={form.email} onChange={e => set("email", e.target.value)} /></div>
+                      <div className="space-y-1"><Label>Phone</Label><Input value={form.phone} onChange={e => set("phone", e.target.value)} /></div>
+                      <div className="space-y-1 sm:col-span-2"><Label>Street Address</Label><Input value={form.address} onChange={e => set("address", e.target.value)} /></div>
+                      <div className="space-y-1"><Label>City</Label><Input value={form.city} onChange={e => set("city", e.target.value)} /></div>
+                      <div className="space-y-1"><Label>Postcode</Label><Input value={form.postcode} onChange={e => set("postcode", e.target.value)} /></div>
+                      <div className="space-y-1"><Label>Date of Birth</Label><Input type="date" value={form.date_of_birth} onChange={e => set("date_of_birth", e.target.value)} /></div>
+                      <div className="space-y-1">
+                        <Label>Gender</Label>
+                        <Select value={form.gender || ""} onValueChange={v => set("gender", v)}>
+                          <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                          <SelectContent>{GENDERS.map(g => <SelectItem key={g} value={g}>{g}</SelectItem>)}</SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground pt-2">Emergency Contact</h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div className="space-y-1"><Label>Contact Name</Label><Input value={form.emergency_contact_name} onChange={e => set("emergency_contact_name", e.target.value)} /></div>
+                      <div className="space-y-1"><Label>Contact Phone</Label><Input value={form.emergency_contact_phone} onChange={e => set("emergency_contact_phone", e.target.value)} /></div>
+                    </div>
+
+                    <div className="flex gap-2 pt-2">
                       <Button onClick={handleSave} disabled={updateMutation.isPending} size="sm">
                         {updateMutation.isPending ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Save className="h-4 w-4 mr-1" />} Save
                       </Button>
@@ -143,22 +177,37 @@ export default function MyProfile() {
                     </div>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-4 text-sm text-muted-foreground">
-                    {member.email && <div className="flex items-center gap-2"><Mail className="h-4 w-4" />{member.email}</div>}
-                    {member.phone && <div className="flex items-center gap-2"><Phone className="h-4 w-4" />{member.phone}</div>}
-                    {(member.address || member.city) && (
-                      <div className="flex items-center gap-2"><MapPin className="h-4 w-4" />{[member.address, member.city, member.postcode].filter(Boolean).join(", ")}</div>
-                    )}
-                    {member.membership_date && (
-                      <div className="flex items-center gap-2"><Calendar className="h-4 w-4" />Member since {format(new Date(member.membership_date), "MMM yyyy")}</div>
-                    )}
-                    {units.length > 0 && (
-                      <div className="flex items-center gap-2 sm:col-span-2 flex-wrap">
-                        <Church className="h-4 w-4 shrink-0" />
-                        {units.map(u => <Badge key={u} variant="secondary" className="text-xs">{u}</Badge>)}
-                      </div>
-                    )}
-                  </div>
+                  <>
+                    <h2 className="text-xl font-bold text-foreground">{member.first_name} {member.last_name}</h2>
+                    <Badge variant="outline" className="mt-1">{member.membership_status}</Badge>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-4 text-sm text-muted-foreground">
+                      {member.email && <div className="flex items-center gap-2"><Mail className="h-4 w-4" />{member.email}</div>}
+                      {member.phone && <div className="flex items-center gap-2"><Phone className="h-4 w-4" />{member.phone}</div>}
+                      {(member.address || member.city) && (
+                        <div className="flex items-center gap-2"><MapPin className="h-4 w-4" />{[member.address, member.city, member.postcode].filter(Boolean).join(", ")}</div>
+                      )}
+                      {member.date_of_birth && (
+                        <div className="flex items-center gap-2"><Calendar className="h-4 w-4" />DOB: {format(new Date(member.date_of_birth), "dd MMM yyyy")}</div>
+                      )}
+                      {member.gender && (
+                        <div className="flex items-center gap-2"><User className="h-4 w-4" />{member.gender}</div>
+                      )}
+                      {member.membership_date && (
+                        <div className="flex items-center gap-2"><Calendar className="h-4 w-4" />Member since {format(new Date(member.membership_date), "MMM yyyy")}</div>
+                      )}
+                      {units.length > 0 && (
+                        <div className="flex items-center gap-2 sm:col-span-2 flex-wrap">
+                          <Church className="h-4 w-4 shrink-0" />
+                          {units.map(u => <Badge key={u} variant="secondary" className="text-xs">{u}</Badge>)}
+                        </div>
+                      )}
+                      {member.emergency_contact_name && (
+                        <div className="flex items-center gap-2 sm:col-span-2 text-xs">
+                          <span className="font-medium text-foreground">Emergency:</span> {member.emergency_contact_name} {member.emergency_contact_phone && `· ${member.emergency_contact_phone}`}
+                        </div>
+                      )}
+                    </div>
+                  </>
                 )}
               </div>
             </div>
