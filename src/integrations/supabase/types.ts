@@ -130,6 +130,7 @@ export type Database = {
           notes: string | null
           session_date: string
           session_type: Database["public"]["Enums"]["session_type"]
+          status: string
           title: string | null
           updated_at: string
         }
@@ -140,6 +141,7 @@ export type Database = {
           notes?: string | null
           session_date: string
           session_type: Database["public"]["Enums"]["session_type"]
+          status?: string
           title?: string | null
           updated_at?: string
         }
@@ -150,6 +152,7 @@ export type Database = {
           notes?: string | null
           session_date?: string
           session_type?: Database["public"]["Enums"]["session_type"]
+          status?: string
           title?: string | null
           updated_at?: string
         }
@@ -600,6 +603,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      pickup_locations: {
+        Row: {
+          address: string
+          created_at: string
+          created_by: string | null
+          id: string
+          is_active: boolean
+          name: string
+          notes: string | null
+          updated_at: string
+        }
+        Insert: {
+          address: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          notes?: string | null
+          updated_at?: string
+        }
+        Update: {
+          address?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          notes?: string | null
+          updated_at?: string
+        }
+        Relationships: []
       }
       profiles: {
         Row: {
