@@ -10,6 +10,13 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 
 // Role requirements: null = any authenticated user, "admin" = admin/super_admin, "leader" = admin or unit_leader
+const roleLabels = {
+  admin: { label: "Admin", class: "bg-primary/15 text-primary" },
+  leader: { label: "Leader", class: "bg-chart-3/15 text-chart-3" },
+  wsf: { label: "WSF", class: "bg-chart-4/15 text-chart-4" },
+  super_admin: { label: "Super", class: "bg-destructive/15 text-destructive" },
+};
+
 const allNavItems = [
   { name: "Dashboard", icon: LayoutDashboard, path: "/", access: null },
   { name: "My Profile", icon: Users, path: "/my-profile", access: null },
