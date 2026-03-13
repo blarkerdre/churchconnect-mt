@@ -182,9 +182,19 @@ export default function WSFManagement() {
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader><DialogTitle className="font-display">{editing ? "Edit Centre" : "New Centre"}</DialogTitle></DialogHeader>
-          <div className="space-y-4">
+          <div className="space-y-4 max-h-[70vh] overflow-y-auto">
             <div className="space-y-1.5"><Label>Centre Name *</Label><Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} /></div>
-            <div className="space-y-1.5"><Label>Location</Label><Input value={form.location} onChange={e => setForm(f => ({ ...f, location: e.target.value }))} placeholder="e.g. CF10 area" /></div>
+            <div className="space-y-1.5"><Label>Address</Label><Input value={form.address} onChange={e => setForm(f => ({ ...f, address: e.target.value }))} placeholder="Street address" /></div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5"><Label>City</Label><Input value={form.city} onChange={e => setForm(f => ({ ...f, city: e.target.value }))} placeholder="Cardiff" /></div>
+              <div className="space-y-1.5"><Label>Postcode</Label><Input value={form.postcode} onChange={e => setForm(f => ({ ...f, postcode: e.target.value }))} placeholder="CF10 1AB" /></div>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Coverage Postcodes</Label>
+              <Input value={form.coverage_postcodes} onChange={e => setForm(f => ({ ...f, coverage_postcodes: e.target.value }))} placeholder="CF10, CF11, CF14" />
+              <p className="text-xs text-muted-foreground">Comma-separated postcode prefixes this centre serves</p>
+            </div>
+            <div className="space-y-1.5"><Label>Location Description</Label><Input value={form.location} onChange={e => setForm(f => ({ ...f, location: e.target.value }))} placeholder="e.g. Near Cardiff Bay" /></div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label>Meeting Day</Label>
