@@ -2,11 +2,12 @@ import React, { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import {
   LayoutDashboard, Users, CalendarDays, HeartHandshake,
-  Heart, Megaphone, Menu, Church, Bell, LogOut,
-  ClipboardList, Car, BarChart2, ChevronLeft, Globe, Settings, Shield, FileText
+  Heart, Megaphone, Menu, Church, LogOut,
+  ClipboardList, Car, BarChart2, ChevronLeft, Globe, Shield, FileText
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
+import NotificationBell from "@/components/notifications/NotificationBell";
 
 // Role requirements: null = any authenticated user, "admin" = admin/super_admin, "leader" = admin or unit_leader
 const allNavItems = [
@@ -17,7 +18,7 @@ const allNavItems = [
   { name: "Attendance", icon: ClipboardList, path: "/attendance", access: "leader" },
   { name: "Follow-ups", icon: HeartHandshake, path: "/followups", access: "leader" },
   { name: "Pastoral Care", icon: Heart, path: "/pastoral-care", access: null },
-  { name: "Communications", icon: Megaphone, path: "/communications", access: "leader" },
+  { name: "Announcements", icon: Megaphone, path: "/communications", access: null },
   { name: "Transportation", icon: Car, path: "/transportation", access: null },
   { name: "Analytics", icon: BarChart2, path: "/analytics", access: "leader" },
   { name: "WSF Centres", icon: Globe, path: "/wsf", access: "wsf" },
@@ -43,6 +44,16 @@ export default function Layout({ children }) {
   });
 
   const currentNav = navItems.find(n => n.path === location.pathname) || allNavItems.find(n => n.path === location.pathname) || navItems[0];
+
+  // Determine role title
+  const getRoleTitle = () => {
+    if (isSuperAdmin) return "Super Admin";
+    if (isAdmin) return "Admin";
+    if (isUnitLeader && isWSFLeader) return "Unit & WSF Leader";
+    if (isUnitLeader) return "Unit Leader";
+    if (isWSFLeader) return "WSF Leader";
+    return "Member";
+  };
 
   return (
     <div className="min-h-screen bg-background flex">
@@ -98,7 +109,10 @@ export default function Layout({ children }) {
         {/* User + Sign Out */}
         <div className="flex flex-col p-3 border-t border-sidebar-border gap-2">
           {!collapsed && profile && (
-            <p className="text-xs text-sidebar-foreground/60 truncate px-1">{profile.full_name || profile.email}</p>
+            <div className="px-1">
+              <p className="text-xs text-sidebar-foreground/60 truncate">{profile.full_name || profile.email}</p>
+              <p className="text-[10px] text-sidebar-foreground/40">{getRoleTitle()}</p>
+            </div>
           )}
           <button
             onClick={signOut}
@@ -130,10 +144,7 @@ export default function Layout({ children }) {
               </h2>
             </div>
             <div className="flex items-center gap-2">
-              <Button variant="ghost" size="icon" className="relative">
-                <Bell className="h-5 w-5 text-muted-foreground" />
-                <span className="absolute -top-0.5 -right-0.5 h-4 w-4 rounded-full bg-destructive flex items-center justify-center text-[9px] font-bold text-destructive-foreground">3</span>
-              </Button>
+              <NotificationBell />
               <Button variant="outline" size="sm" className="lg:hidden gap-1.5 text-destructive border-destructive/30 hover:bg-destructive/10" onClick={signOut}>
                 <LogOut className="h-4 w-4" /> Sign Out
               </Button>
