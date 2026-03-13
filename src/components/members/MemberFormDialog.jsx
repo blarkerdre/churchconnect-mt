@@ -28,7 +28,6 @@ const emptyMember = {
   city: "Cardiff", postcode: "",
   water_baptism: false, holy_spirit_baptism: false,
   winners_satellite: false, wsf_centre_id: "",
-  workers_in_training: false,
   bfc_completed: false, bcc_completed: false, lcc_completed: false, ldc_completed: false,
   gdpr_consent: false,
 };
@@ -83,7 +82,6 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
         holy_spirit_baptism: form.holy_spirit_baptism,
         winners_satellite: form.winners_satellite,
         wsf_centre_id: form.wsf_centre_id || null,
-        workers_in_training: form.workers_in_training,
         bfc_completed: form.bfc_completed,
         bcc_completed: form.bcc_completed,
         lcc_completed: form.lcc_completed,
@@ -97,9 +95,20 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
         if (error) throw error;
         toast({ title: "Member updated" });
       } else {
-        const { error } = await supabase.from("members").insert(payload);
+        const { data: inserted, error } = await supabase.from("members").insert(payload).select().single();
         if (error) throw error;
         toast({ title: "Member registered" });
+
+        // Auto-create followup for First Timer / New Convert
+        if (inserted && (form.membership_status === "First Timer" || form.membership_status === "New Convert")) {
+          await supabase.from("followups").insert({
+            member_id: inserted.id,
+            followup_type: form.membership_status === "First Timer" ? "First Timer" : "New Convert",
+            description: `New ${form.membership_status.toLowerCase()} registered: ${form.first_name} ${form.last_name}`,
+            status: "Pending",
+            priority: "High",
+          });
+        }
       }
       onSaved();
     } catch (err) {
@@ -223,7 +232,6 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
                   </Select>
                 </div>
               )}
-              <SwitchRow id="workers_in_training" label="Workers in Training (WIT)" checked={form.workers_in_training} onChange={(v) => set("workers_in_training", v)} />
               <SwitchRow id="bfc_completed" label="Believers Foundation Class (BFC)" checked={form.bfc_completed} onChange={(v) => set("bfc_completed", v)} />
               <SwitchRow id="bcc_completed" label="Basic Certificate Course (BCC)" checked={form.bcc_completed} onChange={(v) => set("bcc_completed", v)} />
               <SwitchRow id="lcc_completed" label="Leadership Certificate Course (LCC)" checked={form.lcc_completed} onChange={(v) => set("lcc_completed", v)} />

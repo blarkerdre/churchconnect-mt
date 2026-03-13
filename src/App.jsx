@@ -19,6 +19,7 @@ import AuditLog from "@/pages/AuditLog";
 import Auth from "@/pages/Auth";
 import ResetPassword from "@/pages/ResetPassword";
 import MyProfile from "@/pages/MyProfile";
+import PublicRegistration from "@/pages/PublicRegistration";
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
@@ -59,6 +60,7 @@ function AppRoutes() {
     <Routes>
       <Route path="/auth" element={<Auth />} />
       <Route path="/reset-password" element={<ResetPassword />} />
+      <Route path="/register" element={<PublicRegistration />} />
       <Route
         path="/*"
         element={
