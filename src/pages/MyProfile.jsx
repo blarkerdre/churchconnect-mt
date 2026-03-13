@@ -7,13 +7,21 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, User, Mail, Phone, MapPin, Calendar, CheckCircle2, XCircle, Church, Edit, Save, X } from "lucide-react";
+import { Loader2, User, Mail, Phone, MapPin, Calendar, CheckCircle2, XCircle, Church, Edit, Save, X, Shield } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "@/components/ui/use-toast";
 import { suggestClosestWSFCentre } from "@/lib/wsf-suggest";
 
 const GENDERS = ["Male", "Female"];
+const CHURCH_UNITS = [
+  "Ushering", "Choir", "Media", "Children's Ministry", "Protocol",
+  "Sanctuary Keepers", "Prayer & Intercession", "Evangelism", "Follow-up",
+  "Youth Ministry", "Men's Ministry", "Women's Ministry", "Drama & Creative Arts",
+  "Altar Ministers", "Pastoral Care", "Welfare", "CSR", "Transportation", "None"
+];
 
 const statusColors = {
   "Active": "bg-chart-3/10 text-chart-3",
@@ -23,10 +31,20 @@ const statusColors = {
 };
 
 export default function MyProfile() {
-  const { user } = useAuth();
+  const { user, roles, isAdmin, isUnitLeader, isWSFLeader } = useAuth();
   const queryClient = useQueryClient();
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({});
+
+  const isSuperAdmin = roles.includes("super_admin");
+  const getRoleTitle = () => {
+    if (isSuperAdmin) return "Super Admin";
+    if (isAdmin) return "Admin";
+    if (isUnitLeader && isWSFLeader) return "Unit & WSF Leader";
+    if (isUnitLeader) return "Unit Leader";
+    if (isWSFLeader) return "WSF Leader";
+    return "Member";
+  };
 
   const { data: member, isLoading } = useQuery({
     queryKey: ["my-member-profile", user?.id],
@@ -93,7 +111,16 @@ export default function MyProfile() {
       gender: member.gender || "",
       emergency_contact_name: member.emergency_contact_name || "",
       emergency_contact_phone: member.emergency_contact_phone || "",
+      notes: member.notes || "",
+      church_unit: member.church_unit || "",
+      water_baptism: member.water_baptism || false,
+      holy_spirit_baptism: member.holy_spirit_baptism || false,
+      winners_satellite: member.winners_satellite || false,
       wsf_centre_id: member.wsf_centre_id || "",
+      bfc_completed: member.bfc_completed || false,
+      bcc_completed: member.bcc_completed || false,
+      lcc_completed: member.lcc_completed || false,
+      ldc_completed: member.ldc_completed || false,
     });
     setEditing(true);
   };
@@ -115,7 +142,16 @@ export default function MyProfile() {
       gender: form.gender || null,
       emergency_contact_name: form.emergency_contact_name || null,
       emergency_contact_phone: form.emergency_contact_phone || null,
+      notes: form.notes || null,
+      church_unit: form.church_unit || null,
+      water_baptism: form.water_baptism,
+      holy_spirit_baptism: form.holy_spirit_baptism,
+      winners_satellite: form.winners_satellite,
       wsf_centre_id: form.wsf_centre_id || null,
+      bfc_completed: form.bfc_completed,
+      bcc_completed: form.bcc_completed,
+      lcc_completed: form.lcc_completed,
+      ldc_completed: form.ldc_completed,
     });
   };
 
@@ -124,7 +160,7 @@ export default function MyProfile() {
   const handleAddressChange = (key, value) => {
     const updated = { ...form, [key]: value };
     set(key, value);
-    if (member?.winners_satellite) {
+    if (form.winners_satellite) {
       const best = suggestClosestWSFCentre(wsfCentres, updated);
       if (best) set("wsf_centre_id", best.id);
     }
@@ -159,61 +195,127 @@ export default function MyProfile() {
     </div>
   );
 
+  const SwitchRow = ({ id, label, checked, onChange }) => (
+    <div className="flex items-center justify-between p-3 rounded-xl bg-muted/50 border border-border">
+      <p className="text-sm font-medium text-foreground">{label}</p>
+      <Switch id={id} checked={!!checked} onCheckedChange={onChange} />
+    </div>
+  );
+
   return (
     <div className="space-y-6 max-w-4xl">
+      {/* Role Badge */}
+      <div className="flex items-center gap-2">
+        <Shield className="h-4 w-4 text-primary" />
+        <Badge variant="outline" className="text-xs font-medium">{getRoleTitle()}</Badge>
+        <Badge className={`${statusColors[member.membership_status] || "bg-muted text-muted-foreground"} border-0 text-xs`}>
+          {member.membership_status}
+        </Badge>
+      </div>
+
       {/* Profile Header */}
       <Card className="border-0 shadow-sm">
         <CardContent className="p-6">
           <div className="flex items-start justify-between">
-            <div className="flex items-start gap-4">
+            <div className="flex items-start gap-4 flex-1 min-w-0">
               <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xl shrink-0">
                 {member.first_name[0]}{member.last_name[0]}
               </div>
               <div className="flex-1 min-w-0">
                 {editing ? (
-                  <div className="space-y-4">
-                    <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Personal Details</h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <div className="space-y-1"><Label>First Name *</Label><Input value={form.first_name} onChange={e => set("first_name", e.target.value)} /></div>
-                      <div className="space-y-1"><Label>Last Name *</Label><Input value={form.last_name} onChange={e => set("last_name", e.target.value)} /></div>
-                      <div className="space-y-1"><Label>Email</Label><Input type="email" value={form.email} onChange={e => set("email", e.target.value)} /></div>
-                      <div className="space-y-1"><Label>Phone</Label><Input value={form.phone} onChange={e => set("phone", e.target.value)} /></div>
-                      <div className="space-y-1 sm:col-span-2"><Label>Street Address</Label><Input value={form.address} onChange={e => handleAddressChange("address", e.target.value)} /></div>
-                      <div className="space-y-1"><Label>City</Label><Input value={form.city} onChange={e => handleAddressChange("city", e.target.value)} /></div>
-                      <div className="space-y-1"><Label>Postcode</Label><Input value={form.postcode} onChange={e => handleAddressChange("postcode", e.target.value)} /></div>
-                      <div className="space-y-1"><Label>Date of Birth</Label><Input type="date" value={form.date_of_birth} onChange={e => set("date_of_birth", e.target.value)} /></div>
-                      <div className="space-y-1">
-                        <Label>Gender</Label>
-                        <Select value={form.gender || ""} onValueChange={v => set("gender", v)}>
-                          <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                          <SelectContent>{GENDERS.map(g => <SelectItem key={g} value={g}>{g}</SelectItem>)}</SelectContent>
-                        </Select>
+                  <div className="space-y-5">
+                    {/* Personal Details */}
+                    <div>
+                      <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Personal Details</h3>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div className="space-y-1"><Label>First Name *</Label><Input value={form.first_name} onChange={e => set("first_name", e.target.value)} /></div>
+                        <div className="space-y-1"><Label>Last Name *</Label><Input value={form.last_name} onChange={e => set("last_name", e.target.value)} /></div>
+                        <div className="space-y-1"><Label>Email</Label><Input type="email" value={form.email} onChange={e => set("email", e.target.value)} /></div>
+                        <div className="space-y-1"><Label>Phone</Label><Input value={form.phone} onChange={e => set("phone", e.target.value)} /></div>
+                        <div className="space-y-1 sm:col-span-2"><Label>Street Address</Label><Input value={form.address} onChange={e => handleAddressChange("address", e.target.value)} /></div>
+                        <div className="space-y-1"><Label>City</Label><Input value={form.city} onChange={e => handleAddressChange("city", e.target.value)} /></div>
+                        <div className="space-y-1"><Label>Postcode</Label><Input value={form.postcode} onChange={e => handleAddressChange("postcode", e.target.value)} /></div>
+                        <div className="space-y-1"><Label>Date of Birth</Label><Input type="date" value={form.date_of_birth} onChange={e => set("date_of_birth", e.target.value)} /></div>
+                        <div className="space-y-1">
+                          <Label>Gender</Label>
+                          <Select value={form.gender || ""} onValueChange={v => set("gender", v)}>
+                            <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                            <SelectContent>{GENDERS.map(g => <SelectItem key={g} value={g}>{g}</SelectItem>)}</SelectContent>
+                          </Select>
+                        </div>
                       </div>
                     </div>
 
-                    <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground pt-2">Emergency Contact</h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <div className="space-y-1"><Label>Contact Name</Label><Input value={form.emergency_contact_name} onChange={e => set("emergency_contact_name", e.target.value)} /></div>
-                      <div className="space-y-1"><Label>Contact Phone</Label><Input value={form.emergency_contact_phone} onChange={e => set("emergency_contact_phone", e.target.value)} /></div>
+                    {/* Church Units */}
+                    <div>
+                      <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Church Units</h3>
+                      <div className="flex flex-wrap gap-2 p-3 rounded-lg border border-border bg-background min-h-[40px]">
+                        {CHURCH_UNITS.filter(u => u !== "None").map(unit => {
+                          const selected = (form.church_unit || "").split(",").map(s => s.trim()).filter(Boolean);
+                          const isSelected = selected.includes(unit);
+                          return (
+                            <button
+                              key={unit}
+                              type="button"
+                              onClick={() => {
+                                const current = (form.church_unit || "").split(",").map(s => s.trim()).filter(Boolean);
+                                const updated = isSelected ? current.filter(u => u !== unit) : [...current, unit];
+                                set("church_unit", updated.join(", "));
+                              }}
+                              className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
+                                isSelected ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-muted/80"
+                              }`}
+                            >
+                              {unit}
+                            </button>
+                          );
+                        })}
+                      </div>
                     </div>
 
-                    {member?.winners_satellite && (
-                      <>
-                        <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground pt-2">WSF Centre</h3>
-                        <div className="space-y-1">
-                          <Label>Select closest WSF Centre</Label>
-                          <Select value={form.wsf_centre_id || ""} onValueChange={v => set("wsf_centre_id", v)}>
-                            <SelectTrigger><SelectValue placeholder="Select WSF Centre" /></SelectTrigger>
-                            <SelectContent>
-                              {wsfCentres.map(c => (
-                                <SelectItem key={c.id} value={c.id}>{c.name}{c.location ? ` — ${c.location}` : ""}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          {form.wsf_centre_id && <p className="text-xs text-muted-foreground">Auto-suggested based on your address</p>}
-                        </div>
-                      </>
-                    )}
+                    {/* Growth Indices */}
+                    <div>
+                      <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Church Growth Indices</h3>
+                      <div className="space-y-3">
+                        <SwitchRow id="water_baptism" label="Water Baptism" checked={form.water_baptism} onChange={v => set("water_baptism", v)} />
+                        <SwitchRow id="holy_spirit_baptism" label="Holy Spirit Baptism" checked={form.holy_spirit_baptism} onChange={v => set("holy_spirit_baptism", v)} />
+                        <SwitchRow id="winners_satellite" label="Winners Satellite Fellowship" checked={form.winners_satellite} onChange={v => {
+                          set("winners_satellite", v);
+                          if (v && !form.wsf_centre_id) {
+                            const best = suggestClosestWSFCentre(wsfCentres, form);
+                            if (best) set("wsf_centre_id", best.id);
+                          }
+                        }} />
+                        {form.winners_satellite && (
+                          <div className="space-y-1.5 pl-4">
+                            <Label>WSF Centre</Label>
+                            <Select value={form.wsf_centre_id || ""} onValueChange={v => set("wsf_centre_id", v)}>
+                              <SelectTrigger><SelectValue placeholder="Select WSF Centre" /></SelectTrigger>
+                              <SelectContent>{wsfCentres.map(c => <SelectItem key={c.id} value={c.id}>{c.name}{c.location ? ` — ${c.location}` : ""}</SelectItem>)}</SelectContent>
+                            </Select>
+                          </div>
+                        )}
+                        <SwitchRow id="bfc_completed" label="Believers Foundation Class (BFC)" checked={form.bfc_completed} onChange={v => set("bfc_completed", v)} />
+                        <SwitchRow id="bcc_completed" label="Basic Certificate Course (BCC)" checked={form.bcc_completed} onChange={v => set("bcc_completed", v)} />
+                        <SwitchRow id="lcc_completed" label="Leadership Certificate Course (LCC)" checked={form.lcc_completed} onChange={v => set("lcc_completed", v)} />
+                        <SwitchRow id="ldc_completed" label="Leadership Diploma Course (LDC)" checked={form.ldc_completed} onChange={v => set("ldc_completed", v)} />
+                      </div>
+                    </div>
+
+                    {/* Emergency Contact */}
+                    <div>
+                      <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Emergency Contact</h3>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div className="space-y-1"><Label>Contact Name</Label><Input value={form.emergency_contact_name} onChange={e => set("emergency_contact_name", e.target.value)} /></div>
+                        <div className="space-y-1"><Label>Contact Phone</Label><Input value={form.emergency_contact_phone} onChange={e => set("emergency_contact_phone", e.target.value)} /></div>
+                      </div>
+                    </div>
+
+                    {/* Notes */}
+                    <div className="space-y-1.5">
+                      <Label>Notes</Label>
+                      <Textarea value={form.notes} onChange={e => set("notes", e.target.value)} rows={3} />
+                    </div>
 
                     <div className="flex gap-2 pt-2">
                       <Button onClick={handleSave} disabled={updateMutation.isPending} size="sm">
@@ -226,9 +328,6 @@ export default function MyProfile() {
                   <>
                     <div className="flex items-center gap-2 flex-wrap">
                       <h2 className="text-xl font-bold text-foreground">{member.first_name} {member.last_name}</h2>
-                      <Badge className={`${statusColors[member.membership_status] || "bg-muted text-muted-foreground"} border-0`}>
-                        {member.membership_status}
-                      </Badge>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-4 text-sm text-muted-foreground">
                       {member.email && <div className="flex items-center gap-2"><Mail className="h-4 w-4" />{member.email}</div>}
@@ -270,24 +369,26 @@ export default function MyProfile() {
         </CardContent>
       </Card>
 
-      {/* Growth Milestones */}
-      <Card className="border-0 shadow-sm">
-        <CardHeader className="pb-2"><CardTitle className="text-base">Growth Milestones</CardTitle></CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-            <BoolBadge value={member.water_baptism} label="Water Baptism" />
-            <BoolBadge value={member.holy_spirit_baptism} label="HS Baptism" />
-            <BoolBadge value={member.bfc_completed} label="BFC Completed" />
-            <BoolBadge value={member.bcc_completed} label="BCC Completed" />
-            <BoolBadge value={member.lcc_completed} label="LCC Completed" />
-            <BoolBadge value={member.ldc_completed} label="LDC Completed" />
-            <BoolBadge value={member.winners_satellite} label="Winners Satellite" />
-          </div>
-          {member.wsf_centres?.name && (
-            <p className="text-sm text-muted-foreground mt-3">WSF Centre: <span className="text-foreground font-medium">{member.wsf_centres.name}</span></p>
-          )}
-        </CardContent>
-      </Card>
+      {/* Growth Milestones (read-only view) */}
+      {!editing && (
+        <Card className="border-0 shadow-sm">
+          <CardHeader className="pb-2"><CardTitle className="text-base">Growth Milestones</CardTitle></CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              <BoolBadge value={member.water_baptism} label="Water Baptism" />
+              <BoolBadge value={member.holy_spirit_baptism} label="HS Baptism" />
+              <BoolBadge value={member.bfc_completed} label="BFC Completed" />
+              <BoolBadge value={member.bcc_completed} label="BCC Completed" />
+              <BoolBadge value={member.lcc_completed} label="LCC Completed" />
+              <BoolBadge value={member.ldc_completed} label="LDC Completed" />
+              <BoolBadge value={member.winners_satellite} label="Winners Satellite" />
+            </div>
+            {member.wsf_centres?.name && (
+              <p className="text-sm text-muted-foreground mt-3">WSF Centre: <span className="text-foreground font-medium">{member.wsf_centres.name}</span></p>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Attendance History */}
       <Card className="border-0 shadow-sm">

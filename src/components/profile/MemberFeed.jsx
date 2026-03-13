@@ -1,17 +1,20 @@
 import React, { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Megaphone, CalendarDays, Bell, ChevronDown, ChevronUp } from "lucide-react";
+import { Megaphone, CalendarDays, Bell, ChevronDown, ChevronUp, CheckCircle2, Loader2 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { toast } from "@/components/ui/use-toast";
 
 function AnnouncementItem({ a }) {
   const [expanded, setExpanded] = useState(false);
   return (
-    <div className={`p-3 rounded-xl border transition-colors bg-muted/30 border-border`}>
+    <div className="p-3 rounded-xl border transition-colors bg-muted/30 border-border">
       <div className="flex items-start gap-2">
         <Bell className="h-3.5 w-3.5 mt-0.5 shrink-0 text-muted-foreground" />
         <div className="min-w-0 flex-1">
@@ -38,7 +41,44 @@ function AnnouncementItem({ a }) {
   );
 }
 
-function EventItem({ event }) {
+function EventItem({ event, member }) {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+
+  const { data: registration } = useQuery({
+    queryKey: ["event-reg", event.id, user?.id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("event_registrations")
+        .select("id")
+        .eq("event_id", event.id)
+        .eq("user_id", user.id)
+        .maybeSingle();
+      return data;
+    },
+    enabled: !!user?.id && !!event.requires_registration,
+  });
+
+  const registerMutation = useMutation({
+    mutationFn: async () => {
+      const payload = {
+        event_id: event.id,
+        user_id: user.id,
+        member_id: member?.id || null,
+        status: "registered",
+      };
+      const { error } = await supabase.from("event_registrations").insert(payload);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["event-reg", event.id] });
+      toast({ title: "Registered!", description: `You're registered for ${event.title}` });
+    },
+    onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+  });
+
+  const isRegistered = !!registration;
+
   return (
     <div className="flex items-start gap-3 p-3 rounded-xl bg-muted/30 hover:bg-muted/50 transition-colors">
       <div className="h-10 w-10 rounded-lg bg-primary/10 flex flex-col items-center justify-center shrink-0">
@@ -55,6 +95,26 @@ function EventItem({ event }) {
           {event.location || "TBC"}
           {event.start_time && ` · ${event.start_time}`}
         </p>
+        {event.requires_registration && (
+          <div className="mt-2">
+            {isRegistered ? (
+              <Badge className="bg-chart-3/10 text-chart-3 border-0 text-[10px]">
+                <CheckCircle2 className="h-3 w-3 mr-1" /> Registered
+              </Badge>
+            ) : (
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-6 text-[10px] px-2"
+                onClick={() => registerMutation.mutate()}
+                disabled={registerMutation.isPending}
+              >
+                {registerMutation.isPending && <Loader2 className="h-3 w-3 mr-1 animate-spin" />}
+                Register
+              </Button>
+            )}
+          </div>
+        )}
       </div>
       {event.category && (
         <Badge variant="secondary" className="text-[10px] shrink-0">{event.category}</Badge>
@@ -93,7 +153,6 @@ export default function MemberFeed({ member }) {
     },
   });
 
-  // Filter announcements relevant to this member
   const relevantAnnouncements = announcements.filter(a => {
     if (a.target_audience === "Leaders Only") return false;
     if (a.target_audience === "All" || a.target_audience === "All Members" || !a.target_audience) return true;
@@ -148,7 +207,7 @@ export default function MemberFeed({ member }) {
               <p className="text-sm text-muted-foreground text-center py-8">No upcoming events</p>
             ) : (
               <div className="space-y-2">
-                {events.map(e => <EventItem key={e.id} event={e} />)}
+                {events.map(e => <EventItem key={e.id} event={e} member={member} />)}
               </div>
             )}
           </TabsContent>
