@@ -232,6 +232,7 @@ export default function FollowupDetailPanel({ followup, onClose, onUpdate, curre
                 </Select>
               </div>
             )}
+          </div>
 
           {/* Notes */}
           {followup.notes && (
