@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Loader2, User, Mail, Phone, MapPin, Calendar, CheckCircle2, XCircle, Church, Edit, Save, X } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "@/components/ui/use-toast";
+import { suggestClosestWSFCentre } from "@/lib/wsf-suggest";
 
 const GENDERS = ["Male", "Female"];
 
