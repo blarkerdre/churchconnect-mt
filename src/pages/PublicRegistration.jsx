@@ -213,22 +213,9 @@ export default function PublicRegistration() {
                 <SwitchRow id="holy_spirit_baptism" label="Holy Spirit Baptism" checked={form.holy_spirit_baptism} onChange={v => set("holy_spirit_baptism", v)} />
                 <SwitchRow id="winners_satellite" label="Winners Satellite Fellowship" checked={form.winners_satellite} onChange={v => {
                   set("winners_satellite", v);
-                  if (v && !form.wsf_centre_id && (form.postcode || form.address || form.city)) {
-                    const memberArea = `${form.postcode || ""} ${form.address || ""} ${form.city || ""}`.toLowerCase();
-                    const postcodePrefix = (form.postcode || "").trim().split(" ")[0]?.toLowerCase();
-                    const scored = wsfCentres.map(c => {
-                      const loc = (c.location || "").toLowerCase();
-                      let score = 0;
-                      if (postcodePrefix && loc.includes(postcodePrefix)) score += 10;
-                      if (form.city && loc.includes(form.city.toLowerCase())) score += 5;
-                      if (form.postcode && loc.includes(form.postcode.toLowerCase())) score += 8;
-                      const addressWords = memberArea.split(/\s+/).filter(w => w.length > 2);
-                      addressWords.forEach(w => { if (loc.includes(w)) score += 2; });
-                      return { ...c, score };
-                    }).filter(c => c.score > 0).sort((a, b) => b.score - a.score);
-                    if (scored.length > 0) {
-                      set("wsf_centre_id", scored[0].id);
-                    }
+                  if (v && !form.wsf_centre_id) {
+                    const best = suggestClosestWSFCentre(wsfCentres, form);
+                    if (best) set("wsf_centre_id", best.id);
                   }
                 }} />
                 {form.winners_satellite && (
