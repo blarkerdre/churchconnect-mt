@@ -18,8 +18,32 @@ import WSFAttendanceTab from "@/components/wsf/WSFAttendanceTab";
 const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
 export default function WSFManagement() {
-  const { isAdmin, isWSFLeader, leaderUnits } = useAuth();
+  const { isAdmin, isWSFLeader, leaderUnits, user } = useAuth();
   const canManageWSF = isAdmin || isWSFLeader || leaderUnits.includes("WSF");
+
+  // Find the current user's member record to determine their assigned centre
+  const { data: myMember } = useQuery({
+    queryKey: ["my-member-record", user?.id],
+    queryFn: async () => {
+      if (!user?.id) return null;
+      const { data } = await supabase.from("members").select("id").eq("user_id", user.id).single();
+      return data;
+    },
+    enabled: !!user?.id && isWSFLeader && !isAdmin,
+  });
+
+  // For WSF leaders (non-admin), find which centres they lead
+  const myCentreIds = !isAdmin && isWSFLeader && myMember
+    ? centres.filter(c => c.leader_id === myMember.id).map(c => c.id)
+    : [];
+
+  const canEditCentre = (centre) => {
+    if (isAdmin) return true;
+    if (isWSFLeader && myMember && centre.leader_id === myMember.id) return true;
+    return false;
+  };
+
+  const canCreateCentre = isAdmin;
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState({ name: "", location: "", meeting_day: "", meeting_time: "", is_active: true, leader_id: "" });
@@ -141,14 +165,14 @@ export default function WSFManagement() {
         </TabsList>
 
         <TabsContent value="attendance">
-          <WSFAttendanceTab centres={centres} />
+          <WSFAttendanceTab centres={!isAdmin && isWSFLeader && myCentreIds.length > 0 ? centres.filter(c => myCentreIds.includes(c.id)) : centres} />
         </TabsContent>
 
         {canManageWSF && (
           <TabsContent value="centres">
             <div className="space-y-4">
               <div className="flex justify-end">
-                <Button onClick={openNew}><Plus className="h-4 w-4 mr-2" /> Add Centre</Button>
+                {canCreateCentre && <Button onClick={openNew}><Plus className="h-4 w-4 mr-2" /> Add Centre</Button>}
               </div>
 
               {isLoading ? (
@@ -168,8 +192,12 @@ export default function WSFManagement() {
                             </Badge>
                           </div>
                           <div className="flex gap-1">
-                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(c)}><Edit className="h-3.5 w-3.5" /></Button>
-                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { if (window.confirm("Delete this centre?")) deleteMutation.mutate(c.id); }}><Trash2 className="h-3.5 w-3.5 text-destructive" /></Button>
+                            {canEditCentre(c) && (
+                              <>
+                                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(c)}><Edit className="h-3.5 w-3.5" /></Button>
+                                {isAdmin && <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { if (window.confirm("Delete this centre?")) deleteMutation.mutate(c.id); }}><Trash2 className="h-3.5 w-3.5 text-destructive" /></Button>}
+                              </>
+                            )}
                           </div>
                         </div>
                       </CardHeader>
@@ -215,17 +243,21 @@ export default function WSFManagement() {
               </div>
               <div className="space-y-1.5"><Label>Meeting Time</Label><Input type="time" value={form.meeting_time} onChange={e => setForm(f => ({ ...f, meeting_time: e.target.value }))} /></div>
             </div>
-            <div className="space-y-1.5">
-              <Label>Centre Leader</Label>
-              <Select value={form.leader_id} onValueChange={v => setForm(f => ({ ...f, leader_id: v }))}>
-                <SelectTrigger><SelectValue placeholder="Select leader" /></SelectTrigger>
-                <SelectContent>{wsfLeaders.map(m => <SelectItem key={m.id} value={m.id}>{m.first_name} {m.last_name}</SelectItem>)}</SelectContent>
-              </Select>
-            </div>
-            <div className="flex items-center justify-between">
-              <Label>Active</Label>
-              <Switch checked={form.is_active} onCheckedChange={v => setForm(f => ({ ...f, is_active: v }))} />
-            </div>
+            {isAdmin && (
+              <div className="space-y-1.5">
+                <Label>Centre Leader</Label>
+                <Select value={form.leader_id} onValueChange={v => setForm(f => ({ ...f, leader_id: v }))}>
+                  <SelectTrigger><SelectValue placeholder="Select leader" /></SelectTrigger>
+                  <SelectContent>{wsfLeaders.map(m => <SelectItem key={m.id} value={m.id}>{m.first_name} {m.last_name}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+            )}
+            {isAdmin && (
+              <div className="flex items-center justify-between">
+                <Label>Active</Label>
+                <Switch checked={form.is_active} onCheckedChange={v => setForm(f => ({ ...f, is_active: v }))} />
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
