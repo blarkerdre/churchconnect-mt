@@ -8,12 +8,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Plus, Edit, Trash2, MapPin, Clock, Users, Loader2 } from "lucide-react";
+import { Plus, Edit, Trash2, MapPin, Clock, Users, Loader2, UserCog } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import WSFAttendanceTab from "@/components/wsf/WSFAttendanceTab";
+import WSFCentreMembersDialog from "@/components/wsf/WSFCentreMembersDialog";
 
 const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
@@ -46,6 +47,7 @@ export default function WSFManagement() {
   const canCreateCentre = isAdmin;
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState(null);
+  const [membersDialogCentre, setMembersDialogCentre] = useState(null);
   const [form, setForm] = useState({ name: "", location: "", meeting_day: "", meeting_time: "", is_active: true, leader_id: "" });
   const queryClient = useQueryClient();
 
@@ -206,6 +208,11 @@ export default function WSFManagement() {
                         {c.coverage_postcodes && <div className="flex items-center gap-2 text-muted-foreground"><MapPin className="h-3.5 w-3.5 opacity-50" />Covers: {c.coverage_postcodes}</div>}
                         {c.meeting_day && <div className="flex items-center gap-2 text-muted-foreground"><Clock className="h-3.5 w-3.5" />{c.meeting_day}{c.meeting_time ? ` at ${c.meeting_time}` : ""}</div>}
                         {c.leader_id && <div className="flex items-center gap-2 text-muted-foreground"><Users className="h-3.5 w-3.5" />Leader: {getLeaderName(c.leader_id)}</div>}
+                        {canEditCentre(c) && (
+                          <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => setMembersDialogCentre(c)}>
+                            <UserCog className="h-3 w-3 mr-1" /> Manage
+                          </Button>
+                        )}
                         <div className="flex items-center gap-2 text-muted-foreground"><Users className="h-3.5 w-3.5" />{memberCounts[c.id] || 0} members</div>
                       </CardContent>
                     </Card>
@@ -268,6 +275,12 @@ export default function WSFManagement() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <WSFCentreMembersDialog
+        open={!!membersDialogCentre}
+        onOpenChange={(open) => { if (!open) setMembersDialogCentre(null); }}
+        centre={membersDialogCentre}
+      />
     </div>
   );
 }
