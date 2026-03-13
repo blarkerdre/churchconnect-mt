@@ -197,6 +197,24 @@ export default function MyProfile() {
                       <div className="space-y-1"><Label>Contact Phone</Label><Input value={form.emergency_contact_phone} onChange={e => set("emergency_contact_phone", e.target.value)} /></div>
                     </div>
 
+                    {member?.winners_satellite && (
+                      <>
+                        <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground pt-2">WSF Centre</h3>
+                        <div className="space-y-1">
+                          <Label>Select closest WSF Centre</Label>
+                          <Select value={form.wsf_centre_id || ""} onValueChange={v => set("wsf_centre_id", v)}>
+                            <SelectTrigger><SelectValue placeholder="Select WSF Centre" /></SelectTrigger>
+                            <SelectContent>
+                              {wsfCentres.map(c => (
+                                <SelectItem key={c.id} value={c.id}>{c.name}{c.location ? ` — ${c.location}` : ""}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          {form.wsf_centre_id && <p className="text-xs text-muted-foreground">Auto-suggested based on your address</p>}
+                        </div>
+                      </>
+                    )}
+
                     <div className="flex gap-2 pt-2">
                       <Button onClick={handleSave} disabled={updateMutation.isPending} size="sm">
                         {updateMutation.isPending ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Save className="h-4 w-4 mr-1" />} Save
