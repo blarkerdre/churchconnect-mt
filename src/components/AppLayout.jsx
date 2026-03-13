@@ -30,8 +30,9 @@ export default function Layout({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
-  const { signOut, profile, isAdmin, isUnitLeader, isWSFLeader, roles } = useAuth();
+  const { signOut, profile, isAdmin, isUnitLeader, isWSFLeader, roles, leaderUnits } = useAuth();
   const isSuperAdmin = roles.includes("super_admin");
+  const isFollowupUnit = leaderUnits.includes("Follow-up") || leaderUnits.includes("Follow-Up");
 
   // Filter nav items based on role
   const navItems = allNavItems.filter(item => {
@@ -40,6 +41,7 @@ export default function Layout({ children }) {
     if (item.access === "admin") return isAdmin;
     if (item.access === "leader") return isAdmin || isUnitLeader;
     if (item.access === "wsf") return isAdmin || isWSFLeader;
+    if (item.access === "followup") return isAdmin || isFollowupUnit;
     return false;
   });
 
