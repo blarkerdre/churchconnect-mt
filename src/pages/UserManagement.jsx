@@ -12,6 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { logAudit } from "@/lib/audit";
+import UnitLeaderAssignments from "@/components/users/UnitLeaderAssignments";
 
 const ROLES = ["super_admin", "admin", "unit_leader", "member"];
 
