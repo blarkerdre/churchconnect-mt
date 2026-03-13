@@ -7,11 +7,17 @@ import { format } from "date-fns";
 import SelfCheckInWidget from "@/components/attendance/SelfCheckInWidget";
 import ProfileCompletionBanner from "@/components/profile/ProfileCompletionBanner";
 import MemberDashboard from "@/components/dashboard/MemberDashboard";
+import WSFLeaderDashboard from "@/components/dashboard/WSFLeaderDashboard";
 import { useAuth } from "@/hooks/useAuth";
 
 export default function Dashboard() {
-  const { isAdmin, isUnitLeader, profile, myMember, loading: authLoading } = useAuth();
+  const { isAdmin, isUnitLeader, isWSFLeader, profile, myMember, loading: authLoading } = useAuth();
   const isLeaderOrAdmin = isAdmin || isUnitLeader;
+
+  // Show WSF Leader dashboard for WSF leaders who aren't admin/unit leaders
+  if (!authLoading && !isLeaderOrAdmin && isWSFLeader) {
+    return <WSFLeaderDashboard />;
+  }
 
   // Show member dashboard for regular members
   if (!authLoading && !isLeaderOrAdmin) {
