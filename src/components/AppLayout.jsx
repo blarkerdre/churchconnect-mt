@@ -19,6 +19,8 @@ const navItems = [
   { name: "Communications", icon: Megaphone, path: "/communications" },
   { name: "Transportation", icon: Car, path: "/transportation" },
   { name: "Analytics", icon: BarChart2, path: "/analytics" },
+  { name: "WSF Centres", icon: Globe, path: "/wsf" },
+  { name: "User Management", icon: Settings, path: "/user-management" },
 ];
 
 export default function Layout({ children }) {
