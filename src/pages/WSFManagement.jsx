@@ -172,7 +172,7 @@ export default function WSFManagement() {
           <TabsContent value="centres">
             <div className="space-y-4">
               <div className="flex justify-end">
-                <Button onClick={openNew}><Plus className="h-4 w-4 mr-2" /> Add Centre</Button>
+                {canCreateCentre && <Button onClick={openNew}><Plus className="h-4 w-4 mr-2" /> Add Centre</Button>}
               </div>
 
               {isLoading ? (
