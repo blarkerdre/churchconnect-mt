@@ -86,13 +86,13 @@ export default function WSFManagement() {
 
   const openNew = () => {
     setEditing(null);
-    setForm({ name: "", location: "", meeting_day: "", meeting_time: "", is_active: true, leader_id: "" });
+    setForm({ name: "", location: "", address: "", postcode: "", city: "Cardiff", coverage_postcodes: "", meeting_day: "", meeting_time: "", is_active: true, leader_id: "" });
     setDialogOpen(true);
   };
 
   const openEdit = (c) => {
     setEditing(c);
-    setForm({ name: c.name, location: c.location || "", meeting_day: c.meeting_day || "", meeting_time: c.meeting_time || "", is_active: c.is_active, leader_id: c.leader_id || "" });
+    setForm({ name: c.name, location: c.location || "", address: c.address || "", postcode: c.postcode || "", city: c.city || "", coverage_postcodes: c.coverage_postcodes || "", meeting_day: c.meeting_day || "", meeting_time: c.meeting_time || "", is_active: c.is_active, leader_id: c.leader_id || "" });
     setDialogOpen(true);
   };
 
