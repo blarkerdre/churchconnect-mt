@@ -125,11 +125,11 @@ export default function WSFAttendanceFormDialog({ open, onOpenChange, centre, re
             <Textarea value={form.notes} onChange={e => set("notes", e.target.value)} rows={2} placeholder="Meeting highlights..." />
           </div>
         </div>
-        <DialogFooter>
+        <DialogFooter className="gap-2 sm:gap-0">
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={handleSave} disabled={saving || !form.date || (!centre && !selectedCentreId)}>
+          <Button size="lg" className="font-semibold px-8" onClick={handleSave} disabled={saving || !form.date || (!centre && !selectedCentreId)}>
             {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-            {report ? "Update" : "Save"}
+            {report ? "Update Report" : "Submit Attendance"}
           </Button>
         </DialogFooter>
       </DialogContent>
