@@ -107,6 +107,8 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6">
+      {/* Profile Completion Banner */}
+      <ProfileCompletionBanner />
       {/* Self Check-In Widget */}
       <SelfCheckInWidget />
       {/* Stats */}
