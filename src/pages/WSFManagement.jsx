@@ -14,6 +14,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import WSFAttendanceTab from "@/components/wsf/WSFAttendanceTab";
+import WSFCentreMembersDialog from "@/components/wsf/WSFCentreMembersDialog";
 
 const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
