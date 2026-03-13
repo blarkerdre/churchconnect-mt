@@ -18,8 +18,8 @@ import WSFAttendanceTab from "@/components/wsf/WSFAttendanceTab";
 const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
 export default function WSFManagement() {
-  const { isAdmin, leaderUnits } = useAuth();
-  const canManageWSF = isAdmin || leaderUnits.includes("WSF");
+  const { isAdmin, isWSFLeader, leaderUnits } = useAuth();
+  const canManageWSF = isAdmin || isWSFLeader || leaderUnits.includes("WSF");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState({ name: "", location: "", meeting_day: "", meeting_time: "", is_active: true, leader_id: "" });
@@ -128,14 +128,14 @@ export default function WSFManagement() {
       <Tabs defaultValue="attendance" className="space-y-4">
         <TabsList>
           <TabsTrigger value="attendance">Attendance</TabsTrigger>
-          {isAdmin && <TabsTrigger value="centres">Centres</TabsTrigger>}
+          {canManageWSF && <TabsTrigger value="centres">Centres</TabsTrigger>}
         </TabsList>
 
         <TabsContent value="attendance">
           <WSFAttendanceTab centres={centres} />
         </TabsContent>
 
-        {isAdmin && (
+        {canManageWSF && (
           <TabsContent value="centres">
             <div className="space-y-4">
               <div className="flex justify-end">

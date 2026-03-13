@@ -93,6 +93,7 @@ export function AuthProvider({ children }) {
 
   const isAdmin = roles.includes("admin") || roles.includes("super_admin");
   const isUnitLeader = roles.includes("unit_leader");
+  const isWSFLeader = roles.includes("wsf_leader");
   const isMember = roles.includes("member");
 
   return (
@@ -100,7 +101,7 @@ export function AuthProvider({ children }) {
       value={{
         user, profile, roles, loading, leaderUnits,
         signUp, signIn, signOut, resetPassword, updatePassword,
-        isAdmin, isUnitLeader, isMember,
+        isAdmin, isUnitLeader, isWSFLeader, isMember,
         refreshUser: () => user && fetchUserData(user.id),
       }}
     >
