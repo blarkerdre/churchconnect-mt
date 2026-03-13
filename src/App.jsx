@@ -31,6 +31,20 @@ function ProtectedRoute({ children }) {
   return children;
 }
 
+function AdminRoute({ children }) {
+  const { isAdmin, loading } = useAuth();
+  if (loading) return null;
+  if (!isAdmin) return <Navigate to="/" replace />;
+  return children;
+}
+
+function LeaderRoute({ children }) {
+  const { isAdmin, isUnitLeader, loading } = useAuth();
+  if (loading) return null;
+  if (!isAdmin && !isUnitLeader) return <Navigate to="/" replace />;
+  return children;
+}
+
 function AppRoutes() {
   return (
     <Routes>
@@ -45,14 +59,14 @@ function AppRoutes() {
                 <Route path="/" element={<Dashboard />} />
                 <Route path="/members" element={<Members />} />
                 <Route path="/events" element={<Events />} />
-                <Route path="/attendance" element={<Attendance />} />
-                <Route path="/followups" element={<Followups />} />
-                <Route path="/pastoral-care" element={<PastoralCare />} />
-                <Route path="/communications" element={<Communications />} />
+                <Route path="/attendance" element={<LeaderRoute><Attendance /></LeaderRoute>} />
+                <Route path="/followups" element={<LeaderRoute><Followups /></LeaderRoute>} />
+                <Route path="/pastoral-care" element={<LeaderRoute><PastoralCare /></LeaderRoute>} />
+                <Route path="/communications" element={<AdminRoute><Communications /></AdminRoute>} />
                 <Route path="/transportation" element={<Transportation />} />
-                <Route path="/analytics" element={<Analytics />} />
-                <Route path="/wsf" element={<WSFManagement />} />
-                <Route path="/user-management" element={<UserManagement />} />
+                <Route path="/analytics" element={<LeaderRoute><Analytics /></LeaderRoute>} />
+                <Route path="/wsf" element={<AdminRoute><WSFManagement /></AdminRoute>} />
+                <Route path="/user-management" element={<AdminRoute><UserManagement /></AdminRoute>} />
               </Routes>
             </Layout>
           </ProtectedRoute>
