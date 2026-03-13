@@ -315,6 +315,9 @@ export default function Followups() {
           onClose={() => setSelectedFollowup(null)}
           onUpdate={handleUpdateFollowup}
           currentUser={profile}
+          isAdmin={isAdmin}
+          profileMap={profileMap}
+          followupUnitMembers={followupUnitMembers}
           onConverted={() => {
             queryClient.invalidateQueries({ queryKey: ["followups"] });
             queryClient.invalidateQueries({ queryKey: ["members"] });
