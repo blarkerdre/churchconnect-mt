@@ -29,7 +29,8 @@ export default function Layout({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
-  const { signOut, profile, isAdmin, isUnitLeader } = useAuth();
+  const { signOut, profile, isAdmin, isUnitLeader, roles } = useAuth();
+  const isSuperAdmin = roles.includes("super_admin");
 
   // Filter nav items based on role
   const navItems = allNavItems.filter(item => {
