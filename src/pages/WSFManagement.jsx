@@ -128,7 +128,7 @@ export default function WSFManagement() {
       <Tabs defaultValue="attendance" className="space-y-4">
         <TabsList>
           <TabsTrigger value="attendance">Attendance</TabsTrigger>
-          {isAdmin && <TabsTrigger value="centres">Centres</TabsTrigger>}
+          {canManageWSF && <TabsTrigger value="centres">Centres</TabsTrigger>}
         </TabsList>
 
         <TabsContent value="attendance">
