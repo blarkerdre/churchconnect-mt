@@ -155,12 +155,34 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
                   <SelectContent>{STATUSES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
-              <div className="space-y-1.5">
-                <Label>Church Unit</Label>
-                <Select value={form.church_unit || ""} onValueChange={(v) => set("church_unit", v)}>
-                  <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                  <SelectContent>{CHURCH_UNITS.map(u => <SelectItem key={u} value={u}>{u}</SelectItem>)}</SelectContent>
-                </Select>
+              <div className="space-y-1.5 md:col-span-2">
+                <Label>Church Units (select multiple)</Label>
+                <div className="flex flex-wrap gap-2 p-3 rounded-lg border border-border bg-background min-h-[40px]">
+                  {CHURCH_UNITS.filter(u => u !== "None").map(unit => {
+                    const selected = (form.church_unit || "").split(",").map(s => s.trim()).filter(Boolean);
+                    const isSelected = selected.includes(unit);
+                    return (
+                      <button
+                        key={unit}
+                        type="button"
+                        onClick={() => {
+                          const current = (form.church_unit || "").split(",").map(s => s.trim()).filter(Boolean);
+                          const updated = isSelected
+                            ? current.filter(u => u !== unit)
+                            : [...current, unit];
+                          set("church_unit", updated.join(", "));
+                        }}
+                        className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
+                          isSelected
+                            ? "bg-primary text-primary-foreground"
+                            : "bg-muted text-muted-foreground hover:bg-muted/80"
+                        }`}
+                      >
+                        {unit}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             </div>
           </div>

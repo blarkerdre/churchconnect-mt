@@ -72,7 +72,7 @@ function AppRoutes() {
                 <Route path="/attendance" element={<LeaderRoute><Attendance /></LeaderRoute>} />
                 <Route path="/followups" element={<LeaderRoute><Followups /></LeaderRoute>} />
                 <Route path="/pastoral-care" element={<LeaderRoute><PastoralCare /></LeaderRoute>} />
-                <Route path="/communications" element={<AdminRoute><Communications /></AdminRoute>} />
+                <Route path="/communications" element={<LeaderRoute><Communications /></LeaderRoute>} />
                 <Route path="/transportation" element={<Transportation />} />
                 <Route path="/analytics" element={<LeaderRoute><Analytics /></LeaderRoute>} />
                 <Route path="/wsf" element={<AdminRoute><WSFManagement /></AdminRoute>} />

@@ -163,7 +163,13 @@ export default function Members() {
                       </div>
                     </td>
                     <td className="p-4 hidden md:table-cell">
-                      {m.church_unit ? <Badge variant="secondary" className="text-xs">{m.church_unit}</Badge> : <span className="text-xs text-muted-foreground">—</span>}
+                      {m.church_unit ? (
+                        <div className="flex flex-wrap gap-1">
+                          {m.church_unit.split(",").map(u => u.trim()).filter(Boolean).map(u => (
+                            <Badge key={u} variant="secondary" className="text-xs">{u}</Badge>
+                          ))}
+                        </div>
+                      ) : <span className="text-xs text-muted-foreground">—</span>}
                     </td>
                     <td className="p-4">
                       <Badge className={`${statusColors[m.membership_status] || "bg-muted text-muted-foreground"} border-0`}>
