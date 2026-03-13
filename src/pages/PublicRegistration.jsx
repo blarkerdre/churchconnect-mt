@@ -67,7 +67,7 @@ export default function PublicRegistration() {
     }
     setSaving(true);
     try {
-      const { data: inserted, error } = await supabase.from("members").insert({
+      const { error } = await supabase.from("members").insert({
         first_name: form.first_name,
         last_name: form.last_name,
         email: form.email || null,
@@ -92,7 +92,7 @@ export default function PublicRegistration() {
         ldc_completed: form.ldc_completed,
         gdpr_consent: true,
         gdpr_consent_date: new Date().toISOString(),
-      }).select().single();
+      });
       if (error) throw error;
 
       // Auto-create followup for first timer / new convert
