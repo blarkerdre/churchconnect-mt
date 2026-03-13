@@ -10,6 +10,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 import MemberFormDialog from "@/components/members/MemberFormDialog";
+import { logAudit } from "@/lib/audit";
 
 const statusColors = {
   "Active": "bg-chart-3/10 text-chart-3",
@@ -65,9 +66,12 @@ export default function Members() {
     setDialogOpen(true);
   };
 
-  const handleDelete = (id) => {
+  const handleDelete = (member) => {
     if (window.confirm("Delete this member?")) {
-      deleteMutation.mutate(id);
+      deleteMutation.mutate(member.id);
+      logAudit("member_delete", "members", member.id, {
+        member_name: `${member.first_name} ${member.last_name}`,
+      });
     }
   };
 
@@ -173,7 +177,7 @@ export default function Members() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem onClick={() => openEdit(m)}><Edit className="h-4 w-4 mr-2" /> Edit</DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleDelete(m.id)} className="text-destructive"><Trash2 className="h-4 w-4 mr-2" /> Delete</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleDelete(m)} className="text-destructive"><Trash2 className="h-4 w-4 mr-2" /> Delete</DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </td>

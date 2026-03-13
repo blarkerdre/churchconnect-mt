@@ -8,6 +8,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { logAudit } from "@/lib/audit";
 
 const ROLES = ["super_admin", "admin", "unit_leader", "member"];
 
@@ -49,12 +50,13 @@ export default function UserManagement() {
   });
 
   const updateRoleMutation = useMutation({
-    mutationFn: async ({ userId, newRole }) => {
-      // Delete existing role
+    mutationFn: async ({ userId, newRole, oldRole, targetName }) => {
       await supabase.from("user_roles").delete().eq("user_id", userId);
-      // Insert new role
       const { error } = await supabase.from("user_roles").insert({ user_id: userId, role: newRole });
       if (error) throw error;
+      await logAudit("role_change", "user_roles", userId, {
+        old_role: oldRole, new_role: newRole, target_name: targetName,
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["all-user-roles"] });
@@ -141,7 +143,7 @@ export default function UserManagement() {
                               value={currentRole}
                               onValueChange={(newRole) => {
                                 if (newRole !== currentRole) {
-                                  updateRoleMutation.mutate({ userId: p.user_id, newRole });
+                                  updateRoleMutation.mutate({ userId: p.user_id, newRole, oldRole: currentRole, targetName: p.full_name || p.email });
                                 }
                               }}
                             >
