@@ -26,6 +26,35 @@ export default function Followups() {
   const [selectedFollowup, setSelectedFollowup] = useState(null);
   const queryClient = useQueryClient();
 
+  // Fetch profiles for resolving assigned_to user IDs to names
+  const { data: profiles = [] } = useQuery({
+    queryKey: ["all-profiles"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("profiles").select("user_id, full_name, email");
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const profileMap = React.useMemo(() => {
+    const map = {};
+    profiles.forEach(p => { map[p.user_id] = p.full_name || p.email || "Unknown"; });
+    return map;
+  }, [profiles]);
+
+  // Fetch follow-up unit members for reassignment
+  const { data: followupUnitMembers = [] } = useQuery({
+    queryKey: ["followup-unit-members"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("unit_leader_assignments")
+        .select("user_id")
+        .in("unit_name", ["Follow-up", "Follow-Up", "follow-up"]);
+      if (error) throw error;
+      return data.map(d => d.user_id);
+    },
+  });
+
   // Fetch followups with member info
   const { data: followups = [], isLoading } = useQuery({
     queryKey: ["followups"],
