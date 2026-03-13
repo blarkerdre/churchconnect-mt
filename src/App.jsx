@@ -13,6 +13,8 @@ import PastoralCare from "@/pages/PastoralCare";
 import Communications from "@/pages/Communications";
 import Transportation from "@/pages/Transportation";
 import Analytics from "@/pages/Analytics";
+import WSFManagement from "@/pages/WSFManagement";
+import UserManagement from "@/pages/UserManagement";
 import Auth from "@/pages/Auth";
 import ResetPassword from "@/pages/ResetPassword";
 
@@ -49,6 +51,8 @@ function AppRoutes() {
                 <Route path="/communications" element={<Communications />} />
                 <Route path="/transportation" element={<Transportation />} />
                 <Route path="/analytics" element={<Analytics />} />
+                <Route path="/wsf" element={<WSFManagement />} />
+                <Route path="/user-management" element={<UserManagement />} />
               </Routes>
             </Layout>
           </ProtectedRoute>
