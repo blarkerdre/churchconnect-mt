@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format, subDays } from "date-fns";
 import SelfCheckInWidget from "@/components/attendance/SelfCheckInWidget";
+import ProfileCompletionBanner from "@/components/profile/ProfileCompletionBanner";
 
 export default function Dashboard() {
   const { data: members = [], isLoading: membersLoading } = useQuery({
@@ -106,6 +107,8 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6">
+      {/* Profile Completion Banner */}
+      <ProfileCompletionBanner />
       {/* Self Check-In Widget */}
       <SelfCheckInWidget />
       {/* Stats */}
