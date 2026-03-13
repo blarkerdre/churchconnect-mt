@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { CheckCircle2, Clock, Users, CalendarCheck, Plus, Loader2 } from "lucide-react";
+import { CheckCircle2, Clock, Users, CalendarCheck, Plus, Loader2, Lock, FileText } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
@@ -19,6 +19,7 @@ export default function Attendance() {
   const queryClient = useQueryClient();
   const [selectedSessionId, setSelectedSessionId] = useState(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [reportDialogOpen, setReportDialogOpen] = useState(false);
   const [form, setForm] = useState({ title: "", session_type: "Sunday Service", session_date: "", notes: "" });
 
   const { data: sessions = [], isLoading } = useQuery({
@@ -73,8 +74,48 @@ export default function Attendance() {
     onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
 
+  const closeSessionMutation = useMutation({
+    mutationFn: async (sessionId) => {
+      const { error } = await supabase.from("attendance_sessions").update({ status: "closed" }).eq("id", sessionId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["attendance-sessions"] });
+      toast({ title: "Session closed" });
+    },
+    onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+  });
+
   const presentCount = records.length;
   const attendanceRate = totalMembers > 0 ? Math.round((presentCount / totalMembers) * 100) : 0;
+  const isClosed = selectedSession?.status === "closed";
+
+  const generateReport = () => {
+    if (!selectedSession) return;
+    const reportContent = [
+      `ATTENDANCE REPORT`,
+      `=================`,
+      `Session: ${selectedSession.title || selectedSession.session_type}`,
+      `Type: ${selectedSession.session_type}`,
+      `Date: ${selectedSession.session_date}`,
+      `Status: ${isClosed ? "Closed" : "Open"}`,
+      ``,
+      `Total Check-ins: ${presentCount}`,
+      `Total Active Members: ${totalMembers}`,
+      `Attendance Rate: ${attendanceRate}%`,
+      ``,
+      `ATTENDEES:`,
+      `----------`,
+      ...records.map((r, i) => `${i + 1}. ${r.members?.first_name || ""} ${r.members?.last_name || ""} — ${r.check_in_method || "manual"} — ${r.checked_in_at ? new Date(r.checked_in_at).toLocaleTimeString() : "N/A"}`),
+    ].join("\n");
+
+    const blob = new Blob([reportContent], { type: "text/plain" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `attendance-report-${selectedSession.session_date}.txt`;
+    a.click();
+    toast({ title: "Report downloaded" });
+  };
 
   return (
     <div className="space-y-6">
@@ -85,7 +126,7 @@ export default function Attendance() {
         <Card className="border-0 shadow-sm"><CardContent className="p-4 text-center"><p className="text-2xl font-display font-bold text-accent">{sessions.length}</p><p className="text-xs text-muted-foreground">Sessions</p></CardContent></Card>
       </div>
 
-      <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center gap-3">
         {sessions.length > 0 && (
           <Select value={selectedSession?.id || ""} onValueChange={setSelectedSessionId}>
             <SelectTrigger className="w-72"><SelectValue placeholder="Select session" /></SelectTrigger>
@@ -94,12 +135,35 @@ export default function Attendance() {
             </SelectContent>
           </Select>
         )}
-        {selectedSession && <Badge className="bg-primary/10 text-primary border-0">{selectedSession.session_type}</Badge>}
-        {canManage && (
-          <Button onClick={() => { setForm({ title: "", session_type: "Sunday Service", session_date: "", notes: "" }); setDialogOpen(true); }} className="ml-auto bg-primary hover:bg-primary/90">
-            <Plus className="h-4 w-4 mr-2" /> New Session
-          </Button>
+        {selectedSession && (
+          <>
+            <Badge className={`border-0 ${isClosed ? "bg-muted text-muted-foreground" : "bg-primary/10 text-primary"}`}>
+              {isClosed ? "Closed" : selectedSession.session_type}
+            </Badge>
+            {isClosed && <Badge className="border-0 bg-destructive/10 text-destructive"><Lock className="h-3 w-3 mr-1" /> Closed</Badge>}
+          </>
         )}
+        <div className="flex items-center gap-2 ml-auto">
+          {selectedSession && (
+            <Button variant="outline" size="sm" onClick={generateReport}>
+              <FileText className="h-4 w-4 mr-2" /> Report
+            </Button>
+          )}
+          {canManage && selectedSession && !isClosed && (
+            <Button variant="outline" size="sm" onClick={() => {
+              if (window.confirm("Close this session? No more check-ins will be allowed.")) {
+                closeSessionMutation.mutate(selectedSession.id);
+              }
+            }} className="text-destructive border-destructive/30 hover:bg-destructive/10">
+              <Lock className="h-4 w-4 mr-2" /> Close Session
+            </Button>
+          )}
+          {canManage && (
+            <Button onClick={() => { setForm({ title: "", session_type: "Sunday Service", session_date: "", notes: "" }); setDialogOpen(true); }} className="bg-primary hover:bg-primary/90">
+              <Plus className="h-4 w-4 mr-2" /> New Session
+            </Button>
+          )}
+        </div>
       </div>
 
       {isLoading ? (
@@ -120,9 +184,15 @@ export default function Attendance() {
                   }`}
                 >
                   <div>
-                    <p className="font-medium text-sm text-foreground">{s.title || s.session_type}</p>
+                    <p className="font-medium text-sm text-foreground flex items-center gap-2">
+                      {s.title || s.session_type}
+                      {s.status === "closed" && <Lock className="h-3 w-3 text-muted-foreground" />}
+                    </p>
                     <p className="text-xs text-muted-foreground">{s.session_type} · {s.session_date}</p>
                   </div>
+                  <Badge variant="outline" className={`text-xs ${s.status === "closed" ? "text-muted-foreground" : "text-chart-3"}`}>
+                    {s.status === "closed" ? "Closed" : "Open"}
+                  </Badge>
                 </button>
               ))}
             </CardContent>

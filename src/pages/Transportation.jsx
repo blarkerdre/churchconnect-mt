@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Car, MapPin, Clock, User, Plus, Loader2, CheckCircle, XCircle } from "lucide-react";
+import { Car, MapPin, Clock, User, Plus, Loader2, CheckCircle, XCircle, Trash2, Edit, Settings } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
@@ -28,9 +28,13 @@ export default function Transportation() {
   const queryClient = useQueryClient();
   const [bookDialogOpen, setBookDialogOpen] = useState(false);
   const [manageDialogOpen, setManageDialogOpen] = useState(false);
+  const [locationDialogOpen, setLocationDialogOpen] = useState(false);
+  const [editLocationDialogOpen, setEditLocationDialogOpen] = useState(false);
   const [selectedBooking, setSelectedBooking] = useState(null);
+  const [editingLocation, setEditingLocation] = useState(null);
   const [form, setForm] = useState({ pickup_address: "", destination: "Church", request_date: "", pickup_time: "", notes: "", passengers: 1 });
   const [manageForm, setManageForm] = useState({ status: "", assigned_driver: "", driver_phone: "" });
+  const [locationForm, setLocationForm] = useState({ name: "", address: "", notes: "" });
 
   const { data: bookings = [], isLoading } = useQuery({
     queryKey: ["transportation"],
@@ -44,12 +48,19 @@ export default function Transportation() {
     },
   });
 
-  // Non-managers only see their own bookings
+  const { data: pickupLocations = [] } = useQuery({
+    queryKey: ["pickup-locations"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("pickup_locations").select("*").eq("is_active", true).order("name");
+      if (error) throw error;
+      return data;
+    },
+  });
+
   const visibleBookings = canManage ? bookings : bookings.filter(b => b.user_id === user?.id);
 
   const bookMutation = useMutation({
     mutationFn: async (formData) => {
-      // Get member record for current user
       const { data: member } = await supabase.from("members").select("id").eq("user_id", user.id).single();
       const { error } = await supabase.from("transportation").insert({
         pickup_address: formData.pickup_address,
@@ -84,10 +95,64 @@ export default function Transportation() {
     onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
 
+  const deleteBookingMutation = useMutation({
+    mutationFn: async (id) => {
+      const { error } = await supabase.from("transportation").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["transportation"] });
+      toast({ title: "Booking deleted" });
+    },
+    onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+  });
+
+  const saveLocationMutation = useMutation({
+    mutationFn: async (formData) => {
+      if (editingLocation) {
+        const { error } = await supabase.from("pickup_locations").update({ name: formData.name, address: formData.address, notes: formData.notes || null }).eq("id", editingLocation.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from("pickup_locations").insert({ name: formData.name, address: formData.address, notes: formData.notes || null, created_by: user.id });
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["pickup-locations"] });
+      toast({ title: editingLocation ? "Location updated" : "Location added" });
+      setEditLocationDialogOpen(false);
+      setEditingLocation(null);
+    },
+    onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+  });
+
+  const deleteLocationMutation = useMutation({
+    mutationFn: async (id) => {
+      const { error } = await supabase.from("pickup_locations").update({ is_active: false }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["pickup-locations"] });
+      toast({ title: "Location removed" });
+    },
+  });
+
   const openManage = (b) => {
     setSelectedBooking(b);
     setManageForm({ status: b.status, assigned_driver: b.assigned_driver || "", driver_phone: b.driver_phone || "" });
     setManageDialogOpen(true);
+  };
+
+  const openEditLocation = (loc) => {
+    setEditingLocation(loc);
+    setLocationForm({ name: loc.name, address: loc.address, notes: loc.notes || "" });
+    setEditLocationDialogOpen(true);
+  };
+
+  const openNewLocation = () => {
+    setEditingLocation(null);
+    setLocationForm({ name: "", address: "", notes: "" });
+    setEditLocationDialogOpen(true);
   };
 
   return (
@@ -99,7 +164,12 @@ export default function Transportation() {
         <Card className="border-0 shadow-sm"><CardContent className="p-4 text-center"><p className="text-2xl font-display font-bold text-muted-foreground">{visibleBookings.filter(b => b.status === "Completed").length}</p><p className="text-xs text-muted-foreground">Completed</p></CardContent></Card>
       </div>
 
-      <div className="flex justify-end">
+      <div className="flex flex-wrap justify-end gap-2">
+        {canManage && (
+          <Button variant="outline" onClick={() => setLocationDialogOpen(true)}>
+            <Settings className="h-4 w-4 mr-2" /> Pickup Locations
+          </Button>
+        )}
         <Button onClick={() => { setForm({ pickup_address: "", destination: "Church", request_date: "", pickup_time: "", notes: "", passengers: 1 }); setBookDialogOpen(true); }} className="bg-primary hover:bg-primary/90">
           <Plus className="h-4 w-4 mr-2" /> Book Transport
         </Button>
@@ -134,8 +204,13 @@ export default function Transportation() {
                       {b.assigned_driver && <span className="flex items-center gap-1"><User className="h-3.5 w-3.5" /> {b.assigned_driver}</span>}
                     </div>
                   </div>
-                  {canManage && b.status === "Pending" && (
-                    <Button variant="outline" size="sm" onClick={() => openManage(b)}>Manage</Button>
+                  {canManage && (
+                    <div className="flex items-center gap-1">
+                      <Button variant="outline" size="sm" onClick={() => openManage(b)}>Manage</Button>
+                      <Button variant="ghost" size="icon" onClick={() => {
+                        if (window.confirm("Delete this booking?")) deleteBookingMutation.mutate(b.id);
+                      }}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                    </div>
                   )}
                 </div>
               </CardContent>
@@ -149,7 +224,18 @@ export default function Transportation() {
         <DialogContent className="max-w-md">
           <DialogHeader><DialogTitle className="font-display">Book Transport</DialogTitle></DialogHeader>
           <div className="space-y-4 mt-2">
-            <div><Label>Pickup Address</Label><Input value={form.pickup_address} onChange={e => setForm(f => ({ ...f, pickup_address: e.target.value }))} placeholder="e.g. Canton, Cardiff" /></div>
+            <div>
+              <Label>Pickup Location</Label>
+              {pickupLocations.length > 0 ? (
+                <Select value={form.pickup_address} onValueChange={v => setForm(f => ({ ...f, pickup_address: v }))}>
+                  <SelectTrigger><SelectValue placeholder="Select or type below" /></SelectTrigger>
+                  <SelectContent>
+                    {pickupLocations.map(l => <SelectItem key={l.id} value={l.address}>{l.name} – {l.address}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              ) : null}
+              <Input value={form.pickup_address} onChange={e => setForm(f => ({ ...f, pickup_address: e.target.value }))} placeholder="Or type custom address" className="mt-2" />
+            </div>
             <div><Label>Destination</Label><Input value={form.destination} onChange={e => setForm(f => ({ ...f, destination: e.target.value }))} /></div>
             <div className="grid grid-cols-2 gap-3">
               <div><Label>Date</Label><Input type="date" value={form.request_date} onChange={e => setForm(f => ({ ...f, request_date: e.target.value }))} /></div>
@@ -192,6 +278,50 @@ export default function Transportation() {
             <Button variant="outline" onClick={() => manageMutation.mutate({ id: selectedBooking.id, updates: manageForm })} disabled={manageMutation.isPending} className="w-full">
               {manageMutation.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
               Save Changes
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Pickup Locations Management Dialog */}
+      <Dialog open={locationDialogOpen} onOpenChange={setLocationDialogOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader><DialogTitle className="font-display">Pickup Locations</DialogTitle></DialogHeader>
+          <div className="space-y-3 mt-2 max-h-80 overflow-y-auto">
+            {pickupLocations.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-4">No pickup locations configured</p>
+            ) : pickupLocations.map(loc => (
+              <div key={loc.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                <div>
+                  <p className="text-sm font-medium text-foreground">{loc.name}</p>
+                  <p className="text-xs text-muted-foreground">{loc.address}</p>
+                </div>
+                <div className="flex items-center gap-1">
+                  <Button variant="ghost" size="icon" onClick={() => openEditLocation(loc)}><Edit className="h-4 w-4" /></Button>
+                  <Button variant="ghost" size="icon" onClick={() => {
+                    if (window.confirm("Remove this location?")) deleteLocationMutation.mutate(loc.id);
+                  }}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                </div>
+              </div>
+            ))}
+          </div>
+          <Button onClick={openNewLocation} className="w-full bg-primary">
+            <Plus className="h-4 w-4 mr-2" /> Add Location
+          </Button>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add/Edit Location Dialog */}
+      <Dialog open={editLocationDialogOpen} onOpenChange={setEditLocationDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader><DialogTitle className="font-display">{editingLocation ? "Edit Location" : "Add Location"}</DialogTitle></DialogHeader>
+          <div className="space-y-4 mt-2">
+            <div><Label>Name</Label><Input value={locationForm.name} onChange={e => setLocationForm(f => ({ ...f, name: e.target.value }))} placeholder="e.g. Canton Bus Stop" /></div>
+            <div><Label>Address</Label><Input value={locationForm.address} onChange={e => setLocationForm(f => ({ ...f, address: e.target.value }))} placeholder="Full address" /></div>
+            <div><Label>Notes</Label><Textarea value={locationForm.notes} onChange={e => setLocationForm(f => ({ ...f, notes: e.target.value }))} rows={2} /></div>
+            <Button onClick={() => saveLocationMutation.mutate(locationForm)} disabled={saveLocationMutation.isPending || !locationForm.name || !locationForm.address} className="w-full bg-primary">
+              {saveLocationMutation.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+              {editingLocation ? "Save Changes" : "Add Location"}
             </Button>
           </div>
         </DialogContent>
