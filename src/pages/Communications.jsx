@@ -20,14 +20,19 @@ const AUDIENCES = [
 ];
 
 export default function Communications() {
-  const { user, isAdmin, isUnitLeader } = useAuth();
+  const { user, isAdmin, isUnitLeader, leaderUnits } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState(null);
 
-  // Get current user's member record to determine their unit (for unit leaders)
+  // Use leaderUnits from auth context for unit leaders
+  const unitLeaderUnits = (!isAdmin && isUnitLeader && leaderUnits.length > 0)
+    ? leaderUnits
+    : null;
+
+  // Fallback: if no unit_leader_assignments, check member's church_unit
   const { data: myMember } = useQuery({
     queryKey: ["my-member", user?.id],
     queryFn: async () => {
@@ -38,14 +43,13 @@ export default function Communications() {
         .single();
       return data;
     },
-    enabled: !!user?.id && isUnitLeader && !isAdmin,
+    enabled: !!user?.id && isUnitLeader && !isAdmin && !unitLeaderUnits,
   });
 
-  // Determine locked audience for unit leaders
-  const leaderUnits = (!isAdmin && isUnitLeader && myMember?.church_unit)
+  const effectiveUnits = unitLeaderUnits || (myMember?.church_unit
     ? myMember.church_unit.split(",").map(u => u.trim()).filter(Boolean)
-    : null;
-  const lockedAudience = leaderUnits?.length === 1 ? leaderUnits[0] : null;
+    : null);
+  const lockedAudience = effectiveUnits?.length === 1 ? effectiveUnits[0] : null;
 
   // Fetch announcements
   const { data: announcements = [], isLoading } = useQuery({
@@ -73,8 +77,8 @@ export default function Communications() {
   // Filter by unit leader's units — they only see their own unit announcements + "All Members"
   const visibleAnnouncements = announcements.filter(a => {
     if (isAdmin) return true;
-    if (leaderUnits) {
-      return a.audience === "All Members" || leaderUnits.includes(a.audience) || a.created_by === user?.id;
+    if (effectiveUnits) {
+      return a.audience === "All Members" || effectiveUnits.includes(a.audience) || a.created_by === user?.id;
     }
     return true;
   });
@@ -146,8 +150,8 @@ export default function Communications() {
   // Available audiences for the form
   const availableAudiences = isAdmin
     ? AUDIENCES
-    : leaderUnits
-      ? AUDIENCES.filter(a => leaderUnits.includes(a))
+    : effectiveUnits
+      ? AUDIENCES.filter(a => effectiveUnits.includes(a))
       : [];
 
   const renderCard = (a) => (

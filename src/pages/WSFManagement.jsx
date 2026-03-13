@@ -18,7 +18,8 @@ import WSFAttendanceTab from "@/components/wsf/WSFAttendanceTab";
 const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
 export default function WSFManagement() {
-  const { isAdmin } = useAuth();
+  const { isAdmin, leaderUnits } = useAuth();
+  const canManageWSF = isAdmin || leaderUnits.includes("WSF");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState({ name: "", location: "", meeting_day: "", meeting_time: "", is_active: true, leader_id: "" });
