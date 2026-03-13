@@ -47,6 +47,7 @@ export default function WSFManagement() {
   const canCreateCentre = isAdmin;
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState(null);
+  const [membersDialogCentre, setMembersDialogCentre] = useState(null);
   const [form, setForm] = useState({ name: "", location: "", meeting_day: "", meeting_time: "", is_active: true, leader_id: "" });
   const queryClient = useQueryClient();
 
