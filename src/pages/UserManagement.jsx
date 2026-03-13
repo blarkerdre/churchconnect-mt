@@ -26,7 +26,8 @@ const roleColors = {
 };
 
 export default function UserManagement() {
-  const { isAdmin } = useAuth();
+  const { isAdmin, roles, user } = useAuth();
+  const isSuperAdmin = roles.includes("super_admin");
   const queryClient = useQueryClient();
 
   const { data: profiles = [], isLoading } = useQuery({
