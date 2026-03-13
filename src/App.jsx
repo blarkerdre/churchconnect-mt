@@ -72,7 +72,7 @@ function AuthRoutes() {
                 <Route path="/events" element={<Events />} />
                 <Route path="/attendance" element={<LeaderRoute><Attendance /></LeaderRoute>} />
                 <Route path="/followups" element={<LeaderRoute><Followups /></LeaderRoute>} />
-                <Route path="/pastoral-care" element={<LeaderRoute><PastoralCare /></LeaderRoute>} />
+                <Route path="/pastoral-care" element={<PastoralCare />} />
                 <Route path="/communications" element={<LeaderRoute><Communications /></LeaderRoute>} />
                 <Route path="/transportation" element={<Transportation />} />
                 <Route path="/analytics" element={<LeaderRoute><Analytics /></LeaderRoute>} />

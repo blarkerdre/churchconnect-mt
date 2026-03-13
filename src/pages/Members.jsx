@@ -12,6 +12,7 @@ import { toast } from "@/components/ui/use-toast";
 import MemberFormDialog from "@/components/members/MemberFormDialog";
 import RegistrationQRCode from "@/components/members/RegistrationQRCode";
 import { logAudit } from "@/lib/audit";
+import { useAuth } from "@/hooks/useAuth";
 
 const statusColors = {
   "Active": "bg-chart-3/10 text-chart-3",
@@ -21,6 +22,7 @@ const statusColors = {
 };
 
 export default function Members() {
+  const { isAdmin } = useAuth();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -117,9 +119,11 @@ export default function Members() {
           <Button variant="outline" size="sm" onClick={handleDownloadCSV} className="gap-1.5">
             <Download className="h-4 w-4" /> CSV
           </Button>
-          <Button onClick={openNew} className="bg-primary hover:bg-primary/90">
-            <Plus className="h-4 w-4 mr-2" /> Register Member
-          </Button>
+          {isAdmin && (
+            <Button onClick={openNew} className="bg-primary hover:bg-primary/90">
+              <Plus className="h-4 w-4 mr-2" /> Register Member
+            </Button>
+          )}
         </div>
       </div>
 
@@ -187,8 +191,15 @@ export default function Members() {
                           <Button variant="ghost" size="icon"><MoreVertical className="h-4 w-4" /></Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => openEdit(m)}><Edit className="h-4 w-4 mr-2" /> Edit</DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleDelete(m)} className="text-destructive"><Trash2 className="h-4 w-4 mr-2" /> Delete</DropdownMenuItem>
+                          {isAdmin && (
+                            <DropdownMenuItem onClick={() => openEdit(m)}><Edit className="h-4 w-4 mr-2" /> Edit</DropdownMenuItem>
+                          )}
+                          {isAdmin && (
+                            <DropdownMenuItem onClick={() => handleDelete(m)} className="text-destructive"><Trash2 className="h-4 w-4 mr-2" /> Delete</DropdownMenuItem>
+                          )}
+                          {!isAdmin && (
+                            <DropdownMenuItem disabled className="text-muted-foreground">View only</DropdownMenuItem>
+                          )}
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </td>
