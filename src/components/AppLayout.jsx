@@ -35,6 +35,7 @@ export default function Layout({ children }) {
   // Filter nav items based on role
   const navItems = allNavItems.filter(item => {
     if (item.access === null) return true;
+    if (item.access === "super_admin") return isSuperAdmin;
     if (item.access === "admin") return isAdmin;
     if (item.access === "leader") return isAdmin || isUnitLeader;
     return false;
