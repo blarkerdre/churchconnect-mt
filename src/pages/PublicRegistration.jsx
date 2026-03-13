@@ -166,7 +166,7 @@ export default function PublicRegistration() {
                   </Select>
                 </div>
                 <div className="space-y-1.5">
-                  <Label>I am a</Label>
+                  <Label>Membership Status</Label>
                   <Select value={form.membership_status} onValueChange={v => set("membership_status", v)}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>{STATUSES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
