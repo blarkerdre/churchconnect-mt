@@ -25,6 +25,7 @@ export default function Layout({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
+  const { signOut, profile } = useAuth();
 
   const currentNav = navItems.find(n => n.path === location.pathname) || navItems[0];
 
