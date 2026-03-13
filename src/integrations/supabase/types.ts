@@ -14,16 +14,805 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      announcements: {
+        Row: {
+          category: string | null
+          content: string
+          created_at: string
+          created_by: string | null
+          expiry_date: string | null
+          id: string
+          is_published: boolean | null
+          publish_date: string | null
+          target_audience: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          category?: string | null
+          content: string
+          created_at?: string
+          created_by?: string | null
+          expiry_date?: string | null
+          id?: string
+          is_published?: boolean | null
+          publish_date?: string | null
+          target_audience?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string | null
+          content?: string
+          created_at?: string
+          created_by?: string | null
+          expiry_date?: string | null
+          id?: string
+          is_published?: boolean | null
+          publish_date?: string | null
+          target_audience?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      app_settings: {
+        Row: {
+          id: string
+          key: string
+          updated_at: string
+          updated_by: string | null
+          value: Json | null
+        }
+        Insert: {
+          id?: string
+          key: string
+          updated_at?: string
+          updated_by?: string | null
+          value?: Json | null
+        }
+        Update: {
+          id?: string
+          key?: string
+          updated_at?: string
+          updated_by?: string | null
+          value?: Json | null
+        }
+        Relationships: []
+      }
+      attendance_records: {
+        Row: {
+          check_in_method: string | null
+          checked_in_at: string | null
+          created_at: string
+          id: string
+          member_id: string
+          session_id: string
+        }
+        Insert: {
+          check_in_method?: string | null
+          checked_in_at?: string | null
+          created_at?: string
+          id?: string
+          member_id: string
+          session_id: string
+        }
+        Update: {
+          check_in_method?: string | null
+          checked_in_at?: string | null
+          created_at?: string
+          id?: string
+          member_id?: string
+          session_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attendance_records_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attendance_records_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "attendance_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      attendance_sessions: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          notes: string | null
+          session_date: string
+          session_type: Database["public"]["Enums"]["session_type"]
+          title: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          session_date: string
+          session_type: Database["public"]["Enums"]["session_type"]
+          title?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          session_date?: string
+          session_type?: Database["public"]["Enums"]["session_type"]
+          title?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      event_registrations: {
+        Row: {
+          created_at: string
+          event_id: string
+          guest_email: string | null
+          guest_name: string | null
+          id: string
+          member_id: string | null
+          status: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          event_id: string
+          guest_email?: string | null
+          guest_name?: string | null
+          id?: string
+          member_id?: string | null
+          status?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          event_id?: string
+          guest_email?: string | null
+          guest_name?: string | null
+          id?: string
+          member_id?: string | null
+          status?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_registrations_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_registrations_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      events: {
+        Row: {
+          capacity: number | null
+          category: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          end_time: string | null
+          event_date: string
+          id: string
+          is_public: boolean | null
+          location: string | null
+          requires_registration: boolean | null
+          start_time: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          capacity?: number | null
+          category?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          end_time?: string | null
+          event_date: string
+          id?: string
+          is_public?: boolean | null
+          location?: string | null
+          requires_registration?: boolean | null
+          start_time?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          capacity?: number | null
+          category?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          end_time?: string | null
+          event_date?: string
+          id?: string
+          is_public?: boolean | null
+          location?: string | null
+          requires_registration?: boolean | null
+          start_time?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      first_timers: {
+        Row: {
+          created_at: string
+          email: string | null
+          first_name: string
+          follow_up_assigned_to: string | null
+          follow_up_status:
+            | Database["public"]["Enums"]["followup_status"]
+            | null
+          how_heard: string | null
+          id: string
+          last_name: string
+          member_id: string | null
+          notes: string | null
+          phone: string | null
+          prayer_request: string | null
+          updated_at: string
+          visit_date: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          first_name: string
+          follow_up_assigned_to?: string | null
+          follow_up_status?:
+            | Database["public"]["Enums"]["followup_status"]
+            | null
+          how_heard?: string | null
+          id?: string
+          last_name: string
+          member_id?: string | null
+          notes?: string | null
+          phone?: string | null
+          prayer_request?: string | null
+          updated_at?: string
+          visit_date?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          first_name?: string
+          follow_up_assigned_to?: string | null
+          follow_up_status?:
+            | Database["public"]["Enums"]["followup_status"]
+            | null
+          how_heard?: string | null
+          id?: string
+          last_name?: string
+          member_id?: string | null
+          notes?: string | null
+          phone?: string | null
+          prayer_request?: string | null
+          updated_at?: string
+          visit_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "first_timers_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      followups: {
+        Row: {
+          assigned_to: string | null
+          completed_date: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          due_date: string | null
+          followup_type: Database["public"]["Enums"]["followup_type"]
+          id: string
+          member_id: string | null
+          notes: string | null
+          priority: string | null
+          status: Database["public"]["Enums"]["followup_status"]
+          updated_at: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          completed_date?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          due_date?: string | null
+          followup_type: Database["public"]["Enums"]["followup_type"]
+          id?: string
+          member_id?: string | null
+          notes?: string | null
+          priority?: string | null
+          status?: Database["public"]["Enums"]["followup_status"]
+          updated_at?: string
+        }
+        Update: {
+          assigned_to?: string | null
+          completed_date?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          due_date?: string | null
+          followup_type?: Database["public"]["Enums"]["followup_type"]
+          id?: string
+          member_id?: string | null
+          notes?: string | null
+          priority?: string | null
+          status?: Database["public"]["Enums"]["followup_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "followups_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      members: {
+        Row: {
+          address: string | null
+          bcc_completed: boolean | null
+          bfc_completed: boolean | null
+          church_unit: string | null
+          city: string | null
+          created_at: string
+          data_retention_reviewed_at: string | null
+          date_of_birth: string | null
+          email: string | null
+          emergency_contact_name: string | null
+          emergency_contact_phone: string | null
+          first_name: string
+          gdpr_consent: boolean | null
+          gdpr_consent_date: string | null
+          gender: Database["public"]["Enums"]["gender_type"] | null
+          holy_spirit_baptism: boolean | null
+          id: string
+          last_name: string
+          lcc_completed: boolean | null
+          ldc_completed: boolean | null
+          membership_date: string | null
+          membership_status: Database["public"]["Enums"]["membership_status"]
+          notes: string | null
+          phone: string | null
+          photo_url: string | null
+          postcode: string | null
+          updated_at: string
+          user_id: string | null
+          water_baptism: boolean | null
+          winners_satellite: boolean | null
+          workers_in_training: boolean | null
+          wsf_centre_id: string | null
+        }
+        Insert: {
+          address?: string | null
+          bcc_completed?: boolean | null
+          bfc_completed?: boolean | null
+          church_unit?: string | null
+          city?: string | null
+          created_at?: string
+          data_retention_reviewed_at?: string | null
+          date_of_birth?: string | null
+          email?: string | null
+          emergency_contact_name?: string | null
+          emergency_contact_phone?: string | null
+          first_name: string
+          gdpr_consent?: boolean | null
+          gdpr_consent_date?: string | null
+          gender?: Database["public"]["Enums"]["gender_type"] | null
+          holy_spirit_baptism?: boolean | null
+          id?: string
+          last_name: string
+          lcc_completed?: boolean | null
+          ldc_completed?: boolean | null
+          membership_date?: string | null
+          membership_status?: Database["public"]["Enums"]["membership_status"]
+          notes?: string | null
+          phone?: string | null
+          photo_url?: string | null
+          postcode?: string | null
+          updated_at?: string
+          user_id?: string | null
+          water_baptism?: boolean | null
+          winners_satellite?: boolean | null
+          workers_in_training?: boolean | null
+          wsf_centre_id?: string | null
+        }
+        Update: {
+          address?: string | null
+          bcc_completed?: boolean | null
+          bfc_completed?: boolean | null
+          church_unit?: string | null
+          city?: string | null
+          created_at?: string
+          data_retention_reviewed_at?: string | null
+          date_of_birth?: string | null
+          email?: string | null
+          emergency_contact_name?: string | null
+          emergency_contact_phone?: string | null
+          first_name?: string
+          gdpr_consent?: boolean | null
+          gdpr_consent_date?: string | null
+          gender?: Database["public"]["Enums"]["gender_type"] | null
+          holy_spirit_baptism?: boolean | null
+          id?: string
+          last_name?: string
+          lcc_completed?: boolean | null
+          ldc_completed?: boolean | null
+          membership_date?: string | null
+          membership_status?: Database["public"]["Enums"]["membership_status"]
+          notes?: string | null
+          phone?: string | null
+          photo_url?: string | null
+          postcode?: string | null
+          updated_at?: string
+          user_id?: string | null
+          water_baptism?: boolean | null
+          winners_satellite?: boolean | null
+          workers_in_training?: boolean | null
+          wsf_centre_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_members_wsf_centre"
+            columns: ["wsf_centre_id"]
+            isOneToOne: false
+            referencedRelation: "wsf_centres"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      messages: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          is_read: boolean | null
+          recipient_id: string | null
+          sender_id: string
+          subject: string | null
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          is_read?: boolean | null
+          recipient_id?: string | null
+          sender_id: string
+          subject?: string | null
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          is_read?: boolean | null
+          recipient_id?: string | null
+          sender_id?: string
+          subject?: string | null
+        }
+        Relationships: []
+      }
+      pastoral_care: {
+        Row: {
+          assigned_to: string | null
+          care_type: Database["public"]["Enums"]["pastoral_care_type"]
+          confidential: boolean | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          member_id: string | null
+          resolution_notes: string | null
+          status: Database["public"]["Enums"]["pastoral_care_status"]
+          subject: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          care_type: Database["public"]["Enums"]["pastoral_care_type"]
+          confidential?: boolean | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          member_id?: string | null
+          resolution_notes?: string | null
+          status?: Database["public"]["Enums"]["pastoral_care_status"]
+          subject: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_to?: string | null
+          care_type?: Database["public"]["Enums"]["pastoral_care_type"]
+          confidential?: boolean | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          member_id?: string | null
+          resolution_notes?: string | null
+          status?: Database["public"]["Enums"]["pastoral_care_status"]
+          subject?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pastoral_care_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          email: string | null
+          full_name: string | null
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      transportation: {
+        Row: {
+          assigned_driver: string | null
+          created_at: string
+          destination: string | null
+          driver_phone: string | null
+          id: string
+          member_id: string | null
+          notes: string | null
+          passengers: number | null
+          pickup_address: string
+          pickup_time: string | null
+          request_date: string
+          status: Database["public"]["Enums"]["transport_status"]
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          assigned_driver?: string | null
+          created_at?: string
+          destination?: string | null
+          driver_phone?: string | null
+          id?: string
+          member_id?: string | null
+          notes?: string | null
+          passengers?: number | null
+          pickup_address: string
+          pickup_time?: string | null
+          request_date: string
+          status?: Database["public"]["Enums"]["transport_status"]
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          assigned_driver?: string | null
+          created_at?: string
+          destination?: string | null
+          driver_phone?: string | null
+          id?: string
+          member_id?: string | null
+          notes?: string | null
+          passengers?: number | null
+          pickup_address?: string
+          pickup_time?: string | null
+          request_date?: string
+          status?: Database["public"]["Enums"]["transport_status"]
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transportation_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_roles: {
+        Row: {
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
+      wsf_attendance: {
+        Row: {
+          centre_id: string
+          created_at: string
+          id: string
+          meeting_date: string
+          member_id: string
+          notes: string | null
+          present: boolean | null
+          recorded_by: string | null
+        }
+        Insert: {
+          centre_id: string
+          created_at?: string
+          id?: string
+          meeting_date: string
+          member_id: string
+          notes?: string | null
+          present?: boolean | null
+          recorded_by?: string | null
+        }
+        Update: {
+          centre_id?: string
+          created_at?: string
+          id?: string
+          meeting_date?: string
+          member_id?: string
+          notes?: string | null
+          present?: boolean | null
+          recorded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wsf_attendance_centre_id_fkey"
+            columns: ["centre_id"]
+            isOneToOne: false
+            referencedRelation: "wsf_centres"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wsf_attendance_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      wsf_centres: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean | null
+          leader_id: string | null
+          location: string | null
+          meeting_day: string | null
+          meeting_time: string | null
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          leader_id?: string | null
+          location?: string | null
+          meeting_day?: string | null
+          meeting_time?: string | null
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          leader_id?: string | null
+          location?: string | null
+          meeting_day?: string | null
+          meeting_time?: string | null
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wsf_centres_leader_id_fkey"
+            columns: ["leader_id"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      is_admin: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "super_admin" | "admin" | "unit_leader" | "member"
+      followup_status: "Pending" | "In Progress" | "Completed" | "Overdue"
+      followup_type:
+        | "First Timer"
+        | "New Convert"
+        | "Absentee"
+        | "General"
+        | "Pastoral"
+      gender_type: "Male" | "Female"
+      membership_status: "Active" | "Inactive" | "New Convert" | "First Timer"
+      pastoral_care_status: "Open" | "In Progress" | "Resolved" | "Closed"
+      pastoral_care_type:
+        | "Counselling"
+        | "Visitation"
+        | "Prayer Request"
+        | "Hospital Visit"
+        | "Bereavement"
+        | "Marriage"
+        | "Financial Support"
+        | "Other"
+      session_type:
+        | "Sunday Service"
+        | "Midweek Service"
+        | "Special Program"
+        | "Unit Meeting"
+        | "WSF Meeting"
+        | "Other"
+      transport_status: "Pending" | "Confirmed" | "Completed" | "Cancelled"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +939,38 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["super_admin", "admin", "unit_leader", "member"],
+      followup_status: ["Pending", "In Progress", "Completed", "Overdue"],
+      followup_type: [
+        "First Timer",
+        "New Convert",
+        "Absentee",
+        "General",
+        "Pastoral",
+      ],
+      gender_type: ["Male", "Female"],
+      membership_status: ["Active", "Inactive", "New Convert", "First Timer"],
+      pastoral_care_status: ["Open", "In Progress", "Resolved", "Closed"],
+      pastoral_care_type: [
+        "Counselling",
+        "Visitation",
+        "Prayer Request",
+        "Hospital Visit",
+        "Bereavement",
+        "Marriage",
+        "Financial Support",
+        "Other",
+      ],
+      session_type: [
+        "Sunday Service",
+        "Midweek Service",
+        "Special Program",
+        "Unit Meeting",
+        "WSF Meeting",
+        "Other",
+      ],
+      transport_status: ["Pending", "Confirmed", "Completed", "Cancelled"],
+    },
   },
 } as const
