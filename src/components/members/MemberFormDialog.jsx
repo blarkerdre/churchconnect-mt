@@ -193,10 +193,30 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
             <div className="space-y-3">
               <SwitchRow id="water_baptism" label="Water Baptism" checked={form.water_baptism} onChange={(v) => set("water_baptism", v)} />
               <SwitchRow id="holy_spirit_baptism" label="Holy Spirit Baptism" checked={form.holy_spirit_baptism} onChange={(v) => set("holy_spirit_baptism", v)} />
-              <SwitchRow id="winners_satellite" label="Winners Satellite Fellowship" checked={form.winners_satellite} onChange={(v) => set("winners_satellite", v)} />
+              <SwitchRow id="winners_satellite" label="Winners Satellite Fellowship" checked={form.winners_satellite} onChange={(v) => {
+                set("winners_satellite", v);
+                if (v && !form.wsf_centre_id && (form.postcode || form.address || form.city)) {
+                  // Auto-suggest closest WSF centre based on postcode/address
+                  const memberArea = `${form.postcode || ""} ${form.address || ""} ${form.city || ""}`.toLowerCase();
+                  const postcodePrefix = (form.postcode || "").trim().split(" ")[0]?.toLowerCase();
+                  const scored = wsfCentres.map(c => {
+                    const loc = (c.location || "").toLowerCase();
+                    let score = 0;
+                    if (postcodePrefix && loc.includes(postcodePrefix)) score += 10;
+                    if (form.city && loc.includes(form.city.toLowerCase())) score += 5;
+                    if (form.postcode && loc.includes(form.postcode.toLowerCase())) score += 8;
+                    const addressWords = memberArea.split(/\s+/).filter(w => w.length > 2);
+                    addressWords.forEach(w => { if (loc.includes(w)) score += 2; });
+                    return { ...c, score };
+                  }).filter(c => c.score > 0).sort((a, b) => b.score - a.score);
+                  if (scored.length > 0) {
+                    set("wsf_centre_id", scored[0].id);
+                  }
+                }
+              }} />
               {form.winners_satellite && (
                 <div className="space-y-1.5 pl-4">
-                  <Label>WSF Centre</Label>
+                  <Label>WSF Centre {form.wsf_centre_id && wsfCentres.find(c => c.id === form.wsf_centre_id) ? <span className="text-xs text-muted-foreground font-normal ml-1">(auto-suggested by location)</span> : null}</Label>
                   <Select value={form.wsf_centre_id || ""} onValueChange={(v) => set("wsf_centre_id", v)}>
                     <SelectTrigger><SelectValue placeholder="Select WSF Centre" /></SelectTrigger>
                     <SelectContent>{wsfCentres.map(c => <SelectItem key={c.id} value={c.id}>{c.name}{c.location ? ` — ${c.location}` : ""}</SelectItem>)}</SelectContent>
