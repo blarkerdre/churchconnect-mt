@@ -219,7 +219,7 @@ export default function WSFManagement() {
               <Label>Centre Leader</Label>
               <Select value={form.leader_id} onValueChange={v => setForm(f => ({ ...f, leader_id: v }))}>
                 <SelectTrigger><SelectValue placeholder="Select leader" /></SelectTrigger>
-                <SelectContent>{members.map(m => <SelectItem key={m.id} value={m.id}>{m.first_name} {m.last_name}</SelectItem>)}</SelectContent>
+                <SelectContent>{wsfLeaders.map(m => <SelectItem key={m.id} value={m.id}>{m.first_name} {m.last_name}</SelectItem>)}</SelectContent>
               </Select>
             </div>
             <div className="flex items-center justify-between">
