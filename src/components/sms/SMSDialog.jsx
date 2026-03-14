@@ -102,8 +102,8 @@ export default function SMSDialog({
       toast({ title: "Please enter a message", variant: "destructive" });
       return;
     }
-    if (recipientCount === 0) {
-      toast({ title: "No recipients with phone numbers", variant: "destructive" });
+    if (validCount === 0) {
+      toast({ title: "No recipients with valid phone numbers", variant: "destructive" });
       return;
     }
 
