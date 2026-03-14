@@ -229,7 +229,7 @@ export default function SMSDialog({
 
             <Button
               onClick={handleSend}
-              disabled={sending || recipientCount === 0 || !message.trim()}
+              disabled={sending || validCount === 0 || !message.trim()}
               className="w-full bg-primary"
             >
               {sending ? (
@@ -237,7 +237,7 @@ export default function SMSDialog({
               ) : (
                 <Send className="h-4 w-4 mr-2" />
               )}
-              Send to {recipientCount} recipient{recipientCount !== 1 ? "s" : ""}
+              Send to {validCount} recipient{validCount !== 1 ? "s" : ""}
             </Button>
           </div>
         )}
