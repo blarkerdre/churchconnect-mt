@@ -285,7 +285,7 @@ export default function Followups() {
                             <UserCheck className="h-3 w-3" /> Convert to Member
                           </button>
                         )}
-                         {f.member_phone && (
+                         {f.person_phone && (
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
