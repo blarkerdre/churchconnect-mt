@@ -3,7 +3,7 @@ import { Link, useLocation } from "react-router-dom";
 import {
   LayoutDashboard, Users, CalendarDays, HeartHandshake,
   Heart, Megaphone, Menu, LogOut,
-  ClipboardList, Car, BarChart2, ChevronLeft, Globe, Shield, FileText
+  ClipboardList, Car, BarChart2, ChevronLeft, Globe, Shield, FileText, TrendingUp
 } from "lucide-react";
 import winnersLogo from "@/assets/winners-chapel-logo.png";
 import { Button } from "@/components/ui/button";
