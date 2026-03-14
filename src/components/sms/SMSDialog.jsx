@@ -10,6 +10,25 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/components/ui/use-toast";
 
+// Normalize phone to E.164 format
+function normalizePhone(phone) {
+  if (!phone) return null;
+  let cleaned = phone.replace(/[\s\-\(\)\.]/g, "");
+  // If it starts with 0 and looks like a UK number, prepend +44
+  if (/^0[1-9]\d{9,10}$/.test(cleaned)) {
+    cleaned = "+44" + cleaned.slice(1);
+  }
+  // If no +, prepend +
+  if (!cleaned.startsWith("+")) {
+    cleaned = "+" + cleaned;
+  }
+  // Validate E.164: + followed by 7-15 digits
+  if (/^\+[1-9]\d{6,14}$/.test(cleaned)) {
+    return cleaned;
+  }
+  return null;
+}
+
 const AUDIENCES = [
   "All Members", "Ushering", "Choir", "Media", "Children's Ministry", "Protocol",
   "Sanctuary Keepers", "Prayer & Intercession", "Evangelism", "Follow-up",
@@ -64,7 +83,18 @@ export default function SMSDialog({
     enabled: open && !directRecipients,
   });
 
-  const recipientCount = directRecipients ? directRecipients.filter(r => r.phone).length : members.length;
+  const validRecipients = useMemo(() => {
+    const list = directRecipients
+      ? directRecipients.filter(r => r.phone)
+      : members;
+    return list.map(r => {
+      const normalized = normalizePhone(r.phone);
+      return { ...r, phone: normalized, valid: !!normalized };
+    });
+  }, [directRecipients, members]);
+
+  const validCount = validRecipients.filter(r => r.valid).length;
+  const invalidCount = validRecipients.length - validCount;
   const segments = Math.ceil((message.length || 1) / 160);
 
   const handleSend = async () => {
@@ -72,16 +102,16 @@ export default function SMSDialog({
       toast({ title: "Please enter a message", variant: "destructive" });
       return;
     }
-    if (recipientCount === 0) {
-      toast({ title: "No recipients with phone numbers", variant: "destructive" });
+    if (validCount === 0) {
+      toast({ title: "No recipients with valid phone numbers", variant: "destructive" });
       return;
     }
 
     setSending(true);
     try {
-      const recipients = directRecipients
-        ? directRecipients.filter(r => r.phone).map(r => ({ phone: r.phone, member_id: r.member_id }))
-        : members.map(m => ({ phone: m.phone, member_id: m.id }));
+      const recipients = validRecipients
+        .filter(r => r.valid)
+        .map(r => ({ phone: r.phone, member_id: r.member_id || r.id }));
 
       const { data: sessionData } = await supabase.auth.getSession();
       const token = sessionData?.session?.access_token;
@@ -183,16 +213,23 @@ export default function SMSDialog({
 
             <div className="flex items-center justify-between text-sm">
               <span className="text-muted-foreground">
-                Recipients with phone numbers:
+                Valid recipients:
               </span>
-              <Badge className="bg-primary/10 text-primary border-0">
-                {recipientCount}
-              </Badge>
+              <div className="flex items-center gap-2">
+                <Badge className="bg-primary/10 text-primary border-0">
+                  {validCount}
+                </Badge>
+                {invalidCount > 0 && (
+                  <Badge variant="outline" className="text-destructive border-destructive/30 text-xs">
+                    {invalidCount} invalid
+                  </Badge>
+                )}
+              </div>
             </div>
 
             <Button
               onClick={handleSend}
-              disabled={sending || recipientCount === 0 || !message.trim()}
+              disabled={sending || validCount === 0 || !message.trim()}
               className="w-full bg-primary"
             >
               {sending ? (
@@ -200,7 +237,7 @@ export default function SMSDialog({
               ) : (
                 <Send className="h-4 w-4 mr-2" />
               )}
-              Send to {recipientCount} recipient{recipientCount !== 1 ? "s" : ""}
+              Send to {validCount} recipient{validCount !== 1 ? "s" : ""}
             </Button>
           </div>
         )}
