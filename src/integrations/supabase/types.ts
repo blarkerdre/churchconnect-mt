@@ -759,6 +759,54 @@ export type Database = {
           },
         ]
       }
+      training_reports: {
+        Row: {
+          created_at: string
+          female: number
+          holy_ghost_baptism: number
+          id: string
+          male: number
+          notes: string | null
+          recorded_by: string | null
+          session_date: string
+          title: string | null
+          total_attendance: number
+          training_type: string
+          updated_at: string
+          water_baptism: number
+        }
+        Insert: {
+          created_at?: string
+          female?: number
+          holy_ghost_baptism?: number
+          id?: string
+          male?: number
+          notes?: string | null
+          recorded_by?: string | null
+          session_date: string
+          title?: string | null
+          total_attendance?: number
+          training_type: string
+          updated_at?: string
+          water_baptism?: number
+        }
+        Update: {
+          created_at?: string
+          female?: number
+          holy_ghost_baptism?: number
+          id?: string
+          male?: number
+          notes?: string | null
+          recorded_by?: string | null
+          session_date?: string
+          title?: string | null
+          total_attendance?: number
+          training_type?: string
+          updated_at?: string
+          water_baptism?: number
+        }
+        Relationships: []
+      }
       transportation: {
         Row: {
           assigned_driver: string | null
