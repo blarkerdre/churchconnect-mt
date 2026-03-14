@@ -63,6 +63,15 @@ function LeaderRoute({ children }) {
   return children;
 }
 
+function TrainingRoute({ children }) {
+  const { isAdmin, leaderUnits, roles, loading } = useAuth();
+  if (loading) return null;
+  const isSuperAdmin = roles.includes("super_admin");
+  const hasTrainingAccess = leaderUnits.some(u => ["Pastoral Care", "pastoral care", "Altar Minister", "altar minister", "Altar Ministers", "altar ministers"].includes(u));
+  if (!isAdmin && !isSuperAdmin && !hasTrainingAccess) return <Navigate to="/" replace />;
+  return children;
+}
+
 function AuthRoutes() {
   return (
     <Routes>
