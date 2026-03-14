@@ -2,9 +2,10 @@ import React, { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import {
   LayoutDashboard, Users, CalendarDays, HeartHandshake,
-  Heart, Megaphone, Menu, Church, LogOut,
+  Heart, Megaphone, Menu, LogOut,
   ClipboardList, Car, BarChart2, ChevronLeft, Globe, Shield, FileText
 } from "lucide-react";
+import winnersLogo from "@/assets/winners-chapel-logo.png";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import NotificationBell from "@/components/notifications/NotificationBell";
