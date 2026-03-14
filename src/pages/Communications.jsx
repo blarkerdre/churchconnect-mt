@@ -199,9 +199,17 @@ export default function Communications() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input placeholder="Search announcements..." value={search} onChange={e => setSearch(e.target.value)} className="pl-10" />
         </div>
-        <Button onClick={() => { setEditing(null); setFormOpen(true); }} className="bg-primary hover:bg-primary/90">
-          <Plus className="h-4 w-4 mr-2" /> New Announcement
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={() => setHistoryOpen(true)}>
+            <History className="h-4 w-4 mr-2" /> SMS History
+          </Button>
+          <Button variant="outline" onClick={() => { setSmsAnnouncement(null); setSmsOpen(true); }}>
+            <MessageSquare className="h-4 w-4 mr-2" /> Bulk SMS
+          </Button>
+          <Button onClick={() => { setEditing(null); setFormOpen(true); }} className="bg-primary hover:bg-primary/90">
+            <Plus className="h-4 w-4 mr-2" /> New Announcement
+          </Button>
+        </div>
       </div>
 
       {isLoading ? (
