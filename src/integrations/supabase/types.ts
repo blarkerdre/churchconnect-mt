@@ -703,6 +703,53 @@ export type Database = {
         }
         Relationships: []
       }
+      sms_log: {
+        Row: {
+          created_at: string
+          error_message: string | null
+          id: string
+          message: string
+          recipient_member_id: string | null
+          recipient_phone: string
+          reference_id: string | null
+          sender_id: string
+          sms_type: string
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          message: string
+          recipient_member_id?: string | null
+          recipient_phone: string
+          reference_id?: string | null
+          sender_id: string
+          sms_type?: string
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          message?: string
+          recipient_member_id?: string | null
+          recipient_phone?: string
+          reference_id?: string | null
+          sender_id?: string
+          sms_type?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sms_log_recipient_member_id_fkey"
+            columns: ["recipient_member_id"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       transportation: {
         Row: {
           assigned_driver: string | null
