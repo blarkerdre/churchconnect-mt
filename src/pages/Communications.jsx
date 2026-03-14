@@ -6,11 +6,13 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Megaphone, Pin, Search, Plus, Loader2, Trash2, Pencil } from "lucide-react";
+import { Megaphone, Pin, Search, Plus, Loader2, Trash2, Pencil, MessageSquare, History } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { format } from "date-fns";
 import AnnouncementForm from "@/components/comms/AnnouncementForm";
 import { logAudit } from "@/lib/audit";
+import SMSDialog from "@/components/sms/SMSDialog";
+import SMSHistoryDialog from "@/components/sms/SMSHistoryDialog";
 
 const AUDIENCES = [
   "All Members", "Ushering", "Choir", "Media", "Children's Ministry", "Protocol",
