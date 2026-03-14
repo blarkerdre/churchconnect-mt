@@ -68,15 +68,27 @@ export default function SMSHistoryDialog({ open, onOpenChange }) {
                   <span className="font-medium truncate">{log.recipient_phone}</span>
                   <div className="flex items-center gap-2">
                     <Badge variant="outline" className="text-xs">{log.sms_type}</Badge>
-                    <Badge className={`border-0 text-xs ${log.status === "sent" ? "bg-chart-3/10 text-chart-3" : "bg-destructive/10 text-destructive"}`}>
-                      {log.status}
+                    <Badge className={`border-0 text-xs ${
+                      log.delivery_status === "delivered" ? "bg-chart-3/10 text-chart-3" :
+                      ["failed", "undelivered"].includes(log.delivery_status) ? "bg-destructive/10 text-destructive" :
+                      log.status === "sent" ? "bg-primary/10 text-primary" :
+                      "bg-destructive/10 text-destructive"
+                    }`}>
+                      {log.delivery_status || log.status}
                     </Badge>
                   </div>
                 </div>
                 <p className="text-muted-foreground truncate">{log.message}</p>
-                <p className="text-xs text-muted-foreground">
-                  {format(new Date(log.created_at), "dd MMM yyyy, h:mm a")}
-                </p>
+                <div className="flex items-center justify-between">
+                  <p className="text-xs text-muted-foreground">
+                    {format(new Date(log.created_at), "dd MMM yyyy, h:mm a")}
+                  </p>
+                  {log.delivery_updated_at && (
+                    <p className="text-xs text-muted-foreground">
+                      Updated: {format(new Date(log.delivery_updated_at), "h:mm a")}
+                    </p>
+                  )}
+                </div>
                 {log.error_message && (
                   <p className="text-xs text-destructive">{log.error_message}</p>
                 )}

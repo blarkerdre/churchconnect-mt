@@ -1,0 +1,1 @@
+CREATE POLICY "Service role can update sms_log" ON public.sms_log FOR UPDATE USING (true) WITH CHECK (true);

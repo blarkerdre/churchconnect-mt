@@ -706,9 +706,12 @@ export type Database = {
       sms_log: {
         Row: {
           created_at: string
+          delivery_status: string | null
+          delivery_updated_at: string | null
           error_message: string | null
           id: string
           message: string
+          message_sid: string | null
           recipient_member_id: string | null
           recipient_phone: string
           reference_id: string | null
@@ -718,9 +721,12 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          delivery_status?: string | null
+          delivery_updated_at?: string | null
           error_message?: string | null
           id?: string
           message: string
+          message_sid?: string | null
           recipient_member_id?: string | null
           recipient_phone: string
           reference_id?: string | null
@@ -730,9 +736,12 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          delivery_status?: string | null
+          delivery_updated_at?: string | null
           error_message?: string | null
           id?: string
           message?: string
+          message_sid?: string | null
           recipient_member_id?: string | null
           recipient_phone?: string
           reference_id?: string | null
