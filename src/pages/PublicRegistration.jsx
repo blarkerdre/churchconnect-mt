@@ -7,10 +7,12 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { Loader2, CheckCircle2, Church } from "lucide-react";
+import { Loader2, CheckCircle2, Church, Info } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "@/components/ui/use-toast";
 import { Toaster } from "@/components/ui/toaster";
 import { suggestClosestWSFCentre } from "@/lib/wsf-suggest";
+import { normalizePhone } from "@/lib/phone-utils";
 
 const CHURCH_UNITS = [
   "Ushering", "Choir", "Media", "Children's Ministry", "Protocol",
@@ -154,7 +156,26 @@ export default function PublicRegistration() {
                 <div className="space-y-1.5"><Label>First Name *</Label><Input value={form.first_name} onChange={e => set("first_name", e.target.value)} maxLength={100} required /></div>
                 <div className="space-y-1.5"><Label>Last Name *</Label><Input value={form.last_name} onChange={e => set("last_name", e.target.value)} maxLength={100} required /></div>
                 <div className="space-y-1.5"><Label>Email</Label><Input type="email" value={form.email} onChange={e => set("email", e.target.value)} maxLength={255} /></div>
-                <div className="space-y-1.5"><Label>Phone</Label><Input value={form.phone} onChange={e => set("phone", e.target.value)} maxLength={20} /></div>
+                <div className="space-y-1.5">
+                  <div className="flex items-center gap-1.5">
+                    <Label>Phone</Label>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="max-w-[220px] text-xs">
+                          <p>Use international format with country code, e.g. <strong>+447888873207</strong></p>
+                          <p className="mt-1 text-muted-foreground">UK numbers starting with 0 are auto-converted (07xxx → +447xxx)</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
+                  <Input value={form.phone} onChange={e => set("phone", e.target.value)} placeholder="+447888873207" maxLength={20} />
+                  {form.phone && !normalizePhone(form.phone) && (
+                    <p className="text-[11px] text-destructive">Invalid format. Use +country code then number, e.g. +447888873207</p>
+                  )}
+                </div>
                 <div className="space-y-1.5 md:col-span-2"><Label>Street Address</Label><Input value={form.address} onChange={e => { set("address", e.target.value); if (form.winners_satellite) { const best = suggestClosestWSFCentre(wsfCentres, { ...form, address: e.target.value }); if (best) set("wsf_centre_id", best.id); } }} maxLength={300} /></div>
                 <div className="space-y-1.5"><Label>City</Label><Input value={form.city} onChange={e => { set("city", e.target.value); if (form.winners_satellite) { const best = suggestClosestWSFCentre(wsfCentres, { ...form, city: e.target.value }); if (best) set("wsf_centre_id", best.id); } }} maxLength={100} /></div>
                 <div className="space-y-1.5"><Label>Post Code</Label><Input value={form.postcode} onChange={e => { set("postcode", e.target.value); if (form.winners_satellite) { const best = suggestClosestWSFCentre(wsfCentres, { ...form, postcode: e.target.value }); if (best) set("wsf_centre_id", best.id); } }} maxLength={20} /></div>
