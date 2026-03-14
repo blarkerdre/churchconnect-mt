@@ -57,9 +57,7 @@ export default function Auth() {
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="flex flex-col items-center mb-8">
-          <div className="h-16 w-16 rounded-2xl bg-primary flex items-center justify-center mb-4">
-            <Church className="h-8 w-8 text-primary-foreground" />
-          </div>
+          <img src={winnersLogo} alt="Winners Chapel Logo" className="h-16 w-16 object-contain mb-4" />
           <h1 className="font-display text-2xl font-bold text-foreground">Winners Chapel</h1>
           <p className="text-sm text-muted-foreground">International Cardiff</p>
         </div>
