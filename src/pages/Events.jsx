@@ -244,6 +244,15 @@ export default function Events() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <SMSDialog
+        open={!!smsEvent}
+        onOpenChange={(o) => { if (!o) setSmsEvent(null); }}
+        prefillMessage={smsEvent ? `${smsEvent.title} - ${smsEvent.event_date}${smsEvent.start_time ? ' at ' + smsEvent.start_time : ''}${smsEvent.location ? ', ' + smsEvent.location : ''}` : ""}
+        smsType="event"
+        referenceId={smsEvent?.id || null}
+        title="Notify Members via SMS"
+      />
     </div>
   );
 }
