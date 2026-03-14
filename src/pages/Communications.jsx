@@ -6,11 +6,13 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Megaphone, Pin, Search, Plus, Loader2, Trash2, Pencil } from "lucide-react";
+import { Megaphone, Pin, Search, Plus, Loader2, Trash2, Pencil, MessageSquare, History } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { format } from "date-fns";
 import AnnouncementForm from "@/components/comms/AnnouncementForm";
 import { logAudit } from "@/lib/audit";
+import SMSDialog from "@/components/sms/SMSDialog";
+import SMSHistoryDialog from "@/components/sms/SMSHistoryDialog";
 
 const AUDIENCES = [
   "All Members", "Ushering", "Choir", "Media", "Children's Ministry", "Protocol",
@@ -26,6 +28,9 @@ export default function Communications() {
   const [search, setSearch] = useState("");
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState(null);
+  const [smsOpen, setSmsOpen] = useState(false);
+  const [smsAnnouncement, setSmsAnnouncement] = useState(null);
+  const [historyOpen, setHistoryOpen] = useState(false);
 
   // Use leaderUnits from auth context for unit leaders
   const unitLeaderUnits = (!isAdmin && isUnitLeader && leaderUnits.length > 0)
@@ -172,6 +177,10 @@ export default function Communications() {
           </div>
           {canManage(a) && (
             <div className="flex items-center gap-1 shrink-0">
+              <Button variant="ghost" size="icon" className="h-8 w-8" title="Send as SMS"
+                onClick={() => { setSmsAnnouncement(a); setSmsOpen(true); }}>
+                <MessageSquare className="h-3.5 w-3.5 text-primary" />
+              </Button>
               <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEdit(a)}>
                 <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
               </Button>
@@ -192,9 +201,17 @@ export default function Communications() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input placeholder="Search announcements..." value={search} onChange={e => setSearch(e.target.value)} className="pl-10" />
         </div>
-        <Button onClick={() => { setEditing(null); setFormOpen(true); }} className="bg-primary hover:bg-primary/90">
-          <Plus className="h-4 w-4 mr-2" /> New Announcement
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={() => setHistoryOpen(true)}>
+            <History className="h-4 w-4 mr-2" /> SMS History
+          </Button>
+          <Button variant="outline" onClick={() => { setSmsAnnouncement(null); setSmsOpen(true); }}>
+            <MessageSquare className="h-4 w-4 mr-2" /> Bulk SMS
+          </Button>
+          <Button onClick={() => { setEditing(null); setFormOpen(true); }} className="bg-primary hover:bg-primary/90">
+            <Plus className="h-4 w-4 mr-2" /> New Announcement
+          </Button>
+        </div>
       </div>
 
       {isLoading ? (
@@ -227,6 +244,18 @@ export default function Communications() {
         lockedAudience={lockedAudience}
         availableAudiences={availableAudiences}
       />
+
+      <SMSDialog
+        open={smsOpen}
+        onOpenChange={setSmsOpen}
+        prefillMessage={smsAnnouncement ? `${smsAnnouncement.title}: ${smsAnnouncement.body}` : ""}
+        prefillAudience={smsAnnouncement?.audience || ""}
+        smsType={smsAnnouncement ? "announcement" : "bulk"}
+        referenceId={smsAnnouncement?.id || null}
+        title={smsAnnouncement ? "Send Announcement as SMS" : "Bulk SMS"}
+      />
+
+      <SMSHistoryDialog open={historyOpen} onOpenChange={setHistoryOpen} />
     </div>
   );
 }
