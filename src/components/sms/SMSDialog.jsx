@@ -213,11 +213,18 @@ export default function SMSDialog({
 
             <div className="flex items-center justify-between text-sm">
               <span className="text-muted-foreground">
-                Recipients with phone numbers:
+                Valid recipients:
               </span>
-              <Badge className="bg-primary/10 text-primary border-0">
-                {recipientCount}
-              </Badge>
+              <div className="flex items-center gap-2">
+                <Badge className="bg-primary/10 text-primary border-0">
+                  {validCount}
+                </Badge>
+                {invalidCount > 0 && (
+                  <Badge variant="outline" className="text-destructive border-destructive/30 text-xs">
+                    {invalidCount} invalid
+                  </Badge>
+                )}
+              </div>
             </div>
 
             <Button
