@@ -7,12 +7,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, Search, CalendarDays, MapPin, Clock, Users, Edit, Trash2, Loader2 } from "lucide-react";
+import { Plus, Search, CalendarDays, MapPin, Clock, Users, Edit, Trash2, Loader2, MessageSquare } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { logAudit } from "@/lib/audit";
+import SMSDialog from "@/components/sms/SMSDialog";
 
 const statusColors = {
   "Upcoming": "bg-primary/10 text-primary",
@@ -46,6 +47,7 @@ export default function Events() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState({});
+  const [smsEvent, setSmsEvent] = useState(null);
 
   const { data: events = [], isLoading } = useQuery({
     queryKey: ["events"],
@@ -196,6 +198,10 @@ export default function Events() {
                     </div>
                     {canManage && (
                       <div className="flex items-center gap-1">
+                        <Button variant="ghost" size="icon" title="Notify via SMS"
+                          onClick={() => setSmsEvent(e)}>
+                          <MessageSquare className="h-4 w-4 text-primary" />
+                        </Button>
                         <Button variant="ghost" size="icon" onClick={() => openEdit(e)}><Edit className="h-4 w-4" /></Button>
                         <Button variant="ghost" size="icon" onClick={() => handleDelete(e)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                       </div>
@@ -238,6 +244,15 @@ export default function Events() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <SMSDialog
+        open={!!smsEvent}
+        onOpenChange={(o) => { if (!o) setSmsEvent(null); }}
+        prefillMessage={smsEvent ? `${smsEvent.title} - ${smsEvent.event_date}${smsEvent.start_time ? ' at ' + smsEvent.start_time : ''}${smsEvent.location ? ', ' + smsEvent.location : ''}` : ""}
+        smsType="event"
+        referenceId={smsEvent?.id || null}
+        title="Notify Members via SMS"
+      />
     </div>
   );
 }
