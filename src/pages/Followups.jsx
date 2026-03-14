@@ -25,6 +25,7 @@ export default function Followups() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingFollowup, setEditingFollowup] = useState(null);
   const [selectedFollowup, setSelectedFollowup] = useState(null);
+  const [smsFollowup, setSmsFollowup] = useState(null);
   const queryClient = useQueryClient();
 
   // Fetch profiles for resolving assigned_to user IDs to names
