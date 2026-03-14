@@ -10,6 +10,25 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/components/ui/use-toast";
 
+// Normalize phone to E.164 format
+function normalizePhone(phone) {
+  if (!phone) return null;
+  let cleaned = phone.replace(/[\s\-\(\)\.]/g, "");
+  // If it starts with 0 and looks like a UK number, prepend +44
+  if (/^0[1-9]\d{9,10}$/.test(cleaned)) {
+    cleaned = "+44" + cleaned.slice(1);
+  }
+  // If no +, prepend +
+  if (!cleaned.startsWith("+")) {
+    cleaned = "+" + cleaned;
+  }
+  // Validate E.164: + followed by 7-15 digits
+  if (/^\+[1-9]\d{6,14}$/.test(cleaned)) {
+    return cleaned;
+  }
+  return null;
+}
+
 const AUDIENCES = [
   "All Members", "Ushering", "Choir", "Media", "Children's Ministry", "Protocol",
   "Sanctuary Keepers", "Prayer & Intercession", "Evangelism", "Follow-up",
