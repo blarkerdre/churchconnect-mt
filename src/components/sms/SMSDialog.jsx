@@ -109,9 +109,9 @@ export default function SMSDialog({
 
     setSending(true);
     try {
-      const recipients = directRecipients
-        ? directRecipients.filter(r => r.phone).map(r => ({ phone: r.phone, member_id: r.member_id }))
-        : members.map(m => ({ phone: m.phone, member_id: m.id }));
+      const recipients = validRecipients
+        .filter(r => r.valid)
+        .map(r => ({ phone: r.phone, member_id: r.member_id || r.id }));
 
       const { data: sessionData } = await supabase.auth.getSession();
       const token = sessionData?.session?.access_token;
