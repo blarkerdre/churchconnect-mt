@@ -95,6 +95,9 @@ Deno.serve(async (req) => {
     let failed = 0;
     const logs: any[] = [];
 
+    // Build the webhook URL for delivery status callbacks
+    const webhookUrl = `${supabaseUrl}/functions/v1/twilio-webhook`;
+
     for (const recipient of recipients) {
       const phone = recipient.phone?.trim();
       if (!phone) {
@@ -103,6 +106,13 @@ Deno.serve(async (req) => {
       }
 
       try {
+        const params = new URLSearchParams({
+          To: phone,
+          From: TWILIO_FROM,
+          Body: message,
+          StatusCallback: webhookUrl,
+        });
+
         const response = await fetch(`${GATEWAY_URL}/Messages.json`, {
           method: "POST",
           headers: {
@@ -110,11 +120,7 @@ Deno.serve(async (req) => {
             "X-Connection-Api-Key": TWILIO_API_KEY,
             "Content-Type": "application/x-www-form-urlencoded",
           },
-          body: new URLSearchParams({
-            To: phone,
-            From: TWILIO_FROM,
-            Body: message,
-          }),
+          body: params,
         });
 
         const data = await response.json();
@@ -129,6 +135,8 @@ Deno.serve(async (req) => {
             sms_type: sms_type || "bulk",
             reference_id: reference_id || null,
             status: "sent",
+            message_sid: data.sid || null,
+            delivery_status: "queued",
           });
         } else {
           failed++;
