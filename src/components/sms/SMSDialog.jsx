@@ -9,25 +9,8 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/components/ui/use-toast";
-
-// Normalize phone to E.164 format
-function normalizePhone(phone) {
-  if (!phone) return null;
-  let cleaned = phone.replace(/[\s\-\(\)\.]/g, "");
-  // If it starts with 0 and looks like a UK number, prepend +44
-  if (/^0[1-9]\d{9,10}$/.test(cleaned)) {
-    cleaned = "+44" + cleaned.slice(1);
-  }
-  // If no +, prepend +
-  if (!cleaned.startsWith("+")) {
-    cleaned = "+" + cleaned;
-  }
-  // Validate E.164: + followed by 7-15 digits
-  if (/^\+[1-9]\d{6,14}$/.test(cleaned)) {
-    return cleaned;
-  }
-  return null;
-}
+import { normalizePhone } from "@/lib/phone-utils";
+import InvalidRecipientsPreview from "./InvalidRecipientsPreview";
 
 const AUDIENCES = [
   "All Members", "Ushering", "Choir", "Media", "Children's Ministry", "Protocol",
@@ -43,7 +26,7 @@ export default function SMSDialog({
   prefillAudience = "",
   smsType = "bulk",
   referenceId = null,
-  directRecipients = null, // Array<{phone, member_id, name}>
+  directRecipients = null,
   title = "Send SMS",
 }) {
   const { isAdmin, leaderUnits } = useAuth();
@@ -53,7 +36,6 @@ export default function SMSDialog({
   const [sending, setSending] = useState(false);
   const [result, setResult] = useState(null);
 
-  // Reset state when dialog opens
   React.useEffect(() => {
     if (open) {
       setMessage(prefillMessage);
@@ -68,7 +50,6 @@ export default function SMSDialog({
       ? AUDIENCES.filter(a => leaderUnits.includes(a))
       : [];
 
-  // Fetch members with phone numbers for selected audience
   const { data: members = [] } = useQuery({
     queryKey: ["sms-recipients", audience, directRecipients ? "direct" : "audience"],
     queryFn: async () => {
@@ -83,18 +64,24 @@ export default function SMSDialog({
     enabled: open && !directRecipients,
   });
 
-  const validRecipients = useMemo(() => {
+  const { validRecipients, invalidRecipients } = useMemo(() => {
     const list = directRecipients
       ? directRecipients.filter(r => r.phone)
       : members;
-    return list.map(r => {
+    const valid = [];
+    const invalid = [];
+    for (const r of list) {
       const normalized = normalizePhone(r.phone);
-      return { ...r, phone: normalized, valid: !!normalized };
-    });
+      if (normalized) {
+        valid.push({ ...r, phone: normalized });
+      } else {
+        invalid.push({ ...r, rawPhone: r.phone });
+      }
+    }
+    return { validRecipients: valid, invalidRecipients: invalid };
   }, [directRecipients, members]);
 
-  const validCount = validRecipients.filter(r => r.valid).length;
-  const invalidCount = validRecipients.length - validCount;
+  const validCount = validRecipients.length;
   const segments = Math.ceil((message.length || 1) / 160);
 
   const handleSend = async () => {
@@ -109,9 +96,10 @@ export default function SMSDialog({
 
     setSending(true);
     try {
-      const recipients = validRecipients
-        .filter(r => r.valid)
-        .map(r => ({ phone: r.phone, member_id: r.member_id || r.id }));
+      const recipients = validRecipients.map(r => ({
+        phone: r.phone,
+        member_id: r.member_id || r.id,
+      }));
 
       const { data: sessionData } = await supabase.auth.getSession();
       const token = sessionData?.session?.access_token;
@@ -212,20 +200,13 @@ export default function SMSDialog({
             </div>
 
             <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">
-                Valid recipients:
-              </span>
-              <div className="flex items-center gap-2">
-                <Badge className="bg-primary/10 text-primary border-0">
-                  {validCount}
-                </Badge>
-                {invalidCount > 0 && (
-                  <Badge variant="outline" className="text-destructive border-destructive/30 text-xs">
-                    {invalidCount} invalid
-                  </Badge>
-                )}
-              </div>
+              <span className="text-muted-foreground">Valid recipients:</span>
+              <Badge className="bg-primary/10 text-primary border-0">
+                {validCount}
+              </Badge>
             </div>
+
+            <InvalidRecipientsPreview invalidRecipients={invalidRecipients} />
 
             <Button
               onClick={handleSend}
