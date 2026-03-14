@@ -3,7 +3,7 @@ import { Link, useLocation } from "react-router-dom";
 import {
   LayoutDashboard, Users, CalendarDays, HeartHandshake,
   Heart, Megaphone, Menu, LogOut,
-  ClipboardList, Car, BarChart2, ChevronLeft, Globe, Shield, FileText
+  ClipboardList, Car, BarChart2, ChevronLeft, Globe, Shield, FileText, TrendingUp
 } from "lucide-react";
 import winnersLogo from "@/assets/winners-chapel-logo.png";
 import { Button } from "@/components/ui/button";
@@ -22,6 +22,7 @@ const allNavItems = [
   { name: "Announcements", icon: Megaphone, path: "/communications", access: null },
   { name: "Transportation", icon: Car, path: "/transportation", access: null },
   { name: "Analytics", icon: BarChart2, path: "/analytics", access: "leader" },
+  { name: "Training Reports", icon: TrendingUp, path: "/training-reports", access: "training" },
   { name: "WSF Centres", icon: Globe, path: "/wsf", access: "wsf" },
   { name: "User Management", icon: Shield, path: "/user-management", access: "admin" },
   { name: "Audit Log", icon: FileText, path: "/audit-log", access: "super_admin" },
@@ -34,6 +35,7 @@ export default function Layout({ children }) {
   const { signOut, profile, isAdmin, isUnitLeader, isWSFLeader, roles, leaderUnits } = useAuth();
   const isSuperAdmin = roles.includes("super_admin");
   const isFollowupUnit = leaderUnits.includes("Follow-up") || leaderUnits.includes("Follow-Up");
+  const isTrainingAccess = leaderUnits.some(u => ["Pastoral Care", "pastoral care", "Altar Minister", "altar minister", "Altar Ministers", "altar ministers"].includes(u));
 
   // Filter nav items based on role
   const navItems = allNavItems.filter(item => {
@@ -43,6 +45,7 @@ export default function Layout({ children }) {
     if (item.access === "leader") return isAdmin || isUnitLeader;
     if (item.access === "wsf") return isAdmin || isWSFLeader;
     if (item.access === "followup") return isAdmin || isFollowupUnit;
+    if (item.access === "training") return isAdmin || isSuperAdmin || isTrainingAccess;
     return false;
   });
 
