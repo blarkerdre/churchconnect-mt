@@ -127,7 +127,7 @@ Deno.serve(async (req) => {
 
       try {
         const params = new URLSearchParams({
-          To: phone,
+          To: normalized,
           From: TWILIO_FROM,
           Body: message,
           StatusCallback: webhookUrl,
