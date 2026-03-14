@@ -16,6 +16,7 @@ import Analytics from "@/pages/Analytics";
 import WSFManagement from "@/pages/WSFManagement";
 import UserManagement from "@/pages/UserManagement";
 import AuditLog from "@/pages/AuditLog";
+import TrainingReports from "@/pages/TrainingReports";
 import Auth from "@/pages/Auth";
 import ResetPassword from "@/pages/ResetPassword";
 import MyProfile from "@/pages/MyProfile";
@@ -62,6 +63,15 @@ function LeaderRoute({ children }) {
   return children;
 }
 
+function TrainingRoute({ children }) {
+  const { isAdmin, leaderUnits, roles, loading } = useAuth();
+  if (loading) return null;
+  const isSuperAdmin = roles.includes("super_admin");
+  const hasTrainingAccess = leaderUnits.some(u => ["Pastoral Care", "pastoral care", "Altar Minister", "altar minister", "Altar Ministers", "altar ministers"].includes(u));
+  if (!isAdmin && !isSuperAdmin && !hasTrainingAccess) return <Navigate to="/" replace />;
+  return children;
+}
+
 function AuthRoutes() {
   return (
     <Routes>
@@ -83,6 +93,7 @@ function AuthRoutes() {
                 <Route path="/communications" element={<LeaderRoute><Communications /></LeaderRoute>} />
                 <Route path="/transportation" element={<Transportation />} />
                 <Route path="/analytics" element={<LeaderRoute><Analytics /></LeaderRoute>} />
+                <Route path="/training-reports" element={<TrainingRoute><TrainingReports /></TrainingRoute>} />
                 <Route path="/wsf" element={<WSFRoute><WSFManagement /></WSFRoute>} />
                 <Route path="/user-management" element={<AdminRoute><UserManagement /></AdminRoute>} />
                 <Route path="/audit-log" element={<SuperAdminRoute><AuditLog /></SuperAdminRoute>} />
