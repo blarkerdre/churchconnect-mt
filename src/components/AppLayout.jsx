@@ -74,9 +74,7 @@ export default function Layout({ children }) {
         {/* Logo */}
         <div className={`p-4 border-b border-sidebar-border ${collapsed ? "px-3" : "p-6"}`}>
           <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-xl bg-sidebar-primary flex items-center justify-center shrink-0">
-              <Church className="h-5 w-5 text-sidebar-primary-foreground" />
-            </div>
+            <img src={winnersLogo} alt="Winners Chapel Logo" className="h-10 w-10 object-contain shrink-0" />
             {!collapsed && (
               <div className="min-w-0">
                 <h1 className="font-display font-bold text-sm leading-tight text-sidebar-foreground">Winners Chapel</h1>
