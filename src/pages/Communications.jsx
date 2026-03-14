@@ -26,6 +26,9 @@ export default function Communications() {
   const [search, setSearch] = useState("");
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState(null);
+  const [smsOpen, setSmsOpen] = useState(false);
+  const [smsAnnouncement, setSmsAnnouncement] = useState(null);
+  const [historyOpen, setHistoryOpen] = useState(false);
 
   // Use leaderUnits from auth context for unit leaders
   const unitLeaderUnits = (!isAdmin && isUnitLeader && leaderUnits.length > 0)
