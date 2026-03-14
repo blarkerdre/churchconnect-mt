@@ -175,7 +175,7 @@ Deno.serve(async (req) => {
         failed++;
         logs.push({
           sender_id: userId,
-          recipient_phone: phone,
+            recipient_phone: normalized,
           recipient_member_id: recipient.member_id || null,
           message,
           sms_type: sms_type || "bulk",
