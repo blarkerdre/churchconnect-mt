@@ -47,6 +47,7 @@ export default function Events() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState({});
+  const [smsEvent, setSmsEvent] = useState(null);
 
   const { data: events = [], isLoading } = useQuery({
     queryKey: ["events"],
