@@ -83,7 +83,18 @@ export default function SMSDialog({
     enabled: open && !directRecipients,
   });
 
-  const recipientCount = directRecipients ? directRecipients.filter(r => r.phone).length : members.length;
+  const validRecipients = useMemo(() => {
+    const list = directRecipients
+      ? directRecipients.filter(r => r.phone)
+      : members;
+    return list.map(r => {
+      const normalized = normalizePhone(r.phone);
+      return { ...r, phone: normalized, valid: !!normalized };
+    });
+  }, [directRecipients, members]);
+
+  const validCount = validRecipients.filter(r => r.valid).length;
+  const invalidCount = validRecipients.length - validCount;
   const segments = Math.ceil((message.length || 1) / 160);
 
   const handleSend = async () => {
