@@ -91,6 +91,16 @@ Deno.serve(async (req) => {
       });
     }
 
+    // E.164 normalization helper
+    function normalizeE164(phone: string): string | null {
+      let cleaned = phone.replace(/[\s\-\(\)\.]/g, "");
+      if (/^0[1-9]\d{9,10}$/.test(cleaned)) {
+        cleaned = "+44" + cleaned.slice(1);
+      }
+      if (!cleaned.startsWith("+")) cleaned = "+" + cleaned;
+      return /^\+[1-9]\d{6,14}$/.test(cleaned) ? cleaned : null;
+    }
+
     let sent = 0;
     let failed = 0;
     const logs: any[] = [];
@@ -99,15 +109,25 @@ Deno.serve(async (req) => {
     const webhookUrl = `${supabaseUrl}/functions/v1/twilio-webhook`;
 
     for (const recipient of recipients) {
-      const phone = recipient.phone?.trim();
-      if (!phone) {
+      const normalized = normalizeE164(recipient.phone?.trim() || "");
+      if (!normalized) {
         failed++;
+        logs.push({
+          sender_id: userId,
+          recipient_phone: recipient.phone || "invalid",
+          recipient_member_id: recipient.member_id || null,
+          message,
+          sms_type: sms_type || "bulk",
+          reference_id: reference_id || null,
+          status: "failed",
+          error_message: "Invalid phone number format (must be E.164)",
+        });
         continue;
       }
 
       try {
         const params = new URLSearchParams({
-          To: phone,
+          To: normalized,
           From: TWILIO_FROM,
           Body: message,
           StatusCallback: webhookUrl,
@@ -129,7 +149,7 @@ Deno.serve(async (req) => {
           sent++;
           logs.push({
             sender_id: userId,
-            recipient_phone: phone,
+            recipient_phone: normalized,
             recipient_member_id: recipient.member_id || null,
             message,
             sms_type: sms_type || "bulk",
@@ -142,7 +162,7 @@ Deno.serve(async (req) => {
           failed++;
           logs.push({
             sender_id: userId,
-            recipient_phone: phone,
+            recipient_phone: normalized,
             recipient_member_id: recipient.member_id || null,
             message,
             sms_type: sms_type || "bulk",
@@ -155,7 +175,7 @@ Deno.serve(async (req) => {
         failed++;
         logs.push({
           sender_id: userId,
-          recipient_phone: phone,
+            recipient_phone: normalized,
           recipient_member_id: recipient.member_id || null,
           message,
           sms_type: sms_type || "bulk",
