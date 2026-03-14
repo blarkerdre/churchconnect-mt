@@ -242,6 +242,18 @@ export default function Communications() {
         lockedAudience={lockedAudience}
         availableAudiences={availableAudiences}
       />
+
+      <SMSDialog
+        open={smsOpen}
+        onOpenChange={setSmsOpen}
+        prefillMessage={smsAnnouncement ? `${smsAnnouncement.title}: ${smsAnnouncement.body}` : ""}
+        prefillAudience={smsAnnouncement?.audience || ""}
+        smsType={smsAnnouncement ? "announcement" : "bulk"}
+        referenceId={smsAnnouncement?.id || null}
+        title={smsAnnouncement ? "Send Announcement as SMS" : "Bulk SMS"}
+      />
+
+      <SMSHistoryDialog open={historyOpen} onOpenChange={setHistoryOpen} />
     </div>
   );
 }
