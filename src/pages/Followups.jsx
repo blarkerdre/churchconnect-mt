@@ -337,6 +337,18 @@ export default function Followups() {
           }}
         />
       )}
+
+      {smsFollowup && (
+        <SMSDialog
+          open={!!smsFollowup}
+          onOpenChange={(o) => { if (!o) setSmsFollowup(null); }}
+          prefillMessage={`Hi ${smsFollowup.person_name}, this is a follow-up reminder from church. ${smsFollowup.description || smsFollowup.notes || ''}`}
+          smsType="followup"
+          referenceId={smsFollowup.id}
+          directRecipients={[{ phone: smsFollowup.person_phone, member_id: smsFollowup.member_id, name: smsFollowup.person_name }]}
+          title="SMS Follow-up Reminder"
+        />
+      )}
     </div>
   );
 }
