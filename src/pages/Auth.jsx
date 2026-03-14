@@ -5,7 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Church, Mail, Lock, User, ArrowRight } from "lucide-react";
+import { Mail, Lock, User, ArrowRight } from "lucide-react";
+import winnersLogo from "@/assets/winners-chapel-logo.png";
 import { useToast } from "@/components/ui/use-toast";
 
 export default function Auth() {
