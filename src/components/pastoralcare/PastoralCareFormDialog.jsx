@@ -7,8 +7,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Loader2 } from "lucide-react";
+import { useAppSetting } from "@/hooks/useAppSetting";
 
-const CATEGORIES = [
+const DEFAULT_CATEGORIES = [
   "Prayer Request", "Counselling Session", "Visitation", "Hospital Visit",
   "Bereavement Support", "Marriage Support", "Financial Support",
   "Spiritual Direction", "General Pastoral Need", "Other"
