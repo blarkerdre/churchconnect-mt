@@ -82,7 +82,7 @@ export default function TrainingReports() {
       training_type: form.training_type,
       session_date: form.session_date,
       title: form.title || null,
-      total_attendance: parseInt(form.total_attendance) || 0,
+      total_attendance: (parseInt(form.male) || 0) + (parseInt(form.female) || 0),
       male: parseInt(form.male) || 0,
       female: parseInt(form.female) || 0,
       holy_ghost_baptism: parseInt(form.holy_ghost_baptism) || 0,
