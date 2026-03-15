@@ -95,6 +95,7 @@ function AuthRoutes() {
                 <Route path="/transportation" element={<Transportation />} />
                 <Route path="/analytics" element={<LeaderRoute><Analytics /></LeaderRoute>} />
                 <Route path="/training-reports" element={<TrainingRoute><TrainingReports /></TrainingRoute>} />
+                <Route path="/church-attendance" element={<TrainingRoute><ChurchAttendance /></TrainingRoute>} />
                 <Route path="/wsf" element={<WSFRoute><WSFManagement /></WSFRoute>} />
                 <Route path="/user-management" element={<AdminRoute><UserManagement /></AdminRoute>} />
                 <Route path="/audit-log" element={<SuperAdminRoute><AuditLog /></SuperAdminRoute>} />
