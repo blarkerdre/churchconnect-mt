@@ -18,6 +18,7 @@ import UserManagement from "@/pages/UserManagement";
 import AuditLog from "@/pages/AuditLog";
 import TrainingReports from "@/pages/TrainingReports";
 import ChurchAttendance from "@/pages/ChurchAttendance";
+import Settings from "@/pages/Settings";
 import Auth from "@/pages/Auth";
 import ResetPassword from "@/pages/ResetPassword";
 import MyProfile from "@/pages/MyProfile";
@@ -98,6 +99,7 @@ function AuthRoutes() {
                 <Route path="/church-attendance" element={<TrainingRoute><ChurchAttendance /></TrainingRoute>} />
                 <Route path="/wsf" element={<WSFRoute><WSFManagement /></WSFRoute>} />
                 <Route path="/user-management" element={<AdminRoute><UserManagement /></AdminRoute>} />
+                <Route path="/settings" element={<AdminRoute><Settings /></AdminRoute>} />
                 <Route path="/audit-log" element={<SuperAdminRoute><AuditLog /></SuperAdminRoute>} />
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>

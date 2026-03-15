@@ -14,14 +14,9 @@ import { Loader2, User, Mail, Phone, MapPin, Calendar, CheckCircle2, XCircle, Ch
 import { format } from "date-fns";
 import { toast } from "@/components/ui/use-toast";
 import { suggestClosestWSFCentre } from "@/lib/wsf-suggest";
+import { useChurchUnits } from "@/hooks/useChurchUnits";
 
 const GENDERS = ["Male", "Female"];
-const CHURCH_UNITS = [
-  "Ushering", "Choir", "Media", "Children's Ministry", "Protocol",
-  "Sanctuary Keepers", "Prayer & Intercession", "Evangelism", "Follow-up",
-  "Youth Ministry", "Men's Ministry", "Women's Ministry", "Drama & Creative Arts",
-  "Altar Ministers", "Pastoral Care", "Welfare", "CSR", "Transportation", "None"
-];
 
 const statusColors = {
   "Active": "bg-chart-3/10 text-chart-3",
@@ -32,6 +27,8 @@ const statusColors = {
 
 export default function MyProfile() {
   const { user, roles, isAdmin, isUnitLeader, isWSFLeader } = useAuth();
+  const { data: churchUnitsData = [] } = useChurchUnits();
+  const CHURCH_UNITS = churchUnitsData.map(u => u.name);
   const queryClient = useQueryClient();
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({});
