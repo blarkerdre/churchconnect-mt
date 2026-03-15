@@ -14,16 +14,19 @@ import { useAuth } from "@/hooks/useAuth";
 import { toast } from "@/components/ui/use-toast";
 import { format, parseISO } from "date-fns";
 import { Loader2, Plus, Droplets, Flame, BookOpen, Users, TrendingUp } from "lucide-react";
+import { useAppSetting } from "@/hooks/useAppSetting";
 
-const TRAINING_TYPES = [
-  { value: "Water Baptism", label: "Water Baptism", icon: Droplets, color: "text-blue-500" },
-  { value: "Holy Spirit Baptism", label: "Holy Spirit Baptism", icon: Flame, color: "text-orange-500" },
-  { value: "BFC", label: "Believers Foundation Class (BFC)", icon: BookOpen, color: "text-cyan-500" },
-  { value: "WIT", label: "Workers in Training (WIT)", icon: BookOpen, color: "text-emerald-500" },
-  { value: "BCC", label: "Basic Certificate Course (BCC)", icon: BookOpen, color: "text-teal-500" },
-  { value: "LCC", label: "Leadership Certificate Course (LCC)", icon: BookOpen, color: "text-indigo-500" },
-  { value: "LDC", label: "Leadership Diploma Course (LDC)", icon: BookOpen, color: "text-rose-500" },
-];
+const ICON_MAP = {
+  "Water Baptism": { icon: Droplets, color: "text-blue-500" },
+  "Holy Spirit Baptism": { icon: Flame, color: "text-orange-500" },
+  "BFC": { icon: BookOpen, color: "text-cyan-500" },
+  "WIT": { icon: BookOpen, color: "text-emerald-500" },
+  "BCC": { icon: BookOpen, color: "text-teal-500" },
+  "LCC": { icon: BookOpen, color: "text-indigo-500" },
+  "LDC": { icon: BookOpen, color: "text-rose-500" },
+};
+
+const DEFAULT_TRAINING_TYPES = ["Water Baptism", "Holy Spirit Baptism", "BFC", "WIT", "BCC", "LCC", "LDC"];
 
 const emptyForm = {
   training_type: "",
@@ -38,6 +41,13 @@ const emptyForm = {
 };
 
 export default function TrainingReports() {
+  const { data: trainingTypeValues } = useAppSetting("training_types", DEFAULT_TRAINING_TYPES);
+  const TRAINING_TYPES = trainingTypeValues.map(v => ({
+    value: v,
+    label: v,
+    icon: ICON_MAP[v]?.icon || BookOpen,
+    color: ICON_MAP[v]?.color || "text-muted-foreground",
+  }));
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState(emptyForm);
   const [filterType, setFilterType] = useState("all");

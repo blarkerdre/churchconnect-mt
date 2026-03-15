@@ -6,12 +6,136 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
-import { Settings as SettingsIcon, Plus, Pencil, Trash2, Loader2, Users } from "lucide-react";
+import {
+  Settings as SettingsIcon, Plus, Pencil, Trash2, Loader2,
+  Users, Church, CalendarDays, TrendingUp, Heart
+} from "lucide-react";
 
-export default function Settings() {
+/* ─── Reusable list section backed by app_settings ─── */
+function SettingsListSection({ settingsKey, title, icon: Icon, description }) {
+  const qc = useQueryClient();
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingIdx, setEditingIdx] = useState(null);
+  const [itemName, setItemName] = useState("");
+
+  const { data: items = [], isLoading } = useQuery({
+    queryKey: ["app-settings", settingsKey],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("app_settings")
+        .select("value")
+        .eq("key", settingsKey)
+        .maybeSingle();
+      if (error) throw error;
+      return Array.isArray(data?.value) ? data.value : [];
+    },
+  });
+
+  const saveMutation = useMutation({
+    mutationFn: async (newItems) => {
+      const { error } = await supabase
+        .from("app_settings")
+        .upsert({ key: settingsKey, value: newItems }, { onConflict: "key" });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["app-settings", settingsKey] });
+    },
+    onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+  });
+
+  const openCreate = () => { setEditingIdx(null); setItemName(""); setDialogOpen(true); };
+  const openEdit = (idx) => { setEditingIdx(idx); setItemName(items[idx]); setDialogOpen(true); };
+  const closeDialog = () => { setDialogOpen(false); setEditingIdx(null); setItemName(""); };
+
+  const handleSave = () => {
+    const name = itemName.trim();
+    if (!name) { toast({ title: "Name is required", variant: "destructive" }); return; }
+    let updated;
+    if (editingIdx !== null) {
+      updated = items.map((item, i) => i === editingIdx ? name : item);
+    } else {
+      if (items.includes(name)) { toast({ title: "Already exists", variant: "destructive" }); return; }
+      updated = [...items, name];
+    }
+    saveMutation.mutate(updated);
+    toast({ title: editingIdx !== null ? "Updated" : "Added" });
+    closeDialog();
+  };
+
+  const handleDelete = (idx) => {
+    if (window.confirm(`Delete "${items[idx]}"?`)) {
+      saveMutation.mutate(items.filter((_, i) => i !== idx));
+      toast({ title: "Deleted" });
+    }
+  };
+
+  return (
+    <Card className="border-0 shadow-sm">
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle className="text-base font-display flex items-center gap-2">
+              <Icon className="h-4 w-4 text-accent" /> {title}
+            </CardTitle>
+            {description && <p className="text-xs text-muted-foreground mt-1">{description}</p>}
+          </div>
+          <Button size="sm" onClick={openCreate} className="gap-1.5">
+            <Plus className="h-4 w-4" /> Add
+          </Button>
+        </div>
+      </CardHeader>
+      <CardContent>
+        {isLoading ? (
+          <div className="flex justify-center py-6"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
+        ) : items.length === 0 ? (
+          <p className="text-sm text-muted-foreground text-center py-6">No items configured</p>
+        ) : (
+          <div className="space-y-2">
+            {items.map((item, idx) => (
+              <div key={idx} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                <span className="text-sm font-medium text-foreground">{item}</span>
+                <div className="flex items-center gap-1">
+                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(idx)}>
+                    <Pencil className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => handleDelete(idx)}>
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>{editingIdx !== null ? "Edit" : "Add"} {title.replace(/s$/, "")}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 mt-2">
+            <div>
+              <Label>Name</Label>
+              <Input value={itemName} onChange={(e) => setItemName(e.target.value)} placeholder="Enter name" />
+            </div>
+            <Button onClick={handleSave} disabled={saveMutation.isPending} className="w-full">
+              {saveMutation.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+              {editingIdx !== null ? "Update" : "Create"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </Card>
+  );
+}
+
+/* ─── Church Units section (uses dedicated table) ─── */
+function ChurchUnitsSection() {
   const qc = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingUnit, setEditingUnit] = useState(null);
@@ -57,32 +181,12 @@ export default function Settings() {
     onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
 
-  const openCreate = () => {
-    setEditingUnit(null);
-    setUnitName("");
-    setUnitActive(true);
-    setDialogOpen(true);
-  };
-
-  const openEdit = (unit) => {
-    setEditingUnit(unit);
-    setUnitName(unit.name);
-    setUnitActive(unit.is_active);
-    setDialogOpen(true);
-  };
-
-  const closeDialog = () => {
-    setDialogOpen(false);
-    setEditingUnit(null);
-    setUnitName("");
-    setUnitActive(true);
-  };
+  const openCreate = () => { setEditingUnit(null); setUnitName(""); setUnitActive(true); setDialogOpen(true); };
+  const openEdit = (unit) => { setEditingUnit(unit); setUnitName(unit.name); setUnitActive(unit.is_active); setDialogOpen(true); };
+  const closeDialog = () => { setDialogOpen(false); setEditingUnit(null); setUnitName(""); setUnitActive(true); };
 
   const handleSave = () => {
-    if (!unitName.trim()) {
-      toast({ title: "Unit name is required", variant: "destructive" });
-      return;
-    }
+    if (!unitName.trim()) { toast({ title: "Unit name is required", variant: "destructive" }); return; }
     saveMutation.mutate({ id: editingUnit?.id, name: unitName.trim(), is_active: unitActive });
   };
 
@@ -93,54 +197,48 @@ export default function Settings() {
   };
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-xl font-display font-bold text-foreground flex items-center gap-2">
-          <SettingsIcon className="h-5 w-5 text-primary" /> Settings
-        </h1>
-        <p className="text-sm text-muted-foreground mt-1">Manage application configuration</p>
-      </div>
-
-      <Card className="border-0 shadow-sm">
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
+    <Card className="border-0 shadow-sm">
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between">
+          <div>
             <CardTitle className="text-base font-display flex items-center gap-2">
               <Users className="h-4 w-4 text-accent" /> Church Units
             </CardTitle>
-            <Button size="sm" onClick={openCreate} className="gap-1.5">
-              <Plus className="h-4 w-4" /> Add Unit
-            </Button>
+            <p className="text-xs text-muted-foreground mt-1">Departments and ministry groups</p>
           </div>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
-          ) : units.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-8">No church units configured</p>
-          ) : (
-            <div className="space-y-2">
-              {units.map((unit) => (
-                <div key={unit.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <span className="text-sm font-medium text-foreground">{unit.name}</span>
-                    <Badge variant={unit.is_active ? "default" : "secondary"} className="text-xs">
-                      {unit.is_active ? "Active" : "Inactive"}
-                    </Badge>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(unit)}>
-                      <Pencil className="h-3.5 w-3.5" />
-                    </Button>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => handleDelete(unit)}>
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
-                  </div>
+          <Button size="sm" onClick={openCreate} className="gap-1.5">
+            <Plus className="h-4 w-4" /> Add Unit
+          </Button>
+        </div>
+      </CardHeader>
+      <CardContent>
+        {isLoading ? (
+          <div className="flex justify-center py-6"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
+        ) : units.length === 0 ? (
+          <p className="text-sm text-muted-foreground text-center py-6">No church units configured</p>
+        ) : (
+          <div className="space-y-2">
+            {units.map((unit) => (
+              <div key={unit.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                <div className="flex items-center gap-3">
+                  <span className="text-sm font-medium text-foreground">{unit.name}</span>
+                  <Badge variant={unit.is_active ? "default" : "secondary"} className="text-xs">
+                    {unit.is_active ? "Active" : "Inactive"}
+                  </Badge>
                 </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                <div className="flex items-center gap-1">
+                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(unit)}>
+                    <Pencil className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => handleDelete(unit)}>
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-sm">
@@ -163,6 +261,70 @@ export default function Settings() {
           </div>
         </DialogContent>
       </Dialog>
+    </Card>
+  );
+}
+
+/* ─── Main Settings page ─── */
+export default function Settings() {
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-xl font-display font-bold text-foreground flex items-center gap-2">
+          <SettingsIcon className="h-5 w-5 text-primary" /> Settings
+        </h1>
+        <p className="text-sm text-muted-foreground mt-1">Manage application configuration and options</p>
+      </div>
+
+      <Tabs defaultValue="units" className="space-y-4">
+        <TabsList className="flex flex-wrap h-auto gap-1">
+          <TabsTrigger value="units" className="gap-1.5 text-xs"><Users className="h-3.5 w-3.5" /> Units</TabsTrigger>
+          <TabsTrigger value="services" className="gap-1.5 text-xs"><Church className="h-3.5 w-3.5" /> Service Types</TabsTrigger>
+          <TabsTrigger value="events" className="gap-1.5 text-xs"><CalendarDays className="h-3.5 w-3.5" /> Event Categories</TabsTrigger>
+          <TabsTrigger value="training" className="gap-1.5 text-xs"><TrendingUp className="h-3.5 w-3.5" /> Training Types</TabsTrigger>
+          <TabsTrigger value="pastoral" className="gap-1.5 text-xs"><Heart className="h-3.5 w-3.5" /> Pastoral Care</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="units">
+          <ChurchUnitsSection />
+        </TabsContent>
+
+        <TabsContent value="services">
+          <SettingsListSection
+            settingsKey="service_types"
+            title="Service Types"
+            icon={Church}
+            description="Types of church services for attendance recording"
+          />
+        </TabsContent>
+
+        <TabsContent value="events">
+          <SettingsListSection
+            settingsKey="event_categories"
+            title="Event Categories"
+            icon={CalendarDays}
+            description="Categories for church events"
+          />
+        </TabsContent>
+
+        <TabsContent value="training">
+          <SettingsListSection
+            settingsKey="training_types"
+            title="Training Programme Types"
+            icon={TrendingUp}
+            description="Church growth programme types for training reports"
+          />
+        </TabsContent>
+
+        <TabsContent value="pastoral">
+          <SettingsListSection
+            settingsKey="pastoral_care_types"
+            title="Pastoral Care Types"
+            icon={Heart}
+            description="Types of pastoral care requests"
+          />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
