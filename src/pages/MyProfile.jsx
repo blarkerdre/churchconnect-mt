@@ -27,6 +27,8 @@ const statusColors = {
 
 export default function MyProfile() {
   const { user, roles, isAdmin, isUnitLeader, isWSFLeader } = useAuth();
+  const { data: churchUnitsData = [] } = useChurchUnits();
+  const CHURCH_UNITS = churchUnitsData.map(u => u.name);
   const queryClient = useQueryClient();
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({});
