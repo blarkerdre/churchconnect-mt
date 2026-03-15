@@ -31,6 +31,8 @@ const emptyMember = {
 };
 
 export default function MemberFormDialog({ open, onOpenChange, member, onSaved }) {
+  const { data: churchUnits = [] } = useChurchUnits();
+  const CHURCH_UNITS = churchUnits.map(u => u.name);
   const [form, setForm] = useState(emptyMember);
   const [saving, setSaving] = useState(false);
 
