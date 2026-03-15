@@ -18,6 +18,7 @@ import UserManagement from "@/pages/UserManagement";
 import AuditLog from "@/pages/AuditLog";
 import TrainingReports from "@/pages/TrainingReports";
 import ChurchAttendance from "@/pages/ChurchAttendance";
+import Settings from "@/pages/Settings";
 import Auth from "@/pages/Auth";
 import ResetPassword from "@/pages/ResetPassword";
 import MyProfile from "@/pages/MyProfile";
