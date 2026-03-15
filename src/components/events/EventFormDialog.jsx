@@ -12,12 +12,6 @@ import { useChurchUnits } from "@/hooks/useChurchUnits";
 
 const DEFAULT_CATEGORIES = ["Conference", "Special Service", "Revival", "Youth Event", "Women's Event", "Men's Event", "Children's Event", "Outreach", "Training", "Social", "Other"];
 const STATUSES = ["Upcoming", "Ongoing", "Completed", "Cancelled"];
-const AUDIENCES = [
-  "All Members", "Ushering", "Choir", "Media", "Children's Ministry", "Protocol",
-  "Sanctuary Keepers", "Prayer & Intercession", "Evangelism", "Follow-up",
-  "Youth Ministry", "Men's Ministry", "Women's Ministry", "Drama & Creative Arts",
-  "Altar Ministers", "Pastoral Care", "Welfare", "CSR", "Transportation", "Leaders Only"
-];
 
 const empty = {
   title: "", description: "", category: "Special Service", audience: "All Members",
