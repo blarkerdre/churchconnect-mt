@@ -27,6 +27,7 @@ const allNavItems = [
   { name: "WSF Centres", icon: Globe, path: "/wsf", access: "wsf" },
   { name: "User Management", icon: Shield, path: "/user-management", access: "admin" },
   { name: "Audit Log", icon: FileText, path: "/audit-log", access: "super_admin" },
+  { name: "Settings", icon: Settings, path: "/settings", access: "admin" },
 ];
 
 export default function Layout({ children }) {
