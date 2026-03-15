@@ -14,14 +14,9 @@ import { useAuth } from "@/hooks/useAuth";
 import { toast } from "@/components/ui/use-toast";
 import { format, parseISO } from "date-fns";
 import { Loader2, Plus, Users, Church, Baby, UserCheck } from "lucide-react";
+import { useAppSetting } from "@/hooks/useAppSetting";
 
-const SERVICE_TYPES = [
-  "Sunday Service",
-  "Midweek Service",
-  "Special Program",
-  "Thanksgiving Service",
-  "Other",
-];
+const DEFAULT_SERVICE_TYPES = ["Sunday Service", "Midweek Service", "Special Program", "Thanksgiving Service", "Other"];
 
 const emptyForm = {
   service_type: "Sunday Service",
