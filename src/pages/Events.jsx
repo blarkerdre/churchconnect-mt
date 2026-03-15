@@ -14,6 +14,7 @@ import { toast } from "@/components/ui/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { logAudit } from "@/lib/audit";
 import SMSDialog from "@/components/sms/SMSDialog";
+import { useAppSetting } from "@/hooks/useAppSetting";
 
 const statusColors = {
   "Upcoming": "bg-primary/10 text-primary",
@@ -39,6 +40,7 @@ function getEventStatus(eventDate) {
 }
 
 export default function Events() {
+  const { data: EVENT_CATEGORIES } = useAppSetting("event_categories", ["Service", "Youth Event", "Conference", "Women's Event", "Men's Event", "Outreach", "Other"]);
   const { isAdmin, isUnitLeader } = useAuth();
   const canManage = isAdmin || isUnitLeader;
   const queryClient = useQueryClient();
@@ -225,7 +227,7 @@ export default function Events() {
                 <Select value={form.category || "Service"} onValueChange={v => setForm(f => ({ ...f, category: v }))}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {["Service", "Youth Event", "Conference", "Women's Event", "Men's Event", "Outreach", "Other"].map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                    {EVENT_CATEGORIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>

@@ -7,15 +7,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Loader2 } from "lucide-react";
+import { useAppSetting } from "@/hooks/useAppSetting";
+import { useChurchUnits } from "@/hooks/useChurchUnits";
 
-const CATEGORIES = ["Conference", "Special Service", "Revival", "Youth Event", "Women's Event", "Men's Event", "Children's Event", "Outreach", "Training", "Social", "Other"];
+const DEFAULT_CATEGORIES = ["Conference", "Special Service", "Revival", "Youth Event", "Women's Event", "Men's Event", "Children's Event", "Outreach", "Training", "Social", "Other"];
 const STATUSES = ["Upcoming", "Ongoing", "Completed", "Cancelled"];
-const AUDIENCES = [
-  "All Members", "Ushering", "Choir", "Media", "Children's Ministry", "Protocol",
-  "Sanctuary Keepers", "Prayer & Intercession", "Evangelism", "Follow-up",
-  "Youth Ministry", "Men's Ministry", "Women's Ministry", "Drama & Creative Arts",
-  "Altar Ministers", "Pastoral Care", "Welfare", "CSR", "Transportation", "Leaders Only"
-];
 
 const empty = {
   title: "", description: "", category: "Special Service", audience: "All Members",
@@ -24,6 +20,9 @@ const empty = {
 };
 
 export default function EventFormDialog({ open, onOpenChange, event, onSave, lockedCategory = null }) {
+  const { data: CATEGORIES } = useAppSetting("event_categories", DEFAULT_CATEGORIES);
+  const { data: churchUnitsData = [] } = useChurchUnits();
+  const AUDIENCES = ["All Members", ...churchUnitsData.map(u => u.name), "Leaders Only"];
   const [form, setForm] = useState(empty);
   const [saving, setSaving] = useState(false);
 
