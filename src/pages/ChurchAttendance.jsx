@@ -30,6 +30,7 @@ const emptyForm = {
 };
 
 export default function ChurchAttendance() {
+  const { data: SERVICE_TYPES } = useAppSetting("service_types", DEFAULT_SERVICE_TYPES);
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState(emptyForm);
   const [filterType, setFilterType] = useState("all");

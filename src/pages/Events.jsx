@@ -14,6 +14,7 @@ import { toast } from "@/components/ui/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { logAudit } from "@/lib/audit";
 import SMSDialog from "@/components/sms/SMSDialog";
+import { useAppSetting } from "@/hooks/useAppSetting";
 
 const statusColors = {
   "Upcoming": "bg-primary/10 text-primary",
