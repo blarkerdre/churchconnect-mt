@@ -13,13 +13,7 @@ import { toast } from "@/components/ui/use-toast";
 import { Toaster } from "@/components/ui/toaster";
 import { suggestClosestWSFCentre } from "@/lib/wsf-suggest";
 import { normalizePhone } from "@/lib/phone-utils";
-
-const CHURCH_UNITS = [
-  "Ushering", "Choir", "Media", "Children's Ministry", "Protocol",
-  "Sanctuary Keepers", "Prayer & Intercession", "Evangelism", "Follow-up",
-  "Youth Ministry", "Men's Ministry", "Women's Ministry", "Drama & Creative Arts",
-  "Altar Ministers", "Pastoral Care", "Welfare", "CSR", "Transportation", "None"
-];
+import { useChurchUnits } from "@/hooks/useChurchUnits";
 const STATUSES = ["First Timer", "New Convert", "Active", "Inactive"];
 const GENDERS = ["Male", "Female"];
 
@@ -37,6 +31,8 @@ const emptyForm = {
 };
 
 export default function PublicRegistration() {
+  const { data: churchUnitsData = [] } = useChurchUnits();
+  const CHURCH_UNITS = churchUnitsData.map(u => u.name);
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
   const [submitted, setSubmitted] = useState(false);
