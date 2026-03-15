@@ -188,6 +188,54 @@ export type Database = {
         }
         Relationships: []
       }
+      church_attendance_reports: {
+        Row: {
+          adult_female: number
+          adult_male: number
+          children: number
+          created_at: string
+          id: string
+          notes: string | null
+          recorded_by: string | null
+          service_date: string
+          service_type: string
+          teens: number
+          title: string | null
+          total_attendance: number
+          updated_at: string
+        }
+        Insert: {
+          adult_female?: number
+          adult_male?: number
+          children?: number
+          created_at?: string
+          id?: string
+          notes?: string | null
+          recorded_by?: string | null
+          service_date: string
+          service_type?: string
+          teens?: number
+          title?: string | null
+          total_attendance?: number
+          updated_at?: string
+        }
+        Update: {
+          adult_female?: number
+          adult_male?: number
+          children?: number
+          created_at?: string
+          id?: string
+          notes?: string | null
+          recorded_by?: string | null
+          service_date?: string
+          service_type?: string
+          teens?: number
+          title?: string | null
+          total_attendance?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       event_registrations: {
         Row: {
           created_at: string
