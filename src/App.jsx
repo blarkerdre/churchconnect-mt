@@ -17,6 +17,7 @@ import WSFManagement from "@/pages/WSFManagement";
 import UserManagement from "@/pages/UserManagement";
 import AuditLog from "@/pages/AuditLog";
 import TrainingReports from "@/pages/TrainingReports";
+import ChurchAttendance from "@/pages/ChurchAttendance";
 import Auth from "@/pages/Auth";
 import ResetPassword from "@/pages/ResetPassword";
 import MyProfile from "@/pages/MyProfile";
@@ -94,6 +95,7 @@ function AuthRoutes() {
                 <Route path="/transportation" element={<Transportation />} />
                 <Route path="/analytics" element={<LeaderRoute><Analytics /></LeaderRoute>} />
                 <Route path="/training-reports" element={<TrainingRoute><TrainingReports /></TrainingRoute>} />
+                <Route path="/church-attendance" element={<TrainingRoute><ChurchAttendance /></TrainingRoute>} />
                 <Route path="/wsf" element={<WSFRoute><WSFManagement /></WSFRoute>} />
                 <Route path="/user-management" element={<AdminRoute><UserManagement /></AdminRoute>} />
                 <Route path="/audit-log" element={<SuperAdminRoute><AuditLog /></SuperAdminRoute>} />
