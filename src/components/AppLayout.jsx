@@ -23,6 +23,7 @@ const allNavItems = [
   { name: "Transportation", icon: Car, path: "/transportation", access: null },
   { name: "Analytics", icon: BarChart2, path: "/analytics", access: "leader" },
   { name: "Training Reports", icon: TrendingUp, path: "/training-reports", access: "training" },
+  { name: "Church Attendance", icon: ClipboardList, path: "/church-attendance", access: "training" },
   { name: "WSF Centres", icon: Globe, path: "/wsf", access: "wsf" },
   { name: "User Management", icon: Shield, path: "/user-management", access: "admin" },
   { name: "Audit Log", icon: FileText, path: "/audit-log", access: "super_admin" },
