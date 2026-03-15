@@ -13,13 +13,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 import { suggestClosestWSFCentre } from "@/lib/wsf-suggest";
 import { normalizePhone } from "@/lib/phone-utils";
+import { useChurchUnits } from "@/hooks/useChurchUnits";
 
-const CHURCH_UNITS = [
-  "Ushering", "Choir", "Media", "Children's Ministry", "Protocol",
-  "Sanctuary Keepers", "Prayer & Intercession", "Evangelism", "Follow-up",
-  "Youth Ministry", "Men's Ministry", "Women's Ministry", "Drama & Creative Arts",
-  "Altar Ministers", "Pastoral Care", "Welfare", "CSR", "Transportation", "None"
-];
 const STATUSES = ["Active", "Inactive", "New Convert", "First Timer"];
 const GENDERS = ["Male", "Female"];
 
