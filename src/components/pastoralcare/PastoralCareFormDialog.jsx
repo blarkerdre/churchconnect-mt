@@ -26,6 +26,7 @@ const emptyForm = {
 };
 
 export default function PastoralCareFormDialog({ open, onOpenChange, record, members = [], assignableMembers = null, onSave }) {
+  const { data: CATEGORIES } = useAppSetting("pastoral_care_types", DEFAULT_CATEGORIES);
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
 

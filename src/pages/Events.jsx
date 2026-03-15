@@ -227,7 +227,7 @@ export default function Events() {
                 <Select value={form.category || "Service"} onValueChange={v => setForm(f => ({ ...f, category: v }))}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {["Service", "Youth Event", "Conference", "Women's Event", "Men's Event", "Outreach", "Other"].map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                    {EVENT_CATEGORIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
