@@ -151,16 +151,16 @@ export default function TrainingReports() {
                 <p className="text-sm font-semibold text-foreground flex items-center gap-2"><Users className="h-4 w-4" /> Attendance</p>
                 <div className="grid grid-cols-3 gap-3">
                   <div>
-                    <Label className="text-xs">Total</Label>
-                    <Input type="number" min="0" value={form.total_attendance} onChange={(e) => set("total_attendance", e.target.value)} />
-                  </div>
-                  <div>
                     <Label className="text-xs">Male</Label>
                     <Input type="number" min="0" value={form.male} onChange={(e) => set("male", e.target.value)} />
                   </div>
                   <div>
                     <Label className="text-xs">Female</Label>
                     <Input type="number" min="0" value={form.female} onChange={(e) => set("female", e.target.value)} />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Total</Label>
+                    <Input type="number" readOnly value={(parseInt(form.male) || 0) + (parseInt(form.female) || 0)} className="bg-muted font-semibold" />
                   </div>
                 </div>
               </div>
