@@ -41,6 +41,13 @@ const emptyForm = {
 };
 
 export default function TrainingReports() {
+  const { data: trainingTypeValues } = useAppSetting("training_types", DEFAULT_TRAINING_TYPES);
+  const TRAINING_TYPES = trainingTypeValues.map(v => ({
+    value: v,
+    label: v,
+    icon: ICON_MAP[v]?.icon || BookOpen,
+    color: ICON_MAP[v]?.color || "text-muted-foreground",
+  }));
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState(emptyForm);
   const [filterType, setFilterType] = useState("all");
