@@ -13,8 +13,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "@/components/ui/use-toast";
 import { format, parseISO } from "date-fns";
-import { Loader2, Plus, Users, Church, Baby, UserCheck } from "lucide-react";
+import { Loader2, Plus, Users, Church, Baby, UserCheck, Paperclip } from "lucide-react";
 import { useAppSetting } from "@/hooks/useAppSetting";
+import ReportAttachments from "@/components/reports/ReportAttachments";
 
 const DEFAULT_SERVICE_TYPES = ["Sunday Service", "Midweek Service", "Special Program", "Thanksgiving Service", "Other"];
 
