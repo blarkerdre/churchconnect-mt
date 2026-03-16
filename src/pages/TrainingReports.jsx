@@ -13,8 +13,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "@/components/ui/use-toast";
 import { format, parseISO } from "date-fns";
-import { Loader2, Plus, Droplets, Flame, BookOpen, Users, TrendingUp } from "lucide-react";
+import { Loader2, Plus, Droplets, Flame, BookOpen, Users, TrendingUp, Paperclip } from "lucide-react";
 import { useAppSetting } from "@/hooks/useAppSetting";
+import ReportAttachments from "@/components/reports/ReportAttachments";
 
 const ICON_MAP = {
   "Water Baptism": { icon: Droplets, color: "text-blue-500" },
@@ -51,6 +52,7 @@ export default function TrainingReports() {
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState(emptyForm);
   const [filterType, setFilterType] = useState("all");
+  const [expandedRow, setExpandedRow] = useState(null);
   const { user } = useAuth();
   const qc = useQueryClient();
 
@@ -242,7 +244,8 @@ export default function TrainingReports() {
                     <TableHead className="text-center">F</TableHead>
                     <TableHead className="text-center">HG</TableHead>
                     <TableHead className="text-center">WB</TableHead>
-                  </TableRow>
+                    <TableHead className="w-10"></TableHead>
+                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {reports.map((r) => {
@@ -262,7 +265,19 @@ export default function TrainingReports() {
                         <TableCell className="text-center">{r.female}</TableCell>
                         <TableCell className="text-center">{r.holy_ghost_baptism}</TableCell>
                         <TableCell className="text-center">{r.water_baptism}</TableCell>
+                        <TableCell>
+                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setExpandedRow(expandedRow === r.id ? null : r.id)}>
+                            <Paperclip className="h-3.5 w-3.5" />
+                          </Button>
+                        </TableCell>
                       </TableRow>
+                      {expandedRow === r.id && (
+                        <TableRow>
+                          <TableCell colSpan={8} className="bg-muted/20 p-3">
+                            <ReportAttachments relatedTable="training_reports" relatedId={r.id} />
+                          </TableCell>
+                        </TableRow>
+                      )}
                     );
                   })}
                 </TableBody>
