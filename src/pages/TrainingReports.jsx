@@ -244,7 +244,8 @@ export default function TrainingReports() {
                     <TableHead className="text-center">F</TableHead>
                     <TableHead className="text-center">HG</TableHead>
                     <TableHead className="text-center">WB</TableHead>
-                  </TableRow>
+                    <TableHead className="w-10"></TableHead>
+                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {reports.map((r) => {
