@@ -1,0 +1,71 @@
+/// <reference types="npm:@types/react@18.3.1" />
+
+import * as React from 'npm:react@18.3.1'
+
+import {
+  Body,
+  Button,
+  Container,
+  Head,
+  Heading,
+  Html,
+  Preview,
+  Text,
+} from 'npm:@react-email/components@0.0.22'
+
+interface RecoveryEmailProps {
+  siteName: string
+  confirmationUrl: string
+}
+
+export const RecoveryEmail = ({
+  siteName,
+  confirmationUrl,
+}: RecoveryEmailProps) => (
+  <Html lang="en" dir="ltr">
+    <Head />
+    <Preview>Reset your password for Winners Chapel International Cardiff</Preview>
+    <Body style={main}>
+      <Container style={container}>
+        <Heading style={h1}>Reset your password</Heading>
+        <Text style={text}>
+          We received a request to reset your password for Winners Chapel International Cardiff. Click the button below to choose a new password.
+        </Text>
+        <Button style={button} href={confirmationUrl}>
+          Reset Password
+        </Button>
+        <Text style={footer}>
+          If you didn't request a password reset, you can safely ignore this email. Your password will not be changed.
+        </Text>
+      </Container>
+    </Body>
+  </Html>
+)
+
+export default RecoveryEmail
+
+const main = { backgroundColor: '#faf8f5', fontFamily: "'Source Sans 3', Arial, sans-serif" }
+const container = { padding: '30px 25px', maxWidth: '500px', margin: '0 auto' }
+const h1 = {
+  fontSize: '22px',
+  fontWeight: 'bold' as const,
+  color: '#1a2d4d',
+  margin: '0 0 20px',
+  fontFamily: "'Playfair Display', Georgia, serif",
+}
+const text = {
+  fontSize: '14px',
+  color: '#64748b',
+  lineHeight: '1.6',
+  margin: '0 0 25px',
+}
+const button = {
+  backgroundColor: '#1a2d4d',
+  color: '#faf8f5',
+  fontSize: '14px',
+  borderRadius: '12px',
+  padding: '12px 24px',
+  textDecoration: 'none',
+  fontWeight: '600' as const,
+}
+const footer = { fontSize: '12px', color: '#94a3b8', margin: '30px 0 0' }
