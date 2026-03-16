@@ -251,33 +251,35 @@ export default function TrainingReports() {
                   {reports.map((r) => {
                     const cfg = getTypeConfig(r.training_type);
                     return (
-                      <TableRow key={r.id}>
-                        <TableCell className="text-sm">{format(parseISO(r.session_date), "dd MMM yyyy")}</TableCell>
-                        <TableCell>
-                          <Badge variant="secondary" className="text-xs gap-1">
-                            {cfg.icon && <cfg.icon className={`h-3 w-3 ${cfg.color || ""}`} />}
-                            {r.training_type}
-                          </Badge>
-                          {r.title && <span className="block text-xs text-muted-foreground mt-0.5">{r.title}</span>}
-                        </TableCell>
-                        <TableCell className="text-center font-semibold">{r.total_attendance}</TableCell>
-                        <TableCell className="text-center">{r.male}</TableCell>
-                        <TableCell className="text-center">{r.female}</TableCell>
-                        <TableCell className="text-center">{r.holy_ghost_baptism}</TableCell>
-                        <TableCell className="text-center">{r.water_baptism}</TableCell>
-                        <TableCell>
-                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setExpandedRow(expandedRow === r.id ? null : r.id)}>
-                            <Paperclip className="h-3.5 w-3.5" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                      {expandedRow === r.id && (
+                      <React.Fragment key={r.id}>
                         <TableRow>
-                          <TableCell colSpan={8} className="bg-muted/20 p-3">
-                            <ReportAttachments relatedTable="training_reports" relatedId={r.id} />
+                          <TableCell className="text-sm">{format(parseISO(r.session_date), "dd MMM yyyy")}</TableCell>
+                          <TableCell>
+                            <Badge variant="secondary" className="text-xs gap-1">
+                              {cfg.icon && <cfg.icon className={`h-3 w-3 ${cfg.color || ""}`} />}
+                              {r.training_type}
+                            </Badge>
+                            {r.title && <span className="block text-xs text-muted-foreground mt-0.5">{r.title}</span>}
+                          </TableCell>
+                          <TableCell className="text-center font-semibold">{r.total_attendance}</TableCell>
+                          <TableCell className="text-center">{r.male}</TableCell>
+                          <TableCell className="text-center">{r.female}</TableCell>
+                          <TableCell className="text-center">{r.holy_ghost_baptism}</TableCell>
+                          <TableCell className="text-center">{r.water_baptism}</TableCell>
+                          <TableCell>
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setExpandedRow(expandedRow === r.id ? null : r.id)}>
+                              <Paperclip className="h-3.5 w-3.5" />
+                            </Button>
                           </TableCell>
                         </TableRow>
-                      )}
+                        {expandedRow === r.id && (
+                          <TableRow>
+                            <TableCell colSpan={8} className="bg-muted/20 p-3">
+                              <ReportAttachments relatedTable="training_reports" relatedId={r.id} />
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </React.Fragment>
                     );
                   })}
                 </TableBody>
