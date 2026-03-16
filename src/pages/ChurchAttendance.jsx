@@ -234,8 +234,9 @@ export default function ChurchAttendance() {
                     <TableHead className="text-center">Adult F</TableHead>
                     <TableHead className="text-center">Children</TableHead>
                     <TableHead className="text-center">Teens</TableHead>
-                    <TableHead className="text-center">Total</TableHead>
-                  </TableRow>
+                     <TableHead className="text-center">Total</TableHead>
+                     <TableHead className="w-10"></TableHead>
+                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {reports.map((r) => (
