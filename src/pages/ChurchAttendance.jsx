@@ -240,30 +240,32 @@ export default function ChurchAttendance() {
                 </TableHeader>
                 <TableBody>
                   {reports.map((r) => (
-                    <TableRow key={r.id}>
-                      <TableCell className="text-sm">{format(parseISO(r.service_date), "dd MMM yyyy")}</TableCell>
-                      <TableCell>
-                        <Badge variant="secondary" className="text-xs">{r.service_type}</Badge>
-                        {r.title && <span className="block text-xs text-muted-foreground mt-0.5">{r.title}</span>}
-                      </TableCell>
-                      <TableCell className="text-center">{r.adult_male}</TableCell>
-                      <TableCell className="text-center">{r.adult_female}</TableCell>
-                      <TableCell className="text-center">{r.children}</TableCell>
-                      <TableCell className="text-center">{r.teens}</TableCell>
-                      <TableCell className="text-center font-semibold">{r.total_attendance}</TableCell>
-                      <TableCell>
-                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setExpandedRow(expandedRow === r.id ? null : r.id)}>
-                          <Paperclip className="h-3.5 w-3.5" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                    {expandedRow === r.id && (
+                    <React.Fragment key={r.id}>
                       <TableRow>
-                        <TableCell colSpan={8} className="bg-muted/20 p-3">
-                          <ReportAttachments relatedTable="church_attendance_reports" relatedId={r.id} />
+                        <TableCell className="text-sm">{format(parseISO(r.service_date), "dd MMM yyyy")}</TableCell>
+                        <TableCell>
+                          <Badge variant="secondary" className="text-xs">{r.service_type}</Badge>
+                          {r.title && <span className="block text-xs text-muted-foreground mt-0.5">{r.title}</span>}
+                        </TableCell>
+                        <TableCell className="text-center">{r.adult_male}</TableCell>
+                        <TableCell className="text-center">{r.adult_female}</TableCell>
+                        <TableCell className="text-center">{r.children}</TableCell>
+                        <TableCell className="text-center">{r.teens}</TableCell>
+                        <TableCell className="text-center font-semibold">{r.total_attendance}</TableCell>
+                        <TableCell>
+                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setExpandedRow(expandedRow === r.id ? null : r.id)}>
+                            <Paperclip className="h-3.5 w-3.5" />
+                          </Button>
                         </TableCell>
                       </TableRow>
-                    )}
+                      {expandedRow === r.id && (
+                        <TableRow>
+                          <TableCell colSpan={8} className="bg-muted/20 p-3">
+                            <ReportAttachments relatedTable="church_attendance_reports" relatedId={r.id} />
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </React.Fragment>
                   ))}
                 </TableBody>
               </Table>
