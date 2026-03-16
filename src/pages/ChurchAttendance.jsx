@@ -13,8 +13,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "@/components/ui/use-toast";
 import { format, parseISO } from "date-fns";
-import { Loader2, Plus, Users, Church, Baby, UserCheck } from "lucide-react";
+import { Loader2, Plus, Users, Church, Baby, UserCheck, Paperclip } from "lucide-react";
 import { useAppSetting } from "@/hooks/useAppSetting";
+import ReportAttachments from "@/components/reports/ReportAttachments";
 
 const DEFAULT_SERVICE_TYPES = ["Sunday Service", "Midweek Service", "Special Program", "Thanksgiving Service", "Other"];
 
@@ -34,6 +35,7 @@ export default function ChurchAttendance() {
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState(emptyForm);
   const [filterType, setFilterType] = useState("all");
+  const [expandedRow, setExpandedRow] = useState(null);
   const { user } = useAuth();
   const qc = useQueryClient();
 
@@ -232,8 +234,9 @@ export default function ChurchAttendance() {
                     <TableHead className="text-center">Adult F</TableHead>
                     <TableHead className="text-center">Children</TableHead>
                     <TableHead className="text-center">Teens</TableHead>
-                    <TableHead className="text-center">Total</TableHead>
-                  </TableRow>
+                     <TableHead className="text-center">Total</TableHead>
+                     <TableHead className="w-10"></TableHead>
+                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {reports.map((r) => (
@@ -248,7 +251,19 @@ export default function ChurchAttendance() {
                       <TableCell className="text-center">{r.children}</TableCell>
                       <TableCell className="text-center">{r.teens}</TableCell>
                       <TableCell className="text-center font-semibold">{r.total_attendance}</TableCell>
+                      <TableCell>
+                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setExpandedRow(expandedRow === r.id ? null : r.id)}>
+                          <Paperclip className="h-3.5 w-3.5" />
+                        </Button>
+                      </TableCell>
                     </TableRow>
+                    {expandedRow === r.id && (
+                      <TableRow>
+                        <TableCell colSpan={8} className="bg-muted/20 p-3">
+                          <ReportAttachments relatedTable="church_attendance_reports" relatedId={r.id} />
+                        </TableCell>
+                      </TableRow>
+                    )}
                   ))}
                 </TableBody>
               </Table>
