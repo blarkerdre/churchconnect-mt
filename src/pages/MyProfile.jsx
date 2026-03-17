@@ -408,3 +408,172 @@ export default function MyProfile() {
     </div>
   );
 }
+
+function CreateMemberProfile({ user, onCreated, wsfCentres, churchUnits }) {
+  const [form, setForm] = useState({
+    first_name: "", last_name: "", email: user?.email || "", phone: "", address: "",
+    city: "Cardiff", postcode: "", date_of_birth: "", gender: "",
+    emergency_contact_name: "", emergency_contact_phone: "",
+    church_unit: "", notes: "",
+    water_baptism: false, holy_spirit_baptism: false, winners_satellite: false,
+    wsf_centre_id: "", bfc_completed: false, bcc_completed: false, lcc_completed: false, ldc_completed: false,
+    gdpr_consent: false,
+  });
+  const [saving, setSaving] = useState(false);
+  const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+
+  const handleCreate = async () => {
+    if (!form.first_name || !form.last_name) {
+      toast({ title: "First name and last name are required", variant: "destructive" });
+      return;
+    }
+    if (!form.gdpr_consent) {
+      toast({ title: "GDPR consent is required", variant: "destructive" });
+      return;
+    }
+    setSaving(true);
+    try {
+      const { error } = await supabase.from("members").insert({
+        user_id: user.id,
+        first_name: form.first_name,
+        last_name: form.last_name,
+        email: form.email || null,
+        phone: form.phone || null,
+        address: form.address || null,
+        city: form.city || null,
+        postcode: form.postcode || null,
+        date_of_birth: form.date_of_birth || null,
+        gender: form.gender || null,
+        membership_status: "Active",
+        church_unit: form.church_unit || null,
+        emergency_contact_name: form.emergency_contact_name || null,
+        emergency_contact_phone: form.emergency_contact_phone || null,
+        water_baptism: form.water_baptism,
+        holy_spirit_baptism: form.holy_spirit_baptism,
+        winners_satellite: form.winners_satellite,
+        wsf_centre_id: form.wsf_centre_id || null,
+        bfc_completed: form.bfc_completed,
+        bcc_completed: form.bcc_completed,
+        lcc_completed: form.lcc_completed,
+        ldc_completed: form.ldc_completed,
+        gdpr_consent: form.gdpr_consent,
+        gdpr_consent_date: new Date().toISOString(),
+        notes: form.notes || null,
+      });
+      if (error) throw error;
+      toast({ title: "Profile created successfully!" });
+      onCreated();
+    } catch (err) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const SwitchRow = ({ id, label, checked, onChange }) => (
+    <div className="flex items-center justify-between p-3 rounded-xl bg-muted/50 border border-border">
+      <p className="text-sm font-medium text-foreground">{label}</p>
+      <Switch id={id} checked={!!checked} onCheckedChange={onChange} />
+    </div>
+  );
+
+  return (
+    <Card className="border-0 shadow-sm max-w-2xl">
+      <CardHeader>
+        <CardTitle className="font-display">Complete Your Member Profile</CardTitle>
+        <p className="text-sm text-muted-foreground">Fill in your details to get started.</p>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        {/* Personal Details */}
+        <div>
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Personal Details</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="space-y-1"><Label>First Name *</Label><Input value={form.first_name} onChange={e => set("first_name", e.target.value)} /></div>
+            <div className="space-y-1"><Label>Last Name *</Label><Input value={form.last_name} onChange={e => set("last_name", e.target.value)} /></div>
+            <div className="space-y-1"><Label>Email</Label><Input type="email" value={form.email} onChange={e => set("email", e.target.value)} /></div>
+            <div className="space-y-1"><Label>Phone</Label><Input value={form.phone} onChange={e => set("phone", e.target.value)} placeholder="+447888873207" /></div>
+            <div className="space-y-1 sm:col-span-2"><Label>Street Address</Label><Input value={form.address} onChange={e => set("address", e.target.value)} /></div>
+            <div className="space-y-1"><Label>City</Label><Input value={form.city} onChange={e => set("city", e.target.value)} /></div>
+            <div className="space-y-1"><Label>Postcode</Label><Input value={form.postcode} onChange={e => set("postcode", e.target.value)} /></div>
+            <div className="space-y-1"><Label>Date of Birth</Label><Input type="date" value={form.date_of_birth} onChange={e => set("date_of_birth", e.target.value)} /></div>
+            <div className="space-y-1">
+              <Label>Gender</Label>
+              <Select value={form.gender || ""} onValueChange={v => set("gender", v)}>
+                <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                <SelectContent>{["Male", "Female"].map(g => <SelectItem key={g} value={g}>{g}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+          </div>
+        </div>
+
+        {/* Church Units */}
+        <div>
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Church Units</h3>
+          <div className="flex flex-wrap gap-2 p-3 rounded-lg border border-border bg-background min-h-[40px]">
+            {churchUnits.filter(u => u !== "None").map(unit => {
+              const selected = (form.church_unit || "").split(",").map(s => s.trim()).filter(Boolean);
+              const isSelected = selected.includes(unit);
+              return (
+                <button key={unit} type="button" onClick={() => {
+                  const current = (form.church_unit || "").split(",").map(s => s.trim()).filter(Boolean);
+                  const updated = isSelected ? current.filter(u => u !== unit) : [...current, unit];
+                  set("church_unit", updated.join(", "));
+                }} className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${isSelected ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-muted/80"}`}>
+                  {unit}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Growth Indices */}
+        <div>
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Church Growth Indices</h3>
+          <div className="space-y-3">
+            <SwitchRow id="water_baptism" label="Water Baptism" checked={form.water_baptism} onChange={v => set("water_baptism", v)} />
+            <SwitchRow id="holy_spirit_baptism" label="Holy Spirit Baptism" checked={form.holy_spirit_baptism} onChange={v => set("holy_spirit_baptism", v)} />
+            <SwitchRow id="winners_satellite" label="Winners Satellite Fellowship" checked={form.winners_satellite} onChange={v => set("winners_satellite", v)} />
+            {form.winners_satellite && (
+              <div className="space-y-1.5 pl-4">
+                <Label>WSF Centre</Label>
+                <Select value={form.wsf_centre_id || ""} onValueChange={v => set("wsf_centre_id", v)}>
+                  <SelectTrigger><SelectValue placeholder="Select WSF Centre" /></SelectTrigger>
+                  <SelectContent>{wsfCentres.map(c => <SelectItem key={c.id} value={c.id}>{c.name}{c.location ? ` — ${c.location}` : ""}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+            )}
+            <SwitchRow id="bfc_completed" label="Believers Foundation Class (BFC)" checked={form.bfc_completed} onChange={v => set("bfc_completed", v)} />
+            <SwitchRow id="bcc_completed" label="Basic Certificate Course (BCC)" checked={form.bcc_completed} onChange={v => set("bcc_completed", v)} />
+            <SwitchRow id="lcc_completed" label="Leadership Certificate Course (LCC)" checked={form.lcc_completed} onChange={v => set("lcc_completed", v)} />
+            <SwitchRow id="ldc_completed" label="Leadership Diploma Course (LDC)" checked={form.ldc_completed} onChange={v => set("ldc_completed", v)} />
+          </div>
+        </div>
+
+        {/* Emergency Contact */}
+        <div>
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Emergency Contact</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="space-y-1"><Label>Contact Name</Label><Input value={form.emergency_contact_name} onChange={e => set("emergency_contact_name", e.target.value)} /></div>
+            <div className="space-y-1"><Label>Contact Phone</Label><Input value={form.emergency_contact_phone} onChange={e => set("emergency_contact_phone", e.target.value)} /></div>
+          </div>
+        </div>
+
+        {/* GDPR */}
+        <div className={`rounded-xl border p-4 space-y-2 transition-colors ${form.gdpr_consent ? "border-chart-3/30 bg-chart-3/5" : "border-accent/30 bg-accent/5"}`}>
+          <label className="flex items-start gap-3 cursor-pointer">
+            <input type="checkbox" checked={form.gdpr_consent} onChange={e => set("gdpr_consent", e.target.checked)} className="mt-0.5 rounded h-4 w-4 shrink-0" />
+            <span className="text-sm text-foreground leading-relaxed">
+              I consent to processing my personal data including attendance records in accordance with <strong>UK GDPR</strong>.
+            </span>
+          </label>
+          {!form.gdpr_consent && <p className="text-xs text-accent pl-7">⚠️ Consent is required to complete registration.</p>}
+        </div>
+
+        <Button onClick={handleCreate} disabled={saving || !form.first_name || !form.last_name || !form.gdpr_consent} className="w-full">
+          {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+          Create My Profile
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
