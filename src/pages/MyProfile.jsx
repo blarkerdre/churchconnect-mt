@@ -172,15 +172,7 @@ export default function MyProfile() {
   }
 
   if (!member) {
-    return (
-      <Card className="border-0 shadow-sm">
-        <CardContent className="p-8 text-center text-muted-foreground">
-          <User className="h-12 w-12 mx-auto mb-4 opacity-40" />
-          <p className="text-lg font-medium">No member profile linked</p>
-          <p className="text-sm mt-1">Please contact an administrator to link your account to a member record.</p>
-        </CardContent>
-      </Card>
-    );
+    return <CreateMemberProfile user={user} onCreated={() => queryClient.invalidateQueries({ queryKey: ["my-member-profile"] })} wsfCentres={wsfCentres} churchUnits={CHURCH_UNITS} />;
   }
 
   const units = member.church_unit ? member.church_unit.split(",").map(u => u.trim()).filter(Boolean) : [];
