@@ -29,10 +29,39 @@ serve(async (req) => {
     // Prevent self-deletion
     if (user_id === caller.id) return new Response(JSON.stringify({ error: "Cannot delete yourself" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
-    // Delete user roles, profile, and auth user
-    await supabase.from("user_roles").delete().eq("user_id", user_id);
-    await supabase.from("profiles").delete().eq("user_id", user_id);
-    
+    // Clear all foreign key references before deleting
+    // Nullify references in tables that reference auth.users
+    await Promise.all([
+      supabase.from("followups").update({ assigned_to: null }).eq("assigned_to", user_id),
+      supabase.from("followups").update({ created_by: null }).eq("created_by", user_id),
+      supabase.from("pastoral_care").update({ assigned_to: null }).eq("assigned_to", user_id),
+      supabase.from("pastoral_care").update({ created_by: null }).eq("created_by", user_id),
+      supabase.from("members").update({ user_id: null }).eq("user_id", user_id),
+      supabase.from("events").update({ created_by: null }).eq("created_by", user_id),
+      supabase.from("attendance_sessions").update({ created_by: null }).eq("created_by", user_id),
+      supabase.from("wsf_attendance").update({ recorded_by: null }).eq("recorded_by", user_id),
+      supabase.from("first_timers").update({ follow_up_assigned_to: null }).eq("follow_up_assigned_to", user_id),
+      supabase.from("announcements").update({ created_by: null }).eq("created_by", user_id),
+      supabase.from("transportation").update({ user_id: null }).eq("user_id", user_id),
+      supabase.from("app_settings").update({ updated_by: null }).eq("updated_by", user_id),
+    ]);
+
+    // Nullify message references (sender_id is NOT NULL, so delete instead)
+    await supabase.from("messages").delete().eq("sender_id", user_id);
+    await supabase.from("messages").update({ recipient_id: null }).eq("recipient_id", user_id);
+
+    // Delete owned records
+    await Promise.all([
+      supabase.from("event_registrations").delete().eq("user_id", user_id),
+      supabase.from("unit_leader_assignments").delete().eq("user_id", user_id),
+      supabase.from("notifications").delete().eq("user_id", user_id),
+      supabase.from("audit_log").delete().eq("user_id", user_id),
+      supabase.from("sms_log").delete().eq("sender_id", user_id),
+      supabase.from("user_roles").delete().eq("user_id", user_id),
+      supabase.from("profiles").delete().eq("user_id", user_id),
+    ]);
+
+    // Finally delete the auth user
     const { error: deleteError } = await supabase.auth.admin.deleteUser(user_id);
     if (deleteError) return new Response(JSON.stringify({ error: deleteError.message }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
