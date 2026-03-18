@@ -19,7 +19,7 @@ const allNavItems = [
   { name: "Attendance", icon: ClipboardList, path: "/attendance", access: "leader" },
   { name: "Follow-ups", icon: HeartHandshake, path: "/followups", access: "followup" },
   { name: "Pastoral Care", icon: Heart, path: "/pastoral-care", access: null },
-  { name: "Announcements", icon: Megaphone, path: "/communications", access: null },
+  { name: "Communications", icon: Megaphone, path: "/communications", access: null },
   { name: "Transportation", icon: Car, path: "/transportation", access: null },
   { name: "Analytics", icon: BarChart2, path: "/analytics", access: "leader" },
   { name: "Training Reports", icon: TrendingUp, path: "/training-reports", access: "training" },
