@@ -46,7 +46,7 @@ export default function PrintReportButton({ buildRows, label = "Print Report" })
         <h1>${escHtml(title)}</h1>
         <p class="meta">Generated: ${escHtml(new Date().toLocaleString("en-GB"))}</p>
         <table>
-          <thead><tr>${headers.map(h => `<th>${h}</th>`).join("")}</tr></thead>
+          <thead><tr>${headers.map(h => `<th>${escHtml(h)}</th>`).join("")}</tr></thead>
           <tbody>${tableRows}</tbody>
         </table>
       </body>
