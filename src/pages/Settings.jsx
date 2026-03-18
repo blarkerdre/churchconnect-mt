@@ -12,8 +12,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 import {
   Settings as SettingsIcon, Plus, Pencil, Trash2, Loader2,
-  Users, Church, CalendarDays, TrendingUp, Heart
+  Users, Church, CalendarDays, TrendingUp, Heart, Globe
 } from "lucide-react";
+import WSFCentresSection from "@/components/settings/WSFCentresSection";
 
 /* ─── Reusable list section backed by app_settings ─── */
 function SettingsListSection({ settingsKey, title, icon: Icon, description }) {
@@ -191,7 +192,7 @@ function ChurchUnitsSection() {
   };
 
   const handleDelete = (unit) => {
-    if (window.confirm(`Delete "${unit.name}"? Members assigned to this unit will retain the text value but it won't appear in selections.`)) {
+    if (window.confirm(`Delete "${unit.name}"?`)) {
       deleteMutation.mutate(unit.id);
     }
   };
@@ -279,6 +280,7 @@ export default function Settings() {
       <Tabs defaultValue="units" className="space-y-4">
         <TabsList className="flex flex-wrap h-auto gap-1">
           <TabsTrigger value="units" className="gap-1.5 text-xs"><Users className="h-3.5 w-3.5" /> Units</TabsTrigger>
+          <TabsTrigger value="wsf" className="gap-1.5 text-xs"><Globe className="h-3.5 w-3.5" /> WSF Centres</TabsTrigger>
           <TabsTrigger value="services" className="gap-1.5 text-xs"><Church className="h-3.5 w-3.5" /> Service Types</TabsTrigger>
           <TabsTrigger value="events" className="gap-1.5 text-xs"><CalendarDays className="h-3.5 w-3.5" /> Event Categories</TabsTrigger>
           <TabsTrigger value="training" className="gap-1.5 text-xs"><TrendingUp className="h-3.5 w-3.5" /> Training Types</TabsTrigger>
@@ -287,6 +289,10 @@ export default function Settings() {
 
         <TabsContent value="units">
           <ChurchUnitsSection />
+        </TabsContent>
+
+        <TabsContent value="wsf">
+          <WSFCentresSection />
         </TabsContent>
 
         <TabsContent value="services">
