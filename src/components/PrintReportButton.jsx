@@ -6,6 +6,15 @@ import { Printer } from "lucide-react";
  * Renders a "Print Report" button.
  * `buildRows` is called at print time and should return { title, headers: [], rows: [[]] }
  */
+function escHtml(str) {
+  return String(str ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 export default function PrintReportButton({ buildRows, label = "Print Report" }) {
   const [printing, setPrinting] = useState(false);
 
@@ -14,7 +23,7 @@ export default function PrintReportButton({ buildRows, label = "Print Report" })
     setPrinting(true);
 
     const tableRows = rows.map(r =>
-      `<tr>${r.map(c => `<td>${c ?? ""}</td>`).join("")}</tr>`
+      `<tr>${r.map(c => `<td>${escHtml(c)}</td>`).join("")}</tr>`
     ).join("");
 
     const html = `
