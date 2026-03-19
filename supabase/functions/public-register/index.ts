@@ -24,7 +24,6 @@ function isRateLimited(ip: string): boolean {
 function sanitize(val: unknown, maxLen: number): string | null {
   if (val === null || val === undefined || val === "") return null;
   const s = String(val).trim().slice(0, maxLen);
-  // Strip HTML tags
   return s.replace(/<[^>]*>/g, "");
 }
 
@@ -36,6 +35,25 @@ function validateEmail(email: string | null): boolean {
 function validatePhone(phone: string | null): boolean {
   if (!phone) return true;
   return /^[\d\s\+\-\(\)]{5,20}$/.test(phone);
+}
+
+async function getAuthenticatedUser(req: Request, supabaseUrl: string, anonKey: string) {
+  const authHeader = req.headers.get("Authorization");
+  if (!authHeader?.startsWith("Bearer ")) return null;
+
+  const token = authHeader.replace("Bearer ", "");
+  const authClient = createClient(supabaseUrl, anonKey, {
+    global: { headers: { Authorization: authHeader } },
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
+
+  const { data, error } = await authClient.auth.getClaims(token);
+  if (error || !data?.claims?.sub) return null;
+
+  return {
+    userId: data.claims.sub,
+    email: typeof data.claims.email === "string" ? data.claims.email.toLowerCase() : null,
+  };
 }
 
 const VALID_STATUSES = ["First Timer", "New Convert", "Active", "Inactive"];
@@ -54,6 +72,16 @@ Deno.serve(async (req) => {
   }
 
   try {
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+
+    const supabase = createClient(supabaseUrl, serviceRoleKey, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
+
+    const authenticatedUser = await getAuthenticatedUser(req, supabaseUrl, anonKey);
+
     // Rate limiting by IP
     const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
       req.headers.get("cf-connecting-ip") || "unknown";
@@ -73,7 +101,6 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Required fields
     const firstName = sanitize(body.first_name, 100);
     const lastName = sanitize(body.last_name, 100);
     if (!firstName || !lastName) {
@@ -83,7 +110,6 @@ Deno.serve(async (req) => {
       });
     }
 
-    // GDPR consent
     if (body.gdpr_consent !== true) {
       return new Response(JSON.stringify({ error: "GDPR consent is required." }), {
         status: 400,
@@ -91,8 +117,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Validate fields
-    const email = sanitize(body.email, 255);
+    const email = sanitize(body.email, 255)?.toLowerCase() ?? null;
     if (!validateEmail(email)) {
       return new Response(JSON.stringify({ error: "Invalid email format." }), {
         status: 400,
@@ -114,7 +139,6 @@ Deno.serve(async (req) => {
 
     const gender = VALID_GENDERS.includes(body.gender) ? body.gender : null;
 
-    // Sanitize all remaining fields
     const address = sanitize(body.address, 300);
     const city = sanitize(body.city, 100);
     const postcode = sanitize(body.postcode, 20);
@@ -125,7 +149,6 @@ Deno.serve(async (req) => {
     const emergencyContactPhone = sanitize(body.emergency_contact_phone, 20);
     const wsfCentreId = sanitize(body.wsf_centre_id, 36);
 
-    // Boolean fields
     const waterBaptism = body.water_baptism === true;
     const holySpiritBaptism = body.holy_spirit_baptism === true;
     const winnersSatellite = body.winners_satellite === true;
@@ -134,21 +157,14 @@ Deno.serve(async (req) => {
     const lccCompleted = body.lcc_completed === true;
     const ldcCompleted = body.ldc_completed === true;
 
-    // Use service role to insert (bypasses RLS)
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, serviceRoleKey, {
-      auth: { autoRefreshToken: false, persistSession: false },
-    });
-
-    // Validate wsf_centre_id exists if provided
     if (wsfCentreId) {
       const { data: centre } = await supabase
         .from("wsf_centres")
         .select("id")
         .eq("id", wsfCentreId)
         .eq("is_active", true)
-        .single();
+        .maybeSingle();
+
       if (!centre) {
         return new Response(JSON.stringify({ error: "Invalid WSF centre." }), {
           status: 400,
@@ -157,8 +173,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Insert member
-    const { data: member, error: memberError } = await supabase.from("members").insert({
+    const memberPayload = {
       first_name: firstName,
       last_name: lastName,
       email,
@@ -176,21 +191,75 @@ Deno.serve(async (req) => {
       water_baptism: waterBaptism,
       holy_spirit_baptism: holySpiritBaptism,
       winners_satellite: winnersSatellite,
-      wsf_centre_id: wsfCentreId || null,
+      wsf_centre_id: winnersSatellite ? (wsfCentreId || null) : null,
       bfc_completed: bfcCompleted,
       bcc_completed: bccCompleted,
       lcc_completed: lccCompleted,
       ldc_completed: ldcCompleted,
       gdpr_consent: true,
       gdpr_consent_date: new Date().toISOString(),
-    }).select("id").single();
+    };
+
+    if (authenticatedUser?.userId) {
+      const { data: linkedMember, error: linkedMemberError } = await supabase
+        .from("members")
+        .select("id")
+        .eq("user_id", authenticatedUser.userId)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (linkedMemberError) throw linkedMemberError;
+
+      if (linkedMember) {
+        const { error: updateError } = await supabase
+          .from("members")
+          .update(memberPayload)
+          .eq("id", linkedMember.id);
+
+        if (updateError) throw updateError;
+
+        return new Response(JSON.stringify({ success: true, mode: "updated" }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const candidateEmails = [...new Set([email, authenticatedUser.email].filter(Boolean))];
+      for (const candidateEmail of candidateEmails) {
+        const { data: emailMatches, error: emailMatchError } = await supabase
+          .from("members")
+          .select("id, user_id")
+          .eq("email", candidateEmail)
+          .order("created_at", { ascending: false })
+          .limit(2);
+
+        if (emailMatchError) throw emailMatchError;
+
+        if (emailMatches.length === 1 && (!emailMatches[0].user_id || emailMatches[0].user_id === authenticatedUser.userId)) {
+          const { error: claimUpdateError } = await supabase
+            .from("members")
+            .update({ ...memberPayload, user_id: authenticatedUser.userId })
+            .eq("id", emailMatches[0].id);
+
+          if (claimUpdateError) throw claimUpdateError;
+
+          return new Response(JSON.stringify({ success: true, mode: "claimed" }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+      }
+    }
+
+    const { error: memberError } = await supabase
+      .from("members")
+      .insert({
+        ...memberPayload,
+        user_id: authenticatedUser?.userId ?? null,
+      });
 
     if (memberError) throw memberError;
 
-    // Follow-up is auto-created by the database trigger (auto_create_followup)
-    // No manual insert needed — the trigger also handles notifications
-
-    return new Response(JSON.stringify({ success: true }), {
+    return new Response(JSON.stringify({ success: true, mode: "created" }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {
