@@ -263,7 +263,7 @@ export default function PastoralCare() {
               </Select>
             </div>
             <div><Label>Resolution Notes</Label><Textarea value={statusUpdate.resolution_notes} onChange={e => setStatusUpdate(f => ({ ...f, resolution_notes: e.target.value }))} rows={3} /></div>
-            <Button onClick={() => updateMutation.mutate({ id: selectedCase.id, updates: statusUpdate })} disabled={updateMutation.isPending} className="w-full bg-primary">
+            <Button onClick={() => updateMutation.mutate({ id: selectedCase.id, updates: statusUpdate, caseData: selectedCase })} disabled={updateMutation.isPending} className="w-full bg-primary">
               {updateMutation.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
               Update Case
             </Button>
