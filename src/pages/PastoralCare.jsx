@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Heart, Search, Lock, User, CalendarDays, Plus, Loader2 } from "lucide-react";
+import { Heart, Search, Lock, User, CalendarDays, Plus, Loader2, UserCheck } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
@@ -27,13 +27,14 @@ export default function PastoralCare() {
   const { user, isAdmin, leaderUnits } = useAuth();
   const { isMemberOfUnit: isPastoralUnit } = useUnitMembership("Pastoral Care");
   const canManage = isAdmin || leaderUnits.includes("Pastoral Care") || isPastoralUnit;
+  const isPastoralLeader = isAdmin || leaderUnits.includes("Pastoral Care");
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [requestDialogOpen, setRequestDialogOpen] = useState(false);
   const [manageDialogOpen, setManageDialogOpen] = useState(false);
   const [selectedCase, setSelectedCase] = useState(null);
   const [form, setForm] = useState({ subject: "", care_type: "Prayer Request", description: "", confidential: false });
-  const [statusUpdate, setStatusUpdate] = useState({ status: "", resolution_notes: "" });
+  const [statusUpdate, setStatusUpdate] = useState({ status: "", resolution_notes: "", assigned_to: "" });
 
   const { data: cases = [], isLoading } = useQuery({
     queryKey: ["pastoral-care"],
@@ -44,6 +45,31 @@ export default function PastoralCare() {
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data;
+    },
+  });
+
+  // Fetch Pastoral Care unit members for assignment
+  const { data: pastoralUnitMembers = [] } = useQuery({
+    queryKey: ["pastoral-unit-members"],
+    enabled: isPastoralLeader,
+    queryFn: async () => {
+      // Get user IDs of pastoral care unit members
+      const { data: assignments, error: aErr } = await supabase
+        .from("unit_leader_assignments")
+        .select("user_id")
+        .in("unit_name", ["Pastoral Care", "pastoral care", "Pastoral care"]);
+      if (aErr) throw aErr;
+      
+      const userIds = (assignments || []).map(a => a.user_id);
+      if (userIds.length === 0) return [];
+
+      // Get their profiles
+      const { data: profiles, error: pErr } = await supabase
+        .from("profiles")
+        .select("user_id, full_name, email")
+        .in("user_id", userIds);
+      if (pErr) throw pErr;
+      return profiles || [];
     },
   });
 
@@ -73,7 +99,11 @@ export default function PastoralCare() {
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, updates }) => {
-      const { error } = await supabase.from("pastoral_care").update(updates).eq("id", id);
+      const payload = { status: updates.status, resolution_notes: updates.resolution_notes };
+      if (updates.assigned_to) {
+        payload.assigned_to = updates.assigned_to;
+      }
+      const { error } = await supabase.from("pastoral_care").update(payload).eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -88,9 +118,13 @@ export default function PastoralCare() {
     `${r.subject} ${r.members?.first_name || ""} ${r.members?.last_name || ""} ${r.care_type}`.toLowerCase().includes(search.toLowerCase())
   );
 
+  // Build a lookup for assigned_to display
+  const assigneeMap = {};
+  pastoralUnitMembers.forEach(p => { assigneeMap[p.user_id] = p.full_name || p.email || "Unknown"; });
+
   const openManage = (c) => {
     setSelectedCase(c);
-    setStatusUpdate({ status: c.status, resolution_notes: c.resolution_notes || "" });
+    setStatusUpdate({ status: c.status, resolution_notes: c.resolution_notes || "", assigned_to: c.assigned_to || "" });
     setManageDialogOpen(true);
   };
 
@@ -139,6 +173,9 @@ export default function PastoralCare() {
                       {r.members && <span className="flex items-center gap-1"><User className="h-3.5 w-3.5" /> {r.members.first_name} {r.members.last_name}</span>}
                       <span>{r.care_type}</span>
                       <span className="flex items-center gap-1"><CalendarDays className="h-3.5 w-3.5" /> {new Date(r.created_at).toLocaleDateString()}</span>
+                      {r.assigned_to && assigneeMap[r.assigned_to] && (
+                        <span className="flex items-center gap-1"><UserCheck className="h-3.5 w-3.5" /> {assigneeMap[r.assigned_to]}</span>
+                      )}
                     </div>
                   </div>
                   {canManage && (r.status === "Open" || r.status === "In Progress") && (
@@ -184,6 +221,20 @@ export default function PastoralCare() {
         <DialogContent className="max-w-md">
           <DialogHeader><DialogTitle className="font-display">Manage Case</DialogTitle></DialogHeader>
           <div className="space-y-4 mt-2">
+            {isPastoralLeader && pastoralUnitMembers.length > 0 && (
+              <div>
+                <Label>Assign To</Label>
+                <Select value={statusUpdate.assigned_to || "unassigned"} onValueChange={v => setStatusUpdate(f => ({ ...f, assigned_to: v === "unassigned" ? "" : v }))}>
+                  <SelectTrigger><SelectValue placeholder="Select unit member" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="unassigned">— Unassigned —</SelectItem>
+                    {pastoralUnitMembers.map(p => (
+                      <SelectItem key={p.user_id} value={p.user_id}>{p.full_name || p.email}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             <div>
               <Label>Status</Label>
               <Select value={statusUpdate.status} onValueChange={v => setStatusUpdate(f => ({ ...f, status: v }))}>
