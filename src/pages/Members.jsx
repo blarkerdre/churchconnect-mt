@@ -31,6 +31,7 @@ export default function Members() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingMember, setEditingMember] = useState(null);
   const [qrOpen, setQrOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   const queryClient = useQueryClient();
 
   const { data: members = [], isLoading } = useQuery({
