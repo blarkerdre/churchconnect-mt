@@ -162,6 +162,16 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
       toast({ title: "GDPR consent is required", variant: "destructive" });
       return;
     }
+    if (createAccount && !member) {
+      if (!form.email) {
+        toast({ title: "Email is required when creating a user account", variant: "destructive" });
+        return;
+      }
+      if (!password || password.length < 6) {
+        toast({ title: "Password must be at least 6 characters", variant: "destructive" });
+        return;
+      }
+    }
 
     setSaving(true);
     try {
@@ -197,12 +207,24 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
         const { error } = await supabase.from("members").update(payload).eq("id", member.id);
         if (error) throw error;
         toast({ title: "Member updated" });
+      } else if (createAccount) {
+        // Combined: create user account + member via Edge Function
+        const { data, error } = await supabase.functions.invoke("admin-create-user", {
+          body: {
+            email: form.email,
+            password,
+            full_name: `${form.first_name} ${form.last_name}`,
+            role: accountRole,
+            member_data: payload,
+          },
+        });
+        if (error) throw error;
+        if (data?.error) throw new Error(data.error);
+        toast({ title: "Member registered with user account", description: `Account created for ${form.email}` });
       } else {
-        const { data: inserted, error } = await supabase.from("members").insert(payload).select().single();
+        const { error } = await supabase.from("members").insert(payload).select().single();
         if (error) throw error;
         toast({ title: "Member registered" });
-
-        // Follow-up is auto-created by database trigger (auto_create_followup)
       }
       onSaved();
     } catch (err) {
