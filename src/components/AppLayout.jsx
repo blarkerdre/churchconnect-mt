@@ -37,7 +37,7 @@ export default function Layout({ children }) {
   const { signOut, profile, isAdmin, isUnitLeader, isWSFLeader, roles, leaderUnits } = useAuth();
   const isSuperAdmin = roles.includes("super_admin");
   const isFollowupUnit = leaderUnits.includes("Follow-up") || leaderUnits.includes("Follow-Up");
-  const isTrainingAccess = leaderUnits.some(u => ["Pastoral Care", "pastoral care", "Altar Minister", "altar minister", "Altar Ministers", "altar ministers"].includes(u));
+  const isTrainingAccess = isUnitLeader;
 
   // Filter nav items based on role
   const navItems = allNavItems.filter(item => {
