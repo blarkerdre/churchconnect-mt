@@ -111,13 +111,15 @@ export default function Dashboard() {
       text: `${m.first_name} ${m.last_name} registered`,
       sub: m.membership_status,
       time: timeAgo(m.created_at),
+      _ts: new Date(m.created_at).getTime(),
     })),
     ...recentFollowups.map(f => ({
       text: f.description || `${f.followup_type} follow-up`,
       sub: f.status,
       time: timeAgo(f.created_at),
+      _ts: new Date(f.created_at).getTime(),
     })),
-  ].sort((a, b) => 0).slice(0, 6);
+  ].sort((a, b) => b._ts - a._ts).slice(0, 6);
 
   if (membersLoading) {
     return (
