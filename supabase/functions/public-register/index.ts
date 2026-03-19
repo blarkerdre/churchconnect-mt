@@ -232,6 +232,8 @@ Deno.serve(async (req) => {
 
         if (updateError) throw updateError;
 
+        if (email) triggerWelcomeEmail(email, firstName, lastName);
+
         return new Response(JSON.stringify({ success: true, mode: "updated" }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
