@@ -4,13 +4,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Search, Download, Mail, Phone, MoreVertical, Edit, Trash2, Loader2, QrCode } from "lucide-react";
+import { Plus, Search, Download, Upload, Mail, Phone, MoreVertical, Edit, Trash2, Loader2, QrCode } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 import MemberFormDialog from "@/components/members/MemberFormDialog";
 import RegistrationQRCode from "@/components/members/RegistrationQRCode";
+import BulkImportDialog from "@/components/members/BulkImportDialog";
 import { logAudit } from "@/lib/audit";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -30,6 +31,7 @@ export default function Members() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingMember, setEditingMember] = useState(null);
   const [qrOpen, setQrOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   const queryClient = useQueryClient();
 
   const { data: members = [], isLoading } = useQuery({
@@ -147,6 +149,9 @@ export default function Members() {
               <Button variant="outline" size="sm" onClick={handleDownloadCSV} className="gap-1.5">
                 <Download className="h-4 w-4" /> CSV
               </Button>
+              <Button variant="outline" size="sm" onClick={() => setImportOpen(true)} className="gap-1.5">
+                <Upload className="h-4 w-4" /> Import CSV
+              </Button>
               <Button onClick={openNew} className="bg-primary hover:bg-primary/90">
                 <Plus className="h-4 w-4 mr-2" /> Register Member
               </Button>
@@ -257,6 +262,11 @@ export default function Members() {
         }}
       />
       <RegistrationQRCode open={qrOpen} onOpenChange={setQrOpen} />
+      <BulkImportDialog
+        open={importOpen}
+        onOpenChange={setImportOpen}
+        onComplete={() => queryClient.invalidateQueries({ queryKey: ["members"] })}
+      />
     </div>
   );
 }
