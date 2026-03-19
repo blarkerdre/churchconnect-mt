@@ -25,7 +25,7 @@ const emptyMember = {
   emergency_contact_name: "", emergency_contact_phone: "",
   city: "Cardiff", postcode: "",
   water_baptism: false, holy_spirit_baptism: false,
-  winners_satellite: false, wsf_centre_id: "",
+  winners_satellite: false, wsf_centre_id: "", workers_in_training: false,
   bfc_completed: false, bcc_completed: false, lcc_completed: false, ldc_completed: false,
   gdpr_consent: false,
 };
@@ -83,6 +83,7 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
         winners_satellite: form.winners_satellite,
         wsf_centre_id: form.wsf_centre_id || null,
         bfc_completed: form.bfc_completed,
+        workers_in_training: form.workers_in_training,
         bcc_completed: form.bcc_completed,
         lcc_completed: form.lcc_completed,
         ldc_completed: form.ldc_completed,
@@ -243,6 +244,7 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
                 </div>
               )}
               <SwitchRow id="bfc_completed" label="Believers Foundation Class (BFC)" checked={form.bfc_completed} onChange={(v) => set("bfc_completed", v)} />
+              <SwitchRow id="workers_in_training" label="Workers in Training (WIT)" checked={form.workers_in_training} onChange={(v) => set("workers_in_training", v)} />
               <SwitchRow id="bcc_completed" label="Basic Certificate Course (BCC)" checked={form.bcc_completed} onChange={(v) => set("bcc_completed", v)} />
               <SwitchRow id="lcc_completed" label="Leadership Certificate Course (LCC)" checked={form.lcc_completed} onChange={(v) => set("lcc_completed", v)} />
               <SwitchRow id="ldc_completed" label="Leadership Diploma Course (LDC)" checked={form.ldc_completed} onChange={(v) => set("ldc_completed", v)} />
