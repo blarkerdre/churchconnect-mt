@@ -2,6 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClientInstance } from "@/lib/query-client";
 import { BrowserRouter as Router, Route, Routes, Navigate } from "react-router-dom";
+import { useUnitMembership } from "@/hooks/useUnitMembership";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import Layout from "@/components/AppLayout";
 import Dashboard from "@/pages/Dashboard";
@@ -65,12 +66,19 @@ function LeaderRoute({ children }) {
   return children;
 }
 
+function FollowupRoute({ children }) {
+  const { isAdmin, isUnitLeader, loading } = useAuth();
+  const { isMemberOfUnit: isFollowupMember, isLoading: memberLoading } = useUnitMembership("Follow-up");
+  if (loading || memberLoading) return null;
+  if (!isAdmin && !isUnitLeader && !isFollowupMember) return <Navigate to="/" replace />;
+  return children;
+}
+
 function TrainingRoute({ children }) {
-  const { isAdmin, leaderUnits, roles, loading } = useAuth();
+  const { isAdmin, isUnitLeader, roles, loading } = useAuth();
   if (loading) return null;
   const isSuperAdmin = roles.includes("super_admin");
-  const hasTrainingAccess = leaderUnits.some(u => ["Pastoral Care", "pastoral care", "Altar Minister", "altar minister", "Altar Ministers", "altar ministers"].includes(u));
-  if (!isAdmin && !isSuperAdmin && !hasTrainingAccess) return <Navigate to="/" replace />;
+  if (!isAdmin && !isSuperAdmin && !isUnitLeader) return <Navigate to="/" replace />;
   return children;
 }
 
@@ -90,11 +98,11 @@ function AuthRoutes() {
                 <Route path="/members" element={<Members />} />
                 <Route path="/events" element={<Events />} />
                 <Route path="/attendance" element={<LeaderRoute><Attendance /></LeaderRoute>} />
-                <Route path="/followups" element={<LeaderRoute><Followups /></LeaderRoute>} />
+                <Route path="/followups" element={<FollowupRoute><Followups /></FollowupRoute>} />
                 <Route path="/pastoral-care" element={<PastoralCare />} />
                 <Route path="/communications" element={<Communications />} />
                 <Route path="/transportation" element={<Transportation />} />
-                <Route path="/analytics" element={<LeaderRoute><Analytics /></LeaderRoute>} />
+                <Route path="/analytics" element={<AdminRoute><Analytics /></AdminRoute>} />
                 <Route path="/training-reports" element={<TrainingRoute><TrainingReports /></TrainingRoute>} />
                 <Route path="/church-attendance" element={<TrainingRoute><ChurchAttendance /></TrainingRoute>} />
                 <Route path="/wsf" element={<WSFRoute><WSFManagement /></WSFRoute>} />
