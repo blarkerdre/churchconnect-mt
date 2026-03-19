@@ -83,13 +83,6 @@ function NotificationPreferencesSection() {
           )}
         </div>
 
-        <div className="bg-accent/5 border border-accent/20 rounded-lg p-4">
-          <p className="text-xs text-muted-foreground leading-relaxed">
-            <strong className="text-foreground">Cost note:</strong> Each SMS costs approximately £0.04 via Twilio. 
-            Disabling SMS notifications will only affect automated assignment alerts. 
-            Bulk SMS from the Communications page will still work regardless of this setting.
-          </p>
-        </div>
       </CardContent>
     </Card>
   );
