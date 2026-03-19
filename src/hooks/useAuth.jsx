@@ -1,7 +1,13 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
-const AuthContext = createContext({});
+const noop = async () => ({ data: null, error: new Error("Auth not initialized") });
+const AuthContext = createContext({
+  user: null, profile: null, roles: [], loading: true, leaderUnits: [], myMember: null,
+  signUp: noop, signIn: noop, signOut: noop, resetPassword: noop, updatePassword: noop,
+  isAdmin: false, isUnitLeader: false, isWSFLeader: false, isMember: false,
+  refreshUser: () => {},
+});
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
