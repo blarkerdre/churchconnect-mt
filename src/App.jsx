@@ -66,11 +66,10 @@ function LeaderRoute({ children }) {
 }
 
 function TrainingRoute({ children }) {
-  const { isAdmin, leaderUnits, roles, loading } = useAuth();
+  const { isAdmin, isUnitLeader, roles, loading } = useAuth();
   if (loading) return null;
   const isSuperAdmin = roles.includes("super_admin");
-  const hasTrainingAccess = leaderUnits.some(u => ["Pastoral Care", "pastoral care", "Altar Minister", "altar minister", "Altar Ministers", "altar ministers"].includes(u));
-  if (!isAdmin && !isSuperAdmin && !hasTrainingAccess) return <Navigate to="/" replace />;
+  if (!isAdmin && !isSuperAdmin && !isUnitLeader) return <Navigate to="/" replace />;
   return children;
 }
 
