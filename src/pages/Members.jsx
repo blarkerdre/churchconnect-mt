@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Search, Download, Upload, Mail, Phone, MoreVertical, Edit, Trash2, Loader2, QrCode } from "lucide-react";
+import { Plus, Search, Download, Upload, Mail, Phone, MoreVertical, Edit, Trash2, Loader2, QrCode, Link2, Unlink2 } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -186,7 +186,8 @@ export default function Members() {
                   <th className="text-left p-4 font-medium text-muted-foreground">Name</th>
                   <th className="text-left p-4 font-medium text-muted-foreground hidden sm:table-cell">Contact</th>
                   {(isAdmin || viewOnly) && <th className="text-left p-4 font-medium text-muted-foreground hidden md:table-cell">Church Unit</th>}
-                  <th className="text-left p-4 font-medium text-muted-foreground">Status</th>
+                   <th className="text-left p-4 font-medium text-muted-foreground">Status</th>
+                   {isAdmin && <th className="text-center p-4 font-medium text-muted-foreground">Account</th>}
                   <th className="text-right p-4 font-medium text-muted-foreground">Actions</th>
                 </tr>
               </thead>
@@ -226,6 +227,19 @@ export default function Members() {
                         {m.membership_status}
                       </Badge>
                     </td>
+                    {isAdmin && (
+                      <td className="p-4 text-center">
+                        {m.user_id ? (
+                          <span className="inline-flex items-center gap-1 text-xs text-chart-3" title="Linked to user account">
+                            <Link2 className="h-3.5 w-3.5" /> Linked
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 text-xs text-amber-500" title="No linked user account">
+                            <Unlink2 className="h-3.5 w-3.5" /> Unlinked
+                          </span>
+                        )}
+                      </td>
+                    )}
                     <td className="p-4 text-right">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -247,7 +261,7 @@ export default function Members() {
                   </tr>
                 ))}
                 {filtered.length === 0 && (
-                  <tr><td colSpan={(isAdmin || viewOnly) ? 5 : 4} className="p-8 text-center text-muted-foreground">No members found</td></tr>
+                  <tr><td colSpan={isAdmin ? 6 : (viewOnly ? 5 : 4)} className="p-8 text-center text-muted-foreground">No members found</td></tr>
                 )}
               </tbody>
             </table>
