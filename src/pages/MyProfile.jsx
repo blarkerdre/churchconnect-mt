@@ -98,6 +98,7 @@ export default function MyProfile() {
         _emergency_contact_phone: updates.emergency_contact_phone,
         _notes: updates.notes,
         _photo_url: updates.photo_url,
+        _membership_status: updates.membership_status,
       });
       if (error) throw error;
     },
