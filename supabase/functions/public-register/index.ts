@@ -259,6 +259,11 @@ Deno.serve(async (req) => {
 
     if (memberError) throw memberError;
 
+    // Fire-and-forget welcome email
+    if (email) {
+      triggerWelcomeEmail(email, firstName, lastName);
+    }
+
     return new Response(JSON.stringify({ success: true, mode: "created" }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
