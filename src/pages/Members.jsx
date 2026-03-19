@@ -227,6 +227,19 @@ export default function Members() {
                         {m.membership_status}
                       </Badge>
                     </td>
+                    {isAdmin && (
+                      <td className="p-4 text-center">
+                        {m.user_id ? (
+                          <span className="inline-flex items-center gap-1 text-xs text-chart-3" title="Linked to user account">
+                            <Link2 className="h-3.5 w-3.5" /> Linked
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 text-xs text-amber-500" title="No linked user account">
+                            <Unlink2 className="h-3.5 w-3.5" /> Unlinked
+                          </span>
+                        )}
+                      </td>
+                    )}
                     <td className="p-4 text-right">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
