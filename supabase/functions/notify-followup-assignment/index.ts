@@ -155,14 +155,22 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Send SMS notification
-    if (recipientPhone) {
+    // Check if SMS notifications are enabled
+    const { data: smsSetting } = await supabase
+      .from("app_settings")
+      .select("value")
+      .eq("key", "sms_notifications_enabled")
+      .maybeSingle();
+    
+    const smsEnabled = smsSetting?.value === true || smsSetting === null;
+
+    // Send SMS notification (only if enabled)
+    if (recipientPhone && smsEnabled) {
       const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
       const TWILIO_API_KEY = Deno.env.get("TWILIO_API_KEY");
       const TWILIO_FROM = Deno.env.get("TWILIO_FROM_NUMBER");
 
       if (LOVABLE_API_KEY && TWILIO_API_KEY && TWILIO_FROM) {
-        // Normalize phone to E.164
         let cleaned = recipientPhone.replace(/[\s\-\(\)\.]/g, "");
         if (/^0[1-9]\d{9,10}$/.test(cleaned)) {
           cleaned = "+44" + cleaned.slice(1);
@@ -190,7 +198,6 @@ Deno.serve(async (req) => {
             });
 
             const data = await response.json();
-            // Log SMS
             await supabase.from("sms_log").insert({
               sender_id: assigned_to,
               recipient_phone: cleaned,
@@ -213,6 +220,8 @@ Deno.serve(async (req) => {
           }
         }
       }
+    } else if (recipientPhone && !smsEnabled) {
+      console.log("SMS notifications disabled — skipping SMS for follow-up assignment");
     }
 
     return new Response(JSON.stringify({ success: true }), {
