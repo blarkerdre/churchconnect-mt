@@ -29,6 +29,13 @@ serve(async (req) => {
     // Prevent self-deletion
     if (user_id === caller.id) return new Response(JSON.stringify({ error: "Cannot delete yourself" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
+    // Prevent admin from deleting super_admin accounts
+    const { data: targetIsSuperAdmin } = await supabase.rpc("has_role", { _user_id: user_id, _role: "super_admin" });
+    if (targetIsSuperAdmin) {
+      const { data: callerIsSuperAdmin } = await supabase.rpc("has_role", { _user_id: caller.id, _role: "super_admin" });
+      if (!callerIsSuperAdmin) return new Response(JSON.stringify({ error: "Only super-admins can delete super-admin accounts" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
     // Clear all foreign key references before deleting
     // Nullify references in tables that reference auth.users
     await Promise.all([
