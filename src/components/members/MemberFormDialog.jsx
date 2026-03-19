@@ -345,6 +345,52 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
             </div>
           </div>
 
+          {/* Create User Account — admin only, new members only */}
+          {!member && isAdmin && (
+            <div>
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">User Account</h3>
+              <SwitchRow
+                id="create_account"
+                label="Also create user account"
+                description="Creates a login account linked to this member"
+                checked={createAccount}
+                onChange={(v) => setCreateAccount(v)}
+              />
+              {createAccount && (
+                <div className="mt-3 space-y-4 p-3 rounded-xl border border-border bg-muted/30">
+                  <div className="space-y-1.5">
+                    <Label>Password *</Label>
+                    <Input
+                      type="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="Min 6 characters"
+                    />
+                    {password && password.length < 6 && (
+                      <p className="text-[11px] text-destructive">Password must be at least 6 characters</p>
+                    )}
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Role *</Label>
+                    <Select value={accountRole} onValueChange={setAccountRole}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="member">Member</SelectItem>
+                        <SelectItem value="unit_leader">Unit Leader</SelectItem>
+                        <SelectItem value="wsf_leader">WSF Leader</SelectItem>
+                        {isSuperAdmin && <SelectItem value="admin">Admin</SelectItem>}
+                        {isSuperAdmin && <SelectItem value="super_admin">Super Admin</SelectItem>}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  {!form.email && (
+                    <p className="text-[11px] text-destructive">Email is required above to create a user account</p>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Church Growth Indices */}
           <div>
             <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Church Growth Indices</h3>
