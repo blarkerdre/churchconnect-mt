@@ -12,6 +12,7 @@ import { useAuth } from "@/hooks/useAuth";
 
 export default function Dashboard() {
   const { isAdmin, isUnitLeader, isWSFLeader, profile, myMember, loading: authLoading } = useAuth();
+
   // Only admins see the admin dashboard
   // Show WSF Leader dashboard for WSF leaders who aren't admin
   if (!authLoading && !isAdmin && isWSFLeader) {
