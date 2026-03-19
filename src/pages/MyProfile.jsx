@@ -454,7 +454,7 @@ function CreateMemberProfile({ user, onCreated, wsfCentres, churchUnits }) {
         postcode: form.postcode || null,
         date_of_birth: form.date_of_birth || null,
         gender: form.gender || null,
-        membership_status: "Active",
+        membership_status: form.membership_status || "First Timer",
         church_unit: form.church_unit || null,
         emergency_contact_name: form.emergency_contact_name || null,
         emergency_contact_phone: form.emergency_contact_phone || null,
