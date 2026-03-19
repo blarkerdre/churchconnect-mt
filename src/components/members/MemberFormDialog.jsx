@@ -76,6 +76,60 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
     },
     onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
+
+  // Fetch all profiles for account linking (admin only)
+  const { data: allProfiles = [] } = useQuery({
+    queryKey: ["all-profiles-for-linking"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("profiles").select("*").order("full_name");
+      if (error) throw error;
+      return data;
+    },
+    enabled: isAdmin && !!member && !member?.user_id && showLinkSearch,
+  });
+
+  const linkAccountMutation = useMutation({
+    mutationFn: async ({ memberId, userId }) => {
+      const { error } = await supabase.from("members").update({ user_id: userId }).eq("id", memberId);
+      if (error) throw error;
+      await logAudit("member_link_account", "members", memberId, {
+        member_name: `${member?.first_name} ${member?.last_name}`,
+        linked_user_id: userId,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["members"] });
+      toast({ title: "Account linked successfully" });
+      setShowLinkSearch(false);
+      setLinkSearch("");
+      onSaved();
+    },
+    onError: (err) => toast({ title: "Error linking account", description: err.message, variant: "destructive" }),
+  });
+
+  const unlinkAccountMutation = useMutation({
+    mutationFn: async ({ memberId }) => {
+      const { error } = await supabase.from("members").update({ user_id: null }).eq("id", memberId);
+      if (error) throw error;
+      await logAudit("member_unlink_account", "members", memberId, {
+        member_name: `${member?.first_name} ${member?.last_name}`,
+        unlinked_user_id: member?.user_id,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["members"] });
+      toast({ title: "Account unlinked" });
+      onSaved();
+    },
+    onError: (err) => toast({ title: "Error unlinking account", description: err.message, variant: "destructive" }),
+  });
+
+  const filteredProfiles = allProfiles.filter(p => {
+    if (!linkSearch) return true;
+    const q = linkSearch.toLowerCase();
+    return (p.full_name || "").toLowerCase().includes(q) || (p.email || "").toLowerCase().includes(q);
+  });
+
   const { data: wsfCentres = [] } = useQuery({
     queryKey: ["wsf-centres"],
     queryFn: async () => {
@@ -88,6 +142,8 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
   useEffect(() => {
     if (open) {
       setForm(member ? { ...emptyMember, ...member } : emptyMember);
+      setShowLinkSearch(false);
+      setLinkSearch("");
     }
   }, [member, open]);
 
