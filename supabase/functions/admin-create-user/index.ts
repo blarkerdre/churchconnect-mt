@@ -23,7 +23,7 @@ serve(async (req) => {
     const { data: isAdmin } = await supabase.rpc("is_admin", { _user_id: caller.id });
     if (!isAdmin) return new Response(JSON.stringify({ error: "Admin access required" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
-    const { email, password, full_name, role } = await req.json();
+    const { email, password, full_name, role, member_data } = await req.json();
     if (!email || !password) return new Response(JSON.stringify({ error: "Email and password required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
     // Only super_admin can assign elevated roles
@@ -31,6 +31,7 @@ serve(async (req) => {
       const { data: isSuperAdmin } = await supabase.rpc("has_role", { _user_id: caller.id, _role: "super_admin" });
       if (!isSuperAdmin) return new Response(JSON.stringify({ error: "Super-admin access required to assign elevated roles" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
+
     // Create user via admin API
     const { data: newUser, error: createError } = await supabase.auth.admin.createUser({
       email,
@@ -41,12 +42,61 @@ serve(async (req) => {
 
     if (createError) return new Response(JSON.stringify({ error: createError.message }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
+    const userId = newUser?.user?.id;
+
     // Assign role
-    if (role && newUser?.user) {
-      await supabase.from("user_roles").insert({ user_id: newUser.user.id, role });
+    if (role && userId) {
+      await supabase.from("user_roles").insert({ user_id: userId, role });
     }
 
-    return new Response(JSON.stringify({ success: true, user_id: newUser?.user?.id }), {
+    // Create linked member record if member_data provided
+    let memberId = null;
+    if (member_data && userId) {
+      const memberPayload = {
+        first_name: member_data.first_name,
+        last_name: member_data.last_name,
+        email: member_data.email || email,
+        phone: member_data.phone || null,
+        address: member_data.address || null,
+        city: member_data.city || null,
+        postcode: member_data.postcode || null,
+        date_of_birth: member_data.date_of_birth || null,
+        gender: member_data.gender || null,
+        membership_status: member_data.membership_status || "Active",
+        church_unit: member_data.church_unit || null,
+        notes: member_data.notes || null,
+        emergency_contact_name: member_data.emergency_contact_name || null,
+        emergency_contact_phone: member_data.emergency_contact_phone || null,
+        water_baptism: member_data.water_baptism ?? false,
+        holy_spirit_baptism: member_data.holy_spirit_baptism ?? false,
+        winners_satellite: member_data.winners_satellite ?? false,
+        wsf_centre_id: member_data.wsf_centre_id || null,
+        workers_in_training: member_data.workers_in_training ?? false,
+        bfc_completed: member_data.bfc_completed ?? false,
+        bcc_completed: member_data.bcc_completed ?? false,
+        lcc_completed: member_data.lcc_completed ?? false,
+        ldc_completed: member_data.ldc_completed ?? false,
+        gdpr_consent: member_data.gdpr_consent ?? false,
+        gdpr_consent_date: member_data.gdpr_consent_date || null,
+        user_id: userId,
+      };
+
+      const { data: memberRow, error: memberError } = await supabase
+        .from("members")
+        .insert(memberPayload)
+        .select("id")
+        .single();
+
+      if (memberError) {
+        return new Response(JSON.stringify({ error: `User created but member creation failed: ${memberError.message}`, user_id: userId }), {
+          status: 207,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      memberId = memberRow?.id;
+    }
+
+    return new Response(JSON.stringify({ success: true, user_id: userId, member_id: memberId }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {
