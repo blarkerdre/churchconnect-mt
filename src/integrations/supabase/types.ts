@@ -1377,6 +1377,36 @@ export type Database = {
             }
             Returns: undefined
           }
+        | {
+            Args: {
+              _address?: string
+              _bcc_completed?: boolean
+              _bfc_completed?: boolean
+              _church_unit?: string
+              _city?: string
+              _date_of_birth?: string
+              _email?: string
+              _emergency_contact_name?: string
+              _emergency_contact_phone?: string
+              _first_name?: string
+              _gender?: string
+              _holy_spirit_baptism?: boolean
+              _last_name?: string
+              _lcc_completed?: boolean
+              _ldc_completed?: boolean
+              _member_id: string
+              _membership_status?: string
+              _notes?: string
+              _phone?: string
+              _photo_url?: string
+              _postcode?: string
+              _water_baptism?: boolean
+              _winners_satellite?: boolean
+              _workers_in_training?: boolean
+              _wsf_centre_id?: string
+            }
+            Returns: undefined
+          }
     }
     Enums: {
       app_role:
