@@ -187,16 +187,8 @@ Deno.serve(async (req) => {
 
     if (memberError) throw memberError;
 
-    // Auto-create followup for first timer / new convert
-    if (membershipStatus === "First Timer" || membershipStatus === "New Convert") {
-      await supabase.from("followups").insert({
-        member_id: member.id,
-        followup_type: membershipStatus === "First Timer" ? "First Timer" : "New Convert",
-        description: `New ${membershipStatus.toLowerCase()} registered: ${firstName} ${lastName}`,
-        status: "Pending",
-        priority: "High",
-      });
-    }
+    // Follow-up is auto-created by the database trigger (auto_create_followup)
+    // No manual insert needed — the trigger also handles notifications
 
     return new Response(JSON.stringify({ success: true }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
