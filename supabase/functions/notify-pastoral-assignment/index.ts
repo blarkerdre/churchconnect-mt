@@ -1,0 +1,183 @@
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+};
+
+const GATEWAY_URL = "https://connector-gateway.lovable.dev/twilio";
+
+Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, serviceKey);
+
+    const { assigned_to, subject, care_type, description, case_id } = await req.json();
+
+    if (!assigned_to) {
+      return new Response(JSON.stringify({ message: "No assignee" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("full_name, email")
+      .eq("user_id", assigned_to)
+      .single();
+
+    const { data: memberRecord } = await supabase
+      .from("members")
+      .select("phone, email, first_name")
+      .eq("user_id", assigned_to)
+      .single();
+
+    const recipientEmail = profile?.email || memberRecord?.email;
+    const recipientPhone = memberRecord?.phone;
+    const recipientName = profile?.full_name || memberRecord?.first_name || "Team Member";
+
+    const emailSubject = `Pastoral Care Case Assigned: ${subject}`;
+    const bodyText = `Hi ${recipientName},\n\nYou have been assigned a pastoral care case.\n\nSubject: ${subject}\nType: ${care_type || "General"}\n${description ? `Details: ${description}\n` : ""}\nPlease log in to the Church Management System to view and manage this case.\n\nGod bless,\nWinners Chapel International Cardiff`;
+
+    // Send email notification via queue
+    if (recipientEmail) {
+      const senderDomain = "notify.churchmanagementsuite.org";
+      const fromAddress = `Winners Chapel Cardiff <noreply@${senderDomain}>`;
+      const messageId = `pastoral-assign-${crypto.randomUUID()}`;
+
+      const htmlContent = `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background-color:#f4f5f7;font-family:Arial,Helvetica,sans-serif;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f5f7;padding:32px 16px;">
+    <tr><td align="center">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;background-color:#ffffff;border-radius:8px;overflow:hidden;">
+        <tr><td style="background-color:#1a2d4d;padding:24px 32px;text-align:center;">
+          <h1 style="margin:0;color:#ffffff;font-size:20px;font-weight:700;">Winners Chapel International Cardiff</h1>
+        </td></tr>
+        <tr><td style="padding:32px;">
+          <p style="margin:0 0 16px;color:#333333;font-size:16px;">Dear ${recipientName},</p>
+          <h2 style="margin:0 0 16px;color:#1a2d4d;font-size:18px;">Pastoral Care Case Assigned</h2>
+          <div style="background-color:#f0f4f8;border-radius:8px;padding:16px;margin:0 0 24px;">
+            <p style="margin:0 0 8px;color:#555;font-size:14px;"><strong>Subject:</strong> ${subject}</p>
+            <p style="margin:0 0 8px;color:#555;font-size:14px;"><strong>Type:</strong> ${care_type || "General"}</p>
+            ${description ? `<p style="margin:0;color:#555;font-size:14px;">${description}</p>` : ""}
+          </div>
+          <p style="margin:0 0 16px;color:#555;font-size:15px;">Please log in to the Church Management System to view and manage this case.</p>
+          <hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0;">
+          <p style="margin:0;color:#999;font-size:12px;text-align:center;">This is an automated notification from the Pastoral Care Unit.</p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+
+      const payload = {
+        to: recipientEmail,
+        from: fromAddress,
+        sender_domain: senderDomain,
+        subject: emailSubject,
+        html: htmlContent,
+        text: bodyText,
+        purpose: "transactional",
+        label: "pastoral-assignment",
+        message_id: messageId,
+        idempotency_key: messageId,
+        queued_at: new Date().toISOString(),
+      };
+
+      const { error: enqueueError } = await supabase.rpc("enqueue_email", {
+        queue_name: "transactional_emails",
+        payload,
+      });
+
+      if (enqueueError) {
+        console.error("Failed to enqueue pastoral care email:", enqueueError);
+      } else {
+        await supabase.from("email_send_log").insert({
+          message_id: messageId,
+          template_name: "pastoral-assignment",
+          recipient_email: recipientEmail,
+          status: "pending",
+        });
+        console.log("Pastoral care assignment email enqueued for", recipientEmail);
+      }
+    }
+
+    // Send SMS notification
+    if (recipientPhone) {
+      const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+      const TWILIO_API_KEY = Deno.env.get("TWILIO_API_KEY");
+      const TWILIO_FROM = Deno.env.get("TWILIO_FROM_NUMBER");
+
+      if (LOVABLE_API_KEY && TWILIO_API_KEY && TWILIO_FROM) {
+        let cleaned = recipientPhone.replace(/[\s\-\(\)\.]/g, "");
+        if (/^0[1-9]\d{9,10}$/.test(cleaned)) {
+          cleaned = "+44" + cleaned.slice(1);
+        }
+        if (!cleaned.startsWith("+")) cleaned = "+" + cleaned;
+
+        if (/^\+[1-9]\d{6,14}$/.test(cleaned)) {
+          const smsBody = `Hi ${recipientName}, you've been assigned a pastoral care case: "${subject}". Please check the Church Management System. - Winners Chapel Cardiff`;
+
+          try {
+            const webhookUrl = `${supabaseUrl}/functions/v1/twilio-webhook`;
+            const response = await fetch(`${GATEWAY_URL}/Messages.json`, {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${LOVABLE_API_KEY}`,
+                "X-Connection-Api-Key": TWILIO_API_KEY,
+                "Content-Type": "application/x-www-form-urlencoded",
+              },
+              body: new URLSearchParams({
+                To: cleaned,
+                From: TWILIO_FROM,
+                Body: smsBody,
+                StatusCallback: webhookUrl,
+              }),
+            });
+
+            const data = await response.json();
+            await supabase.from("sms_log").insert({
+              sender_id: assigned_to,
+              recipient_phone: cleaned,
+              message: smsBody,
+              sms_type: "pastoral-assignment",
+              reference_id: case_id,
+              status: response.ok ? "sent" : "failed",
+              message_sid: data.sid || null,
+              error_message: response.ok ? null : (data.message || JSON.stringify(data)),
+              delivery_status: response.ok ? "queued" : null,
+            });
+
+            if (response.ok) {
+              console.log("Pastoral care assignment SMS sent to", cleaned);
+            } else {
+              console.error("SMS send failed:", data);
+            }
+          } catch (err) {
+            console.error("SMS error:", err);
+          }
+        }
+      }
+    }
+
+    return new Response(JSON.stringify({ success: true }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  } catch (error) {
+    console.error("notify-pastoral-assignment error:", error);
+    return new Response(JSON.stringify({ error: error.message }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+});
