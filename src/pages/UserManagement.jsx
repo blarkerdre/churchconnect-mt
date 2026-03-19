@@ -141,6 +141,19 @@ export default function UserManagement() {
     return allRoles.filter(r => r.user_id === userId).map(r => r.role);
   };
 
+  const filteredProfiles = profiles.filter(p => {
+    const q = searchQuery.toLowerCase();
+    if (q && !(p.full_name || "").toLowerCase().includes(q) && !(p.email || "").toLowerCase().includes(q)) return false;
+    if (roleFilter !== "all") {
+      const ur = getUserRoles(p.user_id);
+      if (roleFilter === "member") { if (ur.length > 0) return false; }
+      else if (!ur.includes(roleFilter)) return false;
+    }
+    if (statusFilter === "active" && disabledUsers[p.user_id]) return false;
+    if (statusFilter === "disabled" && !disabledUsers[p.user_id]) return false;
+    return true;
+  });
+
   if (!isAdmin) {
     return (
       <Card className="border-0 shadow-sm">
@@ -166,6 +179,37 @@ export default function UserManagement() {
             <Plus className="h-4 w-4 mr-2" /> Add User
           </Button>
         </div>
+      </div>
+
+      {/* Search & Filter Toolbar */}
+      <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
+        <div className="relative flex-1 w-full sm:max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search by name or email..."
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+        <Select value={roleFilter} onValueChange={setRoleFilter}>
+          <SelectTrigger className="w-full sm:w-[160px]"><SelectValue placeholder="Role" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Roles</SelectItem>
+            {ROLES.map(r => <SelectItem key={r} value={r}>{r.replace("_", " ")}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="w-full sm:w-[140px]"><SelectValue placeholder="Status" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Status</SelectItem>
+            <SelectItem value="active">Active</SelectItem>
+            <SelectItem value="disabled">Disabled</SelectItem>
+          </SelectContent>
+        </Select>
+        <span className="text-xs text-muted-foreground whitespace-nowrap">
+          Showing {filteredProfiles.length} of {profiles.length}
+        </span>
       </div>
 
       {isLoading ? (
