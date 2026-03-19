@@ -1,45 +1,39 @@
 
 
-## Combined User Account + Member Profile Registration
+## Send Welcome Email on QR Code Registration
 
-### What
-Add an optional "Create User Account" toggle to the existing Member Registration form (`MemberFormDialog`). When enabled by an admin, it will create both a user account (via the `admin-create-user` Edge Function) and a member profile in one step, automatically linking them.
+### Current State
+Public registration via QR code (`/register`) creates a member record only — no email is sent. The project has email infrastructure (auth-email-hook, process-email-queue, pgmq queues) but no transactional email template for welcome/registration confirmation.
+
+### What We'll Build
+After a successful public registration, send a branded welcome email to the new member (if they provided an email address).
 
 ### How
 
-**1. Update `admin-create-user` Edge Function**
-- After creating the user account, also create a linked member record in the `members` table using the service role client
-- Accept additional member fields: `first_name`, `last_name`, `phone`, `gender`, `membership_status`, `church_unit`, `address`, `city`, `postcode`, `date_of_birth`, etc.
-- Set `members.user_id` to the newly created user's ID
-- Return both `user_id` and `member_id` in the response
+**1. Create a welcome email template**
+- Add `supabase/functions/_shared/email-templates/welcome-registration.tsx` — a React Email template branded with Winners Chapel styling (#1a2d4d, Playfair Display headings)
+- Content: "Welcome to Winners Chapel International Cardiff", confirm their registration was received, invite them to create an account at the login page, and include church contact info
 
-**2. Update `MemberFormDialog.jsx`**
-- Add a "Also create user account" checkbox/switch (visible only for admins when creating a new member, not editing)
-- When toggled on, show additional fields: **Password** and **Role** (dropdown: member, unit_leader, wsf_leader, admin — restricted by caller's permission level)
-- On save, if the toggle is on:
-  - Call `admin-create-user` with both user fields (email, password, role) and member fields
-  - Skip the separate member insert (the Edge Function handles it)
-- If the toggle is off, keep the existing flow (insert member only)
-- Email field becomes required when "create account" is enabled
+**2. Create a `send-welcome-email` Edge Function**
+- New function at `supabase/functions/send-welcome-email/index.ts`
+- Accepts `{ email, first_name, last_name }` from the public-register function
+- Renders the welcome template and enqueues it via `enqueue_email` RPC to the `transactional_emails` queue
+- Logs to `email_send_log`
+- Set `verify_jwt = false` in config.toml (called server-side from public-register)
+- Validate caller using service role key header check
 
-**3. Validation**
-- Email is required when creating an account
-- Password must be at least 6 characters
-- Role selection required
+**3. Update `public-register` Edge Function**
+- After successful member insert/update/claim, if the member provided an email, call `send-welcome-email` internally via `fetch` (same Supabase functions URL)
+- Pass the service role key as Authorization header
+- Fire-and-forget (don't block registration response on email delivery)
 
-### Technical Details
-
-**Edge Function changes** (`supabase/functions/admin-create-user/index.ts`):
-- Add optional `member_data` object to the request body
-- After user creation, if `member_data` is present, insert into `members` table with `user_id` set to the new user's ID
-- Use service role client for the insert (bypasses RLS)
-
-**Frontend changes** (`src/components/members/MemberFormDialog.jsx`):
-- New state: `createAccount` (boolean), `password` (string), `accountRole` (string)
-- Conditional UI section between Personal Details and Church Growth
-- Modified `handleSave` to branch based on `createAccount` flag
+**4. Config & Deploy**
+- Add `send-welcome-email` to `supabase/config.toml` with `verify_jwt = false`
+- Deploy both `send-welcome-email` and `public-register` Edge Functions
 
 ### Files Modified
-1. `supabase/functions/admin-create-user/index.ts` — accept member data, create linked member
-2. `src/components/members/MemberFormDialog.jsx` — add account creation toggle and fields
+1. `supabase/functions/_shared/email-templates/welcome-registration.tsx` — new template
+2. `supabase/functions/send-welcome-email/index.ts` — new Edge Function
+3. `supabase/functions/public-register/index.ts` — trigger welcome email after registration
+4. `supabase/config.toml` — add send-welcome-email config
 
