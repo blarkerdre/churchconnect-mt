@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Loader2, Shield, ShieldCheck, UserCog, User, Plus, Trash2, Globe, UsersRound } from "lucide-react";
+import { Loader2, Shield, ShieldCheck, UserCog, User, Plus, Trash2, Globe, UsersRound, Ban, CheckCircle2 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
@@ -59,6 +59,9 @@ export default function UserManagement() {
       return data;
     },
   });
+
+  // Track disabled status client-side after toggling
+  const [disabledUsers, setDisabledUsers] = useState({});
 
   const toggleRoleMutation = useMutation({
     mutationFn: async ({ userId, role, add, targetName }) => {
@@ -114,6 +117,23 @@ export default function UserManagement() {
     onError: (err) => toast({ title: "Error deleting user", description: err.message, variant: "destructive" }),
   });
 
+  const toggleUserMutation = useMutation({
+    mutationFn: async ({ userId, disabled, targetName }) => {
+      const { data, error } = await supabase.functions.invoke("admin-toggle-user", {
+        body: { user_id: userId, disabled },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      await logAudit(disabled ? "user_disable" : "user_enable", "profiles", userId, { target_name: targetName });
+      return { userId, disabled };
+    },
+    onSuccess: ({ userId, disabled }) => {
+      setDisabledUsers(prev => ({ ...prev, [userId]: disabled }));
+      toast({ title: disabled ? "User account disabled" : "User account enabled" });
+    },
+    onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+  });
+
   const getUserRoles = (userId) => {
     return allRoles.filter(r => r.user_id === userId).map(r => r.role);
   };
@@ -167,19 +187,28 @@ export default function UserManagement() {
                   const isCurrentUser = p.user_id === user?.id;
                   const hasAdminRole = userRoles.some(r => ["admin", "super_admin"].includes(r));
                   const canChange = isCurrentUser ? false : (isSuperAdmin || (!hasAdminRole && isAdmin));
+                  const isDisabled = disabledUsers[p.user_id] === true;
+                  const targetIsSuperAdmin = userRoles.includes("super_admin");
 
                   const availableRoles = isSuperAdmin
                     ? ROLES
                     : ROLES.filter(r => !["super_admin", "admin"].includes(r));
 
                   return (
-                    <tr key={p.id} className="border-b border-border hover:bg-muted/30 transition-colors">
+                    <tr key={p.id} className={`border-b border-border hover:bg-muted/30 transition-colors ${isDisabled ? "opacity-60" : ""}`}>
                       <td className="p-4">
                         <div className="flex items-center gap-3">
-                          <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm">
+                          <div className={`h-9 w-9 rounded-full flex items-center justify-center font-bold text-sm ${isDisabled ? "bg-destructive/10 text-destructive" : "bg-primary/10 text-primary"}`}>
                             {(p.full_name || p.email || "?")[0].toUpperCase()}
                           </div>
-                          <p className="font-medium text-foreground">{p.full_name || "—"}</p>
+                          <div>
+                            <p className="font-medium text-foreground">{p.full_name || "—"}</p>
+                            {isDisabled && (
+                              <Badge variant="outline" className="text-destructive border-destructive/30 text-[10px] mt-0.5">
+                                <Ban className="h-2.5 w-2.5 mr-1" /> Disabled
+                              </Badge>
+                            )}
+                          </div>
                         </div>
                       </td>
                       <td className="p-4 text-muted-foreground">{p.email || "—"}</td>
@@ -238,15 +267,43 @@ export default function UserManagement() {
                         )}
                       </td>
                       <td className="p-4 text-right">
-                        {!isCurrentUser && !(userRoles.includes("super_admin") && !isSuperAdmin) && (
-                          <Button variant="ghost" size="icon" onClick={() => {
-                            if (window.confirm(`Delete user ${p.full_name || p.email}? This cannot be undone.`)) {
-                              deleteUserMutation.mutate({ userId: p.user_id, targetName: p.full_name || p.email });
-                            }
-                          }}>
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
-                        )}
+                        <div className="flex items-center justify-end gap-1">
+                          {/* Disable/Enable - available to admin & super_admin */}
+                          {!isCurrentUser && !(targetIsSuperAdmin && !isSuperAdmin) && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              title={isDisabled ? "Enable account" : "Disable account"}
+                              disabled={toggleUserMutation.isPending}
+                              onClick={() => {
+                                const action = isDisabled ? "enable" : "disable";
+                                if (window.confirm(`${action.charAt(0).toUpperCase() + action.slice(1)} user ${p.full_name || p.email}?`)) {
+                                  toggleUserMutation.mutate({
+                                    userId: p.user_id,
+                                    disabled: !isDisabled,
+                                    targetName: p.full_name || p.email,
+                                  });
+                                }
+                              }}
+                            >
+                              {isDisabled ? (
+                                <CheckCircle2 className="h-4 w-4 text-green-600" />
+                              ) : (
+                                <Ban className="h-4 w-4 text-amber-500" />
+                              )}
+                            </Button>
+                          )}
+                          {/* Delete - super_admin only */}
+                          {isSuperAdmin && !isCurrentUser && (
+                            <Button variant="ghost" size="icon" onClick={() => {
+                              if (window.confirm(`Delete user ${p.full_name || p.email}? This cannot be undone.`)) {
+                                deleteUserMutation.mutate({ userId: p.user_id, targetName: p.full_name || p.email });
+                              }
+                            }}>
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   );
