@@ -25,7 +25,7 @@ const emptyMember = {
   emergency_contact_name: "", emergency_contact_phone: "",
   city: "Cardiff", postcode: "",
   water_baptism: false, holy_spirit_baptism: false,
-  winners_satellite: false, wsf_centre_id: "",
+  winners_satellite: false, wsf_centre_id: "", workers_in_training: false,
   bfc_completed: false, bcc_completed: false, lcc_completed: false, ldc_completed: false,
   gdpr_consent: false,
 };
