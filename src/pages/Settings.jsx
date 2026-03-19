@@ -70,7 +70,7 @@ function NotificationPreferencesSection() {
         <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
           <div>
             <p className="text-sm font-medium text-foreground">SMS Notifications</p>
-            <p className="text-xs text-muted-foreground mt-0.5">Send SMS alongside email for follow-up assignments (Twilio costs apply)</p>
+            <p className="text-xs text-muted-foreground mt-0.5">Send SMS alongside email for follow-up &amp; pastoral care assignments (Twilio costs apply)</p>
           </div>
           {isLoading ? (
             <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
