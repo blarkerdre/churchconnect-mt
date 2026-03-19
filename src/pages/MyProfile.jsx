@@ -145,6 +145,7 @@ export default function MyProfile() {
       postcode: form.postcode || null,
       date_of_birth: form.date_of_birth || null,
       gender: form.gender || null,
+      membership_status: form.membership_status || null,
       emergency_contact_name: form.emergency_contact_name || null,
       emergency_contact_phone: form.emergency_contact_phone || null,
       notes: form.notes || null,
