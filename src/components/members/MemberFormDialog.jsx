@@ -37,9 +37,43 @@ const emptyMember = {
 export default function MemberFormDialog({ open, onOpenChange, member, onSaved }) {
   const { data: churchUnits = [] } = useChurchUnits();
   const CHURCH_UNITS = churchUnits.map(u => u.name);
+  const { isAdmin, roles: currentUserRoles, user: currentUser } = useAuth();
+  const isSuperAdmin = currentUserRoles.includes("super_admin");
+  const queryClient = useQueryClient();
   const [form, setForm] = useState(emptyMember);
   const [saving, setSaving] = useState(false);
 
+  // Fetch roles for the member being edited (if they have a linked user account)
+  const memberUserId = member?.user_id;
+  const { data: memberRoles = [] } = useQuery({
+    queryKey: ["member-roles", memberUserId],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("user_roles").select("*").eq("user_id", memberUserId);
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!memberUserId && isAdmin,
+  });
+
+  const toggleRoleMutation = useMutation({
+    mutationFn: async ({ userId, role, add }) => {
+      if (add) {
+        const { error } = await supabase.from("user_roles").insert({ user_id: userId, role });
+        if (error) throw error;
+        await logAudit("role_add", "user_roles", userId, { role, target_name: `${member?.first_name} ${member?.last_name}` });
+      } else {
+        const { error } = await supabase.from("user_roles").delete().eq("user_id", userId).eq("role", role);
+        if (error) throw error;
+        await logAudit("role_remove", "user_roles", userId, { role, target_name: `${member?.first_name} ${member?.last_name}` });
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["member-roles", memberUserId] });
+      queryClient.invalidateQueries({ queryKey: ["all-user-roles"] });
+      toast({ title: "Role updated" });
+    },
+    onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+  });
   const { data: wsfCentres = [] } = useQuery({
     queryKey: ["wsf-centres"],
     queryFn: async () => {
