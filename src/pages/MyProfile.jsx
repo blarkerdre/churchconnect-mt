@@ -52,8 +52,22 @@ export default function MyProfile() {
         .select("*, wsf_centres!fk_members_wsf_centre(name)")
         .eq("user_id", user.id)
         .maybeSingle();
+
       if (error) throw error;
-      return data;
+      if (data) return data;
+
+      const { data: claimedMemberId, error: claimError } = await supabase.rpc("claim_own_member_profile");
+      if (claimError) throw claimError;
+      if (!claimedMemberId) return null;
+
+      const { data: claimedMember, error: claimedMemberError } = await supabase
+        .from("members")
+        .select("*, wsf_centres!fk_members_wsf_centre(name)")
+        .eq("id", claimedMemberId)
+        .maybeSingle();
+
+      if (claimedMemberError) throw claimedMemberError;
+      return claimedMember;
     },
     enabled: !!user?.id,
   });

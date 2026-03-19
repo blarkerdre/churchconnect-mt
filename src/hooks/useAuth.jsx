@@ -54,22 +54,23 @@ export function AuthProvider({ children }) {
 
       let member = memberRes.data;
 
-      // Auto-link: if no member linked by user_id, try matching by email
       if (!member && userEmail) {
-        const { data: emailMatch } = await supabase
-          .from("members")
-          .select("*, wsf_centres!fk_members_wsf_centre(name)")
-          .eq("email", userEmail)
-          .is("user_id", null)
-          .maybeSingle();
+        const { data: claimedMemberId, error: claimError } = await supabase.rpc("claim_own_member_profile");
 
-        if (emailMatch) {
-          // Link this member record to the user
-          await supabase
+        if (claimError) {
+          console.error("Error claiming member profile:", claimError);
+        } else if (claimedMemberId) {
+          const { data: linkedMember, error: linkedMemberError } = await supabase
             .from("members")
-            .update({ user_id: userId })
-            .eq("id", emailMatch.id);
-          member = { ...emailMatch, user_id: userId };
+            .select("*, wsf_centres!fk_members_wsf_centre(name)")
+            .eq("id", claimedMemberId)
+            .maybeSingle();
+
+          if (linkedMemberError) {
+            console.error("Error loading claimed member profile:", linkedMemberError);
+          } else {
+            member = linkedMember;
+          }
         }
       }
 
