@@ -347,6 +347,86 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
             </div>
           </div>
 
+          {/* Account Linking — admin only */}
+          {member && isAdmin && (
+            <div>
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">User Account</h3>
+              {memberUserId ? (
+                <div className="flex items-center justify-between p-3 rounded-xl bg-chart-3/5 border border-chart-3/20">
+                  <div className="flex items-center gap-2">
+                    <Link2 className="h-4 w-4 text-chart-3" />
+                    <div>
+                      <p className="text-sm font-medium text-foreground">Account linked</p>
+                      <p className="text-xs text-muted-foreground">User ID: {memberUserId.slice(0, 8)}…</p>
+                    </div>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-destructive border-destructive/30 hover:bg-destructive/10"
+                    onClick={() => {
+                      if (window.confirm("Unlink this member from their user account? They will lose access to their profile.")) {
+                        unlinkAccountMutation.mutate({ memberId: member.id });
+                      }
+                    }}
+                    disabled={unlinkAccountMutation.isPending}
+                  >
+                    <Unlink2 className="h-3.5 w-3.5 mr-1" /> Unlink
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between p-3 rounded-xl bg-amber-500/5 border border-amber-500/20">
+                    <div className="flex items-center gap-2">
+                      <Unlink2 className="h-4 w-4 text-amber-500" />
+                      <p className="text-sm text-muted-foreground">No linked user account</p>
+                    </div>
+                    <Button variant="outline" size="sm" onClick={() => setShowLinkSearch(true)} className="gap-1">
+                      <Link2 className="h-3.5 w-3.5" /> Link Account
+                    </Button>
+                  </div>
+                  {showLinkSearch && (
+                    <div className="space-y-2 p-3 rounded-xl border border-border bg-muted/30">
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          placeholder="Search users by name or email..."
+                          value={linkSearch}
+                          onChange={(e) => setLinkSearch(e.target.value)}
+                          className="pl-9"
+                          autoFocus
+                        />
+                      </div>
+                      <div className="max-h-40 overflow-y-auto space-y-1">
+                        {filteredProfiles.length === 0 ? (
+                          <p className="text-xs text-muted-foreground text-center py-2">No users found</p>
+                        ) : filteredProfiles.slice(0, 10).map(p => (
+                          <button
+                            key={p.id}
+                            type="button"
+                            className="w-full flex items-center justify-between p-2 rounded-lg hover:bg-muted text-left text-sm transition-colors"
+                            onClick={() => {
+                              if (window.confirm(`Link this member to ${p.full_name || p.email}?`)) {
+                                linkAccountMutation.mutate({ memberId: member.id, userId: p.user_id });
+                              }
+                            }}
+                            disabled={linkAccountMutation.isPending}
+                          >
+                            <div>
+                              <p className="font-medium text-foreground">{p.full_name || "—"}</p>
+                              <p className="text-xs text-muted-foreground">{p.email}</p>
+                            </div>
+                            <Link2 className="h-4 w-4 text-primary shrink-0" />
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
           {/* User Role Assignment — only for linked members, visible to admins */}
           {member && memberUserId && isAdmin && (
             <div>
