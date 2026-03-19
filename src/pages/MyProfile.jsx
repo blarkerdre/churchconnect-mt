@@ -121,6 +121,7 @@ export default function MyProfile() {
       postcode: member.postcode || "",
       date_of_birth: member.date_of_birth || "",
       gender: member.gender || "",
+      membership_status: member.membership_status || "Active",
       emergency_contact_name: member.emergency_contact_name || "",
       emergency_contact_phone: member.emergency_contact_phone || "",
       notes: member.notes || "",
