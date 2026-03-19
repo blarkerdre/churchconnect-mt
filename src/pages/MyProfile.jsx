@@ -124,15 +124,6 @@ export default function MyProfile() {
       emergency_contact_name: member.emergency_contact_name || "",
       emergency_contact_phone: member.emergency_contact_phone || "",
       notes: member.notes || "",
-      church_unit: member.church_unit || "",
-      water_baptism: member.water_baptism || false,
-      holy_spirit_baptism: member.holy_spirit_baptism || false,
-      winners_satellite: member.winners_satellite || false,
-      wsf_centre_id: member.wsf_centre_id || "",
-      bfc_completed: member.bfc_completed || false,
-      bcc_completed: member.bcc_completed || false,
-      lcc_completed: member.lcc_completed || false,
-      ldc_completed: member.ldc_completed || false,
     });
     setEditing(true);
   };
