@@ -12,19 +12,20 @@ import { useAuth } from "@/hooks/useAuth";
 
 export default function Dashboard() {
   const { isAdmin, isUnitLeader, isWSFLeader, profile, myMember, loading: authLoading } = useAuth();
-  const isLeaderOrAdmin = isAdmin || isUnitLeader;
 
-  // Show WSF Leader dashboard for WSF leaders who aren't admin/unit leaders
-  if (!authLoading && !isLeaderOrAdmin && isWSFLeader) {
+  // Only admins see the admin dashboard
+  // Show WSF Leader dashboard for WSF leaders who aren't admin
+  if (!authLoading && !isAdmin && isWSFLeader) {
     return <WSFLeaderDashboard />;
   }
 
-  // Show member dashboard for regular members
-  if (!authLoading && !isLeaderOrAdmin) {
+  // Show member dashboard for unit leaders and regular members
+  if (!authLoading && !isAdmin) {
     return <MemberDashboard currentUser={profile} myMember={myMember} />;
   }
 
-  // Admin/Leader dashboard below
+  // Admin dashboard below
+  const isLeaderOrAdmin = isAdmin;
   const { data: members = [], isLoading: membersLoading } = useQuery({
     queryKey: ["dashboard-members"],
     queryFn: async () => {

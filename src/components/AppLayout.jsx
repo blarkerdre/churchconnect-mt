@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
+import { useUnitMembership } from "@/hooks/useUnitMembership";
 import {
   LayoutDashboard, Users, CalendarDays, HeartHandshake,
   Heart, Megaphone, Menu, LogOut,
@@ -17,11 +18,11 @@ const allNavItems = [
   { name: "Members", icon: Users, path: "/members", access: "leader" },
   { name: "Events", icon: CalendarDays, path: "/events", access: null },
   { name: "Attendance", icon: ClipboardList, path: "/attendance", access: "leader" },
-  { name: "Follow-ups", icon: HeartHandshake, path: "/followups", access: "followup" },
+  { name: "Follow-ups", icon: HeartHandshake, path: "/followups", access: "followup_member" },
   { name: "Pastoral Care", icon: Heart, path: "/pastoral-care", access: null },
   { name: "Communications", icon: Megaphone, path: "/communications", access: null },
   { name: "Transportation", icon: Car, path: "/transportation", access: null },
-  { name: "Analytics", icon: BarChart2, path: "/analytics", access: "leader" },
+  { name: "Analytics", icon: BarChart2, path: "/analytics", access: "admin" },
   { name: "Training Reports", icon: TrendingUp, path: "/training-reports", access: "training" },
   { name: "Church Attendance", icon: ClipboardList, path: "/church-attendance", access: "training" },
   { name: "WSF Centres", icon: Globe, path: "/wsf", access: "wsf" },
@@ -37,7 +38,8 @@ export default function Layout({ children }) {
   const { signOut, profile, isAdmin, isUnitLeader, isWSFLeader, roles, leaderUnits } = useAuth();
   const isSuperAdmin = roles.includes("super_admin");
   const isFollowupUnit = leaderUnits.includes("Follow-up") || leaderUnits.includes("Follow-Up");
-  const isTrainingAccess = leaderUnits.some(u => ["Pastoral Care", "pastoral care", "Altar Minister", "altar minister", "Altar Ministers", "altar ministers"].includes(u));
+  const isTrainingAccess = isUnitLeader;
+  const { isMemberOfUnit: isFollowupMember } = useUnitMembership("Follow-up");
 
   // Filter nav items based on role
   const navItems = allNavItems.filter(item => {
@@ -46,7 +48,7 @@ export default function Layout({ children }) {
     if (item.access === "admin") return isAdmin;
     if (item.access === "leader") return isAdmin || isUnitLeader;
     if (item.access === "wsf") return isAdmin || isWSFLeader;
-    if (item.access === "followup") return isAdmin || isFollowupUnit;
+    if (item.access === "followup_member") return isAdmin || isFollowupUnit || isFollowupMember;
     if (item.access === "training") return isAdmin || isSuperAdmin || isTrainingAccess;
     return false;
   });

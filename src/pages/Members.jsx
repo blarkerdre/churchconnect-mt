@@ -22,7 +22,9 @@ const statusColors = {
 };
 
 export default function Members() {
-  const { isAdmin, user } = useAuth();
+  const { isAdmin, isUnitLeader, isWSFLeader, leaderUnits, user } = useAuth();
+  const isLeader = isUnitLeader || isWSFLeader;
+  const viewOnly = isLeader && !isAdmin;
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -31,7 +33,7 @@ export default function Members() {
   const queryClient = useQueryClient();
 
   const { data: members = [], isLoading } = useQuery({
-    queryKey: ["members"],
+    queryKey: ["members", isAdmin, viewOnly],
     queryFn: async () => {
       if (isAdmin) {
         const { data, error } = await supabase
@@ -40,8 +42,15 @@ export default function Members() {
           .order("created_at", { ascending: false });
         if (error) throw error;
         return data;
+      } else if (viewOnly) {
+        // Unit leaders / WSF leaders see members via RLS (their unit/centre members)
+        const { data, error } = await supabase
+          .from("members")
+          .select("*")
+          .order("created_at", { ascending: false });
+        if (error) throw error;
+        return data;
       } else {
-        // Regular members can only see their own profile
         const { data, error } = await supabase
           .from("members")
           .select("*")
@@ -102,7 +111,7 @@ export default function Members() {
     a.click();
   };
 
-  // Check if current member can edit (own profile or admin)
+  // Check if current member can edit (own profile or admin; leaders are view-only)
   const canEditMember = (m) => isAdmin || m.user_id === user?.id;
 
   return (
@@ -114,7 +123,7 @@ export default function Members() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input placeholder="Search members..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-10" />
           </div>
-          {isAdmin && (
+          {(isAdmin || viewOnly) && (
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger className="w-full sm:w-40">
                 <SelectValue placeholder="All Status" />
@@ -146,8 +155,8 @@ export default function Members() {
         </div>
       </div>
 
-      {/* Stats row - only for admins */}
-      {isAdmin && (
+      {/* Stats row - admins and leaders */}
+      {(isAdmin || viewOnly) && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <Card className="border-0 shadow-sm"><CardContent className="p-4 text-center"><p className="text-2xl font-display font-bold text-foreground">{members.length}</p><p className="text-xs text-muted-foreground">Total</p></CardContent></Card>
           <Card className="border-0 shadow-sm"><CardContent className="p-4 text-center"><p className="text-2xl font-display font-bold text-chart-3">{members.filter(m => m.membership_status === "Active").length}</p><p className="text-xs text-muted-foreground">Active</p></CardContent></Card>
@@ -167,7 +176,7 @@ export default function Members() {
                 <tr className="border-b border-border bg-muted/50">
                   <th className="text-left p-4 font-medium text-muted-foreground">Name</th>
                   <th className="text-left p-4 font-medium text-muted-foreground hidden sm:table-cell">Contact</th>
-                  {isAdmin && <th className="text-left p-4 font-medium text-muted-foreground hidden md:table-cell">Church Unit</th>}
+                  {(isAdmin || viewOnly) && <th className="text-left p-4 font-medium text-muted-foreground hidden md:table-cell">Church Unit</th>}
                   <th className="text-left p-4 font-medium text-muted-foreground">Status</th>
                   <th className="text-right p-4 font-medium text-muted-foreground">Actions</th>
                 </tr>
@@ -192,7 +201,7 @@ export default function Members() {
                         {m.phone && <span className="flex items-center gap-1 text-muted-foreground"><Phone className="h-3 w-3" /> {m.phone}</span>}
                       </div>
                     </td>
-                    {isAdmin && (
+                    {(isAdmin || viewOnly) && (
                       <td className="p-4 hidden md:table-cell">
                         {m.church_unit ? (
                           <div className="flex flex-wrap gap-1">
@@ -229,7 +238,7 @@ export default function Members() {
                   </tr>
                 ))}
                 {filtered.length === 0 && (
-                  <tr><td colSpan={isAdmin ? 5 : 4} className="p-8 text-center text-muted-foreground">No members found</td></tr>
+                  <tr><td colSpan={(isAdmin || viewOnly) ? 5 : 4} className="p-8 text-center text-muted-foreground">No members found</td></tr>
                 )}
               </tbody>
             </table>
