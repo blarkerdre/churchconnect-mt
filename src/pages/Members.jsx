@@ -33,7 +33,7 @@ export default function Members() {
   const queryClient = useQueryClient();
 
   const { data: members = [], isLoading } = useQuery({
-    queryKey: ["members"],
+    queryKey: ["members", isAdmin, viewOnly],
     queryFn: async () => {
       if (isAdmin) {
         const { data, error } = await supabase
@@ -42,8 +42,15 @@ export default function Members() {
           .order("created_at", { ascending: false });
         if (error) throw error;
         return data;
+      } else if (viewOnly) {
+        // Unit leaders / WSF leaders see members via RLS (their unit/centre members)
+        const { data, error } = await supabase
+          .from("members")
+          .select("*")
+          .order("created_at", { ascending: false });
+        if (error) throw error;
+        return data;
       } else {
-        // Regular members can only see their own profile
         const { data, error } = await supabase
           .from("members")
           .select("*")
