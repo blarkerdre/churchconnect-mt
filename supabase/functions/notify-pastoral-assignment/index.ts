@@ -68,12 +68,12 @@ Deno.serve(async (req) => {
           <h1 style="margin:0;color:#ffffff;font-size:20px;font-weight:700;">Winners Chapel International Cardiff</h1>
         </td></tr>
         <tr><td style="padding:32px;">
-          <p style="margin:0 0 16px;color:#333333;font-size:16px;">Dear ${recipientName},</p>
+          <p style="margin:0 0 16px;color:#333333;font-size:16px;">Dear ${escHtml(recipientName)},</p>
           <h2 style="margin:0 0 16px;color:#1a2d4d;font-size:18px;">Pastoral Care Case Assigned</h2>
           <div style="background-color:#f0f4f8;border-radius:8px;padding:16px;margin:0 0 24px;">
-            <p style="margin:0 0 8px;color:#555;font-size:14px;"><strong>Subject:</strong> ${subject}</p>
-            <p style="margin:0 0 8px;color:#555;font-size:14px;"><strong>Type:</strong> ${care_type || "General"}</p>
-            ${description ? `<p style="margin:0;color:#555;font-size:14px;">${description}</p>` : ""}
+            <p style="margin:0 0 8px;color:#555;font-size:14px;"><strong>Subject:</strong> ${escHtml(subject)}</p>
+            <p style="margin:0 0 8px;color:#555;font-size:14px;"><strong>Type:</strong> ${escHtml(care_type || "General")}</p>
+            ${description ? `<p style="margin:0;color:#555;font-size:14px;">${escHtml(description)}</p>` : ""}
           </div>
           <p style="margin:0 0 16px;color:#555;font-size:15px;">Please log in to the Church Management System to view and manage this case.</p>
           <hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0;">
