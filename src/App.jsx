@@ -24,6 +24,7 @@ import Auth from "@/pages/Auth";
 import ResetPassword from "@/pages/ResetPassword";
 import MyProfile from "@/pages/MyProfile";
 import PublicRegistration from "@/pages/PublicRegistration";
+import Presentation from "@/pages/Presentation";
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
@@ -123,6 +124,7 @@ function AppRoutes() {
   return (
     <Routes>
       <Route path="/register" element={<PublicRegistration />} />
+      <Route path="/presentation" element={<Presentation />} />
       <Route path="/*" element={<AuthProvider><AuthRoutes /></AuthProvider>} />
     </Routes>
   );
