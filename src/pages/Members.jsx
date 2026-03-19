@@ -23,7 +23,7 @@ const statusColors = {
 };
 
 export default function Members() {
-  const { isAdmin, isUnitLeader, isWSFLeader, leaderUnits, user } = useAuth();
+  const { isAdmin, isUnitLeader, isWSFLeader, user, loading: authLoading, myMember } = useAuth();
   const isLeader = isUnitLeader || isWSFLeader;
   const viewOnly = isLeader && !isAdmin;
   const [search, setSearch] = useState("");
@@ -35,7 +35,7 @@ export default function Members() {
   const queryClient = useQueryClient();
 
   const { data: members = [], isLoading } = useQuery({
-    queryKey: ["members", isAdmin, viewOnly],
+    queryKey: ["members", user?.id, isAdmin, viewOnly, myMember?.id],
     queryFn: async () => {
       if (isAdmin) {
         const { data, error } = await supabase
@@ -62,7 +62,7 @@ export default function Members() {
         return data;
       }
     },
-    enabled: !!user?.id,
+    enabled: !!user?.id && !authLoading,
   });
 
   const deleteMutation = useMutation({
