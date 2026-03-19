@@ -22,7 +22,9 @@ const statusColors = {
 };
 
 export default function Members() {
-  const { isAdmin, user } = useAuth();
+  const { isAdmin, isUnitLeader, isWSFLeader, leaderUnits, user } = useAuth();
+  const isLeader = isUnitLeader || isWSFLeader;
+  const viewOnly = isLeader && !isAdmin;
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [dialogOpen, setDialogOpen] = useState(false);
