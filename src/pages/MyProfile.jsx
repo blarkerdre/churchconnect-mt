@@ -422,6 +422,7 @@ function CreateMemberProfile({ user, onCreated, wsfCentres, churchUnits }) {
   const [form, setForm] = useState({
     first_name: "", last_name: "", email: user?.email || "", phone: "", address: "",
     city: "Cardiff", postcode: "", date_of_birth: "", gender: "",
+    membership_status: "First Timer",
     emergency_contact_name: "", emergency_contact_phone: "",
     church_unit: "", notes: "",
     water_baptism: false, holy_spirit_baptism: false, winners_satellite: false,
