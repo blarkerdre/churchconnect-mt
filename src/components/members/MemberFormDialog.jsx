@@ -83,6 +83,7 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
         winners_satellite: form.winners_satellite,
         wsf_centre_id: form.wsf_centre_id || null,
         bfc_completed: form.bfc_completed,
+        workers_in_training: form.workers_in_training,
         bcc_completed: form.bcc_completed,
         lcc_completed: form.lcc_completed,
         ldc_completed: form.ldc_completed,
