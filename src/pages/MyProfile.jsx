@@ -175,6 +175,16 @@ export default function MyProfile() {
       emergency_contact_phone: form.emergency_contact_phone || null,
       notes: form.notes || null,
       photo_url: member.photo_url || null,
+      church_unit: form.church_unit || null,
+      water_baptism: form.water_baptism,
+      holy_spirit_baptism: form.holy_spirit_baptism,
+      winners_satellite: form.winners_satellite,
+      wsf_centre_id: form.wsf_centre_id || null,
+      workers_in_training: form.workers_in_training,
+      bfc_completed: form.bfc_completed,
+      bcc_completed: form.bcc_completed,
+      lcc_completed: form.lcc_completed,
+      ldc_completed: form.ldc_completed,
     });
   };
 
