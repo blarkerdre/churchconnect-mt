@@ -83,7 +83,22 @@ export default function MyProfile() {
 
   const updateMutation = useMutation({
     mutationFn: async (updates) => {
-      const { error } = await supabase.from("members").update(updates).eq("id", member.id);
+      const { error } = await supabase.rpc("update_own_member_profile", {
+        _member_id: member.id,
+        _first_name: updates.first_name,
+        _last_name: updates.last_name,
+        _email: updates.email,
+        _phone: updates.phone,
+        _address: updates.address,
+        _city: updates.city,
+        _postcode: updates.postcode,
+        _date_of_birth: updates.date_of_birth,
+        _gender: updates.gender,
+        _emergency_contact_name: updates.emergency_contact_name,
+        _emergency_contact_phone: updates.emergency_contact_phone,
+        _notes: updates.notes,
+        _photo_url: updates.photo_url,
+      });
       if (error) throw error;
     },
     onSuccess: () => {
@@ -109,15 +124,6 @@ export default function MyProfile() {
       emergency_contact_name: member.emergency_contact_name || "",
       emergency_contact_phone: member.emergency_contact_phone || "",
       notes: member.notes || "",
-      church_unit: member.church_unit || "",
-      water_baptism: member.water_baptism || false,
-      holy_spirit_baptism: member.holy_spirit_baptism || false,
-      winners_satellite: member.winners_satellite || false,
-      wsf_centre_id: member.wsf_centre_id || "",
-      bfc_completed: member.bfc_completed || false,
-      bcc_completed: member.bcc_completed || false,
-      lcc_completed: member.lcc_completed || false,
-      ldc_completed: member.ldc_completed || false,
     });
     setEditing(true);
   };
@@ -140,15 +146,7 @@ export default function MyProfile() {
       emergency_contact_name: form.emergency_contact_name || null,
       emergency_contact_phone: form.emergency_contact_phone || null,
       notes: form.notes || null,
-      church_unit: form.church_unit || null,
-      water_baptism: form.water_baptism,
-      holy_spirit_baptism: form.holy_spirit_baptism,
-      winners_satellite: form.winners_satellite,
-      wsf_centre_id: form.wsf_centre_id || null,
-      bfc_completed: form.bfc_completed,
-      bcc_completed: form.bcc_completed,
-      lcc_completed: form.lcc_completed,
-      ldc_completed: form.ldc_completed,
+      photo_url: member.photo_url || null,
     });
   };
 
