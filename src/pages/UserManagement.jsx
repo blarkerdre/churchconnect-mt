@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Loader2, Shield, ShieldCheck, UserCog, User, Plus, Trash2, Globe, UsersRound, Ban, CheckCircle2 } from "lucide-react";
+import { Loader2, Shield, ShieldCheck, UserCog, User, Plus, Trash2, Globe, UsersRound, Ban, CheckCircle2, Search } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
@@ -41,6 +41,9 @@ export default function UserManagement() {
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [addForm, setAddForm] = useState({ email: "", password: "", full_name: "", role: "member" });
   const [bulkAssignOpen, setBulkAssignOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [roleFilter, setRoleFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
 
   const { data: profiles = [], isLoading } = useQuery({
     queryKey: ["all-profiles"],
@@ -138,6 +141,19 @@ export default function UserManagement() {
     return allRoles.filter(r => r.user_id === userId).map(r => r.role);
   };
 
+  const filteredProfiles = profiles.filter(p => {
+    const q = searchQuery.toLowerCase();
+    if (q && !(p.full_name || "").toLowerCase().includes(q) && !(p.email || "").toLowerCase().includes(q)) return false;
+    if (roleFilter !== "all") {
+      const ur = getUserRoles(p.user_id);
+      if (roleFilter === "member") { if (ur.length > 0) return false; }
+      else if (!ur.includes(roleFilter)) return false;
+    }
+    if (statusFilter === "active" && disabledUsers[p.user_id]) return false;
+    if (statusFilter === "disabled" && !disabledUsers[p.user_id]) return false;
+    return true;
+  });
+
   if (!isAdmin) {
     return (
       <Card className="border-0 shadow-sm">
@@ -165,6 +181,37 @@ export default function UserManagement() {
         </div>
       </div>
 
+      {/* Search & Filter Toolbar */}
+      <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
+        <div className="relative flex-1 w-full sm:max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search by name or email..."
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+        <Select value={roleFilter} onValueChange={setRoleFilter}>
+          <SelectTrigger className="w-full sm:w-[160px]"><SelectValue placeholder="Role" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Roles</SelectItem>
+            {ROLES.map(r => <SelectItem key={r} value={r}>{r.replace("_", " ")}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="w-full sm:w-[140px]"><SelectValue placeholder="Status" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Status</SelectItem>
+            <SelectItem value="active">Active</SelectItem>
+            <SelectItem value="disabled">Disabled</SelectItem>
+          </SelectContent>
+        </Select>
+        <span className="text-xs text-muted-foreground whitespace-nowrap">
+          Showing {filteredProfiles.length} of {profiles.length}
+        </span>
+      </div>
+
       {isLoading ? (
         <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>
       ) : (
@@ -182,7 +229,7 @@ export default function UserManagement() {
                  </tr>
               </thead>
               <tbody>
-                {profiles.map(p => {
+                {filteredProfiles.map(p => {
                   const userRoles = getUserRoles(p.user_id);
                   const isCurrentUser = p.user_id === user?.id;
                   const hasAdminRole = userRoles.some(r => ["admin", "super_admin"].includes(r));
