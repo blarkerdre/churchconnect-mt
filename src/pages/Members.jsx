@@ -63,6 +63,8 @@ export default function Members() {
       }
     },
     enabled: !!user?.id && !authLoading,
+    refetchOnWindowFocus: true,
+    refetchInterval: isAdmin || viewOnly ? 5000 : false,
   });
 
   const deleteMutation = useMutation({
