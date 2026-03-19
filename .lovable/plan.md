@@ -1,42 +1,45 @@
 
 
-## Plan: Bulk CSV Import for Member Updates
+## Combined User Account + Member Profile Registration
 
-### Overview
-Add a CSV import feature to the Members page that lets admins upload a spreadsheet to create new members or update existing ones in bulk. Matching is done by email address — if a member with that email exists, their record is updated; otherwise, a new member is created.
+### What
+Add an optional "Create User Account" toggle to the existing Member Registration form (`MemberFormDialog`). When enabled by an admin, it will create both a user account (via the `admin-create-user` Edge Function) and a member profile in one step, automatically linking them.
 
-### User Flow
-1. Admin clicks "Import CSV" button (next to existing CSV export button)
-2. A dialog opens with instructions and a file picker
-3. Admin uploads a CSV file
-4. The system parses the CSV, shows a preview table with row count and any validation errors
-5. Admin confirms the import
-6. Records are upserted (matched by email) and results are displayed (created / updated / skipped counts)
+### How
+
+**1. Update `admin-create-user` Edge Function**
+- After creating the user account, also create a linked member record in the `members` table using the service role client
+- Accept additional member fields: `first_name`, `last_name`, `phone`, `gender`, `membership_status`, `church_unit`, `address`, `city`, `postcode`, `date_of_birth`, etc.
+- Set `members.user_id` to the newly created user's ID
+- Return both `user_id` and `member_id` in the response
+
+**2. Update `MemberFormDialog.jsx`**
+- Add a "Also create user account" checkbox/switch (visible only for admins when creating a new member, not editing)
+- When toggled on, show additional fields: **Password** and **Role** (dropdown: member, unit_leader, wsf_leader, admin — restricted by caller's permission level)
+- On save, if the toggle is on:
+  - Call `admin-create-user` with both user fields (email, password, role) and member fields
+  - Skip the separate member insert (the Edge Function handles it)
+- If the toggle is off, keep the existing flow (insert member only)
+- Email field becomes required when "create account" is enabled
+
+**3. Validation**
+- Email is required when creating an account
+- Password must be at least 6 characters
+- Role selection required
 
 ### Technical Details
 
-**New component: `src/components/members/BulkImportDialog.jsx`**
-- File input accepting `.csv` files
-- Client-side CSV parsing (no external library needed — use native `FileReader` + split logic)
-- Expected columns (case-insensitive matching): `first_name`, `last_name`, `email`, `phone`, `gender`, `membership_status`, `church_unit`, `address`, `city`, `postcode`, `date_of_birth`, `emergency_contact_name`, `emergency_contact_phone`
-- Validation: require `first_name` and `last_name` per row; normalize phone numbers using existing `normalizePhone` utility
-- Preview table showing first 5 rows + total count
-- Error summary for invalid rows (missing required fields, invalid status values, etc.)
+**Edge Function changes** (`supabase/functions/admin-create-user/index.ts`):
+- Add optional `member_data` object to the request body
+- After user creation, if `member_data` is present, insert into `members` table with `user_id` set to the new user's ID
+- Use service role client for the insert (bypasses RLS)
 
-**Import logic:**
-- For each valid row, check if a member with that email already exists (via a single query fetching all members by the CSV emails)
-- Existing members: update via `supabase.from("members").update(...)` 
-- New members: insert via `supabase.from("members").insert(...)`
-- Process in batches to avoid timeouts
-- Show toast with results: "X created, Y updated, Z skipped"
+**Frontend changes** (`src/components/members/MemberFormDialog.jsx`):
+- New state: `createAccount` (boolean), `password` (string), `accountRole` (string)
+- Conditional UI section between Personal Details and Church Growth
+- Modified `handleSave` to branch based on `createAccount` flag
 
-**Edit to `src/pages/Members.jsx`:**
-- Add "Import CSV" button next to existing "CSV" export button (admin only)
-- Add state + render for `BulkImportDialog`
-
-### Files
-- **New**: `src/components/members/BulkImportDialog.jsx`
-- **Edit**: `src/pages/Members.jsx` — add import button and dialog
-
-No database changes needed — uses existing `members` table and admin RLS policies.
+### Files Modified
+1. `supabase/functions/admin-create-user/index.ts` — accept member data, create linked member
+2. `src/components/members/MemberFormDialog.jsx` — add account creation toggle and fields
 
