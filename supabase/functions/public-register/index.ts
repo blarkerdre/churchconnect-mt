@@ -56,6 +56,19 @@ async function getAuthenticatedUser(req: Request, supabaseUrl: string, anonKey: 
   };
 }
 
+function triggerWelcomeEmail(email: string, firstName: string | null, lastName: string | null) {
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  fetch(`${supabaseUrl}/functions/v1/send-welcome-email`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${serviceRoleKey}`,
+    },
+    body: JSON.stringify({ email, first_name: firstName, last_name: lastName }),
+  }).catch((err) => console.error("Welcome email trigger failed:", err));
+}
+
 const VALID_STATUSES = ["First Timer", "New Convert", "Active", "Inactive"];
 const VALID_GENDERS = ["Male", "Female"];
 
