@@ -238,7 +238,7 @@ export default function Members() {
                   </tr>
                 ))}
                 {filtered.length === 0 && (
-                  <tr><td colSpan={isAdmin ? 5 : 4} className="p-8 text-center text-muted-foreground">No members found</td></tr>
+                  <tr><td colSpan={(isAdmin || viewOnly) ? 5 : 4} className="p-8 text-center text-muted-foreground">No members found</td></tr>
                 )}
               </tbody>
             </table>
