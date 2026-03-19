@@ -83,7 +83,22 @@ export default function MyProfile() {
 
   const updateMutation = useMutation({
     mutationFn: async (updates) => {
-      const { error } = await supabase.from("members").update(updates).eq("id", member.id);
+      const { error } = await supabase.rpc("update_own_member_profile", {
+        _member_id: member.id,
+        _first_name: updates.first_name,
+        _last_name: updates.last_name,
+        _email: updates.email,
+        _phone: updates.phone,
+        _address: updates.address,
+        _city: updates.city,
+        _postcode: updates.postcode,
+        _date_of_birth: updates.date_of_birth,
+        _gender: updates.gender,
+        _emergency_contact_name: updates.emergency_contact_name,
+        _emergency_contact_phone: updates.emergency_contact_phone,
+        _notes: updates.notes,
+        _photo_url: updates.photo_url,
+      });
       if (error) throw error;
     },
     onSuccess: () => {
