@@ -262,6 +262,11 @@ export default function Members() {
         }}
       />
       <RegistrationQRCode open={qrOpen} onOpenChange={setQrOpen} />
+      <BulkImportDialog
+        open={importOpen}
+        onOpenChange={setImportOpen}
+        onComplete={() => queryClient.invalidateQueries({ queryKey: ["members"] })}
+      />
     </div>
   );
 }
