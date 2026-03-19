@@ -39,6 +39,7 @@ export default function Layout({ children }) {
   const isSuperAdmin = roles.includes("super_admin");
   const isFollowupUnit = leaderUnits.includes("Follow-up") || leaderUnits.includes("Follow-Up");
   const isTrainingAccess = isUnitLeader;
+  const { isMemberOfUnit: isFollowupMember } = useUnitMembership("Follow-up");
 
   // Filter nav items based on role
   const navItems = allNavItems.filter(item => {

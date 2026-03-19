@@ -24,7 +24,8 @@ export default function Dashboard() {
     return <MemberDashboard currentUser={profile} myMember={myMember} />;
   }
 
-  // Admin/Leader dashboard below
+  // Admin dashboard below
+  const isLeaderOrAdmin = isAdmin;
   const { data: members = [], isLoading: membersLoading } = useQuery({
     queryKey: ["dashboard-members"],
     queryFn: async () => {
