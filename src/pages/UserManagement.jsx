@@ -229,7 +229,7 @@ export default function UserManagement() {
                  </tr>
               </thead>
               <tbody>
-                {profiles.map(p => {
+                {filteredProfiles.map(p => {
                   const userRoles = getUserRoles(p.user_id);
                   const isCurrentUser = p.user_id === user?.id;
                   const hasAdminRole = userRoles.some(r => ["admin", "super_admin"].includes(r));
