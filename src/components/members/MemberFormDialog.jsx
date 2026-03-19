@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react"; // phone validation
+import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,14 +6,18 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { Loader2, Info } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
+import { Loader2, Info, Shield, ShieldCheck, UserCog, Globe, User } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 import { suggestClosestWSFCentre } from "@/lib/wsf-suggest";
 import { normalizePhone } from "@/lib/phone-utils";
 import { useChurchUnits } from "@/hooks/useChurchUnits";
+import { useAuth } from "@/hooks/useAuth";
+import { logAudit } from "@/lib/audit";
 
 const STATUSES = ["Active", "Inactive", "New Convert", "First Timer"];
 const GENDERS = ["Male", "Female"];
@@ -33,9 +37,43 @@ const emptyMember = {
 export default function MemberFormDialog({ open, onOpenChange, member, onSaved }) {
   const { data: churchUnits = [] } = useChurchUnits();
   const CHURCH_UNITS = churchUnits.map(u => u.name);
+  const { isAdmin, roles: currentUserRoles, user: currentUser } = useAuth();
+  const isSuperAdmin = currentUserRoles.includes("super_admin");
+  const queryClient = useQueryClient();
   const [form, setForm] = useState(emptyMember);
   const [saving, setSaving] = useState(false);
 
+  // Fetch roles for the member being edited (if they have a linked user account)
+  const memberUserId = member?.user_id;
+  const { data: memberRoles = [] } = useQuery({
+    queryKey: ["member-roles", memberUserId],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("user_roles").select("*").eq("user_id", memberUserId);
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!memberUserId && isAdmin,
+  });
+
+  const toggleRoleMutation = useMutation({
+    mutationFn: async ({ userId, role, add }) => {
+      if (add) {
+        const { error } = await supabase.from("user_roles").insert({ user_id: userId, role });
+        if (error) throw error;
+        await logAudit("role_add", "user_roles", userId, { role, target_name: `${member?.first_name} ${member?.last_name}` });
+      } else {
+        const { error } = await supabase.from("user_roles").delete().eq("user_id", userId).eq("role", role);
+        if (error) throw error;
+        await logAudit("role_remove", "user_roles", userId, { role, target_name: `${member?.first_name} ${member?.last_name}` });
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["member-roles", memberUserId] });
+      queryClient.invalidateQueries({ queryKey: ["all-user-roles"] });
+      toast({ title: "Role updated" });
+    },
+    onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+  });
   const { data: wsfCentres = [] } = useQuery({
     queryKey: ["wsf-centres"],
     queryFn: async () => {
@@ -250,6 +288,61 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
               <SwitchRow id="ldc_completed" label="Leadership Diploma Course (LDC)" checked={form.ldc_completed} onChange={(v) => set("ldc_completed", v)} />
             </div>
           </div>
+
+          {/* User Role Assignment — only for linked members, visible to admins */}
+          {member && memberUserId && isAdmin && (
+            <div>
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">User Roles</h3>
+              {(() => {
+                const ROLES = ["super_admin", "admin", "unit_leader", "wsf_leader", "member"];
+                const roleIcons = { super_admin: ShieldCheck, admin: Shield, unit_leader: UserCog, wsf_leader: Globe, member: User };
+                const roleColors = { super_admin: "bg-destructive/10 text-destructive", admin: "bg-primary/10 text-primary", unit_leader: "bg-accent/10 text-accent", wsf_leader: "bg-chart-3/10 text-chart-3", member: "bg-muted text-muted-foreground" };
+                const userRoles = memberRoles.map(r => r.role);
+                const isOwnAccount = memberUserId === currentUser?.id;
+                const hasAdminRole = userRoles.some(r => ["admin", "super_admin"].includes(r));
+                const canChange = !isOwnAccount && (isSuperAdmin || (!hasAdminRole && isAdmin));
+                const availableRoles = isSuperAdmin ? ROLES : ROLES.filter(r => !["super_admin", "admin"].includes(r));
+
+                return (
+                  <div className="space-y-3">
+                    {/* Current roles display */}
+                    <div className="flex flex-wrap gap-1.5">
+                      {userRoles.length === 0 ? (
+                        <Badge className="bg-muted text-muted-foreground border-0 gap-1"><User className="h-3 w-3" /> member (default)</Badge>
+                      ) : userRoles.map(r => {
+                        const RoleIcon = roleIcons[r] || User;
+                        return <Badge key={r} className={`${roleColors[r]} border-0 gap-1`}><RoleIcon className="h-3 w-3" />{r.replace("_", " ")}</Badge>;
+                      })}
+                    </div>
+                    {/* Role checkboxes */}
+                    {canChange ? (
+                      <div className="grid grid-cols-2 gap-2">
+                        {availableRoles.map(r => {
+                          const hasRole = userRoles.includes(r);
+                          return (
+                            <label key={r} className="flex items-center gap-2 cursor-pointer text-sm p-2 rounded-lg hover:bg-muted/50">
+                              <Checkbox
+                                checked={hasRole}
+                                onCheckedChange={(checked) => {
+                                  toggleRoleMutation.mutate({ userId: memberUserId, role: r, add: !!checked });
+                                }}
+                                disabled={toggleRoleMutation.isPending}
+                              />
+                              <span className="capitalize">{r.replace("_", " ")}</span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-muted-foreground italic">
+                        {isOwnAccount ? "Cannot change your own roles" : "Insufficient permissions to change roles"}
+                      </p>
+                    )}
+                  </div>
+                );
+              })()}
+            </div>
+          )}
 
           {/* Emergency Contact */}
           <div>
