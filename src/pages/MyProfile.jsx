@@ -234,6 +234,13 @@ export default function MyProfile() {
                             <SelectContent>{GENDERS.map(g => <SelectItem key={g} value={g}>{g}</SelectItem>)}</SelectContent>
                           </Select>
                         </div>
+                        <div className="space-y-1">
+                          <Label>Membership Status</Label>
+                          <Select value={form.membership_status || ""} onValueChange={v => set("membership_status", v)}>
+                            <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                            <SelectContent>{MEMBERSHIP_STATUSES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+                          </Select>
+                        </div>
                       </div>
                     </div>
 
