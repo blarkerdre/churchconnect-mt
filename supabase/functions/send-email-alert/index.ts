@@ -117,8 +117,8 @@ Deno.serve(async (req) => {
         </td></tr>
         <tr><td style="padding:32px;">
           <p style="margin:0 0 16px;color:#333333;font-size:16px;">Dear ${firstName},</p>
-          <h2 style="margin:0 0 16px;color:#1a2d4d;font-size:18px;">${subject}</h2>
-          <div style="margin:0 0 24px;color:#555555;font-size:15px;line-height:1.6;white-space:pre-wrap;">${body}</div>
+          <h2 style="margin:0 0 16px;color:#1a2d4d;font-size:18px;">${escHtml(subject)}</h2>
+          <div style="margin:0 0 24px;color:#555555;font-size:15px;line-height:1.6;white-space:pre-wrap;">${escHtml(body)}</div>
           <hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0;">
           <p style="margin:0;color:#999999;font-size:12px;text-align:center;">This email was sent to ${audience} members.</p>
         </td></tr>
