@@ -66,6 +66,14 @@ function LeaderRoute({ children }) {
   return children;
 }
 
+function FollowupRoute({ children }) {
+  const { isAdmin, isUnitLeader, loading } = useAuth();
+  const { isMemberOfUnit: isFollowupMember, isLoading: memberLoading } = useUnitMembership("Follow-up");
+  if (loading || memberLoading) return null;
+  if (!isAdmin && !isUnitLeader && !isFollowupMember) return <Navigate to="/" replace />;
+  return children;
+}
+
 function TrainingRoute({ children }) {
   const { isAdmin, isUnitLeader, roles, loading } = useAuth();
   if (loading) return null;
