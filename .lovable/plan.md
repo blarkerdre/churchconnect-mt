@@ -1,86 +1,42 @@
 
 
-## Plan: Member Self-Service Status, Follow-up Triggers, and Auto-Inactivation
+## Plan: Bulk CSV Import for Member Updates
 
 ### Overview
-Three changes: (1) let members update their own membership status, (2) ensure follow-up triggers fire correctly for self-updates, and (3) automatically mark members inactive after 3 consecutive missed attendance sessions.
+Add a CSV import feature to the Members page that lets admins upload a spreadsheet to create new members or update existing ones in bulk. Matching is done by email address — if a member with that email exists, their record is updated; otherwise, a new member is created.
 
----
+### User Flow
+1. Admin clicks "Import CSV" button (next to existing CSV export button)
+2. A dialog opens with instructions and a file picker
+3. Admin uploads a CSV file
+4. The system parses the CSV, shows a preview table with row count and any validation errors
+5. Admin confirms the import
+6. Records are upserted (matched by email) and results are displayed (created / updated / skipped counts)
 
-### 1. Allow members to update their own membership status
+### Technical Details
 
-**Database migration:**
-- Alter the `update_own_member_profile` RPC to accept a new `_membership_status` parameter
-- Validate it's one of the allowed enum values (`First Timer`, `New Convert`, `Active`, `Inactive`)
-- The existing `auto_create_followup` trigger on the `members` table fires on UPDATE, so changing status to First Timer or New Convert will automatically create a follow-up task with notifications
+**New component: `src/components/members/BulkImportDialog.jsx`**
+- File input accepting `.csv` files
+- Client-side CSV parsing (no external library needed — use native `FileReader` + split logic)
+- Expected columns (case-insensitive matching): `first_name`, `last_name`, `email`, `phone`, `gender`, `membership_status`, `church_unit`, `address`, `city`, `postcode`, `date_of_birth`, `emergency_contact_name`, `emergency_contact_phone`
+- Validation: require `first_name` and `last_name` per row; normalize phone numbers using existing `normalizePhone` utility
+- Preview table showing first 5 rows + total count
+- Error summary for invalid rows (missing required fields, invalid status values, etc.)
 
-**Frontend — `src/pages/MyProfile.jsx`:**
-- Add a "Membership Status" dropdown to both the edit form and the `CreateMemberProfile` form (currently hardcoded to "Active")
-- Pass `_membership_status` to the RPC call in `updateMutation`
-- Show all 4 status options: Active, Inactive, First Timer, New Convert
+**Import logic:**
+- For each valid row, check if a member with that email already exists (via a single query fetching all members by the CSV emails)
+- Existing members: update via `supabase.from("members").update(...)` 
+- New members: insert via `supabase.from("members").insert(...)`
+- Process in batches to avoid timeouts
+- Show toast with results: "X created, Y updated, Z skipped"
 
-**Frontend — `src/pages/MyProfile.jsx` (CreateMemberProfile):**
-- Add membership status selector (default: "First Timer") so new self-registrations can pick their status
-- The direct insert already hits the `auto_create_followup` trigger
+**Edit to `src/pages/Members.jsx`:**
+- Add "Import CSV" button next to existing "CSV" export button (admin only)
+- Add state + render for `BulkImportDialog`
 
-### 2. Ensure follow-up triggers fire for QR / public registration
+### Files
+- **New**: `src/components/members/BulkImportDialog.jsx`
+- **Edit**: `src/pages/Members.jsx` — add import button and dialog
 
-The `public-register` edge function already manually creates follow-ups for First Timer / New Convert (lines 191-199). However, the `auto_create_followup` trigger also fires on the insert since it uses the service role. This could cause **duplicate follow-ups**.
-
-**Fix in `supabase/functions/public-register/index.ts`:**
-- Remove the manual follow-up insert (lines 191-199) since the database trigger already handles this automatically, including email/SMS notifications which the manual insert doesn't trigger
-
-### 3. Auto-inactivate members after 3 consecutive missed sessions
-
-**Database migration — create function + trigger:**
-- Create a function `check_attendance_inactivation()` that runs after an attendance session is closed (status changed to "Closed")
-- For each member who has attended at least one session historically, check if they missed the last 3 consecutive closed sessions
-- If so, update their `membership_status` to "Inactive"
-- Create a trigger on `attendance_sessions` that fires this function when `status` changes to "Closed"
-
-```text
-Logic:
-1. Get the 3 most recent closed sessions
-2. For each member who ever attended any session:
-   - Check if they have records in ANY of the last 3 closed sessions
-   - If they have ZERO records across all 3 → mark as Inactive
-3. Only affect members currently marked as "Active"
-```
-
----
-
-### Technical details
-
-**Migration SQL (summary):**
-
-```sql
--- 1. Update RPC to include membership_status
-CREATE OR REPLACE FUNCTION public.update_own_member_profile(
-  ... existing params ...,
-  _membership_status text DEFAULT NULL
-) ...
-  -- Add: membership_status = CASE WHEN valid THEN new_val ELSE keep END
-
--- 2. Auto-inactivation function
-CREATE OR REPLACE FUNCTION public.check_attendance_inactivation()
-  RETURNS trigger AS $$
-  -- Find last 3 closed sessions
-  -- Find active members who attended at least once historically
-  -- but missed all 3 recent sessions → set Inactive
-  $$;
-
-CREATE TRIGGER trg_check_inactivation
-  AFTER UPDATE ON public.attendance_sessions
-  FOR EACH ROW
-  WHEN (NEW.status = 'Closed' AND OLD.status != 'Closed')
-  EXECUTE FUNCTION public.check_attendance_inactivation();
-```
-
-**Files to edit:**
-- `src/pages/MyProfile.jsx` — add membership status to edit form and create form
-- `supabase/functions/public-register/index.ts` — remove duplicate follow-up insert
-
-**New migration:**
-- Update `update_own_member_profile` RPC with `_membership_status`
-- Create `check_attendance_inactivation()` function and trigger
+No database changes needed — uses existing `members` table and admin RLS policies.
 
