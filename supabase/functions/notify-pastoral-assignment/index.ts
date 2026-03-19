@@ -153,8 +153,17 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Send SMS notification
-    if (recipientPhone) {
+    // Check if SMS notifications are enabled
+    const { data: smsSetting } = await supabase
+      .from("app_settings")
+      .select("value")
+      .eq("key", "sms_notifications_enabled")
+      .maybeSingle();
+    
+    const smsEnabled = smsSetting?.value === true || smsSetting === null;
+
+    // Send SMS notification (only if enabled)
+    if (recipientPhone && smsEnabled) {
       const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
       const TWILIO_API_KEY = Deno.env.get("TWILIO_API_KEY");
       const TWILIO_FROM = Deno.env.get("TWILIO_FROM_NUMBER");
@@ -209,6 +218,8 @@ Deno.serve(async (req) => {
           }
         }
       }
+    } else if (recipientPhone && !smsEnabled) {
+      console.log("SMS notifications disabled — skipping SMS for pastoral care assignment");
     }
 
     return new Response(JSON.stringify({ success: true }), {
