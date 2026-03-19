@@ -114,6 +114,16 @@ export default function MyProfile() {
         _notes: updates.notes,
         _photo_url: updates.photo_url,
         _membership_status: updates.membership_status,
+        _church_unit: updates.church_unit,
+        _water_baptism: updates.water_baptism,
+        _holy_spirit_baptism: updates.holy_spirit_baptism,
+        _winners_satellite: updates.winners_satellite,
+        _wsf_centre_id: updates.wsf_centre_id,
+        _workers_in_training: updates.workers_in_training,
+        _bfc_completed: updates.bfc_completed,
+        _bcc_completed: updates.bcc_completed,
+        _lcc_completed: updates.lcc_completed,
+        _ldc_completed: updates.ldc_completed,
       });
       if (error) throw error;
     },
