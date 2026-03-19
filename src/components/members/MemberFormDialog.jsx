@@ -147,6 +147,9 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
       setForm(member ? { ...emptyMember, ...member } : emptyMember);
       setShowLinkSearch(false);
       setLinkSearch("");
+      setCreateAccount(false);
+      setPassword("");
+      setAccountRole("member");
     }
   }, [member, open]);
 
