@@ -201,7 +201,7 @@ export default function Members() {
                         {m.phone && <span className="flex items-center gap-1 text-muted-foreground"><Phone className="h-3 w-3" /> {m.phone}</span>}
                       </div>
                     </td>
-                    {isAdmin && (
+                    {(isAdmin || viewOnly) && (
                       <td className="p-4 hidden md:table-cell">
                         {m.church_unit ? (
                           <div className="flex flex-wrap gap-1">
