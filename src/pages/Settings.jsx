@@ -12,9 +12,88 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 import {
   Settings as SettingsIcon, Plus, Pencil, Trash2, Loader2,
-  Users, Church, CalendarDays, TrendingUp, Heart, Globe
+  Users, Church, CalendarDays, TrendingUp, Heart, Globe, Bell
 } from "lucide-react";
 import WSFCentresSection from "@/components/settings/WSFCentresSection";
+
+/* ─── Notification Preferences section ─── */
+function NotificationPreferencesSection() {
+  const qc = useQueryClient();
+  
+  const { data: smsEnabled, isLoading } = useQuery({
+    queryKey: ["app-settings", "sms_notifications_enabled"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("app_settings")
+        .select("value")
+        .eq("key", "sms_notifications_enabled")
+        .maybeSingle();
+      if (error) throw error;
+      // Default to true (email + SMS) if not set
+      return data?.value === true || data?.value === null || data === null;
+    },
+  });
+
+  const toggleMutation = useMutation({
+    mutationFn: async (enabled) => {
+      const { error } = await supabase
+        .from("app_settings")
+        .upsert({ key: "sms_notifications_enabled", value: enabled }, { onConflict: "key" });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["app-settings", "sms_notifications_enabled"] });
+      toast({ title: "Notification preference updated" });
+    },
+    onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+  });
+
+  return (
+    <Card className="border-0 shadow-sm">
+      <CardHeader className="pb-3">
+        <CardTitle className="text-base font-display flex items-center gap-2">
+          <Bell className="h-4 w-4 text-accent" /> Notification Preferences
+        </CardTitle>
+        <p className="text-xs text-muted-foreground mt-1">Control how automated notifications are sent for follow-ups and pastoral care assignments</p>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        {/* Email — always on */}
+        <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
+          <div>
+            <p className="text-sm font-medium text-foreground">Email Notifications</p>
+            <p className="text-xs text-muted-foreground mt-0.5">Assignment notifications sent via email</p>
+          </div>
+          <Badge className="bg-chart-3/10 text-chart-3 border-0">Always On</Badge>
+        </div>
+
+        {/* SMS toggle */}
+        <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
+          <div>
+            <p className="text-sm font-medium text-foreground">SMS Notifications</p>
+            <p className="text-xs text-muted-foreground mt-0.5">Send SMS alongside email for follow-up &amp; pastoral care assignments (Twilio costs apply)</p>
+          </div>
+          {isLoading ? (
+            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+          ) : (
+            <Switch
+              checked={smsEnabled}
+              onCheckedChange={(checked) => toggleMutation.mutate(checked)}
+              disabled={toggleMutation.isPending}
+            />
+          )}
+        </div>
+
+        <div className="bg-accent/5 border border-accent/20 rounded-lg p-4">
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            <strong className="text-foreground">Cost note:</strong> Each SMS costs approximately £0.04 via Twilio. 
+            Disabling SMS notifications will only affect automated assignment alerts. 
+            Bulk SMS from the Communications page will still work regardless of this setting.
+          </p>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
 
 /* ─── Reusable list section backed by app_settings ─── */
 function SettingsListSection({ settingsKey, title, icon: Icon, description }) {
