@@ -42,6 +42,8 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
   const queryClient = useQueryClient();
   const [form, setForm] = useState(emptyMember);
   const [saving, setSaving] = useState(false);
+  const [linkSearch, setLinkSearch] = useState("");
+  const [showLinkSearch, setShowLinkSearch] = useState(false);
 
   // Fetch roles for the member being edited (if they have a linked user account)
   const memberUserId = member?.user_id;
