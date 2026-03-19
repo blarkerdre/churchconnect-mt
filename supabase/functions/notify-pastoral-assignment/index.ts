@@ -153,7 +153,74 @@ Deno.serve(async (req) => {
       }
     }
 
-    // SMS notification removed — pastoral care assignments are email-only
+    // Check if SMS notifications are enabled
+    const { data: smsSetting } = await supabase
+      .from("app_settings")
+      .select("value")
+      .eq("key", "sms_notifications_enabled")
+      .maybeSingle();
+    
+    const smsEnabled = smsSetting?.value === true || smsSetting === null;
+
+    // Send SMS notification (only if enabled)
+    if (recipientPhone && smsEnabled) {
+      const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+      const TWILIO_API_KEY = Deno.env.get("TWILIO_API_KEY");
+      const TWILIO_FROM = Deno.env.get("TWILIO_FROM_NUMBER");
+
+      if (LOVABLE_API_KEY && TWILIO_API_KEY && TWILIO_FROM) {
+        let cleaned = recipientPhone.replace(/[\s\-\(\)\.]/g, "");
+        if (/^0[1-9]\d{9,10}$/.test(cleaned)) {
+          cleaned = "+44" + cleaned.slice(1);
+        }
+        if (!cleaned.startsWith("+")) cleaned = "+" + cleaned;
+
+        if (/^\+[1-9]\d{6,14}$/.test(cleaned)) {
+          const smsBody = `Hi ${recipientName}, you've been assigned a pastoral care case: "${subject}". Please check the Church Management System. - Winners Chapel Cardiff`;
+
+          try {
+            const webhookUrl = `${supabaseUrl}/functions/v1/twilio-webhook`;
+            const response = await fetch(`${GATEWAY_URL}/Messages.json`, {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${LOVABLE_API_KEY}`,
+                "X-Connection-Api-Key": TWILIO_API_KEY,
+                "Content-Type": "application/x-www-form-urlencoded",
+              },
+              body: new URLSearchParams({
+                To: cleaned,
+                From: TWILIO_FROM,
+                Body: smsBody,
+                StatusCallback: webhookUrl,
+              }),
+            });
+
+            const data = await response.json();
+            await supabase.from("sms_log").insert({
+              sender_id: assigned_to,
+              recipient_phone: cleaned,
+              message: smsBody,
+              sms_type: "pastoral-assignment",
+              reference_id: case_id,
+              status: response.ok ? "sent" : "failed",
+              message_sid: data.sid || null,
+              error_message: response.ok ? null : (data.message || JSON.stringify(data)),
+              delivery_status: response.ok ? "queued" : null,
+            });
+
+            if (response.ok) {
+              console.log("Pastoral care assignment SMS sent to", cleaned);
+            } else {
+              console.error("SMS send failed:", data);
+            }
+          } catch (err) {
+            console.error("SMS error:", err);
+          }
+        }
+      }
+    } else if (recipientPhone && !smsEnabled) {
+      console.log("SMS notifications disabled — skipping SMS for pastoral care assignment");
+    }
 
     return new Response(JSON.stringify({ success: true }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
