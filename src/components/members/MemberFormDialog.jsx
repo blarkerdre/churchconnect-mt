@@ -44,6 +44,9 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
   const [saving, setSaving] = useState(false);
   const [linkSearch, setLinkSearch] = useState("");
   const [showLinkSearch, setShowLinkSearch] = useState(false);
+  const [createAccount, setCreateAccount] = useState(false);
+  const [password, setPassword] = useState("");
+  const [accountRole, setAccountRole] = useState("member");
 
   // Fetch roles for the member being edited (if they have a linked user account)
   const memberUserId = member?.user_id;
@@ -144,6 +147,9 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
       setForm(member ? { ...emptyMember, ...member } : emptyMember);
       setShowLinkSearch(false);
       setLinkSearch("");
+      setCreateAccount(false);
+      setPassword("");
+      setAccountRole("member");
     }
   }, [member, open]);
 
@@ -155,6 +161,16 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
     if (!member && !form.gdpr_consent) {
       toast({ title: "GDPR consent is required", variant: "destructive" });
       return;
+    }
+    if (createAccount && !member) {
+      if (!form.email) {
+        toast({ title: "Email is required when creating a user account", variant: "destructive" });
+        return;
+      }
+      if (!password || password.length < 6) {
+        toast({ title: "Password must be at least 6 characters", variant: "destructive" });
+        return;
+      }
     }
 
     setSaving(true);
@@ -191,12 +207,24 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
         const { error } = await supabase.from("members").update(payload).eq("id", member.id);
         if (error) throw error;
         toast({ title: "Member updated" });
+      } else if (createAccount) {
+        // Combined: create user account + member via Edge Function
+        const { data, error } = await supabase.functions.invoke("admin-create-user", {
+          body: {
+            email: form.email,
+            password,
+            full_name: `${form.first_name} ${form.last_name}`,
+            role: accountRole,
+            member_data: payload,
+          },
+        });
+        if (error) throw error;
+        if (data?.error) throw new Error(data.error);
+        toast({ title: "Member registered with user account", description: `Account created for ${form.email}` });
       } else {
-        const { data: inserted, error } = await supabase.from("members").insert(payload).select().single();
+        const { error } = await supabase.from("members").insert(payload).select().single();
         if (error) throw error;
         toast({ title: "Member registered" });
-
-        // Follow-up is auto-created by database trigger (auto_create_followup)
       }
       onSaved();
     } catch (err) {
@@ -316,6 +344,52 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
               </div>
             </div>
           </div>
+
+          {/* Create User Account — admin only, new members only */}
+          {!member && isAdmin && (
+            <div>
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">User Account</h3>
+              <SwitchRow
+                id="create_account"
+                label="Also create user account"
+                description="Creates a login account linked to this member"
+                checked={createAccount}
+                onChange={(v) => setCreateAccount(v)}
+              />
+              {createAccount && (
+                <div className="mt-3 space-y-4 p-3 rounded-xl border border-border bg-muted/30">
+                  <div className="space-y-1.5">
+                    <Label>Password *</Label>
+                    <Input
+                      type="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="Min 6 characters"
+                    />
+                    {password && password.length < 6 && (
+                      <p className="text-[11px] text-destructive">Password must be at least 6 characters</p>
+                    )}
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Role *</Label>
+                    <Select value={accountRole} onValueChange={setAccountRole}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="member">Member</SelectItem>
+                        <SelectItem value="unit_leader">Unit Leader</SelectItem>
+                        <SelectItem value="wsf_leader">WSF Leader</SelectItem>
+                        {isSuperAdmin && <SelectItem value="admin">Admin</SelectItem>}
+                        {isSuperAdmin && <SelectItem value="super_admin">Super Admin</SelectItem>}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  {!form.email && (
+                    <p className="text-[11px] text-destructive">Email is required above to create a user account</p>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Church Growth Indices */}
           <div>
@@ -513,9 +587,9 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={handleSave} disabled={saving || !form.first_name || !form.last_name || (!member && !form.gdpr_consent)}>
+          <Button onClick={handleSave} disabled={saving || !form.first_name || !form.last_name || (!member && !form.gdpr_consent) || (createAccount && !member && (!form.email || password.length < 6))}>
             {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-            {member ? "Update" : "Register"}
+            {member ? "Update" : createAccount ? "Register & Create Account" : "Register"}
           </Button>
         </DialogFooter>
       </DialogContent>
