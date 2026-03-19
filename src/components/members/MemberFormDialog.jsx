@@ -289,6 +289,61 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
             </div>
           </div>
 
+          {/* User Role Assignment — only for linked members, visible to admins */}
+          {member && memberUserId && isAdmin && (
+            <div>
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">User Roles</h3>
+              {(() => {
+                const ROLES = ["super_admin", "admin", "unit_leader", "wsf_leader", "member"];
+                const roleIcons = { super_admin: ShieldCheck, admin: Shield, unit_leader: UserCog, wsf_leader: Globe, member: User };
+                const roleColors = { super_admin: "bg-destructive/10 text-destructive", admin: "bg-primary/10 text-primary", unit_leader: "bg-accent/10 text-accent", wsf_leader: "bg-chart-3/10 text-chart-3", member: "bg-muted text-muted-foreground" };
+                const userRoles = memberRoles.map(r => r.role);
+                const isOwnAccount = memberUserId === currentUser?.id;
+                const hasAdminRole = userRoles.some(r => ["admin", "super_admin"].includes(r));
+                const canChange = !isOwnAccount && (isSuperAdmin || (!hasAdminRole && isAdmin));
+                const availableRoles = isSuperAdmin ? ROLES : ROLES.filter(r => !["super_admin", "admin"].includes(r));
+
+                return (
+                  <div className="space-y-3">
+                    {/* Current roles display */}
+                    <div className="flex flex-wrap gap-1.5">
+                      {userRoles.length === 0 ? (
+                        <Badge className="bg-muted text-muted-foreground border-0 gap-1"><User className="h-3 w-3" /> member (default)</Badge>
+                      ) : userRoles.map(r => {
+                        const RoleIcon = roleIcons[r] || User;
+                        return <Badge key={r} className={`${roleColors[r]} border-0 gap-1`}><RoleIcon className="h-3 w-3" />{r.replace("_", " ")}</Badge>;
+                      })}
+                    </div>
+                    {/* Role checkboxes */}
+                    {canChange ? (
+                      <div className="grid grid-cols-2 gap-2">
+                        {availableRoles.map(r => {
+                          const hasRole = userRoles.includes(r);
+                          return (
+                            <label key={r} className="flex items-center gap-2 cursor-pointer text-sm p-2 rounded-lg hover:bg-muted/50">
+                              <Checkbox
+                                checked={hasRole}
+                                onCheckedChange={(checked) => {
+                                  toggleRoleMutation.mutate({ userId: memberUserId, role: r, add: !!checked });
+                                }}
+                                disabled={toggleRoleMutation.isPending}
+                              />
+                              <span className="capitalize">{r.replace("_", " ")}</span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-muted-foreground italic">
+                        {isOwnAccount ? "Cannot change your own roles" : "Insufficient permissions to change roles"}
+                      </p>
+                    )}
+                  </div>
+                );
+              })()}
+            </div>
+          )}
+
           {/* Emergency Contact */}
           <div>
             <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Emergency Contact</h3>
