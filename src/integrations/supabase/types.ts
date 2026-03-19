@@ -1332,6 +1332,25 @@ export type Database = {
           read_ct: number
         }[]
       }
+      update_own_member_profile: {
+        Args: {
+          _address?: string
+          _city?: string
+          _date_of_birth?: string
+          _email?: string
+          _emergency_contact_name?: string
+          _emergency_contact_phone?: string
+          _first_name?: string
+          _gender?: string
+          _last_name?: string
+          _member_id: string
+          _notes?: string
+          _phone?: string
+          _photo_url?: string
+          _postcode?: string
+        }
+        Returns: undefined
+      }
     }
     Enums: {
       app_role:
