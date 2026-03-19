@@ -41,6 +41,9 @@ export default function UserManagement() {
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [addForm, setAddForm] = useState({ email: "", password: "", full_name: "", role: "member" });
   const [bulkAssignOpen, setBulkAssignOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [roleFilter, setRoleFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
 
   const { data: profiles = [], isLoading } = useQuery({
     queryKey: ["all-profiles"],
