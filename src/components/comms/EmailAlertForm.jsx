@@ -4,8 +4,9 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card } from "@/components/ui/card";
-import { Send, Mail, Users, Info } from "lucide-react";
+import { Send, Mail, Users, Loader2, CheckCircle2 } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 const AUDIENCES = [
   "All Members", "Ushering", "Choir", "Media", "Children's Ministry", "Protocol",
@@ -18,8 +19,36 @@ export default function EmailAlertForm({ currentUser, myUnits = [], isAdmin }) {
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
   const [audience, setAudience] = useState(isAdmin ? "All Members" : (myUnits[0] || "All Members"));
+  const [sending, setSending] = useState(false);
 
   const availableAudiences = isAdmin ? AUDIENCES : AUDIENCES.filter(a => myUnits.includes(a));
+
+  const handleSend = async () => {
+    if (!subject.trim() || !body.trim()) return;
+    setSending(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("send-email-alert", {
+        body: { subject: subject.trim(), body: body.trim(), audience },
+      });
+
+      if (error) throw error;
+
+      if (data?.error) {
+        toast({ title: "Email Alert", description: data.error, variant: data.sent === 0 ? "default" : "destructive" });
+      } else {
+        toast({
+          title: "Emails queued successfully",
+          description: `${data.sent} email(s) queued for delivery${data.skipped ? ` (${data.skipped} suppressed)` : ""}.`,
+        });
+        setSubject("");
+        setBody("");
+      }
+    } catch (err) {
+      toast({ title: "Failed to send", description: err.message, variant: "destructive" });
+    } finally {
+      setSending(false);
+    }
+  };
 
   return (
     <div className="space-y-5 max-w-2xl">
@@ -59,16 +88,17 @@ export default function EmailAlertForm({ currentUser, myUnits = [], isAdmin }) {
         </div>
 
         <div className="flex items-start gap-2 p-3 rounded-lg bg-muted/50 text-sm text-muted-foreground">
-          <Info className="h-4 w-4 mt-0.5 shrink-0" />
-          <span>Email sending requires email infrastructure to be configured. Set up an email domain in your project settings to enable sending.</span>
+          <CheckCircle2 className="h-4 w-4 mt-0.5 shrink-0 text-green-600" />
+          <span>Emails will be sent from <strong>noreply@notify.churchmanagementsuite.org</strong> and queued for reliable delivery.</span>
         </div>
 
         <Button
-          onClick={() => toast({ title: "Email infrastructure required", description: "Please configure email sending in your project settings first.", variant: "destructive" })}
-          disabled={!subject.trim() || !body.trim()}
+          onClick={handleSend}
+          disabled={!subject.trim() || !body.trim() || sending}
           className="w-full sm:w-auto"
         >
-          <Send className="h-4 w-4 mr-2" /> Send Email Alert
+          {sending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Send className="h-4 w-4 mr-2" />}
+          {sending ? "Sending..." : "Send Email Alert"}
         </Button>
       </Card>
     </div>
