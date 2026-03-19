@@ -67,6 +67,8 @@ export default function Members() {
 
   const deleteMutation = useMutation({
     mutationFn: async (id) => {
+      // Unlink from any WSF centre leadership before deleting
+      await supabase.from("wsf_centres").update({ leader_id: null }).eq("leader_id", id);
       const { error } = await supabase.from("members").delete().eq("id", id);
       if (error) throw error;
     },
