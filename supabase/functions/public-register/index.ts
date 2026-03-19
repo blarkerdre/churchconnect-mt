@@ -258,6 +258,8 @@ Deno.serve(async (req) => {
 
           if (claimUpdateError) throw claimUpdateError;
 
+          if (email) triggerWelcomeEmail(email, firstName, lastName);
+
           return new Response(JSON.stringify({ success: true, mode: "claimed" }), {
             headers: { ...corsHeaders, "Content-Type": "application/json" },
           });
