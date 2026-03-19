@@ -111,7 +111,7 @@ export default function Members() {
     a.click();
   };
 
-  // Check if current member can edit (own profile or admin)
+  // Check if current member can edit (own profile or admin; leaders are view-only)
   const canEditMember = (m) => isAdmin || m.user_id === user?.id;
 
   return (
