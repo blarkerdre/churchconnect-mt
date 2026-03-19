@@ -356,8 +356,9 @@ export default function Settings() {
         <p className="text-sm text-muted-foreground mt-1">Manage application configuration and options</p>
       </div>
 
-      <Tabs defaultValue="units" className="space-y-4">
+      <Tabs defaultValue="notifications" className="space-y-4">
         <TabsList className="flex flex-wrap h-auto gap-1">
+          <TabsTrigger value="notifications" className="gap-1.5 text-xs"><Bell className="h-3.5 w-3.5" /> Notifications</TabsTrigger>
           <TabsTrigger value="units" className="gap-1.5 text-xs"><Users className="h-3.5 w-3.5" /> Units</TabsTrigger>
           <TabsTrigger value="wsf" className="gap-1.5 text-xs"><Globe className="h-3.5 w-3.5" /> WSF Centres</TabsTrigger>
           <TabsTrigger value="services" className="gap-1.5 text-xs"><Church className="h-3.5 w-3.5" /> Service Types</TabsTrigger>
@@ -365,6 +366,10 @@ export default function Settings() {
           <TabsTrigger value="training" className="gap-1.5 text-xs"><TrendingUp className="h-3.5 w-3.5" /> Training Types</TabsTrigger>
           <TabsTrigger value="pastoral" className="gap-1.5 text-xs"><Heart className="h-3.5 w-3.5" /> Pastoral Care</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="notifications">
+          <NotificationPreferencesSection />
+        </TabsContent>
 
         <TabsContent value="units">
           <ChurchUnitsSection />
