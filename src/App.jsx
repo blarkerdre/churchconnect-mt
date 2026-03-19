@@ -24,6 +24,7 @@ import Auth from "@/pages/Auth";
 import ResetPassword from "@/pages/ResetPassword";
 import MyProfile from "@/pages/MyProfile";
 import PublicRegistration from "@/pages/PublicRegistration";
+import Presentation from "@/pages/Presentation";
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
