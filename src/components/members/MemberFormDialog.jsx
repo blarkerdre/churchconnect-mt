@@ -44,6 +44,9 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
   const [saving, setSaving] = useState(false);
   const [linkSearch, setLinkSearch] = useState("");
   const [showLinkSearch, setShowLinkSearch] = useState(false);
+  const [createAccount, setCreateAccount] = useState(false);
+  const [password, setPassword] = useState("");
+  const [accountRole, setAccountRole] = useState("member");
 
   // Fetch roles for the member being edited (if they have a linked user account)
   const memberUserId = member?.user_id;
