@@ -26,6 +26,11 @@ serve(async (req) => {
     const { email, password, full_name, role } = await req.json();
     if (!email || !password) return new Response(JSON.stringify({ error: "Email and password required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
+    // Only super_admin can assign elevated roles
+    if (role && ['admin', 'super_admin'].includes(role)) {
+      const { data: isSuperAdmin } = await supabase.rpc("has_role", { _user_id: caller.id, _role: "super_admin" });
+      if (!isSuperAdmin) return new Response(JSON.stringify({ error: "Super-admin access required to assign elevated roles" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
     // Create user via admin API
     const { data: newUser, error: createError } = await supabase.auth.admin.createUser({
       email,
