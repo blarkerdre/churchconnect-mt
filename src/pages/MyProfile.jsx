@@ -17,6 +17,7 @@ import { suggestClosestWSFCentre } from "@/lib/wsf-suggest";
 import { useChurchUnits } from "@/hooks/useChurchUnits";
 
 const GENDERS = ["Male", "Female"];
+const MEMBERSHIP_STATUSES = ["Active", "Inactive", "First Timer", "New Convert"];
 
 const statusColors = {
   "Active": "bg-chart-3/10 text-chart-3",
@@ -98,6 +99,7 @@ export default function MyProfile() {
         _emergency_contact_phone: updates.emergency_contact_phone,
         _notes: updates.notes,
         _photo_url: updates.photo_url,
+        _membership_status: updates.membership_status,
       });
       if (error) throw error;
     },
@@ -121,6 +123,7 @@ export default function MyProfile() {
       postcode: member.postcode || "",
       date_of_birth: member.date_of_birth || "",
       gender: member.gender || "",
+      membership_status: member.membership_status || "Active",
       emergency_contact_name: member.emergency_contact_name || "",
       emergency_contact_phone: member.emergency_contact_phone || "",
       notes: member.notes || "",
@@ -143,6 +146,7 @@ export default function MyProfile() {
       postcode: form.postcode || null,
       date_of_birth: form.date_of_birth || null,
       gender: form.gender || null,
+      membership_status: form.membership_status || null,
       emergency_contact_name: form.emergency_contact_name || null,
       emergency_contact_phone: form.emergency_contact_phone || null,
       notes: form.notes || null,
@@ -228,6 +232,13 @@ export default function MyProfile() {
                           <Select value={form.gender || ""} onValueChange={v => set("gender", v)}>
                             <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
                             <SelectContent>{GENDERS.map(g => <SelectItem key={g} value={g}>{g}</SelectItem>)}</SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-1">
+                          <Label>Membership Status</Label>
+                          <Select value={form.membership_status || ""} onValueChange={v => set("membership_status", v)}>
+                            <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                            <SelectContent>{MEMBERSHIP_STATUSES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
                           </Select>
                         </div>
                       </div>
@@ -411,6 +422,7 @@ function CreateMemberProfile({ user, onCreated, wsfCentres, churchUnits }) {
   const [form, setForm] = useState({
     first_name: "", last_name: "", email: user?.email || "", phone: "", address: "",
     city: "Cardiff", postcode: "", date_of_birth: "", gender: "",
+    membership_status: "First Timer",
     emergency_contact_name: "", emergency_contact_phone: "",
     church_unit: "", notes: "",
     water_baptism: false, holy_spirit_baptism: false, winners_satellite: false,
@@ -442,7 +454,7 @@ function CreateMemberProfile({ user, onCreated, wsfCentres, churchUnits }) {
         postcode: form.postcode || null,
         date_of_birth: form.date_of_birth || null,
         gender: form.gender || null,
-        membership_status: "Active",
+        membership_status: form.membership_status || "First Timer",
         church_unit: form.church_unit || null,
         emergency_contact_name: form.emergency_contact_name || null,
         emergency_contact_phone: form.emergency_contact_phone || null,
@@ -494,11 +506,18 @@ function CreateMemberProfile({ user, onCreated, wsfCentres, churchUnits }) {
             <div className="space-y-1"><Label>City</Label><Input value={form.city} onChange={e => set("city", e.target.value)} /></div>
             <div className="space-y-1"><Label>Postcode</Label><Input value={form.postcode} onChange={e => set("postcode", e.target.value)} /></div>
             <div className="space-y-1"><Label>Date of Birth</Label><Input type="date" value={form.date_of_birth} onChange={e => set("date_of_birth", e.target.value)} /></div>
-            <div className="space-y-1">
+             <div className="space-y-1">
               <Label>Gender</Label>
               <Select value={form.gender || ""} onValueChange={v => set("gender", v)}>
                 <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
                 <SelectContent>{["Male", "Female"].map(g => <SelectItem key={g} value={g}>{g}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <Label>Membership Status</Label>
+              <Select value={form.membership_status} onValueChange={v => set("membership_status", v)}>
+                <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                <SelectContent>{MEMBERSHIP_STATUSES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
               </Select>
             </div>
           </div>
