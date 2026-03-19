@@ -238,7 +238,7 @@ export default function UserManagement() {
                         )}
                       </td>
                       <td className="p-4 text-right">
-                        {!isCurrentUser && (
+                        {!isCurrentUser && (isSuperAdmin || !userRoles.includes("super_admin")) && (
                           <Button variant="ghost" size="icon" onClick={() => {
                             if (window.confirm(`Delete user ${p.full_name || p.email}? This cannot be undone.`)) {
                               deleteUserMutation.mutate({ userId: p.user_id, targetName: p.full_name || p.email });
