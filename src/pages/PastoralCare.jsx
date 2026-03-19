@@ -98,13 +98,31 @@ export default function PastoralCare() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: async ({ id, updates }) => {
+    mutationFn: async ({ id, updates, caseData }) => {
       const payload = { status: updates.status, resolution_notes: updates.resolution_notes };
+      const isNewAssignment = updates.assigned_to && updates.assigned_to !== caseData?.assigned_to;
       if (updates.assigned_to) {
         payload.assigned_to = updates.assigned_to;
       }
       const { error } = await supabase.from("pastoral_care").update(payload).eq("id", id);
       if (error) throw error;
+
+      // Send notification if newly assigned
+      if (isNewAssignment) {
+        try {
+          await supabase.functions.invoke("notify-pastoral-assignment", {
+            body: {
+              assigned_to: updates.assigned_to,
+              subject: caseData?.subject || "Pastoral Care Case",
+              care_type: caseData?.care_type,
+              description: caseData?.description,
+              case_id: id,
+            },
+          });
+        } catch (notifyErr) {
+          console.error("Failed to send pastoral assignment notification:", notifyErr);
+        }
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["pastoral-care"] });
