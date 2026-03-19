@@ -114,6 +114,16 @@ export default function MyProfile() {
         _notes: updates.notes,
         _photo_url: updates.photo_url,
         _membership_status: updates.membership_status,
+        _church_unit: updates.church_unit,
+        _water_baptism: updates.water_baptism,
+        _holy_spirit_baptism: updates.holy_spirit_baptism,
+        _winners_satellite: updates.winners_satellite,
+        _wsf_centre_id: updates.wsf_centre_id,
+        _workers_in_training: updates.workers_in_training,
+        _bfc_completed: updates.bfc_completed,
+        _bcc_completed: updates.bcc_completed,
+        _lcc_completed: updates.lcc_completed,
+        _ldc_completed: updates.ldc_completed,
       });
       if (error) throw error;
     },
@@ -141,6 +151,16 @@ export default function MyProfile() {
       emergency_contact_name: member.emergency_contact_name || "",
       emergency_contact_phone: member.emergency_contact_phone || "",
       notes: member.notes || "",
+      church_unit: member.church_unit || "",
+      water_baptism: member.water_baptism || false,
+      holy_spirit_baptism: member.holy_spirit_baptism || false,
+      winners_satellite: member.winners_satellite || false,
+      wsf_centre_id: member.wsf_centre_id || "",
+      workers_in_training: member.workers_in_training || false,
+      bfc_completed: member.bfc_completed || false,
+      bcc_completed: member.bcc_completed || false,
+      lcc_completed: member.lcc_completed || false,
+      ldc_completed: member.ldc_completed || false,
     });
     setEditing(true);
   };
@@ -165,6 +185,16 @@ export default function MyProfile() {
       emergency_contact_phone: form.emergency_contact_phone || null,
       notes: form.notes || null,
       photo_url: member.photo_url || null,
+      church_unit: form.church_unit || null,
+      water_baptism: form.water_baptism,
+      holy_spirit_baptism: form.holy_spirit_baptism,
+      winners_satellite: form.winners_satellite,
+      wsf_centre_id: form.wsf_centre_id || null,
+      workers_in_training: form.workers_in_training,
+      bfc_completed: form.bfc_completed,
+      bcc_completed: form.bcc_completed,
+      lcc_completed: form.lcc_completed,
+      ldc_completed: form.ldc_completed,
     });
   };
 
@@ -308,6 +338,7 @@ export default function MyProfile() {
                           </div>
                         )}
                         <SwitchRow id="bfc_completed" label="Believers Foundation Class (BFC)" checked={form.bfc_completed} onChange={v => set("bfc_completed", v)} />
+                        <SwitchRow id="workers_in_training" label="Workers in Training (WIT)" checked={form.workers_in_training} onChange={v => set("workers_in_training", v)} />
                         <SwitchRow id="bcc_completed" label="Basic Certificate Course (BCC)" checked={form.bcc_completed} onChange={v => set("bcc_completed", v)} />
                         <SwitchRow id="lcc_completed" label="Leadership Certificate Course (LCC)" checked={form.lcc_completed} onChange={v => set("lcc_completed", v)} />
                         <SwitchRow id="ldc_completed" label="Leadership Diploma Course (LDC)" checked={form.ldc_completed} onChange={v => set("ldc_completed", v)} />
