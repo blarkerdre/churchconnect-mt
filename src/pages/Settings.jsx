@@ -409,6 +409,10 @@ export default function Settings() {
             description="Types of pastoral care requests"
           />
         </TabsContent>
+
+        <TabsContent value="certificates">
+          <CertificateTemplateSettings />
+        </TabsContent>
       </Tabs>
     </div>
   );
