@@ -36,7 +36,7 @@ function DateRangePicker({ from, to, onFromChange, onToChange }) {
     <div className="flex flex-wrap gap-2">
       <Popover>
         <PopoverTrigger asChild>
-          <Button variant="outline" size="sm" className={cn("w-[150px] justify-start text-left font-normal", !from && "text-muted-foreground")}>
+          <Button variant="outline" size="sm" className={cn("w-full sm:w-[150px] justify-start text-left font-normal", !from && "text-muted-foreground")}>
             <CalendarIcon className="mr-1.5 h-3.5 w-3.5" />
             {from ? format(from, "dd MMM yyyy") : "From"}
           </Button>
@@ -47,7 +47,7 @@ function DateRangePicker({ from, to, onFromChange, onToChange }) {
       </Popover>
       <Popover>
         <PopoverTrigger asChild>
-          <Button variant="outline" size="sm" className={cn("w-[150px] justify-start text-left font-normal", !to && "text-muted-foreground")}>
+          <Button variant="outline" size="sm" className={cn("w-full sm:w-[150px] justify-start text-left font-normal", !to && "text-muted-foreground")}>
             <CalendarIcon className="mr-1.5 h-3.5 w-3.5" />
             {to ? format(to, "dd MMM yyyy") : "To"}
           </Button>
@@ -139,11 +139,11 @@ function EmailLogsPanel() {
       <div className="flex flex-wrap items-center gap-3">
         <DateRangePicker from={fromDate} to={toDate} onFromChange={d => { setFromDate(d); setPage(0); }} onToChange={d => { setToDate(d); setPage(0); }} />
         <Select value={templateFilter} onValueChange={v => { setTemplateFilter(v); setPage(0); }}>
-          <SelectTrigger className="w-48"><SelectValue placeholder="Template" /></SelectTrigger>
+          <SelectTrigger className="w-full sm:w-48"><SelectValue placeholder="Template" /></SelectTrigger>
           <SelectContent>{templates.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
         </Select>
         <Select value={statusFilter} onValueChange={v => { setStatusFilter(v); setPage(0); }}>
-          <SelectTrigger className="w-36"><SelectValue placeholder="Status" /></SelectTrigger>
+          <SelectTrigger className="w-full sm:w-36"><SelectValue placeholder="Status" /></SelectTrigger>
           <SelectContent>{EMAIL_STATUS_OPTIONS.map(s => <SelectItem key={s} value={s}>{s === "All" ? "All Statuses" : s}</SelectItem>)}</SelectContent>
         </Select>
         <Button size="sm" variant="outline" onClick={() => downloadCSV(filtered, EMAIL_CSV_HEADERS, `email-logs-${format(new Date(), "yyyy-MM-dd")}.csv`)} disabled={filtered.length === 0}>
@@ -404,7 +404,7 @@ export default function SystemLogs() {
       </div>
 
       <Tabs defaultValue="email" className="space-y-4">
-        <TabsList className="w-full sm:w-auto">
+        <TabsList className="w-full sm:w-auto overflow-x-auto">
           <TabsTrigger value="email" className="gap-1.5"><Mail className="h-3.5 w-3.5" /> Email</TabsTrigger>
           <TabsTrigger value="sms" className="gap-1.5"><MessageSquare className="h-3.5 w-3.5" /> SMS</TabsTrigger>
           {isSuperAdmin && <TabsTrigger value="audit" className="gap-1.5"><Shield className="h-3.5 w-3.5" /> Audit</TabsTrigger>}

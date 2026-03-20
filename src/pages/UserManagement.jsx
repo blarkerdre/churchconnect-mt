@@ -166,17 +166,17 @@ export default function UserManagement() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h2 className="text-lg font-display font-bold text-foreground">User Management</h2>
           <p className="text-sm text-muted-foreground">Manage user roles and permissions</p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setBulkAssignOpen(true)}>
-            <UsersRound className="h-4 w-4 mr-2" /> Bulk Unit Assign
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" size="sm" onClick={() => setBulkAssignOpen(true)}>
+            <UsersRound className="h-4 w-4 mr-1" /><span className="hidden sm:inline">Bulk Unit Assign</span><span className="sm:hidden">Bulk</span>
           </Button>
-          <Button onClick={() => { setAddForm({ email: "", password: "", full_name: "", role: "member" }); setAddDialogOpen(true); }} className="bg-primary hover:bg-primary/90">
-            <Plus className="h-4 w-4 mr-2" /> Add User
+          <Button size="sm" onClick={() => { setAddForm({ email: "", password: "", full_name: "", role: "member" }); setAddDialogOpen(true); }} className="bg-primary hover:bg-primary/90">
+            <Plus className="h-4 w-4 mr-1" /> Add User
           </Button>
         </div>
       </div>
@@ -219,13 +219,13 @@ export default function UserManagement() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-border bg-muted/50">
-                   <th className="text-left p-4 font-medium text-muted-foreground">User</th>
-                   <th className="text-left p-4 font-medium text-muted-foreground">Email</th>
-                   <th className="text-left p-4 font-medium text-muted-foreground">Roles</th>
-                   <th className="text-left p-4 font-medium text-muted-foreground">Led Units</th>
-                   <th className="text-left p-4 font-medium text-muted-foreground">Manage Roles</th>
-                   <th className="text-right p-4 font-medium text-muted-foreground">Actions</th>
+                 <tr className="border-b border-border bg-muted/50">
+                   <th className="text-left p-3 sm:p-4 font-medium text-muted-foreground">User</th>
+                   <th className="text-left p-3 sm:p-4 font-medium text-muted-foreground hidden md:table-cell">Email</th>
+                   <th className="text-left p-3 sm:p-4 font-medium text-muted-foreground">Roles</th>
+                   <th className="text-left p-3 sm:p-4 font-medium text-muted-foreground hidden lg:table-cell">Led Units</th>
+                   <th className="text-left p-3 sm:p-4 font-medium text-muted-foreground hidden md:table-cell">Manage Roles</th>
+                   <th className="text-right p-3 sm:p-4 font-medium text-muted-foreground">Actions</th>
                  </tr>
               </thead>
               <tbody>
@@ -243,13 +243,14 @@ export default function UserManagement() {
 
                   return (
                     <tr key={p.id} className={`border-b border-border hover:bg-muted/30 transition-colors ${isDisabled ? "opacity-60" : ""}`}>
-                      <td className="p-4">
+                      <td className="p-3 sm:p-4">
                         <div className="flex items-center gap-3">
-                          <div className={`h-9 w-9 rounded-full flex items-center justify-center font-bold text-sm ${isDisabled ? "bg-destructive/10 text-destructive" : "bg-primary/10 text-primary"}`}>
+                          <div className={`h-9 w-9 rounded-full flex items-center justify-center font-bold text-sm shrink-0 ${isDisabled ? "bg-destructive/10 text-destructive" : "bg-primary/10 text-primary"}`}>
                             {(p.full_name || p.email || "?")[0].toUpperCase()}
                           </div>
-                          <div>
-                            <p className="font-medium text-foreground">{p.full_name || "—"}</p>
+                          <div className="min-w-0">
+                            <p className="font-medium text-foreground truncate">{p.full_name || "—"}</p>
+                            <p className="text-xs text-muted-foreground truncate md:hidden">{p.email || ""}</p>
                             {isDisabled && (
                               <Badge variant="outline" className="text-destructive border-destructive/30 text-[10px] mt-0.5">
                                 <Ban className="h-2.5 w-2.5 mr-1" /> Disabled
@@ -258,7 +259,7 @@ export default function UserManagement() {
                           </div>
                         </div>
                       </td>
-                      <td className="p-4 text-muted-foreground">{p.email || "—"}</td>
+                      <td className="p-3 sm:p-4 text-muted-foreground hidden md:table-cell">{p.email || "—"}</td>
                       <td className="p-4">
                         <div className="flex flex-wrap gap-1">
                           {userRoles.length === 0 ? (
@@ -276,14 +277,14 @@ export default function UserManagement() {
                           })}
                         </div>
                       </td>
-                      <td className="p-4">
+                      <td className="p-3 sm:p-4 hidden lg:table-cell">
                         {userRoles.includes("unit_leader") ? (
                           <UnitLeaderAssignments userId={p.user_id} />
                         ) : (
                           <span className="text-xs text-muted-foreground">—</span>
                         )}
                       </td>
-                      <td className="p-4">
+                      <td className="p-3 sm:p-4 hidden md:table-cell">
                         {canChange ? (
                           <div className="space-y-1.5">
                             {availableRoles.map(r => {
@@ -313,7 +314,7 @@ export default function UserManagement() {
                           </span>
                         )}
                       </td>
-                      <td className="p-4 text-right">
+                      <td className="p-3 sm:p-4 text-right">
                         <div className="flex items-center justify-end gap-1">
                           {/* Disable/Enable - available to admin & super_admin */}
                           {!isCurrentUser && !(targetIsSuperAdmin && !isSuperAdmin) && (
