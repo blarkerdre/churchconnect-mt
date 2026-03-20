@@ -1,46 +1,67 @@
 
-## Plan: Make the Live/Test indicator visible in the places users actually see
 
-### Root cause
-The environment logic itself looks correct:
-- Preview URLs resolve to `Test`
-- Published URLs resolve to `Live`
+## Plan: Make the app mobile-friendly across all pages, forms, and dialogs
 
-The problem is UI visibility:
-- In `AppLayout.jsx`, the environment badge is only rendered for `isAdmin`
-- The published app’s entry point is usually the auth screen, and `Auth.jsx` has no environment badge at all
+### Overview
+The app already has some responsive patterns (e.g., `sm:` breakpoints on search bars, `hidden sm:table-cell` on table columns), but several areas break or feel cramped on mobile (384px viewport). This plan addresses the key mobile pain points.
 
-So if a user is:
-- not logged in, or
-- logged in without admin access in Live
+### 1. AppLayout header — fix button overflow on small screens
+- The header action buttons (environment badge, role badge, notification bell, sign-out) can overflow on narrow screens
+- Wrap the action buttons in a flex container with `flex-wrap` and smaller gaps
+- Hide the "Sign Out" text on very small screens, keep icon-only
 
-they won’t see the `Live` label even though the app is correctly running in Live.
+### 2. Members page — action buttons overflow
+- The admin action buttons (QR Code, CSV, Import CSV, Register Member) sit in a horizontal row that overflows on mobile
+- Wrap buttons with `flex-wrap` and collapse button labels to icon-only on mobile using `hidden sm:inline` for text
+- The "Register Member" button should stay full-width on mobile as the primary CTA
 
-### What to build
-1. **Show the environment badge for all authenticated users**
-   - Remove the `isAdmin` gate around the Test/Live badge in `AppLayout.jsx`
-   - Keep the backend mismatch warning restricted to admins, since that is a technical/debug message
+### 3. UserManagement page — table too wide for mobile
+- The 6-column table (User, Email, Roles, Led Units, Manage Roles, Actions) is unusable on mobile
+- Hide Email, Led Units, and Manage Roles columns on small screens (`hidden md:table-cell`)
+- Show email below the user name on mobile (like the Members table pattern)
+- Add a mobile-specific card layout alternative or at minimum hide non-essential columns
 
-2. **Show the environment badge on the auth screen**
-   - Add the same Test/Live indicator to `src/pages/Auth.jsx`
-   - Place it in a simple visible spot near the logo/header so users can confirm they are on Live before logging in
+### 4. UserManagement header — buttons overflow
+- "Bulk Unit Assign" and "Add User" buttons sit in a row that overflows
+- Stack these vertically on mobile, or collapse labels to icons
 
-3. **Optional cleanup**
-   - Extract the badge into a small shared component or keep a shared helper-based rendering pattern so the label styling stays consistent across pages
+### 5. Attendance page — session selector and action buttons overflow
+- The `flex-wrap` filter bar with session selector (w-72), badges, and action buttons can overflow
+- Make session selector full-width on mobile (`w-full sm:w-72`)
+- Stack action buttons below on mobile
 
-### Files involved
-- `src/components/AppLayout.jsx`
-- `src/pages/Auth.jsx`
-- Optional: new shared component such as `src/components/EnvironmentBadge.jsx`
+### 6. SystemLogs — DateRangePicker and filter bar overflow
+- Date range buttons are 150px each, plus template/status selects (w-48, w-36), plus CSV button
+- Make date buttons full-width on mobile, stack filters vertically
+- Make the `TabsList` scrollable on mobile
+
+### 7. Dialog forms — ensure proper scroll and sizing
+- `MemberFormDialog` uses `max-w-2xl max-h-[90vh] overflow-y-auto` — already good
+- `WSFAttendanceFormDialog` uses `max-w-md max-h-[90vh] flex flex-col` — good
+- `WSFCentreFormDialog` uses `max-w-lg max-h-[90vh] overflow-y-auto` — good
+- Event dialog uses `max-w-md` — good
+- Ensure all DialogContent has proper padding and doesn't clip on 384px screens
+
+### 8. Transportation, PastoralCare, Communications — minor fixes
+- Ensure action button groups use `flex-wrap` consistently
+- Make search inputs full-width on mobile (already mostly done)
+
+### 9. Dashboard stat cards — text sizing
+- Stat cards with `text-2xl` values can look oversized in tight 2-col grids on small phones
+- Reduce to `text-xl` on mobile for better fit
 
 ### Technical details
-- Reuse the existing helpers in `src/lib/environment.js`
-- Do **not** change backend configuration or detection logic unless a new issue appears
-- Do **not** expose backend host/debug details to non-admins
-- No database or backend changes needed
 
-### Expected result
-After this change:
-- Logged-in users will always see `Test` or `Live` in the app header
-- Logged-out users visiting the published site will also see `Live` on the sign-in screen
-- Admins will still be the only ones who see backend mismatch diagnostics
+**Files to modify:**
+- `src/pages/Members.jsx` — wrap admin buttons, icon-only on mobile
+- `src/pages/UserManagement.jsx` — hide table columns on mobile, stack header buttons, show email inline
+- `src/pages/Attendance.jsx` — full-width session selector on mobile, stack action buttons
+- `src/pages/SystemLogs.jsx` — full-width date pickers on mobile, scrollable tabs
+- `src/pages/Communications.jsx` — minor flex-wrap adjustments
+- `src/pages/Events.jsx` — already mostly good, minor touch-up
+- `src/pages/Followups.jsx` — already mostly good
+- `src/pages/Transportation.jsx` — minor flex-wrap
+- `src/components/AppLayout.jsx` — tighten header on mobile
+
+**No backend changes needed.** All changes are CSS/layout adjustments using existing Tailwind responsive utilities.
+

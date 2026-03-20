@@ -10,8 +10,7 @@ import winnersLogo from "@/assets/winners-chapel-logo.png";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import NotificationBell from "@/components/notifications/NotificationBell";
-import { getBackendHost, isBackendMismatch } from "@/lib/environment";
-import EnvironmentBadge from "@/components/EnvironmentBadge";
+import { getEnvironmentLabel, getBackendHost, isBackendMismatch } from "@/lib/environment";
 
 // Role requirements: null = any authenticated user, "admin" = admin/super_admin, "leader" = admin or unit_leader
 const allNavItems = [
@@ -163,7 +162,15 @@ export default function Layout({ children }) {
               </div>
             </div>
             <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap justify-end">
-              <EnvironmentBadge />
+              {isAdmin && (
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                  getEnvironmentLabel() === "Test"
+                    ? "bg-amber-500/10 text-amber-600 border-amber-500/30"
+                    : "bg-emerald-500/10 text-emerald-600 border-emerald-500/30"
+                }`}>
+                  {getEnvironmentLabel()}
+                </span>
+              )}
               <span className="text-[11px] font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded-full hidden sm:inline">
                 {getRoleTitle()}
               </span>
