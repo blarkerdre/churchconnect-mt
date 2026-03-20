@@ -79,10 +79,8 @@ async function moveToDlq(
 }
 
 Deno.serve(async (req) => {
-  // Log all request headers for run_id discovery
-  const allHeaders: Record<string, string> = {}
-  req.headers.forEach((v, k) => { allHeaders[k] = v })
-  console.log('HEADERS_DEBUG', JSON.stringify(allHeaders))
+  // Extract the request ID assigned by the platform — used as fallback run_id for transactional emails
+  const sbRequestId = req.headers.get('sb-request-id') || ''
 
   const apiKey = Deno.env.get('LOVABLE_API_KEY')
   const supabaseUrl = Deno.env.get('SUPABASE_URL')
