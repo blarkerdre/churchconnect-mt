@@ -157,19 +157,19 @@ export default function Members() {
             </Select>
           )}
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {isAdmin && (
             <>
               <Button variant="outline" size="sm" onClick={() => setQrOpen(true)} className="gap-1.5">
-                <QrCode className="h-4 w-4" /> QR Code
+                <QrCode className="h-4 w-4" /><span className="hidden sm:inline">QR Code</span>
               </Button>
               <Button variant="outline" size="sm" onClick={handleDownloadCSV} className="gap-1.5">
-                <Download className="h-4 w-4" /> CSV
+                <Download className="h-4 w-4" /><span className="hidden sm:inline">CSV</span>
               </Button>
               <Button variant="outline" size="sm" onClick={() => setImportOpen(true)} className="gap-1.5">
-                <Upload className="h-4 w-4" /> Import CSV
+                <Upload className="h-4 w-4" /><span className="hidden sm:inline">Import CSV</span>
               </Button>
-              <Button onClick={openNew} className="bg-primary hover:bg-primary/90">
+              <Button onClick={openNew} className="bg-primary hover:bg-primary/90 w-full sm:w-auto">
                 <Plus className="h-4 w-4 mr-2" /> Register Member
               </Button>
             </>

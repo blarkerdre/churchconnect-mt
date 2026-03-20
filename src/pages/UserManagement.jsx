@@ -314,7 +314,7 @@ export default function UserManagement() {
                           </span>
                         )}
                       </td>
-                      <td className="p-4 text-right">
+                      <td className="p-3 sm:p-4 text-right">
                         <div className="flex items-center justify-end gap-1">
                           {/* Disable/Enable - available to admin & super_admin */}
                           {!isCurrentUser && !(targetIsSuperAdmin && !isSuperAdmin) && (

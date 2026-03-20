@@ -161,7 +161,7 @@ export default function Layout({ children }) {
                 <p className="text-[10px] text-muted-foreground sm:hidden">{getRoleTitle()}</p>
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap justify-end">
               {isAdmin && (
                 <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
                   getEnvironmentLabel() === "Test"
@@ -175,8 +175,8 @@ export default function Layout({ children }) {
                 {getRoleTitle()}
               </span>
               <NotificationBell />
-              <Button variant="outline" size="sm" className="lg:hidden gap-1.5 text-destructive border-destructive/30 hover:bg-destructive/10" onClick={signOut}>
-                <LogOut className="h-4 w-4" /> Sign Out
+              <Button variant="outline" size="icon" className="lg:hidden h-8 w-8 text-destructive border-destructive/30 hover:bg-destructive/10" onClick={signOut}>
+                <LogOut className="h-4 w-4" />
               </Button>
             </div>
           </div>
