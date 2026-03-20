@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Mail, Lock, User, ArrowRight } from "lucide-react";
 import winnersLogo from "@/assets/winners-chapel-logo.png";
 import { useToast } from "@/components/ui/use-toast";
+import EnvironmentBadge from "@/components/EnvironmentBadge";
 
 export default function Auth() {
   const { user, loading, signIn, signUp, resetPassword } = useAuth();
@@ -60,7 +61,7 @@ export default function Auth() {
           <img src={winnersLogo} alt="Winners Chapel Logo" className="h-16 w-16 object-contain mb-4" />
           <h1 className="font-display text-2xl font-bold text-foreground">Winners Chapel</h1>
           <p className="text-sm text-muted-foreground">International Cardiff</p>
-        </div>
+          <div className="mt-2"><EnvironmentBadge /></div>
 
         <Card className="border-0 shadow-lg">
           <CardHeader className="text-center">
