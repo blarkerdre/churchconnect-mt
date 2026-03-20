@@ -1,29 +1,12 @@
 
 
-## Delete Orphaned Auth Account and Prevent Future Orphans
+## Fix: Welcome Email Not Sending After QR Code Registration
 
-### Part 1: Immediate Fix — Delete blarkerdre@yahoo.com auth account
-Call the `admin-delete-user` edge function with user_id `26f0fa5e-7d98-496f-8d6f-61125963cccd` to remove the orphaned auth account.
+### Root Cause
+The `send-welcome-email` Edge Function calls `supabase.rpc("enqueue_email", { queue_name: "transactional_emails", ... })` but the pgmq queue `transactional_emails` does not exist. No emails queued this way will ever be sent.
 
-### Part 2: Code Fix — Members page delete also removes auth account
-When an admin deletes a member from the Members page, if that member has a linked `user_id`, also call the `admin-delete-user` edge function to remove the authentication account.
-
-### Changes
-
-**`src/pages/Members.jsx`** — Update `deleteMutation` and `handleDelete`:
-- In `deleteMutation.mutationFn`: after deleting the member record, if the member had a `user_id`, invoke the `admin-delete-user` edge function to delete the auth account
-- Update the confirm dialog text to warn that the linked login account will also be deleted (when applicable)
-- Pass the full member object to the mutation instead of just the id
-
-### Technical Detail
-```text
-Current flow:
-  Members page delete → removes members row only
-  Auth account remains → user can still sign in
-
-New flow:
-  Members page delete → removes members row
-                      → if member.user_id exists, call admin-delete-user edge function
-                      → auth account + profile + roles all cleaned up
-```
-
+### Solution
+Set up the email queue infrastructure using the email infrastructure tool, which creates:
+- pgmq queues (`transactional_emails`, `auth_emails`, and their DLQs)
+- The `email_send_state` config table
+- A pg_cron job to process the queue every 5 seconds via the `process
