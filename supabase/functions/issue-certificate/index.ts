@@ -258,7 +258,6 @@ Deno.serve(async (req) => {
         const plainText = `Congratulations, ${member.first_name}!\n\nYou have successfully completed ${training_type} at ${churchName}.\n\nYour certificate number is: ${certificateNumber}\n\n${signedUrl?.signedUrl ? `Download your certificate: ${signedUrl.signedUrl}\n\n` : ""}You can also download your certificate anytime from your profile page.`;
 
         const emailPayload = {
-          run_id: messageId,
           to: member.email,
           from: `Winners Chapel Cardiff <noreply@${senderDomain}>`,
           sender_domain: senderDomain,
