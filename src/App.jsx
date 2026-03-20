@@ -111,6 +111,7 @@ function AuthRoutes() {
                 <Route path="/user-management" element={<AdminRoute><UserManagement /></AdminRoute>} />
                 <Route path="/settings" element={<AdminRoute><Settings /></AdminRoute>} />
                 <Route path="/audit-log" element={<SuperAdminRoute><AuditLog /></SuperAdminRoute>} />
+                <Route path="/email-dashboard" element={<AdminRoute><EmailDashboard /></AdminRoute>} />
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
             </Layout>
