@@ -79,9 +79,6 @@ async function moveToDlq(
 }
 
 Deno.serve(async (req) => {
-  // Extract the request ID assigned by the platform — used as fallback run_id for transactional emails
-  const sbRequestId = req.headers.get('sb-request-id') || ''
-
   const apiKey = Deno.env.get('LOVABLE_API_KEY')
   const supabaseUrl = Deno.env.get('SUPABASE_URL')
   const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
@@ -249,13 +246,9 @@ Deno.serve(async (req) => {
       }
 
       try {
-        // For auth emails, run_id comes from the webhook payload.
-        // For transactional emails, use the current edge function invocation's request ID.
-        const runId = payload.run_id || sbRequestId || crypto.randomUUID()
-
         await sendLovableEmail(
           {
-            run_id: runId,
+            run_id: payload.run_id,
             to: payload.to,
             from: payload.from,
             sender_domain: payload.sender_domain,
