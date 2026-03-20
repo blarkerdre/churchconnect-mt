@@ -143,10 +143,10 @@ export default function Events() {
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <Card className="border-0 shadow-sm"><CardContent className="p-4 text-center"><p className="text-2xl font-display font-bold text-foreground">{events.length}</p><p className="text-xs text-muted-foreground">Total Events</p></CardContent></Card>
-        <Card className="border-0 shadow-sm"><CardContent className="p-4 text-center"><p className="text-2xl font-display font-bold text-primary">{upcomingCount}</p><p className="text-xs text-muted-foreground">Upcoming</p></CardContent></Card>
-        <Card className="border-0 shadow-sm"><CardContent className="p-4 text-center"><p className="text-2xl font-display font-bold text-chart-3">{events.filter(e => getEventStatus(e.event_date) === "Ongoing").length}</p><p className="text-xs text-muted-foreground">Ongoing</p></CardContent></Card>
-        <Card className="border-0 shadow-sm"><CardContent className="p-4 text-center"><p className="text-2xl font-display font-bold text-accent">{totalRegistrations}</p><p className="text-xs text-muted-foreground">Registrations</p></CardContent></Card>
+        <Card className="border-0 shadow-sm"><CardContent className="p-3 sm:p-4 text-center"><p className="text-xl sm:text-2xl font-display font-bold text-foreground">{events.length}</p><p className="text-xs text-muted-foreground">Total</p></CardContent></Card>
+        <Card className="border-0 shadow-sm"><CardContent className="p-3 sm:p-4 text-center"><p className="text-xl sm:text-2xl font-display font-bold text-primary">{upcomingCount}</p><p className="text-xs text-muted-foreground">Upcoming</p></CardContent></Card>
+        <Card className="border-0 shadow-sm"><CardContent className="p-3 sm:p-4 text-center"><p className="text-xl sm:text-2xl font-display font-bold text-chart-3">{events.filter(e => getEventStatus(e.event_date) === "Ongoing").length}</p><p className="text-xs text-muted-foreground">Ongoing</p></CardContent></Card>
+        <Card className="border-0 shadow-sm"><CardContent className="p-3 sm:p-4 text-center"><p className="text-xl sm:text-2xl font-display font-bold text-accent">{totalRegistrations}</p><p className="text-xs text-muted-foreground">Registrations</p></CardContent></Card>
       </div>
 
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
