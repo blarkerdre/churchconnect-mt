@@ -62,6 +62,7 @@ export default function Auth() {
           <h1 className="font-display text-2xl font-bold text-foreground">Winners Chapel</h1>
           <p className="text-sm text-muted-foreground">International Cardiff</p>
           <div className="mt-2"><EnvironmentBadge /></div>
+        </div>
 
         <Card className="border-0 shadow-lg">
           <CardHeader className="text-center">
