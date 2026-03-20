@@ -147,9 +147,12 @@ export default function Layout({ children }) {
               <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setSidebarOpen(true)}>
                 <Menu className="h-5 w-5" />
               </Button>
-              <h2 className="text-lg font-display font-bold text-foreground">
-                {currentNav.name}
-              </h2>
+              <div>
+                <h2 className="text-lg font-display font-bold text-foreground leading-tight">
+                  {currentNav.name}
+                </h2>
+                <p className="text-[10px] text-muted-foreground sm:hidden">{getRoleTitle()}</p>
+              </div>
             </div>
             <div className="flex items-center gap-2">
               <span className="text-[11px] font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded-full hidden sm:inline">
