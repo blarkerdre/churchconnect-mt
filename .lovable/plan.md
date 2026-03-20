@@ -1,36 +1,46 @@
 
+## Plan: Make the Live/Test indicator visible in the places users actually see
 
-## Problem
+### Root cause
+The environment logic itself looks correct:
+- Preview URLs resolve to `Test`
+- Published URLs resolve to `Live`
 
-The `define` block in `vite.config.js` (lines 23-26) hardcodes `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` at build time using `loadEnv` with fallback values. This overrides the auto-generated `.env` file that Lovable Cloud provides, which contains the correct environment-specific backend URLs for Test vs Live. Both builds end up pointing to the same backend instance.
+The problem is UI visibility:
+- In `AppLayout.jsx`, the environment badge is only rendered for `isAdmin`
+- The published app’s entry point is usually the auth screen, and `Auth.jsx` has no environment badge at all
 
-## Fix
+So if a user is:
+- not logged in, or
+- logged in without admin access in Live
 
-Remove the `define` block and the manual env loading logic from `vite.config.js`. The `.env` file is auto-managed by the platform and already provides the correct `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` values per environment. Vite natively reads these without any custom `define` overrides.
+they won’t see the `Live` label even though the app is correctly running in Live.
 
-### Updated `vite.config.js`
+### What to build
+1. **Show the environment badge for all authenticated users**
+   - Remove the `isAdmin` gate around the Test/Live badge in `AppLayout.jsx`
+   - Keep the backend mismatch warning restricted to admins, since that is a technical/debug message
 
-```js
-import react from '@vitejs/plugin-react'
-import { defineConfig } from 'vite'
-import path from 'path'
+2. **Show the environment badge on the auth screen**
+   - Add the same Test/Live indicator to `src/pages/Auth.jsx`
+   - Place it in a simple visible spot near the logo/header so users can confirm they are on Live before logging in
 
-export default defineConfig({
-  plugins: [react()],
-  resolve: {
-    alias: {
-      '@': path.resolve(__dirname, './src'),
-    },
-  },
-  server: {
-    host: '::',
-  },
-})
-```
+3. **Optional cleanup**
+   - Extract the badge into a small shared component or keep a shared helper-based rendering pattern so the label styling stays consistent across pages
 
-## After the fix
+### Files involved
+- `src/components/AppLayout.jsx`
+- `src/pages/Auth.jsx`
+- Optional: new shared component such as `src/components/EnvironmentBadge.jsx`
 
-You will need to **publish** the updated build so the Live site picks up the correct backend URL from its own environment.
+### Technical details
+- Reuse the existing helpers in `src/lib/environment.js`
+- Do **not** change backend configuration or detection logic unless a new issue appears
+- Do **not** expose backend host/debug details to non-admins
+- No database or backend changes needed
 
-**One file changed:** `vite.config.js`
-
+### Expected result
+After this change:
+- Logged-in users will always see `Test` or `Live` in the app header
+- Logged-out users visiting the published site will also see `Live` on the sign-in screen
+- Admins will still be the only ones who see backend mismatch diagnostics
