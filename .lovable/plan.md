@@ -1,46 +1,39 @@
 
-Issue:
-The update is not publishing because `src/pages/SystemLogs.jsx` imports three files under `src/components/logs/`, and the build worker repeatedly fails to load those paths during publish. Since this has already failed across multiple rebuild attempts, this is not a reliable “cache only” problem anymore. The safe fix is to remove those fragile imports from the build path.
 
-Do I know what the issue is?
-Yes. The publish build is breaking on these imported modules:
-- `@/components/logs/EmailLogsTab.jsx`
-- `@/components/logs/SMSLogsTab.jsx`
-- `@/components/logs/AuditLogsTab.jsx`
+## Plan: Clean up unused logs directory + Add date filtering and CSV download
 
-Even though they appear in the editor, the builder is not resolving them consistently. So the fix should avoid depending on those files at all.
+### 1. Delete unused files
+Remove the three orphaned component files that are no longer imported:
+- `src/components/logs/EmailLogsTab.jsx`
+- `src/components/logs/SMSLogsTab.jsx`
+- `src/components/logs/AuditLogsTab.jsx`
 
-Plan to fix publish:
+### 2. Add date/time range filtering to all tabs
+Update `src/pages/SystemLogs.jsx`:
 
-1. Collapse the log tabs into `src/pages/SystemLogs.jsx`
-- Move the Email, SMS, and Audit tab component logic directly into `SystemLogs.jsx` as local components in the same file.
-- Keep the current tabbed UI and role behavior unchanged.
-- This removes the failing imports entirely.
+**Email tab** — Replace the preset time-range buttons with a date-range picker (From / To) using Popover + Calendar. Keep existing template and status filters. Query uses `.gte("created_at", fromDate).lte("created_at", toDate)`.
 
-2. Reuse existing working logic
-- Copy/adapt:
-  - email log logic from `src/pages/EmailDashboard.jsx`
-  - SMS log logic from `src/components/sms/SMSHistoryDialog.jsx`
-  - audit log logic from `src/pages/AuditLog.jsx`
-- Preserve filters, badges, pagination, and admin/super-admin access rules.
+**SMS tab** — Add the same From/To date picker. Query filters by date range instead of fetching latest 100.
 
-3. Keep routing/navigation unchanged
-- Leave `/system-logs` in `src/App.jsx`
-- Leave the “System Logs” sidebar item in `src/components/AppLayout.jsx`
-- No user-facing navigation changes needed.
+**Audit tab** — Add From/To date picker alongside existing search and action filter.
 
-4. Clean up the unstable dependency path
-- After `SystemLogs.jsx` is self-contained, remove imports of `@/components/logs/*`.
-- The separate `src/components/logs/` files can then be left unused or removed in a follow-up cleanup, but they will no longer block publishing.
+All three default to "last 7 days" on mount.
 
-Files involved:
-- `src/pages/SystemLogs.jsx` — make self-contained with all three tab panels
-- `src/App.jsx` — likely no logic change, just verify route still points to `SystemLogs`
-- `src/components/AppLayout.jsx` — likely no logic change, just verify nav item
-- Optional cleanup later:
-  - `src/components/logs/EmailLogsTab.jsx`
-  - `src/components/logs/SMSLogsTab.jsx`
-  - `src/components/logs/AuditLogsTab.jsx`
+### 3. Add CSV download button to each tab
+Add a "Download CSV" button next to the filters in each tab panel. On click, it serializes the currently filtered/visible log data into a CSV blob and triggers a browser download.
 
-Expected result:
-Publishing should work again because the build will no longer rely on the unresolved `src/components/logs/*` module paths.
+- **Email CSV columns**: Template, Recipient, Status, Time, Error
+- **SMS CSV columns**: Phone, Type, Status, Delivery Status, Message, Time, Error
+- **Audit CSV columns**: Actor, Action, Entity Type, Details, Time
+
+### 4. Shared helper
+Create a small `downloadCSV(rows, headers, filename)` utility function at the top of `SystemLogs.jsx` to avoid repeating blob/download logic across tabs.
+
+### Technical details
+- Date pickers use existing `Calendar` + `Popover` components (shadcn)
+- `pointer-events-auto` on Calendar per project convention
+- CSV generation is pure client-side (no backend changes)
+- No new dependencies needed — `date-fns` `format` already imported
+- Single file change: `src/pages/SystemLogs.jsx`
+- Three file deletions: the `src/components/logs/` directory contents
+
