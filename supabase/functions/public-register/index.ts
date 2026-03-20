@@ -66,7 +66,16 @@ function triggerWelcomeEmail(email: string, firstName: string | null, lastName: 
       Authorization: `Bearer ${serviceRoleKey}`,
     },
     body: JSON.stringify({ email, first_name: firstName, last_name: lastName }),
-  }).catch((err) => console.error("Welcome email trigger failed:", err));
+  })
+    .then(async (res) => {
+      if (!res.ok) {
+        const body = await res.text().catch(() => "no body");
+        console.error(`Welcome email trigger failed: ${res.status} ${res.statusText}`, body);
+      } else {
+        console.log("Welcome email triggered successfully for", email);
+      }
+    })
+    .catch((err) => console.error("Welcome email trigger network error:", err));
 }
 
 const VALID_STATUSES = ["First Timer", "New Convert", "Active", "Inactive"];
