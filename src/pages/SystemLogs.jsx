@@ -1,9 +1,9 @@
 import React, { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Mail, MessageSquare, Shield } from "lucide-react";
-import EmailLogsTab from "@/components/logs/EmailLogsTab";
-import SMSLogsTab from "@/components/logs/SMSLogsTab";
-import AuditLogsTab from "@/components/logs/AuditLogsTab";
+import EmailLogsTab from "@/components/logs/EmailLogsTab.jsx";
+import SMSLogsTab from "@/components/logs/SMSLogsTab.jsx";
+import AuditLogsTab from "@/components/logs/AuditLogsTab.jsx";
 import { useAuth } from "@/hooks/useAuth";
 
 export default function SystemLogs() {
