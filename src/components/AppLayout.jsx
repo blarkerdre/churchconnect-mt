@@ -10,7 +10,8 @@ import winnersLogo from "@/assets/winners-chapel-logo.png";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import NotificationBell from "@/components/notifications/NotificationBell";
-import { getEnvironmentLabel, getBackendHost, isBackendMismatch } from "@/lib/environment";
+import { getBackendHost, isBackendMismatch } from "@/lib/environment";
+import EnvironmentBadge from "@/components/EnvironmentBadge";
 
 // Role requirements: null = any authenticated user, "admin" = admin/super_admin, "leader" = admin or unit_leader
 const allNavItems = [
