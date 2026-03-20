@@ -122,6 +122,7 @@ Deno.serve(async (req) => {
 </html>`;
 
       const payload = {
+        run_id: messageId,
         to: recipientEmail,
         from: fromAddress,
         sender_domain: senderDomain,

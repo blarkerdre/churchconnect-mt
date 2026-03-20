@@ -140,6 +140,7 @@ Deno.serve(async (req) => {
     const firstName = member.first_name || 'Member'
 
     const payload = {
+      run_id: messageId,
       to: member.email,
       from: fromAddress,
       sender_domain: senderDomain,
