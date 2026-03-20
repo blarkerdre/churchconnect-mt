@@ -15,6 +15,41 @@ const SENDER_DOMAIN = "notify.churchmanagementsuite.org";
 const FROM_DOMAIN = "churchmanagementsuite.org";
 const ROOT_DOMAIN = "churchmanagementsuite.org";
 
+function normalizeEmail(email: string) {
+  return email.trim().toLowerCase();
+}
+
+async function getOrCreateUnsubscribeToken(
+  supabase: ReturnType<typeof createClient>,
+  email: string,
+) {
+  const normalizedEmail = normalizeEmail(email);
+
+  const { data: existingToken, error: tokenLookupError } = await supabase
+    .from("email_unsubscribe_tokens")
+    .select("token")
+    .eq("email", normalizedEmail)
+    .is("used_at", null)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (tokenLookupError) throw tokenLookupError;
+  if (existingToken?.token) return existingToken.token;
+
+  const token = crypto.randomUUID();
+  const { error: tokenInsertError } = await supabase
+    .from("email_unsubscribe_tokens")
+    .insert({
+      email: normalizedEmail,
+      token,
+    });
+
+  if (tokenInsertError) throw tokenInsertError;
+
+  return token;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -28,7 +63,6 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // Validate caller: only accept service role key
     const authHeader = req.headers.get("Authorization");
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const apiKey = Deno.env.get("LOVABLE_API_KEY");
@@ -49,44 +83,42 @@ Deno.serve(async (req) => {
       });
     }
 
+    const normalizedEmail = normalizeEmail(email);
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
       serviceRoleKey,
       { auth: { autoRefreshToken: false, persistSession: false } }
     );
 
-    // Render email template
     const templateProps = {
       firstName: first_name || "Friend",
       lastName: last_name || "",
       siteUrl: `https://${ROOT_DOMAIN}`,
     };
 
-    const html = await renderAsync(
-      React.createElement(WelcomeRegistrationEmail, templateProps)
-    );
-    const text = await renderAsync(
-      React.createElement(WelcomeRegistrationEmail, templateProps),
-      { plainText: true }
-    );
+    const [html, text, unsubscribeToken] = await Promise.all([
+      renderAsync(React.createElement(WelcomeRegistrationEmail, templateProps)),
+      renderAsync(React.createElement(WelcomeRegistrationEmail, templateProps), {
+        plainText: true,
+      }),
+      getOrCreateUnsubscribeToken(supabase, normalizedEmail),
+    ]);
 
     const messageId = crypto.randomUUID();
 
-    // Log pending
     await supabase.from("email_send_log").insert({
       message_id: messageId,
       template_name: "welcome-registration",
-      recipient_email: email,
+      recipient_email: normalizedEmail,
       status: "pending",
     });
 
-    // Send directly using Lovable email API (no queue needed for transactional)
     if (!apiKey) {
       console.error("Missing LOVABLE_API_KEY");
       await supabase.from("email_send_log").insert({
         message_id: messageId,
         template_name: "welcome-registration",
-        recipient_email: email,
+        recipient_email: normalizedEmail,
         status: "failed",
         error_message: "Missing LOVABLE_API_KEY",
       });
@@ -99,7 +131,7 @@ Deno.serve(async (req) => {
     try {
       await sendLovableEmail(
         {
-          to: email,
+          to: normalizedEmail,
           from: `${SITE_NAME} <noreply@${FROM_DOMAIN}>`,
           sender_domain: SENDER_DOMAIN,
           subject: "Welcome to Winners Chapel International Cardiff",
@@ -107,21 +139,21 @@ Deno.serve(async (req) => {
           text,
           purpose: "transactional",
           label: "welcome-registration",
+          unsubscribe_token: unsubscribeToken,
           message_id: messageId,
           idempotency_key: messageId,
         },
         { apiKey, sendUrl: Deno.env.get("LOVABLE_SEND_URL") }
       );
 
-      // Log success
       await supabase.from("email_send_log").insert({
         message_id: messageId,
         template_name: "welcome-registration",
-        recipient_email: email,
+        recipient_email: normalizedEmail,
         status: "sent",
       });
 
-      console.log("Welcome email sent directly", { email, messageId });
+      console.log("Welcome email sent directly", { email: normalizedEmail, messageId });
 
       return new Response(JSON.stringify({ success: true, message_id: messageId }), {
         status: 200,
@@ -133,7 +165,7 @@ Deno.serve(async (req) => {
       await supabase.from("email_send_log").insert({
         message_id: messageId,
         template_name: "welcome-registration",
-        recipient_email: email,
+        recipient_email: normalizedEmail,
         status: "failed",
         error_message: errMsg.slice(0, 1000),
       });
