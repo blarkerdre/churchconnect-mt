@@ -237,6 +237,22 @@ Deno.serve(async (req) => {
           .from("church-documents")
           .createSignedUrl(filePath, 60 * 60 * 24 * 7); // 7 days
 
+        // Lookup or create unsubscribe token
+        const { data: tokenRow } = await supabase
+          .from("email_unsubscribe_tokens")
+          .select("token")
+          .eq("email", member.email)
+          .maybeSingle();
+
+        let unsubToken = tokenRow?.token;
+        if (!unsubToken) {
+          unsubToken = crypto.randomUUID();
+          await supabase.from("email_unsubscribe_tokens").insert({
+            email: member.email,
+            token: unsubToken,
+          });
+        }
+
         const senderDomain = "notify.churchmanagementsuite.org";
         const messageId = `cert-${crypto.randomUUID()}`;
         const emailPayload = {
@@ -271,6 +287,7 @@ Deno.serve(async (req) => {
           message_id: messageId,
           idempotency_key: messageId,
           queued_at: new Date().toISOString(),
+          unsubscribe_token: unsubToken,
         };
 
         await supabase.rpc("enqueue_email", {
