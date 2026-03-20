@@ -464,8 +464,12 @@ export default function MyProfile() {
 }
 
 function CreateMemberProfile({ user, onCreated, wsfCentres, churchUnits }) {
+  const nameParts = (user?.user_metadata?.full_name || "").trim().split(/\s+/);
+  const defaultFirst = nameParts[0] || "";
+  const defaultLast = nameParts.slice(1).join(" ") || "";
+
   const [form, setForm] = useState({
-    first_name: "", last_name: "", email: user?.email || "", phone: "", address: "",
+    first_name: defaultFirst, last_name: defaultLast, email: user?.email || "", phone: "", address: "",
     city: "Cardiff", postcode: "", date_of_birth: "", gender: "",
     membership_status: "First Timer",
     emergency_contact_name: "", emergency_contact_phone: "",
@@ -488,35 +492,36 @@ function CreateMemberProfile({ user, onCreated, wsfCentres, churchUnits }) {
     }
     setSaving(true);
     try {
-      const { error } = await supabase.from("members").insert({
-        user_id: user.id,
-        first_name: form.first_name,
-        last_name: form.last_name,
-        email: form.email || null,
-        phone: form.phone || null,
-        address: form.address || null,
-        city: form.city || null,
-        postcode: form.postcode || null,
-        date_of_birth: form.date_of_birth || null,
-        gender: form.gender || null,
-        membership_status: form.membership_status || "First Timer",
-        church_unit: form.church_unit || null,
-        emergency_contact_name: form.emergency_contact_name || null,
-        emergency_contact_phone: form.emergency_contact_phone || null,
-        water_baptism: form.water_baptism,
-        holy_spirit_baptism: form.holy_spirit_baptism,
-        winners_satellite: form.winners_satellite,
-        wsf_centre_id: form.wsf_centre_id || null,
-        bfc_completed: form.bfc_completed,
-        bcc_completed: form.bcc_completed,
-        lcc_completed: form.lcc_completed,
-        ldc_completed: form.ldc_completed,
-        gdpr_consent: form.gdpr_consent,
-        gdpr_consent_date: new Date().toISOString(),
-        notes: form.notes || null,
+      const { data, error } = await supabase.functions.invoke("public-register", {
+        body: {
+          first_name: form.first_name,
+          last_name: form.last_name,
+          email: form.email || null,
+          phone: form.phone || null,
+          address: form.address || null,
+          city: form.city || null,
+          postcode: form.postcode || null,
+          date_of_birth: form.date_of_birth || null,
+          gender: form.gender || null,
+          membership_status: form.membership_status || "First Timer",
+          church_unit: form.church_unit || null,
+          emergency_contact_name: form.emergency_contact_name || null,
+          emergency_contact_phone: form.emergency_contact_phone || null,
+          water_baptism: form.water_baptism,
+          holy_spirit_baptism: form.holy_spirit_baptism,
+          winners_satellite: form.winners_satellite,
+          wsf_centre_id: form.wsf_centre_id || null,
+          bfc_completed: form.bfc_completed,
+          bcc_completed: form.bcc_completed,
+          lcc_completed: form.lcc_completed,
+          ldc_completed: form.ldc_completed,
+          gdpr_consent: form.gdpr_consent,
+          notes: form.notes || null,
+        },
       });
       if (error) throw error;
-      toast({ title: "Profile created successfully!" });
+      if (data?.error) throw new Error(data.error);
+      toast({ title: "Profile updated successfully!" });
       onCreated();
     } catch (err) {
       toast({ title: "Error", description: err.message, variant: "destructive" });
@@ -535,8 +540,8 @@ function CreateMemberProfile({ user, onCreated, wsfCentres, churchUnits }) {
   return (
     <Card className="border-0 shadow-sm max-w-2xl">
       <CardHeader>
-        <CardTitle className="font-display">Complete Your Member Profile</CardTitle>
-        <p className="text-sm text-muted-foreground">Fill in your details to get started.</p>
+        <CardTitle className="font-display">Update My Profile</CardTitle>
+        <p className="text-sm text-muted-foreground">Review and update your details below.</p>
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Personal Details */}
@@ -633,7 +638,7 @@ function CreateMemberProfile({ user, onCreated, wsfCentres, churchUnits }) {
 
         <Button onClick={handleCreate} disabled={saving || !form.first_name || !form.last_name || !form.gdpr_consent} className="w-full">
           {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-          Create My Profile
+          Update My Profile
         </Button>
       </CardContent>
     </Card>
