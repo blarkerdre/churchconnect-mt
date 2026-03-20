@@ -237,25 +237,52 @@ Deno.serve(async (req) => {
           .from("church-documents")
           .createSignedUrl(filePath, 60 * 60 * 24 * 7); // 7 days
 
-        // Enqueue email via pgmq
+        const senderDomain = "notify.churchmanagementsuite.org";
+        const messageId = `cert-${crypto.randomUUID()}`;
         const emailPayload = {
+          run_id: messageId,
           to: member.email,
+          from: `Winners Chapel Cardiff <noreply@${senderDomain}>`,
+          sender_domain: senderDomain,
           subject: `Your ${training_type} Certificate - ${churchName}`,
           html: `
-            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-              <h2 style="color: ${bgColor};">Congratulations, ${member.first_name}! 🎉</h2>
-              <p>You have successfully completed <strong>${training_type}</strong> at ${churchName}.</p>
-              <p>Your certificate number is: <strong>${certificateNumber}</strong></p>
-              ${signedUrl?.signedUrl ? `<p><a href="${signedUrl.signedUrl}" style="display: inline-block; padding: 12px 24px; background-color: ${bgColor}; color: white; text-decoration: none; border-radius: 6px; font-weight: 600;">Download Certificate</a></p>` : ""}
-              <p style="color: #888; font-size: 12px;">You can also download your certificate anytime from your profile page.</p>
-            </div>
-          `,
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background-color:#f4f5f7;font-family:Arial,Helvetica,sans-serif;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f5f7;padding:32px 16px;">
+    <tr><td align="center">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;background-color:#ffffff;border-radius:8px;overflow:hidden;">
+        <tr><td style="background-color:${bgColor};padding:24px 32px;text-align:center;">
+          <h1 style="margin:0;color:#ffffff;font-size:20px;font-weight:700;">${escapeXml(churchName)}</h1>
+        </td></tr>
+        <tr><td style="padding:32px;">
+          <h2 style="margin:0 0 16px;color:${bgColor};font-size:22px;">Congratulations, ${escapeXml(member.first_name)}! 🎉</h2>
+          <p style="margin:0 0 12px;color:#333;font-size:15px;line-height:1.6;">You have successfully completed <strong>${escapeXml(training_type)}</strong> at ${escapeXml(churchName)}.</p>
+          <p style="margin:0 0 24px;color:#333;font-size:15px;">Your certificate number is: <strong>${certificateNumber}</strong></p>
+          ${signedUrl?.signedUrl ? `<p style="text-align:center;"><a href="${signedUrl.signedUrl}" style="display:inline-block;padding:12px 24px;background-color:${bgColor};color:white;text-decoration:none;border-radius:6px;font-weight:600;">Download Certificate</a></p>` : ""}
+          <p style="margin:24px 0 0;color:#888;font-size:12px;">You can also download your certificate anytime from your profile page.</p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body></html>`,
           purpose: "transactional",
+          label: "certificate",
+          message_id: messageId,
+          idempotency_key: messageId,
+          queued_at: new Date().toISOString(),
         };
 
         await supabase.rpc("enqueue_email", {
           queue_name: "transactional_emails",
           payload: emailPayload,
+        });
+
+        await supabase.from("email_send_log").insert({
+          message_id: messageId,
+          template_name: "certificate",
+          recipient_email: member.email,
+          status: "pending",
         });
       } catch (emailErr) {
         console.warn("Failed to send certificate email:", emailErr);
