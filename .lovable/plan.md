@@ -1,32 +1,67 @@
 
-Issue found
 
-- The preview and live databases are not actually the same: the current Test backend has 10 member records and 30 audit logs, while Live has 3 member records and 167 audit logs.
-- Recent member names also do not match between those two datasets.
-- The real problem is that the preview runtime is calling a different backend API host than the one attached to this project context, which explains why you can see unexpected member names and audit entries in preview.
-- I also checked the codebase: there is no hardcoded alternate backend URL in the app logic, and there is no service worker/offline cache code forcing stale data.
+## Plan: Make the app mobile-friendly across all pages, forms, and dialogs
 
-Plan
+### Overview
+The app already has some responsive patterns (e.g., `sm:` breakpoints on search bars, `hidden sm:table-cell` on table columns), but several areas break or feel cramped on mobile (384px viewport). This plan addresses the key mobile pain points.
 
-1. Add a clear environment indicator
-- Show an obvious “Preview / Test” or “Live” badge in the app layout for admins.
-- Include the current runtime backend target in a small diagnostics section so you can instantly see which backend the app is using.
+### 1. AppLayout header — fix button overflow on small screens
+- The header action buttons (environment badge, role badge, notification bell, sign-out) can overflow on narrow screens
+- Wrap the action buttons in a flex container with `flex-wrap` and smaller gaps
+- Hide the "Sign Out" text on very small screens, keep icon-only
 
-2. Add a runtime mismatch warning
-- Create a small helper that compares the current app hostname with the configured backend target.
-- If the app is running on a preview URL but appears to be connected to an unexpected backend, show a warning banner instead of silently loading misleading data.
+### 2. Members page — action buttons overflow
+- The admin action buttons (QR Code, CSV, Import CSV, Register Member) sit in a horizontal row that overflows on mobile
+- Wrap buttons with `flex-wrap` and collapse button labels to icon-only on mobile using `hidden sm:inline` for text
+- The "Register Member" button should stay full-width on mobile as the primary CTA
 
-3. Keep the existing data access rules
-- No database schema or RLS changes are planned right now.
-- I reviewed the member and audit access rules, and they do not explain cross-environment data appearing in preview.
+### 3. UserManagement page — table too wide for mobile
+- The 6-column table (User, Email, Roles, Led Units, Manage Roles, Actions) is unusable on mobile
+- Hide Email, Led Units, and Manage Roles columns on small screens (`hidden md:table-cell`)
+- Show email below the user name on mobile (like the Members table pattern)
+- Add a mobile-specific card layout alternative or at minimum hide non-essential columns
 
-4. Re-verify preview vs live after the UI diagnostics are added
-- Confirm preview points to the Test backend.
-- Confirm the published site points to Live.
-- Recheck a few recent member and audit records to make sure both environments clearly differ.
+### 4. UserManagement header — buttons overflow
+- "Bulk Unit Assign" and "Add User" buttons sit in a row that overflows
+- Stack these vertically on mobile, or collapse labels to icons
 
-Technical details
+### 5. Attendance page — session selector and action buttons overflow
+- The `flex-wrap` filter bar with session selector (w-72), badges, and action buttons can overflow
+- Make session selector full-width on mobile (`w-full sm:w-72`)
+- Stack action buttons below on mobile
 
-- Likely files: `src/components/AppLayout.jsx` plus a small new utility/hook, and optionally an admin diagnostics block in `src/pages/SystemLogs.jsx` or `src/pages/Settings.jsx`.
-- No backend migrations are needed for this fix.
-- If the diagnostics still show preview targeting the wrong backend after rebuild, that would confirm a project-level environment wiring problem rather than an application-code bug.
+### 6. SystemLogs — DateRangePicker and filter bar overflow
+- Date range buttons are 150px each, plus template/status selects (w-48, w-36), plus CSV button
+- Make date buttons full-width on mobile, stack filters vertically
+- Make the `TabsList` scrollable on mobile
+
+### 7. Dialog forms — ensure proper scroll and sizing
+- `MemberFormDialog` uses `max-w-2xl max-h-[90vh] overflow-y-auto` — already good
+- `WSFAttendanceFormDialog` uses `max-w-md max-h-[90vh] flex flex-col` — good
+- `WSFCentreFormDialog` uses `max-w-lg max-h-[90vh] overflow-y-auto` — good
+- Event dialog uses `max-w-md` — good
+- Ensure all DialogContent has proper padding and doesn't clip on 384px screens
+
+### 8. Transportation, PastoralCare, Communications — minor fixes
+- Ensure action button groups use `flex-wrap` consistently
+- Make search inputs full-width on mobile (already mostly done)
+
+### 9. Dashboard stat cards — text sizing
+- Stat cards with `text-2xl` values can look oversized in tight 2-col grids on small phones
+- Reduce to `text-xl` on mobile for better fit
+
+### Technical details
+
+**Files to modify:**
+- `src/pages/Members.jsx` — wrap admin buttons, icon-only on mobile
+- `src/pages/UserManagement.jsx` — hide table columns on mobile, stack header buttons, show email inline
+- `src/pages/Attendance.jsx` — full-width session selector on mobile, stack action buttons
+- `src/pages/SystemLogs.jsx` — full-width date pickers on mobile, scrollable tabs
+- `src/pages/Communications.jsx` — minor flex-wrap adjustments
+- `src/pages/Events.jsx` — already mostly good, minor touch-up
+- `src/pages/Followups.jsx` — already mostly good
+- `src/pages/Transportation.jsx` — minor flex-wrap
+- `src/components/AppLayout.jsx` — tighten header on mobile
+
+**No backend changes needed.** All changes are CSS/layout adjustments using existing Tailwind responsive utilities.
+
