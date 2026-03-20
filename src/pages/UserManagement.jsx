@@ -277,14 +277,14 @@ export default function UserManagement() {
                           })}
                         </div>
                       </td>
-                      <td className="p-4">
+                      <td className="p-3 sm:p-4 hidden lg:table-cell">
                         {userRoles.includes("unit_leader") ? (
                           <UnitLeaderAssignments userId={p.user_id} />
                         ) : (
                           <span className="text-xs text-muted-foreground">—</span>
                         )}
                       </td>
-                      <td className="p-4">
+                      <td className="p-3 sm:p-4 hidden md:table-cell">
                         {canChange ? (
                           <div className="space-y-1.5">
                             {availableRoles.map(r => {
