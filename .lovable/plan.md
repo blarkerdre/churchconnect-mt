@@ -1,39 +1,32 @@
 
+Issue found
 
-## Plan: Clean up unused logs directory + Add date filtering and CSV download
+- The preview and live databases are not actually the same: the current Test backend has 10 member records and 30 audit logs, while Live has 3 member records and 167 audit logs.
+- Recent member names also do not match between those two datasets.
+- The real problem is that the preview runtime is calling a different backend API host than the one attached to this project context, which explains why you can see unexpected member names and audit entries in preview.
+- I also checked the codebase: there is no hardcoded alternate backend URL in the app logic, and there is no service worker/offline cache code forcing stale data.
 
-### 1. Delete unused files
-Remove the three orphaned component files that are no longer imported:
-- `src/components/logs/EmailLogsTab.jsx`
-- `src/components/logs/SMSLogsTab.jsx`
-- `src/components/logs/AuditLogsTab.jsx`
+Plan
 
-### 2. Add date/time range filtering to all tabs
-Update `src/pages/SystemLogs.jsx`:
+1. Add a clear environment indicator
+- Show an obvious “Preview / Test” or “Live” badge in the app layout for admins.
+- Include the current runtime backend target in a small diagnostics section so you can instantly see which backend the app is using.
 
-**Email tab** — Replace the preset time-range buttons with a date-range picker (From / To) using Popover + Calendar. Keep existing template and status filters. Query uses `.gte("created_at", fromDate).lte("created_at", toDate)`.
+2. Add a runtime mismatch warning
+- Create a small helper that compares the current app hostname with the configured backend target.
+- If the app is running on a preview URL but appears to be connected to an unexpected backend, show a warning banner instead of silently loading misleading data.
 
-**SMS tab** — Add the same From/To date picker. Query filters by date range instead of fetching latest 100.
+3. Keep the existing data access rules
+- No database schema or RLS changes are planned right now.
+- I reviewed the member and audit access rules, and they do not explain cross-environment data appearing in preview.
 
-**Audit tab** — Add From/To date picker alongside existing search and action filter.
+4. Re-verify preview vs live after the UI diagnostics are added
+- Confirm preview points to the Test backend.
+- Confirm the published site points to Live.
+- Recheck a few recent member and audit records to make sure both environments clearly differ.
 
-All three default to "last 7 days" on mount.
+Technical details
 
-### 3. Add CSV download button to each tab
-Add a "Download CSV" button next to the filters in each tab panel. On click, it serializes the currently filtered/visible log data into a CSV blob and triggers a browser download.
-
-- **Email CSV columns**: Template, Recipient, Status, Time, Error
-- **SMS CSV columns**: Phone, Type, Status, Delivery Status, Message, Time, Error
-- **Audit CSV columns**: Actor, Action, Entity Type, Details, Time
-
-### 4. Shared helper
-Create a small `downloadCSV(rows, headers, filename)` utility function at the top of `SystemLogs.jsx` to avoid repeating blob/download logic across tabs.
-
-### Technical details
-- Date pickers use existing `Calendar` + `Popover` components (shadcn)
-- `pointer-events-auto` on Calendar per project convention
-- CSV generation is pure client-side (no backend changes)
-- No new dependencies needed — `date-fns` `format` already imported
-- Single file change: `src/pages/SystemLogs.jsx`
-- Three file deletions: the `src/components/logs/` directory contents
-
+- Likely files: `src/components/AppLayout.jsx` plus a small new utility/hook, and optionally an admin diagnostics block in `src/pages/SystemLogs.jsx` or `src/pages/Settings.jsx`.
+- No backend migrations are needed for this fix.
+- If the diagnostics still show preview targeting the wrong backend after rebuild, that would confirm a project-level environment wiring problem rather than an application-code bug.
