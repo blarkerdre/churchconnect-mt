@@ -143,10 +143,10 @@ export default function Attendance() {
             {isClosed && <Badge className="border-0 bg-destructive/10 text-destructive"><Lock className="h-3 w-3 mr-1" /> Closed</Badge>}
           </>
         )}
-        <div className="flex items-center gap-2 ml-auto">
+        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto sm:ml-auto">
           {selectedSession && (
             <Button variant="outline" size="sm" onClick={generateReport}>
-              <FileText className="h-4 w-4 mr-2" /> Report
+              <FileText className="h-4 w-4" /><span className="hidden sm:inline ml-2">Report</span>
             </Button>
           )}
           {canManage && selectedSession && !isClosed && (
@@ -155,11 +155,11 @@ export default function Attendance() {
                 closeSessionMutation.mutate(selectedSession.id);
               }
             }} className="text-destructive border-destructive/30 hover:bg-destructive/10">
-              <Lock className="h-4 w-4 mr-2" /> Close Session
+              <Lock className="h-4 w-4" /><span className="hidden sm:inline ml-2">Close Session</span>
             </Button>
           )}
           {canManage && (
-            <Button onClick={() => { setForm({ title: "", session_type: "Sunday Service", session_date: "", notes: "" }); setDialogOpen(true); }} className="bg-primary hover:bg-primary/90">
+            <Button onClick={() => { setForm({ title: "", session_type: "Sunday Service", session_date: "", notes: "" }); setDialogOpen(true); }} className="bg-primary hover:bg-primary/90 w-full sm:w-auto">
               <Plus className="h-4 w-4 mr-2" /> New Session
             </Button>
           )}
