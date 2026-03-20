@@ -129,7 +129,7 @@ export default function Attendance() {
       <div className="flex flex-wrap items-center gap-3">
         {sessions.length > 0 && (
           <Select value={selectedSession?.id || ""} onValueChange={setSelectedSessionId}>
-            <SelectTrigger className="w-72"><SelectValue placeholder="Select session" /></SelectTrigger>
+            <SelectTrigger className="w-full sm:w-72"><SelectValue placeholder="Select session" /></SelectTrigger>
             <SelectContent>
               {sessions.map(s => <SelectItem key={s.id} value={s.id}>{s.title || s.session_type} – {s.session_date}</SelectItem>)}
             </SelectContent>
