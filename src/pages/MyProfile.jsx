@@ -540,8 +540,8 @@ function CreateMemberProfile({ user, onCreated, wsfCentres, churchUnits }) {
   return (
     <Card className="border-0 shadow-sm max-w-2xl">
       <CardHeader>
-        <CardTitle className="font-display">Complete Your Member Profile</CardTitle>
-        <p className="text-sm text-muted-foreground">Fill in your details to get started.</p>
+        <CardTitle className="font-display">Update My Profile</CardTitle>
+        <p className="text-sm text-muted-foreground">Review and update your details below.</p>
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Personal Details */}
