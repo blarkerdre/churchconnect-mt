@@ -6,18 +6,61 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Mail, MessageSquare, Shield, CheckCircle, XCircle, Clock, AlertTriangle, Loader2, Search, UserCog, Trash2, Plus, Edit } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { Mail, MessageSquare, Shield, CheckCircle, XCircle, Clock, AlertTriangle, Loader2, Search, UserCog, Trash2, Plus, Edit, CalendarIcon, Download } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { format, subDays, subHours } from "date-fns";
+import { format, subDays } from "date-fns";
+import { cn } from "@/lib/utils";
+
+/* ── Shared helpers ── */
+function downloadCSV(rows, headers, filename) {
+  const escape = (v) => {
+    const s = String(v ?? "");
+    return s.includes(",") || s.includes('"') || s.includes("\n") ? `"${s.replace(/"/g, '""')}"` : s;
+  };
+  const lines = [headers.map(h => h.label).join(","), ...rows.map(r => headers.map(h => escape(h.fn(r))).join(","))];
+  const blob = new Blob([lines.join("\n")], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function DateRangePicker({ from, to, onFromChange, onToChange }) {
+  return (
+    <div className="flex flex-wrap gap-2">
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button variant="outline" size="sm" className={cn("w-[150px] justify-start text-left font-normal", !from && "text-muted-foreground")}>
+            <CalendarIcon className="mr-1.5 h-3.5 w-3.5" />
+            {from ? format(from, "dd MMM yyyy") : "From"}
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-auto p-0" align="start">
+          <Calendar mode="single" selected={from} onSelect={onFromChange} initialFocus className="p-3 pointer-events-auto" />
+        </PopoverContent>
+      </Popover>
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button variant="outline" size="sm" className={cn("w-[150px] justify-start text-left font-normal", !to && "text-muted-foreground")}>
+            <CalendarIcon className="mr-1.5 h-3.5 w-3.5" />
+            {to ? format(to, "dd MMM yyyy") : "To"}
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-auto p-0" align="start">
+          <Calendar mode="single" selected={to} onSelect={onToChange} initialFocus className="p-3 pointer-events-auto" />
+        </PopoverContent>
+      </Popover>
+    </div>
+  );
+}
 
 /* ── Email Logs Tab ── */
-const TIME_RANGES = [
-  { label: "Last 24h", value: "24h", fn: () => subHours(new Date(), 24) },
-  { label: "Last 7 days", value: "7d", fn: () => subDays(new Date(), 7) },
-  { label: "Last 30 days", value: "30d", fn: () => subDays(new Date(), 30) },
-];
 const EMAIL_STATUS_OPTIONS = ["All", "sent", "failed", "dlq", "pending", "suppressed"];
 const emailStatusConfig = {
   sent: { color: "bg-emerald-100 text-emerald-700", icon: CheckCircle },
@@ -40,21 +83,28 @@ function EmailMiniStat({ title, value, icon: Icon, color }) {
   );
 }
 
+const EMAIL_CSV_HEADERS = [
+  { label: "Template", fn: r => r.template_name },
+  { label: "Recipient", fn: r => r.recipient_email },
+  { label: "Status", fn: r => r.status },
+  { label: "Time", fn: r => format(new Date(r.created_at), "yyyy-MM-dd HH:mm:ss") },
+  { label: "Error", fn: r => r.error_message || "" },
+];
+
 function EmailLogsPanel() {
-  const [timeRange, setTimeRange] = useState("7d");
+  const [fromDate, setFromDate] = useState(() => subDays(new Date(), 7));
+  const [toDate, setToDate] = useState(() => new Date());
   const [templateFilter, setTemplateFilter] = useState("All");
   const [statusFilter, setStatusFilter] = useState("All");
   const [page, setPage] = useState(0);
 
-  const startDate = useMemo(() => {
-    const range = TIME_RANGES.find(r => r.value === timeRange);
-    return range ? range.fn().toISOString() : subDays(new Date(), 7).toISOString();
-  }, [timeRange]);
-
   const { data: rawLogs = [], isLoading } = useQuery({
-    queryKey: ["email-logs", startDate],
+    queryKey: ["email-logs", fromDate?.toISOString(), toDate?.toISOString()],
     queryFn: async () => {
-      const { data, error } = await supabase.from("email_send_log").select("*").gte("created_at", startDate).order("created_at", { ascending: false }).limit(1000);
+      let q = supabase.from("email_send_log").select("*").order("created_at", { ascending: false }).limit(1000);
+      if (fromDate) q = q.gte("created_at", fromDate.toISOString());
+      if (toDate) q = q.lte("created_at", new Date(toDate.getFullYear(), toDate.getMonth(), toDate.getDate(), 23, 59, 59).toISOString());
+      const { data, error } = await q;
       if (error) throw error;
       return data || [];
     },
@@ -86,18 +136,8 @@ function EmailLogsPanel() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap gap-2">
-        {TIME_RANGES.map(r => (
-          <Button key={r.value} size="sm" variant={timeRange === r.value ? "default" : "outline"} onClick={() => { setTimeRange(r.value); setPage(0); }}>{r.label}</Button>
-        ))}
-      </div>
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <EmailMiniStat title="Total" value={stats.total} icon={Mail} color="blue" />
-        <EmailMiniStat title="Sent" value={stats.sent} icon={CheckCircle} color="emerald" />
-        <EmailMiniStat title="Failed" value={stats.failed} icon={XCircle} color="rose" />
-        <EmailMiniStat title="Pending" value={stats.pending} icon={Clock} color="amber" />
-      </div>
-      <div className="flex flex-wrap gap-3">
+      <div className="flex flex-wrap items-center gap-3">
+        <DateRangePicker from={fromDate} to={toDate} onFromChange={d => { setFromDate(d); setPage(0); }} onToChange={d => { setToDate(d); setPage(0); }} />
         <Select value={templateFilter} onValueChange={v => { setTemplateFilter(v); setPage(0); }}>
           <SelectTrigger className="w-48"><SelectValue placeholder="Template" /></SelectTrigger>
           <SelectContent>{templates.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
@@ -106,6 +146,15 @@ function EmailLogsPanel() {
           <SelectTrigger className="w-36"><SelectValue placeholder="Status" /></SelectTrigger>
           <SelectContent>{EMAIL_STATUS_OPTIONS.map(s => <SelectItem key={s} value={s}>{s === "All" ? "All Statuses" : s}</SelectItem>)}</SelectContent>
         </Select>
+        <Button size="sm" variant="outline" onClick={() => downloadCSV(filtered, EMAIL_CSV_HEADERS, `email-logs-${format(new Date(), "yyyy-MM-dd")}.csv`)} disabled={filtered.length === 0}>
+          <Download className="h-3.5 w-3.5 mr-1.5" /> CSV
+        </Button>
+      </div>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <EmailMiniStat title="Total" value={stats.total} icon={Mail} color="blue" />
+        <EmailMiniStat title="Sent" value={stats.sent} icon={CheckCircle} color="emerald" />
+        <EmailMiniStat title="Failed" value={stats.failed} icon={XCircle} color="rose" />
+        <EmailMiniStat title="Pending" value={stats.pending} icon={Clock} color="amber" />
       </div>
       <Card className="overflow-hidden">
         <Table>
@@ -145,13 +194,28 @@ function EmailLogsPanel() {
 }
 
 /* ── SMS Logs Tab ── */
+const SMS_CSV_HEADERS = [
+  { label: "Phone", fn: r => r.recipient_phone },
+  { label: "Type", fn: r => r.sms_type },
+  { label: "Status", fn: r => r.status },
+  { label: "Delivery Status", fn: r => r.delivery_status || "" },
+  { label: "Message", fn: r => r.message },
+  { label: "Time", fn: r => format(new Date(r.created_at), "yyyy-MM-dd HH:mm:ss") },
+  { label: "Error", fn: r => r.error_message || "" },
+];
+
 function SMSLogsPanel() {
   const [typeFilter, setTypeFilter] = useState("All");
+  const [fromDate, setFromDate] = useState(() => subDays(new Date(), 7));
+  const [toDate, setToDate] = useState(() => new Date());
+
   const { data: logs = [], isLoading } = useQuery({
-    queryKey: ["sms-logs", typeFilter],
+    queryKey: ["sms-logs", typeFilter, fromDate?.toISOString(), toDate?.toISOString()],
     queryFn: async () => {
-      let query = supabase.from("sms_log").select("*").order("created_at", { ascending: false }).limit(100);
+      let query = supabase.from("sms_log").select("*").order("created_at", { ascending: false }).limit(500);
       if (typeFilter !== "All") query = query.eq("sms_type", typeFilter);
+      if (fromDate) query = query.gte("created_at", fromDate.toISOString());
+      if (toDate) query = query.lte("created_at", new Date(toDate.getFullYear(), toDate.getMonth(), toDate.getDate(), 23, 59, 59).toISOString());
       const { data, error } = await query;
       if (error) throw error;
       return data;
@@ -163,7 +227,8 @@ function SMSLogsPanel() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-wrap items-center gap-3">
+        <DateRangePicker from={fromDate} to={toDate} onFromChange={setFromDate} onToChange={setToDate} />
         <Select value={typeFilter} onValueChange={setTypeFilter}>
           <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
           <SelectContent>
@@ -176,6 +241,9 @@ function SMSLogsPanel() {
           <Badge className="bg-chart-3/10 text-chart-3 border-0">{sentCount} sent</Badge>
           {failedCount > 0 && <Badge className="bg-destructive/10 text-destructive border-0">{failedCount} failed</Badge>}
         </div>
+        <Button size="sm" variant="outline" onClick={() => downloadCSV(logs, SMS_CSV_HEADERS, `sms-logs-${format(new Date(), "yyyy-MM-dd")}.csv`)} disabled={logs.length === 0}>
+          <Download className="h-3.5 w-3.5 mr-1.5" /> CSV
+        </Button>
       </div>
       <div className="space-y-2">
         {isLoading ? (
@@ -212,14 +280,27 @@ function SMSLogsPanel() {
 const actionIcons = { role_change: UserCog, member_delete: Trash2, member_create: Plus, member_update: Edit };
 const actionColors = { role_change: "bg-primary/10 text-primary", member_delete: "bg-destructive/10 text-destructive", member_create: "bg-chart-3/10 text-chart-3", member_update: "bg-accent/10 text-accent" };
 
+const AUDIT_CSV_HEADERS = [
+  { label: "Actor", fn: r => r._actorName || r.user_id },
+  { label: "Action", fn: r => r.action },
+  { label: "Entity Type", fn: r => r.entity_type },
+  { label: "Details", fn: r => JSON.stringify(r.details || {}) },
+  { label: "Time", fn: r => format(new Date(r.created_at), "yyyy-MM-dd HH:mm:ss") },
+];
+
 function AuditLogsPanel() {
   const [search, setSearch] = useState("");
   const [actionFilter, setActionFilter] = useState("all");
+  const [fromDate, setFromDate] = useState(() => subDays(new Date(), 7));
+  const [toDate, setToDate] = useState(() => new Date());
 
   const { data: logs = [], isLoading } = useQuery({
-    queryKey: ["audit-log"],
+    queryKey: ["audit-log", fromDate?.toISOString(), toDate?.toISOString()],
     queryFn: async () => {
-      const { data, error } = await supabase.from("audit_log").select("*").order("created_at", { ascending: false }).limit(200);
+      let q = supabase.from("audit_log").select("*").order("created_at", { ascending: false }).limit(500);
+      if (fromDate) q = q.gte("created_at", fromDate.toISOString());
+      if (toDate) q = q.lte("created_at", new Date(toDate.getFullYear(), toDate.getMonth(), toDate.getDate(), 23, 59, 59).toISOString());
+      const { data, error } = await q;
       if (error) throw error;
       return data;
     },
@@ -247,10 +328,13 @@ function AuditLogsPanel() {
 
   const uniqueActions = [...new Set(logs.map(l => l.action))];
 
+  const csvRows = filtered.map(r => ({ ...r, _actorName: getActorName(r.user_id) }));
+
   return (
     <div className="space-y-4">
-      <div className="flex flex-col sm:flex-row gap-3">
-        <div className="relative flex-1">
+      <div className="flex flex-wrap items-center gap-3">
+        <DateRangePicker from={fromDate} to={toDate} onFromChange={setFromDate} onToChange={setToDate} />
+        <div className="relative flex-1 min-w-[180px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input placeholder="Search logs..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9" />
         </div>
@@ -261,6 +345,9 @@ function AuditLogsPanel() {
             {uniqueActions.map(a => <SelectItem key={a} value={a}>{a.replace(/_/g, " ")}</SelectItem>)}
           </SelectContent>
         </Select>
+        <Button size="sm" variant="outline" onClick={() => downloadCSV(csvRows, AUDIT_CSV_HEADERS, `audit-logs-${format(new Date(), "yyyy-MM-dd")}.csv`)} disabled={filtered.length === 0}>
+          <Download className="h-3.5 w-3.5 mr-1.5" /> CSV
+        </Button>
       </div>
       {isLoading ? (
         <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>
