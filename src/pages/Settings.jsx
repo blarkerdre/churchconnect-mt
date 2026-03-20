@@ -12,9 +12,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 import {
   Settings as SettingsIcon, Plus, Pencil, Trash2, Loader2,
-  Users, Church, CalendarDays, TrendingUp, Heart, Globe, Bell
+  Users, Church, CalendarDays, TrendingUp, Heart, Globe, Bell, Award
 } from "lucide-react";
 import WSFCentresSection from "@/components/settings/WSFCentresSection";
+import CertificateTemplateSettings from "@/components/certificates/CertificateTemplateSettings";
 
 /* ─── Notification Preferences section ─── */
 function NotificationPreferencesSection() {
@@ -358,6 +359,7 @@ export default function Settings() {
           <TabsTrigger value="events" className="gap-1.5 text-xs"><CalendarDays className="h-3.5 w-3.5" /> Event Categories</TabsTrigger>
           <TabsTrigger value="training" className="gap-1.5 text-xs"><TrendingUp className="h-3.5 w-3.5" /> Training Types</TabsTrigger>
           <TabsTrigger value="pastoral" className="gap-1.5 text-xs"><Heart className="h-3.5 w-3.5" /> Pastoral Care</TabsTrigger>
+          <TabsTrigger value="certificates" className="gap-1.5 text-xs"><Award className="h-3.5 w-3.5" /> Certificates</TabsTrigger>
         </TabsList>
 
         <TabsContent value="notifications">
@@ -406,6 +408,10 @@ export default function Settings() {
             icon={Heart}
             description="Types of pastoral care requests"
           />
+        </TabsContent>
+
+        <TabsContent value="certificates">
+          <CertificateTemplateSettings />
         </TabsContent>
       </Tabs>
     </div>
