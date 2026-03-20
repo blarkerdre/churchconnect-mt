@@ -139,7 +139,7 @@ function EmailLogsPanel() {
       <div className="flex flex-wrap items-center gap-3">
         <DateRangePicker from={fromDate} to={toDate} onFromChange={d => { setFromDate(d); setPage(0); }} onToChange={d => { setToDate(d); setPage(0); }} />
         <Select value={templateFilter} onValueChange={v => { setTemplateFilter(v); setPage(0); }}>
-          <SelectTrigger className="w-48"><SelectValue placeholder="Template" /></SelectTrigger>
+          <SelectTrigger className="w-full sm:w-48"><SelectValue placeholder="Template" /></SelectTrigger>
           <SelectContent>{templates.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
         </Select>
         <Select value={statusFilter} onValueChange={v => { setStatusFilter(v); setPage(0); }}>
