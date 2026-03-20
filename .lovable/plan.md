@@ -1,38 +1,19 @@
 
-Fix the certificate email failure by updating the certificate sender to include a plain-text email body.
 
-What I found
-- The failing certificate messages are reaching the queue correctly.
-- The queued certificate payload already includes `run_id`, `message_id`, `idempotency_key`, and `unsubscribe_token`.
-- The email API error is specifically: `missing_parameter` with `parameter: "text"`.
-- In `supabase/functions/issue-certificate/index.ts`, the certificate email payload includes `html` but does not include `text`.
-- The queue dispatcher forwards `text: payload.text` to the email API, so certificate emails currently arrive without the required plain-text field.
+## Fix: Remove invalid `run_id` from certificate email payload
 
-Implementation plan
-1. Update `supabase/functions/issue-certificate/index.ts`
-   - Add a plain-text version of the certificate email alongside the existing HTML.
-   - Include it in the queued payload as `text`.
-   - Keep the existing unsubscribe token logic and queue metadata as-is.
+### Problem
+Certificate emails fail with `404 run_not_found` because the payload includes a self-generated `run_id` (`cert-<uuid>`). The email API expects `run_id` to reference an existing run in its system — a random UUID is not valid.
 
-2. Keep the email content aligned
-   - Plain-text body should include:
-     - member first name
-     - training name
-     - church name
-     - certificate number
-     - signed download link when available
-   - This ensures the text and HTML versions stay consistent.
+Per the email infrastructure, transactional emails do **not** require a `run_id`. When `idempotency_key` is provided with `purpose: "transactional"` and no `run_id`, the API creates a run inline.
 
-3. Redeploy and verify
-   - Redeploy the `issue-certificate` backend function.
-   - Trigger a fresh certificate issuance and confirm the queue processes it without the `missing_parameter:text` error.
-   - Check the email logs for a `sent` status.
+### Fix
+**`supabase/functions/issue-certificate/index.ts`** (line 261):
+- Remove the `run_id: messageId` line from the `emailPayload` object.
+- Keep everything else (message_id, idempotency_key, unsubscribe_token, text, etc.) as-is.
 
-4. Handle already-failed messages
-   - Existing failed/DLQ certificate messages will not be fixed automatically because they were queued without `text`.
-   - After deployment, resend by issuing a new certificate email flow for affected members, or manually requeue only if needed.
+Then redeploy the `issue-certificate` edge function.
 
-Technical note
-- No database change is needed.
-- Root cause is isolated to the certificate email payload, not the queue processor.
-- There may be other transactional email flows worth reviewing later for payload completeness, but the certificate failure itself is clearly caused by the missing `text` field.
+### Also
+- Clean up the stuck failed message (msg_id 9) from the transactional queue so it doesn't keep retrying with the bad payload.
+
