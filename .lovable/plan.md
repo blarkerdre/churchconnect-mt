@@ -1,28 +1,29 @@
 
 
-## Show User Role on Dashboard and Header
+## Delete Orphaned Auth Account and Prevent Future Orphans
 
-### Problem
-The user's role (e.g., "Admin", "Unit Leader", "Member") is only visible inside the sidebar, which is hidden by default on mobile. On a 384px viewport, users never see their role unless they open the sidebar.
+### Part 1: Immediate Fix — Delete blarkerdre@yahoo.com auth account
+Call the `admin-delete-user` edge function with user_id `26f0fa5e-7d98-496f-8d6f-61125963cccd` to remove the orphaned auth account.
 
-### Solution
-Display the user's role in two places:
-
-1. **Header bar** — Show the user's name and role badge next to the notification bell on mobile, so it's always visible.
-
-2. **Member Dashboard welcome banner** — Add a role badge (e.g., "Member", "Unit Leader") below the user's name in the welcome card.
+### Part 2: Code Fix — Members page delete also removes auth account
+When an admin deletes a member from the Members page, if that member has a linked `user_id`, also call the `admin-delete-user` edge function to remove the authentication account.
 
 ### Changes
 
-**`src/components/AppLayout.jsx`**
-- Add the user's role title as a small badge/text in the sticky header, visible on all screen sizes
-- Use the existing `getRoleTitle()` function to determine the display text
-
-**`src/components/dashboard/MemberDashboard.jsx`**
-- No changes needed here since the role will be visible in the header
+**`src/pages/Members.jsx`** — Update `deleteMutation` and `handleDelete`:
+- In `deleteMutation.mutationFn`: after deleting the member record, if the member had a `user_id`, invoke the `admin-delete-user` edge function to delete the auth account
+- Update the confirm dialog text to warn that the linked login account will also be deleted (when applicable)
+- Pass the full member object to the mutation instead of just the id
 
 ### Technical Detail
-- Reuse the `getRoleTitle()` logic already in AppLayout
-- Show as a subtle badge or text next to the page title or notification bell
-- Keep it compact for mobile: just a small role label
+```text
+Current flow:
+  Members page delete → removes members row only
+  Auth account remains → user can still sign in
+
+New flow:
+  Members page delete → removes members row
+                      → if member.user_id exists, call admin-delete-user edge function
+                      → auth account + profile + roles all cleaned up
+```
 
