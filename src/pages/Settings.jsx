@@ -12,9 +12,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 import {
   Settings as SettingsIcon, Plus, Pencil, Trash2, Loader2,
-  Users, Church, CalendarDays, TrendingUp, Heart, Globe, Bell
+  Users, Church, CalendarDays, TrendingUp, Heart, Globe, Bell, Award
 } from "lucide-react";
 import WSFCentresSection from "@/components/settings/WSFCentresSection";
+import CertificateTemplateSettings from "@/components/certificates/CertificateTemplateSettings";
 
 /* ─── Notification Preferences section ─── */
 function NotificationPreferencesSection() {
