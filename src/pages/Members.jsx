@@ -265,9 +265,12 @@ export default function Members() {
                             <DropdownMenuItem onClick={() => openEdit(m)}><Edit className="h-4 w-4 mr-2" /> Edit</DropdownMenuItem>
                           )}
                           {isAdmin && (
+                            <DropdownMenuItem onClick={() => setCertMember(m)}><Award className="h-4 w-4 mr-2" /> Issue Certificate</DropdownMenuItem>
+                          )}
+                          {isAdmin && (
                             <DropdownMenuItem onClick={() => handleDelete(m)} className="text-destructive"><Trash2 className="h-4 w-4 mr-2" /> Delete</DropdownMenuItem>
                           )}
-                          {!canEditMember(m) && (
+                          {!canEditMember(m) && !isAdmin && (
                             <DropdownMenuItem disabled className="text-muted-foreground">View only</DropdownMenuItem>
                           )}
                         </DropdownMenuContent>
