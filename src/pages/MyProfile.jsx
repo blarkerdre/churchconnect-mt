@@ -15,6 +15,7 @@ import { format } from "date-fns";
 import { toast } from "@/components/ui/use-toast";
 import { suggestClosestWSFCentre } from "@/lib/wsf-suggest";
 import { useChurchUnits } from "@/hooks/useChurchUnits";
+import MyCertificates from "@/components/certificates/MyCertificates";
 
 const GENDERS = ["Male", "Female"];
 const MEMBERSHIP_STATUSES = ["Active", "Inactive", "First Timer", "New Convert"];
@@ -432,6 +433,9 @@ export default function MyProfile() {
           </CardContent>
         </Card>
       )}
+
+      {/* Certificates */}
+      {!editing && <MyCertificates memberId={member.id} />}
 
       {/* Attendance History */}
       <Card className="border-0 shadow-sm">

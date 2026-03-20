@@ -188,6 +188,48 @@ export type Database = {
         }
         Relationships: []
       }
+      certificate_templates: {
+        Row: {
+          accent_color: string
+          background_color: string
+          church_name: string
+          created_at: string
+          custom_message: string | null
+          id: string
+          logo_url: string | null
+          signatory_name: string
+          signatory_title: string
+          training_type: string
+          updated_at: string
+        }
+        Insert: {
+          accent_color?: string
+          background_color?: string
+          church_name?: string
+          created_at?: string
+          custom_message?: string | null
+          id?: string
+          logo_url?: string | null
+          signatory_name?: string
+          signatory_title?: string
+          training_type: string
+          updated_at?: string
+        }
+        Update: {
+          accent_color?: string
+          background_color?: string
+          church_name?: string
+          created_at?: string
+          custom_message?: string | null
+          id?: string
+          logo_url?: string | null
+          signatory_name?: string
+          signatory_title?: string
+          training_type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       church_attendance_reports: {
         Row: {
           adult_female: number
@@ -980,6 +1022,50 @@ export type Database = {
           reason?: string
         }
         Relationships: []
+      }
+      training_completions: {
+        Row: {
+          certificate_number: string
+          certificate_url: string | null
+          completion_date: string
+          created_at: string
+          id: string
+          issued_by: string
+          member_id: string
+          notes: string | null
+          training_type: string
+        }
+        Insert: {
+          certificate_number: string
+          certificate_url?: string | null
+          completion_date?: string
+          created_at?: string
+          id?: string
+          issued_by: string
+          member_id: string
+          notes?: string | null
+          training_type: string
+        }
+        Update: {
+          certificate_number?: string
+          certificate_url?: string | null
+          completion_date?: string
+          created_at?: string
+          id?: string
+          issued_by?: string
+          member_id?: string
+          notes?: string | null
+          training_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "training_completions_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       training_reports: {
         Row: {

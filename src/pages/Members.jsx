@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Search, Download, Upload, Mail, Phone, MoreVertical, Edit, Trash2, Loader2, QrCode, Link2, Unlink2 } from "lucide-react";
+import { Plus, Search, Download, Upload, Mail, Phone, MoreVertical, Edit, Trash2, Loader2, QrCode, Link2, Unlink2, Award } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -12,6 +12,7 @@ import { toast } from "@/components/ui/use-toast";
 import MemberFormDialog from "@/components/members/MemberFormDialog";
 import RegistrationQRCode from "@/components/members/RegistrationQRCode";
 import BulkImportDialog from "@/components/members/BulkImportDialog";
+import IssueCertificateDialog from "@/components/certificates/IssueCertificateDialog";
 import { logAudit } from "@/lib/audit";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -32,6 +33,7 @@ export default function Members() {
   const [editingMember, setEditingMember] = useState(null);
   const [qrOpen, setQrOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
+  const [certMember, setCertMember] = useState(null);
   const queryClient = useQueryClient();
 
   const { data: members = [], isLoading } = useQuery({
@@ -263,9 +265,12 @@ export default function Members() {
                             <DropdownMenuItem onClick={() => openEdit(m)}><Edit className="h-4 w-4 mr-2" /> Edit</DropdownMenuItem>
                           )}
                           {isAdmin && (
+                            <DropdownMenuItem onClick={() => setCertMember(m)}><Award className="h-4 w-4 mr-2" /> Issue Certificate</DropdownMenuItem>
+                          )}
+                          {isAdmin && (
                             <DropdownMenuItem onClick={() => handleDelete(m)} className="text-destructive"><Trash2 className="h-4 w-4 mr-2" /> Delete</DropdownMenuItem>
                           )}
-                          {!canEditMember(m) && (
+                          {!canEditMember(m) && !isAdmin && (
                             <DropdownMenuItem disabled className="text-muted-foreground">View only</DropdownMenuItem>
                           )}
                         </DropdownMenuContent>
@@ -297,6 +302,11 @@ export default function Members() {
         open={importOpen}
         onOpenChange={setImportOpen}
         onComplete={() => queryClient.invalidateQueries({ queryKey: ["members"] })}
+      />
+      <IssueCertificateDialog
+        open={!!certMember}
+        onOpenChange={(open) => !open && setCertMember(null)}
+        member={certMember}
       />
     </div>
   );
