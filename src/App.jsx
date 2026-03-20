@@ -16,7 +16,7 @@ import Transportation from "@/pages/Transportation";
 import Analytics from "@/pages/Analytics";
 import WSFManagement from "@/pages/WSFManagement";
 import UserManagement from "@/pages/UserManagement";
-import AuditLog from "@/pages/AuditLog";
+import SystemLogs from "@/pages/SystemLogs";
 import TrainingReports from "@/pages/TrainingReports";
 import ChurchAttendance from "@/pages/ChurchAttendance";
 import Settings from "@/pages/Settings";
@@ -25,7 +25,7 @@ import ResetPassword from "@/pages/ResetPassword";
 import MyProfile from "@/pages/MyProfile";
 import PublicRegistration from "@/pages/PublicRegistration";
 import Presentation from "@/pages/Presentation";
-import EmailDashboard from "@/pages/EmailDashboard";
+
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
@@ -110,8 +110,7 @@ function AuthRoutes() {
                 <Route path="/wsf" element={<WSFRoute><WSFManagement /></WSFRoute>} />
                 <Route path="/user-management" element={<AdminRoute><UserManagement /></AdminRoute>} />
                 <Route path="/settings" element={<AdminRoute><Settings /></AdminRoute>} />
-                <Route path="/audit-log" element={<SuperAdminRoute><AuditLog /></SuperAdminRoute>} />
-                <Route path="/email-dashboard" element={<AdminRoute><EmailDashboard /></AdminRoute>} />
+                <Route path="/system-logs" element={<AdminRoute><SystemLogs /></AdminRoute>} />
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
             </Layout>
