@@ -27,8 +27,7 @@ const allNavItems = [
   { name: "Church Attendance", icon: ClipboardList, path: "/church-attendance", access: "training" },
   { name: "WSF Centres", icon: Globe, path: "/wsf", access: "wsf" },
   { name: "User Management", icon: Shield, path: "/user-management", access: "admin" },
-  { name: "Audit Log", icon: FileText, path: "/audit-log", access: "super_admin" },
-  { name: "Email Logs", icon: Mail, path: "/email-dashboard", access: "admin" },
+  { name: "System Logs", icon: FileText, path: "/system-logs", access: "admin" },
   { name: "Settings", icon: Settings, path: "/settings", access: "admin" },
 ];
 
