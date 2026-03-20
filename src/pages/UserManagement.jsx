@@ -243,13 +243,14 @@ export default function UserManagement() {
 
                   return (
                     <tr key={p.id} className={`border-b border-border hover:bg-muted/30 transition-colors ${isDisabled ? "opacity-60" : ""}`}>
-                      <td className="p-4">
+                      <td className="p-3 sm:p-4">
                         <div className="flex items-center gap-3">
-                          <div className={`h-9 w-9 rounded-full flex items-center justify-center font-bold text-sm ${isDisabled ? "bg-destructive/10 text-destructive" : "bg-primary/10 text-primary"}`}>
+                          <div className={`h-9 w-9 rounded-full flex items-center justify-center font-bold text-sm shrink-0 ${isDisabled ? "bg-destructive/10 text-destructive" : "bg-primary/10 text-primary"}`}>
                             {(p.full_name || p.email || "?")[0].toUpperCase()}
                           </div>
-                          <div>
-                            <p className="font-medium text-foreground">{p.full_name || "—"}</p>
+                          <div className="min-w-0">
+                            <p className="font-medium text-foreground truncate">{p.full_name || "—"}</p>
+                            <p className="text-xs text-muted-foreground truncate md:hidden">{p.email || ""}</p>
                             {isDisabled && (
                               <Badge variant="outline" className="text-destructive border-destructive/30 text-[10px] mt-0.5">
                                 <Ban className="h-2.5 w-2.5 mr-1" /> Disabled
@@ -258,7 +259,7 @@ export default function UserManagement() {
                           </div>
                         </div>
                       </td>
-                      <td className="p-4 text-muted-foreground">{p.email || "—"}</td>
+                      <td className="p-3 sm:p-4 text-muted-foreground hidden md:table-cell">{p.email || "—"}</td>
                       <td className="p-4">
                         <div className="flex flex-wrap gap-1">
                           {userRoles.length === 0 ? (
