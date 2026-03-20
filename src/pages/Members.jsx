@@ -68,11 +68,19 @@ export default function Members() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: async (id) => {
+    mutationFn: async (member) => {
       // Unlink from any WSF centre leadership before deleting
-      await supabase.from("wsf_centres").update({ leader_id: null }).eq("leader_id", id);
-      const { error } = await supabase.from("members").delete().eq("id", id);
+      await supabase.from("wsf_centres").update({ leader_id: null }).eq("leader_id", member.id);
+      const { error } = await supabase.from("members").delete().eq("id", member.id);
       if (error) throw error;
+
+      // If member had a linked auth account, delete that too
+      if (member.user_id) {
+        const { data, error: fnError } = await supabase.functions.invoke("admin-delete-user", {
+          body: { user_id: member.user_id },
+        });
+        if (fnError) console.warn("Could not delete auth account:", fnError.message);
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["members"] });
