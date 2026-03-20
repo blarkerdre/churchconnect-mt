@@ -638,7 +638,7 @@ function CreateMemberProfile({ user, onCreated, wsfCentres, churchUnits }) {
 
         <Button onClick={handleCreate} disabled={saving || !form.first_name || !form.last_name || !form.gdpr_consent} className="w-full">
           {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-          Create My Profile
+          Update My Profile
         </Button>
       </CardContent>
     </Card>
