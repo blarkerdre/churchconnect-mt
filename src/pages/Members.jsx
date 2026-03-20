@@ -33,6 +33,7 @@ export default function Members() {
   const [editingMember, setEditingMember] = useState(null);
   const [qrOpen, setQrOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
+  const [certMember, setCertMember] = useState(null);
   const queryClient = useQueryClient();
 
   const { data: members = [], isLoading } = useQuery({
