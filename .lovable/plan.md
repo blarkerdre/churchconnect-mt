@@ -1,20 +1,28 @@
 
 
-## Update QR Code URL to Be Environment-Aware
+## Show User Role on Dashboard and Header
 
 ### Problem
-The QR code URL is hardcoded to `https://churchmanagementsuite.org/register` (the live/production domain). In the test/preview environment, it should point to the preview URL instead.
+The user's role (e.g., "Admin", "Unit Leader", "Member") is only visible inside the sidebar, which is hidden by default on mobile. On a 384px viewport, users never see their role unless they open the sidebar.
 
 ### Solution
-Use `window.location.origin` to dynamically generate the registration URL based on the current environment:
-- **Live**: `https://churchmanagementsuite.org/register` (when accessed from the live domain)
-- **Preview/Test**: `https://id-preview--de8d3061-cc44-4ec4-9843-a7713896e3bc.lovable.app/register`
+Display the user's role in two places:
 
-### Change
-**`src/components/members/RegistrationQRCode.jsx`** — Replace the hardcoded URL with:
-```js
-const registrationUrl = `${window.location.origin}/register`;
-```
+1. **Header bar** — Show the user's name and role badge next to the notification bell on mobile, so it's always visible.
 
-This single-line change ensures the QR code always points to whichever environment you're currently using.
+2. **Member Dashboard welcome banner** — Add a role badge (e.g., "Member", "Unit Leader") below the user's name in the welcome card.
+
+### Changes
+
+**`src/components/AppLayout.jsx`**
+- Add the user's role title as a small badge/text in the sticky header, visible on all screen sizes
+- Use the existing `getRoleTitle()` function to determine the display text
+
+**`src/components/dashboard/MemberDashboard.jsx`**
+- No changes needed here since the role will be visible in the header
+
+### Technical Detail
+- Reuse the `getRoleTitle()` logic already in AppLayout
+- Show as a subtle badge or text next to the page title or notification bell
+- Keep it compact for mobile: just a small role label
 
