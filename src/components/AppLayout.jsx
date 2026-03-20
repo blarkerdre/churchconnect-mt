@@ -4,7 +4,7 @@ import { useUnitMembership } from "@/hooks/useUnitMembership";
 import {
   LayoutDashboard, Users, CalendarDays, HeartHandshake,
   Heart, Megaphone, Menu, LogOut,
-  ClipboardList, Car, BarChart2, ChevronLeft, Globe, Shield, FileText, TrendingUp, Settings
+  ClipboardList, Car, BarChart2, ChevronLeft, Globe, Shield, FileText, TrendingUp, Settings, Mail
 } from "lucide-react";
 import winnersLogo from "@/assets/winners-chapel-logo.png";
 import { Button } from "@/components/ui/button";
@@ -28,6 +28,7 @@ const allNavItems = [
   { name: "WSF Centres", icon: Globe, path: "/wsf", access: "wsf" },
   { name: "User Management", icon: Shield, path: "/user-management", access: "admin" },
   { name: "Audit Log", icon: FileText, path: "/audit-log", access: "super_admin" },
+  { name: "Email Logs", icon: Mail, path: "/email-dashboard", access: "admin" },
   { name: "Settings", icon: Settings, path: "/settings", access: "admin" },
 ];
 
