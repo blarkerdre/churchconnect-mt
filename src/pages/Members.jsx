@@ -106,10 +106,15 @@ export default function Members() {
   };
 
   const handleDelete = (member) => {
-    if (window.confirm("Delete this member?")) {
-      deleteMutation.mutate(member.id);
+    const hasAccount = !!member.user_id;
+    const msg = hasAccount
+      ? `Delete this member AND their login account? They will no longer be able to sign in.`
+      : `Delete this member?`;
+    if (window.confirm(msg)) {
+      deleteMutation.mutate(member);
       logAudit("member_delete", "members", member.id, {
         member_name: `${member.first_name} ${member.last_name}`,
+        auth_account_deleted: hasAccount,
       });
     }
   };
