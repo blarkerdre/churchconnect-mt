@@ -4,12 +4,13 @@ import { useUnitMembership } from "@/hooks/useUnitMembership";
 import {
   LayoutDashboard, Users, CalendarDays, HeartHandshake,
   Heart, Megaphone, Menu, LogOut,
-  ClipboardList, Car, BarChart2, ChevronLeft, Globe, Shield, FileText, TrendingUp, Settings, Mail
+  ClipboardList, Car, BarChart2, ChevronLeft, Globe, Shield, FileText, TrendingUp, Settings, Mail, AlertTriangle
 } from "lucide-react";
 import winnersLogo from "@/assets/winners-chapel-logo.png";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import NotificationBell from "@/components/notifications/NotificationBell";
+import { getEnvironmentLabel, getBackendHost, isBackendMismatch } from "@/lib/environment";
 
 // Role requirements: null = any authenticated user, "admin" = admin/super_admin, "leader" = admin or unit_leader
 const allNavItems = [
@@ -142,6 +143,12 @@ export default function Layout({ children }) {
       {/* Main content */}
       <div className="flex-1 flex flex-col min-h-screen">
         <header className="sticky top-0 z-30 bg-card/80 backdrop-blur-xl border-b border-border px-4 lg:px-8 py-4">
+          {isBackendMismatch() && isAdmin && (
+            <div className="flex items-center gap-2 mb-2 px-3 py-2 rounded-lg bg-destructive/10 text-destructive text-xs font-medium border border-destructive/20">
+              <AlertTriangle className="h-4 w-4 shrink-0" />
+              <span>Backend mismatch detected — connected to <code className="bg-destructive/10 px-1 rounded">{getBackendHost()}</code></span>
+            </div>
+          )}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setSidebarOpen(true)}>
@@ -155,6 +162,15 @@ export default function Layout({ children }) {
               </div>
             </div>
             <div className="flex items-center gap-2">
+              {isAdmin && (
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                  getEnvironmentLabel() === "Test"
+                    ? "bg-amber-500/10 text-amber-600 border-amber-500/30"
+                    : "bg-emerald-500/10 text-emerald-600 border-emerald-500/30"
+                }`}>
+                  {getEnvironmentLabel()}
+                </span>
+              )}
               <span className="text-[11px] font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded-full hidden sm:inline">
                 {getRoleTitle()}
               </span>
