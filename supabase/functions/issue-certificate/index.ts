@@ -255,12 +255,15 @@ Deno.serve(async (req) => {
 
         const senderDomain = "notify.churchmanagementsuite.org";
         const messageId = `cert-${crypto.randomUUID()}`;
+        const plainText = `Congratulations, ${member.first_name}!\n\nYou have successfully completed ${training_type} at ${churchName}.\n\nYour certificate number is: ${certificateNumber}\n\n${signedUrl?.signedUrl ? `Download your certificate: ${signedUrl.signedUrl}\n\n` : ""}You can also download your certificate anytime from your profile page.`;
+
         const emailPayload = {
           run_id: messageId,
           to: member.email,
           from: `Winners Chapel Cardiff <noreply@${senderDomain}>`,
           sender_domain: senderDomain,
           subject: `Your ${training_type} Certificate - ${churchName}`,
+          text: plainText,
           html: `
 <!DOCTYPE html>
 <html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
