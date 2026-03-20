@@ -152,6 +152,9 @@ export default function Layout({ children }) {
               </h2>
             </div>
             <div className="flex items-center gap-2">
+              <span className="text-[11px] font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded-full hidden sm:inline">
+                {getRoleTitle()}
+              </span>
               <NotificationBell />
               <Button variant="outline" size="sm" className="lg:hidden gap-1.5 text-destructive border-destructive/30 hover:bg-destructive/10" onClick={signOut}>
                 <LogOut className="h-4 w-4" /> Sign Out
