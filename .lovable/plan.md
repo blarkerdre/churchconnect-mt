@@ -1,16 +1,36 @@
 
 
-## Plan: Fix hardcoded fallback backend URL in vite.config.js
+## Problem
 
-### Problem
-`vite.config.js` has hardcoded fallback values pointing to an old Supabase project (`aipjlpuintvfcjnzaqlu`). When environment variables aren't loaded, the app connects to the wrong backend.
+The `define` block in `vite.config.js` (lines 23-26) hardcodes `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` at build time using `loadEnv` with fallback values. This overrides the auto-generated `.env` file that Lovable Cloud provides, which contains the correct environment-specific backend URLs for Test vs Live. Both builds end up pointing to the same backend instance.
 
-### Fix
-Update `vite.config.js` line 7-12: replace the old project ID and anon key fallbacks with the current project's values (`komqiadgeaapeuuzbovn`).
+## Fix
 
-**File:** `vite.config.js`
-- Change fallback `projectId` from `aipjlpuintvfcjnzaqlu` to `komqiadgeaapeuuzbovn`
-- Change fallback `publishableKey` to the current project's anon key
+Remove the `define` block and the manual env loading logic from `vite.config.js`. The `.env` file is auto-managed by the platform and already provides the correct `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` values per environment. Vite natively reads these without any custom `define` overrides.
 
-Single file, 2 lines changed.
+### Updated `vite.config.js`
+
+```js
+import react from '@vitejs/plugin-react'
+import { defineConfig } from 'vite'
+import path from 'path'
+
+export default defineConfig({
+  plugins: [react()],
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, './src'),
+    },
+  },
+  server: {
+    host: '::',
+  },
+})
+```
+
+## After the fix
+
+You will need to **publish** the updated build so the Live site picks up the correct backend URL from its own environment.
+
+**One file changed:** `vite.config.js`
 
