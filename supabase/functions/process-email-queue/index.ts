@@ -246,9 +246,12 @@ Deno.serve(async (req) => {
       }
 
       try {
+        // Fallback chain for run_id: explicit > message_id > idempotency_key > generate
+        const runId = payload.run_id || payload.message_id || payload.idempotency_key || crypto.randomUUID()
+
         await sendLovableEmail(
           {
-            run_id: payload.run_id,
+            run_id: runId,
             to: payload.to,
             from: payload.from,
             sender_domain: payload.sender_domain,
