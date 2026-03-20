@@ -1,5 +1,6 @@
 import * as React from "npm:react@18.3.1";
 import { renderAsync } from "npm:@react-email/components@0.0.22";
+import { sendLovableEmail } from "npm:@lovable.dev/email-js";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { WelcomeRegistrationEmail } from "../_shared/email-templates/welcome-registration.tsx";
 
@@ -30,6 +31,8 @@ Deno.serve(async (req) => {
     // Validate caller: only accept service role key
     const authHeader = req.headers.get("Authorization");
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const apiKey = Deno.env.get("LOVABLE_API_KEY");
+
     if (!authHeader || authHeader !== `Bearer ${serviceRoleKey}`) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
@@ -77,46 +80,68 @@ Deno.serve(async (req) => {
       status: "pending",
     });
 
-    // Enqueue to transactional_emails queue
-    const { error: enqueueError } = await supabase.rpc("enqueue_email", {
-      queue_name: "transactional_emails",
-      payload: {
-        run_id: messageId,
-        message_id: messageId,
-        idempotency_key: messageId,
-        to: email,
-        from: `${SITE_NAME} <noreply@${FROM_DOMAIN}>`,
-        sender_domain: SENDER_DOMAIN,
-        subject: "Welcome to Winners Chapel International Cardiff",
-        html,
-        text,
-        purpose: "transactional",
-        label: "welcome-registration",
-        queued_at: new Date().toISOString(),
-      },
-    });
-
-    if (enqueueError) {
-      console.error("Failed to enqueue welcome email", { error: enqueueError });
+    // Send directly using Lovable email API (no queue needed for transactional)
+    if (!apiKey) {
+      console.error("Missing LOVABLE_API_KEY");
       await supabase.from("email_send_log").insert({
         message_id: messageId,
         template_name: "welcome-registration",
         recipient_email: email,
         status: "failed",
-        error_message: "Failed to enqueue email",
+        error_message: "Missing LOVABLE_API_KEY",
       });
-      return new Response(JSON.stringify({ error: "Failed to enqueue email" }), {
+      return new Response(JSON.stringify({ error: "Server configuration error" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    console.log("Welcome email enqueued", { email, messageId });
+    try {
+      await sendLovableEmail(
+        {
+          to: email,
+          from: `${SITE_NAME} <noreply@${FROM_DOMAIN}>`,
+          sender_domain: SENDER_DOMAIN,
+          subject: "Welcome to Winners Chapel International Cardiff",
+          html,
+          text,
+          purpose: "transactional",
+          label: "welcome-registration",
+          message_id: messageId,
+          idempotency_key: messageId,
+        },
+        { apiKey, sendUrl: Deno.env.get("LOVABLE_SEND_URL") }
+      );
 
-    return new Response(JSON.stringify({ success: true, message_id: messageId }), {
-      status: 200,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+      // Log success
+      await supabase.from("email_send_log").insert({
+        message_id: messageId,
+        template_name: "welcome-registration",
+        recipient_email: email,
+        status: "sent",
+      });
+
+      console.log("Welcome email sent directly", { email, messageId });
+
+      return new Response(JSON.stringify({ success: true, message_id: messageId }), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    } catch (sendErr) {
+      const errMsg = sendErr instanceof Error ? sendErr.message : String(sendErr);
+      console.error("Failed to send welcome email", { error: errMsg });
+      await supabase.from("email_send_log").insert({
+        message_id: messageId,
+        template_name: "welcome-registration",
+        recipient_email: email,
+        status: "failed",
+        error_message: errMsg.slice(0, 1000),
+      });
+      return new Response(JSON.stringify({ error: "Failed to send email" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
   } catch (err) {
     console.error("Send welcome email error:", err);
     return new Response(JSON.stringify({ error: "Internal server error" }), {
