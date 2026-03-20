@@ -1,25 +1,41 @@
 
 
-## Plan: Prefill profile form with signup data and use "Update My Profile"
+## Plan: Show clear error for duplicate email signups
 
 ### Problem
-When a logged-in user with no linked member record visits My Profile, the form shows empty fields and says "Create My Profile". It should prefill with their signup data (name, email) and say "Update My Profile".
+When someone signs up with an already-registered email, the auth system silently succeeds (returns no error) to prevent email enumeration. The user sees "Account created! Check your email" but never receives a confirmation — confusing.
+
+### Solution
+After a successful `signUp` call, check if the response indicates a fake/obfuscated user (no session, no confirmed email, identity already exists). If so, show a helpful message telling them to sign in instead.
 
 ### Changes
 
-**1. Update `CreateMemberProfile` in `src/pages/MyProfile.jsx`**
-- Rename title from "Complete Your Member Profile" / "Create My Profile" to "Update My Profile"
-- Prefill `first_name` and `last_name` by splitting `user.user_metadata.full_name` (from signup)
-- Prefill `email` from `user.email` (already done)
-- Change the submit button text from "Create My Profile" to "Update My Profile"
-- Instead of doing a direct `supabase.from("members").insert(...)`, call the `public-register` edge function which already handles creating or claiming member records for authenticated users, and passes the auth token so the backend links the record properly
+**`src/pages/Auth.jsx`** — Update the signup handler:
+- After `signUp`, check `data.user.identities` — if it's an empty array, the email is already registered
+- Show a toast: "An account with this email already exists. Please sign in instead."
+- Switch to login mode instead of showing the "check your email" message
 
-**2. Drop the RLS INSERT policy "Users can create own member record"**
-- Database migration to remove the policy that allows `INSERT` where `auth.uid() = user_id`
-- The edge function uses the service role key, so it bypasses RLS — no client-side insert needed
-- This hardens security: members cannot insert arbitrary records via the client
+```javascript
+} else if (mode === "signup") {
+  const { data, error } = await signUp(form.email, form.password, form.fullName);
+  if (error) throw error;
+  // Detect duplicate email (Supabase returns user with empty identities)
+  if (data?.user?.identities?.length === 0) {
+    toast({
+      title: "Email already registered",
+      description: "An account with this email already exists. Please sign in instead.",
+      variant: "destructive",
+    });
+    setMode("login");
+  } else {
+    toast({ title: "Account created!", description: "Please check your email to verify your account." });
+    setMode("login");
+  }
+}
+```
+
+**`src/hooks/useAuth.jsx`** — Update `signUp` to return `data` (already does, no change needed).
 
 ### Files affected
-- `src/pages/MyProfile.jsx` — prefill form, rename labels, use edge function for submission
-- Database migration — drop the self-insert RLS policy on `members`
+- `src/pages/Auth.jsx` — one block change in handleSubmit
 
