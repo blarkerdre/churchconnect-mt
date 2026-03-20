@@ -16,7 +16,7 @@ import Transportation from "@/pages/Transportation";
 import Analytics from "@/pages/Analytics";
 import WSFManagement from "@/pages/WSFManagement";
 import UserManagement from "@/pages/UserManagement";
-import AuditLog from "@/pages/AuditLog";
+import SystemLogs from "@/pages/SystemLogs";
 import TrainingReports from "@/pages/TrainingReports";
 import ChurchAttendance from "@/pages/ChurchAttendance";
 import Settings from "@/pages/Settings";
