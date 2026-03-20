@@ -166,17 +166,17 @@ export default function UserManagement() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h2 className="text-lg font-display font-bold text-foreground">User Management</h2>
           <p className="text-sm text-muted-foreground">Manage user roles and permissions</p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setBulkAssignOpen(true)}>
-            <UsersRound className="h-4 w-4 mr-2" /> Bulk Unit Assign
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" size="sm" onClick={() => setBulkAssignOpen(true)}>
+            <UsersRound className="h-4 w-4 mr-1" /><span className="hidden sm:inline">Bulk Unit Assign</span><span className="sm:hidden">Bulk</span>
           </Button>
-          <Button onClick={() => { setAddForm({ email: "", password: "", full_name: "", role: "member" }); setAddDialogOpen(true); }} className="bg-primary hover:bg-primary/90">
-            <Plus className="h-4 w-4 mr-2" /> Add User
+          <Button size="sm" onClick={() => { setAddForm({ email: "", password: "", full_name: "", role: "member" }); setAddDialogOpen(true); }} className="bg-primary hover:bg-primary/90">
+            <Plus className="h-4 w-4 mr-1" /> Add User
           </Button>
         </div>
       </div>
