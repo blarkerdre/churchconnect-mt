@@ -249,8 +249,9 @@ Deno.serve(async (req) => {
       }
 
       try {
-        // Fallback chain for run_id: explicit > message_id > idempotency_key > generate
-        const runId = payload.run_id || payload.message_id || payload.idempotency_key || crypto.randomUUID()
+        // For auth emails, run_id comes from the webhook payload.
+        // For transactional emails, use the current edge function invocation's request ID.
+        const runId = payload.run_id || sbRequestId || crypto.randomUUID()
 
         await sendLovableEmail(
           {
