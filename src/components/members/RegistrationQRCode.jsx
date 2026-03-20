@@ -8,7 +8,7 @@ import { toast } from "@/components/ui/use-toast";
 
 export default function RegistrationQRCode({ open, onOpenChange }) {
   const qrRef = useRef();
-  const registrationUrl = `https://churchmanagementsuite.org/register`;
+  const registrationUrl = `${window.location.origin}/register`;
 
   const handleCopy = () => {
     navigator.clipboard.writeText(registrationUrl);
