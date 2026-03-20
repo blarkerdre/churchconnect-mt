@@ -1,0 +1,1 @@
+DROP POLICY IF EXISTS "Users can create own member record" ON public.members;
