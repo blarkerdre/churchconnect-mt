@@ -219,13 +219,13 @@ export default function UserManagement() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-border bg-muted/50">
-                   <th className="text-left p-4 font-medium text-muted-foreground">User</th>
-                   <th className="text-left p-4 font-medium text-muted-foreground">Email</th>
-                   <th className="text-left p-4 font-medium text-muted-foreground">Roles</th>
-                   <th className="text-left p-4 font-medium text-muted-foreground">Led Units</th>
-                   <th className="text-left p-4 font-medium text-muted-foreground">Manage Roles</th>
-                   <th className="text-right p-4 font-medium text-muted-foreground">Actions</th>
+                 <tr className="border-b border-border bg-muted/50">
+                   <th className="text-left p-3 sm:p-4 font-medium text-muted-foreground">User</th>
+                   <th className="text-left p-3 sm:p-4 font-medium text-muted-foreground hidden md:table-cell">Email</th>
+                   <th className="text-left p-3 sm:p-4 font-medium text-muted-foreground">Roles</th>
+                   <th className="text-left p-3 sm:p-4 font-medium text-muted-foreground hidden lg:table-cell">Led Units</th>
+                   <th className="text-left p-3 sm:p-4 font-medium text-muted-foreground hidden md:table-cell">Manage Roles</th>
+                   <th className="text-right p-3 sm:p-4 font-medium text-muted-foreground">Actions</th>
                  </tr>
               </thead>
               <tbody>
