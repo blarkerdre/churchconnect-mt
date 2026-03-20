@@ -34,9 +34,17 @@ export default function Auth() {
         const { error } = await signIn(form.email, form.password);
         if (error) throw error;
       } else if (mode === "signup") {
-        const { error } = await signUp(form.email, form.password, form.fullName);
+        const { data, error } = await signUp(form.email, form.password, form.fullName);
         if (error) throw error;
-        toast({ title: "Account created!", description: "Please check your email to verify your account." });
+        if (data?.user?.identities?.length === 0) {
+          toast({
+            title: "Email already registered",
+            description: "An account with this email already exists. Please sign in instead.",
+            variant: "destructive",
+          });
+        } else {
+          toast({ title: "Account created!", description: "Please check your email to verify your account." });
+        }
         setMode("login");
       } else if (mode === "forgot") {
         const { error } = await resetPassword(form.email);
