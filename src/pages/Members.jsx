@@ -303,6 +303,11 @@ export default function Members() {
         onOpenChange={setImportOpen}
         onComplete={() => queryClient.invalidateQueries({ queryKey: ["members"] })}
       />
+      <IssueCertificateDialog
+        open={!!certMember}
+        onOpenChange={(open) => !open && setCertMember(null)}
+        member={certMember}
+      />
     </div>
   );
 }

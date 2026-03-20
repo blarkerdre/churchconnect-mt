@@ -434,6 +434,9 @@ export default function MyProfile() {
         </Card>
       )}
 
+      {/* Certificates */}
+      {!editing && <MyCertificates memberId={member.id} />}
+
       {/* Attendance History */}
       <Card className="border-0 shadow-sm">
         <CardHeader className="pb-2"><CardTitle className="text-base">Recent Attendance ({attendanceRecords.length})</CardTitle></CardHeader>
