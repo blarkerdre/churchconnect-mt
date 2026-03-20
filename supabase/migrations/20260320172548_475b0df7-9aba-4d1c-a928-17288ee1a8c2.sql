@@ -1,0 +1,1 @@
+SELECT public.delete_email('transactional_emails', 9);
