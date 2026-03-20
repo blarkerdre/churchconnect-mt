@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Mail, Lock, User, ArrowRight } from "lucide-react";
 import winnersLogo from "@/assets/winners-chapel-logo.png";
 import { useToast } from "@/components/ui/use-toast";
+import EnvironmentBadge from "@/components/EnvironmentBadge";
 
 export default function Auth() {
   const { user, loading, signIn, signUp, resetPassword } = useAuth();
