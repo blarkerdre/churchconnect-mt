@@ -68,7 +68,7 @@ export default function GrowthIndices({ members }) {
     <Card className="border-0 shadow-sm">
       <CardHeader className="pb-3">
         <CardTitle className="text-base font-semibold flex items-center gap-2">
-          <TrendingUp className="h-4 w-4 text-[#1e3a5f]" /> Church Growth Indices
+          <TrendingUp className="h-4 w-4 text-[#1e3a5f]" /> Spiritual Development
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">

@@ -1509,7 +1509,12 @@ export type Database = {
         | "General"
         | "Pastoral"
       gender_type: "Male" | "Female"
-      membership_status: "Active" | "Inactive" | "New Convert" | "First Timer"
+      membership_status:
+        | "Active"
+        | "Inactive"
+        | "New Convert"
+        | "First Timer"
+        | "Visitor"
       pastoral_care_status: "Open" | "In Progress" | "Resolved" | "Closed"
       pastoral_care_type:
         | "Counselling"
@@ -1665,7 +1670,13 @@ export const Constants = {
         "Pastoral",
       ],
       gender_type: ["Male", "Female"],
-      membership_status: ["Active", "Inactive", "New Convert", "First Timer"],
+      membership_status: [
+        "Active",
+        "Inactive",
+        "New Convert",
+        "First Timer",
+        "Visitor",
+      ],
       pastoral_care_status: ["Open", "In Progress", "Resolved", "Closed"],
       pastoral_care_type: [
         "Counselling",
