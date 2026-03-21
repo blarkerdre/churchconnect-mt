@@ -357,7 +357,7 @@ export default function MyProfile() {
 
                     {/* Notes */}
                     <div className="space-y-1.5">
-                      <Label>Notes</Label>
+                      <Label>Prayer Request</Label>
                       <Textarea value={form.notes} onChange={e => set("notes", e.target.value)} rows={3} />
                     </div>
 
