@@ -14,7 +14,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { suggestClosestWSFCentre } from "@/lib/wsf-suggest";
 import { normalizePhone } from "@/lib/phone-utils";
 import { useChurchUnits } from "@/hooks/useChurchUnits";
-const STATUSES = ["First Timer", "New Convert", "Active", "Inactive"];
+const STATUSES = ["First Timer", "New Convert", "Visitor", "Active", "Inactive"];
 const GENDERS = ["Male", "Female"];
 
 const emptyForm = {
@@ -222,9 +222,9 @@ export default function PublicRegistration() {
               </div>
             </div>
 
-            {/* Church Growth Indices */}
+            {/* Spiritual Development */}
             <div>
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Church Growth Indices</h3>
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Spiritual Development</h3>
               <div className="space-y-3">
                 <SwitchRow id="water_baptism" label="Water Baptism" checked={form.water_baptism} onChange={v => set("water_baptism", v)} />
                 <SwitchRow id="holy_spirit_baptism" label="Holy Spirit Baptism" checked={form.holy_spirit_baptism} onChange={v => set("holy_spirit_baptism", v)} />
@@ -244,26 +244,35 @@ export default function PublicRegistration() {
                     </Select>
                   </div>
                 )}
-                <SwitchRow id="bfc_completed" label="Believers Foundation Class (BFC)" checked={form.bfc_completed} onChange={v => set("bfc_completed", v)} />
-                <SwitchRow id="bcc_completed" label="Basic Certificate Course (BCC)" checked={form.bcc_completed} onChange={v => set("bcc_completed", v)} />
-                <SwitchRow id="lcc_completed" label="Leadership Certificate Course (LCC)" checked={form.lcc_completed} onChange={v => set("lcc_completed", v)} />
-                <SwitchRow id="ldc_completed" label="Leadership Diploma Course (LDC)" checked={form.ldc_completed} onChange={v => set("ldc_completed", v)} />
+                {form.membership_status === "Visitor" && (
+                  <SwitchRow id="bfc_completed" label="Have you completed Believers Foundation Class (BFC)?" checked={form.bfc_completed} onChange={v => set("bfc_completed", v)} />
+                )}
+                {form.membership_status !== "Visitor" && (
+                  <>
+                    <SwitchRow id="bfc_completed" label="Believers Foundation Class (BFC)" checked={form.bfc_completed} onChange={v => set("bfc_completed", v)} />
+                    <SwitchRow id="bcc_completed" label="Basic Certificate Course (BCC)" checked={form.bcc_completed} onChange={v => set("bcc_completed", v)} />
+                    <SwitchRow id="lcc_completed" label="Leadership Certificate Course (LCC)" checked={form.lcc_completed} onChange={v => set("lcc_completed", v)} />
+                    <SwitchRow id="ldc_completed" label="Leadership Diploma Course (LDC)" checked={form.ldc_completed} onChange={v => set("ldc_completed", v)} />
+                  </>
+                )}
               </div>
             </div>
 
-            {/* Emergency Contact */}
-            <div>
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Emergency Contact</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-1.5"><Label>Contact Name</Label><Input value={form.emergency_contact_name} onChange={e => set("emergency_contact_name", e.target.value)} maxLength={100} /></div>
-                <div className="space-y-1.5"><Label>Contact Phone</Label><Input value={form.emergency_contact_phone} onChange={e => set("emergency_contact_phone", e.target.value)} maxLength={20} /></div>
+            {/* Emergency Contact — shown for First Timer / New Convert */}
+            {(form.membership_status === "First Timer" || form.membership_status === "New Convert") && (
+              <div>
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Emergency Contact (Optional)</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-1.5"><Label>Contact Name (Optional)</Label><Input value={form.emergency_contact_name} onChange={e => set("emergency_contact_name", e.target.value)} maxLength={100} /></div>
+                  <div className="space-y-1.5"><Label>Contact Phone (Optional)</Label><Input value={form.emergency_contact_phone} onChange={e => set("emergency_contact_phone", e.target.value)} maxLength={20} /></div>
+                </div>
               </div>
-            </div>
+            )}
 
-            {/* Notes */}
+            {/* Prayer Request */}
             <div className="space-y-1.5">
-              <Label>Prayer Request / Notes</Label>
-              <Textarea value={form.notes} onChange={e => set("notes", e.target.value)} rows={3} maxLength={2000} />
+              <Label>Prayer Request</Label>
+              <Textarea value={form.notes} onChange={e => set("notes", e.target.value)} rows={3} maxLength={2000} placeholder="Share any prayer requests here..." />
             </div>
 
             {/* GDPR Consent */}
@@ -271,7 +280,8 @@ export default function PublicRegistration() {
               <label className="flex items-start gap-3 cursor-pointer">
                 <input type="checkbox" checked={form.gdpr_consent} onChange={e => set("gdpr_consent", e.target.checked)} className="mt-0.5 rounded h-4 w-4 shrink-0" />
                 <span className="text-sm text-foreground leading-relaxed">
-                  I consent to processing my personal data including attendance records in accordance with <strong>UK GDPR</strong>.
+                  I consent to processing my personal data including attendance records in accordance with <strong>UK GDPR</strong>.{" "}
+                  <a href="https://winners-chapel.org.uk/wp-content/uploads/2024/11/WMA_PrivacyPolicy2024.pdf" target="_blank" rel="noopener noreferrer" className="text-primary underline hover:text-primary/80">View our Privacy Policy</a>.
                 </span>
               </label>
               {!form.gdpr_consent && <p className="text-xs text-destructive pl-7">⚠️ Consent is required to complete registration.</p>}

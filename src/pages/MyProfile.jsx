@@ -18,13 +18,14 @@ import { useChurchUnits } from "@/hooks/useChurchUnits";
 import MyCertificates from "@/components/certificates/MyCertificates";
 
 const GENDERS = ["Male", "Female"];
-const MEMBERSHIP_STATUSES = ["Active", "Inactive", "First Timer", "New Convert"];
+const MEMBERSHIP_STATUSES = ["Active", "Inactive", "First Timer", "New Convert", "Visitor"];
 
 const statusColors = {
   "Active": "bg-chart-3/10 text-chart-3",
   "Inactive": "bg-muted text-muted-foreground",
   "New Convert": "bg-accent/10 text-accent",
   "First Timer": "bg-chart-4/10 text-chart-4",
+  "Visitor": "bg-primary/10 text-primary",
 };
 
 export default function MyProfile() {
@@ -318,7 +319,7 @@ export default function MyProfile() {
 
                     {/* Growth Indices */}
                     <div>
-                      <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Church Growth Indices</h3>
+                      <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Spiritual Development</h3>
                       <div className="space-y-3">
                         <SwitchRow id="water_baptism" label="Water Baptism" checked={form.water_baptism} onChange={v => set("water_baptism", v)} />
                         <SwitchRow id="holy_spirit_baptism" label="Holy Spirit Baptism" checked={form.holy_spirit_baptism} onChange={v => set("holy_spirit_baptism", v)} />
@@ -350,14 +351,14 @@ export default function MyProfile() {
                     <div>
                       <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Emergency Contact</h3>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div className="space-y-1"><Label>Contact Name</Label><Input value={form.emergency_contact_name} onChange={e => set("emergency_contact_name", e.target.value)} /></div>
-                        <div className="space-y-1"><Label>Contact Phone</Label><Input value={form.emergency_contact_phone} onChange={e => set("emergency_contact_phone", e.target.value)} /></div>
+                         <div className="space-y-1"><Label>Contact Name (Optional)</Label><Input value={form.emergency_contact_name} onChange={e => set("emergency_contact_name", e.target.value)} /></div>
+                        <div className="space-y-1"><Label>Contact Phone (Optional)</Label><Input value={form.emergency_contact_phone} onChange={e => set("emergency_contact_phone", e.target.value)} /></div>
                       </div>
                     </div>
 
                     {/* Notes */}
                     <div className="space-y-1.5">
-                      <Label>Notes</Label>
+                      <Label>Prayer Request</Label>
                       <Textarea value={form.notes} onChange={e => set("notes", e.target.value)} rows={3} />
                     </div>
 
@@ -599,7 +600,7 @@ function CreateMemberProfile({ user, onCreated, wsfCentres, churchUnits }) {
 
         {/* Growth Indices */}
         <div>
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Church Growth Indices</h3>
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Spiritual Development</h3>
           <div className="space-y-3">
             <SwitchRow id="water_baptism" label="Water Baptism" checked={form.water_baptism} onChange={v => set("water_baptism", v)} />
             <SwitchRow id="holy_spirit_baptism" label="Holy Spirit Baptism" checked={form.holy_spirit_baptism} onChange={v => set("holy_spirit_baptism", v)} />
@@ -624,8 +625,8 @@ function CreateMemberProfile({ user, onCreated, wsfCentres, churchUnits }) {
         <div>
           <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Emergency Contact</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="space-y-1"><Label>Contact Name</Label><Input value={form.emergency_contact_name} onChange={e => set("emergency_contact_name", e.target.value)} /></div>
-            <div className="space-y-1"><Label>Contact Phone</Label><Input value={form.emergency_contact_phone} onChange={e => set("emergency_contact_phone", e.target.value)} /></div>
+            <div className="space-y-1"><Label>Contact Name (Optional)</Label><Input value={form.emergency_contact_name} onChange={e => set("emergency_contact_name", e.target.value)} /></div>
+            <div className="space-y-1"><Label>Contact Phone (Optional)</Label><Input value={form.emergency_contact_phone} onChange={e => set("emergency_contact_phone", e.target.value)} /></div>
           </div>
         </div>
 
@@ -634,7 +635,8 @@ function CreateMemberProfile({ user, onCreated, wsfCentres, churchUnits }) {
           <label className="flex items-start gap-3 cursor-pointer">
             <input type="checkbox" checked={form.gdpr_consent} onChange={e => set("gdpr_consent", e.target.checked)} className="mt-0.5 rounded h-4 w-4 shrink-0" />
             <span className="text-sm text-foreground leading-relaxed">
-              I consent to processing my personal data including attendance records in accordance with <strong>UK GDPR</strong>.
+              I consent to processing my personal data including attendance records in accordance with <strong>UK GDPR</strong>.{" "}
+              <a href="https://winners-chapel.org.uk/wp-content/uploads/2024/11/WMA_PrivacyPolicy2024.pdf" target="_blank" rel="noopener noreferrer" className="text-primary underline hover:text-primary/80">View our Privacy Policy</a>.
             </span>
           </label>
           {!form.gdpr_consent && <p className="text-xs text-accent pl-7">⚠️ Consent is required to complete registration.</p>}

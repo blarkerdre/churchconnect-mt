@@ -23,6 +23,7 @@ export default function MemberDashboard({ currentUser, myMember }) {
     Inactive: "bg-muted text-muted-foreground",
     "New Convert": "bg-accent/10 text-accent",
     "First Timer": "bg-chart-4/10 text-chart-4",
+    Visitor: "bg-primary/10 text-primary",
   };
 
   return (
@@ -116,7 +117,7 @@ export default function MemberDashboard({ currentUser, myMember }) {
       {myMember && (
         <Card className="border-0 shadow-sm">
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">My Growth Milestones</CardTitle>
+            <CardTitle className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">My Spiritual Development</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">

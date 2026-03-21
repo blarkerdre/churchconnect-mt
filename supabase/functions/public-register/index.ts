@@ -78,7 +78,7 @@ function triggerWelcomeEmail(email: string, firstName: string | null, lastName: 
     .catch((err) => console.error("Welcome email trigger network error:", err));
 }
 
-const VALID_STATUSES = ["First Timer", "New Convert", "Active", "Inactive"];
+const VALID_STATUSES = ["First Timer", "New Convert", "Active", "Inactive", "Visitor"];
 const VALID_GENDERS = ["Male", "Female"];
 
 Deno.serve(async (req) => {

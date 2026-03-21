@@ -83,7 +83,7 @@ export default function Analytics() {
 
   // Membership breakdown
   const membershipBreakdown = useMemo(() => {
-    const counts = { Active: 0, Inactive: 0, "New Convert": 0, "First Timer": 0 };
+    const counts = { Active: 0, Inactive: 0, "New Convert": 0, "First Timer": 0, Visitor: 0 };
     members.forEach(m => { counts[m.membership_status] = (counts[m.membership_status] || 0) + 1; });
     return Object.entries(counts).map(([name, value], i) => ({ name, value, color: COLORS[i % COLORS.length] }));
   }, [members]);
@@ -255,7 +255,7 @@ export default function Analytics() {
 
         {/* Growth Indices */}
         <Card className="border-0 shadow-sm">
-          <CardHeader><CardTitle className="text-base font-display">Church Growth Indices</CardTitle></CardHeader>
+          <CardHeader><CardTitle className="text-base font-display">Spiritual Development</CardTitle></CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={280}>
               <BarChart data={growthIndices} layout="vertical">
