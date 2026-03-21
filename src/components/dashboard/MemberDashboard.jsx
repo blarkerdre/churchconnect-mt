@@ -23,6 +23,7 @@ export default function MemberDashboard({ currentUser, myMember }) {
     Inactive: "bg-muted text-muted-foreground",
     "New Convert": "bg-accent/10 text-accent",
     "First Timer": "bg-chart-4/10 text-chart-4",
+    Visitor: "bg-primary/10 text-primary",
   };
 
   return (
