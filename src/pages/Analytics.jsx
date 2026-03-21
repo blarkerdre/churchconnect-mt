@@ -83,7 +83,7 @@ export default function Analytics() {
 
   // Membership breakdown
   const membershipBreakdown = useMemo(() => {
-    const counts = { Active: 0, Inactive: 0, "New Convert": 0, "First Timer": 0 };
+    const counts = { Active: 0, Inactive: 0, "New Convert": 0, "First Timer": 0, Visitor: 0 };
     members.forEach(m => { counts[m.membership_status] = (counts[m.membership_status] || 0) + 1; });
     return Object.entries(counts).map(([name, value], i) => ({ name, value, color: COLORS[i % COLORS.length] }));
   }, [members]);
