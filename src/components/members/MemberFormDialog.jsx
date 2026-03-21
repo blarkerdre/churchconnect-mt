@@ -19,7 +19,7 @@ import { useChurchUnits } from "@/hooks/useChurchUnits";
 import { useAuth } from "@/hooks/useAuth";
 import { logAudit } from "@/lib/audit";
 
-const STATUSES = ["Active", "Inactive", "New Convert", "First Timer"];
+const STATUSES = ["Active", "Inactive", "New Convert", "First Timer", "Visitor"];
 const GENDERS = ["Male", "Female"];
 
 const emptyMember = {
