@@ -269,10 +269,10 @@ export default function PublicRegistration() {
               </div>
             )}
 
-            {/* Notes */}
+            {/* Prayer Request */}
             <div className="space-y-1.5">
-              <Label>Prayer Request / Notes</Label>
-              <Textarea value={form.notes} onChange={e => set("notes", e.target.value)} rows={3} maxLength={2000} />
+              <Label>Prayer Request</Label>
+              <Textarea value={form.notes} onChange={e => set("notes", e.target.value)} rows={3} maxLength={2000} placeholder="Share any prayer requests here..." />
             </div>
 
             {/* GDPR Consent */}
