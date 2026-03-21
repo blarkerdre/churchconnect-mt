@@ -560,8 +560,8 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
           <div>
             <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Emergency Contact</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-1.5"><Label>Contact Name</Label><Input value={form.emergency_contact_name} onChange={(e) => set("emergency_contact_name", e.target.value)} /></div>
-              <div className="space-y-1.5"><Label>Contact Phone</Label><Input value={form.emergency_contact_phone} onChange={(e) => set("emergency_contact_phone", e.target.value)} /></div>
+              <div className="space-y-1.5"><Label>Contact Name (Optional)</Label><Input value={form.emergency_contact_name} onChange={(e) => set("emergency_contact_name", e.target.value)} /></div>
+              <div className="space-y-1.5"><Label>Contact Phone (Optional)</Label><Input value={form.emergency_contact_phone} onChange={(e) => set("emergency_contact_phone", e.target.value)} /></div>
             </div>
           </div>
 
