@@ -18,7 +18,7 @@ import { useChurchUnits } from "@/hooks/useChurchUnits";
 import MyCertificates from "@/components/certificates/MyCertificates";
 
 const GENDERS = ["Male", "Female"];
-const MEMBERSHIP_STATUSES = ["Active", "Inactive", "First Timer", "New Convert"];
+const MEMBERSHIP_STATUSES = ["Active", "Inactive", "First Timer", "New Convert", "Visitor"];
 
 const statusColors = {
   "Active": "bg-chart-3/10 text-chart-3",
