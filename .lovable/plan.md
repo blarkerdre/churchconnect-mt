@@ -1,98 +1,85 @@
 
 
-## Plan: Events Scoping, Communications WSF Support, and Member Journey Tracking
+## Plan: Auto-Link Accounts + Training Exams with Certificate Generation
 
-Three changes (excluding auto-certificate generation as requested).
+### 1. Auto-Link User and Member Accounts
 
----
+The current system uses `claim_own_member_profile` RPC (matching by email) which is called on login. This works but only links if emails match exactly. 
 
-### 1. Database Migration
+**Improvements:**
+- **On signup**: Update `admin-create-user` edge function to auto-link existing unlinked member records by email when creating a user (if no `member_data` is provided)
+- **On public registration**: Update `public-register` edge function — when an authenticated user submits, auto-set `user_id` on the member record (already partially done, but ensure it also checks for existing unlinked members with matching email)
+- **On login (existing)**: The `claim_own_member_profile` RPC already handles this — no changes needed
+- **Admin UI**: In `MemberFormDialog.jsx`, add a one-click "Link Account" button that searches for existing users by the member's email and links them automatically (using service role via a small edge function or RPC)
 
-**Drop unused columns from events:**
+**Database migration:**
 ```sql
-ALTER TABLE public.events DROP COLUMN IF EXISTS target_unit;
-ALTER TABLE public.events DROP COLUMN IF EXISTS target_wsf_centre_id;
+CREATE OR REPLACE FUNCTION public.auto_link_member_by_email(_user_id uuid, _email text)
+RETURNS uuid
+LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'public'
+AS $$ ... $$;
 ```
-No data exists in these columns (verified). Replace with an `audience` text column (default `'All Members'`) to match the announcements pattern.
+This function finds a single unlinked member by email and sets `user_id`. Called from `admin-create-user` when no `member_data` is provided.
 
-**Add audience column to events:**
-```sql
-ALTER TABLE public.events ADD COLUMN audience text NOT NULL DEFAULT 'All Members';
-```
-
-**Create member_status_history table:**
-```sql
-CREATE TABLE public.member_status_history (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  member_id uuid NOT NULL REFERENCES public.members(id) ON DELETE CASCADE,
-  previous_status text,
-  new_status text NOT NULL,
-  changed_at timestamptz NOT NULL DEFAULT now(),
-  changed_by uuid
-);
-ALTER TABLE public.member_status_history ENABLE ROW LEVEL SECURITY;
--- RLS policies for admins/leaders to view, trigger inserts via SECURITY DEFINER
-```
-
-**Create trigger to track status changes:**
-A BEFORE UPDATE trigger on `members` that inserts into `member_status_history` when `membership_status` changes.
-
-**Update RLS on events and announcements** to allow WSF leaders to manage (INSERT/UPDATE/DELETE):
-```sql
--- Events: add wsf_leader to the manage policy
-DROP POLICY "Admins can manage events" ON public.events;
-CREATE POLICY "Admins/leaders can manage events" ON public.events FOR ALL TO authenticated
-  USING (is_admin(auth.uid()) OR has_role(auth.uid(), 'unit_leader'::app_role) OR has_role(auth.uid(), 'wsf_leader'::app_role))
-  WITH CHECK (is_admin(auth.uid()) OR has_role(auth.uid(), 'unit_leader'::app_role) OR has_role(auth.uid(), 'wsf_leader'::app_role));
-
--- Same for announcements
-DROP POLICY "Admins/leaders can manage announcements" ON public.announcements;
-CREATE POLICY "Admins/leaders can manage announcements" ON public.announcements FOR ALL TO authenticated
-  USING (is_admin(auth.uid()) OR has_role(auth.uid(), 'unit_leader'::app_role) OR has_role(auth.uid(), 'wsf_leader'::app_role))
-  WITH CHECK (is_admin(auth.uid()) OR has_role(auth.uid(), 'unit_leader'::app_role) OR has_role(auth.uid(), 'wsf_leader'::app_role));
-```
+**Files:** `admin-create-user/index.ts`, DB migration
 
 ---
 
-### 2. Events.jsx Changes
+### 2. Training Exams System
 
-- Remove `target_unit` and `target_wsf_centre_id` from form, payload, and filtering logic
-- Replace with `audience` field — same AUDIENCES list as Communications
-- **Unit leaders**: auto-lock audience to their unit name(s); can only create events for their unit
-- **WSF leaders**: auto-lock audience to their WSF centre name; can only create events for their centre members
-- **Admins**: can select any audience freely
-- Filter events list: unit leaders see `All Members` + their unit events; WSF leaders see `All Members` + their centre events
-- Display audience badge on event cards
-- Keep event_mode, start/end time, date, location fields
+Create a full exam/quiz system for training programs (BFC, BCC, LCC, LDC). Admins create questions, members answer them, answers are auto-marked, and certificates are generated on passing.
+
+**Database migration — new tables:**
+
+| Table | Columns |
+|-------|---------|
+| `exam_questions` | id, training_type, question_text, option_a, option_b, option_c, option_d, correct_answer (a/b/c/d), points (int, default 1), sort_order, created_by, created_at |
+| `exam_attempts` | id, member_id, training_type, started_at, completed_at, score, total_points, passed (bool), certificate_issued (bool) |
+| `exam_answers` | id, attempt_id, question_id, selected_answer, is_correct (bool) |
+
+**App setting:** `exam_pass_percentage` (default 70) stored in `app_settings`.
+
+**RLS:**
+- `exam_questions`: Admins/leaders can manage; authenticated can SELECT
+- `exam_attempts`: Admins/leaders can view all; members can view/insert own
+- `exam_answers`: Same as attempts
+
+**Admin UI — Exam Management (new page or section in Settings):**
+- Create/edit/delete multiple-choice questions per training type
+- Set correct answer, reorder questions
+- Configure pass percentage
+
+**Member UI — Take Exam (in MyProfile or new page):**
+- Select training type → see questions one by one or all at once
+- Submit answers → auto-mark (compare `selected_answer` to `correct_answer`)
+- Calculate score → if >= pass percentage, mark as passed
+- On pass: auto-call `issue-certificate` edge function to generate and email certificate
+- On fail: show score and allow retry
+
+**Admin UI — View Results:**
+- In `TrainingReports.jsx` or `MemberFormDialog.jsx`, show exam history per member
+- View individual attempt details (which questions were right/wrong)
 
 ---
 
-### 3. Communications.jsx Changes
-
-- Add WSF leader support: `canManageComms` includes `isWSFLeader`
-- Fetch WSF centre names for WSF leaders (reuse pattern from Events)
-- WSF leaders' available audiences = their WSF centre names
-- WSF leaders' locked audience = their centre name if they lead exactly one centre
-
----
-
-### 4. Member Journey Tracking UI
-
-**MemberFormDialog.jsx**: Add a "Member Journey" section showing timeline from `member_status_history` table when viewing/editing a member. Shows progression like "First Timer → New Convert (15 Jan 2026)" with dates.
-
-**MyProfile.jsx**: Same timeline view for member's own profile.
-
-Both query `member_status_history` by `member_id` ordered by `changed_at`.
-
----
-
-### Files Changed Summary
+### 3. Files Changed Summary
 
 | File | Changes |
 |------|---------|
-| DB migration | Drop target_unit/target_wsf_centre_id, add audience to events, create member_status_history + trigger, update RLS |
-| `Events.jsx` | Replace target_unit/wsf with audience-based scoping, WSF leader support |
-| `Communications.jsx` | Add WSF leader support, WSF centre audience scoping |
-| `MemberFormDialog.jsx` | Add member journey timeline section |
-| `MyProfile.jsx` | Add member journey timeline section |
+| DB migration | `auto_link_member_by_email` RPC, `exam_questions`, `exam_attempts`, `exam_answers` tables with RLS |
+| `admin-create-user/index.ts` | Auto-link existing member by email when no `member_data` provided |
+| New: `src/pages/ExamManagement.jsx` | Admin page to manage exam questions per training type |
+| New: `src/components/exams/TakeExamDialog.jsx` | Member-facing exam UI with auto-marking |
+| New: `src/components/exams/ExamResultsPanel.jsx` | View exam attempt results |
+| `src/pages/MyProfile.jsx` | Add "Take Exam" buttons for available training types |
+| `src/pages/TrainingReports.jsx` | Remove WIT, add link to exam results |
+| `src/App.jsx` | Add route for exam management page |
+| `src/components/AppLayout.jsx` | Add nav link for exam management (admin only) |
+
+### Technical Notes
+- Exam auto-marking is done client-side by comparing answers to `correct_answer` from the questions table, then the results are stored in `exam_attempts`/`exam_answers`
+- Certificate generation reuses the existing `issue-certificate` edge function
+- Pass/fail threshold is configurable via `app_settings`
+- Members can retake exams (new attempt each time)
+- The auto-link function handles edge cases: multiple members with same email returns null (no auto-link), single match auto-links
 
