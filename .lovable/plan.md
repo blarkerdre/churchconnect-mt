@@ -1,52 +1,75 @@
 
 
-## Plan: Enhanced Exam Management — CRUD, Pass Mark, Answer Type Selection
+## Plan: Dynamic Exam Types, Question Type Modes, and Exam Title CRUD
 
 ### Overview
-Enhance the Exam Management page with full exam lifecycle management: create/edit/delete exams with configurable pass marks and support for selecting the number of answer options per question (2, 3, or 4 objectives).
+Three enhancements: (1) Replace hardcoded training types with a dynamic `exam_titles` table so admins can create/edit/delete exam categories, (2) Add question type support for "multiple_choice", "fill_in_gap", and "drag_and_drop" beyond the current MCQ-only mode, (3) Update the member-facing TakeExamDialog to render each question type correctly.
+
+---
 
 ### 1. Database Migration
 
-Add a `pass_mark` column to `exam_questions` table at the training-type level. Since pass marks are per training type (not per question), store them in `app_settings` using key pattern `exam_pass_mark_{type}`. The current `exam_pass_percentage` setting is already used in `TakeExamDialog` — we will make it per-training-type configurable from the Exam Management page.
-
-No new tables needed. Add an `answer_count` column to `exam_questions` to store how many options (2/3/4) are active for each question:
-
+**New table: `exam_titles`** — replaces the hardcoded `EXAM_TRAINING_TYPES` array:
 ```sql
-ALTER TABLE public.exam_questions ADD COLUMN IF NOT EXISTS answer_count integer NOT NULL DEFAULT 4;
+CREATE TABLE public.exam_titles (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  name text NOT NULL UNIQUE,
+  description text,
+  is_active boolean NOT NULL DEFAULT true,
+  created_by uuid,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+ALTER TABLE public.exam_titles ENABLE ROW LEVEL SECURITY;
+-- Admins can manage, authenticated can view
 ```
+
+Seed with existing types: `INSERT INTO exam_titles (name) VALUES ('BFC'),('BCC'),('LCC'),('LDC');`
+
+**Add `question_type` column to `exam_questions`:**
+```sql
+ALTER TABLE public.exam_questions 
+  ADD COLUMN IF NOT EXISTS question_type text NOT NULL DEFAULT 'multiple_choice';
+```
+Values: `multiple_choice`, `fill_in_gap`, `drag_and_drop`.
+
+For `fill_in_gap`: the `correct_answer` column stores the expected text answer (case-insensitive matching). Options A-D are unused.
+
+For `drag_and_drop`: options A-D store the items to order. `correct_answer` stores the correct order as comma-separated letters (e.g. `"b,a,d,c"`).
+
+---
 
 ### 2. ExamManagement.jsx Changes
 
-**Pass Mark Configuration:**
-- Add a "Pass Mark" input (percentage) per training type at the top of the questions section
-- Save to `app_settings` with key `exam_pass_mark_{training_type}` (e.g. `exam_pass_mark_BFC`)
-- Falls back to the global `exam_pass_percentage` if not set
+**Exam Titles Management Section:**
+- Add a card at the top with a list of exam titles from `exam_titles` table
+- Add/Edit/Delete exam title buttons with inline form or small dialog
+- Replace `EXAM_TRAINING_TYPES` hardcoded array with data from `exam_titles` query
+- The training type selector dropdown uses this dynamic list
 
-**Answer Type Selection (per question):**
-- Add a "Number of Options" selector (2, 3, or 4) in the question form dialog
-- When 2 is selected, only show A & B option inputs; when 3, show A/B/C; when 4, show all
-- Store as `answer_count` on the question record
-- Display only the relevant options in the questions list
+**Question Type Selector:**
+- In the question form dialog, add a "Question Type" select: Multiple Choice, Fill in the Gap, Drag & Drop
+- **Multiple Choice**: current behavior (options + correct answer radio)
+- **Fill in the Gap**: show only question text + a "Correct Answer" text input (no options A-D)
+- **Drag & Drop**: show items (options A-D) + correct order input (comma-separated or drag UI in admin is just text input for the correct order sequence)
 
-**Full CRUD (already exists for questions, enhance UX):**
-- Add delete confirmation dialog
-- Already has create/edit/delete — ensure all work with the new `answer_count` field
+---
 
 ### 3. TakeExamDialog.jsx Changes
 
-- Read per-type pass mark from `app_settings` key `exam_pass_mark_{trainingType}`, falling back to global `exam_pass_percentage`
-- Only render options up to `answer_count` (e.g. if `answer_count=2`, only show A and B)
+**Multiple Choice**: unchanged — radio buttons for options.
+
+**Fill in the Gap**: render a text input. On submit, compare `trim().toLowerCase()` to `correct_answer.trim().toLowerCase()`.
+
+**Drag & Drop**: render the options as draggable items. User reorders them. On submit, compare the order string to `correct_answer`. Use a simple up/down button reorder UI (no complex DnD library needed).
+
+---
 
 ### 4. Files Changed
 
 | File | Changes |
 |------|---------|
-| DB migration | Add `answer_count` column to `exam_questions` |
-| `ExamManagement.jsx` | Add pass mark config per type, answer count selector in question form, delete confirmation |
-| `TakeExamDialog.jsx` | Use per-type pass mark, respect `answer_count` for displayed options |
-
-### Technical Notes
-- Pass marks stored per training type in `app_settings` (key: `exam_pass_mark_BFC` etc.) — no schema change needed since `app_settings` already supports arbitrary keys with jsonb values
-- `answer_count` defaults to 4 so existing questions are unaffected
-- The correct_answer radio buttons in the form will dynamically adjust based on the selected answer_count
+| DB migration | Create `exam_titles` table + seed, add `question_type` to `exam_questions` |
+| `ExamManagement.jsx` | Dynamic exam titles CRUD, question type selector in form, conditional form fields |
+| `TakeExamDialog.jsx` | Render fill_in_gap (text input) and drag_and_drop (reorder UI) question types |
+| `MyProfile.jsx` | Fetch exam titles dynamically instead of hardcoded list |
 
