@@ -478,6 +478,7 @@ export type Database = {
       }
       events: {
         Row: {
+          audience: string
           capacity: number | null
           category: string | null
           created_at: string
@@ -491,12 +492,11 @@ export type Database = {
           location: string | null
           requires_registration: boolean | null
           start_time: string | null
-          target_unit: string | null
-          target_wsf_centre_id: string | null
           title: string
           updated_at: string
         }
         Insert: {
+          audience?: string
           capacity?: number | null
           category?: string | null
           created_at?: string
@@ -510,12 +510,11 @@ export type Database = {
           location?: string | null
           requires_registration?: boolean | null
           start_time?: string | null
-          target_unit?: string | null
-          target_wsf_centre_id?: string | null
           title: string
           updated_at?: string
         }
         Update: {
+          audience?: string
           capacity?: number | null
           category?: string | null
           created_at?: string
@@ -529,20 +528,10 @@ export type Database = {
           location?: string | null
           requires_registration?: boolean | null
           start_time?: string | null
-          target_unit?: string | null
-          target_wsf_centre_id?: string | null
           title?: string
           updated_at?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "events_target_wsf_centre_id_fkey"
-            columns: ["target_wsf_centre_id"]
-            isOneToOne: false
-            referencedRelation: "wsf_centres"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       first_timers: {
         Row: {
@@ -658,6 +647,41 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "followups_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      member_status_history: {
+        Row: {
+          changed_at: string
+          changed_by: string | null
+          id: string
+          member_id: string
+          new_status: string
+          previous_status: string | null
+        }
+        Insert: {
+          changed_at?: string
+          changed_by?: string | null
+          id?: string
+          member_id: string
+          new_status: string
+          previous_status?: string | null
+        }
+        Update: {
+          changed_at?: string
+          changed_by?: string | null
+          id?: string
+          member_id?: string
+          new_status?: string
+          previous_status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "member_status_history_member_id_fkey"
             columns: ["member_id"]
             isOneToOne: false
             referencedRelation: "members"
