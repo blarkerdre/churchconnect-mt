@@ -1,84 +1,104 @@
 
 
-## Plan: Exam Sessions with Aggregate Scoring Across 10+ Course Exams
+## Plan: Certificate Course → Subjects Hierarchy with Aggregate Scoring
 
 ### Overview
-Add an exam session system where admins create sessions containing multiple course exams (10+). Members take all assigned exams within a session. The system calculates an aggregate score across all exams and determines pass/fail based on admin-configured criteria.
+Restructure the exam system from flat exam titles into a two-level hierarchy: **Certificate Courses** (e.g., BCC) contain multiple **Subjects** (e.g., "Church History", "Doctrine"). Each subject has its own exam with questions. A member's aggregate score across all subjects determines whether they pass the course and receive a certificate. Admins can CRUD both courses and subjects. Members can download a score report.
+
+---
 
 ### 1. Database Migration
 
-**New table: `exam_sessions`**
+**Add columns to `exam_titles`** (which becomes the "course" level):
 ```sql
-CREATE TABLE public.exam_sessions (
+ALTER TABLE public.exam_titles 
+  ADD COLUMN IF NOT EXISTS pass_mark_percentage numeric NOT NULL DEFAULT 50;
+```
+
+**New table: `exam_subjects`**
+```sql
+CREATE TABLE public.exam_subjects (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  course_id uuid REFERENCES public.exam_titles(id) ON DELETE CASCADE NOT NULL,
   name text NOT NULL,
   description text,
-  status text NOT NULL DEFAULT 'draft',  -- draft, active, closed
-  pass_mark_percentage numeric NOT NULL DEFAULT 50,
-  started_at timestamptz,
-  ended_at timestamptz,
-  created_by uuid,
-  created_at timestamptz NOT NULL DEFAULT now(),
-  updated_at timestamptz NOT NULL DEFAULT now()
-);
-```
-
-**New table: `exam_session_courses`** — links which exam titles are included in a session:
-```sql
-CREATE TABLE public.exam_session_courses (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  session_id uuid REFERENCES public.exam_sessions(id) ON DELETE CASCADE NOT NULL,
-  exam_title text NOT NULL,
   sort_order integer NOT NULL DEFAULT 0,
-  UNIQUE(session_id, exam_title)
+  is_active boolean NOT NULL DEFAULT true,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE(course_id, name)
 );
+ALTER TABLE public.exam_subjects ENABLE ROW LEVEL SECURITY;
+-- Admins manage, authenticated view
 ```
 
-**Add `session_id` to `exam_attempts`:**
+**Add `subject_id` to `exam_questions`:**
+```sql
+ALTER TABLE public.exam_questions 
+  ADD COLUMN IF NOT EXISTS subject_id uuid REFERENCES public.exam_subjects(id) ON DELETE CASCADE;
+```
+Questions will be linked to subjects. `training_type` is kept for backward compatibility but new questions use `subject_id`.
+
+**Add `subject_id` to `exam_attempts`:**
 ```sql
 ALTER TABLE public.exam_attempts 
-ADD COLUMN IF NOT EXISTS session_id uuid REFERENCES public.exam_sessions(id);
+  ADD COLUMN IF NOT EXISTS subject_id uuid REFERENCES public.exam_subjects(id);
 ```
 
-RLS: Admins can manage; authenticated can view active sessions.
+---
 
-### 2. ExamManagement.jsx — Session Management Section
+### 2. ExamManagement.jsx — Full Restructure
 
-**New "Exam Sessions" tab/card:**
-- Create session: name, description, select which exam titles to include (multi-select from `exam_titles`), set aggregate pass mark percentage
-- Start/Stop session buttons (toggle `active`/`closed`)
-- Only one session can be active at a time (enforced in UI)
-- View session details: list of included courses, session status
+**Course Management** (existing exam titles section, enhanced):
+- Add `pass_mark_percentage` input when creating/editing a course
+- Show course-level aggregate pass mark
 
-**Aggregate Results View** — when viewing a closed/active session:
-- Query `exam_attempts` WHERE `session_id = X`, grouped by `member_id`
-- Per member row: name, score per course exam, total aggregate score, total possible points, aggregate percentage, pass/fail badge
-- Summary: average aggregate, overall pass rate, participant count
+**Subject Management** — new section per course:
+- When a course is selected, show its subjects list
+- CRUD subjects: name, description, sort order
+- Delete with confirmation
+
+**Question Management** — scoped to a subject:
+- When a subject is selected within a course, show/manage its questions (existing question CRUD, just scoped to subject instead of training_type)
+- Questions saved with both `training_type` (course name) and `subject_id`
+
+**Course Results View**:
+- Per course, show members who have taken exams with per-subject scores and aggregate
+- Pass/fail badge based on course `pass_mark_percentage`
+
+---
 
 ### 3. TakeExamDialog.jsx Changes
-- Accept `sessionId` prop
-- Include `session_id` in `exam_attempts` insert
-- Backward compatible: `session_id` is nullable
 
-### 4. MyProfile.jsx Changes
-- Show active session with its list of required exams
-- Track which exams the member has already taken in this session
-- Show aggregate progress (e.g., "4/10 exams completed, current aggregate: 72%")
-- Pass `sessionId` to `TakeExamDialog`
+- Accept `subjectId` and `subjectName` props alongside `trainingType`
+- Fetch questions by `subject_id` instead of `training_type`
+- Save attempt with `subject_id` and `training_type` (course name)
+- After completing a subject exam, check if all subjects in the course are done; if aggregate meets pass mark, trigger certificate issuance
+
+---
+
+### 4. MyProfile.jsx — Member View
+
+- Replace flat exam buttons with course → subject hierarchy
+- Show course card with list of subjects; each subject has a "Take Exam" button
+- Show per-subject scores and aggregate progress
+- Add "Download Score Report" button that generates a printable HTML view of all subject scores for a course
+- After all subjects completed and aggregate passes, show certificate
+
+---
 
 ### 5. Files Changed
 
 | File | Changes |
 |------|---------|
-| DB migration | Create `exam_sessions`, `exam_session_courses` tables; add `session_id` to `exam_attempts` |
-| `ExamManagement.jsx` | Session CRUD (create/edit/delete/start/stop), course selection, aggregate results table |
-| `TakeExamDialog.jsx` | Accept and store `session_id` |
-| `MyProfile.jsx` | Show active session, track exam progress, show aggregate score |
+| DB migration | Add `pass_mark_percentage` to `exam_titles`, create `exam_subjects`, add `subject_id` to `exam_questions` and `exam_attempts` |
+| `ExamManagement.jsx` | Course pass mark config, subject CRUD within courses, scope questions to subjects, course-level results |
+| `TakeExamDialog.jsx` | Accept `subjectId`, fetch questions by subject, save with subject reference, check course completion |
+| `MyProfile.jsx` | Course → subject hierarchy UI, per-subject scores, downloadable score report, aggregate progress |
+| `ExamSessionManager.jsx` | Update to work with course/subject model (sessions assign courses, aggregate at course level) |
 
 ### Technical Notes
-- `exam_session_courses` allows flexible assignment of 1-10+ exam titles per session
-- Aggregate = sum of all attempt scores / sum of all attempt total_points across the session for a member
-- Pass/fail determined by comparing aggregate percentage against `exam_sessions.pass_mark_percentage`
-- Members can only take each exam title once per session (enforced in UI by checking existing attempts)
-- `selected_answer` column on `exam_answers` needs to accept text (not just char) for fill_in_gap and drag_and_drop — will alter if needed
+- `subject_id` is nullable on `exam_questions` and `exam_attempts` for backward compatibility with existing data
+- Pass mark moves from `app_settings` to `exam_titles.pass_mark_percentage` (simpler, co-located)
+- Score report download: generate a print-friendly HTML window (same pattern as `PrintReportButton`) showing all subject scores, aggregate, and pass/fail status
+- Certificate auto-issuance triggers when aggregate across all active subjects in a course meets the pass mark
 
