@@ -12,11 +12,13 @@ import { useChurchUnits } from "@/hooks/useChurchUnits";
 
 const DEFAULT_CATEGORIES = ["Conference", "Special Service", "Revival", "Youth Event", "Women's Event", "Men's Event", "Children's Event", "Outreach", "Training", "Social", "Other"];
 const STATUSES = ["Upcoming", "Ongoing", "Completed", "Cancelled"];
+const EVENT_MODES = ["In Person", "Online", "Hybrid"];
 
 const empty = {
   title: "", description: "", category: "Special Service", audience: "All Members",
   date: "", end_date: "", start_time: "", end_time: "", location: "", address: "",
-  capacity: "", registration_required: false, registration_deadline: "", status: "Upcoming", notes: ""
+  registration_required: false, registration_deadline: "", status: "Upcoming", notes: "",
+  event_mode: "In Person",
 };
 
 export default function EventFormDialog({ open, onOpenChange, event, onSave, lockedCategory = null }) {
@@ -36,7 +38,7 @@ export default function EventFormDialog({ open, onOpenChange, event, onSave, loc
 
   const handleSave = async () => {
     setSaving(true);
-    await onSave({ ...form, capacity: form.capacity ? Number(form.capacity) : undefined });
+    await onSave({ ...form });
     setSaving(false);
     onOpenChange(false);
   };
@@ -69,6 +71,13 @@ export default function EventFormDialog({ open, onOpenChange, event, onSave, loc
                     <SelectContent>{CATEGORIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
                   </Select>
                 )}
+              </div>
+              <div className="space-y-1.5">
+                <Label>Event Mode</Label>
+                <Select value={form.event_mode || "In Person"} onValueChange={v => set("event_mode", v)}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>{EVENT_MODES.map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}</SelectContent>
+                </Select>
               </div>
               <div className="space-y-1.5">
                 <Label>Status</Label>
@@ -121,10 +130,6 @@ export default function EventFormDialog({ open, onOpenChange, event, onSave, loc
               <div className="space-y-1.5">
                 <Label>Venue Name</Label>
                 <Input value={form.location} onChange={e => set("location", e.target.value)} placeholder="e.g. Main Auditorium" />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Capacity</Label>
-                <Input type="number" value={form.capacity} onChange={e => set("capacity", e.target.value)} placeholder="e.g. 200" />
               </div>
               <div className="space-y-1.5 md:col-span-2">
                 <Label>Full Address</Label>
