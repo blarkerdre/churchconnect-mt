@@ -76,7 +76,6 @@ export default function TakeExamDialog({ open, onOpenChange, trainingType, membe
           member_id: memberId,
           training_type: trainingType,
           subject_id: subjectId || null,
-          session_id: sessionId || null,
           completed_at: new Date().toISOString(),
           score,
           total_points: totalPoints,
