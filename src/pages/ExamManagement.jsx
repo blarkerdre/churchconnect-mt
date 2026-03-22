@@ -230,8 +230,6 @@ export default function ExamManagement() {
         </div>
       </div>
 
-      {/* Exam Sessions */}
-      <ExamSessionManager />
 
       {/* Certificate Courses */}
       <Card className="border-0 shadow-sm">
