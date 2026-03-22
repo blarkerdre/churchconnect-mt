@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, Search, CalendarDays, MapPin, Clock, Users, Edit, Trash2, Loader2, MessageSquare } from "lucide-react";
+import { Plus, Search, CalendarDays, MapPin, Clock, Users, Edit, Trash2, Loader2, MessageSquare, Globe, Monitor } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
@@ -15,6 +15,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { logAudit } from "@/lib/audit";
 import SMSDialog from "@/components/sms/SMSDialog";
 import { useAppSetting } from "@/hooks/useAppSetting";
+import { useUnitMembership } from "@/hooks/useUnitMembership";
 
 const statusColors = {
   "Upcoming": "bg-primary/10 text-primary",
@@ -32,6 +33,14 @@ const categoryColors = {
   "Outreach": "bg-chart-3/10 text-chart-3",
 };
 
+const EVENT_MODES = ["In Person", "Online", "Hybrid"];
+
+const modeIcons = {
+  "In Person": MapPin,
+  "Online": Globe,
+  "Hybrid": Monitor,
+};
+
 function getEventStatus(eventDate) {
   const today = new Date().toISOString().split("T")[0];
   if (eventDate > today) return "Upcoming";
@@ -41,8 +50,8 @@ function getEventStatus(eventDate) {
 
 export default function Events() {
   const { data: EVENT_CATEGORIES } = useAppSetting("event_categories", ["Service", "Youth Event", "Conference", "Women's Event", "Men's Event", "Outreach", "Other"]);
-  const { isAdmin, isUnitLeader } = useAuth();
-  const canManage = isAdmin || isUnitLeader;
+  const { isAdmin, isUnitLeader, isWSFLeader, user } = useAuth();
+  const canManage = isAdmin || isUnitLeader || isWSFLeader;
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
@@ -50,6 +59,41 @@ export default function Events() {
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState({});
   const [smsEvent, setSmsEvent] = useState(null);
+
+  // Get unit assignments for scoping
+  const { data: unitAssignments = [] } = useQuery({
+    queryKey: ["my-unit-assignments", user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("unit_leader_assignments")
+        .select("unit_name")
+        .eq("user_id", user.id);
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user?.id && isUnitLeader,
+  });
+
+  // Get WSF centre for WSF leader scoping
+  const { data: myWsfCentres = [] } = useQuery({
+    queryKey: ["my-wsf-centres", user?.id],
+    queryFn: async () => {
+      const { data: memberData } = await supabase
+        .from("members")
+        .select("id")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      if (!memberData) return [];
+      const { data, error } = await supabase
+        .from("wsf_centres")
+        .select("id, name")
+        .eq("leader_id", memberData.id)
+        .eq("is_active", true);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!user?.id && isWSFLeader,
+  });
 
   const { data: events = [], isLoading } = useQuery({
     queryKey: ["events"],
@@ -78,9 +122,12 @@ export default function Events() {
         category: formData.category,
         event_date: formData.event_date,
         start_time: formData.start_time || null,
+        end_time: formData.end_time || null,
         location: formData.location,
         description: formData.description,
-        capacity: formData.capacity ? parseInt(formData.capacity) : null,
+        event_mode: formData.event_mode || "In Person",
+        target_unit: formData.target_unit || null,
+        target_wsf_centre_id: formData.target_wsf_centre_id || null,
         is_public: true,
       };
       if (editing) {
@@ -118,6 +165,23 @@ export default function Events() {
     const status = getEventStatus(e.event_date);
     const matchSearch = `${e.title} ${e.location || ""} ${e.category || ""}`.toLowerCase().includes(search.toLowerCase());
     const matchStatus = statusFilter === "All" || status === statusFilter;
+
+    // Scope filtering for non-admin users
+    if (!isAdmin) {
+      // Unit leaders see general events + their unit events
+      if (isUnitLeader && !isWSFLeader) {
+        const myUnits = unitAssignments.map(a => a.unit_name);
+        if (e.target_unit && !myUnits.includes(e.target_unit)) return false;
+        if (e.target_wsf_centre_id) return false;
+      }
+      // WSF leaders see general events + their centre events
+      if (isWSFLeader && !isUnitLeader) {
+        const myCentreIds = myWsfCentres.map(c => c.id);
+        if (e.target_wsf_centre_id && !myCentreIds.includes(e.target_wsf_centre_id)) return false;
+        if (e.target_unit) return false;
+      }
+    }
+
     return matchSearch && matchStatus;
   });
 
@@ -126,13 +190,32 @@ export default function Events() {
 
   const openNew = () => {
     setEditing(null);
-    setForm({ title: "", category: "Service", event_date: "", start_time: "", location: "", description: "", capacity: "" });
+    const defaultForm = {
+      title: "", category: "Service", event_date: "", start_time: "", end_time: "",
+      location: "", description: "", event_mode: "In Person",
+      target_unit: "", target_wsf_centre_id: "",
+    };
+    // Auto-set scope for unit leaders
+    if (isUnitLeader && !isAdmin && unitAssignments.length > 0) {
+      defaultForm.target_unit = unitAssignments[0].unit_name;
+    }
+    // Auto-set scope for WSF leaders
+    if (isWSFLeader && !isAdmin && myWsfCentres.length > 0) {
+      defaultForm.target_wsf_centre_id = myWsfCentres[0].id;
+    }
+    setForm(defaultForm);
     setDialogOpen(true);
   };
 
   const openEdit = (e) => {
     setEditing(e);
-    setForm({ title: e.title, category: e.category || "Service", event_date: e.event_date, start_time: e.start_time || "", location: e.location || "", description: e.description || "", capacity: e.capacity || "" });
+    setForm({
+      title: e.title, category: e.category || "Service", event_date: e.event_date,
+      start_time: e.start_time || "", end_time: e.end_time || "",
+      location: e.location || "", description: e.description || "",
+      event_mode: e.event_mode || "In Person",
+      target_unit: e.target_unit || "", target_wsf_centre_id: e.target_wsf_centre_id || "",
+    });
     setDialogOpen(true);
   };
 
@@ -181,6 +264,7 @@ export default function Events() {
           {filtered.map(e => {
             const status = getEventStatus(e.event_date);
             const regCount = registrationCounts[e.id] || 0;
+            const ModeIcon = modeIcons[e.event_mode] || MapPin;
             return (
               <Card key={e.id} className="border-0 shadow-sm hover:shadow-md transition-shadow">
                 <CardContent className="p-5">
@@ -190,12 +274,16 @@ export default function Events() {
                         <h3 className="font-display font-bold text-foreground">{e.title}</h3>
                         {e.category && <Badge className={`border-0 ${categoryColors[e.category] || "bg-muted text-muted-foreground"}`}>{e.category}</Badge>}
                         <Badge className={`border-0 ${statusColors[status]}`}>{status}</Badge>
+                        {e.event_mode && e.event_mode !== "In Person" && (
+                          <Badge variant="outline" className="gap-1 text-xs"><ModeIcon className="h-3 w-3" />{e.event_mode}</Badge>
+                        )}
+                        {e.target_unit && <Badge variant="outline" className="text-xs">{e.target_unit}</Badge>}
                       </div>
                       <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
                         <span className="flex items-center gap-1"><CalendarDays className="h-3.5 w-3.5" /> {e.event_date}</span>
-                        {e.start_time && <span className="flex items-center gap-1"><Clock className="h-3.5 w-3.5" /> {e.start_time}</span>}
+                        {e.start_time && <span className="flex items-center gap-1"><Clock className="h-3.5 w-3.5" /> {e.start_time}{e.end_time ? ` – ${e.end_time}` : ""}</span>}
                         {e.location && <span className="flex items-center gap-1"><MapPin className="h-3.5 w-3.5" /> {e.location}</span>}
-                        <span className="flex items-center gap-1"><Users className="h-3.5 w-3.5" /> {regCount}{e.capacity ? `/${e.capacity}` : ""}</span>
+                        <span className="flex items-center gap-1"><Users className="h-3.5 w-3.5" /> {regCount}</span>
                       </div>
                     </div>
                     {canManage && (
@@ -205,7 +293,7 @@ export default function Events() {
                           <MessageSquare className="h-4 w-4 text-primary" />
                         </Button>
                         <Button variant="ghost" size="icon" onClick={() => openEdit(e)}><Edit className="h-4 w-4" /></Button>
-                        <Button variant="ghost" size="icon" onClick={() => handleDelete(e)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                        {isAdmin && <Button variant="ghost" size="icon" onClick={() => handleDelete(e)}><Trash2 className="h-4 w-4 text-destructive" /></Button>}
                       </div>
                     )}
                   </div>
@@ -231,14 +319,38 @@ export default function Events() {
                   </SelectContent>
                 </Select>
               </div>
-              <div><Label>Date</Label><Input type="date" value={form.event_date || ""} onChange={e => setForm(f => ({ ...f, event_date: e.target.value }))} /></div>
+              <div>
+                <Label>Event Mode</Label>
+                <Select value={form.event_mode || "In Person"} onValueChange={v => setForm(f => ({ ...f, event_mode: v }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {EVENT_MODES.map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
+            <div><Label>Date</Label><Input type="date" value={form.event_date || ""} onChange={e => setForm(f => ({ ...f, event_date: e.target.value }))} /></div>
             <div className="grid grid-cols-2 gap-3">
-              <div><Label>Time</Label><Input type="time" value={form.start_time || ""} onChange={e => setForm(f => ({ ...f, start_time: e.target.value }))} /></div>
-              <div><Label>Capacity</Label><Input type="number" value={form.capacity || ""} onChange={e => setForm(f => ({ ...f, capacity: e.target.value }))} /></div>
+              <div><Label>Start Time</Label><Input type="time" value={form.start_time || ""} onChange={e => setForm(f => ({ ...f, start_time: e.target.value }))} /></div>
+              <div><Label>End Time</Label><Input type="time" value={form.end_time || ""} onChange={e => setForm(f => ({ ...f, end_time: e.target.value }))} /></div>
             </div>
             <div><Label>Location</Label><Input value={form.location || ""} onChange={e => setForm(f => ({ ...f, location: e.target.value }))} /></div>
             <div><Label>Description</Label><Textarea value={form.description || ""} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={3} /></div>
+
+            {/* Scope — only admins can set freely */}
+            {isAdmin && (
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label>Target Unit <span className="text-xs text-muted-foreground">(optional)</span></Label>
+                  <Input value={form.target_unit || ""} onChange={e => setForm(f => ({ ...f, target_unit: e.target.value }))} placeholder="e.g. Youth" />
+                </div>
+                <div>
+                  <Label>Target WSF <span className="text-xs text-muted-foreground">(optional)</span></Label>
+                  <Input value={form.target_wsf_centre_id || ""} onChange={e => setForm(f => ({ ...f, target_wsf_centre_id: e.target.value }))} placeholder="Centre ID" />
+                </div>
+              </div>
+            )}
+
             <Button onClick={() => saveMutation.mutate(form)} disabled={saveMutation.isPending} className="w-full bg-primary">
               {saveMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
               {editing ? "Save Changes" : "Create Event"}
