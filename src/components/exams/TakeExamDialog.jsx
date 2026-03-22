@@ -11,13 +11,33 @@ import { toast } from "@/components/ui/use-toast";
 import { Loader2, CheckCircle2, XCircle, Award } from "lucide-react";
 import { useAppSetting } from "@/hooks/useAppSetting";
 
+const OPTION_LETTERS = ["a", "b", "c", "d"];
+
 export default function TakeExamDialog({ open, onOpenChange, trainingType, memberId }) {
   const qc = useQueryClient();
   const [answers, setAnswers] = useState({});
   const [submitted, setSubmitted] = useState(false);
   const [result, setResult] = useState(null);
-  const { data: passPercentage } = useAppSetting("exam_pass_percentage", [70]);
-  const passThreshold = Array.isArray(passPercentage) ? Number(passPercentage[0]) || 70 : 70;
+
+  // Global fallback
+  const { data: globalPassMark } = useAppSetting("exam_pass_percentage", [70]);
+  const globalThreshold = Array.isArray(globalPassMark) ? Number(globalPassMark[0]) || 70 : 70;
+
+  // Per-type pass mark
+  const { data: typePassMarkSetting } = useQuery({
+    queryKey: ["app-setting", `exam_pass_mark_${trainingType}`],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("app_settings")
+        .select("value")
+        .eq("key", `exam_pass_mark_${trainingType}`)
+        .maybeSingle();
+      return data?.value;
+    },
+    enabled: open && !!trainingType,
+  });
+
+  const passThreshold = typePassMarkSetting != null ? Number(typePassMarkSetting) : globalThreshold;
 
   const { data: questions = [], isLoading } = useQuery({
     queryKey: ["exam-questions", trainingType],
@@ -48,7 +68,6 @@ export default function TakeExamDialog({ open, onOpenChange, trainingType, membe
       const percentage = totalPoints > 0 ? (score / totalPoints) * 100 : 0;
       const passed = percentage >= passThreshold;
 
-      // Create attempt
       const { data: attempt, error: attemptErr } = await supabase
         .from("exam_attempts")
         .insert({
@@ -63,12 +82,10 @@ export default function TakeExamDialog({ open, onOpenChange, trainingType, membe
         .single();
       if (attemptErr) throw attemptErr;
 
-      // Insert answers
       const answersPayload = answerRows.map(a => ({ ...a, attempt_id: attempt.id }));
       const { error: ansErr } = await supabase.from("exam_answers").insert(answersPayload);
       if (ansErr) throw ansErr;
 
-      // If passed, issue certificate
       if (passed) {
         try {
           const { data: certData, error: certErr } = await supabase.functions.invoke("issue-certificate", {
@@ -127,7 +144,6 @@ export default function TakeExamDialog({ open, onOpenChange, trainingType, membe
         ) : questions.length === 0 ? (
           <p className="text-sm text-muted-foreground text-center py-8">No exam questions available for {trainingType} yet.</p>
         ) : submitted && result ? (
-          /* Results View */
           <div className="space-y-6 py-4">
             <div className={`text-center p-6 rounded-xl border-2 ${
               result.passed
@@ -148,9 +164,7 @@ export default function TakeExamDialog({ open, onOpenChange, trainingType, membe
                   ({Math.round(result.percentage)}%)
                 </span>
               </p>
-              <p className="text-sm text-muted-foreground mt-1">
-                Pass mark: {passThreshold}%
-              </p>
+              <p className="text-sm text-muted-foreground mt-1">Pass mark: {passThreshold}%</p>
               {result.passed && (
                 <p className="text-sm text-emerald-600 mt-2 font-medium">
                   Your certificate has been generated and will be emailed to you.
@@ -158,7 +172,6 @@ export default function TakeExamDialog({ open, onOpenChange, trainingType, membe
               )}
             </div>
 
-            {/* Show answers review */}
             <div className="space-y-3">
               <h4 className="text-sm font-semibold text-foreground">Answer Review</h4>
               {questions.map((q, idx) => {
@@ -188,7 +201,6 @@ export default function TakeExamDialog({ open, onOpenChange, trainingType, membe
             <Button onClick={handleClose} className="w-full">Close</Button>
           </div>
         ) : (
-          /* Exam Questions */
           <div className="space-y-4 py-2">
             <div className="flex items-center justify-between text-xs text-muted-foreground">
               <span>{answeredCount}/{questions.length} answered</span>
@@ -197,32 +209,35 @@ export default function TakeExamDialog({ open, onOpenChange, trainingType, membe
             <Progress value={progress} className="h-2" />
 
             <div className="space-y-6">
-              {questions.map((q, idx) => (
-                <div key={q.id} className="p-4 rounded-lg border border-border bg-card">
-                  <p className="text-sm font-medium text-foreground mb-3">
-                    <span className="text-muted-foreground mr-2">{idx + 1}.</span>
-                    {q.question_text}
-                    <Badge variant="outline" className="ml-2 text-[10px]">{q.points} pt{q.points !== 1 ? "s" : ""}</Badge>
-                  </p>
-                  <RadioGroup
-                    value={answers[q.id] || ""}
-                    onValueChange={v => setAnswers(prev => ({ ...prev, [q.id]: v }))}
-                    className="space-y-2"
-                  >
-                    {["a", "b", "c", "d"].map(opt => (
-                      q[`option_${opt}`] && (
-                        <div key={opt} className="flex items-center gap-2 p-2 rounded-lg hover:bg-muted/50 transition-colors">
-                          <RadioGroupItem value={opt} id={`q-${q.id}-${opt}`} />
-                          <Label htmlFor={`q-${q.id}-${opt}`} className="text-sm flex-1 cursor-pointer">
-                            <span className="font-bold uppercase mr-1.5 text-muted-foreground">{opt}.</span>
-                            {q[`option_${opt}`]}
-                          </Label>
-                        </div>
-                      )
-                    ))}
-                  </RadioGroup>
-                </div>
-              ))}
+              {questions.map((q, idx) => {
+                const qOpts = OPTION_LETTERS.slice(0, q.answer_count || 4);
+                return (
+                  <div key={q.id} className="p-4 rounded-lg border border-border bg-card">
+                    <p className="text-sm font-medium text-foreground mb-3">
+                      <span className="text-muted-foreground mr-2">{idx + 1}.</span>
+                      {q.question_text}
+                      <Badge variant="outline" className="ml-2 text-[10px]">{q.points} pt{q.points !== 1 ? "s" : ""}</Badge>
+                    </p>
+                    <RadioGroup
+                      value={answers[q.id] || ""}
+                      onValueChange={v => setAnswers(prev => ({ ...prev, [q.id]: v }))}
+                      className="space-y-2"
+                    >
+                      {qOpts.map(opt => (
+                        q[`option_${opt}`] && (
+                          <div key={opt} className="flex items-center gap-2 p-2 rounded-lg hover:bg-muted/50 transition-colors">
+                            <RadioGroupItem value={opt} id={`q-${q.id}-${opt}`} />
+                            <Label htmlFor={`q-${q.id}-${opt}`} className="text-sm flex-1 cursor-pointer">
+                              <span className="font-bold uppercase mr-1.5 text-muted-foreground">{opt}.</span>
+                              {q[`option_${opt}`]}
+                            </Label>
+                          </div>
+                        )
+                      ))}
+                    </RadioGroup>
+                  </div>
+                );
+              })}
             </div>
 
             <DialogFooter>
