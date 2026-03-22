@@ -56,7 +56,21 @@ export default function IssueCertificateDialog({ open, onOpenChange, member }) {
     },
   });
 
-  const allTypes = [...new Set([...DEFAULT_TRAINING_TYPES, ...customTypes])];
+  // Fetch active courses from exam_titles
+  const { data: examTitles = [] } = useQuery({
+    queryKey: ["exam-titles-active"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("exam_titles")
+        .select("name")
+        .eq("is_active", true)
+        .order("name");
+      if (error) throw error;
+      return data.map((t) => t.name);
+    },
+  });
+
+  const allTypes = [...new Set([...examTitles, ...customTypes, ...DEFAULT_TRAINING_TYPES])];
   const completedTypes = completions.map(c => c.training_type);
 
   const issueMutation = useMutation({
