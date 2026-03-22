@@ -4,7 +4,8 @@ import { useUnitMembership } from "@/hooks/useUnitMembership";
 import {
   LayoutDashboard, Users, CalendarDays, HeartHandshake,
   Heart, Megaphone, Menu, LogOut,
-  ClipboardList, Car, BarChart2, ChevronLeft, Globe, Shield, FileText, TrendingUp, Settings, Mail, AlertTriangle
+  ClipboardList, Car, BarChart2, ChevronLeft, Globe, Shield, FileText, TrendingUp, Settings, Mail, AlertTriangle,
+  BookOpen
 } from "lucide-react";
 import winnersLogo from "@/assets/winners-chapel-logo.png";
 import { Button } from "@/components/ui/button";
@@ -26,6 +27,7 @@ const allNavItems = [
   { name: "Analytics", icon: BarChart2, path: "/analytics", access: "admin" },
   { name: "Training Reports", icon: TrendingUp, path: "/training-reports", access: "training" },
   { name: "Church Attendance", icon: ClipboardList, path: "/church-attendance", access: "training" },
+  { name: "Exam Management", icon: BookOpen, path: "/exam-management", access: "admin" },
   { name: "WSF Centres", icon: Globe, path: "/wsf", access: "wsf" },
   { name: "User Management", icon: Shield, path: "/user-management", access: "admin" },
   { name: "System Logs", icon: FileText, path: "/system-logs", access: "admin" },

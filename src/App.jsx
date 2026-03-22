@@ -18,6 +18,7 @@ import WSFManagement from "@/pages/WSFManagement";
 import UserManagement from "@/pages/UserManagement";
 import SystemLogs from "@/pages/SystemLogs";
 import TrainingReports from "@/pages/TrainingReports";
+import ExamManagement from "@/pages/ExamManagement";
 import ChurchAttendance from "@/pages/ChurchAttendance";
 import Settings from "@/pages/Settings";
 import Auth from "@/pages/Auth";
@@ -106,6 +107,7 @@ function AuthRoutes() {
                 <Route path="/transportation" element={<Transportation />} />
                 <Route path="/analytics" element={<AdminRoute><Analytics /></AdminRoute>} />
                 <Route path="/training-reports" element={<TrainingRoute><TrainingReports /></TrainingRoute>} />
+                <Route path="/exam-management" element={<AdminRoute><ExamManagement /></AdminRoute>} />
                 <Route path="/church-attendance" element={<TrainingRoute><ChurchAttendance /></TrainingRoute>} />
                 <Route path="/wsf" element={<WSFRoute><WSFManagement /></WSFRoute>} />
                 <Route path="/user-management" element={<AdminRoute><UserManagement /></AdminRoute>} />
