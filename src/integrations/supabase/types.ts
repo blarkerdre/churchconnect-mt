@@ -584,6 +584,7 @@ export type Database = {
           member_id: string
           passed: boolean | null
           score: number | null
+          session_id: string | null
           started_at: string
           total_points: number | null
           training_type: string
@@ -596,6 +597,7 @@ export type Database = {
           member_id: string
           passed?: boolean | null
           score?: number | null
+          session_id?: string | null
           started_at?: string
           total_points?: number | null
           training_type: string
@@ -608,6 +610,7 @@ export type Database = {
           member_id?: string
           passed?: boolean | null
           score?: number | null
+          session_id?: string | null
           started_at?: string
           total_points?: number | null
           training_type?: string
@@ -618,6 +621,13 @@ export type Database = {
             columns: ["member_id"]
             isOneToOne: false
             referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "exam_attempts_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "exam_sessions"
             referencedColumns: ["id"]
           },
         ]
@@ -670,6 +680,74 @@ export type Database = {
           question_type?: string
           sort_order?: number
           training_type?: string
+        }
+        Relationships: []
+      }
+      exam_session_courses: {
+        Row: {
+          exam_title: string
+          id: string
+          session_id: string
+          sort_order: number
+        }
+        Insert: {
+          exam_title: string
+          id?: string
+          session_id: string
+          sort_order?: number
+        }
+        Update: {
+          exam_title?: string
+          id?: string
+          session_id?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exam_session_courses_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "exam_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      exam_sessions: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          ended_at: string | null
+          id: string
+          name: string
+          pass_mark_percentage: number
+          started_at: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          ended_at?: string | null
+          id?: string
+          name: string
+          pass_mark_percentage?: number
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          ended_at?: string | null
+          id?: string
+          name?: string
+          pass_mark_percentage?: number
+          started_at?: string | null
+          status?: string
+          updated_at?: string
         }
         Relationships: []
       }

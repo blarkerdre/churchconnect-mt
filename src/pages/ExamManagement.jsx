@@ -16,6 +16,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { toast } from "@/components/ui/use-toast";
 import { Loader2, Plus, Trash2, Edit, BookOpen, Save, Tag } from "lucide-react";
 import { useAppSetting } from "@/hooks/useAppSetting";
+import ExamSessionManager from "@/components/exams/ExamSessionManager";
 
 const OPTION_LETTERS = ["a", "b", "c", "d"];
 const QUESTION_TYPES = [
@@ -334,6 +335,9 @@ export default function ExamManagement() {
           <p className="text-sm text-muted-foreground mt-1">Create and manage exam questions for training programmes</p>
         </div>
       </div>
+
+      {/* Exam Sessions */}
+      <ExamSessionManager />
 
       {/* Exam Titles Management */}
       <Card className="border-0 shadow-sm">

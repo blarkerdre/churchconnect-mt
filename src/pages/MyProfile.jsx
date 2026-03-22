@@ -485,13 +485,14 @@ export default function MyProfile() {
       {!editing && <MyCertificates memberId={member.id} />}
 
       {/* Take Exams */}
-      {!editing && <DynamicExamButtons onSelect={setExamType} />}
+      {!editing && <DynamicExamButtons memberId={member.id} onSelect={setExamType} />}
 
       <TakeExamDialog
         open={!!examType}
         onOpenChange={(v) => { if (!v) setExamType(null); }}
-        trainingType={examType}
+        trainingType={examType?.type}
         memberId={member.id}
+        sessionId={examType?.sessionId}
       />
 
       {/* Attendance History */}
@@ -743,7 +744,7 @@ function CreateMemberProfile({ user, onCreated, wsfCentres, churchUnits }) {
   );
 }
 
-function DynamicExamButtons({ onSelect }) {
+function DynamicExamButtons({ memberId, onSelect }) {
   const { data: examTitles = [], isLoading } = useQuery({
     queryKey: ["exam-titles"],
     queryFn: async () => {
@@ -757,7 +758,56 @@ function DynamicExamButtons({ onSelect }) {
     },
   });
 
+  // Fetch active session
+  const { data: activeSession } = useQuery({
+    queryKey: ["active-exam-session"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("exam_sessions")
+        .select("*")
+        .eq("status", "active")
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const { data: sessionCourses = [] } = useQuery({
+    queryKey: ["active-session-courses", activeSession?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("exam_session_courses")
+        .select("*")
+        .eq("session_id", activeSession.id)
+        .order("sort_order");
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!activeSession?.id,
+  });
+
+  // Fetch member's attempts for this session
+  const { data: sessionAttempts = [] } = useQuery({
+    queryKey: ["my-session-attempts", activeSession?.id, memberId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("exam_attempts")
+        .select("*")
+        .eq("session_id", activeSession.id)
+        .eq("member_id", memberId);
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!activeSession?.id && !!memberId,
+  });
+
   if (isLoading || examTitles.length === 0) return null;
+
+  const sessionCourseNames = sessionCourses.map(c => c.exam_title);
+  const completedCourses = [...new Set(sessionAttempts.map(a => a.training_type))];
+  const totalScore = sessionAttempts.reduce((s, a) => s + (a.score || 0), 0);
+  const totalPoints = sessionAttempts.reduce((s, a) => s + (a.total_points || 0), 0);
+  const aggregatePercentage = totalPoints > 0 ? (totalScore / totalPoints) * 100 : 0;
 
   return (
     <Card className="border-0 shadow-sm">
@@ -767,14 +817,56 @@ function DynamicExamButtons({ onSelect }) {
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <p className="text-sm text-muted-foreground mb-3">Take exams for your training programmes to earn certificates.</p>
-        <div className="flex flex-wrap gap-2">
-          {examTitles.map(t => (
-            <Button key={t.id} variant="outline" size="sm" onClick={() => onSelect(t.name)} className="gap-1.5">
-              <BookOpen className="h-3.5 w-3.5" /> {t.name} Exam
-            </Button>
-          ))}
-        </div>
+        {activeSession ? (
+          <div className="space-y-3">
+            <div className="p-3 rounded-lg bg-chart-3/5 border border-chart-3/20">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <div>
+                  <p className="text-sm font-semibold text-foreground">{activeSession.name}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {completedCourses.length}/{sessionCourseNames.length} exams completed
+                    {totalPoints > 0 && ` · Aggregate: ${Math.round(aggregatePercentage)}%`}
+                    {` · Pass mark: ${activeSession.pass_mark_percentage}%`}
+                  </p>
+                </div>
+                {completedCourses.length === sessionCourseNames.length && totalPoints > 0 && (
+                  <Badge variant={aggregatePercentage >= activeSession.pass_mark_percentage ? "default" : "destructive"} className="text-xs">
+                    {aggregatePercentage >= activeSession.pass_mark_percentage ? "Passed ✓" : "Not Passed"}
+                  </Badge>
+                )}
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {sessionCourseNames.map(name => {
+                const taken = completedCourses.includes(name);
+                return (
+                  <Button
+                    key={name}
+                    variant={taken ? "secondary" : "outline"}
+                    size="sm"
+                    disabled={taken}
+                    onClick={() => onSelect({ type: name, sessionId: activeSession.id })}
+                    className="gap-1.5"
+                  >
+                    <BookOpen className="h-3.5 w-3.5" />
+                    {name} {taken ? "✓" : "Exam"}
+                  </Button>
+                );
+              })}
+            </div>
+          </div>
+        ) : (
+          <>
+            <p className="text-sm text-muted-foreground mb-3">Take exams for your training programmes to earn certificates.</p>
+            <div className="flex flex-wrap gap-2">
+              {examTitles.map(t => (
+                <Button key={t.id} variant="outline" size="sm" onClick={() => onSelect({ type: t.name, sessionId: null })} className="gap-1.5">
+                  <BookOpen className="h-3.5 w-3.5" /> {t.name} Exam
+                </Button>
+              ))}
+            </div>
+          </>
+        )}
       </CardContent>
     </Card>
   );
