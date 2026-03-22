@@ -14,9 +14,10 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "@/components/ui/use-toast";
-import { Loader2, Plus, Trash2, Edit, BookOpen, Save, Tag } from "lucide-react";
-import { useAppSetting } from "@/hooks/useAppSetting";
+import { Loader2, Plus, Trash2, Edit, BookOpen, Save, Tag, Layers } from "lucide-react";
 import ExamSessionManager from "@/components/exams/ExamSessionManager";
+import SubjectManager from "@/components/exams/SubjectManager";
+import CourseResultsView from "@/components/exams/CourseResultsView";
 
 const OPTION_LETTERS = ["a", "b", "c", "d"];
 const QUESTION_TYPES = [
@@ -40,39 +41,38 @@ const emptyQuestion = {
 export default function ExamManagement() {
   const { user } = useAuth();
   const qc = useQueryClient();
-  const [selectedType, setSelectedType] = useState("");
+  const [selectedCourse, setSelectedCourse] = useState(null);
+  const [selectedSubject, setSelectedSubject] = useState(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingQuestion, setEditingQuestion] = useState(null);
   const [form, setForm] = useState(emptyQuestion);
   const [deleteTarget, setDeleteTarget] = useState(null);
 
-  // Exam Titles CRUD state
+  // Course CRUD state
   const [titleDialogOpen, setTitleDialogOpen] = useState(false);
   const [editingTitle, setEditingTitle] = useState(null);
-  const [titleForm, setTitleForm] = useState({ name: "", description: "" });
+  const [titleForm, setTitleForm] = useState({ name: "", description: "", pass_mark_percentage: 50 });
   const [deleteTitleTarget, setDeleteTitleTarget] = useState(null);
+  const [showResults, setShowResults] = useState(false);
 
-  // Fetch dynamic exam titles
+  // Fetch courses (exam_titles)
   const { data: examTitles = [], isLoading: titlesLoading } = useQuery({
     queryKey: ["exam-titles"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("exam_titles")
-        .select("*")
-        .order("name");
+      const { data, error } = await supabase.from("exam_titles").select("*").order("name");
       if (error) throw error;
       return data;
     },
   });
 
-  // Auto-select first title
+  // Auto-select first course
   React.useEffect(() => {
-    if (examTitles.length > 0 && !selectedType) {
-      setSelectedType(examTitles[0].name);
+    if (examTitles.length > 0 && !selectedCourse) {
+      setSelectedCourse(examTitles[0]);
     }
-  }, [examTitles, selectedType]);
+  }, [examTitles, selectedCourse]);
 
-  // Exam title mutations
+  // Course mutations
   const saveTitleMutation = useMutation({
     mutationFn: async (payload) => {
       if (editingTitle) {
@@ -85,10 +85,10 @@ export default function ExamManagement() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["exam-titles"] });
-      toast({ title: editingTitle ? "Exam title updated" : "Exam title created" });
+      toast({ title: editingTitle ? "Course updated" : "Course created" });
       setTitleDialogOpen(false);
       setEditingTitle(null);
-      setTitleForm({ name: "", description: "" });
+      setTitleForm({ name: "", description: "", pass_mark_percentage: 50 });
     },
     onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
@@ -100,94 +100,27 @@ export default function ExamManagement() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["exam-titles"] });
-      toast({ title: "Exam title deleted" });
+      toast({ title: "Course deleted" });
       setDeleteTitleTarget(null);
-      if (deleteTitleTarget?.name === selectedType) setSelectedType("");
+      if (deleteTitleTarget?.id === selectedCourse?.id) { setSelectedCourse(null); setSelectedSubject(null); }
     },
     onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
 
-  // Per-type pass mark
-  const { data: globalPassMark } = useAppSetting("exam_pass_percentage", [70]);
-  const globalThreshold = Array.isArray(globalPassMark) ? Number(globalPassMark[0]) || 70 : 70;
-
-  const { data: typePassMarkSetting } = useQuery({
-    queryKey: ["app-setting", `exam_pass_mark_${selectedType}`],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from("app_settings")
-        .select("value")
-        .eq("key", `exam_pass_mark_${selectedType}`)
-        .maybeSingle();
-      return data?.value;
-    },
-    enabled: !!selectedType,
-  });
-
-  const currentPassMark = typePassMarkSetting != null ? Number(typePassMarkSetting) : globalThreshold;
-  const [passMarkInput, setPassMarkInput] = useState("");
-
-  React.useEffect(() => {
-    setPassMarkInput(String(currentPassMark));
-  }, [currentPassMark, selectedType]);
-
-  const savePassMarkMutation = useMutation({
-    mutationFn: async (value) => {
-      const key = `exam_pass_mark_${selectedType}`;
-      const { data: existing } = await supabase
-        .from("app_settings")
-        .select("id")
-        .eq("key", key)
-        .maybeSingle();
-
-      if (existing) {
-        const { error } = await supabase
-          .from("app_settings")
-          .update({ value: Number(value), updated_by: user?.id })
-          .eq("key", key);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase
-          .from("app_settings")
-          .insert({ key, value: Number(value), updated_by: user?.id });
-        if (error) throw error;
-      }
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["app-setting", `exam_pass_mark_${selectedType}`] });
-      toast({ title: `Pass mark for ${selectedType} updated` });
-    },
-    onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
-  });
-
+  // Questions — scoped to selected subject
   const { data: questions = [], isLoading } = useQuery({
-    queryKey: ["exam-questions", selectedType],
+    queryKey: ["exam-questions-by-subject", selectedSubject?.id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("exam_questions")
         .select("*")
-        .eq("training_type", selectedType)
+        .eq("subject_id", selectedSubject.id)
         .order("sort_order")
         .order("created_at");
       if (error) throw error;
       return data;
     },
-    enabled: !!selectedType,
-  });
-
-  const { data: attempts = [] } = useQuery({
-    queryKey: ["exam-attempts-summary", selectedType],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("exam_attempts")
-        .select("*, members(first_name, last_name)")
-        .eq("training_type", selectedType)
-        .order("created_at", { ascending: false })
-        .limit(50);
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!selectedType,
+    enabled: !!selectedSubject?.id,
   });
 
   const saveMutation = useMutation({
@@ -201,7 +134,7 @@ export default function ExamManagement() {
       }
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["exam-questions"] });
+      qc.invalidateQueries({ queryKey: ["exam-questions-by-subject"] });
       toast({ title: editingQuestion ? "Question updated" : "Question added" });
       setDialogOpen(false);
       setEditingQuestion(null);
@@ -216,7 +149,7 @@ export default function ExamManagement() {
       if (error) throw error;
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["exam-questions"] });
+      qc.invalidateQueries({ queryKey: ["exam-questions-by-subject"] });
       toast({ title: "Question deleted" });
       setDeleteTarget(null);
     },
@@ -230,40 +163,20 @@ export default function ExamManagement() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!form.question_text) {
-      toast({ title: "Question text is required", variant: "destructive" });
-      return;
-    }
-
+    if (!form.question_text) { toast({ title: "Question text is required", variant: "destructive" }); return; }
     if (isMCQ) {
-      if (!form.option_a || !form.option_b) {
-        toast({ title: "At least options A & B are required for multiple choice", variant: "destructive" });
-        return;
-      }
-      if (!activeOptions.includes(form.correct_answer)) {
-        toast({ title: `Correct answer must be one of: ${activeOptions.map(o => o.toUpperCase()).join(", ")}`, variant: "destructive" });
-        return;
-      }
+      if (!form.option_a || !form.option_b) { toast({ title: "At least options A & B are required", variant: "destructive" }); return; }
+      if (!activeOptions.includes(form.correct_answer)) { toast({ title: `Correct answer must be one of: ${activeOptions.map(o => o.toUpperCase()).join(", ")}`, variant: "destructive" }); return; }
     }
-
-    if (isFillGap && !form.correct_answer) {
-      toast({ title: "Correct answer text is required for fill in the gap", variant: "destructive" });
-      return;
-    }
-
+    if (isFillGap && !form.correct_answer) { toast({ title: "Correct answer is required", variant: "destructive" }); return; }
     if (isDragDrop) {
-      if (!form.option_a || !form.option_b) {
-        toast({ title: "At least 2 items are required for drag & drop", variant: "destructive" });
-        return;
-      }
-      if (!form.correct_answer) {
-        toast({ title: "Correct order is required (e.g. b,a,c,d)", variant: "destructive" });
-        return;
-      }
+      if (!form.option_a || !form.option_b) { toast({ title: "At least 2 items required", variant: "destructive" }); return; }
+      if (!form.correct_answer) { toast({ title: "Correct order is required", variant: "destructive" }); return; }
     }
 
     saveMutation.mutate({
-      training_type: selectedType,
+      training_type: selectedCourse.name,
+      subject_id: selectedSubject.id,
       question_text: form.question_text,
       option_a: isFillGap ? "" : form.option_a,
       option_b: isFillGap ? "" : form.option_b,
@@ -281,44 +194,25 @@ export default function ExamManagement() {
   const openEdit = (q) => {
     setEditingQuestion(q);
     setForm({
-      question_text: q.question_text,
-      option_a: q.option_a,
-      option_b: q.option_b,
-      option_c: q.option_c,
-      option_d: q.option_d,
-      correct_answer: q.correct_answer,
-      points: q.points,
-      answer_count: q.answer_count || 4,
-      question_type: q.question_type || "multiple_choice",
+      question_text: q.question_text, option_a: q.option_a, option_b: q.option_b,
+      option_c: q.option_c, option_d: q.option_d, correct_answer: q.correct_answer,
+      points: q.points, answer_count: q.answer_count || 4, question_type: q.question_type || "multiple_choice",
     });
     setDialogOpen(true);
   };
 
-  const openNew = () => {
-    setEditingQuestion(null);
-    setForm(emptyQuestion);
-    setDialogOpen(true);
-  };
+  const openNew = () => { setEditingQuestion(null); setForm(emptyQuestion); setDialogOpen(true); };
 
   const set = (k, v) => setForm(f => {
     const next = { ...f, [k]: v };
     if (k === "answer_count") {
       const newOpts = OPTION_LETTERS.slice(0, Number(v));
-      if (!newOpts.includes(f.correct_answer) && f.question_type === "multiple_choice") {
-        next.correct_answer = "a";
-      }
+      if (!newOpts.includes(f.correct_answer) && f.question_type === "multiple_choice") next.correct_answer = "a";
     }
     if (k === "question_type") {
-      if (v === "fill_in_gap") {
-        next.correct_answer = "";
-        next.answer_count = 0;
-      } else if (v === "drag_and_drop") {
-        next.correct_answer = "";
-        next.answer_count = f.answer_count || 4;
-      } else {
-        next.correct_answer = "a";
-        next.answer_count = f.answer_count || 4;
-      }
+      if (v === "fill_in_gap") { next.correct_answer = ""; next.answer_count = 0; }
+      else if (v === "drag_and_drop") { next.correct_answer = ""; next.answer_count = f.answer_count || 4; }
+      else { next.correct_answer = "a"; next.answer_count = f.answer_count || 4; }
     }
     return next;
   });
@@ -332,26 +226,26 @@ export default function ExamManagement() {
           <h1 className="text-xl font-display font-bold text-foreground flex items-center gap-2">
             <BookOpen className="h-5 w-5 text-primary" /> Exam Management
           </h1>
-          <p className="text-sm text-muted-foreground mt-1">Create and manage exam questions for training programmes</p>
+          <p className="text-sm text-muted-foreground mt-1">Manage certificate courses, subjects, and exam questions</p>
         </div>
       </div>
 
       {/* Exam Sessions */}
       <ExamSessionManager />
 
-      {/* Exam Titles Management */}
+      {/* Certificate Courses */}
       <Card className="border-0 shadow-sm">
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
             <CardTitle className="text-base font-display flex items-center gap-2">
-              <Tag className="h-4 w-4 text-primary" /> Exam Titles
+              <Tag className="h-4 w-4 text-primary" /> Certificate Courses
             </CardTitle>
             <Button size="sm" variant="outline" className="gap-1.5" onClick={() => {
               setEditingTitle(null);
-              setTitleForm({ name: "", description: "" });
+              setTitleForm({ name: "", description: "", pass_mark_percentage: 50 });
               setTitleDialogOpen(true);
             }}>
-              <Plus className="h-3.5 w-3.5" /> Add Title
+              <Plus className="h-3.5 w-3.5" /> Add Course
             </Button>
           </div>
         </CardHeader>
@@ -359,27 +253,29 @@ export default function ExamManagement() {
           {titlesLoading ? (
             <div className="flex justify-center py-4"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
           ) : examTitles.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-4">No exam titles yet.</p>
+            <p className="text-sm text-muted-foreground text-center py-4">No courses yet.</p>
           ) : (
             <div className="flex flex-wrap gap-2">
               {examTitles.map(t => (
                 <div key={t.id} className={`group flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-sm cursor-pointer transition-colors ${
-                  selectedType === t.name
+                  selectedCourse?.id === t.id
                     ? "bg-primary text-primary-foreground border-primary"
                     : "bg-card border-border hover:bg-muted"
-                }`} onClick={() => setSelectedType(t.name)}>
+                }`} onClick={() => { setSelectedCourse(t); setSelectedSubject(null); setShowResults(false); }}>
                   <span className="font-medium">{t.name}</span>
+                  <Badge variant="outline" className={`text-[9px] h-4 ${selectedCourse?.id === t.id ? "border-primary-foreground/30 text-primary-foreground" : ""}`}>
+                    {t.pass_mark_percentage}%
+                  </Badge>
                   {!t.is_active && <Badge variant="secondary" className="text-[9px] h-4">Inactive</Badge>}
-                  <button
-                    className="opacity-0 group-hover:opacity-100 transition-opacity ml-1"
-                    onClick={(e) => { e.stopPropagation(); setEditingTitle(t); setTitleForm({ name: t.name, description: t.description || "" }); setTitleDialogOpen(true); }}
-                  >
+                  <button className="opacity-0 group-hover:opacity-100 transition-opacity ml-1" onClick={(e) => {
+                    e.stopPropagation();
+                    setEditingTitle(t);
+                    setTitleForm({ name: t.name, description: t.description || "", pass_mark_percentage: t.pass_mark_percentage || 50 });
+                    setTitleDialogOpen(true);
+                  }}>
                     <Edit className="h-3 w-3" />
                   </button>
-                  <button
-                    className="opacity-0 group-hover:opacity-100 transition-opacity text-destructive"
-                    onClick={(e) => { e.stopPropagation(); setDeleteTitleTarget(t); }}
-                  >
+                  <button className="opacity-0 group-hover:opacity-100 transition-opacity text-destructive" onClick={(e) => { e.stopPropagation(); setDeleteTitleTarget(t); }}>
                     <Trash2 className="h-3 w-3" />
                   </button>
                 </div>
@@ -389,251 +285,146 @@ export default function ExamManagement() {
         </CardContent>
       </Card>
 
-      {selectedType && (
+      {selectedCourse && (
         <>
-          {/* Controls */}
-          <div className="flex items-center justify-end">
-            <Button size="sm" className="gap-1.5" onClick={openNew}>
-              <Plus className="h-4 w-4" /> Add Question
+          {/* Toggle: Subjects vs Results */}
+          <div className="flex gap-2">
+            <Button variant={!showResults ? "default" : "outline"} size="sm" onClick={() => setShowResults(false)} className="gap-1.5">
+              <Layers className="h-3.5 w-3.5" /> Subjects & Questions
+            </Button>
+            <Button variant={showResults ? "default" : "outline"} size="sm" onClick={() => setShowResults(true)} className="gap-1.5">
+              Course Results
             </Button>
           </div>
 
-          {/* Pass Mark Configuration */}
-          <Card className="border-0 shadow-sm">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base font-display">Pass Mark — {selectedType}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-end gap-3">
-                <div className="space-y-1.5">
-                  <Label className="text-xs text-muted-foreground">Pass Percentage (%)</Label>
-                  <Input
-                    type="number"
-                    min="0"
-                    max="100"
-                    value={passMarkInput}
-                    onChange={e => setPassMarkInput(e.target.value)}
-                    className="w-28"
-                  />
-                </div>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="gap-1.5"
-                  disabled={savePassMarkMutation.isPending || passMarkInput === String(currentPassMark)}
-                  onClick={() => savePassMarkMutation.mutate(passMarkInput)}
-                >
-                  {savePassMarkMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
-                  Save
-                </Button>
-                <span className="text-xs text-muted-foreground pb-2">
-                  Global default: {globalThreshold}%
-                </span>
-              </div>
-            </CardContent>
-          </Card>
+          {showResults ? (
+            <CourseResultsView course={selectedCourse} />
+          ) : (
+            <>
+              {/* Subject Manager */}
+              <SubjectManager
+                course={selectedCourse}
+                onSelectSubject={(s) => setSelectedSubject(s)}
+                selectedSubjectId={selectedSubject?.id}
+              />
 
-          {/* Questions list */}
-          <Card className="border-0 shadow-sm">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base font-display">
-                {selectedType} Questions ({questions.length})
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {isLoading ? (
-                <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
-              ) : questions.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-8">No questions yet. Add your first question above.</p>
-              ) : (
-                <div className="space-y-3">
-                  {questions.map((q, idx) => {
-                    const qType = q.question_type || "multiple_choice";
-                    const qOpts = OPTION_LETTERS.slice(0, q.answer_count || 4);
-                    return (
-                      <div key={q.id} className="p-4 rounded-lg border border-border bg-card">
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-foreground">
-                              <span className="text-muted-foreground mr-2">{idx + 1}.</span>
-                              {q.question_text}
-                            </p>
-                            <div className="flex items-center gap-1.5 mt-1.5">
-                              <Badge variant="secondary" className="text-[10px]">{questionTypeLabel(qType)}</Badge>
-                            </div>
-                            {qType === "multiple_choice" && (
-                              <div className="grid grid-cols-2 gap-2 mt-2">
-                                {qOpts.map(opt => (
-                                  q[`option_${opt}`] && (
-                                    <div key={opt} className={`text-xs px-2 py-1.5 rounded ${
-                                      q.correct_answer === opt
-                                        ? "bg-emerald-500/10 text-emerald-600 font-semibold border border-emerald-500/30"
-                                        : "bg-muted text-muted-foreground"
-                                    }`}>
-                                      <span className="font-bold uppercase mr-1">{opt}.</span>
-                                      {q[`option_${opt}`]}
+              {/* Questions for selected subject */}
+              {selectedSubject && (
+                <>
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-semibold text-foreground">
+                      Questions — {selectedSubject.name}
+                    </h3>
+                    <Button size="sm" className="gap-1.5" onClick={openNew}>
+                      <Plus className="h-4 w-4" /> Add Question
+                    </Button>
+                  </div>
+
+                  <Card className="border-0 shadow-sm">
+                    <CardContent className="pt-6">
+                      {isLoading ? (
+                        <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+                      ) : questions.length === 0 ? (
+                        <p className="text-sm text-muted-foreground text-center py-8">No questions yet for this subject.</p>
+                      ) : (
+                        <div className="space-y-3">
+                          {questions.map((q, idx) => {
+                            const qType = q.question_type || "multiple_choice";
+                            const qOpts = OPTION_LETTERS.slice(0, q.answer_count || 4);
+                            return (
+                              <div key={q.id} className="p-4 rounded-lg border border-border bg-card">
+                                <div className="flex items-start justify-between gap-3">
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-medium text-foreground">
+                                      <span className="text-muted-foreground mr-2">{idx + 1}.</span>{q.question_text}
+                                    </p>
+                                    <div className="flex items-center gap-1.5 mt-1.5">
+                                      <Badge variant="secondary" className="text-[10px]">{questionTypeLabel(qType)}</Badge>
                                     </div>
-                                  )
-                                ))}
-                              </div>
-                            )}
-                            {qType === "fill_in_gap" && (
-                              <p className="text-xs text-emerald-600 mt-2">
-                                Answer: <strong>{q.correct_answer}</strong>
-                              </p>
-                            )}
-                            {qType === "drag_and_drop" && (
-                              <div className="mt-2 space-y-1">
-                                <div className="flex flex-wrap gap-1.5">
-                                  {qOpts.map(opt => q[`option_${opt}`] && (
-                                    <span key={opt} className="text-xs px-2 py-1 rounded bg-muted text-muted-foreground">
-                                      {opt.toUpperCase()}. {q[`option_${opt}`]}
-                                    </span>
-                                  ))}
+                                    {qType === "multiple_choice" && (
+                                      <div className="grid grid-cols-2 gap-2 mt-2">
+                                        {qOpts.map(opt => q[`option_${opt}`] && (
+                                          <div key={opt} className={`text-xs px-2 py-1.5 rounded ${q.correct_answer === opt ? "bg-emerald-500/10 text-emerald-600 font-semibold border border-emerald-500/30" : "bg-muted text-muted-foreground"}`}>
+                                            <span className="font-bold uppercase mr-1">{opt}.</span>{q[`option_${opt}`]}
+                                          </div>
+                                        ))}
+                                      </div>
+                                    )}
+                                    {qType === "fill_in_gap" && <p className="text-xs text-emerald-600 mt-2">Answer: <strong>{q.correct_answer}</strong></p>}
+                                    {qType === "drag_and_drop" && (
+                                      <div className="mt-2 space-y-1">
+                                        <div className="flex flex-wrap gap-1.5">
+                                          {qOpts.map(opt => q[`option_${opt}`] && (
+                                            <span key={opt} className="text-xs px-2 py-1 rounded bg-muted text-muted-foreground">{opt.toUpperCase()}. {q[`option_${opt}`]}</span>
+                                          ))}
+                                        </div>
+                                        <p className="text-xs text-emerald-600">Correct order: <strong>{q.correct_answer}</strong></p>
+                                      </div>
+                                    )}
+                                  </div>
+                                  <div className="flex items-center gap-1 shrink-0">
+                                    <Badge variant="outline" className="text-[10px]">{q.points} pt{q.points !== 1 ? "s" : ""}</Badge>
+                                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(q)}><Edit className="h-3.5 w-3.5" /></Button>
+                                    <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => setDeleteTarget(q)}><Trash2 className="h-3.5 w-3.5" /></Button>
+                                  </div>
                                 </div>
-                                <p className="text-xs text-emerald-600">
-                                  Correct order: <strong>{q.correct_answer}</strong>
-                                </p>
                               </div>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-1 shrink-0">
-                            <Badge variant="outline" className="text-[10px]">{q.points} pt{q.points !== 1 ? "s" : ""}</Badge>
-                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(q)}>
-                              <Edit className="h-3.5 w-3.5" />
-                            </Button>
-                            <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => setDeleteTarget(q)}>
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </Button>
-                          </div>
+                            );
+                          })}
                         </div>
-                      </div>
-                    );
-                  })}
-                </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </>
               )}
-            </CardContent>
-          </Card>
-
-          {/* Recent Attempts */}
-          {attempts.length > 0 && (
-            <Card className="border-0 shadow-sm">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base font-display">Recent Exam Results</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Member</TableHead>
-                        <TableHead className="text-center">Score</TableHead>
-                        <TableHead className="text-center">Result</TableHead>
-                        <TableHead className="text-center">Certificate</TableHead>
-                        <TableHead>Date</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {attempts.map(a => (
-                        <TableRow key={a.id}>
-                          <TableCell className="text-sm font-medium">
-                            {a.members?.first_name} {a.members?.last_name}
-                          </TableCell>
-                          <TableCell className="text-center text-sm">
-                            {a.score}/{a.total_points}
-                          </TableCell>
-                          <TableCell className="text-center">
-                            <Badge variant={a.passed ? "default" : "destructive"} className="text-xs">
-                              {a.passed ? "Passed" : "Failed"}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-center text-xs text-muted-foreground">
-                            {a.certificate_issued ? "✅ Issued" : "—"}
-                          </TableCell>
-                          <TableCell className="text-xs text-muted-foreground">
-                            {a.completed_at ? new Date(a.completed_at).toLocaleDateString() : "In Progress"}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              </CardContent>
-            </Card>
+            </>
           )}
         </>
       )}
 
-      {/* Delete Question Confirmation */}
+      {/* Delete Question */}
       <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
         <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Question</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete this question? This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
+          <AlertDialogHeader><AlertDialogTitle>Delete Question</AlertDialogTitle><AlertDialogDescription>Are you sure? This cannot be undone.</AlertDialogDescription></AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {deleteMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-              Delete
+            <AlertDialogAction onClick={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              {deleteMutation.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />} Delete
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Delete Title Confirmation */}
+      {/* Delete Course */}
       <AlertDialog open={!!deleteTitleTarget} onOpenChange={(open) => !open && setDeleteTitleTarget(null)}>
         <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Exam Title</AlertDialogTitle>
-            <AlertDialogDescription>
-              Delete "{deleteTitleTarget?.name}"? This will not remove existing questions or attempts, but they will no longer appear in the list.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
+          <AlertDialogHeader><AlertDialogTitle>Delete Course</AlertDialogTitle><AlertDialogDescription>Delete "{deleteTitleTarget?.name}"? This removes all subjects and questions.</AlertDialogDescription></AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => deleteTitleTarget && deleteTitleMutation.mutate(deleteTitleTarget.id)}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {deleteTitleMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-              Delete
+            <AlertDialogAction onClick={() => deleteTitleTarget && deleteTitleMutation.mutate(deleteTitleTarget.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              {deleteTitleMutation.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />} Delete
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Exam Title Dialog */}
+      {/* Course Dialog */}
       <Dialog open={titleDialogOpen} onOpenChange={setTitleDialogOpen}>
         <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle>{editingTitle ? "Edit Exam Title" : "Add Exam Title"}</DialogTitle>
-          </DialogHeader>
+          <DialogHeader><DialogTitle>{editingTitle ? "Edit Course" : "Add Certificate Course"}</DialogTitle></DialogHeader>
           <form onSubmit={(e) => {
             e.preventDefault();
-            if (!titleForm.name.trim()) {
-              toast({ title: "Title name is required", variant: "destructive" });
-              return;
-            }
+            if (!titleForm.name.trim()) { toast({ title: "Course name is required", variant: "destructive" }); return; }
             saveTitleMutation.mutate({
               name: titleForm.name.trim(),
               description: titleForm.description.trim() || null,
+              pass_mark_percentage: Number(titleForm.pass_mark_percentage) || 50,
               is_active: true,
             });
           }} className="space-y-4">
-            <div>
-              <Label>Title Name *</Label>
-              <Input value={titleForm.name} onChange={e => setTitleForm(f => ({ ...f, name: e.target.value }))} placeholder="e.g. BFC, Leadership 101" />
-            </div>
-            <div>
-              <Label>Description</Label>
-              <Input value={titleForm.description} onChange={e => setTitleForm(f => ({ ...f, description: e.target.value }))} placeholder="Optional description" />
-            </div>
+            <div><Label>Course Name *</Label><Input value={titleForm.name} onChange={e => setTitleForm(f => ({ ...f, name: e.target.value }))} placeholder="e.g. BCC, LCC" /></div>
+            <div><Label>Description</Label><Input value={titleForm.description} onChange={e => setTitleForm(f => ({ ...f, description: e.target.value }))} placeholder="Optional" /></div>
+            <div><Label>Aggregate Pass Mark (%)</Label><Input type="number" min="0" max="100" value={titleForm.pass_mark_percentage} onChange={e => setTitleForm(f => ({ ...f, pass_mark_percentage: e.target.value }))} className="w-28" /></div>
             <DialogFooter>
               <Button type="submit" disabled={saveTitleMutation.isPending}>
                 {saveTitleMutation.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
@@ -644,28 +435,22 @@ export default function ExamManagement() {
         </DialogContent>
       </Dialog>
 
-      {/* Add/Edit Question Dialog */}
+      {/* Question Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{editingQuestion ? "Edit Question" : "Add Question"}</DialogTitle>
-          </DialogHeader>
+          <DialogHeader><DialogTitle>{editingQuestion ? "Edit Question" : "Add Question"}</DialogTitle></DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <Label>Question Type</Label>
               <Select value={form.question_type} onValueChange={v => set("question_type", v)}>
                 <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {QUESTION_TYPES.map(t => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}
-                </SelectContent>
+                <SelectContent>{QUESTION_TYPES.map(t => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}</SelectContent>
               </Select>
             </div>
             <div>
               <Label>Question *</Label>
-              <Textarea value={form.question_text} onChange={e => set("question_text", e.target.value)} rows={3} placeholder={isFillGap ? "Use ___ to indicate the blank (e.g. 'The capital of France is ___')" : ""} />
+              <Textarea value={form.question_text} onChange={e => set("question_text", e.target.value)} rows={3} placeholder={isFillGap ? "Use ___ for the blank" : ""} />
             </div>
-
-            {/* Multiple Choice fields */}
             {isMCQ && (
               <>
                 <div>
@@ -684,11 +469,7 @@ export default function ExamManagement() {
                   {activeOptions.map(opt => (
                     <div key={opt} className="flex items-center gap-2">
                       <span className="text-xs font-bold uppercase text-muted-foreground w-5">{opt}.</span>
-                      <Input
-                        value={form[`option_${opt}`]}
-                        onChange={e => set(`option_${opt}`, e.target.value)}
-                        placeholder={`Option ${opt.toUpperCase()}`}
-                      />
+                      <Input value={form[`option_${opt}`]} onChange={e => set(`option_${opt}`, e.target.value)} placeholder={`Option ${opt.toUpperCase()}`} />
                     </div>
                   ))}
                 </div>
@@ -705,21 +486,13 @@ export default function ExamManagement() {
                 </div>
               </>
             )}
-
-            {/* Fill in the Gap fields */}
             {isFillGap && (
               <div>
                 <Label>Correct Answer *</Label>
-                <Input
-                  value={form.correct_answer}
-                  onChange={e => set("correct_answer", e.target.value)}
-                  placeholder="The expected answer text"
-                />
-                <p className="text-xs text-muted-foreground mt-1">Case-insensitive matching will be used.</p>
+                <Input value={form.correct_answer} onChange={e => set("correct_answer", e.target.value)} placeholder="Expected answer" />
+                <p className="text-xs text-muted-foreground mt-1">Case-insensitive matching.</p>
               </div>
             )}
-
-            {/* Drag & Drop fields */}
             {isDragDrop && (
               <>
                 <div>
@@ -734,36 +507,22 @@ export default function ExamManagement() {
                   </Select>
                 </div>
                 <div className="space-y-3">
-                  <Label>Items (in display order) *</Label>
+                  <Label>Items *</Label>
                   {activeOptions.map(opt => (
                     <div key={opt} className="flex items-center gap-2">
                       <span className="text-xs font-bold uppercase text-muted-foreground w-5">{opt}.</span>
-                      <Input
-                        value={form[`option_${opt}`]}
-                        onChange={e => set(`option_${opt}`, e.target.value)}
-                        placeholder={`Item ${opt.toUpperCase()}`}
-                      />
+                      <Input value={form[`option_${opt}`]} onChange={e => set(`option_${opt}`, e.target.value)} placeholder={`Item ${opt.toUpperCase()}`} />
                     </div>
                   ))}
                 </div>
                 <div>
                   <Label>Correct Order *</Label>
-                  <Input
-                    value={form.correct_answer}
-                    onChange={e => set("correct_answer", e.target.value)}
-                    placeholder={`e.g. ${activeOptions.reverse().join(",")}`}
-                  />
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Comma-separated letters in correct order (e.g. b,a,d,c)
-                  </p>
+                  <Input value={form.correct_answer} onChange={e => set("correct_answer", e.target.value)} placeholder={`e.g. ${activeOptions.reverse().join(",")}`} />
+                  <p className="text-xs text-muted-foreground mt-1">Comma-separated letters in correct order</p>
                 </div>
               </>
             )}
-
-            <div>
-              <Label>Points</Label>
-              <Input type="number" min="1" value={form.points} onChange={e => set("points", e.target.value)} className="w-24" />
-            </div>
+            <div><Label>Points</Label><Input type="number" min="1" value={form.points} onChange={e => set("points", e.target.value)} className="w-24" /></div>
             <DialogFooter>
               <Button type="submit" disabled={saveMutation.isPending}>
                 {saveMutation.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}

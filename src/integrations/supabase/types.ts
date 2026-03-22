@@ -586,6 +586,7 @@ export type Database = {
           score: number | null
           session_id: string | null
           started_at: string
+          subject_id: string | null
           total_points: number | null
           training_type: string
         }
@@ -599,6 +600,7 @@ export type Database = {
           score?: number | null
           session_id?: string | null
           started_at?: string
+          subject_id?: string | null
           total_points?: number | null
           training_type: string
         }
@@ -612,6 +614,7 @@ export type Database = {
           score?: number | null
           session_id?: string | null
           started_at?: string
+          subject_id?: string | null
           total_points?: number | null
           training_type?: string
         }
@@ -628,6 +631,13 @@ export type Database = {
             columns: ["session_id"]
             isOneToOne: false
             referencedRelation: "exam_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "exam_attempts_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "exam_subjects"
             referencedColumns: ["id"]
           },
         ]
@@ -647,6 +657,7 @@ export type Database = {
           question_text: string
           question_type: string
           sort_order: number
+          subject_id: string | null
           training_type: string
         }
         Insert: {
@@ -663,6 +674,7 @@ export type Database = {
           question_text: string
           question_type?: string
           sort_order?: number
+          subject_id?: string | null
           training_type: string
         }
         Update: {
@@ -679,9 +691,18 @@ export type Database = {
           question_text?: string
           question_type?: string
           sort_order?: number
+          subject_id?: string | null
           training_type?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "exam_questions_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "exam_subjects"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       exam_session_courses: {
         Row: {
@@ -751,6 +772,44 @@ export type Database = {
         }
         Relationships: []
       }
+      exam_subjects: {
+        Row: {
+          course_id: string
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          sort_order: number
+        }
+        Insert: {
+          course_id: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          sort_order?: number
+        }
+        Update: {
+          course_id?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exam_subjects_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "exam_titles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       exam_titles: {
         Row: {
           created_at: string
@@ -759,6 +818,7 @@ export type Database = {
           id: string
           is_active: boolean
           name: string
+          pass_mark_percentage: number
         }
         Insert: {
           created_at?: string
@@ -767,6 +827,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           name: string
+          pass_mark_percentage?: number
         }
         Update: {
           created_at?: string
@@ -775,6 +836,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           name?: string
+          pass_mark_percentage?: number
         }
         Relationships: []
       }
