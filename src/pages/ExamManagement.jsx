@@ -16,6 +16,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { toast } from "@/components/ui/use-toast";
 import { Loader2, Plus, Trash2, Edit, BookOpen, Save, Tag } from "lucide-react";
 import { useAppSetting } from "@/hooks/useAppSetting";
+import ExamSessionManager from "@/components/exams/ExamSessionManager";
 
 const OPTION_LETTERS = ["a", "b", "c", "d"];
 const QUESTION_TYPES = [
