@@ -484,6 +484,30 @@ export default function MyProfile() {
       {/* Certificates */}
       {!editing && <MyCertificates memberId={member.id} />}
 
+      {/* Take Exams */}
+      {!editing && (
+        <Card className="border-0 shadow-sm">
+          <CardHeader className="pb-2"><CardTitle className="text-base flex items-center gap-2"><BookOpen className="h-4 w-4 text-primary" /> Training Exams</CardTitle></CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground mb-3">Take exams for your training programmes to earn certificates.</p>
+            <div className="flex flex-wrap gap-2">
+              {["BFC", "BCC", "LCC", "LDC"].map(type => (
+                <Button key={type} variant="outline" size="sm" onClick={() => setExamType(type)} className="gap-1.5">
+                  <BookOpen className="h-3.5 w-3.5" /> {type} Exam
+                </Button>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      <TakeExamDialog
+        open={!!examType}
+        onOpenChange={(v) => { if (!v) setExamType(null); }}
+        trainingType={examType}
+        memberId={member.id}
+      />
+
       {/* Attendance History */}
       <Card className="border-0 shadow-sm">
         <CardHeader className="pb-2"><CardTitle className="text-base">Recent Attendance ({attendanceRecords.length})</CardTitle></CardHeader>
