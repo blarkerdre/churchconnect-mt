@@ -485,11 +485,14 @@ export type Database = {
           description: string | null
           end_time: string | null
           event_date: string
+          event_mode: string
           id: string
           is_public: boolean | null
           location: string | null
           requires_registration: boolean | null
           start_time: string | null
+          target_unit: string | null
+          target_wsf_centre_id: string | null
           title: string
           updated_at: string
         }
@@ -501,11 +504,14 @@ export type Database = {
           description?: string | null
           end_time?: string | null
           event_date: string
+          event_mode?: string
           id?: string
           is_public?: boolean | null
           location?: string | null
           requires_registration?: boolean | null
           start_time?: string | null
+          target_unit?: string | null
+          target_wsf_centre_id?: string | null
           title: string
           updated_at?: string
         }
@@ -517,15 +523,26 @@ export type Database = {
           description?: string | null
           end_time?: string | null
           event_date?: string
+          event_mode?: string
           id?: string
           is_public?: boolean | null
           location?: string | null
           requires_registration?: boolean | null
           start_time?: string | null
+          target_unit?: string | null
+          target_wsf_centre_id?: string | null
           title?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "events_target_wsf_centre_id_fkey"
+            columns: ["target_wsf_centre_id"]
+            isOneToOne: false
+            referencedRelation: "wsf_centres"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       first_timers: {
         Row: {
@@ -1460,6 +1477,35 @@ export type Database = {
               _phone?: string
               _photo_url?: string
               _postcode?: string
+            }
+            Returns: undefined
+          }
+        | {
+            Args: {
+              _address?: string
+              _bcc_completed?: boolean
+              _bfc_completed?: boolean
+              _church_unit?: string
+              _city?: string
+              _date_of_birth?: string
+              _email?: string
+              _emergency_contact_name?: string
+              _emergency_contact_phone?: string
+              _first_name?: string
+              _gender?: string
+              _holy_spirit_baptism?: boolean
+              _last_name?: string
+              _lcc_completed?: boolean
+              _ldc_completed?: boolean
+              _member_id: string
+              _membership_status?: string
+              _notes?: string
+              _phone?: string
+              _photo_url?: string
+              _postcode?: string
+              _water_baptism?: boolean
+              _winners_satellite?: boolean
+              _wsf_centre_id?: string
             }
             Returns: undefined
           }
