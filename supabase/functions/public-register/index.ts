@@ -78,6 +78,89 @@ function triggerWelcomeEmail(email: string, firstName: string | null, lastName: 
     .catch((err) => console.error("Welcome email trigger network error:", err));
 }
 
+async function createPastoralCareForPrayerRequest(
+  supabase: any,
+  memberId: string,
+  firstName: string,
+  lastName: string,
+  notes: string,
+) {
+  try {
+    // Find a Pastoral Care unit member using round-robin
+    const { data: pcMembers } = await supabase
+      .from("unit_leader_assignments")
+      .select("user_id")
+      .in("unit_name", ["Pastoral Care", "Pastoral care", "pastoral care"]);
+
+    let assignedTo: string | null = null;
+    if (pcMembers && pcMembers.length > 0) {
+      // Least-busy assignment
+      const { data: counts } = await supabase
+        .from("pastoral_care")
+        .select("assigned_to")
+        .in("status", ["Open", "In Progress"])
+        .in("assigned_to", pcMembers.map((m: any) => m.user_id));
+
+      const countMap: Record<string, number> = {};
+      pcMembers.forEach((m: any) => { countMap[m.user_id] = 0; });
+      (counts || []).forEach((c: any) => {
+        if (c.assigned_to) countMap[c.assigned_to] = (countMap[c.assigned_to] || 0) + 1;
+      });
+
+      const sorted = Object.entries(countMap).sort((a, b) => a[1] - b[1]);
+      assignedTo = sorted[0]?.[0] || null;
+    }
+
+    await supabase.from("pastoral_care").insert({
+      member_id: memberId,
+      care_type: "Prayer Request",
+      subject: `Prayer Request from ${firstName} ${lastName}`,
+      description: notes,
+      status: "Open",
+      assigned_to: assignedTo,
+      confidential: false,
+    });
+
+    console.log("Pastoral care record created for prayer request from", firstName, lastName);
+  } catch (err) {
+    console.error("Failed to create pastoral care for prayer request:", err);
+  }
+}
+
+async function notifyWSFLeader(supabase: any, wsfCentreId: string, firstName: string, lastName: string) {
+  try {
+    const { data: centre } = await supabase
+      .from("wsf_centres")
+      .select("leader_id, name")
+      .eq("id", wsfCentreId)
+      .maybeSingle();
+
+    if (!centre?.leader_id) return;
+
+    // Get the leader's user_id from members table
+    const { data: leaderMember } = await supabase
+      .from("members")
+      .select("user_id")
+      .eq("id", centre.leader_id)
+      .maybeSingle();
+
+    if (!leaderMember?.user_id) return;
+
+    await supabase.from("notifications").insert({
+      user_id: leaderMember.user_id,
+      title: "New Member Registration",
+      message: `${firstName} ${lastName} registered near your WSF centre: ${centre.name}`,
+      type: "general",
+      reference_type: "wsf_centre",
+      reference_id: wsfCentreId,
+    });
+
+    console.log("WSF leader notified for new registration near", centre.name);
+  } catch (err) {
+    console.error("Failed to notify WSF leader:", err);
+  }
+}
+
 const VALID_STATUSES = ["First Timer", "New Convert", "Active", "Inactive", "Visitor"];
 const VALID_GENDERS = ["Male", "Female"];
 
@@ -222,6 +305,9 @@ Deno.serve(async (req) => {
       gdpr_consent_date: new Date().toISOString(),
     };
 
+    let resultMemberId: string | null = null;
+    let resultMode = "created";
+
     if (authenticatedUser?.userId) {
       const { data: linkedMember, error: linkedMemberError } = await supabase
         .from("members")
@@ -240,10 +326,23 @@ Deno.serve(async (req) => {
           .eq("id", linkedMember.id);
 
         if (updateError) throw updateError;
+        resultMemberId = linkedMember.id;
+        resultMode = "updated";
 
         if (email) triggerWelcomeEmail(email, firstName, lastName);
 
-        return new Response(JSON.stringify({ success: true, mode: "updated" }), {
+        // Prayer request routing
+        if (notes && notes.trim()) {
+          createPastoralCareForPrayerRequest(supabase, linkedMember.id, firstName, lastName, notes);
+        }
+
+        // WSF leader notification
+        const effectiveWsfCentreId = winnersSatellite ? (wsfCentreId || null) : null;
+        if (effectiveWsfCentreId) {
+          notifyWSFLeader(supabase, effectiveWsfCentreId, firstName, lastName);
+        }
+
+        return new Response(JSON.stringify({ success: true, mode: resultMode }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
@@ -266,8 +365,20 @@ Deno.serve(async (req) => {
             .eq("id", emailMatches[0].id);
 
           if (claimUpdateError) throw claimUpdateError;
+          resultMemberId = emailMatches[0].id;
 
           if (email) triggerWelcomeEmail(email, firstName, lastName);
+
+          // Prayer request routing
+          if (notes && notes.trim()) {
+            createPastoralCareForPrayerRequest(supabase, emailMatches[0].id, firstName, lastName, notes);
+          }
+
+          // WSF leader notification
+          const effectiveWsfCentreId = winnersSatellite ? (wsfCentreId || null) : null;
+          if (effectiveWsfCentreId) {
+            notifyWSFLeader(supabase, effectiveWsfCentreId, firstName, lastName);
+          }
 
           return new Response(JSON.stringify({ success: true, mode: "claimed" }), {
             headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -276,18 +387,32 @@ Deno.serve(async (req) => {
       }
     }
 
-    const { error: memberError } = await supabase
+    const { data: insertedMember, error: memberError } = await supabase
       .from("members")
       .insert({
         ...memberPayload,
         user_id: authenticatedUser?.userId ?? null,
-      });
+      })
+      .select("id")
+      .single();
 
     if (memberError) throw memberError;
+    resultMemberId = insertedMember?.id || null;
 
     // Fire-and-forget welcome email
     if (email) {
       triggerWelcomeEmail(email, firstName, lastName);
+    }
+
+    // Prayer request → pastoral care
+    if (notes && notes.trim() && resultMemberId) {
+      createPastoralCareForPrayerRequest(supabase, resultMemberId, firstName, lastName, notes);
+    }
+
+    // WSF leader notification
+    const effectiveWsfCentreId = winnersSatellite ? (wsfCentreId || null) : null;
+    if (effectiveWsfCentreId) {
+      notifyWSFLeader(supabase, effectiveWsfCentreId, firstName, lastName);
     }
 
     return new Response(JSON.stringify({ success: true, mode: "created" }), {
