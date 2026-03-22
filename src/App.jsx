@@ -18,6 +18,7 @@ import WSFManagement from "@/pages/WSFManagement";
 import UserManagement from "@/pages/UserManagement";
 import SystemLogs from "@/pages/SystemLogs";
 import TrainingReports from "@/pages/TrainingReports";
+import ExamManagement from "@/pages/ExamManagement";
 import ChurchAttendance from "@/pages/ChurchAttendance";
 import Settings from "@/pages/Settings";
 import Auth from "@/pages/Auth";
