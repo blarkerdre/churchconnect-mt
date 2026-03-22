@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { useChurchUnits } from "@/hooks/useChurchUnits";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Megaphone, Pin, Search, Plus, Loader2, Trash2, Pencil, MessageSquare, History, Mail } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
@@ -16,15 +17,11 @@ import { logAudit } from "@/lib/audit";
 import SMSDialog from "@/components/sms/SMSDialog";
 import SMSHistoryDialog from "@/components/sms/SMSHistoryDialog";
 
-const AUDIENCES = [
-  "All Members", "Ushering", "Choir", "Media", "Children's Ministry", "Protocol",
-  "Sanctuary Keepers", "Prayer & Intercession", "Evangelism", "Follow-up",
-  "Youth Ministry", "Men's Ministry", "Women's Ministry", "Drama & Creative Arts",
-  "Altar Ministers", "Pastoral Care", "Welfare", "CSR", "Transportation", "Leaders Only"
-];
+const STATIC_AUDIENCES = ["All Members", "Leaders Only"];
 
 export default function Communications() {
-  const { user, isAdmin, isUnitLeader, leaderUnits } = useAuth();
+  const { user, isAdmin, isUnitLeader, isWSFLeader, leaderUnits } = useAuth();
+  const { data: churchUnitsData = [] } = useChurchUnits();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
@@ -34,10 +31,41 @@ export default function Communications() {
   const [smsAnnouncement, setSmsAnnouncement] = useState(null);
   const [historyOpen, setHistoryOpen] = useState(false);
 
-  const canManageComms = isAdmin || isUnitLeader;
+  const canManageComms = isAdmin || isUnitLeader || isWSFLeader;
+
+  // Get WSF centre names for WSF leader scoping
+  const { data: myWsfCentres = [] } = useQuery({
+    queryKey: ["my-wsf-centres-comms", user?.id],
+    queryFn: async () => {
+      const { data: memberData } = await supabase
+        .from("members")
+        .select("id")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      if (!memberData) return [];
+      const { data, error } = await supabase
+        .from("wsf_centres")
+        .select("id, name")
+        .eq("leader_id", memberData.id)
+        .eq("is_active", true);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!user?.id && isWSFLeader,
+  });
+
+  // Build dynamic AUDIENCES
+  const AUDIENCES = [...new Set([
+    "All Members",
+    ...churchUnitsData.map(u => u.name),
+    ...myWsfCentres.map(c => c.name),
+    "Leaders Only",
+  ])];
 
   const unitLeaderUnits = (!isAdmin && isUnitLeader && leaderUnits.length > 0)
     ? leaderUnits : null;
+  const wsfLeaderCentres = (!isAdmin && isWSFLeader && myWsfCentres.length > 0)
+    ? myWsfCentres.map(c => c.name) : null;
 
   const { data: myMember } = useQuery({
     queryKey: ["my-member", user?.id],
@@ -46,12 +74,16 @@ export default function Communications() {
         .from("members").select("church_unit").eq("user_id", user.id).single();
       return data;
     },
-    enabled: !!user?.id && isUnitLeader && !isAdmin && !unitLeaderUnits,
+    enabled: !!user?.id && !isAdmin && !unitLeaderUnits && !wsfLeaderCentres,
   });
 
-  const effectiveUnits = unitLeaderUnits || (myMember?.church_unit
-    ? myMember.church_unit.split(",").map(u => u.trim()).filter(Boolean) : null);
-  const lockedAudience = effectiveUnits?.length === 1 ? effectiveUnits[0] : null;
+  // Build effective units/centres for audience scoping
+  const effectiveScopes = [
+    ...(unitLeaderUnits || []),
+    ...(wsfLeaderCentres || []),
+    ...(myMember?.church_unit ? myMember.church_unit.split(",").map(u => u.trim()).filter(Boolean) : []),
+  ];
+  const lockedAudience = !isAdmin && effectiveScopes.length === 1 ? effectiveScopes[0] : null;
 
   const { data: announcements = [], isLoading } = useQuery({
     queryKey: ["announcements"],
@@ -76,9 +108,8 @@ export default function Communications() {
   // All users see "All Members" announcements + their unit announcements
   const visibleAnnouncements = announcements.filter(a => {
     if (isAdmin) return true;
-    // Members see All Members + their unit
     if (a.audience === "All Members") return true;
-    if (effectiveUnits && effectiveUnits.includes(a.audience)) return true;
+    if (effectiveScopes.includes(a.audience)) return true;
     if (a.created_by === user?.id) return true;
     // Regular members: check their church_unit
     if (myMember?.church_unit) {
@@ -146,7 +177,7 @@ export default function Communications() {
   const canManage = (a) => isAdmin || a.created_by === user?.id;
 
   const availableAudiences = isAdmin ? AUDIENCES
-    : effectiveUnits ? AUDIENCES.filter(a => effectiveUnits.includes(a)) : [];
+    : effectiveScopes.length > 0 ? AUDIENCES.filter(a => effectiveScopes.includes(a)) : [];
 
   const renderCard = (a) => (
     <Card key={a.id} className={`border-0 shadow-sm ${a.pinned ? "border-l-4 border-l-accent" : ""}`}>
