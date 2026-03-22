@@ -17,12 +17,7 @@ import { logAudit } from "@/lib/audit";
 import SMSDialog from "@/components/sms/SMSDialog";
 import SMSHistoryDialog from "@/components/sms/SMSHistoryDialog";
 
-const AUDIENCES = [
-  "All Members", "Ushering", "Choir", "Media", "Children's Ministry", "Protocol",
-  "Sanctuary Keepers", "Prayer & Intercession", "Evangelism", "Follow-up",
-  "Youth Ministry", "Men's Ministry", "Women's Ministry", "Drama & Creative Arts",
-  "Altar Ministers", "Pastoral Care", "Welfare", "CSR", "Transportation", "Leaders Only"
-];
+const STATIC_AUDIENCES = ["All Members", "Leaders Only"];
 
 export default function Communications() {
   const { user, isAdmin, isUnitLeader, leaderUnits } = useAuth();
