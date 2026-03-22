@@ -14,7 +14,7 @@ import { useAppSetting } from "@/hooks/useAppSetting";
 
 const OPTION_LETTERS = ["a", "b", "c", "d"];
 
-export default function TakeExamDialog({ open, onOpenChange, trainingType, memberId }) {
+export default function TakeExamDialog({ open, onOpenChange, trainingType, memberId, sessionId }) {
   const qc = useQueryClient();
   const [answers, setAnswers] = useState({});
   const [submitted, setSubmitted] = useState(false);
