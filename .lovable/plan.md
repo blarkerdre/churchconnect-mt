@@ -1,85 +1,52 @@
 
 
-## Plan: Auto-Link Accounts + Training Exams with Certificate Generation
+## Plan: Enhanced Exam Management — CRUD, Pass Mark, Answer Type Selection
 
-### 1. Auto-Link User and Member Accounts
+### Overview
+Enhance the Exam Management page with full exam lifecycle management: create/edit/delete exams with configurable pass marks and support for selecting the number of answer options per question (2, 3, or 4 objectives).
 
-The current system uses `claim_own_member_profile` RPC (matching by email) which is called on login. This works but only links if emails match exactly. 
+### 1. Database Migration
 
-**Improvements:**
-- **On signup**: Update `admin-create-user` edge function to auto-link existing unlinked member records by email when creating a user (if no `member_data` is provided)
-- **On public registration**: Update `public-register` edge function — when an authenticated user submits, auto-set `user_id` on the member record (already partially done, but ensure it also checks for existing unlinked members with matching email)
-- **On login (existing)**: The `claim_own_member_profile` RPC already handles this — no changes needed
-- **Admin UI**: In `MemberFormDialog.jsx`, add a one-click "Link Account" button that searches for existing users by the member's email and links them automatically (using service role via a small edge function or RPC)
+Add a `pass_mark` column to `exam_questions` table at the training-type level. Since pass marks are per training type (not per question), store them in `app_settings` using key pattern `exam_pass_mark_{type}`. The current `exam_pass_percentage` setting is already used in `TakeExamDialog` — we will make it per-training-type configurable from the Exam Management page.
 
-**Database migration:**
+No new tables needed. Add an `answer_count` column to `exam_questions` to store how many options (2/3/4) are active for each question:
+
 ```sql
-CREATE OR REPLACE FUNCTION public.auto_link_member_by_email(_user_id uuid, _email text)
-RETURNS uuid
-LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'public'
-AS $$ ... $$;
+ALTER TABLE public.exam_questions ADD COLUMN IF NOT EXISTS answer_count integer NOT NULL DEFAULT 4;
 ```
-This function finds a single unlinked member by email and sets `user_id`. Called from `admin-create-user` when no `member_data` is provided.
 
-**Files:** `admin-create-user/index.ts`, DB migration
+### 2. ExamManagement.jsx Changes
 
----
+**Pass Mark Configuration:**
+- Add a "Pass Mark" input (percentage) per training type at the top of the questions section
+- Save to `app_settings` with key `exam_pass_mark_{training_type}` (e.g. `exam_pass_mark_BFC`)
+- Falls back to the global `exam_pass_percentage` if not set
 
-### 2. Training Exams System
+**Answer Type Selection (per question):**
+- Add a "Number of Options" selector (2, 3, or 4) in the question form dialog
+- When 2 is selected, only show A & B option inputs; when 3, show A/B/C; when 4, show all
+- Store as `answer_count` on the question record
+- Display only the relevant options in the questions list
 
-Create a full exam/quiz system for training programs (BFC, BCC, LCC, LDC). Admins create questions, members answer them, answers are auto-marked, and certificates are generated on passing.
+**Full CRUD (already exists for questions, enhance UX):**
+- Add delete confirmation dialog
+- Already has create/edit/delete — ensure all work with the new `answer_count` field
 
-**Database migration — new tables:**
+### 3. TakeExamDialog.jsx Changes
 
-| Table | Columns |
-|-------|---------|
-| `exam_questions` | id, training_type, question_text, option_a, option_b, option_c, option_d, correct_answer (a/b/c/d), points (int, default 1), sort_order, created_by, created_at |
-| `exam_attempts` | id, member_id, training_type, started_at, completed_at, score, total_points, passed (bool), certificate_issued (bool) |
-| `exam_answers` | id, attempt_id, question_id, selected_answer, is_correct (bool) |
+- Read per-type pass mark from `app_settings` key `exam_pass_mark_{trainingType}`, falling back to global `exam_pass_percentage`
+- Only render options up to `answer_count` (e.g. if `answer_count=2`, only show A and B)
 
-**App setting:** `exam_pass_percentage` (default 70) stored in `app_settings`.
-
-**RLS:**
-- `exam_questions`: Admins/leaders can manage; authenticated can SELECT
-- `exam_attempts`: Admins/leaders can view all; members can view/insert own
-- `exam_answers`: Same as attempts
-
-**Admin UI — Exam Management (new page or section in Settings):**
-- Create/edit/delete multiple-choice questions per training type
-- Set correct answer, reorder questions
-- Configure pass percentage
-
-**Member UI — Take Exam (in MyProfile or new page):**
-- Select training type → see questions one by one or all at once
-- Submit answers → auto-mark (compare `selected_answer` to `correct_answer`)
-- Calculate score → if >= pass percentage, mark as passed
-- On pass: auto-call `issue-certificate` edge function to generate and email certificate
-- On fail: show score and allow retry
-
-**Admin UI — View Results:**
-- In `TrainingReports.jsx` or `MemberFormDialog.jsx`, show exam history per member
-- View individual attempt details (which questions were right/wrong)
-
----
-
-### 3. Files Changed Summary
+### 4. Files Changed
 
 | File | Changes |
 |------|---------|
-| DB migration | `auto_link_member_by_email` RPC, `exam_questions`, `exam_attempts`, `exam_answers` tables with RLS |
-| `admin-create-user/index.ts` | Auto-link existing member by email when no `member_data` provided |
-| New: `src/pages/ExamManagement.jsx` | Admin page to manage exam questions per training type |
-| New: `src/components/exams/TakeExamDialog.jsx` | Member-facing exam UI with auto-marking |
-| New: `src/components/exams/ExamResultsPanel.jsx` | View exam attempt results |
-| `src/pages/MyProfile.jsx` | Add "Take Exam" buttons for available training types |
-| `src/pages/TrainingReports.jsx` | Remove WIT, add link to exam results |
-| `src/App.jsx` | Add route for exam management page |
-| `src/components/AppLayout.jsx` | Add nav link for exam management (admin only) |
+| DB migration | Add `answer_count` column to `exam_questions` |
+| `ExamManagement.jsx` | Add pass mark config per type, answer count selector in question form, delete confirmation |
+| `TakeExamDialog.jsx` | Use per-type pass mark, respect `answer_count` for displayed options |
 
 ### Technical Notes
-- Exam auto-marking is done client-side by comparing answers to `correct_answer` from the questions table, then the results are stored in `exam_attempts`/`exam_answers`
-- Certificate generation reuses the existing `issue-certificate` edge function
-- Pass/fail threshold is configurable via `app_settings`
-- Members can retake exams (new attempt each time)
-- The auto-link function handles edge cases: multiple members with same email returns null (no auto-link), single match auto-links
+- Pass marks stored per training type in `app_settings` (key: `exam_pass_mark_BFC` etc.) — no schema change needed since `app_settings` already supports arbitrary keys with jsonb values
+- `answer_count` defaults to 4 so existing questions are unaffected
+- The correct_answer radio buttons in the form will dynamically adjust based on the selected answer_count
 
