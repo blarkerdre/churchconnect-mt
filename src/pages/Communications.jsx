@@ -74,12 +74,16 @@ export default function Communications() {
         .from("members").select("church_unit").eq("user_id", user.id).single();
       return data;
     },
-    enabled: !!user?.id && isUnitLeader && !isAdmin && !unitLeaderUnits,
+    enabled: !!user?.id && !isAdmin && !unitLeaderUnits && !wsfLeaderCentres,
   });
 
-  const effectiveUnits = unitLeaderUnits || (myMember?.church_unit
-    ? myMember.church_unit.split(",").map(u => u.trim()).filter(Boolean) : null);
-  const lockedAudience = effectiveUnits?.length === 1 ? effectiveUnits[0] : null;
+  // Build effective units/centres for audience scoping
+  const effectiveScopes = [
+    ...(unitLeaderUnits || []),
+    ...(wsfLeaderCentres || []),
+    ...(myMember?.church_unit ? myMember.church_unit.split(",").map(u => u.trim()).filter(Boolean) : []),
+  ];
+  const lockedAudience = !isAdmin && effectiveScopes.length === 1 ? effectiveScopes[0] : null;
 
   const { data: announcements = [], isLoading } = useQuery({
     queryKey: ["announcements"],
