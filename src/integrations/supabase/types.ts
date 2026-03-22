@@ -533,6 +533,140 @@ export type Database = {
         }
         Relationships: []
       }
+      exam_answers: {
+        Row: {
+          attempt_id: string
+          created_at: string
+          id: string
+          is_correct: boolean | null
+          question_id: string
+          selected_answer: string | null
+        }
+        Insert: {
+          attempt_id: string
+          created_at?: string
+          id?: string
+          is_correct?: boolean | null
+          question_id: string
+          selected_answer?: string | null
+        }
+        Update: {
+          attempt_id?: string
+          created_at?: string
+          id?: string
+          is_correct?: boolean | null
+          question_id?: string
+          selected_answer?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exam_answers_attempt_id_fkey"
+            columns: ["attempt_id"]
+            isOneToOne: false
+            referencedRelation: "exam_attempts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "exam_answers_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "exam_questions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      exam_attempts: {
+        Row: {
+          certificate_issued: boolean | null
+          completed_at: string | null
+          created_at: string
+          id: string
+          member_id: string
+          passed: boolean | null
+          score: number | null
+          started_at: string
+          total_points: number | null
+          training_type: string
+        }
+        Insert: {
+          certificate_issued?: boolean | null
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          member_id: string
+          passed?: boolean | null
+          score?: number | null
+          started_at?: string
+          total_points?: number | null
+          training_type: string
+        }
+        Update: {
+          certificate_issued?: boolean | null
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          member_id?: string
+          passed?: boolean | null
+          score?: number | null
+          started_at?: string
+          total_points?: number | null
+          training_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exam_attempts_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      exam_questions: {
+        Row: {
+          correct_answer: string
+          created_at: string
+          created_by: string | null
+          id: string
+          option_a: string
+          option_b: string
+          option_c: string
+          option_d: string
+          points: number
+          question_text: string
+          sort_order: number
+          training_type: string
+        }
+        Insert: {
+          correct_answer: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          option_a: string
+          option_b: string
+          option_c: string
+          option_d: string
+          points?: number
+          question_text: string
+          sort_order?: number
+          training_type: string
+        }
+        Update: {
+          correct_answer?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          option_a?: string
+          option_b?: string
+          option_c?: string
+          option_d?: string
+          points?: number
+          question_text?: string
+          sort_order?: number
+          training_type?: string
+        }
+        Relationships: []
+      }
       first_timers: {
         Row: {
           created_at: string
@@ -1416,6 +1550,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      auto_link_member_by_email: {
+        Args: { _email: string; _user_id: string }
+        Returns: string
+      }
       claim_own_member_profile: { Args: never; Returns: string }
       delete_email: {
         Args: { message_id: number; queue_name: string }
