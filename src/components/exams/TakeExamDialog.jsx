@@ -89,6 +89,7 @@ export default function TakeExamDialog({ open, onOpenChange, trainingType, membe
           score,
           total_points: totalPoints,
           passed,
+          session_id: sessionId || null,
         })
         .select("id")
         .single();
