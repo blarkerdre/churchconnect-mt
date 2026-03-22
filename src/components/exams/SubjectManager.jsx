@@ -1,0 +1,168 @@
+import React, { useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/components/ui/use-toast";
+import { Loader2, Plus, Trash2, Edit, Layers } from "lucide-react";
+
+export default function SubjectManager({ course, onSelectSubject, selectedSubjectId }) {
+  const qc = useQueryClient();
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editing, setEditing] = useState(null);
+  const [form, setForm] = useState({ name: "", description: "" });
+  const [deleteTarget, setDeleteTarget] = useState(null);
+
+  const { data: subjects = [], isLoading } = useQuery({
+    queryKey: ["exam-subjects", course.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("exam_subjects")
+        .select("*")
+        .eq("course_id", course.id)
+        .order("sort_order")
+        .order("created_at");
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!course.id,
+  });
+
+  const saveMutation = useMutation({
+    mutationFn: async (payload) => {
+      if (editing) {
+        const { error } = await supabase.from("exam_subjects").update(payload).eq("id", editing.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from("exam_subjects").insert({ ...payload, course_id: course.id, sort_order: subjects.length });
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["exam-subjects", course.id] });
+      toast({ title: editing ? "Subject updated" : "Subject added" });
+      closeDialog();
+    },
+    onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id) => {
+      const { error } = await supabase.from("exam_subjects").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["exam-subjects", course.id] });
+      toast({ title: "Subject deleted" });
+      setDeleteTarget(null);
+    },
+    onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+  });
+
+  const closeDialog = () => {
+    setDialogOpen(false);
+    setEditing(null);
+    setForm({ name: "", description: "" });
+  };
+
+  return (
+    <>
+      <Card className="border-0 shadow-sm">
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base font-display flex items-center gap-2">
+              <Layers className="h-4 w-4 text-primary" /> {course.name} — Subjects
+            </CardTitle>
+            <Button size="sm" variant="outline" className="gap-1.5" onClick={() => { setEditing(null); setForm({ name: "", description: "" }); setDialogOpen(true); }}>
+              <Plus className="h-3.5 w-3.5" /> Add Subject
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <div className="flex justify-center py-4"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
+          ) : subjects.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-4">No subjects yet. Add subjects to this course.</p>
+          ) : (
+            <div className="space-y-2">
+              {subjects.map((s, idx) => (
+                <div
+                  key={s.id}
+                  className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-colors ${
+                    selectedSubjectId === s.id
+                      ? "bg-primary/5 border-primary/30"
+                      : "bg-card border-border hover:bg-muted/50"
+                  }`}
+                  onClick={() => onSelectSubject(s)}
+                >
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="text-xs text-muted-foreground font-mono w-5">{idx + 1}.</span>
+                    <span className="text-sm font-medium text-foreground">{s.name}</span>
+                    {s.description && <span className="text-xs text-muted-foreground hidden sm:inline">— {s.description}</span>}
+                    {!s.is_active && <Badge variant="secondary" className="text-[9px] h-4">Inactive</Badge>}
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); setEditing(s); setForm({ name: s.name, description: s.description || "" }); setDialogOpen(true); }}>
+                      <Edit className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={(e) => { e.stopPropagation(); setDeleteTarget(s); }}>
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Dialog open={dialogOpen} onOpenChange={(v) => !v && closeDialog()}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>{editing ? "Edit Subject" : "Add Subject"}</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={(e) => {
+            e.preventDefault();
+            if (!form.name.trim()) { toast({ title: "Subject name is required", variant: "destructive" }); return; }
+            saveMutation.mutate({ name: form.name.trim(), description: form.description.trim() || null });
+          }} className="space-y-4">
+            <div className="space-y-1.5">
+              <Label>Subject Name *</Label>
+              <Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="e.g. Church History" />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Description</Label>
+              <Input value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} placeholder="Optional" />
+            </div>
+            <DialogFooter>
+              <Button type="submit" disabled={saveMutation.isPending}>
+                {saveMutation.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+                {editing ? "Update" : "Add"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog open={!!deleteTarget} onOpenChange={(v) => !v && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Subject</AlertDialogTitle>
+            <AlertDialogDescription>Delete "{deleteTarget?.name}"? This will also remove all linked questions.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              {deleteMutation.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />} Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
+  );
+}
