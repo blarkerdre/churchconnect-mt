@@ -1,0 +1,181 @@
+
+-- Events: add event_mode, target_unit, target_wsf_centre_id
+ALTER TABLE public.events ADD COLUMN IF NOT EXISTS event_mode text NOT NULL DEFAULT 'In Person';
+ALTER TABLE public.events ADD COLUMN IF NOT EXISTS target_unit text;
+ALTER TABLE public.events ADD COLUMN IF NOT EXISTS target_wsf_centre_id uuid REFERENCES public.wsf_centres(id);
+
+-- Pastoral care type enum: add Prayer Request (already exists in enum as 'Prayer Request')
+-- Check: the enum already has 'Prayer Request' - skip
+
+-- Update RPC: remove workers_in_training parameter, keep all other fields
+CREATE OR REPLACE FUNCTION public.update_own_member_profile(
+  _member_id uuid,
+  _first_name text DEFAULT NULL,
+  _last_name text DEFAULT NULL,
+  _email text DEFAULT NULL,
+  _phone text DEFAULT NULL,
+  _address text DEFAULT NULL,
+  _city text DEFAULT NULL,
+  _postcode text DEFAULT NULL,
+  _date_of_birth date DEFAULT NULL,
+  _gender text DEFAULT NULL,
+  _emergency_contact_name text DEFAULT NULL,
+  _emergency_contact_phone text DEFAULT NULL,
+  _notes text DEFAULT NULL,
+  _photo_url text DEFAULT NULL,
+  _membership_status text DEFAULT NULL,
+  _church_unit text DEFAULT NULL,
+  _water_baptism boolean DEFAULT NULL,
+  _holy_spirit_baptism boolean DEFAULT NULL,
+  _winners_satellite boolean DEFAULT NULL,
+  _wsf_centre_id uuid DEFAULT NULL,
+  _bfc_completed boolean DEFAULT NULL,
+  _bcc_completed boolean DEFAULT NULL,
+  _lcc_completed boolean DEFAULT NULL,
+  _ldc_completed boolean DEFAULT NULL
+)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO 'public'
+AS $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM public.members
+    WHERE id = _member_id AND user_id = auth.uid()
+  ) THEN
+    RAISE EXCEPTION 'Not authorized to update this member profile';
+  END IF;
+
+  UPDATE public.members SET
+    first_name = COALESCE(_first_name, first_name),
+    last_name = COALESCE(_last_name, last_name),
+    email = COALESCE(_email, email),
+    phone = COALESCE(_phone, phone),
+    address = COALESCE(_address, address),
+    city = COALESCE(_city, city),
+    postcode = COALESCE(_postcode, postcode),
+    date_of_birth = COALESCE(_date_of_birth, date_of_birth),
+    gender = CASE WHEN _gender IS NOT NULL AND _gender IN ('Male', 'Female') THEN _gender::gender_type ELSE gender END,
+    emergency_contact_name = COALESCE(_emergency_contact_name, emergency_contact_name),
+    emergency_contact_phone = COALESCE(_emergency_contact_phone, emergency_contact_phone),
+    notes = COALESCE(_notes, notes),
+    photo_url = COALESCE(_photo_url, photo_url),
+    membership_status = CASE 
+      WHEN _membership_status IS NOT NULL AND _membership_status IN ('Active', 'Inactive', 'First Timer', 'New Convert', 'Visitor') 
+      THEN _membership_status::membership_status 
+      ELSE membership_status 
+    END,
+    church_unit = COALESCE(_church_unit, church_unit),
+    water_baptism = COALESCE(_water_baptism, water_baptism),
+    holy_spirit_baptism = COALESCE(_holy_spirit_baptism, holy_spirit_baptism),
+    winners_satellite = COALESCE(_winners_satellite, winners_satellite),
+    wsf_centre_id = CASE WHEN _winners_satellite = true THEN COALESCE(_wsf_centre_id, wsf_centre_id) WHEN _winners_satellite = false THEN NULL ELSE COALESCE(_wsf_centre_id, wsf_centre_id) END,
+    bfc_completed = COALESCE(_bfc_completed, bfc_completed),
+    bcc_completed = COALESCE(_bcc_completed, bcc_completed),
+    lcc_completed = COALESCE(_lcc_completed, lcc_completed),
+    ldc_completed = COALESCE(_ldc_completed, ldc_completed),
+    updated_at = now()
+  WHERE id = _member_id AND user_id = auth.uid();
+END;
+$$;
+
+-- Update auto_create_followup trigger to include prayer request text
+CREATE OR REPLACE FUNCTION public.auto_create_followup()
+ RETURNS trigger
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+DECLARE
+  _followup_id uuid;
+  _assigned_user uuid;
+  _fu_user record;
+  _desc text;
+  _type text;
+  _supabase_url text;
+  _service_key text;
+BEGIN
+  IF (TG_OP = 'INSERT' AND NEW.membership_status IN ('First Timer', 'New Convert'))
+     OR (TG_OP = 'UPDATE' AND OLD.membership_status IS DISTINCT FROM NEW.membership_status AND NEW.membership_status IN ('First Timer', 'New Convert'))
+  THEN
+    _type := CASE WHEN NEW.membership_status = 'First Timer' THEN 'First Timer' ELSE 'New Convert' END;
+    
+    IF TG_OP = 'INSERT' THEN
+      _desc := CASE 
+        WHEN NEW.membership_status = 'First Timer' THEN 'New first timer registered: ' || NEW.first_name || ' ' || NEW.last_name || '. Welcome and connect them to the church.'
+        ELSE 'New convert registered: ' || NEW.first_name || ' ' || NEW.last_name || '. Enrol in BFC and assign a mentor.'
+      END;
+    ELSE
+      _desc := CASE 
+        WHEN NEW.membership_status = 'First Timer' THEN 'Member status changed to First Timer: ' || NEW.first_name || ' ' || NEW.last_name
+        ELSE 'Member status changed to New Convert: ' || NEW.first_name || ' ' || NEW.last_name || '. Enrol in BFC and assign a mentor.'
+      END;
+    END IF;
+
+    -- Append prayer request if present
+    IF NEW.notes IS NOT NULL AND trim(NEW.notes) != '' THEN
+      _desc := _desc || E'\n\nPrayer Request: ' || left(NEW.notes, 500);
+    END IF;
+
+    SELECT ula.user_id INTO _assigned_user
+    FROM public.unit_leader_assignments ula
+    WHERE ula.unit_name IN ('Follow-up', 'Follow-Up', 'follow-up')
+    ORDER BY (
+      SELECT COUNT(*) FROM public.followups f 
+      WHERE f.assigned_to = ula.user_id AND f.status IN ('Pending', 'In Progress')
+    ) ASC, random()
+    LIMIT 1;
+
+    INSERT INTO public.followups (member_id, followup_type, status, priority, description, created_by, assigned_to)
+    VALUES (NEW.id, _type::followup_type, 'Pending', 'High', _desc, NEW.user_id, _assigned_user)
+    RETURNING id INTO _followup_id;
+
+    FOR _fu_user IN
+      SELECT ula.user_id FROM public.unit_leader_assignments ula
+      WHERE ula.unit_name IN ('Follow-up', 'Follow-Up', 'follow-up')
+    LOOP
+      INSERT INTO public.notifications (user_id, title, message, type, reference_id, reference_type)
+      VALUES (
+        _fu_user.user_id,
+        'New Follow-up: ' || NEW.first_name || ' ' || NEW.last_name,
+        _desc,
+        'general',
+        _followup_id::text,
+        'followup'
+      );
+    END LOOP;
+
+    IF _assigned_user IS NOT NULL THEN
+      SELECT decrypted_secret INTO _supabase_url
+      FROM vault.decrypted_secrets WHERE name = 'supabase_url' LIMIT 1;
+      
+      IF _supabase_url IS NULL THEN
+        _supabase_url := current_setting('app.settings.supabase_url', true);
+      END IF;
+
+      SELECT decrypted_secret INTO _service_key
+      FROM vault.decrypted_secrets WHERE name = 'email_queue_service_role_key' LIMIT 1;
+
+      IF _supabase_url IS NOT NULL AND _service_key IS NOT NULL THEN
+        PERFORM extensions.http_post(
+          url := _supabase_url || '/functions/v1/notify-followup-assignment',
+          body := jsonb_build_object(
+            'assigned_to', _assigned_user,
+            'member_name', NEW.first_name || ' ' || NEW.last_name,
+            'description', _desc,
+            'followup_id', _followup_id::text,
+            'followup_type', _type
+          )::text,
+          headers := jsonb_build_object(
+            'Content-Type', 'application/json',
+            'Authorization', 'Bearer ' || _service_key
+          )::jsonb
+        );
+      END IF;
+    END IF;
+  END IF;
+
+  RETURN NEW;
+END;
+$function$;

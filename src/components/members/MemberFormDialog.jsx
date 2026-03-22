@@ -21,6 +21,8 @@ import { logAudit } from "@/lib/audit";
 
 const STATUSES = ["Active", "Inactive", "New Convert", "First Timer", "Visitor"];
 const GENDERS = ["Male", "Female"];
+const HIDE_SPIRITUAL_STATUSES = ["First Timer", "New Convert", "Visitor"];
+const SHOW_BAPTISM_STATUSES = ["First Timer", "New Convert"];
 
 const emptyMember = {
   first_name: "", last_name: "", email: "", phone: "", address: "",
@@ -29,7 +31,7 @@ const emptyMember = {
   emergency_contact_name: "", emergency_contact_phone: "",
   city: "Cardiff", postcode: "",
   water_baptism: false, holy_spirit_baptism: false,
-  winners_satellite: false, wsf_centre_id: "", workers_in_training: false,
+  winners_satellite: false, wsf_centre_id: "",
   bfc_completed: false, bcc_completed: false, lcc_completed: false, ldc_completed: false,
   gdpr_consent: false,
 };
@@ -48,7 +50,10 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
   const [password, setPassword] = useState("");
   const [accountRole, setAccountRole] = useState("member");
 
-  // Fetch roles for the member being edited (if they have a linked user account)
+  const showChurchUnits = !HIDE_SPIRITUAL_STATUSES.includes(form.membership_status);
+  const showSpiritualDev = !HIDE_SPIRITUAL_STATUSES.includes(form.membership_status);
+  const showBaptism = SHOW_BAPTISM_STATUSES.includes(form.membership_status);
+
   const memberUserId = member?.user_id;
   const { data: memberRoles = [] } = useQuery({
     queryKey: ["member-roles", memberUserId],
@@ -80,7 +85,6 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
     onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
 
-  // Fetch all profiles for account linking (admin only)
   const { data: allProfiles = [] } = useQuery({
     queryKey: ["all-profiles-for-linking"],
     queryFn: async () => {
@@ -186,7 +190,7 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
         date_of_birth: form.date_of_birth || null,
         gender: form.gender || null,
         membership_status: form.membership_status,
-        church_unit: form.church_unit || null,
+        church_unit: showChurchUnits ? (form.church_unit || null) : null,
         notes: form.notes || null,
         emergency_contact_name: form.emergency_contact_name || null,
         emergency_contact_phone: form.emergency_contact_phone || null,
@@ -195,7 +199,6 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
         winners_satellite: form.winners_satellite,
         wsf_centre_id: form.wsf_centre_id || null,
         bfc_completed: form.bfc_completed,
-        workers_in_training: form.workers_in_training,
         bcc_completed: form.bcc_completed,
         lcc_completed: form.lcc_completed,
         ldc_completed: form.ldc_completed,
@@ -208,7 +211,6 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
         if (error) throw error;
         toast({ title: "Member updated" });
       } else if (createAccount) {
-        // Combined: create user account + member via Edge Function
         const { data, error } = await supabase.functions.invoke("admin-create-user", {
           body: {
             email: form.email,
@@ -236,7 +238,6 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
 
   const set = (key, val) => setForm((p) => ({ ...p, [key]: val }));
 
-  // Auto-suggest WSF centre when address/postcode changes and WSF is enabled
   const autoSuggestWSF = (updatedForm) => {
     if (updatedForm.winners_satellite && (updatedForm.postcode || updatedForm.address || updatedForm.city)) {
       const best = suggestClosestWSFCentre(wsfCentres, updatedForm);
@@ -313,37 +314,41 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
                   <SelectContent>{STATUSES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
-              <div className="space-y-1.5 md:col-span-2">
-                <Label>Church Units (select multiple)</Label>
-                <div className="flex flex-wrap gap-2 p-3 rounded-lg border border-border bg-background min-h-[40px]">
-                  {CHURCH_UNITS.filter(u => u !== "None").map(unit => {
-                    const selected = (form.church_unit || "").split(",").map(s => s.trim()).filter(Boolean);
-                    const isSelected = selected.includes(unit);
-                    return (
-                      <button
-                        key={unit}
-                        type="button"
-                        onClick={() => {
-                          const current = (form.church_unit || "").split(",").map(s => s.trim()).filter(Boolean);
-                          const updated = isSelected
-                            ? current.filter(u => u !== unit)
-                            : [...current, unit];
-                          set("church_unit", updated.join(", "));
-                        }}
-                        className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
-                          isSelected
-                            ? "bg-primary text-primary-foreground"
-                            : "bg-muted text-muted-foreground hover:bg-muted/80"
-                        }`}
-                      >
-                        {unit}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
             </div>
           </div>
+
+          {/* Church Units — only for Active/Inactive */}
+          {showChurchUnits && (
+            <div>
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Church Units</h3>
+              <div className="flex flex-wrap gap-2 p-3 rounded-lg border border-border bg-background min-h-[40px]">
+                {CHURCH_UNITS.filter(u => u !== "None").map(unit => {
+                  const selected = (form.church_unit || "").split(",").map(s => s.trim()).filter(Boolean);
+                  const isSelected = selected.includes(unit);
+                  return (
+                    <button
+                      key={unit}
+                      type="button"
+                      onClick={() => {
+                        const current = (form.church_unit || "").split(",").map(s => s.trim()).filter(Boolean);
+                        const updated = isSelected
+                          ? current.filter(u => u !== unit)
+                          : [...current, unit];
+                        set("church_unit", updated.join(", "));
+                      }}
+                      className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
+                        isSelected
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-muted text-muted-foreground hover:bg-muted/80"
+                      }`}
+                    >
+                      {unit}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {/* Create User Account — admin only, new members only */}
           {!member && isAdmin && (
@@ -391,35 +396,62 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
             </div>
           )}
 
-          {/* Spiritual Development */}
-          <div>
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Spiritual Development</h3>
-            <div className="space-y-3">
-              <SwitchRow id="water_baptism" label="Water Baptism" checked={form.water_baptism} onChange={(v) => set("water_baptism", v)} />
-              <SwitchRow id="holy_spirit_baptism" label="Holy Spirit Baptism" checked={form.holy_spirit_baptism} onChange={(v) => set("holy_spirit_baptism", v)} />
-              <SwitchRow id="winners_satellite" label="Winners Satellite Fellowship" checked={form.winners_satellite} onChange={(v) => {
-                set("winners_satellite", v);
-                if (v && !form.wsf_centre_id) {
-                  const best = suggestClosestWSFCentre(wsfCentres, form);
-                  if (best) set("wsf_centre_id", best.id);
-                }
-              }} />
-              {form.winners_satellite && (
-                <div className="space-y-1.5 pl-4">
-                  <Label>WSF Centre {form.wsf_centre_id && wsfCentres.find(c => c.id === form.wsf_centre_id) ? <span className="text-xs text-muted-foreground font-normal ml-1">(auto-suggested by location)</span> : null}</Label>
-                  <Select value={form.wsf_centre_id || ""} onValueChange={(v) => set("wsf_centre_id", v)}>
-                    <SelectTrigger><SelectValue placeholder="Select WSF Centre" /></SelectTrigger>
-                    <SelectContent>{wsfCentres.map(c => <SelectItem key={c.id} value={c.id}>{c.name}{c.location ? ` — ${c.location}` : ""}</SelectItem>)}</SelectContent>
-                  </Select>
-                </div>
-              )}
-              <SwitchRow id="bfc_completed" label="Believers Foundation Class (BFC)" checked={form.bfc_completed} onChange={(v) => set("bfc_completed", v)} />
-              <SwitchRow id="workers_in_training" label="Workers in Training (WIT)" checked={form.workers_in_training} onChange={(v) => set("workers_in_training", v)} />
-              <SwitchRow id="bcc_completed" label="Basic Certificate Course (BCC)" checked={form.bcc_completed} onChange={(v) => set("bcc_completed", v)} />
-              <SwitchRow id="lcc_completed" label="Leadership Certificate Course (LCC)" checked={form.lcc_completed} onChange={(v) => set("lcc_completed", v)} />
-              <SwitchRow id="ldc_completed" label="Leadership Diploma Course (LDC)" checked={form.ldc_completed} onChange={(v) => set("ldc_completed", v)} />
+          {/* Baptism — only for First Timer / New Convert */}
+          {showBaptism && !showSpiritualDev && (
+            <div>
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Baptism</h3>
+              <div className="space-y-3">
+                <SwitchRow id="water_baptism" label="Water Baptism" checked={form.water_baptism} onChange={(v) => set("water_baptism", v)} />
+                <SwitchRow id="holy_spirit_baptism" label="Holy Spirit Baptism" checked={form.holy_spirit_baptism} onChange={(v) => set("holy_spirit_baptism", v)} />
+              </div>
             </div>
-          </div>
+          )}
+
+          {/* Spiritual Development — only for Active/Inactive */}
+          {showSpiritualDev && (
+            <div>
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Spiritual Development</h3>
+              <div className="space-y-3">
+                <SwitchRow id="water_baptism" label="Water Baptism" checked={form.water_baptism} onChange={(v) => set("water_baptism", v)} />
+                <SwitchRow id="holy_spirit_baptism" label="Holy Spirit Baptism" checked={form.holy_spirit_baptism} onChange={(v) => set("holy_spirit_baptism", v)} />
+                <SwitchRow id="winners_satellite" label="Winners Satellite Fellowship" checked={form.winners_satellite} onChange={(v) => {
+                  set("winners_satellite", v);
+                  if (v && !form.wsf_centre_id) {
+                    const best = suggestClosestWSFCentre(wsfCentres, form);
+                    if (best) set("wsf_centre_id", best.id);
+                  }
+                }} />
+                {form.winners_satellite && (
+                  <div className="space-y-1.5 pl-4">
+                    <Label>WSF Centre {form.wsf_centre_id && wsfCentres.find(c => c.id === form.wsf_centre_id) ? <span className="text-xs text-muted-foreground font-normal ml-1">(auto-suggested by location)</span> : null}</Label>
+                    <Select value={form.wsf_centre_id || ""} onValueChange={(v) => set("wsf_centre_id", v)}>
+                      <SelectTrigger><SelectValue placeholder="Select WSF Centre" /></SelectTrigger>
+                      <SelectContent>{wsfCentres.map(c => <SelectItem key={c.id} value={c.id}>{c.name}{c.location ? ` — ${c.location}` : ""}</SelectItem>)}</SelectContent>
+                    </Select>
+                  </div>
+                )}
+                <SwitchRow id="bfc_completed" label="Believers Foundation Class (BFC)" checked={form.bfc_completed} onChange={(v) => set("bfc_completed", v)} />
+
+                {/* Word of Faith Bible Institute - WoFBI */}
+                <div className="mt-2">
+                  <p className="text-xs font-semibold text-muted-foreground mb-2">Word of Faith Bible Institute — WoFBI</p>
+                  <div className="space-y-3">
+                    <SwitchRow id="bcc_completed" label="Basic Certificate Course (BCC)" checked={form.bcc_completed} onChange={(v) => set("bcc_completed", v)} />
+                    <SwitchRow id="lcc_completed" label="Leadership Certificate Course (LCC)" checked={form.lcc_completed} onChange={(v) => set("lcc_completed", v)} />
+                    <SwitchRow id="ldc_completed" label="Leadership Diploma Course (LDC)" checked={form.ldc_completed} onChange={(v) => set("ldc_completed", v)} />
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Visitor BFC prompt */}
+          {form.membership_status === "Visitor" && (
+            <div>
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Foundation Class</h3>
+              <SwitchRow id="bfc_completed" label="Have you completed Believers Foundation Class (BFC)?" checked={form.bfc_completed} onChange={(v) => set("bfc_completed", v)} />
+            </div>
+          )}
 
           {/* Account Linking — admin only */}
           {member && isAdmin && (
@@ -517,7 +549,6 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
 
                 return (
                   <div className="space-y-3">
-                    {/* Current roles display */}
                     <div className="flex flex-wrap gap-1.5">
                       {userRoles.length === 0 ? (
                         <Badge className="bg-muted text-muted-foreground border-0 gap-1"><User className="h-3 w-3" /> member (default)</Badge>
@@ -526,7 +557,6 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
                         return <Badge key={r} className={`${roleColors[r]} border-0 gap-1`}><RoleIcon className="h-3 w-3" />{r.replace("_", " ")}</Badge>;
                       })}
                     </div>
-                    {/* Role checkboxes */}
                     {canChange ? (
                       <div className="grid grid-cols-2 gap-2">
                         {availableRoles.map(r => {

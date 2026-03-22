@@ -19,6 +19,8 @@ import MyCertificates from "@/components/certificates/MyCertificates";
 
 const GENDERS = ["Male", "Female"];
 const MEMBERSHIP_STATUSES = ["Active", "Inactive", "First Timer", "New Convert", "Visitor"];
+const HIDE_SPIRITUAL_STATUSES = ["First Timer", "New Convert", "Visitor"];
+const SHOW_BAPTISM_STATUSES = ["First Timer", "New Convert"];
 
 const statusColors = {
   "Active": "bg-chart-3/10 text-chart-3",
@@ -121,7 +123,6 @@ export default function MyProfile() {
         _holy_spirit_baptism: updates.holy_spirit_baptism,
         _winners_satellite: updates.winners_satellite,
         _wsf_centre_id: updates.wsf_centre_id,
-        _workers_in_training: updates.workers_in_training,
         _bfc_completed: updates.bfc_completed,
         _bcc_completed: updates.bcc_completed,
         _lcc_completed: updates.lcc_completed,
@@ -158,7 +159,6 @@ export default function MyProfile() {
       holy_spirit_baptism: member.holy_spirit_baptism || false,
       winners_satellite: member.winners_satellite || false,
       wsf_centre_id: member.wsf_centre_id || "",
-      workers_in_training: member.workers_in_training || false,
       bfc_completed: member.bfc_completed || false,
       bcc_completed: member.bcc_completed || false,
       lcc_completed: member.lcc_completed || false,
@@ -172,6 +172,7 @@ export default function MyProfile() {
       toast({ title: "First and last name are required", variant: "destructive" });
       return;
     }
+    const showUnits = !HIDE_SPIRITUAL_STATUSES.includes(form.membership_status);
     updateMutation.mutate({
       first_name: form.first_name,
       last_name: form.last_name,
@@ -187,12 +188,11 @@ export default function MyProfile() {
       emergency_contact_phone: form.emergency_contact_phone || null,
       notes: form.notes || null,
       photo_url: member.photo_url || null,
-      church_unit: form.church_unit || null,
+      church_unit: showUnits ? (form.church_unit || null) : null,
       water_baptism: form.water_baptism,
       holy_spirit_baptism: form.holy_spirit_baptism,
       winners_satellite: form.winners_satellite,
       wsf_centre_id: form.wsf_centre_id || null,
-      workers_in_training: form.workers_in_training,
       bfc_completed: form.bfc_completed,
       bcc_completed: form.bcc_completed,
       lcc_completed: form.lcc_completed,
@@ -224,6 +224,10 @@ export default function MyProfile() {
   }
 
   const units = member.church_unit ? member.church_unit.split(",").map(u => u.trim()).filter(Boolean) : [];
+
+  const showChurchUnits = !HIDE_SPIRITUAL_STATUSES.includes(form.membership_status);
+  const showSpiritualDev = !HIDE_SPIRITUAL_STATUSES.includes(form.membership_status);
+  const showBaptism = SHOW_BAPTISM_STATUSES.includes(form.membership_status);
 
   const BoolBadge = ({ value, label }) => (
     <div className="flex items-center gap-2 text-sm">
@@ -290,62 +294,91 @@ export default function MyProfile() {
                       </div>
                     </div>
 
-                    {/* Church Units */}
-                    <div>
-                      <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Church Units</h3>
-                      <div className="flex flex-wrap gap-2 p-3 rounded-lg border border-border bg-background min-h-[40px]">
-                        {CHURCH_UNITS.filter(u => u !== "None").map(unit => {
-                          const selected = (form.church_unit || "").split(",").map(s => s.trim()).filter(Boolean);
-                          const isSelected = selected.includes(unit);
-                          return (
-                            <button
-                              key={unit}
-                              type="button"
-                              onClick={() => {
-                                const current = (form.church_unit || "").split(",").map(s => s.trim()).filter(Boolean);
-                                const updated = isSelected ? current.filter(u => u !== unit) : [...current, unit];
-                                set("church_unit", updated.join(", "));
-                              }}
-                              className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
-                                isSelected ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-muted/80"
-                              }`}
-                            >
-                              {unit}
-                            </button>
-                          );
-                        })}
+                    {/* Church Units — only for Active/Inactive */}
+                    {showChurchUnits && (
+                      <div>
+                        <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Church Units</h3>
+                        <div className="flex flex-wrap gap-2 p-3 rounded-lg border border-border bg-background min-h-[40px]">
+                          {CHURCH_UNITS.filter(u => u !== "None").map(unit => {
+                            const selected = (form.church_unit || "").split(",").map(s => s.trim()).filter(Boolean);
+                            const isSelected = selected.includes(unit);
+                            return (
+                              <button
+                                key={unit}
+                                type="button"
+                                onClick={() => {
+                                  const current = (form.church_unit || "").split(",").map(s => s.trim()).filter(Boolean);
+                                  const updated = isSelected ? current.filter(u => u !== unit) : [...current, unit];
+                                  set("church_unit", updated.join(", "));
+                                }}
+                                className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
+                                  isSelected ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-muted/80"
+                                }`}
+                              >
+                                {unit}
+                              </button>
+                            );
+                          })}
+                        </div>
                       </div>
-                    </div>
+                    )}
 
-                    {/* Growth Indices */}
-                    <div>
-                      <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Spiritual Development</h3>
-                      <div className="space-y-3">
-                        <SwitchRow id="water_baptism" label="Water Baptism" checked={form.water_baptism} onChange={v => set("water_baptism", v)} />
-                        <SwitchRow id="holy_spirit_baptism" label="Holy Spirit Baptism" checked={form.holy_spirit_baptism} onChange={v => set("holy_spirit_baptism", v)} />
-                        <SwitchRow id="winners_satellite" label="Winners Satellite Fellowship" checked={form.winners_satellite} onChange={v => {
-                          set("winners_satellite", v);
-                          if (v && !form.wsf_centre_id) {
-                            const best = suggestClosestWSFCentre(wsfCentres, form);
-                            if (best) set("wsf_centre_id", best.id);
-                          }
-                        }} />
-                        {form.winners_satellite && (
-                          <div className="space-y-1.5 pl-4">
-                            <Label>WSF Centre</Label>
-                            <Select value={form.wsf_centre_id || ""} onValueChange={v => set("wsf_centre_id", v)}>
-                              <SelectTrigger><SelectValue placeholder="Select WSF Centre" /></SelectTrigger>
-                              <SelectContent>{wsfCentres.map(c => <SelectItem key={c.id} value={c.id}>{c.name}{c.location ? ` — ${c.location}` : ""}</SelectItem>)}</SelectContent>
-                            </Select>
-                          </div>
-                        )}
-                        <SwitchRow id="bfc_completed" label="Believers Foundation Class (BFC)" checked={form.bfc_completed} onChange={v => set("bfc_completed", v)} />
-                        <SwitchRow id="workers_in_training" label="Workers in Training (WIT)" checked={form.workers_in_training} onChange={v => set("workers_in_training", v)} />
-                        <SwitchRow id="bcc_completed" label="Basic Certificate Course (BCC)" checked={form.bcc_completed} onChange={v => set("bcc_completed", v)} />
-                        <SwitchRow id="lcc_completed" label="Leadership Certificate Course (LCC)" checked={form.lcc_completed} onChange={v => set("lcc_completed", v)} />
-                        <SwitchRow id="ldc_completed" label="Leadership Diploma Course (LDC)" checked={form.ldc_completed} onChange={v => set("ldc_completed", v)} />
+                    {/* Baptism — only for First Timer / New Convert */}
+                    {showBaptism && !showSpiritualDev && (
+                      <div>
+                        <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Baptism</h3>
+                        <div className="space-y-3">
+                          <SwitchRow id="water_baptism" label="Water Baptism" checked={form.water_baptism} onChange={v => set("water_baptism", v)} />
+                          <SwitchRow id="holy_spirit_baptism" label="Holy Spirit Baptism" checked={form.holy_spirit_baptism} onChange={v => set("holy_spirit_baptism", v)} />
+                        </div>
                       </div>
-                    </div>
+                    )}
+
+                    {/* Spiritual Development — only for Active/Inactive */}
+                    {showSpiritualDev && (
+                      <div>
+                        <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Spiritual Development</h3>
+                        <div className="space-y-3">
+                          <SwitchRow id="water_baptism" label="Water Baptism" checked={form.water_baptism} onChange={v => set("water_baptism", v)} />
+                          <SwitchRow id="holy_spirit_baptism" label="Holy Spirit Baptism" checked={form.holy_spirit_baptism} onChange={v => set("holy_spirit_baptism", v)} />
+                          <SwitchRow id="winners_satellite" label="Winners Satellite Fellowship" checked={form.winners_satellite} onChange={v => {
+                            set("winners_satellite", v);
+                            if (v && !form.wsf_centre_id) {
+                              const best = suggestClosestWSFCentre(wsfCentres, form);
+                              if (best) set("wsf_centre_id", best.id);
+                            }
+                          }} />
+                          {form.winners_satellite && (
+                            <div className="space-y-1.5 pl-4">
+                              <Label>WSF Centre</Label>
+                              <Select value={form.wsf_centre_id || ""} onValueChange={v => set("wsf_centre_id", v)}>
+                                <SelectTrigger><SelectValue placeholder="Select WSF Centre" /></SelectTrigger>
+                                <SelectContent>{wsfCentres.map(c => <SelectItem key={c.id} value={c.id}>{c.name}{c.location ? ` — ${c.location}` : ""}</SelectItem>)}</SelectContent>
+                              </Select>
+                            </div>
+                          )}
+                          <SwitchRow id="bfc_completed" label="Believers Foundation Class (BFC)" checked={form.bfc_completed} onChange={v => set("bfc_completed", v)} />
+
+                          {/* Word of Faith Bible Institute - WoFBI */}
+                          <div className="mt-2">
+                            <p className="text-xs font-semibold text-muted-foreground mb-2">Word of Faith Bible Institute — WoFBI</p>
+                            <div className="space-y-3">
+                              <SwitchRow id="bcc_completed" label="Basic Certificate Course (BCC)" checked={form.bcc_completed} onChange={v => set("bcc_completed", v)} />
+                              <SwitchRow id="lcc_completed" label="Leadership Certificate Course (LCC)" checked={form.lcc_completed} onChange={v => set("lcc_completed", v)} />
+                              <SwitchRow id="ldc_completed" label="Leadership Diploma Course (LDC)" checked={form.ldc_completed} onChange={v => set("ldc_completed", v)} />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Visitor BFC prompt */}
+                    {form.membership_status === "Visitor" && (
+                      <div>
+                        <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Foundation Class</h3>
+                        <SwitchRow id="bfc_completed" label="Have you completed Believers Foundation Class (BFC)?" checked={form.bfc_completed} onChange={v => set("bfc_completed", v)} />
+                      </div>
+                    )}
 
                     {/* Emergency Contact */}
                     <div>
@@ -486,6 +519,10 @@ function CreateMemberProfile({ user, onCreated, wsfCentres, churchUnits }) {
   const [saving, setSaving] = useState(false);
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
+  const showChurchUnits = !HIDE_SPIRITUAL_STATUSES.includes(form.membership_status);
+  const showSpiritualDev = !HIDE_SPIRITUAL_STATUSES.includes(form.membership_status);
+  const showBaptism = SHOW_BAPTISM_STATUSES.includes(form.membership_status);
+
   const handleCreate = async () => {
     if (!form.first_name || !form.last_name) {
       toast({ title: "First name and last name are required", variant: "destructive" });
@@ -509,7 +546,7 @@ function CreateMemberProfile({ user, onCreated, wsfCentres, churchUnits }) {
           date_of_birth: form.date_of_birth || null,
           gender: form.gender || null,
           membership_status: form.membership_status || "First Timer",
-          church_unit: form.church_unit || null,
+          church_unit: showChurchUnits ? (form.church_unit || null) : null,
           emergency_contact_name: form.emergency_contact_name || null,
           emergency_contact_phone: form.emergency_contact_phone || null,
           water_baptism: form.water_baptism,
@@ -534,6 +571,8 @@ function CreateMemberProfile({ user, onCreated, wsfCentres, churchUnits }) {
       setSaving(false);
     }
   };
+
+  const MEMBERSHIP_STATUSES = ["Active", "Inactive", "First Timer", "New Convert", "Visitor"];
 
   const SwitchRow = ({ id, label, checked, onChange }) => (
     <div className="flex items-center justify-between p-3 rounded-xl bg-muted/50 border border-border">
@@ -578,48 +617,78 @@ function CreateMemberProfile({ user, onCreated, wsfCentres, churchUnits }) {
           </div>
         </div>
 
-        {/* Church Units */}
-        <div>
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Church Units</h3>
-          <div className="flex flex-wrap gap-2 p-3 rounded-lg border border-border bg-background min-h-[40px]">
-            {churchUnits.filter(u => u !== "None").map(unit => {
-              const selected = (form.church_unit || "").split(",").map(s => s.trim()).filter(Boolean);
-              const isSelected = selected.includes(unit);
-              return (
-                <button key={unit} type="button" onClick={() => {
-                  const current = (form.church_unit || "").split(",").map(s => s.trim()).filter(Boolean);
-                  const updated = isSelected ? current.filter(u => u !== unit) : [...current, unit];
-                  set("church_unit", updated.join(", "));
-                }} className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${isSelected ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-muted/80"}`}>
-                  {unit}
-                </button>
-              );
-            })}
+        {/* Church Units — only for Active/Inactive */}
+        {showChurchUnits && (
+          <div>
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Church Units</h3>
+            <div className="flex flex-wrap gap-2 p-3 rounded-lg border border-border bg-background min-h-[40px]">
+              {churchUnits.filter(u => u !== "None").map(unit => {
+                const selected = (form.church_unit || "").split(",").map(s => s.trim()).filter(Boolean);
+                const isSelected = selected.includes(unit);
+                return (
+                  <button key={unit} type="button" onClick={() => {
+                    const current = (form.church_unit || "").split(",").map(s => s.trim()).filter(Boolean);
+                    const updated = isSelected ? current.filter(u => u !== unit) : [...current, unit];
+                    set("church_unit", updated.join(", "));
+                  }} className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${isSelected ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-muted/80"}`}>
+                    {unit}
+                  </button>
+                );
+              })}
+            </div>
           </div>
-        </div>
+        )}
 
-        {/* Growth Indices */}
-        <div>
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Spiritual Development</h3>
-          <div className="space-y-3">
-            <SwitchRow id="water_baptism" label="Water Baptism" checked={form.water_baptism} onChange={v => set("water_baptism", v)} />
-            <SwitchRow id="holy_spirit_baptism" label="Holy Spirit Baptism" checked={form.holy_spirit_baptism} onChange={v => set("holy_spirit_baptism", v)} />
-            <SwitchRow id="winners_satellite" label="Winners Satellite Fellowship" checked={form.winners_satellite} onChange={v => set("winners_satellite", v)} />
-            {form.winners_satellite && (
-              <div className="space-y-1.5 pl-4">
-                <Label>WSF Centre</Label>
-                <Select value={form.wsf_centre_id || ""} onValueChange={v => set("wsf_centre_id", v)}>
-                  <SelectTrigger><SelectValue placeholder="Select WSF Centre" /></SelectTrigger>
-                  <SelectContent>{wsfCentres.map(c => <SelectItem key={c.id} value={c.id}>{c.name}{c.location ? ` — ${c.location}` : ""}</SelectItem>)}</SelectContent>
-                </Select>
-              </div>
-            )}
-            <SwitchRow id="bfc_completed" label="Believers Foundation Class (BFC)" checked={form.bfc_completed} onChange={v => set("bfc_completed", v)} />
-            <SwitchRow id="bcc_completed" label="Basic Certificate Course (BCC)" checked={form.bcc_completed} onChange={v => set("bcc_completed", v)} />
-            <SwitchRow id="lcc_completed" label="Leadership Certificate Course (LCC)" checked={form.lcc_completed} onChange={v => set("lcc_completed", v)} />
-            <SwitchRow id="ldc_completed" label="Leadership Diploma Course (LDC)" checked={form.ldc_completed} onChange={v => set("ldc_completed", v)} />
+        {/* Baptism — only for First Timer / New Convert */}
+        {showBaptism && !showSpiritualDev && (
+          <div>
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Baptism</h3>
+            <div className="space-y-3">
+              <SwitchRow id="water_baptism" label="Water Baptism" checked={form.water_baptism} onChange={v => set("water_baptism", v)} />
+              <SwitchRow id="holy_spirit_baptism" label="Holy Spirit Baptism" checked={form.holy_spirit_baptism} onChange={v => set("holy_spirit_baptism", v)} />
+            </div>
           </div>
-        </div>
+        )}
+
+        {/* Spiritual Development — only for Active/Inactive */}
+        {showSpiritualDev && (
+          <div>
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Spiritual Development</h3>
+            <div className="space-y-3">
+              <SwitchRow id="water_baptism" label="Water Baptism" checked={form.water_baptism} onChange={v => set("water_baptism", v)} />
+              <SwitchRow id="holy_spirit_baptism" label="Holy Spirit Baptism" checked={form.holy_spirit_baptism} onChange={v => set("holy_spirit_baptism", v)} />
+              <SwitchRow id="winners_satellite" label="Winners Satellite Fellowship" checked={form.winners_satellite} onChange={v => set("winners_satellite", v)} />
+              {form.winners_satellite && (
+                <div className="space-y-1.5 pl-4">
+                  <Label>WSF Centre</Label>
+                  <Select value={form.wsf_centre_id || ""} onValueChange={v => set("wsf_centre_id", v)}>
+                    <SelectTrigger><SelectValue placeholder="Select WSF Centre" /></SelectTrigger>
+                    <SelectContent>{wsfCentres.map(c => <SelectItem key={c.id} value={c.id}>{c.name}{c.location ? ` — ${c.location}` : ""}</SelectItem>)}</SelectContent>
+                  </Select>
+                </div>
+              )}
+              <SwitchRow id="bfc_completed" label="Believers Foundation Class (BFC)" checked={form.bfc_completed} onChange={v => set("bfc_completed", v)} />
+
+              {/* Word of Faith Bible Institute - WoFBI */}
+              <div className="mt-2">
+                <p className="text-xs font-semibold text-muted-foreground mb-2">Word of Faith Bible Institute — WoFBI</p>
+                <div className="space-y-3">
+                  <SwitchRow id="bcc_completed" label="Basic Certificate Course (BCC)" checked={form.bcc_completed} onChange={v => set("bcc_completed", v)} />
+                  <SwitchRow id="lcc_completed" label="Leadership Certificate Course (LCC)" checked={form.lcc_completed} onChange={v => set("lcc_completed", v)} />
+                  <SwitchRow id="ldc_completed" label="Leadership Diploma Course (LDC)" checked={form.ldc_completed} onChange={v => set("ldc_completed", v)} />
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Visitor BFC prompt */}
+        {form.membership_status === "Visitor" && (
+          <div>
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Foundation Class</h3>
+            <SwitchRow id="bfc_completed" label="Have you completed Believers Foundation Class (BFC)?" checked={form.bfc_completed} onChange={v => set("bfc_completed", v)} />
+          </div>
+        )}
 
         {/* Emergency Contact */}
         <div>
