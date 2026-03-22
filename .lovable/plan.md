@@ -1,70 +1,117 @@
-## Plan: Registration Form Updates (Public QR + Admin MemberFormDialog + MyProfile)
 
-### Summary
 
-Apply seven changes across the public registration form, admin member form, member self-service profile, dashboard, analytics, and the backend edge function/database.
+## Plan: Form Restructuring, Events Overhaul, and Prayer Request Routing
 
-### 1. Database Migration
+This is a large set of changes spanning forms, events, notifications, and automated workflows. Breaking into sections:
 
-- Add `'Visitor'` to the `membership_status` enum
-- Update `update_own_member_profile` RPC to accept `'Visitor'` in its valid status list
+---
+
+### 1. Form Changes (PublicRegistration, MemberFormDialog, MyProfile)
+
+**All 3 forms** get these changes:
+
+| Change | Detail |
+|--------|--------|
+| Remove WIT | Delete the "Workers in Training" switch from all forms and stop sending `workers_in_training` in payloads |
+| Group BCC/LCC/LDC | Place under a sub-heading: **"Word of Faith Bible Institute - WoFBI"** |
+| Conditional sections | When status is "New Convert", "First Timer", or "Visitor": hide Church Units and Spiritual Development (BFC, WSF, WoFBI courses). Only show Water Baptism + Holy Spirit Baptism for First Timer/New Convert |
+| Emergency contact | Show for ALL statuses (remove the conditional wrap in PublicRegistration) |
+
+**Conditional visibility logic:**
+```text
+Status = Active/Inactive → Show: Church Units, full Spiritual Development (WSF, BFC, WoFBI)
+Status = First Timer/New Convert → Show: Water Baptism, Holy Spirit Baptism. Hide: Church Units, WSF, BFC, WoFBI
+Status = Visitor → Hide: Church Units, Water Baptism, HS Baptism, WSF, BFC, WoFBI (show nothing extra)
+```
+
+**Files**: `PublicRegistration.jsx`, `MemberFormDialog.jsx`, `MyProfile.jsx` (both editing and CreateMemberProfile sections)
+
+---
+
+### 2. Events Overhaul
+
+**Database migration:**
+- Add `event_mode` column (text, default `'In Person'`) to `events` table — values: "In Person", "Online", "Hybrid"
+- Add `end_time` already exists in schema
+- Add `target_unit` column (text, nullable) — for unit-specific events
+- Add `target_wsf_centre_id` column (uuid, nullable) — for WSF centre-specific events
+- Remove capacity from the event form UI (keep column in DB for backward compat)
+
+**Events page (`Events.jsx`) changes:**
+- Replace Capacity input with Event Mode select (In Person / Online / Hybrid)
+- Add end time field alongside start time
+- Display event mode badge on event cards
+- Unit leaders: auto-set `target_unit` to their assigned unit when creating events, filter event list to show their unit's events + general events
+- WSF leaders: auto-set `target_wsf_centre_id` to their centre, filter to show their centre's events + general events
+- Update save mutation payload to include `event_mode`, `end_time`, `target_unit`, `target_wsf_centre_id`
+
+**EventFormDialog.jsx** — same changes if this dialog is used elsewhere
+
+**Communications scoping** — Unit leaders and WSF leaders can create unit/centre-specific announcements and SMS (already partially supported via `target_audience` on announcements)
+
+---
+
+### 3. WSF Leader Notification on New Registration
+
+When a new member registers with a WSF centre (or near one), notify the WSF leader of that centre.
+
+**Implementation**: Update the `public-register` edge function to:
+- After inserting/updating a member with a `wsf_centre_id`, look up the WSF centre's `leader_id`
+- Find the leader's `user_id` from the `members` table
+- Insert a notification for that user: "New member registered near your WSF centre: [name]"
+
+---
+
+### 4. Prayer Request → Pastoral Care + Follow-up
+
+When a prayer request (notes field) is submitted via public registration or member form:
+
+**Update `public-register/index.ts`:**
+- After member insert/update, if `notes` is non-empty:
+  - Create a `pastoral_care` record with `care_type: 'Prayer Request'`, `subject: 'Prayer Request from [name]'`, `description: notes`
+  - Need to check if `'Prayer Request'` exists in the `pastoral_care_type` enum; if not, add it via migration
+  - Assign to a Pastoral Care unit member using the same least-busy round-robin pattern as follow-ups
+
+**Update `auto_create_followup` trigger:**
+- Currently only fires for First Timer / New Convert
+- Add logic: if `notes` is not null/empty on INSERT, include the prayer request text in the follow-up description so the follow-up team is aware
+
+**Database migration:**
+- Add `'Prayer Request'` to `pastoral_care_type` enum if not already present
+
+---
+
+### 5. Database Migration Summary
 
 ```sql
-ALTER TYPE public.membership_status ADD VALUE IF NOT EXISTS 'Visitor';
+-- Events: add event_mode, target_unit, target_wsf_centre_id
+ALTER TABLE public.events ADD COLUMN IF NOT EXISTS event_mode text NOT NULL DEFAULT 'In Person';
+ALTER TABLE public.events ADD COLUMN IF NOT EXISTS target_unit text;
+ALTER TABLE public.events ADD COLUMN IF NOT EXISTS target_wsf_centre_id uuid;
+
+-- Pastoral care type enum: add Prayer Request
+ALTER TYPE public.pastoral_care_type ADD VALUE IF NOT EXISTS 'Prayer Request';
 ```
 
-Then re-create the RPC with `'Visitor'` added to the CASE WHEN check.
+---
 
-### 2. Edge Function Update
+### 6. Files Changed Summary
 
-`**supabase/functions/public-register/index.ts**` (line 81):
-
-- Add `"Visitor"` to `VALID_STATUSES`
-
-### 3. File Changes
-
-All three form files get the same pattern of changes:
-
-
-| Change                                                   | `PublicRegistration.jsx`                  | `MemberFormDialog.jsx`      | `MyProfile.jsx`             |
-| -------------------------------------------------------- | ----------------------------------------- | --------------------------- | --------------------------- |
-| Add "Visitor" to STATUSES array                          | line 20                                   | line 22                     | line 21                     |
-| Rename "Church Growth Indices" → "Spiritual Development" | line 227                                  | line 396                    | lines 321, 602              |
-| Rename "Notes" → "Prayer Request"                        | line 263 label                            | line 570 label              | line 360 label              |
-| Add "(Optional)" to emergency contact labels             | lines 265-266                             | lines 563-564               | lines 353-354, 627-628      |
-| Conditional emergency contact (Public reg only)          | Show only when First Timer or New Convert | N/A (admin always sees it)  | N/A                         |
-| BFC prompt for Visitor (Public reg only)                 | Show BFC switch when Visitor selected     | N/A                         | N/A                         |
-| GDPR link to privacy policy PDF                          | GDPR section                              | GDPR section (line 576-584) | GDPR section (line 632-641) |
-
-
-### 5. BFC Prompt for Visitor (PublicRegistration.jsx only)
-
-When membership status is `"Visitor"`, show a single switch/prompt: "Have you completed Believers Foundation Class (BFC)?" — reusing the existing `bfc_completed` field.
-
-### 6. GDPR Privacy Policy Link
-
-Update the GDPR consent text in all three forms to include a clickable link:
-
-```
-...in accordance with UK GDPR. View our <a href="/https://winners-chapel.org.uk/wp-content/uploads/2024/11/WMA_PrivacyPolicy2024.pdf">Privacy Policy</a>.
-```
-
-Place the PDF file in `public/WMA_PrivacyPolicy2024.pdf` (user will need to provide the actual file; for now we reference it).
-
-### 7. Dashboard/Analytics Label Updates
-
-
-| File                             | Change                                              |
-| -------------------------------- | --------------------------------------------------- |
-| `GrowthIndices.jsx` line 71      | "Church Growth Indices" → "Spiritual Development"   |
-| `Analytics.jsx` line 258         | "Church Growth Indices" → "Spiritual Development"   |
-| `MemberDashboard.jsx` line 21-26 | Add `"Visitor"` status color                        |
-| `MemberDashboard.jsx` line 119   | "My Growth Milestones" → "My Spiritual Development" |
-
+| File | Changes |
+|------|---------|
+| `PublicRegistration.jsx` | Conditional sections, remove WIT, WoFBI heading, emergency contact for all, prayer request routing via edge function |
+| `MemberFormDialog.jsx` | Same form restructuring, remove WIT, WoFBI heading, conditional visibility |
+| `MyProfile.jsx` | Same (both edit mode and CreateMemberProfile), remove WIT from RPC call |
+| `Events.jsx` | Remove capacity, add event mode, end time, unit/centre scoping for leaders |
+| `EventFormDialog.jsx` | Same event form changes |
+| `public-register/index.ts` | Remove `workers_in_training`, add pastoral care creation for prayer requests, WSF leader notification |
+| `auto_create_followup` trigger | Include prayer request in follow-up description |
+| DB migration | New columns on events, new enum value on pastoral_care_type |
+| `update_own_member_profile` RPC | Remove `_workers_in_training` parameter |
 
 ### Technical Notes
+- The `workers_in_training` column stays in the DB but is no longer exposed in forms
+- Event mode is a text column (not enum) for flexibility
+- WSF leader notifications are created inline in the edge function (fire-and-forget style)
+- Prayer request pastoral care records are created with service role in the edge function
 
-- The enum change is one-way (values cannot be removed from Postgres enums)
-- The admin `MemberFormDialog` keeps emergency contact always visible since admins need full access
-- The `MyProfile.jsx` has two rendering paths (editing mode at line 319 and initial setup at line 600); both get updated
-- No RLS policy changes needed
