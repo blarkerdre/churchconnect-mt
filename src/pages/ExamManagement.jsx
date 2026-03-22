@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -13,10 +14,11 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "@/components/ui/use-toast";
-import { Loader2, Plus, Trash2, Edit, BookOpen, GripVertical } from "lucide-react";
+import { Loader2, Plus, Trash2, Edit, BookOpen, Save } from "lucide-react";
 import { useAppSetting } from "@/hooks/useAppSetting";
 
 const EXAM_TRAINING_TYPES = ["BFC", "BCC", "LCC", "LDC"];
+const OPTION_LETTERS = ["a", "b", "c", "d"];
 
 const emptyQuestion = {
   question_text: "",
@@ -26,6 +28,7 @@ const emptyQuestion = {
   option_d: "",
   correct_answer: "a",
   points: 1,
+  answer_count: 4,
 };
 
 export default function ExamManagement() {
@@ -35,6 +38,60 @@ export default function ExamManagement() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingQuestion, setEditingQuestion] = useState(null);
   const [form, setForm] = useState(emptyQuestion);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+
+  // Per-type pass mark
+  const { data: globalPassMark } = useAppSetting("exam_pass_percentage", [70]);
+  const globalThreshold = Array.isArray(globalPassMark) ? Number(globalPassMark[0]) || 70 : 70;
+
+  const { data: typePassMarkSetting } = useQuery({
+    queryKey: ["app-setting", `exam_pass_mark_${selectedType}`],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("app_settings")
+        .select("value")
+        .eq("key", `exam_pass_mark_${selectedType}`)
+        .maybeSingle();
+      return data?.value;
+    },
+  });
+
+  const currentPassMark = typePassMarkSetting != null ? Number(typePassMarkSetting) : globalThreshold;
+  const [passMarkInput, setPassMarkInput] = useState("");
+
+  // Sync passMarkInput when data loads or type changes
+  React.useEffect(() => {
+    setPassMarkInput(String(currentPassMark));
+  }, [currentPassMark, selectedType]);
+
+  const savePassMarkMutation = useMutation({
+    mutationFn: async (value) => {
+      const key = `exam_pass_mark_${selectedType}`;
+      const { data: existing } = await supabase
+        .from("app_settings")
+        .select("id")
+        .eq("key", key)
+        .maybeSingle();
+
+      if (existing) {
+        const { error } = await supabase
+          .from("app_settings")
+          .update({ value: Number(value), updated_by: user?.id })
+          .eq("key", key);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from("app_settings")
+          .insert({ key, value: Number(value), updated_by: user?.id });
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["app-setting", `exam_pass_mark_${selectedType}`] });
+      toast({ title: `Pass mark for ${selectedType} updated` });
+    },
+    onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+  });
 
   const { data: questions = [], isLoading } = useQuery({
     queryKey: ["exam-questions", selectedType],
@@ -92,9 +149,12 @@ export default function ExamManagement() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["exam-questions"] });
       toast({ title: "Question deleted" });
+      setDeleteTarget(null);
     },
     onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
+
+  const activeOptions = OPTION_LETTERS.slice(0, form.answer_count);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -102,15 +162,21 @@ export default function ExamManagement() {
       toast({ title: "Question and at least options A & B are required", variant: "destructive" });
       return;
     }
+    // Validate correct_answer is within answer_count range
+    if (!activeOptions.includes(form.correct_answer)) {
+      toast({ title: `Correct answer must be one of: ${activeOptions.map(o => o.toUpperCase()).join(", ")}`, variant: "destructive" });
+      return;
+    }
     saveMutation.mutate({
       training_type: selectedType,
       question_text: form.question_text,
       option_a: form.option_a,
       option_b: form.option_b,
-      option_c: form.option_c,
-      option_d: form.option_d,
+      option_c: form.answer_count >= 3 ? form.option_c : "",
+      option_d: form.answer_count >= 4 ? form.option_d : "",
       correct_answer: form.correct_answer,
       points: parseInt(form.points) || 1,
+      answer_count: form.answer_count,
       sort_order: editingQuestion?.sort_order ?? questions.length,
       created_by: user?.id,
     });
@@ -126,6 +192,7 @@ export default function ExamManagement() {
       option_d: q.option_d,
       correct_answer: q.correct_answer,
       points: q.points,
+      answer_count: q.answer_count || 4,
     });
     setDialogOpen(true);
   };
@@ -136,7 +203,17 @@ export default function ExamManagement() {
     setDialogOpen(true);
   };
 
-  const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+  const set = (k, v) => setForm(f => {
+    const next = { ...f, [k]: v };
+    // If reducing answer_count, reset correct_answer if it's out of range
+    if (k === "answer_count") {
+      const newOpts = OPTION_LETTERS.slice(0, Number(v));
+      if (!newOpts.includes(f.correct_answer)) {
+        next.correct_answer = "a";
+      }
+    }
+    return next;
+  });
 
   return (
     <div className="space-y-6">
@@ -160,6 +237,41 @@ export default function ExamManagement() {
         </div>
       </div>
 
+      {/* Pass Mark Configuration */}
+      <Card className="border-0 shadow-sm">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base font-display">Pass Mark — {selectedType}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-end gap-3">
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground">Pass Percentage (%)</Label>
+              <Input
+                type="number"
+                min="0"
+                max="100"
+                value={passMarkInput}
+                onChange={e => setPassMarkInput(e.target.value)}
+                className="w-28"
+              />
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              className="gap-1.5"
+              disabled={savePassMarkMutation.isPending || passMarkInput === String(currentPassMark)}
+              onClick={() => savePassMarkMutation.mutate(passMarkInput)}
+            >
+              {savePassMarkMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+              Save
+            </Button>
+            <span className="text-xs text-muted-foreground pb-2">
+              Global default: {globalThreshold}%
+            </span>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Questions list */}
       <Card className="border-0 shadow-sm">
         <CardHeader className="pb-3">
@@ -174,39 +286,45 @@ export default function ExamManagement() {
             <p className="text-sm text-muted-foreground text-center py-8">No questions yet. Add your first question above.</p>
           ) : (
             <div className="space-y-3">
-              {questions.map((q, idx) => (
-                <div key={q.id} className="p-4 rounded-lg border border-border bg-card">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-foreground">
-                        <span className="text-muted-foreground mr-2">{idx + 1}.</span>
-                        {q.question_text}
-                      </p>
-                      <div className="grid grid-cols-2 gap-2 mt-2">
-                        {["a", "b", "c", "d"].map(opt => (
-                          <div key={opt} className={`text-xs px-2 py-1.5 rounded ${
-                            q.correct_answer === opt
-                              ? "bg-emerald-500/10 text-emerald-600 font-semibold border border-emerald-500/30"
-                              : "bg-muted text-muted-foreground"
-                          }`}>
-                            <span className="font-bold uppercase mr-1">{opt}.</span>
-                            {q[`option_${opt}`]}
-                          </div>
-                        ))}
+              {questions.map((q, idx) => {
+                const qOpts = OPTION_LETTERS.slice(0, q.answer_count || 4);
+                return (
+                  <div key={q.id} className="p-4 rounded-lg border border-border bg-card">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-foreground">
+                          <span className="text-muted-foreground mr-2">{idx + 1}.</span>
+                          {q.question_text}
+                        </p>
+                        <div className="grid grid-cols-2 gap-2 mt-2">
+                          {qOpts.map(opt => (
+                            q[`option_${opt}`] && (
+                              <div key={opt} className={`text-xs px-2 py-1.5 rounded ${
+                                q.correct_answer === opt
+                                  ? "bg-emerald-500/10 text-emerald-600 font-semibold border border-emerald-500/30"
+                                  : "bg-muted text-muted-foreground"
+                              }`}>
+                                <span className="font-bold uppercase mr-1">{opt}.</span>
+                                {q[`option_${opt}`]}
+                              </div>
+                            )
+                          ))}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1 shrink-0">
+                        <Badge variant="outline" className="text-[10px]">{q.points} pt{q.points !== 1 ? "s" : ""}</Badge>
+                        <Badge variant="secondary" className="text-[10px]">{q.answer_count || 4} opts</Badge>
+                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(q)}>
+                          <Edit className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => setDeleteTarget(q)}>
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
                       </div>
                     </div>
-                    <div className="flex items-center gap-1 shrink-0">
-                      <Badge variant="outline" className="text-[10px]">{q.points} pt{q.points !== 1 ? "s" : ""}</Badge>
-                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(q)}>
-                        <Edit className="h-3.5 w-3.5" />
-                      </Button>
-                      <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => deleteMutation.mutate(q.id)}>
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
-                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </CardContent>
@@ -259,6 +377,28 @@ export default function ExamManagement() {
         </Card>
       )}
 
+      {/* Delete Confirmation */}
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Question</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this question? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleteMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {/* Add/Edit Question Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
@@ -270,9 +410,20 @@ export default function ExamManagement() {
               <Label>Question *</Label>
               <Textarea value={form.question_text} onChange={e => set("question_text", e.target.value)} rows={3} />
             </div>
+            <div>
+              <Label>Number of Options</Label>
+              <Select value={String(form.answer_count)} onValueChange={v => set("answer_count", Number(v))}>
+                <SelectTrigger className="w-32 mt-1"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="2">2 (A–B)</SelectItem>
+                  <SelectItem value="3">3 (A–C)</SelectItem>
+                  <SelectItem value="4">4 (A–D)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             <div className="space-y-3">
               <Label>Options *</Label>
-              {["a", "b", "c", "d"].map(opt => (
+              {activeOptions.map(opt => (
                 <div key={opt} className="flex items-center gap-2">
                   <span className="text-xs font-bold uppercase text-muted-foreground w-5">{opt}.</span>
                   <Input
@@ -286,7 +437,7 @@ export default function ExamManagement() {
             <div>
               <Label>Correct Answer *</Label>
               <RadioGroup value={form.correct_answer} onValueChange={v => set("correct_answer", v)} className="flex gap-4 mt-2">
-                {["a", "b", "c", "d"].map(opt => (
+                {activeOptions.map(opt => (
                   <div key={opt} className="flex items-center gap-1.5">
                     <RadioGroupItem value={opt} id={`correct-${opt}`} />
                     <Label htmlFor={`correct-${opt}`} className="text-sm uppercase font-semibold">{opt}</Label>
