@@ -17,6 +17,7 @@ import { suggestClosestWSFCentre } from "@/lib/wsf-suggest";
 import { useChurchUnits } from "@/hooks/useChurchUnits";
 import MyCertificates from "@/components/certificates/MyCertificates";
 import MemberJourneyTimeline from "@/components/members/MemberJourneyTimeline";
+import TakeExamDialog from "@/components/exams/TakeExamDialog";
 
 const GENDERS = ["Male", "Female"];
 const MEMBERSHIP_STATUSES = ["Active", "Inactive", "First Timer", "New Convert", "Visitor"];
