@@ -485,14 +485,16 @@ export default function MyProfile() {
       {!editing && <MyCertificates memberId={member.id} />}
 
       {/* Take Exams */}
-      {!editing && <DynamicExamButtons memberId={member.id} onSelect={setExamType} />}
+      {!editing && <DynamicExamButtons memberId={member.id} onSelect={setExamSelection} />}
 
       <TakeExamDialog
-        open={!!examType}
-        onOpenChange={(v) => { if (!v) setExamType(null); }}
-        trainingType={examType?.type}
+        open={!!examSelection}
+        onOpenChange={(v) => { if (!v) setExamSelection(null); }}
+        trainingType={examSelection?.type}
         memberId={member.id}
-        sessionId={examType?.sessionId}
+        sessionId={examSelection?.sessionId}
+        subjectId={examSelection?.subjectId}
+        subjectName={examSelection?.subjectName}
       />
 
       {/* Attendance History */}
