@@ -177,7 +177,7 @@ export default function Communications() {
   const canManage = (a) => isAdmin || a.created_by === user?.id;
 
   const availableAudiences = isAdmin ? AUDIENCES
-    : effectiveUnits ? AUDIENCES.filter(a => effectiveUnits.includes(a)) : [];
+    : effectiveScopes.length > 0 ? AUDIENCES.filter(a => effectiveScopes.includes(a)) : [];
 
   const renderCard = (a) => (
     <Card key={a.id} className={`border-0 shadow-sm ${a.pinned ? "border-l-4 border-l-accent" : ""}`}>
