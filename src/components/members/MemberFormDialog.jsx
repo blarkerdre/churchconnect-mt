@@ -18,6 +18,7 @@ import { normalizePhone } from "@/lib/phone-utils";
 import { useChurchUnits } from "@/hooks/useChurchUnits";
 import { useAuth } from "@/hooks/useAuth";
 import { logAudit } from "@/lib/audit";
+import MemberJourneyTimeline from "@/components/members/MemberJourneyTimeline";
 
 const STATUSES = ["Active", "Inactive", "New Convert", "First Timer", "Visitor"];
 const GENDERS = ["Male", "Female"];
