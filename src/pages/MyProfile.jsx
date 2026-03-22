@@ -39,7 +39,7 @@ export default function MyProfile() {
   const queryClient = useQueryClient();
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({});
-  const [examType, setExamType] = useState(null);
+  const [examSelection, setExamSelection] = useState(null);
 
   const isSuperAdmin = roles.includes("super_admin");
   const getRoleTitle = () => {
