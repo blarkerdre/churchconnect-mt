@@ -15,7 +15,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { logAudit } from "@/lib/audit";
 import SMSDialog from "@/components/sms/SMSDialog";
 import { useAppSetting } from "@/hooks/useAppSetting";
-import { useUnitMembership } from "@/hooks/useUnitMembership";
+import { useChurchUnits } from "@/hooks/useChurchUnits";
 
 const statusColors = {
   "Upcoming": "bg-primary/10 text-primary",
@@ -50,7 +50,7 @@ function getEventStatus(eventDate) {
 
 export default function Events() {
   const { data: EVENT_CATEGORIES } = useAppSetting("event_categories", ["Service", "Youth Event", "Conference", "Women's Event", "Men's Event", "Outreach", "Other"]);
-  const { isAdmin, isUnitLeader, isWSFLeader, user } = useAuth();
+  const { isAdmin, isUnitLeader, isWSFLeader, user, leaderUnits } = useAuth();
   const canManage = isAdmin || isUnitLeader || isWSFLeader;
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
@@ -60,21 +60,9 @@ export default function Events() {
   const [form, setForm] = useState({});
   const [smsEvent, setSmsEvent] = useState(null);
 
-  // Get unit assignments for scoping
-  const { data: unitAssignments = [] } = useQuery({
-    queryKey: ["my-unit-assignments", user?.id],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("unit_leader_assignments")
-        .select("unit_name")
-        .eq("user_id", user.id);
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!user?.id && isUnitLeader,
-  });
+  const { data: churchUnitsData = [] } = useChurchUnits();
 
-  // Get WSF centre for WSF leader scoping
+  // Get WSF centre names for WSF leader scoping
   const { data: myWsfCentres = [] } = useQuery({
     queryKey: ["my-wsf-centres", user?.id],
     queryFn: async () => {
@@ -94,6 +82,21 @@ export default function Events() {
     },
     enabled: !!user?.id && isWSFLeader,
   });
+
+  // Build AUDIENCES list
+  const allAudiences = ["All Members", ...churchUnitsData.map(u => u.name), ...myWsfCentres.map(c => c.name), "Leaders Only"];
+  const uniqueAudiences = [...new Set(allAudiences)];
+
+  // Determine available audiences for the current user
+  const getAvailableAudiences = () => {
+    if (isAdmin) return uniqueAudiences;
+    if (isWSFLeader && !isUnitLeader) return myWsfCentres.map(c => c.name);
+    if (isUnitLeader && !isWSFLeader) return leaderUnits;
+    if (isUnitLeader && isWSFLeader) return [...leaderUnits, ...myWsfCentres.map(c => c.name)];
+    return [];
+  };
+  const availableAudiences = getAvailableAudiences();
+  const lockedAudience = availableAudiences.length === 1 ? availableAudiences[0] : null;
 
   const { data: events = [], isLoading } = useQuery({
     queryKey: ["events"],
@@ -126,8 +129,7 @@ export default function Events() {
         location: formData.location,
         description: formData.description,
         event_mode: formData.event_mode || "In Person",
-        target_unit: formData.target_unit || null,
-        target_wsf_centre_id: formData.target_wsf_centre_id || null,
+        audience: formData.audience || "All Members",
         is_public: true,
       };
       if (editing) {
@@ -168,17 +170,23 @@ export default function Events() {
 
     // Scope filtering for non-admin users
     if (!isAdmin) {
-      // Unit leaders see general events + their unit events
-      if (isUnitLeader && !isWSFLeader) {
-        const myUnits = unitAssignments.map(a => a.unit_name);
-        if (e.target_unit && !myUnits.includes(e.target_unit)) return false;
-        if (e.target_wsf_centre_id) return false;
-      }
-      // WSF leaders see general events + their centre events
-      if (isWSFLeader && !isUnitLeader) {
-        const myCentreIds = myWsfCentres.map(c => c.id);
-        if (e.target_wsf_centre_id && !myCentreIds.includes(e.target_wsf_centre_id)) return false;
-        if (e.target_unit) return false;
+      const audience = e.audience || "All Members";
+      if (audience !== "All Members") {
+        // Unit leaders see their unit events + All Members
+        if (isUnitLeader && !leaderUnits.includes(audience)) {
+          // WSF leaders also check their centres
+          if (isWSFLeader && myWsfCentres.some(c => c.name === audience)) {
+            // allow
+          } else if (!isWSFLeader) {
+            return false;
+          } else {
+            return false;
+          }
+        }
+        // WSF-only leaders see their centre events + All Members
+        if (!isUnitLeader && isWSFLeader && !myWsfCentres.some(c => c.name === audience)) {
+          return false;
+        }
       }
     }
 
@@ -190,20 +198,11 @@ export default function Events() {
 
   const openNew = () => {
     setEditing(null);
-    const defaultForm = {
+    setForm({
       title: "", category: "Service", event_date: "", start_time: "", end_time: "",
       location: "", description: "", event_mode: "In Person",
-      target_unit: "", target_wsf_centre_id: "",
-    };
-    // Auto-set scope for unit leaders
-    if (isUnitLeader && !isAdmin && unitAssignments.length > 0) {
-      defaultForm.target_unit = unitAssignments[0].unit_name;
-    }
-    // Auto-set scope for WSF leaders
-    if (isWSFLeader && !isAdmin && myWsfCentres.length > 0) {
-      defaultForm.target_wsf_centre_id = myWsfCentres[0].id;
-    }
-    setForm(defaultForm);
+      audience: lockedAudience || "All Members",
+    });
     setDialogOpen(true);
   };
 
@@ -214,7 +213,7 @@ export default function Events() {
       start_time: e.start_time || "", end_time: e.end_time || "",
       location: e.location || "", description: e.description || "",
       event_mode: e.event_mode || "In Person",
-      target_unit: e.target_unit || "", target_wsf_centre_id: e.target_wsf_centre_id || "",
+      audience: e.audience || "All Members",
     });
     setDialogOpen(true);
   };
@@ -265,6 +264,7 @@ export default function Events() {
             const status = getEventStatus(e.event_date);
             const regCount = registrationCounts[e.id] || 0;
             const ModeIcon = modeIcons[e.event_mode] || MapPin;
+            const audience = e.audience || "All Members";
             return (
               <Card key={e.id} className="border-0 shadow-sm hover:shadow-md transition-shadow">
                 <CardContent className="p-5">
@@ -277,7 +277,9 @@ export default function Events() {
                         {e.event_mode && e.event_mode !== "In Person" && (
                           <Badge variant="outline" className="gap-1 text-xs"><ModeIcon className="h-3 w-3" />{e.event_mode}</Badge>
                         )}
-                        {e.target_unit && <Badge variant="outline" className="text-xs">{e.target_unit}</Badge>}
+                        {audience !== "All Members" && (
+                          <Badge variant="outline" className="text-xs">{audience}</Badge>
+                        )}
                       </div>
                       <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
                         <span className="flex items-center gap-1"><CalendarDays className="h-3.5 w-3.5" /> {e.event_date}</span>
@@ -329,6 +331,27 @@ export default function Events() {
                 </Select>
               </div>
             </div>
+
+            {/* Audience */}
+            <div>
+              <Label>Audience</Label>
+              {lockedAudience ? (
+                <div className="flex h-9 w-full items-center rounded-md border border-input bg-muted px-3 py-2 text-sm text-muted-foreground">
+                  {lockedAudience}
+                  <span className="ml-2 text-xs text-muted-foreground">(locked to your scope)</span>
+                </div>
+              ) : (
+                <Select value={form.audience || "All Members"} onValueChange={v => setForm(f => ({ ...f, audience: v }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {(isAdmin ? uniqueAudiences : availableAudiences).map(a => (
+                      <SelectItem key={a} value={a}>{a}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
+
             <div><Label>Date</Label><Input type="date" value={form.event_date || ""} onChange={e => setForm(f => ({ ...f, event_date: e.target.value }))} /></div>
             <div className="grid grid-cols-2 gap-3">
               <div><Label>Start Time</Label><Input type="time" value={form.start_time || ""} onChange={e => setForm(f => ({ ...f, start_time: e.target.value }))} /></div>
@@ -336,20 +359,6 @@ export default function Events() {
             </div>
             <div><Label>Location</Label><Input value={form.location || ""} onChange={e => setForm(f => ({ ...f, location: e.target.value }))} /></div>
             <div><Label>Description</Label><Textarea value={form.description || ""} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={3} /></div>
-
-            {/* Scope — only admins can set freely */}
-            {isAdmin && (
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Label>Target Unit <span className="text-xs text-muted-foreground">(optional)</span></Label>
-                  <Input value={form.target_unit || ""} onChange={e => setForm(f => ({ ...f, target_unit: e.target.value }))} placeholder="e.g. Youth" />
-                </div>
-                <div>
-                  <Label>Target WSF <span className="text-xs text-muted-foreground">(optional)</span></Label>
-                  <Input value={form.target_wsf_centre_id || ""} onChange={e => setForm(f => ({ ...f, target_wsf_centre_id: e.target.value }))} placeholder="Centre ID" />
-                </div>
-              </div>
-            )}
 
             <Button onClick={() => saveMutation.mutate(form)} disabled={saveMutation.isPending} className="w-full bg-primary">
               {saveMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
@@ -365,7 +374,7 @@ export default function Events() {
         prefillMessage={smsEvent ? `${smsEvent.title} - ${smsEvent.event_date}${smsEvent.start_time ? ' at ' + smsEvent.start_time : ''}${smsEvent.location ? ', ' + smsEvent.location : ''}` : ""}
         smsType="event"
         referenceId={smsEvent?.id || null}
-        title="Notify Members via SMS"
+        title={smsEvent ? `Notify: ${smsEvent.title}` : ""}
       />
     </div>
   );
