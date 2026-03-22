@@ -15,7 +15,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "@/components/ui/use-toast";
 import { Loader2, Plus, Trash2, Edit, BookOpen, Save, Tag, Layers } from "lucide-react";
-
+import ExamSessionManager from "@/components/exams/ExamSessionManager";
 import SubjectManager from "@/components/exams/SubjectManager";
 import CourseResultsView from "@/components/exams/CourseResultsView";
 
@@ -230,6 +230,8 @@ export default function ExamManagement() {
         </div>
       </div>
 
+      {/* Exam Sessions */}
+      <ExamSessionManager />
 
       {/* Certificate Courses */}
       <Card className="border-0 shadow-sm">

@@ -13,7 +13,7 @@ import { Loader2, CheckCircle2, XCircle, Award, ArrowUp, ArrowDown } from "lucid
 
 const OPTION_LETTERS = ["a", "b", "c", "d"];
 
-export default function TakeExamDialog({ open, onOpenChange, trainingType, memberId, subjectId, subjectName }) {
+export default function TakeExamDialog({ open, onOpenChange, trainingType, memberId, sessionId, subjectId, subjectName }) {
   const qc = useQueryClient();
   const [answers, setAnswers] = useState({});
   const [submitted, setSubmitted] = useState(false);
@@ -76,6 +76,7 @@ export default function TakeExamDialog({ open, onOpenChange, trainingType, membe
           member_id: memberId,
           training_type: trainingType,
           subject_id: subjectId || null,
+          session_id: sessionId || null,
           completed_at: new Date().toISOString(),
           score,
           total_points: totalPoints,
