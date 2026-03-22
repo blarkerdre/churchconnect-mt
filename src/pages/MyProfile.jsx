@@ -747,69 +747,81 @@ function CreateMemberProfile({ user, onCreated, wsfCentres, churchUnits }) {
 }
 
 function DynamicExamButtons({ memberId, onSelect }) {
-  const { data: examTitles = [], isLoading } = useQuery({
+  const { data: courses = [], isLoading } = useQuery({
     queryKey: ["exam-titles"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("exam_titles")
-        .select("*")
-        .eq("is_active", true)
-        .order("name");
+      const { data, error } = await supabase.from("exam_titles").select("*").eq("is_active", true).order("name");
       if (error) throw error;
       return data;
     },
   });
 
-  // Fetch active session
-  const { data: activeSession } = useQuery({
-    queryKey: ["active-exam-session"],
+  const { data: allSubjects = [] } = useQuery({
+    queryKey: ["all-exam-subjects"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("exam_sessions")
-        .select("*")
-        .eq("status", "active")
-        .maybeSingle();
+      const { data, error } = await supabase.from("exam_subjects").select("*").eq("is_active", true).order("sort_order");
       if (error) throw error;
       return data;
     },
   });
 
-  const { data: sessionCourses = [] } = useQuery({
-    queryKey: ["active-session-courses", activeSession?.id],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("exam_session_courses")
-        .select("*")
-        .eq("session_id", activeSession.id)
-        .order("sort_order");
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!activeSession?.id,
-  });
-
-  // Fetch member's attempts for this session
-  const { data: sessionAttempts = [] } = useQuery({
-    queryKey: ["my-session-attempts", activeSession?.id, memberId],
+  const { data: myAttempts = [] } = useQuery({
+    queryKey: ["my-course-attempts", memberId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("exam_attempts")
-        .select("*")
-        .eq("session_id", activeSession.id)
+        .select("subject_id, training_type, score, total_points")
         .eq("member_id", memberId);
       if (error) throw error;
       return data;
     },
-    enabled: !!activeSession?.id && !!memberId,
+    enabled: !!memberId,
   });
 
-  if (isLoading || examTitles.length === 0) return null;
+  if (isLoading || courses.length === 0) return null;
 
-  const sessionCourseNames = sessionCourses.map(c => c.exam_title);
-  const completedCourses = [...new Set(sessionAttempts.map(a => a.training_type))];
-  const totalScore = sessionAttempts.reduce((s, a) => s + (a.score || 0), 0);
-  const totalPoints = sessionAttempts.reduce((s, a) => s + (a.total_points || 0), 0);
-  const aggregatePercentage = totalPoints > 0 ? (totalScore / totalPoints) * 100 : 0;
+  // Build best attempt per subject
+  const bestBySubject = {};
+  myAttempts.forEach(a => {
+    if (!a.subject_id) return;
+    const pct = a.total_points > 0 ? a.score / a.total_points : 0;
+    if (!bestBySubject[a.subject_id] || pct > (bestBySubject[a.subject_id].score / bestBySubject[a.subject_id].total_points)) {
+      bestBySubject[a.subject_id] = a;
+    }
+  });
+
+  const downloadScoreReport = (course, subjects) => {
+    const courseSubjects = subjects.filter(s => s.course_id === course.id);
+    let totalScore = 0, totalPoints = 0;
+    const rows = courseSubjects.map(s => {
+      const best = bestBySubject[s.id];
+      if (best) { totalScore += best.score; totalPoints += best.total_points; }
+      return [s.name, best ? `${best.score}/${best.total_points}` : "Not taken", best ? `${Math.round((best.score / best.total_points) * 100)}%` : "—"];
+    });
+    const aggPct = totalPoints > 0 ? Math.round((totalScore / totalPoints) * 100) : 0;
+    const passed = aggPct >= course.pass_mark_percentage;
+
+    const html = `<!DOCTYPE html><html><head><title>${course.name} Score Report</title>
+    <style>body{font-family:Arial,sans-serif;font-size:12px;color:#111;margin:24px}h1{font-size:18px;color:#1e3a5f}
+    table{width:100%;border-collapse:collapse;margin-top:16px}th{background:#1e3a5f;color:#fff;text-align:left;padding:8px 10px;font-size:11px}
+    td{padding:7px 10px;border-bottom:1px solid #e5e7eb}tr:nth-child(even) td{background:#f8fafc}
+    .summary{margin-top:20px;padding:12px;border-radius:8px;font-size:14px}
+    .pass{background:#ecfdf5;border:1px solid #a7f3d0;color:#065f46}.fail{background:#fef2f2;border:1px solid #fecaca;color:#991b1b}
+    @media print{body{margin:0}}</style></head><body>
+    <h1>${course.name} — Score Report</h1>
+    <p style="font-size:11px;color:#666">Generated: ${new Date().toLocaleString("en-GB")}</p>
+    <table><thead><tr><th>Subject</th><th>Score</th><th>%</th></tr></thead>
+    <tbody>${rows.map(r => `<tr><td>${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td></tr>`).join("")}</tbody></table>
+    <div class="summary ${passed ? 'pass' : 'fail'}">
+    <strong>Aggregate: ${totalScore}/${totalPoints} (${aggPct}%)</strong> — Pass mark: ${course.pass_mark_percentage}% — <strong>${passed ? "PASSED ✓" : "NOT PASSED"}</strong>
+    </div></body></html>`;
+
+    const win = window.open("", "_blank", "width=700,height=500");
+    win.document.write(html);
+    win.document.close();
+    win.focus();
+    win.print();
+  };
 
   return (
     <Card className="border-0 shadow-sm">
@@ -818,57 +830,71 @@ function DynamicExamButtons({ memberId, onSelect }) {
           <BookOpen className="h-4 w-4 text-primary" /> Training Exams
         </CardTitle>
       </CardHeader>
-      <CardContent>
-        {activeSession ? (
-          <div className="space-y-3">
-            <div className="p-3 rounded-lg bg-chart-3/5 border border-chart-3/20">
+      <CardContent className="space-y-4">
+        {courses.map(course => {
+          const subjects = allSubjects.filter(s => s.course_id === course.id);
+          if (subjects.length === 0) {
+            // Legacy: no subjects, show flat button
+            return (
+              <Button key={course.id} variant="outline" size="sm" onClick={() => onSelect({ type: course.name })} className="gap-1.5">
+                <BookOpen className="h-3.5 w-3.5" /> {course.name} Exam
+              </Button>
+            );
+          }
+
+          const completedSubjectIds = subjects.filter(s => bestBySubject[s.id]).map(s => s.id);
+          const totalScore = completedSubjectIds.reduce((sum, id) => sum + (bestBySubject[id]?.score || 0), 0);
+          const totalPoints = completedSubjectIds.reduce((sum, id) => sum + (bestBySubject[id]?.total_points || 0), 0);
+          const aggPct = totalPoints > 0 ? (totalScore / totalPoints) * 100 : 0;
+          const allDone = completedSubjectIds.length === subjects.length;
+          const passed = allDone && aggPct >= course.pass_mark_percentage;
+
+          return (
+            <div key={course.id} className="p-4 rounded-lg border border-border bg-card space-y-3">
               <div className="flex items-center justify-between flex-wrap gap-2">
                 <div>
-                  <p className="text-sm font-semibold text-foreground">{activeSession.name}</p>
+                  <h3 className="text-sm font-semibold text-foreground">{course.name}</h3>
                   <p className="text-xs text-muted-foreground">
-                    {completedCourses.length}/{sessionCourseNames.length} exams completed
-                    {totalPoints > 0 && ` · Aggregate: ${Math.round(aggregatePercentage)}%`}
-                    {` · Pass mark: ${activeSession.pass_mark_percentage}%`}
+                    {completedSubjectIds.length}/{subjects.length} subjects completed
+                    {totalPoints > 0 && ` · Aggregate: ${Math.round(aggPct)}%`}
+                    {` · Pass mark: ${course.pass_mark_percentage}%`}
                   </p>
                 </div>
-                {completedCourses.length === sessionCourseNames.length && totalPoints > 0 && (
-                  <Badge variant={aggregatePercentage >= activeSession.pass_mark_percentage ? "default" : "destructive"} className="text-xs">
-                    {aggregatePercentage >= activeSession.pass_mark_percentage ? "Passed ✓" : "Not Passed"}
-                  </Badge>
-                )}
+                <div className="flex gap-1.5">
+                  {allDone && (
+                    <Badge variant={passed ? "default" : "destructive"} className="text-xs">
+                      {passed ? "Passed ✓" : "Not Passed"}
+                    </Badge>
+                  )}
+                  {completedSubjectIds.length > 0 && (
+                    <Button variant="ghost" size="sm" className="text-xs h-7" onClick={() => downloadScoreReport(course, allSubjects)}>
+                      📄 Score Report
+                    </Button>
+                  )}
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {subjects.map(s => {
+                  const taken = !!bestBySubject[s.id];
+                  const best = bestBySubject[s.id];
+                  return (
+                    <Button
+                      key={s.id}
+                      variant={taken ? "secondary" : "outline"}
+                      size="sm"
+                      disabled={taken}
+                      onClick={() => onSelect({ type: course.name, subjectId: s.id, subjectName: s.name })}
+                      className="gap-1.5"
+                    >
+                      <BookOpen className="h-3.5 w-3.5" />
+                      {s.name} {taken ? `✓ ${best.score}/${best.total_points}` : ""}
+                    </Button>
+                  );
+                })}
               </div>
             </div>
-            <div className="flex flex-wrap gap-2">
-              {sessionCourseNames.map(name => {
-                const taken = completedCourses.includes(name);
-                return (
-                  <Button
-                    key={name}
-                    variant={taken ? "secondary" : "outline"}
-                    size="sm"
-                    disabled={taken}
-                    onClick={() => onSelect({ type: name, sessionId: activeSession.id })}
-                    className="gap-1.5"
-                  >
-                    <BookOpen className="h-3.5 w-3.5" />
-                    {name} {taken ? "✓" : "Exam"}
-                  </Button>
-                );
-              })}
-            </div>
-          </div>
-        ) : (
-          <>
-            <p className="text-sm text-muted-foreground mb-3">Take exams for your training programmes to earn certificates.</p>
-            <div className="flex flex-wrap gap-2">
-              {examTitles.map(t => (
-                <Button key={t.id} variant="outline" size="sm" onClick={() => onSelect({ type: t.name, sessionId: null })} className="gap-1.5">
-                  <BookOpen className="h-3.5 w-3.5" /> {t.name} Exam
-                </Button>
-              ))}
-            </div>
-          </>
-        )}
+          );
+        })}
       </CardContent>
     </Card>
   );
