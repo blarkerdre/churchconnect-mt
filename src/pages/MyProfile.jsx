@@ -16,6 +16,7 @@ import { toast } from "@/components/ui/use-toast";
 import { suggestClosestWSFCentre } from "@/lib/wsf-suggest";
 import { useChurchUnits } from "@/hooks/useChurchUnits";
 import MyCertificates from "@/components/certificates/MyCertificates";
+import MemberJourneyTimeline from "@/components/members/MemberJourneyTimeline";
 
 const GENDERS = ["Male", "Female"];
 const MEMBERSHIP_STATUSES = ["Active", "Inactive", "First Timer", "New Convert", "Visitor"];
@@ -464,6 +465,16 @@ export default function MyProfile() {
             {member.wsf_centres?.name && (
               <p className="text-sm text-muted-foreground mt-3">WSF Centre: <span className="text-foreground font-medium">{member.wsf_centres.name}</span></p>
             )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Member Journey */}
+      {!editing && (
+        <Card className="border-0 shadow-sm">
+          <CardHeader className="pb-2"><CardTitle className="text-base">Member Journey</CardTitle></CardHeader>
+          <CardContent>
+            <MemberJourneyTimeline memberId={member.id} />
           </CardContent>
         </Card>
       )}

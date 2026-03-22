@@ -18,6 +18,7 @@ import { normalizePhone } from "@/lib/phone-utils";
 import { useChurchUnits } from "@/hooks/useChurchUnits";
 import { useAuth } from "@/hooks/useAuth";
 import { logAudit } from "@/lib/audit";
+import MemberJourneyTimeline from "@/components/members/MemberJourneyTimeline";
 
 const STATUSES = ["Active", "Inactive", "New Convert", "First Timer", "Visitor"];
 const GENDERS = ["Male", "Female"];
@@ -452,6 +453,9 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
               <SwitchRow id="bfc_completed" label="Have you completed Believers Foundation Class (BFC)?" checked={form.bfc_completed} onChange={(v) => set("bfc_completed", v)} />
             </div>
           )}
+
+          {/* Member Journey Timeline */}
+          {member && <MemberJourneyTimeline memberId={member.id} />}
 
           {/* Account Linking — admin only */}
           {member && isAdmin && (
