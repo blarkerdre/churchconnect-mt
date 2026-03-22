@@ -336,6 +336,9 @@ export default function ExamManagement() {
         </div>
       </div>
 
+      {/* Exam Sessions */}
+      <ExamSessionManager />
+
       {/* Exam Titles Management */}
       <Card className="border-0 shadow-sm">
         <CardHeader className="pb-3">
