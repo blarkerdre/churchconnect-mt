@@ -635,6 +635,7 @@ export type Database = {
           option_d: string
           points: number
           question_text: string
+          question_type: string
           sort_order: number
           training_type: string
         }
@@ -650,6 +651,7 @@ export type Database = {
           option_d: string
           points?: number
           question_text: string
+          question_type?: string
           sort_order?: number
           training_type: string
         }
@@ -665,8 +667,36 @@ export type Database = {
           option_d?: string
           points?: number
           question_text?: string
+          question_type?: string
           sort_order?: number
           training_type?: string
+        }
+        Relationships: []
+      }
+      exam_titles: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
         }
         Relationships: []
       }
