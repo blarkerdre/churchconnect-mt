@@ -27,6 +27,7 @@ const allNavItems = [
   { name: "Analytics", icon: BarChart2, path: "/analytics", access: "admin" },
   { name: "Training Reports", icon: TrendingUp, path: "/training-reports", access: "training" },
   { name: "Church Attendance", icon: ClipboardList, path: "/church-attendance", access: "training" },
+  { name: "Exam Management", icon: BookOpen, path: "/exam-management", access: "admin" },
   { name: "WSF Centres", icon: Globe, path: "/wsf", access: "wsf" },
   { name: "User Management", icon: Shield, path: "/user-management", access: "admin" },
   { name: "System Logs", icon: FileText, path: "/system-logs", access: "admin" },
