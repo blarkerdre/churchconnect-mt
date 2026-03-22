@@ -454,6 +454,9 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
             </div>
           )}
 
+          {/* Member Journey Timeline */}
+          {member && <MemberJourneyTimeline memberId={member.id} />}
+
           {/* Account Linking — admin only */}
           {member && isAdmin && (
             <div>

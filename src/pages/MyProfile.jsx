@@ -469,6 +469,16 @@ export default function MyProfile() {
         </Card>
       )}
 
+      {/* Member Journey */}
+      {!editing && (
+        <Card className="border-0 shadow-sm">
+          <CardHeader className="pb-2"><CardTitle className="text-base">Member Journey</CardTitle></CardHeader>
+          <CardContent>
+            <MemberJourneyTimeline memberId={member.id} />
+          </CardContent>
+        </Card>
+      )}
+
       {/* Certificates */}
       {!editing && <MyCertificates memberId={member.id} />}
 
