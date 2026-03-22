@@ -485,21 +485,7 @@ export default function MyProfile() {
       {!editing && <MyCertificates memberId={member.id} />}
 
       {/* Take Exams */}
-      {!editing && (
-        <Card className="border-0 shadow-sm">
-          <CardHeader className="pb-2"><CardTitle className="text-base flex items-center gap-2"><BookOpen className="h-4 w-4 text-primary" /> Training Exams</CardTitle></CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground mb-3">Take exams for your training programmes to earn certificates.</p>
-            <div className="flex flex-wrap gap-2">
-              {["BFC", "BCC", "LCC", "LDC"].map(type => (
-                <Button key={type} variant="outline" size="sm" onClick={() => setExamType(type)} className="gap-1.5">
-                  <BookOpen className="h-3.5 w-3.5" /> {type} Exam
-                </Button>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      {!editing && <DynamicExamButtons onSelect={setExamType} />}
 
       <TakeExamDialog
         open={!!examType}
@@ -752,6 +738,43 @@ function CreateMemberProfile({ user, onCreated, wsfCentres, churchUnits }) {
           {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
           Update My Profile
         </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
+function DynamicExamButtons({ onSelect }) {
+  const { data: examTitles = [], isLoading } = useQuery({
+    queryKey: ["exam-titles"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("exam_titles")
+        .select("*")
+        .eq("is_active", true)
+        .order("name");
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  if (isLoading || examTitles.length === 0) return null;
+
+  return (
+    <Card className="border-0 shadow-sm">
+      <CardHeader className="pb-2">
+        <CardTitle className="text-base flex items-center gap-2">
+          <BookOpen className="h-4 w-4 text-primary" /> Training Exams
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <p className="text-sm text-muted-foreground mb-3">Take exams for your training programmes to earn certificates.</p>
+        <div className="flex flex-wrap gap-2">
+          {examTitles.map(t => (
+            <Button key={t.id} variant="outline" size="sm" onClick={() => onSelect(t.name)} className="gap-1.5">
+              <BookOpen className="h-3.5 w-3.5" /> {t.name} Exam
+            </Button>
+          ))}
+        </div>
       </CardContent>
     </Card>
   );
