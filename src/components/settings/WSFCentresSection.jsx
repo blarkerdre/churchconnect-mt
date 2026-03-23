@@ -51,7 +51,7 @@ export default function WSFCentresSection() {
     queryKey: ["all-members-for-host"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("members").select("id, first_name, last_name")
+        .from("members").select("id, first_name, last_name, address, postcode, city")
         .order("first_name");
       if (error) throw error;
       return data;
@@ -202,7 +202,7 @@ export default function WSFCentresSection() {
             <div className="space-y-1.5"><Label>Centre Name *</Label><Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} /></div>
             <div className="space-y-1.5">
               <Label>House Provider</Label>
-              <Select value={form.host_member_id} onValueChange={v => setForm(f => ({ ...f, host_member_id: v }))}>
+              <Select value={form.host_member_id} onValueChange={v => { const m = allMembers.find(x => x.id === v); setForm(f => ({ ...f, host_member_id: v, address: m?.address || f.address, postcode: m?.postcode || f.postcode, city: m?.city || f.city })); }}>
                 <SelectTrigger><SelectValue placeholder="Select member" /></SelectTrigger>
                 <SelectContent>{allMembers.map(m => <SelectItem key={m.id} value={m.id}>{m.first_name} {m.last_name}</SelectItem>)}</SelectContent>
               </Select>
