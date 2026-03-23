@@ -361,6 +361,7 @@ export default function Settings() {
           <TabsTrigger value="training" className="gap-1.5 text-xs"><TrendingUp className="h-3.5 w-3.5" /> Training Types</TabsTrigger>
           <TabsTrigger value="pastoral" className="gap-1.5 text-xs"><Heart className="h-3.5 w-3.5" /> Pastoral Care</TabsTrigger>
           <TabsTrigger value="certificates" className="gap-1.5 text-xs"><Award className="h-3.5 w-3.5" /> Certificates</TabsTrigger>
+          <TabsTrigger value="links" className="gap-1.5 text-xs"><Link2 className="h-3.5 w-3.5" /> Links</TabsTrigger>
         </TabsList>
 
         <TabsContent value="notifications">
