@@ -1,35 +1,17 @@
 
 
-## Plan: Fix WhatsApp FROM Number Formatting
+## Plan: Add WhatsApp as a Separate Tab in Communications
 
-### Problem
-The error `The 'From' number whatsapp: +44 7888873207 is not a valid phone number` shows the FROM number has extra spaces. The stored secret likely contains `whatsapp: +44 7888873207` instead of `whatsapp:+447888873207`.
+### What Changes
+Add a "WhatsApp" tab alongside Email and SMS in the Communications page tab bar.
 
-### Root Cause
-The edge function reads `TWILIO_WHATSAPP_FROM` as-is without sanitizing whitespace or formatting.
+### Changes
 
-### Fix
+**`src/pages/Communications.jsx`**
+- Add a new `TabsTrigger` for "whatsapp" with a WhatsApp-style icon (reuse `MessageSquare` or use a phone icon) after the SMS tab trigger
+- Add a new `TabsContent` for "whatsapp" — similar to the existing SMS tab content but with the SMSDialog pre-set to WhatsApp channel
+- Add state for a separate WhatsApp dialog (`waOpen`) or reuse `smsOpen` with a default channel parameter
+- The WhatsApp tab content will mirror the SMS tab layout: a "Send Bulk WhatsApp" button and a placeholder card, plus SMS History button filtered to WhatsApp
 
-**1. Edge function: `supabase/functions/send-sms/index.ts`**
-- When reading `TWILIO_WHATSAPP_FROM`, strip all spaces from the value
-- Ensure the `whatsapp:` prefix has no space before the `+`
-- Add a `.replace(/\s/g, "")` call on the env var value before using it
-
-The relevant code change (around line 75-79):
-```typescript
-// Before
-const waFrom = Deno.env.get("TWILIO_WHATSAPP_FROM");
-fromNumber = waFrom.startsWith("whatsapp:") ? waFrom : `whatsapp:${waFrom}`;
-
-// After  
-const waFrom = Deno.env.get("TWILIO_WHATSAPP_FROM")?.replace(/\s/g, "") || "";
-fromNumber = waFrom.startsWith("whatsapp:") ? waFrom : `whatsapp:${waFrom}`;
-```
-
-This produces `whatsapp:+447888873207` regardless of how the secret was entered.
-
-**2. Update the secret value**
-- Also update `TWILIO_WHATSAPP_FROM` to the clean value `whatsapp:+447888873207` so it's correct at the source
-
-No database or frontend changes needed.
+This is a small UI restructuring — no backend or database changes needed.
 
