@@ -12,8 +12,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 import {
   Settings as SettingsIcon, Plus, Pencil, Trash2, Loader2,
-  Users, Church, CalendarDays, TrendingUp, Heart, Globe, Bell, Award, Link2
+  Users, Church, CalendarDays, TrendingUp, Heart, Globe, Bell, Award, Link2, ToggleLeft
 } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
 import WSFCentresSection from "@/components/settings/WSFCentresSection";
 import CertificateTemplateSettings from "@/components/certificates/CertificateTemplateSettings";
 import ExternalLinksSection from "@/components/settings/ExternalLinksSection";
@@ -340,8 +341,100 @@ function ChurchUnitsSection() {
   );
 }
 
+/* ─── Feature Toggles section (super admin only) ─── */
+const TOGGLEABLE_FEATURES = [
+  { path: "/members", name: "Members" },
+  { path: "/events", name: "Events" },
+  { path: "/attendance", name: "Unit Attendance" },
+  { path: "/followups", name: "Follow-ups" },
+  { path: "/pastoral-care", name: "Pastoral Care" },
+  { path: "/communications", name: "Communications" },
+  { path: "/transportation", name: "Transportation" },
+  { path: "/analytics", name: "Analytics" },
+  { path: "/training-reports", name: "BFC Report" },
+  { path: "/church-attendance", name: "Church Attendance" },
+  { path: "/exam-management", name: "WoFBI" },
+  { path: "/wsf", name: "WSF Centres" },
+];
+
+function FeatureTogglesSection() {
+  const qc = useQueryClient();
+
+  const { data: disabledFeatures = [], isLoading } = useQuery({
+    queryKey: ["app-settings", "disabled_features"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("app_settings")
+        .select("value")
+        .eq("key", "disabled_features")
+        .maybeSingle();
+      if (error) throw error;
+      return Array.isArray(data?.value) ? data.value : [];
+    },
+  });
+
+  const toggleMutation = useMutation({
+    mutationFn: async (newDisabled) => {
+      const { error } = await supabase
+        .from("app_settings")
+        .upsert({ key: "disabled_features", value: newDisabled }, { onConflict: "key" });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["app-settings", "disabled_features"] });
+      toast({ title: "Feature visibility updated" });
+    },
+    onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+  });
+
+  const handleToggle = (path, enabled) => {
+    const updated = enabled
+      ? disabledFeatures.filter((p) => p !== path)
+      : [...disabledFeatures, path];
+    toggleMutation.mutate(updated);
+  };
+
+  return (
+    <Card className="border-0 shadow-sm">
+      <CardHeader className="pb-3">
+        <CardTitle className="text-base font-display flex items-center gap-2">
+          <ToggleLeft className="h-4 w-4 text-accent" /> Feature Toggles
+        </CardTitle>
+        <p className="text-xs text-muted-foreground mt-1">Enable or disable app modules. Disabled features are hidden from all users except super admins.</p>
+      </CardHeader>
+      <CardContent>
+        {isLoading ? (
+          <div className="flex justify-center py-6"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
+        ) : (
+          <div className="space-y-2">
+            {TOGGLEABLE_FEATURES.map((feature) => {
+              const isEnabled = !disabledFeatures.includes(feature.path);
+              return (
+                <div key={feature.path} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                  <div>
+                    <p className="text-sm font-medium text-foreground">{feature.name}</p>
+                    <p className="text-[11px] text-muted-foreground">{feature.path}</p>
+                  </div>
+                  <Switch
+                    checked={isEnabled}
+                    onCheckedChange={(checked) => handleToggle(feature.path, checked)}
+                    disabled={toggleMutation.isPending}
+                  />
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 /* ─── Main Settings page ─── */
 export default function Settings() {
+  const { roles } = useAuth();
+  const isSuperAdmin = roles.includes("super_admin");
+
   return (
     <div className="space-y-6">
       <div>
@@ -362,6 +455,9 @@ export default function Settings() {
           <TabsTrigger value="pastoral" className="gap-1.5 text-xs"><Heart className="h-3.5 w-3.5" /> Pastoral Care</TabsTrigger>
           <TabsTrigger value="certificates" className="gap-1.5 text-xs"><Award className="h-3.5 w-3.5" /> Certificates</TabsTrigger>
           <TabsTrigger value="links" className="gap-1.5 text-xs"><Link2 className="h-3.5 w-3.5" /> Links</TabsTrigger>
+          {isSuperAdmin && (
+            <TabsTrigger value="features" className="gap-1.5 text-xs"><ToggleLeft className="h-3.5 w-3.5" /> Features</TabsTrigger>
+          )}
         </TabsList>
 
         <TabsContent value="notifications">
@@ -419,6 +515,12 @@ export default function Settings() {
         <TabsContent value="links">
           <ExternalLinksSection />
         </TabsContent>
+
+        {isSuperAdmin && (
+          <TabsContent value="features">
+            <FeatureTogglesSection />
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   );

@@ -43,12 +43,15 @@ export default function Layout({ children }) {
   const { signOut, profile, isAdmin, isUnitLeader, isWSFLeader, roles, leaderUnits } = useAuth();
   const isSuperAdmin = roles.includes("super_admin");
   const { data: externalLinks } = useAppSetting("external_links", []);
+  const { data: disabledFeatures } = useAppSetting("disabled_features", []);
   const isFollowupUnit = leaderUnits.includes("Follow-up") || leaderUnits.includes("Follow-Up");
   const isTrainingAccess = isUnitLeader;
   const { isMemberOfUnit: isFollowupMember } = useUnitMembership("Follow-up");
 
-  // Filter nav items based on role
+  // Filter nav items based on role and disabled features
   const navItems = allNavItems.filter(item => {
+    // Super admins see all features; others don't see disabled ones
+    if (!isSuperAdmin && disabledFeatures.includes(item.path)) return false;
     if (item.access === null) return true;
     if (item.access === "super_admin") return isSuperAdmin;
     if (item.access === "admin") return isAdmin;
