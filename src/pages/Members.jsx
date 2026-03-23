@@ -227,7 +227,7 @@ export default function Members() {
                       </div>
                     </td>
                     {(isAdmin || viewOnly) && (
-                      <td className="p-4 hidden md:table-cell">
+                      <td className="p-3 sm:p-4 hidden md:table-cell">
                         {m.church_unit ? (
                           <div className="flex flex-wrap gap-1">
                             {m.church_unit.split(",").map(u => u.trim()).filter(Boolean).map(u => (
