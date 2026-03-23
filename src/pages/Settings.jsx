@@ -275,14 +275,14 @@ function ChurchUnitsSection() {
   return (
     <Card className="border-0 shadow-sm">
       <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div>
             <CardTitle className="text-base font-display flex items-center gap-2">
               <Users className="h-4 w-4 text-accent" /> Church Units
             </CardTitle>
             <p className="text-xs text-muted-foreground mt-1">Departments and ministry groups</p>
           </div>
-          <Button size="sm" onClick={openCreate} className="gap-1.5">
+          <Button size="sm" onClick={openCreate} className="gap-1.5 w-full sm:w-auto">
             <Plus className="h-4 w-4" /> Add Unit
           </Button>
         </div>
