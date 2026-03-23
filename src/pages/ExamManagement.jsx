@@ -649,7 +649,7 @@ function MemberExamsView({ memberId, courses, loading }) {
   if (!memberId) {
     return (
       <div className="text-center py-12">
-        <p className="text-muted-foreground">Please complete your member profile first to access exams.</p>
+        <p className="text-muted-foreground">Please complete your member profile first to access WoFBI.</p>
       </div>
     );
   }
