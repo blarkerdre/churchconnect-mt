@@ -705,7 +705,7 @@ function CourseRegistrationsView({ course }) {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {registrations.map(r => (
+                {filteredRegistrations.map(r => (
                   <TableRow key={r.id}>
                     <TableCell className="font-medium">{r.members?.first_name} {r.members?.last_name}</TableCell>
                     <TableCell className="text-sm text-muted-foreground">{r.members?.email || "—"}</TableCell>
