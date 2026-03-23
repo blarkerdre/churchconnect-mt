@@ -330,7 +330,7 @@ export default function Communications() {
                 </Button>
               </div>
               <Card className="border-0 shadow-sm p-8 text-center text-muted-foreground">
-                <MessageSquare className="h-10 w-10 mx-auto mb-3 opacity-20" />
+                <WhatsAppIcon className="h-10 w-10 mx-auto mb-3 opacity-20" />
                 <p className="text-sm">Use the button above to compose and send WhatsApp messages to members.</p>
               </Card>
             </div>
