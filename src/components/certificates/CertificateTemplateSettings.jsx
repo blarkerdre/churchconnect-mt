@@ -234,7 +234,7 @@ export default function CertificateTemplateSettings() {
   return (
     <Card className="border-0 shadow-sm">
       <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div>
             <CardTitle className="text-base font-display flex items-center gap-2">
               <Award className="h-4 w-4 text-accent" /> Certificate Templates
@@ -243,7 +243,7 @@ export default function CertificateTemplateSettings() {
               Customize certificate appearance per training type. Create a "Default" template to apply signatory and branding to all certificates without a specific template. Upload a sample certificate image to use as background.
             </p>
           </div>
-          <Button size="sm" onClick={openCreate} className="gap-1.5">
+          <Button size="sm" onClick={openCreate} className="gap-1.5 w-full sm:w-auto shrink-0">
             <Plus className="h-4 w-4" /> Add Template
           </Button>
         </div>
@@ -258,9 +258,9 @@ export default function CertificateTemplateSettings() {
         ) : (
           <div className="space-y-2">
             {templates.map((t) => (
-              <div key={t.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                <div className="flex items-center gap-3">
-                  <div className="flex gap-1">
+              <div key={t.id} className="flex items-center justify-between p-2.5 sm:p-3 bg-muted/50 rounded-lg">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="flex gap-1 shrink-0">
                     {t.background_image_url ? (
                       <Image className="h-4 w-4 text-primary" />
                     ) : (
@@ -270,8 +270,8 @@ export default function CertificateTemplateSettings() {
                       </>
                     )}
                   </div>
-                  <div>
-                    <span className="text-sm font-medium text-foreground">{t.training_type}</span>
+                  <div className="min-w-0">
+                    <span className="text-sm font-medium text-foreground truncate block">{t.training_type}</span>
                     {t.signatory_name && (
                       <p className="text-xs text-muted-foreground">Signed by {t.signatory_name}</p>
                     )}
@@ -300,7 +300,7 @@ export default function CertificateTemplateSettings() {
       </CardContent>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto">
+        <DialogContent className="max-w-[95vw] sm:max-w-md max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editing ? "Edit Template" : "Add Certificate Template"}</DialogTitle>
           </DialogHeader>
@@ -407,7 +407,7 @@ export default function CertificateTemplateSettings() {
 
             {/* Color controls - only when no background image */}
             {!form.background_image_url && (
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <Label>Background Color</Label>
                   <div className="flex items-center gap-2">
@@ -448,7 +448,7 @@ export default function CertificateTemplateSettings() {
       </Dialog>
       {/* Preview Dialog */}
       <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
-        <DialogContent className="max-w-3xl">
+        <DialogContent className="max-w-[95vw] sm:max-w-3xl">
           <DialogHeader>
             <DialogTitle>Certificate Preview</DialogTitle>
           </DialogHeader>
