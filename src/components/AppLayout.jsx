@@ -42,6 +42,7 @@ export default function Layout({ children }) {
   const location = useLocation();
   const { signOut, profile, isAdmin, isUnitLeader, isWSFLeader, roles, leaderUnits } = useAuth();
   const isSuperAdmin = roles.includes("super_admin");
+  const { data: externalLinks } = useAppSetting("external_links", []);
   const isFollowupUnit = leaderUnits.includes("Follow-up") || leaderUnits.includes("Follow-Up");
   const isTrainingAccess = isUnitLeader;
   const { isMemberOfUnit: isFollowupMember } = useUnitMembership("Follow-up");
