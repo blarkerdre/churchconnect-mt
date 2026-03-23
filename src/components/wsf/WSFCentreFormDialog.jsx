@@ -21,6 +21,17 @@ export default function WSFCentreFormDialog({ open, onOpenChange, centre, onSave
   const [form, setForm] = useState(empty);
   const [saving, setSaving] = useState(false);
 
+  const { data: allMembers = [] } = useQuery({
+    queryKey: ["all-members-for-host"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("members").select("id, first_name, last_name")
+        .order("first_name");
+      if (error) throw error;
+      return data;
+    },
+  });
+
   useEffect(() => {
     setForm(centre ? { ...empty, ...centre } : empty);
   }, [centre, open]);
