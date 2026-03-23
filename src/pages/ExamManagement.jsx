@@ -584,3 +584,186 @@ export default function ExamManagement() {
     </div>
   );
 }
+
+function MemberExamsView({ memberId, courses, loading }) {
+  const qc = useQueryClient();
+  const [examSelection, setExamSelection] = useState(null);
+
+  const { data: registrations = [], isLoading: regLoading } = useQuery({
+    queryKey: ["my-course-registrations", memberId],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("course_registrations").select("course_id").eq("member_id", memberId);
+      if (error) throw error;
+      return data.map(r => r.course_id);
+    },
+    enabled: !!memberId,
+  });
+
+  const { data: allSubjects = [] } = useQuery({
+    queryKey: ["all-exam-subjects"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("exam_subjects").select("*").eq("is_active", true).order("sort_order");
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const { data: myAttempts = [] } = useQuery({
+    queryKey: ["my-course-attempts", memberId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("exam_attempts")
+        .select("subject_id, training_type, score, total_points, passed, retake_allowed")
+        .eq("member_id", memberId);
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!memberId,
+  });
+
+  const registerMutation = useMutation({
+    mutationFn: async (courseId) => {
+      const { error } = await supabase.from("course_registrations").insert({ member_id: memberId, course_id: courseId });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["my-course-registrations"] });
+      toast({ title: "Registered successfully!" });
+    },
+    onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+  });
+
+  const bestBySubject = {};
+  myAttempts.forEach(a => {
+    if (!a.subject_id) return;
+    const pct = a.total_points > 0 ? a.score / a.total_points : 0;
+    if (!bestBySubject[a.subject_id] || pct > (bestBySubject[a.subject_id].score / bestBySubject[a.subject_id].total_points)) {
+      bestBySubject[a.subject_id] = a;
+    }
+  });
+
+  if (loading || regLoading) {
+    return <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>;
+  }
+
+  if (!memberId) {
+    return (
+      <div className="text-center py-12">
+        <p className="text-muted-foreground">Please complete your member profile first to access exams.</p>
+      </div>
+    );
+  }
+
+  const activeCourses = courses.filter(c => c.is_active);
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-xl font-display font-bold text-foreground flex items-center gap-2">
+          <BookOpen className="h-5 w-5 text-primary" /> Exams
+        </h1>
+        <p className="text-sm text-muted-foreground mt-1">Register for courses and take your exams</p>
+      </div>
+
+      {activeCourses.length === 0 ? (
+        <Card className="border-0 shadow-sm">
+          <CardContent className="py-8 text-center text-sm text-muted-foreground">No courses available.</CardContent>
+        </Card>
+      ) : (
+        <div className="space-y-4">
+          {activeCourses.map(course => {
+            const isRegistered = registrations.includes(course.id);
+            const subjects = allSubjects.filter(s => s.course_id === course.id);
+            const completedSubjectIds = subjects.filter(s => bestBySubject[s.id]).map(s => s.id);
+            const totalScore = completedSubjectIds.reduce((sum, id) => sum + (bestBySubject[id]?.score || 0), 0);
+            const totalPoints = completedSubjectIds.reduce((sum, id) => sum + (bestBySubject[id]?.total_points || 0), 0);
+            const aggPct = totalPoints > 0 ? (totalScore / totalPoints) * 100 : 0;
+            const allDone = subjects.length > 0 && completedSubjectIds.length === subjects.length;
+            const passed = allDone && aggPct >= course.pass_mark_percentage;
+
+            return (
+              <Card key={course.id} className="border-0 shadow-sm">
+                <CardContent className="p-5 space-y-3">
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <div>
+                      <h3 className="text-sm font-semibold text-foreground">{course.name}</h3>
+                      {course.description && <p className="text-xs text-muted-foreground">{course.description}</p>}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {isRegistered && (
+                        <Badge variant="outline" className="text-xs border-chart-3/40 text-chart-3">
+                          <CheckCircle2 className="h-3 w-3 mr-1" /> Registered
+                        </Badge>
+                      )}
+                      {allDone && (
+                        <Badge variant={passed ? "default" : "destructive"} className="text-xs">
+                          {passed ? "Passed ✓" : "Not Passed"}
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+
+                  {!isRegistered ? (
+                    course.registration_open ? (
+                      <Button size="sm" onClick={() => registerMutation.mutate(course.id)} disabled={registerMutation.isPending} className="gap-1.5">
+                        {registerMutation.isPending && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                        Register for {course.name}
+                      </Button>
+                    ) : (
+                      <p className="text-xs text-muted-foreground italic">Registration is currently closed.</p>
+                    )
+                  ) : !course.exams_open ? (
+                    <p className="text-xs text-muted-foreground italic">Exams are not yet available. Please wait for the admin to open the exam window.</p>
+                  ) : subjects.length === 0 ? (
+                    <p className="text-xs text-muted-foreground">No subjects configured yet.</p>
+                  ) : (
+                    <>
+                      <p className="text-xs text-muted-foreground">
+                        {completedSubjectIds.length}/{subjects.length} subjects completed
+                        {totalPoints > 0 && ` · Aggregate: ${Math.round(aggPct)}%`}
+                        {` · Pass mark: ${course.pass_mark_percentage}%`}
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {subjects.map(s => {
+                          const taken = !!bestBySubject[s.id];
+                          const best = bestBySubject[s.id];
+                          const bestPct = best && best.total_points > 0 ? (best.score / best.total_points) * 100 : 0;
+                          const subjectPassMark = s.pass_mark_percentage ?? 50;
+                          const hasPassed = taken && bestPct >= subjectPassMark;
+                          const canRetake = taken && !hasPassed && myAttempts.some(a => a.subject_id === s.id && a.retake_allowed === true);
+                          const isDisabled = taken && !canRetake;
+                          return (
+                            <Button
+                              key={s.id}
+                              variant={taken ? "secondary" : "outline"}
+                              size="sm"
+                              disabled={isDisabled}
+                              onClick={() => setExamSelection({ type: course.name, subjectId: s.id, subjectName: s.name })}
+                              className="gap-1.5"
+                            >
+                              <BookOpen className="h-3.5 w-3.5" />
+                              {s.name} {taken ? (canRetake ? "↻ Retake" : `✓ ${best.score}/${best.total_points}`) : ""}
+                            </Button>
+                          );
+                        })}
+                      </div>
+                    </>
+                  )}
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      )}
+
+      <TakeExamDialog
+        open={!!examSelection}
+        onOpenChange={(v) => { if (!v) { setExamSelection(null); qc.invalidateQueries({ queryKey: ["my-course-attempts"] }); } }}
+        trainingType={examSelection?.type}
+        memberId={memberId}
+        subjectId={examSelection?.subjectId}
+        subjectName={examSelection?.subjectName}
+      />
+    </div>
+  );
+}
