@@ -117,6 +117,8 @@ Deno.serve(async (req) => {
     const customMessage =
       template?.custom_message ||
       "This is to certify that the above named has successfully completed";
+    const backgroundImageUrl = template?.background_image_url || null;
+    const textPositions = template?.text_positions || { name_y: 280, training_y: 340, date_y: 380, signatory_y: 500 };
 
     // Generate certificate number
     const year = new Date().getFullYear();
@@ -139,8 +141,60 @@ Deno.serve(async (req) => {
     });
     const memberName = `${member.first_name} ${member.last_name}`;
 
-    // Generate SVG certificate
-    const svgCert = `<?xml version="1.0" encoding="UTF-8"?>
+    // Build SVG certificate
+    let svgCert: string;
+
+    if (backgroundImageUrl) {
+      // Generate a signed URL for the background image to embed in SVG
+      const { data: bgSignedData } = await supabase.storage
+        .from("church-documents")
+        .createSignedUrl(backgroundImageUrl, 60 * 60); // 1 hour
+
+      // Download the image and convert to base64 for embedding
+      let bgDataUri = "";
+      if (bgSignedData?.signedUrl) {
+        try {
+          const imgResp = await fetch(bgSignedData.signedUrl);
+          const imgBuf = await imgResp.arrayBuffer();
+          const contentType = imgResp.headers.get("content-type") || "image/png";
+          const base64 = btoa(String.fromCharCode(...new Uint8Array(imgBuf)));
+          bgDataUri = `data:${contentType};base64,${base64}`;
+        } catch (e) {
+          console.warn("Failed to fetch background image, falling back to default design:", e);
+        }
+      }
+
+      const nameY = textPositions.name_y || 280;
+      const trainingY = textPositions.training_y || 340;
+      const dateY = textPositions.date_y || 380;
+      const sigY = textPositions.signatory_y || 500;
+      const certNumY = dateY + 25;
+
+      svgCert = `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="842" height="595" viewBox="0 0 842 595">
+  <defs>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&amp;family=Inter:wght@400;500;600&amp;display=swap');
+    </style>
+  </defs>
+  ${bgDataUri ? `<image href="${bgDataUri}" width="842" height="595" preserveAspectRatio="xMidYMid slice"/>` : `<rect width="842" height="595" fill="${bgColor}"/>`}
+  <!-- Member name -->
+  <text x="421" y="${nameY}" text-anchor="middle" font-family="Playfair Display, serif" font-weight="700" font-size="32" fill="${bgColor}">${escapeXml(memberName)}</text>
+  <!-- Training type -->
+  <text x="421" y="${trainingY}" text-anchor="middle" font-family="Inter, sans-serif" font-weight="600" font-size="18" fill="${bgColor}">${escapeXml(training_type)}</text>
+  <!-- Date -->
+  <text x="421" y="${dateY}" text-anchor="middle" font-family="Inter, sans-serif" font-weight="400" font-size="13" fill="#666">Completed on ${formattedDate}</text>
+  <!-- Certificate number -->
+  <text x="421" y="${certNumY}" text-anchor="middle" font-family="Inter, sans-serif" font-weight="400" font-size="10" fill="#aaa">Certificate No: ${certificateNumber}</text>
+  ${signatoryName ? `
+  <line x1="301" y1="${sigY - 20}" x2="541" y2="${sigY - 20}" stroke="#ccc" stroke-width="1"/>
+  <text x="421" y="${sigY}" text-anchor="middle" font-family="Inter, sans-serif" font-weight="600" font-size="13" fill="${bgColor}">${escapeXml(signatoryName)}</text>
+  <text x="421" y="${sigY + 18}" text-anchor="middle" font-family="Inter, sans-serif" font-weight="400" font-size="11" fill="#888">${escapeXml(signatoryTitle)}</text>
+  ` : ""}
+</svg>`;
+    } else {
+      // Default SVG-generated design
+      svgCert = `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="842" height="595" viewBox="0 0 842 595">
   <defs>
     <style>
@@ -181,6 +235,7 @@ Deno.serve(async (req) => {
   <!-- Bottom accent -->
   <rect x="321" y="545" width="200" height="4" rx="2" fill="${accentColor}"/>
 </svg>`;
+    }
 
     // Upload SVG to storage
     const filePath = `certificates/${member_id}/${certificateNumber}.svg`;
