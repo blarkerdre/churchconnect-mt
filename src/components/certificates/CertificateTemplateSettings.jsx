@@ -234,7 +234,7 @@ export default function CertificateTemplateSettings() {
   return (
     <Card className="border-0 shadow-sm">
       <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div>
             <CardTitle className="text-base font-display flex items-center gap-2">
               <Award className="h-4 w-4 text-accent" /> Certificate Templates
@@ -243,7 +243,7 @@ export default function CertificateTemplateSettings() {
               Customize certificate appearance per training type. Create a "Default" template to apply signatory and branding to all certificates without a specific template. Upload a sample certificate image to use as background.
             </p>
           </div>
-          <Button size="sm" onClick={openCreate} className="gap-1.5">
+          <Button size="sm" onClick={openCreate} className="gap-1.5 w-full sm:w-auto shrink-0">
             <Plus className="h-4 w-4" /> Add Template
           </Button>
         </div>
