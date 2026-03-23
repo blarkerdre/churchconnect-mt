@@ -4,6 +4,7 @@ import { queryClientInstance } from "@/lib/query-client";
 import { BrowserRouter as Router, Route, Routes, Navigate } from "react-router-dom";
 import { useUnitMembership } from "@/hooks/useUnitMembership";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
+import { useAppSetting } from "@/hooks/useAppSetting";
 import Layout from "@/components/AppLayout";
 import Dashboard from "@/pages/Dashboard";
 import Members from "@/pages/Members";
