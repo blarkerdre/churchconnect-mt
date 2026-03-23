@@ -175,7 +175,7 @@ export default function Layout({ children }) {
 
       {/* Main content */}
       <div className="flex-1 flex flex-col min-h-screen">
-        <header className="sticky top-0 z-30 bg-card/80 backdrop-blur-xl border-b border-border px-4 lg:px-8 py-4">
+        <header className="sticky top-0 z-30 bg-card/80 backdrop-blur-xl border-b border-border px-3 lg:px-8 py-4">
           {isBackendMismatch() && isAdmin && (
             <div className="flex items-center gap-2 mb-2 px-3 py-2 rounded-lg bg-destructive/10 text-destructive text-xs font-medium border border-destructive/20">
               <AlertTriangle className="h-4 w-4 shrink-0" />
