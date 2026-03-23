@@ -220,7 +220,7 @@ export default function Members() {
                         </div>
                       </div>
                     </td>
-                    <td className="p-4 hidden sm:table-cell">
+                    <td className="p-3 sm:p-4 hidden sm:table-cell">
                       <div className="flex flex-col gap-0.5">
                         {m.email && <span className="flex items-center gap-1 text-muted-foreground"><Mail className="h-3 w-3" /> {m.email}</span>}
                         {m.phone && <span className="flex items-center gap-1 text-muted-foreground"><Phone className="h-3 w-3" /> {m.phone}</span>}
