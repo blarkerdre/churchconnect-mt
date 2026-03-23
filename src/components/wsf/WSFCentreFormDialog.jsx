@@ -13,7 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 const DAYS = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"];
 
 const empty = {
-  name: "", host_name: "", leader_name: "", leader_email: "", address: "", postcode: "", city: "",
+  name: "", host_name: "", host_member_id: "", leader_name: "", leader_email: "", address: "", postcode: "", city: "",
   phone: "", meeting_day: "", meeting_time: "", active: true, notes: ""
 };
 
