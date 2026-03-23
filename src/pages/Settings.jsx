@@ -173,8 +173,8 @@ function SettingsListSection({ settingsKey, title, icon: Icon, description }) {
         ) : (
           <div className="space-y-2">
             {items.map((item, idx) => (
-              <div key={idx} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                <span className="text-sm font-medium text-foreground">{item}</span>
+              <div key={idx} className="flex items-center justify-between p-2.5 sm:p-3 bg-muted/50 rounded-lg">
+                <span className="text-sm font-medium text-foreground truncate min-w-0 mr-2">{item}</span>
                 <div className="flex items-center gap-1">
                   <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(idx)}>
                     <Pencil className="h-3.5 w-3.5" />
