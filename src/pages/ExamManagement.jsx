@@ -634,11 +634,12 @@ function CourseRegistrationsView({ course }) {
   });
 
   const downloadCSV = () => {
-    const headers = ["Name", "Email", "Phone", "Registered At"];
+    const headers = ["Name", "Email", "Phone", "Source", "Registered At"];
     const rows = registrations.map(r => [
       `${r.members?.first_name || ""} ${r.members?.last_name || ""}`.trim(),
       r.members?.email || "",
       r.members?.phone || "",
+      r.members?.user_id ? "Member" : "QR / Public",
       new Date(r.registered_at).toLocaleDateString(),
     ]);
     const csv = [headers, ...rows].map(row => row.map(c => `"${(c || "").replace(/"/g, '""')}"`).join(",")).join("\n");
