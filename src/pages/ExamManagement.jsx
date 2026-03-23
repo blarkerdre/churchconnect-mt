@@ -40,7 +40,7 @@ const emptyQuestion = {
 };
 
 export default function ExamManagement() {
-  const { user } = useAuth();
+  const { user, isAdmin, myMember } = useAuth();
   const qc = useQueryClient();
   const [selectedCourse, setSelectedCourse] = useState(null);
   const [selectedSubject, setSelectedSubject] = useState(null);
