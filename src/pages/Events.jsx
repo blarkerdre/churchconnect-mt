@@ -271,6 +271,10 @@ export default function Events() {
       location: e.location || "", description: e.description || "",
       event_mode: e.event_mode || "In Person",
       audience: e.audience || "All Members",
+      is_recurring: e.is_recurring || false,
+      recurrence_frequency: e.recurrence_frequency || "Weekly",
+      recurrence_end_date: e.recurrence_end_date || "",
+      reminder_days_before: e.reminder_days_before || [],
     });
     setDialogOpen(true);
   };
