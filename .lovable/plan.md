@@ -1,26 +1,52 @@
 
 
-## Add Certificate Template Preview
+## Mobile Responsiveness Improvements
 
-### Overview
-Add a "Preview" button to the certificate template form that renders a live SVG preview of the certificate using the current form values, with sample placeholder data. This lets admins see exactly how the certificate will look before saving.
+This plan addresses alignment and overflow issues across all pages, forms, and dialogs on mobile (384px viewport).
 
-### Changes
+### 1. Dialog Component — Scrollable on Mobile
+**File: `src/components/ui/dialog.jsx`**
+- Add `max-h-[90vh] overflow-y-auto` to `DialogContent` so long forms (MemberForm, CertificateTemplate, etc.) scroll instead of overflowing the viewport
 
-**File: `src/components/certificates/CertificateTemplateSettings.jsx`**
+### 2. Dashboard — Responsive Stat Values
+**File: `src/pages/Dashboard.jsx`**
+- Change stat value from `text-3xl` to `text-2xl sm:text-3xl` to prevent grid overflow on small screens
 
-1. Add an `Eye` icon import from lucide-react
-2. Add a `previewOpen` state for a second dialog
-3. Create a `generatePreviewSvg()` function that replicates the same SVG logic from the edge function:
-   - When `background_image_url` is set: uses the signed `previewUrl` as the background image, overlays text at configured `text_positions`
-   - When no background image: renders the full default SVG design with colors, borders, church name, custom message
-   - Uses placeholder data: name = "John Doe", certificate number = "CERT-XXXX-2026-0001", date = today
-4. Add a "Preview Certificate" button next to the Save button in the form dialog
-5. Add a preview Dialog that renders the SVG inline using `dangerouslySetInnerHTML` inside a scaled container (landscape 842x595 scaled to fit dialog width)
+### 3. Followups — Responsive Stat Values
+**File: `src/pages/Followups.jsx`**
+- Change stat values from `text-2xl` to `text-xl sm:text-2xl`
 
-### Technical Detail
-- The SVG generation mirrors the edge function logic exactly (both background-image and default-design branches)
-- For background images, uses the already-resolved `previewUrl` signed URL directly in the `<image>` href (no base64 needed for browser rendering)
-- Preview updates live as the admin changes colors, positions, signatory, etc.
-- No database or edge function changes needed — purely client-side
+### 4. Members — Responsive Stat Values
+**File: `src/pages/Members.jsx`**
+- Change stat values from `text-2xl` to `text-xl sm:text-2xl`
+
+### 5. MyProfile — Mobile-Friendly Edit Layout
+**File: `src/pages/MyProfile.jsx`**
+- On the profile header card, stack the avatar and content vertically on mobile: change `flex items-start gap-4` to `flex flex-col sm:flex-row items-start gap-4`
+- Make Edit button full-width on mobile with `w-full sm:w-auto`
+- Make the avatar smaller on mobile: `h-12 w-12 sm:h-16 sm:w-16`
+
+### 6. Settings Tabs — Scrollable on Mobile
+**File: `src/pages/Settings.jsx`**
+- Wrap TabsList in a horizontally scrollable container: `overflow-x-auto` with `flex-nowrap` instead of `flex-wrap` so tabs don't stack awkwardly
+
+### 7. Communications Tabs — Scrollable on Mobile
+**File: `src/pages/Communications.jsx`**
+- Same pattern as Settings: make TabsList horizontally scrollable with `overflow-x-auto`
+
+### 8. AppLayout Header — Tighter Mobile Padding
+**File: `src/components/AppLayout.jsx`**
+- Reduce main content padding on mobile from `p-4` to `p-3 lg:p-8`
+- Reduce header padding from `px-4` to `px-3`
+
+### 9. Events — Full-Width New Event Button on Mobile
+**File: `src/pages/Events.jsx`**
+- Add `w-full sm:w-auto` to the "New Event" button
+
+### 10. Followups — Full-Width New Follow-up Button
+**File: `src/pages/Followups.jsx`**
+- Add `w-full sm:w-auto` to the "New Follow-up" button
+
+### Summary
+All changes are CSS-only (Tailwind classes). No logic or database changes. The key fix is making the Dialog component scrollable, which instantly improves every form in the app on mobile.
 
