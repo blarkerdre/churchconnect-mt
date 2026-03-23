@@ -14,3 +14,6 @@ verify_jwt = false
 
 [functions.public-wofbi-register]
 verify_jwt = false
+
+[functions.send-course-registration-email]
+verify_jwt = false
