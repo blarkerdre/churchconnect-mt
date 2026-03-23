@@ -1,18 +1,22 @@
 
 
-## Plan: Fix `run_not_found` Email API Error
+## Plan: Fix `run_not_found` Email API Error — RESOLVED
 
-### Problem
-Three edge functions are setting `run_id: messageId` in their email payloads. For transactional emails, the `run_id` must be **omitted** — the email API auto-creates a run from the `idempotency_key`. Including a fake `run_id` causes a `404 run_not_found` lookup failure.
+### Root Cause
+The `process-email-queue` worker was forwarding `run_id` from any queued payload to the email API. For transactional emails, the API expects no `run_id` — it creates a run inline from the `idempotency_key`. Sending a fabricated `run_id` caused `404 run_not_found`.
 
-### Affected Functions
-1. `supabase/functions/send-email-alert/index.ts` (line 143)
-2. `supabase/functions/notify-followup-assignment/index.ts` (line 127)
-3. `supabase/functions/notify-pastoral-assignment/index.ts` (line 125)
+### Fix Applied
+Updated `process-email-queue/index.ts` to only forward `run_id` when processing the `auth_emails` queue. For `transactional_emails`, `run_id` is now explicitly stripped regardless of what the payload contains. This protects against stale payloads and future regressions.
 
-### Changes
-Remove the `run_id` field from the email payload in all three functions. Everything else stays the same — `message_id`, `idempotency_key`, and `purpose: "transactional"` are already correct.
+### Deployed Functions
+All six email-related edge functions redeployed:
+- `process-email-queue` (the fix)
+- `issue-certificate`
+- `send-welcome-email`
+- `send-email-alert`
+- `notify-followup-assignment`
+- `notify-pastoral-assignment`
 
-### Deployment
-Redeploy all three edge functions after the fix.
-
+### Queue Status
+- Main queue (`transactional_emails`): empty — no active issues
+- DLQ: contains 7 historical messages (some with legacy `run_id`), left for audit
