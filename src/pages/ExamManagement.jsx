@@ -611,7 +611,7 @@ function CourseRegistrationsView({ course }) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("course_registrations")
-        .select("id, registered_at, member_id, members(first_name, last_name, email, phone)")
+        .select("id, registered_at, member_id, members(first_name, last_name, email, phone, user_id)")
         .eq("course_id", course.id)
         .order("registered_at", { ascending: false });
       if (error) throw error;
