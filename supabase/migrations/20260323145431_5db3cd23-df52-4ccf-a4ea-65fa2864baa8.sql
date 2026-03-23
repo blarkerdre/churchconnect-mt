@@ -1,0 +1,1 @@
+ALTER TABLE public.wsf_centres ADD COLUMN host_name TEXT;

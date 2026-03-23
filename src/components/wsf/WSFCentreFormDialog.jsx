@@ -45,7 +45,7 @@ export default function WSFCentreFormDialog({ open, onOpenChange, centre, onSave
               <Input value={form.name} onChange={e => set("name", e.target.value)} placeholder="e.g. Cardiff North Cell" />
             </div>
             <div className="space-y-1.5 sm:col-span-2">
-              <Label>Host Name</Label>
+              <Label>House Provider</Label>
               <Input value={form.host_name} onChange={e => set("host_name", e.target.value)} placeholder="Host's full name" />
             </div>
             <div className="space-y-1.5">
