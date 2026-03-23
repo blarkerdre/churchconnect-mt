@@ -23,7 +23,7 @@ export default function Attendance() {
   const [form, setForm] = useState({ title: "", session_type: "Sunday Service", session_date: "", notes: "", unit: "" });
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
-  const [demoForm, setDemoForm] = useState({ male_count: 0, female_count: 0 });
+  const [demoForm, setDemoForm] = useState({ male_count: 0, female_count: 0, meeting_notes: "" });
 
   const { data: sessions = [], isLoading } = useQuery({
     queryKey: ["attendance-sessions"],
@@ -87,14 +87,14 @@ export default function Attendance() {
   });
 
   const updateDemographicsMutation = useMutation({
-    mutationFn: async ({ sessionId, male_count, female_count }) => {
+    mutationFn: async ({ sessionId, male_count, female_count, meeting_notes }) => {
       const total = male_count + female_count;
-      const { error } = await supabase.from("attendance_sessions").update({ male_count, female_count, total_count: total }).eq("id", sessionId);
+      const { error } = await supabase.from("attendance_sessions").update({ male_count, female_count, total_count: total, notes: meeting_notes || null }).eq("id", sessionId);
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["attendance-sessions"] });
-      toast({ title: "Demographics saved" });
+      toast({ title: "Report saved" });
     },
     onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
@@ -153,7 +153,7 @@ export default function Attendance() {
   // Sync demoForm when selected session changes
   React.useEffect(() => {
     if (selectedSession) {
-      setDemoForm({ male_count: selectedSession.male_count || 0, female_count: selectedSession.female_count || 0 });
+      setDemoForm({ male_count: selectedSession.male_count || 0, female_count: selectedSession.female_count || 0, meeting_notes: selectedSession.notes || "" });
     }
   }, [selectedSession?.id]);
 
@@ -319,6 +319,10 @@ export default function Attendance() {
                       <div className="h-9 flex items-center px-3 rounded-md border border-input bg-muted text-sm font-medium text-foreground">{demoTotal}</div>
                     </div>
                   </div>
+                  <div>
+                    <Label className="text-xs">Meeting Notes</Label>
+                    <Textarea value={demoForm.meeting_notes} onChange={e => setDemoForm(f => ({ ...f, meeting_notes: e.target.value }))} rows={3} placeholder="Enter meeting notes, summary, or key points..." />
+                  </div>
                   <Button
                     size="sm"
                     className="w-full"
@@ -327,10 +331,11 @@ export default function Attendance() {
                       sessionId: selectedSession.id,
                       male_count: parseInt(demoForm.male_count) || 0,
                       female_count: parseInt(demoForm.female_count) || 0,
+                      meeting_notes: demoForm.meeting_notes,
                     })}
                   >
                     {updateDemographicsMutation.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-                    Save Demographics
+                    Save Report
                   </Button>
                   <div className="pt-2 border-t">
                     <ReportAttachments relatedTable="attendance_sessions" relatedId={selectedSession.id} />
