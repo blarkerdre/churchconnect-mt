@@ -437,7 +437,7 @@ export default function Settings() {
   const isSuperAdmin = roles.includes("super_admin");
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <div>
         <h1 className="text-lg sm:text-xl font-display font-bold text-foreground flex items-center gap-2">
           <SettingsIcon className="h-5 w-5 text-primary" /> Settings
