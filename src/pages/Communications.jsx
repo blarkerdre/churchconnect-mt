@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { useChurchUnits } from "@/hooks/useChurchUnits";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Megaphone, Pin, Search, Plus, Loader2, Trash2, Pencil, MessageSquare, History, Mail } from "lucide-react";
+import { Megaphone, Pin, Search, Plus, Loader2, Trash2, Pencil, MessageSquare, History, Mail, Phone } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { format } from "date-fns";
 import AnnouncementForm from "@/components/comms/AnnouncementForm";
