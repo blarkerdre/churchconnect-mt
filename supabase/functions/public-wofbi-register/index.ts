@@ -56,6 +56,26 @@ function triggerWelcomeEmail(email: string, firstName: string | null, lastName: 
     .catch((err) => console.error("Welcome email trigger error:", err));
 }
 
+function triggerCourseRegistrationEmail(email: string, firstName: string | null, courseName: string) {
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  fetch(`${supabaseUrl}/functions/v1/send-course-registration-email`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${serviceRoleKey}`,
+    },
+    body: JSON.stringify({ email, first_name: firstName, course_name: courseName }),
+  })
+    .then(async (res) => {
+      if (!res.ok) {
+        const body = await res.text().catch(() => "no body");
+        console.error(`Course registration email trigger failed: ${res.status}`, body);
+      }
+    })
+    .catch((err) => console.error("Course registration email trigger error:", err));
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -210,6 +230,11 @@ Deno.serve(async (req) => {
     // Fire-and-forget welcome email for new members
     if (isNewMember && email) {
       triggerWelcomeEmail(email, firstName, lastName);
+    }
+
+    // Fire-and-forget course registration confirmation email for all registrants
+    if (email) {
+      triggerCourseRegistrationEmail(email, firstName, course.name);
     }
 
     return new Response(JSON.stringify({ success: true, course_name: course.name }), {
