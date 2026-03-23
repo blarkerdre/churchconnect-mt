@@ -172,34 +172,6 @@ export default function SMSDialog({
           </div>
         ) : (
           <div className="space-y-4 mt-2">
-            {/* Channel toggle */}
-            <div>
-              <label className="text-sm font-medium mb-1.5 block">Channel</label>
-              <div className="flex rounded-lg border border-border overflow-hidden">
-                <button
-                  type="button"
-                  onClick={() => setChannel("sms")}
-                  className={`flex-1 py-2 text-sm font-medium transition-colors ${
-                    channel === "sms"
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-background text-muted-foreground hover:bg-muted"
-                  }`}
-                >
-                  📱 SMS
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setChannel("whatsapp")}
-                  className={`flex-1 py-2 text-sm font-medium transition-colors ${
-                    channel === "whatsapp"
-                      ? "bg-[#25D366] text-white"
-                      : "bg-background text-muted-foreground hover:bg-muted"
-                  }`}
-                >
-                  💬 WhatsApp
-                </button>
-              </div>
-            </div>
 
             {!directRecipients && (
               <div>
