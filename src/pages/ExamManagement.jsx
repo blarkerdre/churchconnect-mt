@@ -221,6 +221,23 @@ export default function ExamManagement() {
 
   const questionTypeLabel = (type) => QUESTION_TYPES.find(t => t.value === type)?.label || type;
 
+  // Admin toggle mutations
+  const toggleCourseMutation = useMutation({
+    mutationFn: async ({ id, field, value }) => {
+      const { error } = await supabase.from("exam_titles").update({ [field]: value }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["exam-titles"] });
+    },
+    onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+  });
+
+  // If not admin, show member view
+  if (!isAdmin) {
+    return <MemberExamsView memberId={myMember?.id} courses={examTitles} loading={titlesLoading} />;
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
