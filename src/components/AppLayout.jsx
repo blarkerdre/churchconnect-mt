@@ -12,6 +12,8 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import NotificationBell from "@/components/notifications/NotificationBell";
 import { getEnvironmentLabel, getBackendHost, isBackendMismatch } from "@/lib/environment";
+import { useAppSetting } from "@/hooks/useAppSetting";
+import { getIconComponent } from "@/lib/icon-map";
 
 // Role requirements: null = any authenticated user, "admin" = admin/super_admin, "leader" = admin or unit_leader
 const allNavItems = [
