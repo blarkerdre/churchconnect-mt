@@ -15,7 +15,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "@/components/ui/use-toast";
-import { Loader2, Plus, Trash2, Edit, BookOpen, Save, Tag, Layers, Eye, CheckCircle2 } from "lucide-react";
+import { Loader2, Plus, Trash2, Edit, BookOpen, Save, Tag, Layers, Eye, CheckCircle2, Download, Users } from "lucide-react";
 import SubjectManager from "@/components/exams/SubjectManager";
 import CourseResultsView from "@/components/exams/CourseResultsView";
 import TakeExamDialog from "@/components/exams/TakeExamDialog";
@@ -58,6 +58,7 @@ export default function ExamManagement() {
   const [titleForm, setTitleForm] = useState({ name: "", description: "", pass_mark_percentage: 50, registration_open: false, exams_open: false });
   const [deleteTitleTarget, setDeleteTitleTarget] = useState(null);
   const [showResults, setShowResults] = useState(false);
+  const [showRegistrations, setShowRegistrations] = useState(false);
 
   // Fetch courses (exam_titles)
   const { data: examTitles = [], isLoading: titlesLoading } = useQuery({
@@ -283,7 +284,7 @@ export default function ExamManagement() {
                   selectedCourse?.id === t.id
                     ? "bg-primary text-primary-foreground border-primary"
                     : "bg-card border-border hover:bg-muted"
-                }`} onClick={() => { setSelectedCourse(t); setSelectedSubject(null); setShowResults(false); }}>
+                }`} onClick={() => { setSelectedCourse(t); setSelectedSubject(null); setShowResults(false); setShowRegistrations(false); }}>
                   <span className="font-medium">{t.name}</span>
                   <Badge variant="outline" className={`text-[9px] h-4 ${selectedCourse?.id === t.id ? "border-primary-foreground/30 text-primary-foreground" : ""}`}>
                     {t.pass_mark_percentage}%
@@ -313,15 +314,20 @@ export default function ExamManagement() {
         <>
           {/* Toggle: Subjects vs Results */}
           <div className="flex gap-2">
-            <Button variant={!showResults ? "default" : "outline"} size="sm" onClick={() => setShowResults(false)} className="gap-1.5">
+            <Button variant={!showResults && !showRegistrations ? "default" : "outline"} size="sm" onClick={() => { setShowResults(false); setShowRegistrations(false); }} className="gap-1.5">
               <Layers className="h-3.5 w-3.5" /> Subjects & Questions
             </Button>
-            <Button variant={showResults ? "default" : "outline"} size="sm" onClick={() => setShowResults(true)} className="gap-1.5">
+            <Button variant={showResults ? "default" : "outline"} size="sm" onClick={() => { setShowResults(true); setShowRegistrations(false); }} className="gap-1.5">
               Course Results
+            </Button>
+            <Button variant={showRegistrations ? "default" : "outline"} size="sm" onClick={() => { setShowRegistrations(true); setShowResults(false); }} className="gap-1.5">
+              <Users className="h-3.5 w-3.5" /> Registrations
             </Button>
           </div>
 
-          {showResults ? (
+          {showRegistrations ? (
+            <CourseRegistrationsView course={selectedCourse} />
+          ) : showResults ? (
             <CourseResultsView course={selectedCourse} />
           ) : (
             <>
@@ -587,6 +593,128 @@ export default function ExamManagement() {
         />
       )}
     </div>
+  );
+}
+
+function CourseRegistrationsView({ course }) {
+  const qc = useQueryClient();
+  const [deleteTarget, setDeleteTarget] = useState(null);
+
+  const { data: registrations = [], isLoading } = useQuery({
+    queryKey: ["course-registrations", course.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("course_registrations")
+        .select("id, registered_at, member_id, members(first_name, last_name, email, phone)")
+        .eq("course_id", course.id)
+        .order("registered_at", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!course?.id,
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id) => {
+      const { error } = await supabase.from("course_registrations").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["course-registrations", course.id] });
+      toast({ title: "Registration removed" });
+      setDeleteTarget(null);
+    },
+    onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+  });
+
+  const downloadCSV = () => {
+    const headers = ["Name", "Email", "Phone", "Registered At"];
+    const rows = registrations.map(r => [
+      `${r.members?.first_name || ""} ${r.members?.last_name || ""}`.trim(),
+      r.members?.email || "",
+      r.members?.phone || "",
+      new Date(r.registered_at).toLocaleDateString(),
+    ]);
+    const csv = [headers, ...rows].map(row => row.map(c => `"${(c || "").replace(/"/g, '""')}"`).join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${course.name}_registrations.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  return (
+    <Card className="border-0 shadow-sm">
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-base font-display flex items-center gap-2">
+            <Users className="h-4 w-4 text-primary" /> Registrations — {course.name}
+            <Badge variant="secondary" className="ml-2">{registrations.length}</Badge>
+          </CardTitle>
+          {registrations.length > 0 && (
+            <Button size="sm" variant="outline" className="gap-1.5" onClick={downloadCSV}>
+              <Download className="h-3.5 w-3.5" /> Download CSV
+            </Button>
+          )}
+        </div>
+      </CardHeader>
+      <CardContent>
+        {isLoading ? (
+          <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
+        ) : registrations.length === 0 ? (
+          <p className="text-sm text-muted-foreground text-center py-8">No members registered for this course yet.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-muted/50">
+                  <TableHead className="font-semibold">Name</TableHead>
+                  <TableHead className="font-semibold">Email</TableHead>
+                  <TableHead className="font-semibold">Phone</TableHead>
+                  <TableHead className="font-semibold">Registered</TableHead>
+                  <TableHead className="font-semibold text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {registrations.map(r => (
+                  <TableRow key={r.id}>
+                    <TableCell className="font-medium">{r.members?.first_name} {r.members?.last_name}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground">{r.members?.email || "—"}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground">{r.members?.phone || "—"}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground">{new Date(r.registered_at).toLocaleDateString()}</TableCell>
+                    <TableCell className="text-right">
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setDeleteTarget(r)}>
+                        <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+      </CardContent>
+
+      <AlertDialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove Registration</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to unregister {deleteTarget?.members?.first_name} {deleteTarget?.members?.last_name} from {course.name}?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={() => deleteMutation.mutate(deleteTarget.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              {deleteMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              Remove
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </Card>
   );
 }
 
