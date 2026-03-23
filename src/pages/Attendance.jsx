@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -7,11 +7,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { CheckCircle2, Clock, Users, CalendarCheck, Plus, Loader2, Lock, FileText } from "lucide-react";
+import { CheckCircle2, Clock, Users, CalendarCheck, Plus, Loader2, Lock, FileText, Filter } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import ReportAttachments from "@/components/reports/ReportAttachments";
 
 export default function Attendance() {
   const { isAdmin, isUnitLeader } = useAuth();
@@ -19,8 +20,9 @@ export default function Attendance() {
   const queryClient = useQueryClient();
   const [selectedSessionId, setSelectedSessionId] = useState(null);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [reportDialogOpen, setReportDialogOpen] = useState(false);
-  const [form, setForm] = useState({ title: "", session_type: "Sunday Service", session_date: "", notes: "" });
+  const [form, setForm] = useState({ title: "", session_type: "Sunday Service", session_date: "", notes: "", male_count: 0, female_count: 0, unit: "" });
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
 
   const { data: sessions = [], isLoading } = useQuery({
     queryKey: ["attendance-sessions"],
@@ -31,7 +33,15 @@ export default function Attendance() {
     },
   });
 
-  const selectedSession = sessions.find(s => s.id === selectedSessionId) || sessions[0];
+  const filteredSessions = useMemo(() => {
+    return sessions.filter(s => {
+      if (dateFrom && s.session_date < dateFrom) return false;
+      if (dateTo && s.session_date > dateTo) return false;
+      return true;
+    });
+  }, [sessions, dateFrom, dateTo]);
+
+  const selectedSession = filteredSessions.find(s => s.id === selectedSessionId) || filteredSessions[0];
 
   const { data: records = [] } = useQuery({
     queryKey: ["attendance-records", selectedSession?.id],
@@ -58,11 +68,16 @@ export default function Attendance() {
 
   const createSessionMutation = useMutation({
     mutationFn: async (formData) => {
+      const total = (parseInt(formData.male_count) || 0) + (parseInt(formData.female_count) || 0);
       const { error } = await supabase.from("attendance_sessions").insert({
         title: formData.title || null,
         session_type: formData.session_type,
         session_date: formData.session_date,
         notes: formData.notes || null,
+        male_count: parseInt(formData.male_count) || 0,
+        female_count: parseInt(formData.female_count) || 0,
+        total_count: total,
+        unit: formData.unit || null,
       });
       if (error) throw error;
     },
@@ -99,6 +114,12 @@ export default function Attendance() {
       `Type: ${selectedSession.session_type}`,
       `Date: ${selectedSession.session_date}`,
       `Status: ${isClosed ? "Closed" : "Open"}`,
+      selectedSession.unit ? `Unit: ${selectedSession.unit}` : null,
+      ``,
+      `Demographics:`,
+      `  Male: ${selectedSession.male_count || 0}`,
+      `  Female: ${selectedSession.female_count || 0}`,
+      `  Total: ${selectedSession.total_count || 0}`,
       ``,
       `Total Check-ins: ${presentCount}`,
       `Total Active Members: ${totalMembers}`,
@@ -107,7 +128,7 @@ export default function Attendance() {
       `ATTENDEES:`,
       `----------`,
       ...records.map((r, i) => `${i + 1}. ${r.members?.first_name || ""} ${r.members?.last_name || ""} — ${r.check_in_method || "manual"} — ${r.checked_in_at ? new Date(r.checked_in_at).toLocaleTimeString() : "N/A"}`),
-    ].join("\n");
+    ].filter(Boolean).join("\n");
 
     const blob = new Blob([reportContent], { type: "text/plain" });
     const a = document.createElement("a");
@@ -117,21 +138,38 @@ export default function Attendance() {
     toast({ title: "Report downloaded" });
   };
 
+  const formTotal = (parseInt(form.male_count) || 0) + (parseInt(form.female_count) || 0);
+
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <Card className="border-0 shadow-sm"><CardContent className="p-3 sm:p-4 text-center"><p className="text-xl sm:text-2xl font-display font-bold text-chart-3">{presentCount}</p><p className="text-xs text-muted-foreground">Checked In</p></CardContent></Card>
         <Card className="border-0 shadow-sm"><CardContent className="p-3 sm:p-4 text-center"><p className="text-xl sm:text-2xl font-display font-bold text-foreground">{totalMembers}</p><p className="text-xs text-muted-foreground">Total</p></CardContent></Card>
         <Card className="border-0 shadow-sm"><CardContent className="p-3 sm:p-4 text-center"><p className="text-xl sm:text-2xl font-display font-bold text-primary">{attendanceRate}%</p><p className="text-xs text-muted-foreground">Rate</p></CardContent></Card>
-        <Card className="border-0 shadow-sm"><CardContent className="p-3 sm:p-4 text-center"><p className="text-xl sm:text-2xl font-display font-bold text-accent">{sessions.length}</p><p className="text-xs text-muted-foreground">Sessions</p></CardContent></Card>
+        <Card className="border-0 shadow-sm"><CardContent className="p-3 sm:p-4 text-center"><p className="text-xl sm:text-2xl font-display font-bold text-accent">{filteredSessions.length}</p><p className="text-xs text-muted-foreground">Sessions</p></CardContent></Card>
+      </div>
+
+      {/* Date Filter */}
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 p-3 bg-muted/50 rounded-lg border border-border">
+        <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+          <Filter className="h-4 w-4" /> Filter by date:
+        </div>
+        <div className="flex items-center gap-2 flex-1">
+          <Input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="h-9 text-sm flex-1" placeholder="From" />
+          <span className="text-xs text-muted-foreground">to</span>
+          <Input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="h-9 text-sm flex-1" placeholder="To" />
+        </div>
+        {(dateFrom || dateTo) && (
+          <Button variant="ghost" size="sm" onClick={() => { setDateFrom(""); setDateTo(""); }} className="text-xs">Clear</Button>
+        )}
       </div>
 
       <div className="flex flex-wrap items-center gap-3">
-        {sessions.length > 0 && (
+        {filteredSessions.length > 0 && (
           <Select value={selectedSession?.id || ""} onValueChange={setSelectedSessionId}>
             <SelectTrigger className="w-full sm:w-72"><SelectValue placeholder="Select session" /></SelectTrigger>
             <SelectContent>
-              {sessions.map(s => <SelectItem key={s.id} value={s.id}>{s.title || s.session_type} – {s.session_date}</SelectItem>)}
+              {filteredSessions.map(s => <SelectItem key={s.id} value={s.id}>{s.title || s.session_type} – {s.session_date}</SelectItem>)}
             </SelectContent>
           </Select>
         )}
@@ -159,7 +197,7 @@ export default function Attendance() {
             </Button>
           )}
           {canManage && (
-            <Button onClick={() => { setForm({ title: "", session_type: "Sunday Service", session_date: "", notes: "" }); setDialogOpen(true); }} className="bg-primary hover:bg-primary/90 w-full sm:w-auto">
+            <Button onClick={() => { setForm({ title: "", session_type: "Sunday Service", session_date: "", notes: "", male_count: 0, female_count: 0, unit: "" }); setDialogOpen(true); }} className="bg-primary hover:bg-primary/90 w-full sm:w-auto">
               <Plus className="h-4 w-4 mr-2" /> New Session
             </Button>
           )}
@@ -173,9 +211,9 @@ export default function Attendance() {
           <Card className="border-0 shadow-sm">
             <CardHeader><CardTitle className="text-base font-display flex items-center gap-2"><CalendarCheck className="h-4 w-4 text-accent" /> All Sessions</CardTitle></CardHeader>
             <CardContent className="space-y-2">
-              {sessions.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-4">No sessions yet</p>
-              ) : sessions.map(s => (
+              {filteredSessions.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-4">No sessions found</p>
+              ) : filteredSessions.map(s => (
                 <button
                   key={s.id}
                   onClick={() => setSelectedSessionId(s.id)}
@@ -183,14 +221,19 @@ export default function Attendance() {
                     selectedSession?.id === s.id ? "bg-primary/10 border border-primary/20" : "bg-muted/50 hover:bg-muted"
                   }`}
                 >
-                  <div>
+                  <div className="min-w-0 flex-1">
                     <p className="font-medium text-sm text-foreground flex items-center gap-2">
-                      {s.title || s.session_type}
-                      {s.status === "closed" && <Lock className="h-3 w-3 text-muted-foreground" />}
+                      <span className="truncate">{s.title || s.session_type}</span>
+                      {s.status === "closed" && <Lock className="h-3 w-3 text-muted-foreground shrink-0" />}
                     </p>
                     <p className="text-xs text-muted-foreground">{s.session_type} · {s.session_date}</p>
+                    {(s.male_count > 0 || s.female_count > 0) && (
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        M: {s.male_count} · F: {s.female_count} · T: {s.total_count}
+                      </p>
+                    )}
                   </div>
-                  <Badge variant="outline" className={`text-xs ${s.status === "closed" ? "text-muted-foreground" : "text-chart-3"}`}>
+                  <Badge variant="outline" className={`text-xs shrink-0 ${s.status === "closed" ? "text-muted-foreground" : "text-chart-3"}`}>
                     {s.status === "closed" ? "Closed" : "Open"}
                   </Badge>
                 </button>
@@ -198,34 +241,62 @@ export default function Attendance() {
             </CardContent>
           </Card>
 
-          <Card className="border-0 shadow-sm">
-            <CardHeader><CardTitle className="text-base font-display flex items-center gap-2"><Users className="h-4 w-4 text-accent" /> Check-ins</CardTitle></CardHeader>
-            <CardContent className="space-y-2">
-              {records.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-4">No check-ins for this session</p>
-              ) : records.map(r => (
-                <div key={r.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary text-xs font-bold">
-                      {r.members?.first_name?.[0]}{r.members?.last_name?.[0]}
+          <div className="space-y-6">
+            <Card className="border-0 shadow-sm">
+              <CardHeader><CardTitle className="text-base font-display flex items-center gap-2"><Users className="h-4 w-4 text-accent" /> Check-ins</CardTitle></CardHeader>
+              <CardContent className="space-y-2">
+                {/* Demographics summary for selected session */}
+                {selectedSession && (selectedSession.male_count > 0 || selectedSession.female_count > 0) && (
+                  <div className="grid grid-cols-3 gap-2 mb-3">
+                    <div className="bg-primary/5 rounded-lg p-2 text-center border border-primary/10">
+                      <p className="text-lg font-bold text-primary">{selectedSession.male_count}</p>
+                      <p className="text-[11px] text-muted-foreground">Male</p>
                     </div>
-                    <div>
-                      <p className="text-sm font-medium text-foreground">{r.members?.first_name} {r.members?.last_name}</p>
-                      <p className="text-xs text-muted-foreground flex items-center gap-1">
-                        <Clock className="h-3 w-3" /> {r.checked_in_at ? new Date(r.checked_in_at).toLocaleTimeString() : "—"}
-                      </p>
+                    <div className="bg-accent/5 rounded-lg p-2 text-center border border-accent/10">
+                      <p className="text-lg font-bold text-accent">{selectedSession.female_count}</p>
+                      <p className="text-[11px] text-muted-foreground">Female</p>
+                    </div>
+                    <div className="bg-muted rounded-lg p-2 text-center border border-border">
+                      <p className="text-lg font-bold text-foreground">{selectedSession.total_count}</p>
+                      <p className="text-[11px] text-muted-foreground">Total</p>
                     </div>
                   </div>
-                  <Badge className="bg-chart-3/10 text-chart-3 border-0">{r.check_in_method || "manual"}</Badge>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
+                )}
+                {records.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-4">No check-ins for this session</p>
+                ) : records.map(r => (
+                  <div key={r.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary text-xs font-bold">
+                        {r.members?.first_name?.[0]}{r.members?.last_name?.[0]}
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-foreground">{r.members?.first_name} {r.members?.last_name}</p>
+                        <p className="text-xs text-muted-foreground flex items-center gap-1">
+                          <Clock className="h-3 w-3" /> {r.checked_in_at ? new Date(r.checked_in_at).toLocaleTimeString() : "—"}
+                        </p>
+                      </div>
+                    </div>
+                    <Badge className="bg-chart-3/10 text-chart-3 border-0">{r.check_in_method || "manual"}</Badge>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+
+            {/* Report Attachments */}
+            {selectedSession && (
+              <Card className="border-0 shadow-sm">
+                <CardContent className="p-4">
+                  <ReportAttachments relatedTable="attendance_sessions" relatedId={selectedSession.id} />
+                </CardContent>
+              </Card>
+            )}
+          </div>
         </div>
       )}
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-[95vw] sm:max-w-md">
           <DialogHeader><DialogTitle className="font-display">New Session</DialogTitle></DialogHeader>
           <div className="space-y-4 mt-2">
             <div><Label>Title (optional)</Label><Input value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} /></div>
@@ -241,8 +312,25 @@ export default function Attendance() {
               </Select>
             </div>
             <div><Label>Date</Label><Input type="date" value={form.session_date} onChange={e => setForm(f => ({ ...f, session_date: e.target.value }))} /></div>
+            {form.session_type === "Unit Meeting" && (
+              <div><Label>Unit</Label><Input value={form.unit} onChange={e => setForm(f => ({ ...f, unit: e.target.value }))} placeholder="e.g. Choir, Ushering" /></div>
+            )}
+            <div className="grid grid-cols-3 gap-3">
+              <div>
+                <Label>Male</Label>
+                <Input type="number" min="0" value={form.male_count} onChange={e => setForm(f => ({ ...f, male_count: e.target.value }))} />
+              </div>
+              <div>
+                <Label>Female</Label>
+                <Input type="number" min="0" value={form.female_count} onChange={e => setForm(f => ({ ...f, female_count: e.target.value }))} />
+              </div>
+              <div>
+                <Label>Total</Label>
+                <div className="h-9 flex items-center px-3 rounded-md border border-input bg-muted text-sm font-medium text-foreground">{formTotal}</div>
+              </div>
+            </div>
             <div><Label>Notes</Label><Textarea value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} rows={2} /></div>
-            <Button onClick={() => createSessionMutation.mutate(form)} disabled={createSessionMutation.isPending} className="w-full bg-primary">
+            <Button onClick={() => createSessionMutation.mutate(form)} disabled={createSessionMutation.isPending || !form.session_date} className="w-full bg-primary">
               {createSessionMutation.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
               Create Session
             </Button>

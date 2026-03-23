@@ -131,6 +131,23 @@ export default function CheckInPanel({ session, onClose }) {
         ))}
       </div>
 
+      {(session.male_count > 0 || session.female_count > 0) && (
+        <div className="grid grid-cols-3 gap-2">
+          <div className="bg-primary/5 rounded-xl p-2.5 text-center border border-primary/10">
+            <p className="text-lg font-bold text-primary">{session.male_count}</p>
+            <p className="text-[11px] text-muted-foreground">Male</p>
+          </div>
+          <div className="bg-accent/5 rounded-xl p-2.5 text-center border border-accent/10">
+            <p className="text-lg font-bold text-accent">{session.female_count}</p>
+            <p className="text-[11px] text-muted-foreground">Female</p>
+          </div>
+          <div className="bg-muted/50 rounded-xl p-2.5 text-center border border-border">
+            <p className="text-lg font-bold text-foreground">{session.total_count}</p>
+            <p className="text-[11px] text-muted-foreground">Demo Total</p>
+          </div>
+        </div>
+      )}
+
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input placeholder="Search members..." value={search} onChange={e => setSearch(e.target.value)} className="pl-10 h-11 text-base" />
