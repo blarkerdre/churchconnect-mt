@@ -351,7 +351,7 @@ const TOGGLEABLE_FEATURES = [
   { path: "/communications", name: "Communications" },
   { path: "/transportation", name: "Transportation" },
   { path: "/analytics", name: "Analytics" },
-  { path: "/training-reports", name: "BFC Report" },
+  { path: "/training-reports", name: "BFC & Training Report" },
   { path: "/church-attendance", name: "Church Attendance" },
   { path: "/exam-management", name: "WoFBI" },
   { path: "/wsf", name: "WSF Centres" },
