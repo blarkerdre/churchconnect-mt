@@ -191,7 +191,7 @@ function SettingsListSection({ settingsKey, title, icon: Icon, description }) {
       </CardContent>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-sm">
+        <DialogContent className="max-w-[95vw] sm:max-w-sm">
           <DialogHeader>
             <DialogTitle>{editingIdx !== null ? "Edit" : "Add"} {title.replace(/s$/, "")}</DialogTitle>
           </DialogHeader>
