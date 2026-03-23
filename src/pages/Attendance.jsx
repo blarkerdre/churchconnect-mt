@@ -153,7 +153,7 @@ export default function Attendance() {
   // Sync demoForm when selected session changes
   React.useEffect(() => {
     if (selectedSession) {
-      setDemoForm({ male_count: selectedSession.male_count || 0, female_count: selectedSession.female_count || 0 });
+      setDemoForm({ male_count: selectedSession.male_count || 0, female_count: selectedSession.female_count || 0, meeting_notes: selectedSession.notes || "" });
     }
   }, [selectedSession?.id]);
 
