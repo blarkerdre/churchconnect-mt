@@ -248,12 +248,43 @@ export default function CertificateTemplateSettings() {
           <div className="space-y-4 mt-2">
             <div className="space-y-1.5">
               <Label>Training Type *</Label>
-              <Input
-                value={form.training_type}
-                onChange={(e) => set("training_type", e.target.value)}
-                placeholder="e.g. Believers Foundation Class (BFC)"
-                disabled={!!editing}
-              />
+              {editing ? (
+                <Input value={form.training_type} disabled />
+              ) : useCustomType ? (
+                <div className="flex gap-2">
+                  <Input
+                    value={form.training_type}
+                    onChange={(e) => set("training_type", e.target.value)}
+                    placeholder="Enter custom training type"
+                    className="flex-1"
+                  />
+                  <Button variant="outline" size="sm" onClick={() => { setUseCustomType(false); set("training_type", ""); }}>
+                    Back
+                  </Button>
+                </div>
+              ) : (
+                <Select
+                  value={form.training_type}
+                  onValueChange={(v) => {
+                    if (v === "__other__") {
+                      setUseCustomType(true);
+                      set("training_type", "");
+                    } else {
+                      set("training_type", v);
+                    }
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select training type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {allTypes.map((t) => (
+                      <SelectItem key={t} value={t}>{t}</SelectItem>
+                    ))}
+                    <SelectItem value="__other__">Other (custom)</SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
             </div>
             <div className="space-y-1.5">
               <Label>Church Name</Label>
