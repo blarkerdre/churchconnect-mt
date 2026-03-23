@@ -148,7 +148,14 @@ export default function Attendance() {
     toast({ title: "Report downloaded" });
   };
 
-  const formTotal = (parseInt(form.male_count) || 0) + (parseInt(form.female_count) || 0);
+  const demoTotal = (parseInt(demoForm.male_count) || 0) + (parseInt(demoForm.female_count) || 0);
+
+  // Sync demoForm when selected session changes
+  React.useEffect(() => {
+    if (selectedSession) {
+      setDemoForm({ male_count: selectedSession.male_count || 0, female_count: selectedSession.female_count || 0 });
+    }
+  }, [selectedSession?.id]);
 
   return (
     <div className="space-y-6">
