@@ -611,7 +611,7 @@ function CourseRegistrationsView({ course }) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("course_registrations")
-        .select("id, registered_at, member_id, members(first_name, last_name, email, phone)")
+        .select("id, registered_at, member_id, members(first_name, last_name, email, phone, user_id)")
         .eq("course_id", course.id)
         .order("registered_at", { ascending: false });
       if (error) throw error;
@@ -634,11 +634,12 @@ function CourseRegistrationsView({ course }) {
   });
 
   const downloadCSV = () => {
-    const headers = ["Name", "Email", "Phone", "Registered At"];
+    const headers = ["Name", "Email", "Phone", "Source", "Registered At"];
     const rows = registrations.map(r => [
       `${r.members?.first_name || ""} ${r.members?.last_name || ""}`.trim(),
       r.members?.email || "",
       r.members?.phone || "",
+      r.members?.user_id ? "Member" : "QR / Public",
       new Date(r.registered_at).toLocaleDateString(),
     ]);
     const csv = [headers, ...rows].map(row => row.map(c => `"${(c || "").replace(/"/g, '""')}"`).join(",")).join("\n");
@@ -676,9 +677,10 @@ function CourseRegistrationsView({ course }) {
             <Table>
               <TableHeader>
                 <TableRow className="bg-muted/50">
-                  <TableHead className="font-semibold">Name</TableHead>
+                   <TableHead className="font-semibold">Name</TableHead>
                   <TableHead className="font-semibold">Email</TableHead>
                   <TableHead className="font-semibold">Phone</TableHead>
+                  <TableHead className="font-semibold">Source</TableHead>
                   <TableHead className="font-semibold">Registered</TableHead>
                   <TableHead className="font-semibold text-right">Actions</TableHead>
                 </TableRow>
@@ -689,6 +691,11 @@ function CourseRegistrationsView({ course }) {
                     <TableCell className="font-medium">{r.members?.first_name} {r.members?.last_name}</TableCell>
                     <TableCell className="text-sm text-muted-foreground">{r.members?.email || "—"}</TableCell>
                     <TableCell className="text-sm text-muted-foreground">{r.members?.phone || "—"}</TableCell>
+                    <TableCell>
+                      <Badge variant={r.members?.user_id ? "default" : "outline"}>
+                        {r.members?.user_id ? "Member" : "QR / Public"}
+                      </Badge>
+                    </TableCell>
                     <TableCell className="text-sm text-muted-foreground">{new Date(r.registered_at).toLocaleDateString()}</TableCell>
                     <TableCell className="text-right">
                       <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setDeleteTarget(r)}>
