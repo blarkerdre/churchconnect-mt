@@ -93,12 +93,21 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Get template (fallback to defaults)
-    const { data: template } = await supabase
+    // Get template (case-insensitive + fallback to "Default" template)
+    let { data: template } = await supabase
       .from("certificate_templates")
       .select("*")
-      .eq("training_type", training_type)
+      .ilike("training_type", training_type.trim())
       .maybeSingle();
+
+    if (!template) {
+      const { data: defaultTpl } = await supabase
+        .from("certificate_templates")
+        .select("*")
+        .ilike("training_type", "default")
+        .maybeSingle();
+      template = defaultTpl;
+    }
 
     const churchName = template?.church_name || "Winners Chapel International Cardiff";
     const signatoryName = template?.signatory_name || "";
