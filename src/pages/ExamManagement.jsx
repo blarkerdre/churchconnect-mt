@@ -252,7 +252,11 @@ export default function ExamManagement() {
           </h1>
           <p className="text-sm text-muted-foreground mt-1">Manage certificate courses, subjects, and exam questions</p>
         </div>
+        <Button variant="outline" onClick={() => setQrOpen(true)} className="gap-2">
+          <QrCode className="h-4 w-4" /> Registration QR
+        </Button>
       </div>
+      <WoFBIRegistrationQRCode open={qrOpen} onOpenChange={setQrOpen} />
 
 
       {/* WoFBI About Section (Admin Editable) */}
