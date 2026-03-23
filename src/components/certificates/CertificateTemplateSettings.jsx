@@ -117,7 +117,7 @@ export default function CertificateTemplateSettings() {
               <Award className="h-4 w-4 text-accent" /> Certificate Templates
             </CardTitle>
             <p className="text-xs text-muted-foreground mt-1">
-              Customize certificate appearance per training type
+              Customize certificate appearance per training type. Create a "Default" template to apply signatory and branding to all certificates without a specific template.
             </p>
           </div>
           <Button size="sm" onClick={openCreate} className="gap-1.5">
