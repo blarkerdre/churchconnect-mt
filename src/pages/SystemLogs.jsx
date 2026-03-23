@@ -282,6 +282,89 @@ function SMSLogsPanel() {
   );
 }
 
+/* ── WhatsApp Logs Tab ── */
+const WHATSAPP_CSV_HEADERS = [
+  { label: "Phone", fn: r => r.recipient_phone },
+  { label: "Type", fn: r => r.sms_type },
+  { label: "Status", fn: r => r.status },
+  { label: "Delivery Status", fn: r => r.delivery_status || "" },
+  { label: "Message", fn: r => r.message },
+  { label: "Time", fn: r => format(new Date(r.created_at), "yyyy-MM-dd HH:mm:ss") },
+  { label: "Error", fn: r => r.error_message || "" },
+];
+
+function WhatsAppLogsPanel() {
+  const [typeFilter, setTypeFilter] = useState("All");
+  const [fromDate, setFromDate] = useState(() => subDays(new Date(), 7));
+  const [toDate, setToDate] = useState(() => new Date());
+
+  const { data: logs = [], isLoading } = useQuery({
+    queryKey: ["whatsapp-logs", typeFilter, fromDate?.toISOString(), toDate?.toISOString()],
+    queryFn: async () => {
+      let query = supabase.from("sms_log").select("*").eq("channel", "whatsapp").order("created_at", { ascending: false }).limit(500);
+      if (typeFilter !== "All") query = query.eq("sms_type", typeFilter);
+      if (fromDate) query = query.gte("created_at", fromDate.toISOString());
+      if (toDate) query = query.lte("created_at", new Date(toDate.getFullYear(), toDate.getMonth(), toDate.getDate(), 23, 59, 59).toISOString());
+      const { data, error } = await query;
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const sentCount = logs.filter(l => l.status === "sent").length;
+  const failedCount = logs.filter(l => l.status === "failed").length;
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center gap-3">
+        <DateRangePicker from={fromDate} to={toDate} onFromChange={setFromDate} onToChange={setToDate} />
+        <Select value={typeFilter} onValueChange={setTypeFilter}>
+          <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            {["All", "announcement", "event", "followup", "bulk"].map(t => (
+              <SelectItem key={t} value={t}>{t === "All" ? "All Types" : t.charAt(0).toUpperCase() + t.slice(1)}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <div className="flex gap-2 text-xs">
+          <Badge className="bg-chart-3/10 text-chart-3 border-0">{sentCount} sent</Badge>
+          {failedCount > 0 && <Badge className="bg-destructive/10 text-destructive border-0">{failedCount} failed</Badge>}
+        </div>
+        <Button size="sm" variant="outline" onClick={() => downloadCSV(logs, WHATSAPP_CSV_HEADERS, `whatsapp-logs-${format(new Date(), "yyyy-MM-dd")}.csv`)} disabled={logs.length === 0}>
+          <Download className="h-3.5 w-3.5 mr-1.5" /> CSV
+        </Button>
+      </div>
+      <div className="space-y-2">
+        {isLoading ? (
+          <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+        ) : logs.length === 0 ? (
+          <p className="text-center text-muted-foreground py-8">No WhatsApp logs found</p>
+        ) : logs.map(log => (
+          <div key={log.id} className="border rounded-lg p-3 text-sm space-y-1">
+            <div className="flex items-center justify-between">
+              <span className="font-medium truncate">{log.recipient_phone}</span>
+              <div className="flex items-center gap-2">
+                <Badge variant="outline" className="text-xs">{log.sms_type}</Badge>
+                <Badge className={`border-0 text-xs ${
+                  log.delivery_status === "delivered" ? "bg-chart-3/10 text-chart-3" :
+                  ["failed", "undelivered"].includes(log.delivery_status) ? "bg-destructive/10 text-destructive" :
+                  log.status === "sent" ? "bg-primary/10 text-primary" : "bg-destructive/10 text-destructive"
+                }`}>{log.delivery_status || log.status}</Badge>
+              </div>
+            </div>
+            <p className="text-muted-foreground truncate">{log.message}</p>
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-muted-foreground">{format(new Date(log.created_at), "dd MMM yyyy, h:mm a")}</p>
+              {log.delivery_updated_at && <p className="text-xs text-muted-foreground">Updated: {format(new Date(log.delivery_updated_at), "h:mm a")}</p>}
+            </div>
+            {log.error_message && <p className="text-xs text-destructive">{log.error_message}</p>}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 /* ── Audit Logs Tab ── */
 const actionIcons = { role_change: UserCog, member_delete: Trash2, member_create: Plus, member_update: Edit };
 const actionColors = { role_change: "bg-primary/10 text-primary", member_delete: "bg-destructive/10 text-destructive", member_create: "bg-chart-3/10 text-chart-3", member_update: "bg-accent/10 text-accent" };
