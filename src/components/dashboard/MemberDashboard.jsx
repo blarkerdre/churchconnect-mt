@@ -20,6 +20,7 @@ const GROWTH_FIELDS = [
 ];
 
 export default function MemberDashboard({ currentUser, myMember }) {
+  const { data: externalLinks } = useAppSetting("external_links", []);
   const statusColors = {
     Active: "bg-chart-3/10 text-chart-3",
     Inactive: "bg-muted text-muted-foreground",
