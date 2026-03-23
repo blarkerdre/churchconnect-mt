@@ -1,18 +1,25 @@
 
 
-## Add Search Input to Course Registrations
+## Fix: QR Registrations Not Visible — Missing Foreign Key
 
-### Change
+### Problem
+The `course_registrations` table has no foreign key constraint linking `member_id` to `members.id`. Without this FK, the Supabase client query `.select("..., members(first_name, last_name, email, phone, user_id)")` cannot resolve the join. It silently returns `null` for the `members` object, making QR registrations (and potentially all registrations) appear without member details.
 
-**`src/pages/ExamManagement.jsx`** — `CourseRegistrationsView`:
-1. Add a `searchTerm` state
-2. Add an `<Input>` with a search icon next to the source filter dropdown
-3. Apply search filter after source filter — match against `first_name`, `last_name`, `email`, and `phone` (case-insensitive)
-4. CSV export and count badge already use `filteredRegistrations`, so they'll automatically respect the search
+Additionally, `course_id` has no FK to `exam_titles.id`, which should also be added for the same reason.
 
-### Technical details
-- Add `Search` icon import from lucide-react (already used elsewhere in project)
-- Add `Input` import from `@/components/ui/input`
-- Filter chain: `registrations → sourceFilter → searchFilter → filteredRegistrations`
-- Search matches partial strings across name (first + last combined), email, and phone
+### Fix
+
+**Database migration** — Add foreign key constraints:
+```sql
+ALTER TABLE public.course_registrations
+  ADD CONSTRAINT course_registrations_member_id_fkey
+  FOREIGN KEY (member_id) REFERENCES public.members(id) ON DELETE CASCADE;
+
+ALTER TABLE public.course_registrations
+  ADD CONSTRAINT course_registrations_course_id_fkey
+  FOREIGN KEY (course_id) REFERENCES public.exam_titles(id) ON DELETE CASCADE;
+```
+
+### No code changes needed
+The query in `ExamManagement.jsx` is already correct — it just needs the FK to exist for the join to work. Once the FK is added, member details (name, email, phone, user_id) will populate for all registrations including QR/public ones.
 
