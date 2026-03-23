@@ -22,7 +22,7 @@ function shuffleArray(arr) {
   return a;
 }
 
-export default function TakeExamDialog({ open, onOpenChange, trainingType, memberId, subjectId, subjectName }) {
+export default function TakeExamDialog({ open, onOpenChange, trainingType, memberId, subjectId, subjectName, previewMode = false }) {
   const qc = useQueryClient();
   const [answers, setAnswers] = useState({});
   const [submitted, setSubmitted] = useState(false);
