@@ -246,8 +246,11 @@ Deno.serve(async (req) => {
       }
 
       try {
-        // Build the email request — only include run_id if present in payload
-        // (auth emails have it from the webhook; transactional emails omit it)
+        // Build the email request.
+        // run_id is ONLY forwarded for auth_emails (set by the auth-email-hook).
+        // For transactional_emails it must NEVER be included — the API creates
+        // a run inline from the idempotency_key. Stripping it here protects
+        // against stale payloads that may still carry a legacy run_id.
         const emailRequest: Record<string, unknown> = {
             to: payload.to,
             from: payload.from,
@@ -261,7 +264,7 @@ Deno.serve(async (req) => {
             unsubscribe_token: payload.unsubscribe_token,
             message_id: payload.message_id,
         }
-        if (payload.run_id) {
+        if (queue === 'auth_emails' && payload.run_id) {
           emailRequest.run_id = payload.run_id
         }
 
