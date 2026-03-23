@@ -1718,6 +1718,7 @@ export type Database = {
           city: string | null
           coverage_postcodes: string | null
           created_at: string
+          host_member_id: string | null
           host_name: string | null
           id: string
           is_active: boolean | null
@@ -1734,6 +1735,7 @@ export type Database = {
           city?: string | null
           coverage_postcodes?: string | null
           created_at?: string
+          host_member_id?: string | null
           host_name?: string | null
           id?: string
           is_active?: boolean | null
@@ -1750,6 +1752,7 @@ export type Database = {
           city?: string | null
           coverage_postcodes?: string | null
           created_at?: string
+          host_member_id?: string | null
           host_name?: string | null
           id?: string
           is_active?: boolean | null

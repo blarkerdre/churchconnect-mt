@@ -20,7 +20,7 @@ export default function WSFCentresSection() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [membersDialogCentre, setMembersDialogCentre] = useState(null);
-  const [form, setForm] = useState({ name: "", host_name: "", location: "", address: "", postcode: "", city: "Cardiff", coverage_postcodes: "", meeting_day: "", meeting_time: "", is_active: true, leader_id: "" });
+  const [form, setForm] = useState({ name: "", host_name: "", host_member_id: "", location: "", address: "", postcode: "", city: "Cardiff", coverage_postcodes: "", meeting_day: "", meeting_time: "", is_active: true, leader_id: "" });
 
   const { data: centres = [], isLoading } = useQuery({
     queryKey: ["wsf-centres"],
@@ -42,6 +42,17 @@ export default function WSFCentresSection() {
       const { data, error } = await supabase
         .from("members").select("id, first_name, last_name, user_id")
         .in("user_id", userIds).order("first_name");
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const { data: allMembers = [] } = useQuery({
+    queryKey: ["all-members-for-host"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("members").select("id, first_name, last_name")
+        .order("first_name");
       if (error) throw error;
       return data;
     },
@@ -91,21 +102,24 @@ export default function WSFCentresSection() {
 
   const openNew = () => {
     setEditing(null);
-    setForm({ name: "", host_name: "", location: "", address: "", postcode: "", city: "Cardiff", coverage_postcodes: "", meeting_day: "", meeting_time: "", is_active: true, leader_id: "" });
+    setForm({ name: "", host_name: "", host_member_id: "", location: "", address: "", postcode: "", city: "Cardiff", coverage_postcodes: "", meeting_day: "", meeting_time: "", is_active: true, leader_id: "" });
     setDialogOpen(true);
   };
 
   const openEdit = (c) => {
     setEditing(c);
-    setForm({ name: c.name, host_name: c.host_name || "", location: c.location || "", address: c.address || "", postcode: c.postcode || "", city: c.city || "", coverage_postcodes: c.coverage_postcodes || "", meeting_day: c.meeting_day || "", meeting_time: c.meeting_time || "", is_active: c.is_active, leader_id: c.leader_id || "" });
+    setForm({ name: c.name, host_name: c.host_name || "", host_member_id: c.host_member_id || "", location: c.location || "", address: c.address || "", postcode: c.postcode || "", city: c.city || "", coverage_postcodes: c.coverage_postcodes || "", meeting_day: c.meeting_day || "", meeting_time: c.meeting_time || "", is_active: c.is_active, leader_id: c.leader_id || "" });
     setDialogOpen(true);
   };
 
   const handleSave = () => {
     if (!form.name) return toast({ title: "Centre name is required", variant: "destructive" });
+    const selectedHost = allMembers.find(m => m.id === form.host_member_id);
+    const derivedHostName = selectedHost ? `${selectedHost.first_name} ${selectedHost.last_name}` : (form.host_name || null);
     saveMutation.mutate({
       name: form.name,
-      host_name: form.host_name || null,
+      host_name: derivedHostName,
+      host_member_id: form.host_member_id || null,
       location: form.location || null,
       address: form.address || null,
       postcode: form.postcode || null,
@@ -165,7 +179,7 @@ export default function WSFCentresSection() {
                     </div>
                   </div>
                   <div className="text-xs text-muted-foreground space-y-1">
-                    {c.host_name && <div className="flex items-center gap-1.5"><Users className="h-3 w-3" />House Provider: {c.host_name}</div>}
+                    {(c.host_member_id || c.host_name) && <div className="flex items-center gap-1.5"><Users className="h-3 w-3" />House Provider: {c.host_member_id ? (() => { const m = allMembers.find(m => m.id === c.host_member_id); return m ? `${m.first_name} ${m.last_name}` : c.host_name; })() : c.host_name}</div>}
                     {(c.address || c.location) && <div className="flex items-center gap-1.5"><MapPin className="h-3 w-3" />{c.address || c.location}{c.postcode ? `, ${c.postcode}` : ""}</div>}
                     {c.meeting_day && <div className="flex items-center gap-1.5"><Clock className="h-3 w-3" />{c.meeting_day}{c.meeting_time ? ` at ${c.meeting_time}` : ""}</div>}
                     {c.leader_id && <div className="flex items-center gap-1.5"><Users className="h-3 w-3" />Leader: {getLeaderName(c.leader_id)}</div>}
@@ -186,7 +200,13 @@ export default function WSFCentresSection() {
           <DialogHeader><DialogTitle className="font-display">{editing ? "Edit Centre" : "New Centre"}</DialogTitle></DialogHeader>
           <div className="space-y-4 max-h-[70vh] overflow-y-auto">
             <div className="space-y-1.5"><Label>Centre Name *</Label><Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} /></div>
-            <div className="space-y-1.5"><Label>House Provider</Label><Input value={form.host_name} onChange={e => setForm(f => ({ ...f, host_name: e.target.value }))} placeholder="Host's full name" /></div>
+            <div className="space-y-1.5">
+              <Label>House Provider</Label>
+              <Select value={form.host_member_id} onValueChange={v => setForm(f => ({ ...f, host_member_id: v }))}>
+                <SelectTrigger><SelectValue placeholder="Select member" /></SelectTrigger>
+                <SelectContent>{allMembers.map(m => <SelectItem key={m.id} value={m.id}>{m.first_name} {m.last_name}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
             <div className="space-y-1.5"><Label>Address</Label><Input value={form.address} onChange={e => setForm(f => ({ ...f, address: e.target.value }))} placeholder="Street address" /></div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5"><Label>City</Label><Input value={form.city} onChange={e => setForm(f => ({ ...f, city: e.target.value }))} placeholder="Cardiff" /></div>

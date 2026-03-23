@@ -7,17 +7,30 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Loader2 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 const DAYS = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"];
 
 const empty = {
-  name: "", host_name: "", leader_name: "", leader_email: "", address: "", postcode: "", city: "",
+  name: "", host_name: "", host_member_id: "", leader_name: "", leader_email: "", address: "", postcode: "", city: "",
   phone: "", meeting_day: "", meeting_time: "", active: true, notes: ""
 };
 
 export default function WSFCentreFormDialog({ open, onOpenChange, centre, onSave }) {
   const [form, setForm] = useState(empty);
   const [saving, setSaving] = useState(false);
+
+  const { data: allMembers = [] } = useQuery({
+    queryKey: ["all-members-for-host"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("members").select("id, first_name, last_name")
+        .order("first_name");
+      if (error) throw error;
+      return data;
+    },
+  });
 
   useEffect(() => {
     setForm(centre ? { ...empty, ...centre } : empty);
@@ -46,7 +59,10 @@ export default function WSFCentreFormDialog({ open, onOpenChange, centre, onSave
             </div>
             <div className="space-y-1.5 sm:col-span-2">
               <Label>House Provider</Label>
-              <Input value={form.host_name} onChange={e => set("host_name", e.target.value)} placeholder="Host's full name" />
+              <Select value={form.host_member_id} onValueChange={v => set("host_member_id", v)}>
+                <SelectTrigger><SelectValue placeholder="Select member" /></SelectTrigger>
+                <SelectContent>{allMembers.map(m => <SelectItem key={m.id} value={m.id}>{m.first_name} {m.last_name}</SelectItem>)}</SelectContent>
+              </Select>
             </div>
             <div className="space-y-1.5">
               <Label>WSF Leader Name</Label>
