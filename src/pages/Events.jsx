@@ -341,6 +341,9 @@ export default function Events() {
                         {e.event_mode && e.event_mode !== "In Person" && (
                           <Badge variant="outline" className="gap-1 text-xs"><ModeIcon className="h-3 w-3" />{e.event_mode}</Badge>
                         )}
+                        {e.is_recurring && (
+                          <Badge variant="outline" className="gap-1 text-xs text-chart-4 border-chart-4/30"><Repeat className="h-3 w-3" />Recurring</Badge>
+                        )}
                         {audience !== "All Members" && (
                           <Badge variant="outline" className="text-xs">{audience}</Badge>
                         )}
