@@ -25,7 +25,7 @@ export default function WSFCentreFormDialog({ open, onOpenChange, centre, onSave
     queryKey: ["all-members-for-host"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("members").select("id, first_name, last_name")
+        .from("members").select("id, first_name, last_name, address, postcode, city")
         .order("first_name");
       if (error) throw error;
       return data;
