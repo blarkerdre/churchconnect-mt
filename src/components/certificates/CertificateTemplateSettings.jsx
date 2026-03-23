@@ -300,7 +300,7 @@ export default function CertificateTemplateSettings() {
       </CardContent>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto">
+        <DialogContent className="max-w-[95vw] sm:max-w-md max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editing ? "Edit Template" : "Add Certificate Template"}</DialogTitle>
           </DialogHeader>
