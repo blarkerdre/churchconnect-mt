@@ -258,9 +258,9 @@ export default function CertificateTemplateSettings() {
         ) : (
           <div className="space-y-2">
             {templates.map((t) => (
-              <div key={t.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                <div className="flex items-center gap-3">
-                  <div className="flex gap-1">
+              <div key={t.id} className="flex items-center justify-between p-2.5 sm:p-3 bg-muted/50 rounded-lg">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="flex gap-1 shrink-0">
                     {t.background_image_url ? (
                       <Image className="h-4 w-4 text-primary" />
                     ) : (
@@ -270,8 +270,8 @@ export default function CertificateTemplateSettings() {
                       </>
                     )}
                   </div>
-                  <div>
-                    <span className="text-sm font-medium text-foreground">{t.training_type}</span>
+                  <div className="min-w-0">
+                    <span className="text-sm font-medium text-foreground truncate block">{t.training_type}</span>
                     {t.signatory_name && (
                       <p className="text-xs text-muted-foreground">Signed by {t.signatory_name}</p>
                     )}
