@@ -25,6 +25,7 @@ import Auth from "@/pages/Auth";
 import ResetPassword from "@/pages/ResetPassword";
 import MyProfile from "@/pages/MyProfile";
 import PublicRegistration from "@/pages/PublicRegistration";
+import PublicWoFBIRegistration from "@/pages/PublicWoFBIRegistration";
 import Presentation from "@/pages/Presentation";
 
 
