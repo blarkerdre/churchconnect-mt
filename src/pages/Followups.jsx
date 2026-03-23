@@ -210,10 +210,10 @@ export default function Followups() {
 
       {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <Card className="border-0 shadow-sm"><CardContent className="p-4 text-center"><p className="text-2xl font-display font-bold text-foreground">{followups.length}</p><p className="text-xs text-muted-foreground">Total</p></CardContent></Card>
-        <Card className="border-0 shadow-sm"><CardContent className="p-4 text-center"><p className="text-2xl font-display font-bold text-accent">{followups.filter(f => f.status === "Pending").length}</p><p className="text-xs text-muted-foreground">Pending</p></CardContent></Card>
-        <Card className="border-0 shadow-sm"><CardContent className="p-4 text-center"><p className="text-2xl font-display font-bold text-primary">{followups.filter(f => f.status === "In Progress").length}</p><p className="text-xs text-muted-foreground">In Progress</p></CardContent></Card>
-        <Card className="border-0 shadow-sm"><CardContent className="p-4 text-center"><p className="text-2xl font-display font-bold text-chart-3">{followups.filter(f => f.status === "Completed").length}</p><p className="text-xs text-muted-foreground">Completed</p></CardContent></Card>
+        <Card className="border-0 shadow-sm"><CardContent className="p-4 text-center"><p className="text-xl sm:text-2xl font-display font-bold text-foreground">{followups.length}</p><p className="text-xs text-muted-foreground">Total</p></CardContent></Card>
+        <Card className="border-0 shadow-sm"><CardContent className="p-4 text-center"><p className="text-xl sm:text-2xl font-display font-bold text-accent">{followups.filter(f => f.status === "Pending").length}</p><p className="text-xs text-muted-foreground">Pending</p></CardContent></Card>
+        <Card className="border-0 shadow-sm"><CardContent className="p-4 text-center"><p className="text-xl sm:text-2xl font-display font-bold text-primary">{followups.filter(f => f.status === "In Progress").length}</p><p className="text-xs text-muted-foreground">In Progress</p></CardContent></Card>
+        <Card className="border-0 shadow-sm"><CardContent className="p-4 text-center"><p className="text-xl sm:text-2xl font-display font-bold text-chart-3">{followups.filter(f => f.status === "Completed").length}</p><p className="text-xs text-muted-foreground">Completed</p></CardContent></Card>
       </div>
 
       {/* Controls */}
