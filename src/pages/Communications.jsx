@@ -360,7 +360,7 @@ export default function Communications() {
         defaultChannel="whatsapp"
       />
 
-      <SMSHistoryDialog open={waHistoryOpen} onOpenChange={setWaHistoryOpen} defaultFilter="whatsapp" />
+      <SMSHistoryDialog open={waHistoryOpen} onOpenChange={setWaHistoryOpen} channelFilter="whatsapp" />
     </div>
   );
 }
