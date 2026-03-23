@@ -232,6 +232,11 @@ Deno.serve(async (req) => {
       triggerWelcomeEmail(email, firstName, lastName);
     }
 
+    // Fire-and-forget course registration confirmation email for all registrants
+    if (email) {
+      triggerCourseRegistrationEmail(email, firstName, course.name);
+    }
+
     return new Response(JSON.stringify({ success: true, course_name: course.name }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
