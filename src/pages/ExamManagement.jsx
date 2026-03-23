@@ -605,6 +605,7 @@ export default function ExamManagement() {
 function CourseRegistrationsView({ course }) {
   const qc = useQueryClient();
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [sourceFilter, setSourceFilter] = useState("all");
 
   const { data: registrations = [], isLoading } = useQuery({
     queryKey: ["course-registrations", course.id],
@@ -633,9 +634,15 @@ function CourseRegistrationsView({ course }) {
     onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
 
+  const filteredRegistrations = registrations.filter(r => {
+    if (sourceFilter === "member") return !!r.members?.user_id;
+    if (sourceFilter === "public") return !r.members?.user_id;
+    return true;
+  });
+
   const downloadCSV = () => {
     const headers = ["Name", "Email", "Phone", "Source", "Registered At"];
-    const rows = registrations.map(r => [
+    const rows = filteredRegistrations.map(r => [
       `${r.members?.first_name || ""} ${r.members?.last_name || ""}`.trim(),
       r.members?.email || "",
       r.members?.phone || "",
@@ -658,20 +665,32 @@ function CourseRegistrationsView({ course }) {
         <div className="flex items-center justify-between">
           <CardTitle className="text-base font-display flex items-center gap-2">
             <Users className="h-4 w-4 text-primary" /> Registrations — {course.name}
-            <Badge variant="secondary" className="ml-2">{registrations.length}</Badge>
+            <Badge variant="secondary" className="ml-2">{filteredRegistrations.length}</Badge>
           </CardTitle>
-          {registrations.length > 0 && (
-            <Button size="sm" variant="outline" className="gap-1.5" onClick={downloadCSV}>
-              <Download className="h-3.5 w-3.5" /> Download CSV
-            </Button>
-          )}
+          <div className="flex items-center gap-2">
+            <Select value={sourceFilter} onValueChange={setSourceFilter}>
+              <SelectTrigger className="w-[140px] h-8 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Sources</SelectItem>
+                <SelectItem value="member">Member</SelectItem>
+                <SelectItem value="public">QR / Public</SelectItem>
+              </SelectContent>
+            </Select>
+            {filteredRegistrations.length > 0 && (
+              <Button size="sm" variant="outline" className="gap-1.5" onClick={downloadCSV}>
+                <Download className="h-3.5 w-3.5" /> Download CSV
+              </Button>
+            )}
+          </div>
         </div>
       </CardHeader>
       <CardContent>
         {isLoading ? (
           <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
-        ) : registrations.length === 0 ? (
-          <p className="text-sm text-muted-foreground text-center py-8">No members registered for this course yet.</p>
+        ) : filteredRegistrations.length === 0 ? (
+          <p className="text-sm text-muted-foreground text-center py-8">{registrations.length > 0 ? "No registrations match the selected filter." : "No members registered for this course yet."}</p>
         ) : (
           <div className="overflow-x-auto">
             <Table>
@@ -686,7 +705,7 @@ function CourseRegistrationsView({ course }) {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {registrations.map(r => (
+                {filteredRegistrations.map(r => (
                   <TableRow key={r.id}>
                     <TableCell className="font-medium">{r.members?.first_name} {r.members?.last_name}</TableCell>
                     <TableCell className="text-sm text-muted-foreground">{r.members?.email || "—"}</TableCell>
