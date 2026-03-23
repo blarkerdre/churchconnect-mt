@@ -283,7 +283,9 @@ export default function ExamManagement() {
                   <Badge variant="outline" className={`text-[9px] h-4 ${selectedCourse?.id === t.id ? "border-primary-foreground/30 text-primary-foreground" : ""}`}>
                     {t.pass_mark_percentage}%
                   </Badge>
-                  {!t.is_active && <Badge variant="secondary" className="text-[9px] h-4">Inactive</Badge>}
+                   {!t.is_active && <Badge variant="secondary" className="text-[9px] h-4">Inactive</Badge>}
+                   {t.registration_open && <Badge variant="outline" className="text-[9px] h-4 border-chart-3/40 text-chart-3">Reg Open</Badge>}
+                   {t.exams_open && <Badge variant="outline" className="text-[9px] h-4 border-primary/40 text-primary">Exams Open</Badge>}
                   <button className="opacity-0 group-hover:opacity-100 transition-opacity ml-1" onClick={(e) => {
                     e.stopPropagation();
                     setEditingTitle(t);
