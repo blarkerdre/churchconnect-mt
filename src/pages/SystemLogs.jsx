@@ -489,17 +489,19 @@ export default function SystemLogs() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-display font-bold text-foreground">System Logs</h1>
-        <p className="text-sm text-muted-foreground">Monitor emails, SMS, and admin activity</p>
+        <p className="text-sm text-muted-foreground">Monitor emails, SMS, WhatsApp, and admin activity</p>
       </div>
 
       <Tabs defaultValue="email" className="space-y-4">
         <TabsList className="w-full sm:w-auto overflow-x-auto">
           <TabsTrigger value="email" className="gap-1.5"><Mail className="h-3.5 w-3.5" /> Email</TabsTrigger>
           <TabsTrigger value="sms" className="gap-1.5"><MessageSquare className="h-3.5 w-3.5" /> SMS</TabsTrigger>
+          <TabsTrigger value="whatsapp" className="gap-1.5"><WhatsAppIcon className="h-3.5 w-3.5" /> WhatsApp</TabsTrigger>
           {isSuperAdmin && <TabsTrigger value="audit" className="gap-1.5"><Shield className="h-3.5 w-3.5" /> Audit</TabsTrigger>}
         </TabsList>
         <TabsContent value="email"><EmailLogsPanel /></TabsContent>
         <TabsContent value="sms"><SMSLogsPanel /></TabsContent>
+        <TabsContent value="whatsapp"><WhatsAppLogsPanel /></TabsContent>
         {isSuperAdmin && <TabsContent value="audit"><AuditLogsPanel /></TabsContent>}
       </Tabs>
     </div>
