@@ -329,6 +329,13 @@ export type Database = {
             referencedRelation: "exam_titles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "course_registrations_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
         ]
       }
       documents: {
