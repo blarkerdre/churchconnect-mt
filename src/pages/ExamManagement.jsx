@@ -651,6 +651,27 @@ function WofbiAboutEditor() {
   );
 }
 
+function WofbiAboutDisplay() {
+  const { data: aboutText = WOFBI_DEFAULT_ABOUT } = useQuery({
+    queryKey: ["app-settings", "wofbi_about"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("app_settings").select("value").eq("key", "wofbi_about").maybeSingle();
+      if (error) throw error;
+      return typeof data?.value === "string" ? data.value : WOFBI_DEFAULT_ABOUT;
+    },
+  });
+
+  if (!aboutText) return null;
+
+  return (
+    <Card className="border-0 shadow-sm bg-primary/5">
+      <CardContent className="p-4">
+        <p className="text-sm text-foreground leading-relaxed">{aboutText}</p>
+      </CardContent>
+    </Card>
+  );
+}
+
 function MemberExamsView({ memberId, courses, loading }) {
   const qc = useQueryClient();
   const [examSelection, setExamSelection] = useState(null);
