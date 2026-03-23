@@ -349,6 +349,18 @@ export default function Communications() {
       />
 
       <SMSHistoryDialog open={historyOpen} onOpenChange={setHistoryOpen} />
+
+      <SMSDialog
+        open={waOpen} onOpenChange={setWaOpen}
+        prefillMessage=""
+        prefillAudience=""
+        smsType="bulk"
+        referenceId={null}
+        title="Send Bulk WhatsApp"
+        defaultChannel="whatsapp"
+      />
+
+      <SMSHistoryDialog open={waHistoryOpen} onOpenChange={setWaHistoryOpen} defaultFilter="whatsapp" />
     </div>
   );
 }
