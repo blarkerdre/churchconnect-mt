@@ -161,7 +161,7 @@ export default function WSFCentresSection() {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {centres.map(c => (
-                <div key={c.id} className="p-4 bg-muted/50 rounded-lg space-y-2">
+                <div key={c.id} className="p-3 sm:p-4 bg-muted/50 rounded-lg space-y-2">
                   <div className="flex items-start justify-between">
                     <div>
                       <p className="text-sm font-semibold text-foreground">{c.name}</p>
