@@ -47,6 +47,17 @@ export default function WSFCentresSection() {
     },
   });
 
+  const { data: allMembers = [] } = useQuery({
+    queryKey: ["all-members-for-host"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("members").select("id, first_name, last_name")
+        .order("first_name");
+      if (error) throw error;
+      return data;
+    },
+  });
+
   const { data: memberCounts = {} } = useQuery({
     queryKey: ["wsf-member-counts"],
     queryFn: async () => {
