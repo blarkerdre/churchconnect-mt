@@ -243,7 +243,7 @@ export default function ExamManagement() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-xl font-display font-bold text-foreground flex items-center gap-2">
-            <BookOpen className="h-5 w-5 text-primary" /> Exam Management
+            <BookOpen className="h-5 w-5 text-primary" /> WoFBI Management
           </h1>
           <p className="text-sm text-muted-foreground mt-1">Manage certificate courses, subjects, and exam questions</p>
         </div>
