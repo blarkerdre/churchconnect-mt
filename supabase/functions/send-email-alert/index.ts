@@ -10,6 +10,37 @@ function escHtml(s: string): string {
     .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
+function normalizeEmail(email: string) {
+  return email.trim().toLowerCase();
+}
+
+async function getOrCreateUnsubscribeToken(
+  supabase: ReturnType<typeof createClient>,
+  email: string,
+) {
+  const normalizedEmail = normalizeEmail(email);
+
+  const { data: existingToken, error: tokenLookupError } = await supabase
+    .from('email_unsubscribe_tokens')
+    .select('token')
+    .eq('email', normalizedEmail)
+    .is('used_at', null)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (tokenLookupError) throw tokenLookupError;
+  if (existingToken?.token) return existingToken.token;
+
+  const token = crypto.randomUUID();
+  const { error: tokenInsertError } = await supabase
+    .from('email_unsubscribe_tokens')
+    .insert({ email: normalizedEmail, token });
+
+  if (tokenInsertError) throw tokenInsertError;
+  return token;
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
