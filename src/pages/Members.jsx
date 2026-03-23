@@ -237,8 +237,8 @@ export default function Members() {
                         ) : <span className="text-xs text-muted-foreground">—</span>}
                       </td>
                     )}
-                    <td className="p-4">
-                      <Badge className={`${statusColors[m.membership_status] || "bg-muted text-muted-foreground"} border-0`}>
+                    <td className="p-3 sm:p-4">
+                      <Badge className={`${statusColors[m.membership_status] || "bg-muted text-muted-foreground"} border-0 text-xs whitespace-nowrap`}>
                         {m.membership_status}
                       </Badge>
                     </td>
