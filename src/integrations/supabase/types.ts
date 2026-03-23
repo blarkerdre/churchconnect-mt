@@ -780,7 +780,10 @@ export type Database = {
           id: string
           is_active: boolean
           name: string
+          pass_mark_percentage: number
+          randomize_questions: boolean
           sort_order: number
+          time_limit_minutes: number | null
         }
         Insert: {
           course_id: string
@@ -789,7 +792,10 @@ export type Database = {
           id?: string
           is_active?: boolean
           name: string
+          pass_mark_percentage?: number
+          randomize_questions?: boolean
           sort_order?: number
+          time_limit_minutes?: number | null
         }
         Update: {
           course_id?: string
@@ -798,7 +804,10 @@ export type Database = {
           id?: string
           is_active?: boolean
           name?: string
+          pass_mark_percentage?: number
+          randomize_questions?: boolean
           sort_order?: number
+          time_limit_minutes?: number | null
         }
         Relationships: [
           {
