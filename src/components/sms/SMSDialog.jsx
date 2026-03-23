@@ -27,7 +27,7 @@ export default function SMSDialog({
   smsType = "bulk",
   referenceId = null,
   directRecipients = null,
-  title = "Send SMS",
+  title = "Send Message",
 }) {
   const { isAdmin, leaderUnits } = useAuth();
   const { toast } = useToast();
@@ -35,12 +35,14 @@ export default function SMSDialog({
   const [audience, setAudience] = useState(prefillAudience || "All Members");
   const [sending, setSending] = useState(false);
   const [result, setResult] = useState(null);
+  const [channel, setChannel] = useState("sms");
 
   React.useEffect(() => {
     if (open) {
       setMessage(prefillMessage);
       setAudience(prefillAudience || "All Members");
       setResult(null);
+      setChannel("sms");
     }
   }, [open, prefillMessage, prefillAudience]);
 
@@ -117,16 +119,17 @@ export default function SMSDialog({
             message: message.trim(),
             sms_type: smsType,
             reference_id: referenceId,
+            channel,
           }),
         }
       );
 
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to send SMS");
+      if (!res.ok) throw new Error(data.error || "Failed to send message");
 
       setResult(data);
       toast({
-        title: "SMS Sent",
+        title: `${channel === "whatsapp" ? "WhatsApp" : "SMS"} Sent`,
         description: `${data.sent} sent, ${data.failed} failed out of ${data.total}`,
       });
     } catch (err) {
@@ -135,6 +138,8 @@ export default function SMSDialog({
       setSending(false);
     }
   };
+
+  const channelLabel = channel === "whatsapp" ? "WhatsApp" : "SMS";
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -166,6 +171,35 @@ export default function SMSDialog({
           </div>
         ) : (
           <div className="space-y-4 mt-2">
+            {/* Channel toggle */}
+            <div>
+              <label className="text-sm font-medium mb-1.5 block">Channel</label>
+              <div className="flex rounded-lg border border-border overflow-hidden">
+                <button
+                  type="button"
+                  onClick={() => setChannel("sms")}
+                  className={`flex-1 py-2 text-sm font-medium transition-colors ${
+                    channel === "sms"
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-background text-muted-foreground hover:bg-muted"
+                  }`}
+                >
+                  📱 SMS
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setChannel("whatsapp")}
+                  className={`flex-1 py-2 text-sm font-medium transition-colors ${
+                    channel === "whatsapp"
+                      ? "bg-[#25D366] text-white"
+                      : "bg-background text-muted-foreground hover:bg-muted"
+                  }`}
+                >
+                  💬 WhatsApp
+                </button>
+              </div>
+            </div>
+
             {!directRecipients && (
               <div>
                 <label className="text-sm font-medium">Audience</label>
@@ -185,16 +219,18 @@ export default function SMSDialog({
                 <label className="text-sm font-medium">Message</label>
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
                   <span>{message.length} chars</span>
-                  <Badge variant="outline" className="text-xs">
-                    {segments} segment{segments !== 1 ? "s" : ""}
-                  </Badge>
+                  {channel === "sms" && (
+                    <Badge variant="outline" className="text-xs">
+                      {segments} segment{segments !== 1 ? "s" : ""}
+                    </Badge>
+                  )}
                 </div>
               </div>
               <Textarea
                 value={message}
                 onChange={e => setMessage(e.target.value)}
                 rows={4}
-                placeholder="Type your SMS message..."
+                placeholder={`Type your ${channelLabel} message...`}
                 maxLength={1600}
               />
             </div>
@@ -211,14 +247,14 @@ export default function SMSDialog({
             <Button
               onClick={handleSend}
               disabled={sending || validCount === 0 || !message.trim()}
-              className="w-full bg-primary"
+              className={`w-full ${channel === "whatsapp" ? "bg-[#25D366] hover:bg-[#1da851]" : "bg-primary"}`}
             >
               {sending ? (
                 <Loader2 className="h-4 w-4 animate-spin mr-2" />
               ) : (
                 <Send className="h-4 w-4 mr-2" />
               )}
-              Send to {validCount} recipient{validCount !== 1 ? "s" : ""}
+              Send {channelLabel} to {validCount} recipient{validCount !== 1 ? "s" : ""}
             </Button>
           </div>
         )}
