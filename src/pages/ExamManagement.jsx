@@ -636,8 +636,13 @@ function CourseRegistrationsView({ course }) {
   });
 
   const filteredRegistrations = registrations.filter(r => {
-    if (sourceFilter === "member") return !!r.members?.user_id;
-    if (sourceFilter === "public") return !r.members?.user_id;
+    if (sourceFilter === "member" && !r.members?.user_id) return false;
+    if (sourceFilter === "public" && r.members?.user_id) return false;
+    if (searchTerm) {
+      const s = searchTerm.toLowerCase();
+      const name = `${r.members?.first_name || ""} ${r.members?.last_name || ""}`.toLowerCase();
+      if (!name.includes(s) && !(r.members?.email || "").toLowerCase().includes(s) && !(r.members?.phone || "").includes(s)) return false;
+    }
     return true;
   });
 
