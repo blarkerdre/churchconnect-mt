@@ -23,7 +23,7 @@ export default function Attendance() {
   const [form, setForm] = useState({ title: "", session_type: "Sunday Service", session_date: "", notes: "", unit: "" });
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
-  const [demoForm, setDemoForm] = useState({ male_count: 0, female_count: 0 });
+  const [demoForm, setDemoForm] = useState({ male_count: 0, female_count: 0, meeting_notes: "" });
 
   const { data: sessions = [], isLoading } = useQuery({
     queryKey: ["attendance-sessions"],
