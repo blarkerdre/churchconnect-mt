@@ -126,34 +126,46 @@ export type Database = {
         Row: {
           created_at: string
           created_by: string | null
+          female_count: number
           id: string
+          male_count: number
           notes: string | null
           session_date: string
           session_type: Database["public"]["Enums"]["session_type"]
           status: string
           title: string | null
+          total_count: number
+          unit: string | null
           updated_at: string
         }
         Insert: {
           created_at?: string
           created_by?: string | null
+          female_count?: number
           id?: string
+          male_count?: number
           notes?: string | null
           session_date: string
           session_type: Database["public"]["Enums"]["session_type"]
           status?: string
           title?: string | null
+          total_count?: number
+          unit?: string | null
           updated_at?: string
         }
         Update: {
           created_at?: string
           created_by?: string | null
+          female_count?: number
           id?: string
+          male_count?: number
           notes?: string | null
           session_date?: string
           session_type?: Database["public"]["Enums"]["session_type"]
           status?: string
           title?: string | null
+          total_count?: number
+          unit?: string | null
           updated_at?: string
         }
         Relationships: []
