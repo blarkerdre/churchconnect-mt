@@ -102,7 +102,7 @@ export default function WSFCentresSection() {
 
   const openNew = () => {
     setEditing(null);
-    setForm({ name: "", host_name: "", location: "", address: "", postcode: "", city: "Cardiff", coverage_postcodes: "", meeting_day: "", meeting_time: "", is_active: true, leader_id: "" });
+    setForm({ name: "", host_name: "", host_member_id: "", location: "", address: "", postcode: "", city: "Cardiff", coverage_postcodes: "", meeting_day: "", meeting_time: "", is_active: true, leader_id: "" });
     setDialogOpen(true);
   };
 
