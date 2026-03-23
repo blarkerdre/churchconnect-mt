@@ -459,6 +459,9 @@ export default function Settings() {
           {isSuperAdmin && (
             <TabsTrigger value="features" className="gap-1.5 text-xs"><ToggleLeft className="h-3.5 w-3.5" /><span className="hidden sm:inline"> Features</span></TabsTrigger>
           )}
+          {isSuperAdmin && (
+            <TabsTrigger value="danger" className="gap-1.5 text-xs text-destructive"><ShieldAlert className="h-3.5 w-3.5" /><span className="hidden sm:inline"> Danger</span></TabsTrigger>
+          )}
         </TabsList>
 
         <TabsContent value="notifications">
