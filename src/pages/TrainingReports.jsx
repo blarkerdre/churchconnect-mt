@@ -13,9 +13,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "@/components/ui/use-toast";
 import { format, parseISO } from "date-fns";
-import { Loader2, Plus, Droplets, Flame, BookOpen, Users, TrendingUp, Paperclip } from "lucide-react";
+import { Loader2, Plus, Droplets, Flame, BookOpen, Users, TrendingUp, Paperclip, Download, Printer } from "lucide-react";
 import { useAppSetting } from "@/hooks/useAppSetting";
 import ReportAttachments from "@/components/reports/ReportAttachments";
+import PrintReportButton from "@/components/PrintReportButton";
 
 const ICON_MAP = {
   "Water Baptism": { icon: Droplets, color: "text-blue-500" },
@@ -52,18 +53,22 @@ export default function TrainingReports() {
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState(emptyForm);
   const [filterType, setFilterType] = useState("all");
+  const [filterFrom, setFilterFrom] = useState("");
+  const [filterTo, setFilterTo] = useState("");
   const [expandedRow, setExpandedRow] = useState(null);
   const { user } = useAuth();
   const qc = useQueryClient();
 
   const { data: reports = [], isLoading } = useQuery({
-    queryKey: ["training-reports", filterType],
+    queryKey: ["training-reports", filterType, filterFrom, filterTo],
     queryFn: async () => {
       let q = supabase
         .from("training_reports")
         .select("*")
         .order("session_date", { ascending: false });
       if (filterType !== "all") q = q.eq("training_type", filterType);
+      if (filterFrom) q = q.gte("session_date", filterFrom);
+      if (filterTo) q = q.lte("session_date", filterTo);
       const { data, error } = await q;
       if (error) throw error;
       return data;
@@ -114,6 +119,44 @@ export default function TrainingReports() {
   const totalHGBaptism = reports.reduce((s, r) => s + r.holy_ghost_baptism, 0);
   const totalWBaptism = reports.reduce((s, r) => s + r.water_baptism, 0);
 
+  const handleDownloadCSV = () => {
+    const headers = ["Date", "Type", "Title", "Total", "Male", "Female", "HG Baptism", "Water Baptism", "Notes"];
+    const rows = reports.map(r => [
+      r.session_date,
+      r.training_type,
+      r.title || "",
+      r.total_attendance,
+      r.male,
+      r.female,
+      r.holy_ghost_baptism,
+      r.water_baptism,
+      (r.notes || "").replace(/"/g, '""'),
+    ]);
+    const csv = [headers.join(","), ...rows.map(r => r.map(c => `"${c}"`).join(","))].join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `bfc-training-report-${format(new Date(), "yyyy-MM-dd")}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const buildPrintRows = () => ({
+    title: "BFC & Training Report",
+    headers: ["Date", "Type", "Title", "Total", "Male", "Female", "HG Baptism", "Water Baptism"],
+    rows: reports.map(r => [
+      format(parseISO(r.session_date), "dd MMM yyyy"),
+      r.training_type,
+      r.title || "",
+      r.total_attendance,
+      r.male,
+      r.female,
+      r.holy_ghost_baptism,
+      r.water_baptism,
+    ]),
+  });
+
   if (isLoading) {
     return <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>;
   }
@@ -124,9 +167,9 @@ export default function TrainingReports() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-xl font-display font-bold text-foreground flex items-center gap-2">
-            <TrendingUp className="h-5 w-5 text-primary" /> BFC Report
+            <TrendingUp className="h-5 w-5 text-primary" /> BFC & Training Report
           </h1>
-          <p className="text-sm text-muted-foreground mt-1">Record attendance and outcomes for BFC sessions</p>
+          <p className="text-sm text-muted-foreground mt-1">Record attendance and outcomes for BFC and training sessions</p>
         </div>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
@@ -218,15 +261,23 @@ export default function TrainingReports() {
         <CardHeader className="pb-3">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <CardTitle className="text-base font-display">Session Records</CardTitle>
-            <Select value={filterType} onValueChange={setFilterType}>
-              <SelectTrigger className="w-48"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Types</SelectItem>
-                {TRAINING_TYPES.map((t) => (
-                  <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="flex flex-wrap items-center gap-2">
+              <Input type="date" value={filterFrom} onChange={(e) => setFilterFrom(e.target.value)} className="w-36 text-xs" placeholder="From" />
+              <Input type="date" value={filterTo} onChange={(e) => setFilterTo(e.target.value)} className="w-36 text-xs" placeholder="To" />
+              <Select value={filterType} onValueChange={setFilterType}>
+                <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Types</SelectItem>
+                  {TRAINING_TYPES.map((t) => (
+                    <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button variant="outline" size="sm" onClick={handleDownloadCSV} disabled={reports.length === 0} className="gap-1.5">
+                <Download className="h-3.5 w-3.5" /> CSV
+              </Button>
+              <PrintReportButton buildRows={buildPrintRows} label="Print" />
+            </div>
           </div>
         </CardHeader>
         <CardContent>

@@ -313,7 +313,7 @@ const SLIDES = [
             { icon: TrendingUp, title: "Attendance Trends", desc: "Visualise attendance patterns across services with interactive charts and date-range filters." },
             { icon: Bell, title: "Absence Alerts", desc: "Automatically identify members who've missed multiple consecutive services for timely follow-up." },
             { icon: Users, title: "Member Consistency", desc: "Score and rank members by attendance consistency to identify engagement levels." },
-            { icon: FileText, title: "BFC Report", desc: "Track BFC, BCC, LCC training sessions with attendance breakdowns by gender and milestones." },
+            { icon: FileText, title: "BFC & Training Report", desc: "Track BFC, BCC, LCC training sessions with attendance breakdowns by gender and milestones." },
           ].map(({ icon: Icon, title, desc }) => (
             <div key={title} className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/10">
               <Icon className="h-8 w-8 text-[hsl(42,68%,54%)] mb-3" />

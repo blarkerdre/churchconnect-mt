@@ -351,7 +351,7 @@ const TOGGLEABLE_FEATURES = [
   { path: "/communications", name: "Communications" },
   { path: "/transportation", name: "Transportation" },
   { path: "/analytics", name: "Analytics" },
-  { path: "/training-reports", name: "BFC Report" },
+  { path: "/training-reports", name: "BFC & Training Report" },
   { path: "/church-attendance", name: "Church Attendance" },
   { path: "/exam-management", name: "WoFBI" },
   { path: "/wsf", name: "WSF Centres" },
@@ -495,7 +495,7 @@ export default function Settings() {
             settingsKey="training_types"
             title="Training Programme Types"
             icon={TrendingUp}
-            description="Church growth programme types for BFC reports"
+            description="Church growth programme types for BFC & training reports"
           />
         </TabsContent>
 
