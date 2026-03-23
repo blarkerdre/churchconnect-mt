@@ -27,7 +27,7 @@ const allNavItems = [
   { name: "Communications", icon: Megaphone, path: "/communications", access: null },
   { name: "Transportation", icon: Car, path: "/transportation", access: null },
   { name: "Analytics", icon: BarChart2, path: "/analytics", access: "admin" },
-  { name: "Training Reports", icon: TrendingUp, path: "/training-reports", access: "training" },
+  { name: "BFC Report", icon: TrendingUp, path: "/training-reports", access: "training" },
   { name: "Church Attendance", icon: ClipboardList, path: "/church-attendance", access: "training" },
   { name: "WoFBI", icon: BookOpen, path: "/exam-management", access: null },
   { name: "WSF Centres", icon: Globe, path: "/wsf", access: "wsf" },
