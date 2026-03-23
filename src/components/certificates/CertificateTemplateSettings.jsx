@@ -407,7 +407,7 @@ export default function CertificateTemplateSettings() {
 
             {/* Color controls - only when no background image */}
             {!form.background_image_url && (
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <Label>Background Color</Label>
                   <div className="flex items-center gap-2">
