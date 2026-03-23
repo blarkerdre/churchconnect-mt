@@ -446,6 +446,23 @@ export default function CertificateTemplateSettings() {
           </div>
         </DialogContent>
       </Dialog>
+      {/* Preview Dialog */}
+      <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Certificate Preview</DialogTitle>
+          </DialogHeader>
+          <div className="mt-2 rounded-lg overflow-hidden border bg-muted/30">
+            <div
+              dangerouslySetInnerHTML={{ __html: generatePreviewSvg() }}
+              className="w-full [&>svg]:w-full [&>svg]:h-auto"
+            />
+          </div>
+          <p className="text-xs text-muted-foreground text-center">
+            Preview uses sample data. Actual certificates will show real member details.
+          </p>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }
