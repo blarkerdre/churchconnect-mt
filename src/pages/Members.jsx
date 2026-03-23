@@ -182,10 +182,10 @@ export default function Members() {
       {/* Stats row - admins and leaders */}
       {(isAdmin || viewOnly) && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <Card className="border-0 shadow-sm"><CardContent className="p-4 text-center"><p className="text-2xl font-display font-bold text-foreground">{members.length}</p><p className="text-xs text-muted-foreground">Total</p></CardContent></Card>
-          <Card className="border-0 shadow-sm"><CardContent className="p-4 text-center"><p className="text-2xl font-display font-bold text-chart-3">{members.filter(m => m.membership_status === "Active").length}</p><p className="text-xs text-muted-foreground">Active</p></CardContent></Card>
-          <Card className="border-0 shadow-sm"><CardContent className="p-4 text-center"><p className="text-2xl font-display font-bold text-accent">{members.filter(m => m.membership_status === "New Convert").length}</p><p className="text-xs text-muted-foreground">New Converts</p></CardContent></Card>
-          <Card className="border-0 shadow-sm"><CardContent className="p-4 text-center"><p className="text-2xl font-display font-bold text-chart-4">{members.filter(m => m.membership_status === "First Timer").length}</p><p className="text-xs text-muted-foreground">First Timers</p></CardContent></Card>
+          <Card className="border-0 shadow-sm"><CardContent className="p-4 text-center"><p className="text-xl sm:text-2xl font-display font-bold text-foreground">{members.length}</p><p className="text-xs text-muted-foreground">Total</p></CardContent></Card>
+          <Card className="border-0 shadow-sm"><CardContent className="p-4 text-center"><p className="text-xl sm:text-2xl font-display font-bold text-chart-3">{members.filter(m => m.membership_status === "Active").length}</p><p className="text-xs text-muted-foreground">Active</p></CardContent></Card>
+          <Card className="border-0 shadow-sm"><CardContent className="p-4 text-center"><p className="text-xl sm:text-2xl font-display font-bold text-accent">{members.filter(m => m.membership_status === "New Convert").length}</p><p className="text-xs text-muted-foreground">New Converts</p></CardContent></Card>
+          <Card className="border-0 shadow-sm"><CardContent className="p-4 text-center"><p className="text-xl sm:text-2xl font-display font-bold text-chart-4">{members.filter(m => m.membership_status === "First Timer").length}</p><p className="text-xs text-muted-foreground">First Timers</p></CardContent></Card>
         </div>
       )}
 
