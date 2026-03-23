@@ -583,6 +583,7 @@ export type Database = {
           id: string
           member_id: string
           passed: boolean | null
+          retake_allowed: boolean
           score: number | null
           session_id: string | null
           started_at: string
@@ -597,6 +598,7 @@ export type Database = {
           id?: string
           member_id: string
           passed?: boolean | null
+          retake_allowed?: boolean
           score?: number | null
           session_id?: string | null
           started_at?: string
@@ -611,6 +613,7 @@ export type Database = {
           id?: string
           member_id?: string
           passed?: boolean | null
+          retake_allowed?: boolean
           score?: number | null
           session_id?: string | null
           started_at?: string

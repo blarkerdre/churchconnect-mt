@@ -3,10 +3,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Trophy, Download } from "lucide-react";
+import { Loader2, Trophy, Download, RotateCcw } from "lucide-react";
 import PrintReportButton from "@/components/PrintReportButton";
+import { toast } from "@/components/ui/use-toast";
 
 function downloadCSV(filename, headers, rows) {
   const escape = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
@@ -21,6 +22,8 @@ function downloadCSV(filename, headers, rows) {
 }
 
 export default function CourseResultsView({ course }) {
+  const qc = useQueryClient();
+
   const { data: subjects = [] } = useQuery({
     queryKey: ["exam-subjects", course.id],
     queryFn: async () => {
@@ -51,6 +54,26 @@ export default function CourseResultsView({ course }) {
       return data;
     },
     enabled: subjectIds.length > 0,
+  });
+
+  const allowRetakeMutation = useMutation({
+    mutationFn: async ({ memberId, subjectId }) => {
+      // Find the latest failed attempt for this member+subject
+      const memberAttempts = attempts
+        .filter(a => a.member_id === memberId && a.subject_id === subjectId && a.passed === false)
+        .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+      if (memberAttempts.length === 0) throw new Error("No failed attempt found");
+      const { error } = await supabase
+        .from("exam_attempts")
+        .update({ retake_allowed: true })
+        .eq("id", memberAttempts[0].id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["course-attempts"] });
+      toast({ title: "Retake allowed for this member" });
+    },
+    onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
 
   // Group by member
@@ -226,13 +249,40 @@ export default function CourseResultsView({ course }) {
                       <TableCell className="text-center text-sm font-semibold">{m.totalScore}/{m.totalPoints}</TableCell>
                       <TableCell className="text-center text-sm">{Math.round(m.percentage)}%</TableCell>
                       <TableCell className="text-center">
-                        {m.subjectsTaken < subjects.length ? (
-                          <Badge variant="outline" className="text-[10px]">{m.subjectsTaken}/{subjects.length}</Badge>
-                        ) : (
-                          <Badge variant={m.passed ? "default" : "destructive"} className="text-[10px]">
-                            {m.passed ? "Passed" : "Failed"}
-                          </Badge>
-                        )}
+                        <div className="flex items-center justify-center gap-1">
+                          {m.subjectsTaken < subjects.length ? (
+                            <Badge variant="outline" className="text-[10px]">{m.subjectsTaken}/{subjects.length}</Badge>
+                          ) : (
+                            <Badge variant={m.passed ? "default" : "destructive"} className="text-[10px]">
+                              {m.passed ? "Passed" : "Failed"}
+                            </Badge>
+                          )}
+                          {/* Show Allow Retake for each failed subject */}
+                          {subjects.map(s => {
+                            const sub = m.subjects[s.id];
+                            if (!sub) return null;
+                            const subPct = sub.total_points > 0 ? (sub.score / sub.total_points) * 100 : 0;
+                            const subPassMark = s.pass_mark_percentage ?? 50;
+                            if (subPct >= subPassMark) return null;
+                            // Check if retake already allowed
+                            const hasRetake = attempts.some(a => a.member_id === m.id && a.subject_id === s.id && a.retake_allowed === true);
+                            if (hasRetake) return (
+                              <Badge key={s.id} variant="outline" className="text-[9px] border-accent text-accent-foreground">↻ {s.name}</Badge>
+                            );
+                            return (
+                              <Button
+                                key={s.id}
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 text-[10px] px-1.5 gap-0.5"
+                                onClick={() => allowRetakeMutation.mutate({ memberId: m.id, subjectId: s.id })}
+                                disabled={allowRetakeMutation.isPending}
+                              >
+                                <RotateCcw className="h-3 w-3" /> Retake {s.name}
+                              </Button>
+                            );
+                          })}
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
