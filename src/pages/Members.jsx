@@ -209,9 +209,9 @@ export default function Members() {
               <tbody>
                 {filtered.map((m) => (
                   <tr key={m.id} className="border-b border-border hover:bg-muted/30 transition-colors">
-                    <td className="p-4">
-                      <div className="flex items-center gap-3">
-                        <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm shrink-0">
+                    <td className="p-3 sm:p-4">
+                      <div className="flex items-center gap-2 sm:gap-3">
+                        <div className="h-8 w-8 sm:h-9 sm:w-9 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs sm:text-sm shrink-0">
                           {m.first_name[0]}{m.last_name[0]}
                         </div>
                         <div>
