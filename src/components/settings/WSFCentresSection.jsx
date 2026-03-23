@@ -141,14 +141,14 @@ export default function WSFCentresSection() {
     <>
       <Card className="border-0 shadow-sm">
         <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <div>
               <CardTitle className="text-base font-display flex items-center gap-2">
                 <Globe className="h-4 w-4 text-accent" /> WSF Centres
               </CardTitle>
               <p className="text-xs text-muted-foreground mt-1">Manage Winners Satellite Fellowship centres</p>
             </div>
-            <Button size="sm" onClick={openNew} className="gap-1.5">
+            <Button size="sm" onClick={openNew} className="gap-1.5 w-full sm:w-auto">
               <Plus className="h-4 w-4" /> Add Centre
             </Button>
           </div>
@@ -161,7 +161,7 @@ export default function WSFCentresSection() {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {centres.map(c => (
-                <div key={c.id} className="p-4 bg-muted/50 rounded-lg space-y-2">
+                <div key={c.id} className="p-3 sm:p-4 bg-muted/50 rounded-lg space-y-2">
                   <div className="flex items-start justify-between">
                     <div>
                       <p className="text-sm font-semibold text-foreground">{c.name}</p>
@@ -196,7 +196,7 @@ export default function WSFCentresSection() {
       </Card>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-[95vw] sm:max-w-md">
           <DialogHeader><DialogTitle className="font-display">{editing ? "Edit Centre" : "New Centre"}</DialogTitle></DialogHeader>
           <div className="space-y-4 max-h-[70vh] overflow-y-auto">
             <div className="space-y-1.5"><Label>Centre Name *</Label><Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} /></div>

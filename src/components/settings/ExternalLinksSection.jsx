@@ -84,14 +84,14 @@ export default function ExternalLinksSection() {
   return (
     <Card className="border-0 shadow-sm">
       <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div>
             <CardTitle className="text-base font-display flex items-center gap-2">
               <Link2 className="h-4 w-4 text-accent" /> External Links
             </CardTitle>
             <p className="text-xs text-muted-foreground mt-1">Links displayed on member dashboard and sidebar for quick access to external apps</p>
           </div>
-          <Button size="sm" onClick={openCreate} className="gap-1.5">
+          <Button size="sm" onClick={openCreate} className="gap-1.5 w-full sm:w-auto">
             <Plus className="h-4 w-4" /> Add Link
           </Button>
         </div>
@@ -106,7 +106,7 @@ export default function ExternalLinksSection() {
             {links.map((link, idx) => {
               const IconComp = getIconComponent(link.icon);
               return (
-                <div key={idx} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                <div key={idx} className="flex items-center justify-between p-2.5 sm:p-3 bg-muted/50 rounded-lg">
                   <div className="flex items-center gap-3 min-w-0">
                     <IconComp className="h-4 w-4 text-primary shrink-0" />
                     <div className="min-w-0">
@@ -136,7 +136,7 @@ export default function ExternalLinksSection() {
       </CardContent>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-sm">
+        <DialogContent className="max-w-[95vw] sm:max-w-sm">
           <DialogHeader>
             <DialogTitle>{editingIdx !== null ? "Edit Link" : "Add External Link"}</DialogTitle>
           </DialogHeader>
