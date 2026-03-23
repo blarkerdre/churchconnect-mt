@@ -691,6 +691,11 @@ function CourseRegistrationsView({ course }) {
                     <TableCell className="font-medium">{r.members?.first_name} {r.members?.last_name}</TableCell>
                     <TableCell className="text-sm text-muted-foreground">{r.members?.email || "—"}</TableCell>
                     <TableCell className="text-sm text-muted-foreground">{r.members?.phone || "—"}</TableCell>
+                    <TableCell>
+                      <Badge variant={r.members?.user_id ? "default" : "outline"}>
+                        {r.members?.user_id ? "Member" : "QR / Public"}
+                      </Badge>
+                    </TableCell>
                     <TableCell className="text-sm text-muted-foreground">{new Date(r.registered_at).toLocaleDateString()}</TableCell>
                     <TableCell className="text-right">
                       <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setDeleteTarget(r)}>
