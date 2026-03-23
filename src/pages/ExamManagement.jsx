@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -14,7 +15,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "@/components/ui/use-toast";
-import { Loader2, Plus, Trash2, Edit, BookOpen, Save, Tag, Layers, Eye } from "lucide-react";
+import { Loader2, Plus, Trash2, Edit, BookOpen, Save, Tag, Layers, Eye, CheckCircle2 } from "lucide-react";
 import SubjectManager from "@/components/exams/SubjectManager";
 import CourseResultsView from "@/components/exams/CourseResultsView";
 import TakeExamDialog from "@/components/exams/TakeExamDialog";
@@ -39,7 +40,7 @@ const emptyQuestion = {
 };
 
 export default function ExamManagement() {
-  const { user } = useAuth();
+  const { user, isAdmin, myMember } = useAuth();
   const qc = useQueryClient();
   const [selectedCourse, setSelectedCourse] = useState(null);
   const [selectedSubject, setSelectedSubject] = useState(null);
@@ -52,7 +53,7 @@ export default function ExamManagement() {
   // Course CRUD state
   const [titleDialogOpen, setTitleDialogOpen] = useState(false);
   const [editingTitle, setEditingTitle] = useState(null);
-  const [titleForm, setTitleForm] = useState({ name: "", description: "", pass_mark_percentage: 50 });
+  const [titleForm, setTitleForm] = useState({ name: "", description: "", pass_mark_percentage: 50, registration_open: false, exams_open: false });
   const [deleteTitleTarget, setDeleteTitleTarget] = useState(null);
   const [showResults, setShowResults] = useState(false);
 
@@ -89,7 +90,7 @@ export default function ExamManagement() {
       toast({ title: editingTitle ? "Course updated" : "Course created" });
       setTitleDialogOpen(false);
       setEditingTitle(null);
-      setTitleForm({ name: "", description: "", pass_mark_percentage: 50 });
+      setTitleForm({ name: "", description: "", pass_mark_percentage: 50, registration_open: false, exams_open: false });
     },
     onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
@@ -220,6 +221,23 @@ export default function ExamManagement() {
 
   const questionTypeLabel = (type) => QUESTION_TYPES.find(t => t.value === type)?.label || type;
 
+  // Admin toggle mutations
+  const toggleCourseMutation = useMutation({
+    mutationFn: async ({ id, field, value }) => {
+      const { error } = await supabase.from("exam_titles").update({ [field]: value }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["exam-titles"] });
+    },
+    onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+  });
+
+  // If not admin, show member view
+  if (!isAdmin) {
+    return <MemberExamsView memberId={myMember?.id} courses={examTitles} loading={titlesLoading} />;
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -239,9 +257,9 @@ export default function ExamManagement() {
             <CardTitle className="text-base font-display flex items-center gap-2">
               <Tag className="h-4 w-4 text-primary" /> Certificate Courses
             </CardTitle>
-            <Button size="sm" variant="outline" className="gap-1.5" onClick={() => {
+             <Button size="sm" variant="outline" className="gap-1.5" onClick={() => {
               setEditingTitle(null);
-              setTitleForm({ name: "", description: "", pass_mark_percentage: 50 });
+              setTitleForm({ name: "", description: "", pass_mark_percentage: 50, registration_open: false, exams_open: false });
               setTitleDialogOpen(true);
             }}>
               <Plus className="h-3.5 w-3.5" /> Add Course
@@ -265,11 +283,13 @@ export default function ExamManagement() {
                   <Badge variant="outline" className={`text-[9px] h-4 ${selectedCourse?.id === t.id ? "border-primary-foreground/30 text-primary-foreground" : ""}`}>
                     {t.pass_mark_percentage}%
                   </Badge>
-                  {!t.is_active && <Badge variant="secondary" className="text-[9px] h-4">Inactive</Badge>}
+                   {!t.is_active && <Badge variant="secondary" className="text-[9px] h-4">Inactive</Badge>}
+                   {t.registration_open && <Badge variant="outline" className="text-[9px] h-4 border-chart-3/40 text-chart-3">Reg Open</Badge>}
+                   {t.exams_open && <Badge variant="outline" className="text-[9px] h-4 border-primary/40 text-primary">Exams Open</Badge>}
                   <button className="opacity-0 group-hover:opacity-100 transition-opacity ml-1" onClick={(e) => {
                     e.stopPropagation();
                     setEditingTitle(t);
-                    setTitleForm({ name: t.name, description: t.description || "", pass_mark_percentage: t.pass_mark_percentage || 50 });
+                    setTitleForm({ name: t.name, description: t.description || "", pass_mark_percentage: t.pass_mark_percentage || 50, registration_open: !!t.registration_open, exams_open: !!t.exams_open });
                     setTitleDialogOpen(true);
                   }}>
                     <Edit className="h-3 w-3" />
@@ -426,11 +446,21 @@ export default function ExamManagement() {
               description: titleForm.description.trim() || null,
               pass_mark_percentage: Number(titleForm.pass_mark_percentage) || 50,
               is_active: true,
+              registration_open: titleForm.registration_open,
+              exams_open: titleForm.exams_open,
             });
           }} className="space-y-4">
             <div><Label>Course Name *</Label><Input value={titleForm.name} onChange={e => setTitleForm(f => ({ ...f, name: e.target.value }))} placeholder="e.g. BCC, LCC" /></div>
             <div><Label>Description</Label><Input value={titleForm.description} onChange={e => setTitleForm(f => ({ ...f, description: e.target.value }))} placeholder="Optional" /></div>
             <div><Label>Aggregate Pass Mark (%)</Label><Input type="number" min="0" max="100" value={titleForm.pass_mark_percentage} onChange={e => setTitleForm(f => ({ ...f, pass_mark_percentage: e.target.value }))} className="w-28" /></div>
+            <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50 border border-border">
+              <Label htmlFor="reg-open" className="cursor-pointer">Registration Open</Label>
+              <Switch id="reg-open" checked={titleForm.registration_open} onCheckedChange={v => setTitleForm(f => ({ ...f, registration_open: v }))} />
+            </div>
+            <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50 border border-border">
+              <Label htmlFor="exams-open" className="cursor-pointer">Exams Open</Label>
+              <Switch id="exams-open" checked={titleForm.exams_open} onCheckedChange={v => setTitleForm(f => ({ ...f, exams_open: v }))} />
+            </div>
             <DialogFooter>
               <Button type="submit" disabled={saveTitleMutation.isPending}>
                 {saveTitleMutation.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
@@ -551,6 +581,189 @@ export default function ExamManagement() {
           previewMode
         />
       )}
+    </div>
+  );
+}
+
+function MemberExamsView({ memberId, courses, loading }) {
+  const qc = useQueryClient();
+  const [examSelection, setExamSelection] = useState(null);
+
+  const { data: registrations = [], isLoading: regLoading } = useQuery({
+    queryKey: ["my-course-registrations", memberId],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("course_registrations").select("course_id").eq("member_id", memberId);
+      if (error) throw error;
+      return data.map(r => r.course_id);
+    },
+    enabled: !!memberId,
+  });
+
+  const { data: allSubjects = [] } = useQuery({
+    queryKey: ["all-exam-subjects"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("exam_subjects").select("*").eq("is_active", true).order("sort_order");
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const { data: myAttempts = [] } = useQuery({
+    queryKey: ["my-course-attempts", memberId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("exam_attempts")
+        .select("subject_id, training_type, score, total_points, passed, retake_allowed")
+        .eq("member_id", memberId);
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!memberId,
+  });
+
+  const registerMutation = useMutation({
+    mutationFn: async (courseId) => {
+      const { error } = await supabase.from("course_registrations").insert({ member_id: memberId, course_id: courseId });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["my-course-registrations"] });
+      toast({ title: "Registered successfully!" });
+    },
+    onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+  });
+
+  const bestBySubject = {};
+  myAttempts.forEach(a => {
+    if (!a.subject_id) return;
+    const pct = a.total_points > 0 ? a.score / a.total_points : 0;
+    if (!bestBySubject[a.subject_id] || pct > (bestBySubject[a.subject_id].score / bestBySubject[a.subject_id].total_points)) {
+      bestBySubject[a.subject_id] = a;
+    }
+  });
+
+  if (loading || regLoading) {
+    return <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>;
+  }
+
+  if (!memberId) {
+    return (
+      <div className="text-center py-12">
+        <p className="text-muted-foreground">Please complete your member profile first to access exams.</p>
+      </div>
+    );
+  }
+
+  const activeCourses = courses.filter(c => c.is_active);
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-xl font-display font-bold text-foreground flex items-center gap-2">
+          <BookOpen className="h-5 w-5 text-primary" /> Exams
+        </h1>
+        <p className="text-sm text-muted-foreground mt-1">Register for courses and take your exams</p>
+      </div>
+
+      {activeCourses.length === 0 ? (
+        <Card className="border-0 shadow-sm">
+          <CardContent className="py-8 text-center text-sm text-muted-foreground">No courses available.</CardContent>
+        </Card>
+      ) : (
+        <div className="space-y-4">
+          {activeCourses.map(course => {
+            const isRegistered = registrations.includes(course.id);
+            const subjects = allSubjects.filter(s => s.course_id === course.id);
+            const completedSubjectIds = subjects.filter(s => bestBySubject[s.id]).map(s => s.id);
+            const totalScore = completedSubjectIds.reduce((sum, id) => sum + (bestBySubject[id]?.score || 0), 0);
+            const totalPoints = completedSubjectIds.reduce((sum, id) => sum + (bestBySubject[id]?.total_points || 0), 0);
+            const aggPct = totalPoints > 0 ? (totalScore / totalPoints) * 100 : 0;
+            const allDone = subjects.length > 0 && completedSubjectIds.length === subjects.length;
+            const passed = allDone && aggPct >= course.pass_mark_percentage;
+
+            return (
+              <Card key={course.id} className="border-0 shadow-sm">
+                <CardContent className="p-5 space-y-3">
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <div>
+                      <h3 className="text-sm font-semibold text-foreground">{course.name}</h3>
+                      {course.description && <p className="text-xs text-muted-foreground">{course.description}</p>}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {isRegistered && (
+                        <Badge variant="outline" className="text-xs border-chart-3/40 text-chart-3">
+                          <CheckCircle2 className="h-3 w-3 mr-1" /> Registered
+                        </Badge>
+                      )}
+                      {allDone && (
+                        <Badge variant={passed ? "default" : "destructive"} className="text-xs">
+                          {passed ? "Passed ✓" : "Not Passed"}
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+
+                  {!isRegistered ? (
+                    course.registration_open ? (
+                      <Button size="sm" onClick={() => registerMutation.mutate(course.id)} disabled={registerMutation.isPending} className="gap-1.5">
+                        {registerMutation.isPending && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                        Register for {course.name}
+                      </Button>
+                    ) : (
+                      <p className="text-xs text-muted-foreground italic">Registration is currently closed.</p>
+                    )
+                  ) : !course.exams_open ? (
+                    <p className="text-xs text-muted-foreground italic">Exams are not yet available. Please wait for the admin to open the exam window.</p>
+                  ) : subjects.length === 0 ? (
+                    <p className="text-xs text-muted-foreground">No subjects configured yet.</p>
+                  ) : (
+                    <>
+                      <p className="text-xs text-muted-foreground">
+                        {completedSubjectIds.length}/{subjects.length} subjects completed
+                        {totalPoints > 0 && ` · Aggregate: ${Math.round(aggPct)}%`}
+                        {` · Pass mark: ${course.pass_mark_percentage}%`}
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {subjects.map(s => {
+                          const taken = !!bestBySubject[s.id];
+                          const best = bestBySubject[s.id];
+                          const bestPct = best && best.total_points > 0 ? (best.score / best.total_points) * 100 : 0;
+                          const subjectPassMark = s.pass_mark_percentage ?? 50;
+                          const hasPassed = taken && bestPct >= subjectPassMark;
+                          const canRetake = taken && !hasPassed && myAttempts.some(a => a.subject_id === s.id && a.retake_allowed === true);
+                          const isDisabled = taken && !canRetake;
+                          return (
+                            <Button
+                              key={s.id}
+                              variant={taken ? "secondary" : "outline"}
+                              size="sm"
+                              disabled={isDisabled}
+                              onClick={() => setExamSelection({ type: course.name, subjectId: s.id, subjectName: s.name })}
+                              className="gap-1.5"
+                            >
+                              <BookOpen className="h-3.5 w-3.5" />
+                              {s.name} {taken ? (canRetake ? "↻ Retake" : `✓ ${best.score}/${best.total_points}`) : ""}
+                            </Button>
+                          );
+                        })}
+                      </div>
+                    </>
+                  )}
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      )}
+
+      <TakeExamDialog
+        open={!!examSelection}
+        onOpenChange={(v) => { if (!v) { setExamSelection(null); qc.invalidateQueries({ queryKey: ["my-course-attempts"] }); } }}
+        trainingType={examSelection?.type}
+        memberId={memberId}
+        subjectId={examSelection?.subjectId}
+        subjectName={examSelection?.subjectName}
+      />
     </div>
   );
 }
