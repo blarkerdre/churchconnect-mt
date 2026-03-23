@@ -729,6 +729,8 @@ function MemberExamsView({ memberId, courses, loading }) {
         <p className="text-sm text-muted-foreground mt-1">Register for courses and take your WoFBI exams</p>
       </div>
 
+      <WofbiAboutDisplay />
+
       {activeCourses.length === 0 ? (
         <Card className="border-0 shadow-sm">
           <CardContent className="py-8 text-center text-sm text-muted-foreground">No courses available.</CardContent>
