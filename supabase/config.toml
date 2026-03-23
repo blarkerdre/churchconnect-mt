@@ -11,3 +11,6 @@ verify_jwt = true
 
 [functions.issue-certificate]
 verify_jwt = false
+
+[functions.public-wofbi-register]
+verify_jwt = false

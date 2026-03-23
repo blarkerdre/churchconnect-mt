@@ -128,6 +128,7 @@ function AppRoutes() {
   return (
     <Routes>
       <Route path="/register" element={<PublicRegistration />} />
+      <Route path="/wofbi-register" element={<PublicWoFBIRegistration />} />
       <Route path="/presentation" element={<Presentation />} />
       <Route path="/*" element={<AuthProvider><AuthRoutes /></AuthProvider>} />
     </Routes>
