@@ -434,11 +434,11 @@ export default function CertificateTemplateSettings() {
                 rows={2}
               />
             </div>
-            <div className="flex flex-col sm:flex-row gap-2">
-              <Button variant="outline" onClick={() => setPreviewOpen(true)} className="gap-1.5 w-full sm:w-auto">
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => setPreviewOpen(true)} className="gap-1.5">
                 <Eye className="h-4 w-4" /> Preview
               </Button>
-              <Button onClick={handleSave} disabled={saveMutation.isPending} className="flex-1 w-full sm:w-auto">
+              <Button onClick={handleSave} disabled={saveMutation.isPending} className="flex-1">
                 {saveMutation.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
                 {editing ? "Update" : "Create"} Template
               </Button>
