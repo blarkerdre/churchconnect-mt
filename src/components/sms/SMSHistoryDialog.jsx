@@ -7,11 +7,11 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 
-export default function SMSHistoryDialog({ open, onOpenChange }) {
-  const [typeFilter, setTypeFilter] = useState("All");
+export default function SMSHistoryDialog({ open, onOpenChange, defaultFilter = "All", channelFilter = null }) {
+  const [typeFilter, setTypeFilter] = useState(defaultFilter);
 
   const { data: logs = [], isLoading } = useQuery({
-    queryKey: ["sms-logs", typeFilter],
+    queryKey: ["sms-logs", typeFilter, channelFilter],
     queryFn: async () => {
       let query = supabase
         .from("sms_log")
@@ -20,6 +20,9 @@ export default function SMSHistoryDialog({ open, onOpenChange }) {
         .limit(100);
       if (typeFilter !== "All") {
         query = query.eq("sms_type", typeFilter);
+      }
+      if (channelFilter) {
+        query = query.eq("channel", channelFilter);
       }
       const { data, error } = await query;
       if (error) throw error;

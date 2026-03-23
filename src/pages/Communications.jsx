@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { useChurchUnits } from "@/hooks/useChurchUnits";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Megaphone, Pin, Search, Plus, Loader2, Trash2, Pencil, MessageSquare, History, Mail } from "lucide-react";
+import { Megaphone, Pin, Search, Plus, Loader2, Trash2, Pencil, MessageSquare, History, Mail, Phone } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { format } from "date-fns";
 import AnnouncementForm from "@/components/comms/AnnouncementForm";
@@ -30,6 +30,8 @@ export default function Communications() {
   const [smsOpen, setSmsOpen] = useState(false);
   const [smsAnnouncement, setSmsAnnouncement] = useState(null);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [waOpen, setWaOpen] = useState(false);
+  const [waHistoryOpen, setWaHistoryOpen] = useState(false);
 
   const canManageComms = isAdmin || isUnitLeader || isWSFLeader;
 
@@ -230,6 +232,9 @@ export default function Communications() {
                 <TabsTrigger value="sms" className="gap-1.5 text-xs">
                   <MessageSquare className="h-3.5 w-3.5" /> SMS
                 </TabsTrigger>
+                <TabsTrigger value="whatsapp" className="gap-1.5 text-xs">
+                  <Phone className="h-3.5 w-3.5" /> WhatsApp
+                </TabsTrigger>
               </>
             )}
           </TabsList>
@@ -303,6 +308,27 @@ export default function Communications() {
             </div>
           </TabsContent>
         )}
+
+        {canManageComms && (
+          <TabsContent value="whatsapp">
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                {isAdmin && (
+                  <Button variant="outline" onClick={() => setWaHistoryOpen(true)}>
+                    <History className="h-4 w-4 mr-2" /> WhatsApp History
+                  </Button>
+                )}
+                <Button onClick={() => setWaOpen(true)} className="bg-primary hover:bg-primary/90">
+                  <Phone className="h-4 w-4 mr-2" /> Send Bulk WhatsApp
+                </Button>
+              </div>
+              <Card className="border-0 shadow-sm p-8 text-center text-muted-foreground">
+                <Phone className="h-10 w-10 mx-auto mb-3 opacity-20" />
+                <p className="text-sm">Use the button above to compose and send WhatsApp messages to members.</p>
+              </Card>
+            </div>
+          </TabsContent>
+        )}
       </Tabs>
 
       <AnnouncementForm
@@ -323,6 +349,18 @@ export default function Communications() {
       />
 
       <SMSHistoryDialog open={historyOpen} onOpenChange={setHistoryOpen} />
+
+      <SMSDialog
+        open={waOpen} onOpenChange={setWaOpen}
+        prefillMessage=""
+        prefillAudience=""
+        smsType="bulk"
+        referenceId={null}
+        title="Send Bulk WhatsApp"
+        defaultChannel="whatsapp"
+      />
+
+      <SMSHistoryDialog open={waHistoryOpen} onOpenChange={setWaHistoryOpen} channelFilter="whatsapp" />
     </div>
   );
 }
