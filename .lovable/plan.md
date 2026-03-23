@@ -1,21 +1,23 @@
 
 
-## Add Meeting Notes to Session Report
+## Auto-populate WSF Centre Address from House Provider
 
-Add a text area for meeting notes in the Session Report section, saved alongside demographics.
+When a House Provider (member) is selected in either WSF centre form, automatically populate the address, postcode, and city fields from that member's record.
 
-### Changes — `src/pages/Attendance.jsx`
+### Changes
 
-1. Add `meeting_notes` to `demoForm` state, initialized from `selectedSession.notes` when session changes
-2. Add a `Textarea` labeled "Meeting Notes" in the Session Report section (between demographics and attachments)
-3. Include `notes` in the `updateDemographicsMutation` payload so it saves to `attendance_sessions.notes`
-4. Rename "Save Demographics" button to "Save Report" since it now saves both demographics and notes
+**1. `src/components/settings/WSFCentresSection.jsx`**
+- Expand the `allMembers` query to include `address, postcode, city` fields
+- When `host_member_id` changes in the form, look up the selected member and auto-fill `address`, `postcode`, `city` fields
+- Fields remain editable (user can override after auto-fill)
 
-### Database
-No changes needed — `attendance_sessions` already has a `notes` text column.
+**2. `src/components/wsf/WSFCentreFormDialog.jsx`**
+- Expand the `allMembers` query to include `address, postcode, city` fields
+- Add a `useEffect` or handler: when `host_member_id` changes, auto-populate `address`, `postcode`, `city` from the selected member
+- Fields remain editable after auto-fill
 
 ### Technical Detail
-- `demoForm` state expands: `{ male_count, female_count, meeting_notes }` 
-- `useEffect` that syncs `demoForm` from `selectedSession` also sets `meeting_notes: selectedSession?.notes || ""`
-- Update mutation adds `notes: meeting_notes` to the `.update()` call
+- Both components already query `members` for the host dropdown — just add `address, postcode, city` to the `.select()` call
+- On host member change: `const m = allMembers.find(x => x.id === selectedId); set("address", m.address || ""); set("postcode", m.postcode || ""); set("city", m.city || "");`
+- No database changes needed — `wsf_centres` already has `address`, `postcode`, `city` columns
 
