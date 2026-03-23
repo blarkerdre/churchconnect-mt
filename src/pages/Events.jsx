@@ -280,7 +280,10 @@ export default function Events() {
   };
 
   const handleDelete = (e) => {
-    if (window.confirm("Delete this event?")) deleteMutation.mutate(e);
+    const msg = e.is_recurring && !e.recurrence_parent_id
+      ? "Delete this recurring event and all its occurrences?"
+      : "Delete this event?";
+    if (window.confirm(msg)) deleteMutation.mutate(e);
   };
 
   return (
