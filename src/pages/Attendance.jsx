@@ -20,9 +20,10 @@ export default function Attendance() {
   const queryClient = useQueryClient();
   const [selectedSessionId, setSelectedSessionId] = useState(null);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [form, setForm] = useState({ title: "", session_type: "Sunday Service", session_date: "", notes: "", male_count: 0, female_count: 0, unit: "" });
+  const [form, setForm] = useState({ title: "", session_type: "Sunday Service", session_date: "", notes: "", unit: "" });
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const [demoForm, setDemoForm] = useState({ male_count: 0, female_count: 0 });
 
   const { data: sessions = [], isLoading } = useQuery({
     queryKey: ["attendance-sessions"],
