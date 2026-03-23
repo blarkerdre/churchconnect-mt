@@ -12,6 +12,8 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import NotificationBell from "@/components/notifications/NotificationBell";
 import { getEnvironmentLabel, getBackendHost, isBackendMismatch } from "@/lib/environment";
+import { useAppSetting } from "@/hooks/useAppSetting";
+import { getIconComponent } from "@/lib/icon-map";
 
 // Role requirements: null = any authenticated user, "admin" = admin/super_admin, "leader" = admin or unit_leader
 const allNavItems = [
@@ -40,6 +42,7 @@ export default function Layout({ children }) {
   const location = useLocation();
   const { signOut, profile, isAdmin, isUnitLeader, isWSFLeader, roles, leaderUnits } = useAuth();
   const isSuperAdmin = roles.includes("super_admin");
+  const { data: externalLinks } = useAppSetting("external_links", []);
   const isFollowupUnit = leaderUnits.includes("Follow-up") || leaderUnits.includes("Follow-Up");
   const isTrainingAccess = isUnitLeader;
   const { isMemberOfUnit: isFollowupMember } = useUnitMembership("Follow-up");
@@ -115,6 +118,31 @@ export default function Layout({ children }) {
               </Link>
             );
           })}
+          {/* External Links */}
+          {externalLinks.length > 0 && (
+            <>
+              <div className={`border-t border-sidebar-border my-2 ${collapsed ? "mx-2" : "mx-1"}`} />
+              {!collapsed && (
+                <p className="px-3 text-[10px] font-semibold text-sidebar-foreground/40 uppercase tracking-wider mb-1">Links</p>
+              )}
+              {externalLinks.map((link, idx) => {
+                const IconComp = getIconComponent(link.icon);
+                return (
+                  <a
+                    key={idx}
+                    href={link.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title={collapsed ? link.title : undefined}
+                    className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all text-sidebar-foreground/60 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground ${collapsed ? "justify-center" : ""}`}
+                  >
+                    <IconComp className="h-4 w-4 shrink-0" />
+                    {!collapsed && link.title}
+                  </a>
+                );
+              })}
+            </>
+          )}
         </nav>
 
         {/* User + Sign Out */}
