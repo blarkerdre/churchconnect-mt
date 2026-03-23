@@ -115,20 +115,24 @@ export default function TakeExamDialog({ open, onOpenChange, trainingType, membe
     return () => clearInterval(timerRef.current);
   }, [timeLeft !== null, submitted]);
 
-  // Auto-submit on timer expiry
+  // Auto-submit on timer expiry (not in preview mode)
   const doSubmit = useCallback(() => {
-    if (!submitted && shuffledQuestions.length > 0) {
+    if (!submitted && shuffledQuestions.length > 0 && !previewMode) {
       submitMutation.mutate();
     }
-  }, [submitted, shuffledQuestions]);
+  }, [submitted, shuffledQuestions, previewMode]);
 
   useEffect(() => {
     if (autoSubmitRef.current && timeLeft === 0 && !submitted) {
       autoSubmitRef.current = false;
-      toast({ title: "⏰ Time's up! Auto-submitting your exam." });
-      doSubmit();
+      if (previewMode) {
+        toast({ title: "⏰ Time's up! (Preview mode — no auto-submit)" });
+      } else {
+        toast({ title: "⏰ Time's up! Auto-submitting your exam." });
+        doSubmit();
+      }
     }
-  }, [timeLeft, submitted, doSubmit]);
+  }, [timeLeft, submitted, doSubmit, previewMode]);
 
   const submitMutation = useMutation({
     mutationFn: async () => {
