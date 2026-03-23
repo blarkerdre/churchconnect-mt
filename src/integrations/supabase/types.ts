@@ -543,7 +543,13 @@ export type Database = {
           event_mode: string
           id: string
           is_public: boolean | null
+          is_recurring: boolean
           location: string | null
+          recurrence_end_date: string | null
+          recurrence_frequency: string | null
+          recurrence_parent_id: string | null
+          reminder_days_before: number[] | null
+          reminder_sent: boolean
           requires_registration: boolean | null
           start_time: string | null
           title: string
@@ -561,7 +567,13 @@ export type Database = {
           event_mode?: string
           id?: string
           is_public?: boolean | null
+          is_recurring?: boolean
           location?: string | null
+          recurrence_end_date?: string | null
+          recurrence_frequency?: string | null
+          recurrence_parent_id?: string | null
+          reminder_days_before?: number[] | null
+          reminder_sent?: boolean
           requires_registration?: boolean | null
           start_time?: string | null
           title: string
@@ -579,13 +591,27 @@ export type Database = {
           event_mode?: string
           id?: string
           is_public?: boolean | null
+          is_recurring?: boolean
           location?: string | null
+          recurrence_end_date?: string | null
+          recurrence_frequency?: string | null
+          recurrence_parent_id?: string | null
+          reminder_days_before?: number[] | null
+          reminder_sent?: boolean
           requires_registration?: boolean | null
           start_time?: string | null
           title?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "events_recurrence_parent_id_fkey"
+            columns: ["recurrence_parent_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       exam_answers: {
         Row: {
