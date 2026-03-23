@@ -20,7 +20,7 @@ export default function WSFCentresSection() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [membersDialogCentre, setMembersDialogCentre] = useState(null);
-  const [form, setForm] = useState({ name: "", location: "", address: "", postcode: "", city: "Cardiff", coverage_postcodes: "", meeting_day: "", meeting_time: "", is_active: true, leader_id: "" });
+  const [form, setForm] = useState({ name: "", host_name: "", location: "", address: "", postcode: "", city: "Cardiff", coverage_postcodes: "", meeting_day: "", meeting_time: "", is_active: true, leader_id: "" });
 
   const { data: centres = [], isLoading } = useQuery({
     queryKey: ["wsf-centres"],
