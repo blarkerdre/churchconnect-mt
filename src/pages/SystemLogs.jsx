@@ -218,7 +218,7 @@ function SMSLogsPanel() {
   const { data: logs = [], isLoading } = useQuery({
     queryKey: ["sms-logs", typeFilter, fromDate?.toISOString(), toDate?.toISOString()],
     queryFn: async () => {
-      let query = supabase.from("sms_log").select("*").order("created_at", { ascending: false }).limit(500);
+      let query = supabase.from("sms_log").select("*").eq("channel", "sms").order("created_at", { ascending: false }).limit(500);
       if (typeFilter !== "All") query = query.eq("sms_type", typeFilter);
       if (fromDate) query = query.gte("created_at", fromDate.toISOString());
       if (toDate) query = query.lte("created_at", new Date(toDate.getFullYear(), toDate.getMonth(), toDate.getDate(), 23, 59, 59).toISOString());
