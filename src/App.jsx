@@ -87,6 +87,15 @@ function TrainingRoute({ children }) {
   return children;
 }
 
+function FeatureGate({ path, children }) {
+  const { roles, loading } = useAuth();
+  const { data: disabledFeatures } = useAppSetting("disabled_features", []);
+  if (loading) return null;
+  const isSuperAdmin = roles.includes("super_admin");
+  if (!isSuperAdmin && disabledFeatures.includes(path)) return <Navigate to="/" replace />;
+  return children;
+}
+
 function AuthRoutes() {
   return (
     <Routes>
