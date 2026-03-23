@@ -1,43 +1,32 @@
 
 
-## Unit Meeting & Attendance — Enhanced Features
+## Post-Session Demographics & Report — Unit Leaders Only
 
-This plan renames "Unit Attendance" to "Unit Meeting & Attendance", adds demographic reporting (male/female/total), date filtering, and file upload capability to attendance sessions.
+### Summary
+Move demographic recording (male/female/total) and report attachments to appear **only after a session is closed**, accessible **only to unit leaders** (not during session creation). This creates a proper workflow: create session → check-in members → close session → record demographics & upload meeting report.
 
-### Database Changes
+### Changes
 
-**Add columns to `attendance_sessions` table:**
-- `male_count` (integer, default 0) — male attendance count
-- `female_count` (integer, default 0) — female attendance count
-- `total_count` (integer, default 0) — auto-calculated total
-- `unit` (text, nullable) — the church unit for this session
+**`src/pages/Attendance.jsx`**
 
-No new tables needed — file uploads will use the existing `ReportAttachments` component with the `documents` table and `church-documents` storage bucket.
+1. **Remove male/female/total inputs from the "New Session" dialog** — these fields should not be filled at creation time
+2. **Remove male_count/female_count/total_count from createSessionMutation** — leave them at DB defaults (0)
+3. **Add a new "Session Report" section** that appears only when:
+   - The selected session is **closed** (`status === "closed"`)
+   - The current user is a **unit leader** (`isUnitLeader` — not admin-only, specifically unit leaders)
+4. **Session Report section includes:**
+   - Editable male/female number inputs with auto-calculated total
+   - A "Save Demographics" button that updates the session row
+   - The existing `ReportAttachments` component for file uploads
+5. **Move ReportAttachments** from its current always-visible position into this new gated section
+6. **Demographics display** in the session list and check-ins panel remains read-only for everyone (unchanged)
 
-### File Changes
+### Technical Detail
+- New `updateDemographicsMutation`: calls `supabase.from("attendance_sessions").update({ male_count, female_count, total_count }).eq("id", sessionId)`
+- Gate: `{isClosed && isUnitLeader && ( <SessionReportSection /> )}`
+- Local state for demographic editing: `demoForm` with `male_count`/`female_count`, pre-populated from `selectedSession` values when session changes
+- No database changes needed — columns already exist
 
-**1. `src/components/AppLayout.jsx`**
-- Rename nav item from "Unit Attendance" to "Unit Meeting & Attendance"
-
-**2. `src/pages/Attendance.jsx`** — Major updates:
-- Add date range filter (from/to date inputs) to filter sessions
-- Add demographic fields (male, female) to the "New Session" dialog, with auto-calculated total
-- Display male/female/total in session list items and stats cards
-- Add `ReportAttachments` component for the selected session (upload/download meeting reports)
-- Update report download to include demographic data
-- Rename page title references to "Unit Meeting & Attendance"
-
-**3. `src/components/attendance/SessionFormDialog.jsx`**
-- Add male/female number inputs with auto-calculated total display
-- Pass demographic data in the save payload
-
-**4. `src/components/attendance/CheckInPanel.jsx`**
-- Show male/female/total stats if available on the session
-
-### Technical Details
-
-- Date filter: two `<Input type="date">` fields filtering `sessions` array client-side by `session_date`
-- Demographics: stored on `attendance_sessions` row, editable when creating/editing
-- File uploads: reuse `<ReportAttachments relatedTable="attendance_sessions" relatedId={session.id} />` — no new storage setup needed
-- Total is always `male_count + female_count`, computed on save and displayed read-only
+### Files
+- `src/pages/Attendance.jsx` (only file)
 
