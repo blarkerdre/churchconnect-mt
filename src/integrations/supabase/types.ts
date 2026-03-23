@@ -192,6 +192,7 @@ export type Database = {
         Row: {
           accent_color: string
           background_color: string
+          background_image_url: string | null
           church_name: string
           created_at: string
           custom_message: string | null
@@ -199,12 +200,14 @@ export type Database = {
           logo_url: string | null
           signatory_name: string
           signatory_title: string
+          text_positions: Json | null
           training_type: string
           updated_at: string
         }
         Insert: {
           accent_color?: string
           background_color?: string
+          background_image_url?: string | null
           church_name?: string
           created_at?: string
           custom_message?: string | null
@@ -212,12 +215,14 @@ export type Database = {
           logo_url?: string | null
           signatory_name?: string
           signatory_title?: string
+          text_positions?: Json | null
           training_type: string
           updated_at?: string
         }
         Update: {
           accent_color?: string
           background_color?: string
+          background_image_url?: string | null
           church_name?: string
           created_at?: string
           custom_message?: string | null
@@ -225,6 +230,7 @@ export type Database = {
           logo_url?: string | null
           signatory_name?: string
           signatory_title?: string
+          text_positions?: Json | null
           training_type?: string
           updated_at?: string
         }
