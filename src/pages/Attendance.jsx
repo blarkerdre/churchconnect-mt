@@ -300,11 +300,41 @@ export default function Attendance() {
               </CardContent>
             </Card>
 
-            {/* Report Attachments */}
-            {selectedSession && (
+            {/* Session Report — only for unit leaders after session is closed */}
+            {selectedSession && isClosed && (isAdmin || isUnitLeader) && (
               <Card className="border-0 shadow-sm">
-                <CardContent className="p-4">
-                  <ReportAttachments relatedTable="attendance_sessions" relatedId={selectedSession.id} />
+                <CardHeader><CardTitle className="text-base font-display flex items-center gap-2"><FileText className="h-4 w-4 text-accent" /> Session Report</CardTitle></CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-3 gap-3">
+                    <div>
+                      <Label className="text-xs">Male</Label>
+                      <Input type="number" min="0" value={demoForm.male_count} onChange={e => setDemoForm(f => ({ ...f, male_count: e.target.value }))} />
+                    </div>
+                    <div>
+                      <Label className="text-xs">Female</Label>
+                      <Input type="number" min="0" value={demoForm.female_count} onChange={e => setDemoForm(f => ({ ...f, female_count: e.target.value }))} />
+                    </div>
+                    <div>
+                      <Label className="text-xs">Total</Label>
+                      <div className="h-9 flex items-center px-3 rounded-md border border-input bg-muted text-sm font-medium text-foreground">{demoTotal}</div>
+                    </div>
+                  </div>
+                  <Button
+                    size="sm"
+                    className="w-full"
+                    disabled={updateDemographicsMutation.isPending}
+                    onClick={() => updateDemographicsMutation.mutate({
+                      sessionId: selectedSession.id,
+                      male_count: parseInt(demoForm.male_count) || 0,
+                      female_count: parseInt(demoForm.female_count) || 0,
+                    })}
+                  >
+                    {updateDemographicsMutation.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+                    Save Demographics
+                  </Button>
+                  <div className="pt-2 border-t">
+                    <ReportAttachments relatedTable="attendance_sessions" relatedId={selectedSession.id} />
+                  </div>
                 </CardContent>
               </Card>
             )}
