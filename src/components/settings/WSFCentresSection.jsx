@@ -179,13 +179,13 @@ export default function WSFCentresSection() {
                     </div>
                   </div>
                   <div className="text-xs text-muted-foreground space-y-1">
-                    {(c.host_member_id || c.host_name) && <div className="flex items-start gap-1.5"><Users className="h-3 w-3 shrink-0 mt-0.5" /><span className="truncate">House Provider: {c.host_member_id ? (() => { const m = allMembers.find(m => m.id === c.host_member_id); return m ? `${m.first_name} ${m.last_name}` : c.host_name; })() : c.host_name}</span></div>}
-                    {(c.address || c.location) && <div className="flex items-start gap-1.5"><MapPin className="h-3 w-3 shrink-0 mt-0.5" /><span className="truncate">{c.address || c.location}{c.postcode ? `, ${c.postcode}` : ""}</span></div>}
+                    {(c.host_member_id || c.host_name) && <div className="flex items-center gap-1.5"><Users className="h-3 w-3" />House Provider: {c.host_member_id ? (() => { const m = allMembers.find(m => m.id === c.host_member_id); return m ? `${m.first_name} ${m.last_name}` : c.host_name; })() : c.host_name}</div>}
+                    {(c.address || c.location) && <div className="flex items-center gap-1.5"><MapPin className="h-3 w-3" />{c.address || c.location}{c.postcode ? `, ${c.postcode}` : ""}</div>}
                     {c.meeting_day && <div className="flex items-center gap-1.5"><Clock className="h-3 w-3" />{c.meeting_day}{c.meeting_time ? ` at ${c.meeting_time}` : ""}</div>}
                     {c.leader_id && <div className="flex items-center gap-1.5"><Users className="h-3 w-3" />Leader: {getLeaderName(c.leader_id)}</div>}
                     <div className="flex items-center gap-1.5"><Users className="h-3 w-3" />{memberCounts[c.id] || 0} members</div>
                   </div>
-                  <Button variant="outline" size="sm" className="h-7 text-xs w-full sm:w-auto" onClick={() => setMembersDialogCentre(c)}>
+                  <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => setMembersDialogCentre(c)}>
                     <UserCog className="h-3 w-3 mr-1" /> Manage Members
                   </Button>
                 </div>
@@ -240,9 +240,9 @@ export default function WSFCentresSection() {
               <Switch checked={form.is_active} onCheckedChange={v => setForm(f => ({ ...f, is_active: v }))} />
             </div>
           </div>
-          <DialogFooter className="flex-col-reverse sm:flex-row gap-2">
-            <Button variant="outline" onClick={() => setDialogOpen(false)} className="w-full sm:w-auto">Cancel</Button>
-            <Button onClick={handleSave} disabled={saveMutation.isPending} className="w-full sm:w-auto">
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleSave} disabled={saveMutation.isPending}>
               {saveMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               {editing ? "Update" : "Create"}
             </Button>
