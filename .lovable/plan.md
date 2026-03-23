@@ -1,24 +1,36 @@
 
 
-## Rename "Attendance" → "Unit Attendance" and "Training Reports" → "BFC Report"
+## Super Admin Feature Toggle
 
-Simple label rename across the app. No logic or structural changes.
+### Overview
+Super Admins can enable/disable app features from Settings. Disabled features are hidden from navigation and their routes redirect to the dashboard.
 
-### Files to update
+### Data
+Store in `app_settings` with key `disabled_features` as a JSON array of route paths (e.g. `["/transportation", "/analytics"]`). No migration needed.
 
-**1. `src/components/AppLayout.jsx`**
-- Line 24: `"Attendance"` → `"Unit Attendance"`
-- Line 30: `"Training Reports"` → `"BFC Report"`
+### Changes
 
-**2. `src/pages/TrainingReports.jsx`**
-- Update any visible heading/title text from "Training Reports" to "BFC Report"
+**1. New Settings tab — `src/pages/Settings.jsx`**
+- Add a "Features" tab (visible only to super admins)
+- Show a checklist of all toggleable features (everything except Dashboard, My Profile, Settings, User Management, System Logs)
+- Each feature has a switch; toggling updates the `disabled_features` array in `app_settings`
 
-**3. `src/pages/Settings.jsx`**
-- Line ~402: description `"training reports"` → `"BFC reports"`
+**2. Sidebar filtering — `src/components/AppLayout.jsx`**
+- Fetch `disabled_features` using `useAppSetting("disabled_features", [])`
+- Filter out nav items whose path is in the disabled list (super admins still see all features)
 
-**4. `src/pages/Presentation.jsx`**
-- Line 316: `"Training Reports"` → `"BFC Report"` in the feature showcase
+**3. Route protection — `src/App.jsx`**
+- Create a `FeatureGate` wrapper component that checks `disabled_features`
+- If the current route is disabled, redirect to `/`
+- Super admins bypass the gate
+- Wrap toggleable routes with `FeatureGate`
 
-**5. `src/App.jsx`**
-- No route path changes needed (paths stay `/attendance` and `/training-reports`)
+**4. Hook enhancement — `src/hooks/useAppSetting.jsx`**
+- Already works for this use case, no changes needed
+
+### Features that can be toggled
+Members, Events, Unit Attendance, Follow-ups, Pastoral Care, Communications, Transportation, Analytics, BFC Report, Church Attendance, WoFBI, WSF Centres
+
+### Features that cannot be toggled (core)
+Dashboard, My Profile, User Management, Settings, System Logs
 
