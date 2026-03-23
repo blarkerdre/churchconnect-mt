@@ -255,7 +255,7 @@ export default function Members() {
                         )}
                       </td>
                     )}
-                    <td className="p-4 text-right">
+                    <td className="p-3 sm:p-4 text-right">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button variant="ghost" size="icon"><MoreVertical className="h-4 w-4" /></Button>
