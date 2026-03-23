@@ -677,9 +677,10 @@ function CourseRegistrationsView({ course }) {
             <Table>
               <TableHeader>
                 <TableRow className="bg-muted/50">
-                  <TableHead className="font-semibold">Name</TableHead>
+                   <TableHead className="font-semibold">Name</TableHead>
                   <TableHead className="font-semibold">Email</TableHead>
                   <TableHead className="font-semibold">Phone</TableHead>
+                  <TableHead className="font-semibold">Source</TableHead>
                   <TableHead className="font-semibold">Registered</TableHead>
                   <TableHead className="font-semibold text-right">Actions</TableHead>
                 </TableRow>
