@@ -1,22 +1,25 @@
 
 
-## Plan: Fix `run_not_found` Email API Error — RESOLVED
+## Plan: Fix `missing_unsubscribe` Email API Error
+
+### Problem
+The `send-email-alert` Edge Function enqueues transactional emails **without** an `unsubscribe_token`. The Email API requires all transactional emails to include one, resulting in a `400 missing_unsubscribe` rejection.
 
 ### Root Cause
-The `process-email-queue` worker was forwarding `run_id` from any queued payload to the email API. For transactional emails, the API expects no `run_id` — it creates a run inline from the `idempotency_key`. Sending a fabricated `run_id` caused `404 run_not_found`.
+The payload built at line 142–154 of `send-email-alert/index.ts` omits `unsubscribe_token`. The other senders (certificate, welcome, follow-up, pastoral) already include it.
 
-### Fix Applied
-Updated `process-email-queue/index.ts` to only forward `run_id` when processing the `auth_emails` queue. For `transactional_emails`, `run_id` is now explicitly stripped regardless of what the payload contains. This protects against stale payloads and future regressions.
+### Fix
+Update `send-email-alert/index.ts` to:
+1. Look up (or create) an unsubscribe token for each recipient email from the `email_unsubscribe_tokens` table before enqueuing
+2. Include `unsubscribe_token` in the queued payload
 
-### Deployed Functions
-All six email-related edge functions redeployed:
-- `process-email-queue` (the fix)
-- `issue-certificate`
-- `send-welcome-email`
-- `send-email-alert`
-- `notify-followup-assignment`
-- `notify-pastoral-assignment`
+This matches the pattern already used in `send-welcome-email` and `issue-certificate`.
 
-### Queue Status
-- Main queue (`transactional_emails`): empty — no active issues
-- DLQ: contains 7 historical messages (some with legacy `run_id`), left for audit
+### Changes
+**File: `supabase/functions/send-email-alert/index.ts`**
+- Add a helper function `getOrCreateUnsubscribeToken(supabase, email)` (same pattern as in `send-welcome-email`)
+- Inside the member loop, call it for each recipient and add `unsubscribe_token` to the payload
+
+### Deployment
+Redeploy `send-email-alert`. The stuck message (msg_id 11) in the queue will be retried automatically by `process-email-queue` once the token is present — but since the *payload* is already in the queue without a token, the existing message will continue to fail until it hits max retries and moves to DLQ. No manual queue intervention needed; new sends will work correctly.
+
