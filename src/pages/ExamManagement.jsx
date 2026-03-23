@@ -284,7 +284,7 @@ export default function ExamManagement() {
                   selectedCourse?.id === t.id
                     ? "bg-primary text-primary-foreground border-primary"
                     : "bg-card border-border hover:bg-muted"
-                }`} onClick={() => { setSelectedCourse(t); setSelectedSubject(null); setShowResults(false); }}>
+                }`} onClick={() => { setSelectedCourse(t); setSelectedSubject(null); setShowResults(false); setShowRegistrations(false); }}>
                   <span className="font-medium">{t.name}</span>
                   <Badge variant="outline" className={`text-[9px] h-4 ${selectedCourse?.id === t.id ? "border-primary-foreground/30 text-primary-foreground" : ""}`}>
                     {t.pass_mark_percentage}%
