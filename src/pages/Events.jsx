@@ -257,6 +257,8 @@ export default function Events() {
       title: "", category: "Service", event_date: "", start_time: "", end_time: "",
       location: "", description: "", event_mode: "In Person",
       audience: lockedAudience || "All Members",
+      is_recurring: false, recurrence_frequency: "Weekly", recurrence_end_date: "",
+      reminder_days_before: [],
     });
     setDialogOpen(true);
   };
