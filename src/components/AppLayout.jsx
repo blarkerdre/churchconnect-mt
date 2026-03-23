@@ -11,6 +11,7 @@ import winnersLogo from "@/assets/winners-chapel-logo.png";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import NotificationBell from "@/components/notifications/NotificationBell";
+import MobileBottomNav from "@/components/navigation/MobileBottomNav";
 import { getEnvironmentLabel, getBackendHost, isBackendMismatch } from "@/lib/environment";
 import { useAppSetting } from "@/hooks/useAppSetting";
 import { getIconComponent } from "@/lib/icon-map";
@@ -215,9 +216,10 @@ export default function Layout({ children }) {
           </div>
         </header>
 
-        <main className="flex-1 p-3 lg:p-8">
+        <main className="flex-1 p-3 lg:p-8 pb-20 lg:pb-8">
           {children}
         </main>
+        <MobileBottomNav />
       </div>
     </div>
   );
