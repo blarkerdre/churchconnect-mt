@@ -634,9 +634,15 @@ function CourseRegistrationsView({ course }) {
     onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
 
+  const filteredRegistrations = registrations.filter(r => {
+    if (sourceFilter === "member") return !!r.members?.user_id;
+    if (sourceFilter === "public") return !r.members?.user_id;
+    return true;
+  });
+
   const downloadCSV = () => {
     const headers = ["Name", "Email", "Phone", "Source", "Registered At"];
-    const rows = registrations.map(r => [
+    const rows = filteredRegistrations.map(r => [
       `${r.members?.first_name || ""} ${r.members?.last_name || ""}`.trim(),
       r.members?.email || "",
       r.members?.phone || "",
