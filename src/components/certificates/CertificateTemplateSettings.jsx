@@ -173,6 +173,64 @@ export default function CertificateTemplateSettings() {
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
   const setPos = (k, v) => setForm(f => ({ ...f, text_positions: { ...f.text_positions, [k]: Number(v) || 0 } }));
 
+  const escapeXml = (str) => str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;");
+
+  const generatePreviewSvg = () => {
+    const memberName = "John Doe";
+    const trainingType = form.training_type || "Training Programme";
+    const certNumber = "CERT-XXXX-2026-0001";
+    const formattedDate = new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
+    const churchName = form.church_name || "Winners Chapel International Cardiff";
+    const sigName = form.signatory_name || "";
+    const sigTitle = form.signatory_title || "";
+    const bgColor = form.background_color || "#1a2d4d";
+    const accentColor = form.accent_color || "#c5a028";
+    const customMessage = form.custom_message || "This is to certify that the above named has successfully completed";
+
+    if (form.background_image_url && previewUrl) {
+      const nameY = form.text_positions?.name_y || 280;
+      const trainingY = form.text_positions?.training_y || 340;
+      const dateY = form.text_positions?.date_y || 380;
+      const sigY = form.text_positions?.signatory_y || 500;
+      const certNumY = dateY + 25;
+
+      return `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="842" height="595" viewBox="0 0 842 595">
+  <defs><style>@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&amp;family=Inter:wght@400;500;600&amp;display=swap');</style></defs>
+  <image href="${previewUrl}" width="842" height="595" preserveAspectRatio="xMidYMid slice"/>
+  <text x="421" y="${nameY}" text-anchor="middle" font-family="Playfair Display, serif" font-weight="700" font-size="32" fill="${bgColor}">${escapeXml(memberName)}</text>
+  <text x="421" y="${trainingY}" text-anchor="middle" font-family="Inter, sans-serif" font-weight="600" font-size="18" fill="${bgColor}">${escapeXml(trainingType)}</text>
+  <text x="421" y="${dateY}" text-anchor="middle" font-family="Inter, sans-serif" font-weight="400" font-size="13" fill="#666">Completed on ${formattedDate}</text>
+  <text x="421" y="${certNumY}" text-anchor="middle" font-family="Inter, sans-serif" font-weight="400" font-size="10" fill="#aaa">Certificate No: ${certNumber}</text>
+  ${sigName ? `
+  <line x1="301" y1="${sigY - 20}" x2="541" y2="${sigY - 20}" stroke="#ccc" stroke-width="1"/>
+  <text x="421" y="${sigY}" text-anchor="middle" font-family="Inter, sans-serif" font-weight="600" font-size="13" fill="${bgColor}">${escapeXml(sigName)}</text>
+  <text x="421" y="${sigY + 18}" text-anchor="middle" font-family="Inter, sans-serif" font-weight="400" font-size="11" fill="#888">${escapeXml(sigTitle)}</text>` : ""}
+</svg>`;
+    }
+
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="842" height="595" viewBox="0 0 842 595">
+  <defs><style>@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&amp;family=Inter:wght@400;500;600&amp;display=swap');</style></defs>
+  <rect width="842" height="595" fill="${bgColor}"/>
+  <rect x="24" y="24" width="794" height="547" rx="8" fill="white" stroke="${accentColor}" stroke-width="3"/>
+  <rect x="36" y="36" width="770" height="523" rx="4" fill="none" stroke="${accentColor}" stroke-width="1" stroke-dasharray="8,4"/>
+  <rect x="321" y="60" width="200" height="4" rx="2" fill="${accentColor}"/>
+  <text x="421" y="100" text-anchor="middle" font-family="Inter, sans-serif" font-weight="600" font-size="14" fill="${bgColor}" letter-spacing="3">${escapeXml(churchName.toUpperCase())}</text>
+  <text x="421" y="150" text-anchor="middle" font-family="Playfair Display, serif" font-weight="700" font-size="36" fill="${bgColor}">CERTIFICATE</text>
+  <text x="421" y="180" text-anchor="middle" font-family="Inter, sans-serif" font-weight="500" font-size="14" fill="#666" letter-spacing="5">OF COMPLETION</text>
+  <text x="421" y="220" text-anchor="middle" font-family="Inter, sans-serif" font-weight="400" font-size="12" fill="#888">${escapeXml(customMessage)}</text>
+  <text x="421" y="280" text-anchor="middle" font-family="Playfair Display, serif" font-weight="700" font-size="32" fill="${bgColor}">${escapeXml(memberName)}</text>
+  <line x1="221" y1="295" x2="621" y2="295" stroke="${accentColor}" stroke-width="1.5"/>
+  <text x="421" y="340" text-anchor="middle" font-family="Inter, sans-serif" font-weight="600" font-size="18" fill="${bgColor}">${escapeXml(trainingType)}</text>
+  <text x="421" y="380" text-anchor="middle" font-family="Inter, sans-serif" font-weight="400" font-size="13" fill="#666">Completed on ${formattedDate}</text>
+  <text x="421" y="405" text-anchor="middle" font-family="Inter, sans-serif" font-weight="400" font-size="10" fill="#aaa">Certificate No: ${certNumber}</text>
+  ${sigName ? `
+  <line x1="301" y1="480" x2="541" y2="480" stroke="#ccc" stroke-width="1"/>
+  <text x="421" y="500" text-anchor="middle" font-family="Inter, sans-serif" font-weight="600" font-size="13" fill="${bgColor}">${escapeXml(sigName)}</text>
+  <text x="421" y="518" text-anchor="middle" font-family="Inter, sans-serif" font-weight="400" font-size="11" fill="#888">${escapeXml(sigTitle)}</text>` : ""}
+  <rect x="321" y="545" width="200" height="4" rx="2" fill="${accentColor}"/>
+</svg>`;
+  };
+
   return (
     <Card className="border-0 shadow-sm">
       <CardHeader className="pb-3">
