@@ -28,6 +28,7 @@ export default function SMSDialog({
   referenceId = null,
   directRecipients = null,
   title = "Send Message",
+  defaultChannel = "sms",
 }) {
   const { isAdmin, leaderUnits } = useAuth();
   const { toast } = useToast();
