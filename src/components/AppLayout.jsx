@@ -216,9 +216,10 @@ export default function Layout({ children }) {
           </div>
         </header>
 
-        <main className="flex-1 p-3 lg:p-8">
+        <main className="flex-1 p-3 lg:p-8 pb-20 lg:pb-8">
           {children}
         </main>
+        <MobileBottomNav />
       </div>
     </div>
   );
