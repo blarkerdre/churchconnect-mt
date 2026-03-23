@@ -105,6 +105,7 @@ export default function WSFCentresSection() {
     if (!form.name) return toast({ title: "Centre name is required", variant: "destructive" });
     saveMutation.mutate({
       name: form.name,
+      host_name: form.host_name || null,
       location: form.location || null,
       address: form.address || null,
       postcode: form.postcode || null,
