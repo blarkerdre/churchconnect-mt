@@ -1,18 +1,18 @@
 
 
-## Add Source Filter to Course Registrations
+## Add Search Input to Course Registrations
 
 ### Change
 
 **`src/pages/ExamManagement.jsx`** — `CourseRegistrationsView`:
-1. Add a `sourceFilter` state: `"all" | "member" | "public"`
-2. Add a `Select` dropdown next to the CSV button (options: All, Member, QR / Public)
-3. Filter the `registrations` array before rendering based on the selected source
-4. Apply the same filter to the CSV export so downloads match the current view
-5. Update the count badge to reflect filtered results
+1. Add a `searchTerm` state
+2. Add an `<Input>` with a search icon next to the source filter dropdown
+3. Apply search filter after source filter — match against `first_name`, `last_name`, `email`, and `phone` (case-insensitive)
+4. CSV export and count badge already use `filteredRegistrations`, so they'll automatically respect the search
 
 ### Technical details
-- Filter logic: `"member"` → `r.members?.user_id != null`, `"public"` → `r.members?.user_id == null`
-- Uses existing `Select` component from `@/components/ui/select`
-- No database or migration changes needed
+- Add `Search` icon import from lucide-react (already used elsewhere in project)
+- Add `Input` import from `@/components/ui/input`
+- Filter chain: `registrations → sourceFilter → searchFilter → filteredRegistrations`
+- Search matches partial strings across name (first + last combined), email, and phone
 
