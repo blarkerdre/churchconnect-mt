@@ -21,7 +21,7 @@ const allNavItems = [
   { name: "My Profile", icon: Users, path: "/my-profile", access: null },
   { name: "Members", icon: Users, path: "/members", access: "leader" },
   { name: "Events", icon: CalendarDays, path: "/events", access: null },
-  { name: "Attendance", icon: ClipboardList, path: "/attendance", access: "leader" },
+  { name: "Unit Attendance", icon: ClipboardList, path: "/attendance", access: "leader" },
   { name: "Follow-ups", icon: HeartHandshake, path: "/followups", access: "followup_member" },
   { name: "Pastoral Care", icon: Heart, path: "/pastoral-care", access: null },
   { name: "Communications", icon: Megaphone, path: "/communications", access: null },
