@@ -42,9 +42,8 @@ export default function CertificateTemplateSettings() {
   const { data: settingsTypes } = useAppSetting("training_types", []);
 
   const allTypes = useMemo(() => {
-    const defaults = ["BFC", "BCC", "LCC", "LDC", "Water Baptism", "WIT"];
     const courseNames = courses.map(c => c.name);
-    const merged = new Set(["Default", ...defaults, ...courseNames, ...(settingsTypes || [])]);
+    const merged = new Set(["Default", ...courseNames, ...(settingsTypes || [])]);
     return [...merged];
   }, [courses, settingsTypes]);
 
