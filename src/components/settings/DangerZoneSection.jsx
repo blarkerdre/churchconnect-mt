@@ -109,7 +109,7 @@ export default function DangerZoneSection() {
       </CardContent>
 
       <AlertDialog open={dialogOpen} onOpenChange={(open) => !loading && (open ? setDialogOpen(true) : resetAndClose())}>
-        <AlertDialogContent className="max-w-md">
+        <AlertDialogContent className="max-w-[95vw] sm:max-w-md">
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2 text-destructive">
               <AlertTriangle className="h-5 w-5" />
@@ -169,13 +169,14 @@ export default function DangerZoneSection() {
               </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={loading}>Cancel</AlertDialogCancel>
+          <AlertDialogFooter className="flex-col-reverse sm:flex-row gap-2">
+            <AlertDialogCancel disabled={loading} className="w-full sm:w-auto">Cancel</AlertDialogCancel>
             {step === 1 ? (
               <Button
                 variant="destructive"
                 onClick={handleProceedToPassword}
                 disabled={phrase !== CONFIRMATION_PHRASE}
+                className="w-full sm:w-auto"
               >
                 Continue
               </Button>
@@ -184,6 +185,7 @@ export default function DangerZoneSection() {
                 variant="destructive"
                 onClick={handlePurge}
                 disabled={loading || !password.trim()}
+                className="w-full sm:w-auto text-xs sm:text-sm"
               >
                 {loading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
                 Permanently Delete All Data
