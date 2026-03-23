@@ -434,10 +434,15 @@ export default function CertificateTemplateSettings() {
                 rows={2}
               />
             </div>
-            <Button onClick={handleSave} disabled={saveMutation.isPending} className="w-full">
-              {saveMutation.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-              {editing ? "Update" : "Create"} Template
-            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => setPreviewOpen(true)} className="gap-1.5">
+                <Eye className="h-4 w-4" /> Preview
+              </Button>
+              <Button onClick={handleSave} disabled={saveMutation.isPending} className="flex-1">
+                {saveMutation.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+                {editing ? "Update" : "Create"} Template
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
