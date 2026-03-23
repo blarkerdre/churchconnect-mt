@@ -53,7 +53,7 @@ export default function ExamManagement() {
   // Course CRUD state
   const [titleDialogOpen, setTitleDialogOpen] = useState(false);
   const [editingTitle, setEditingTitle] = useState(null);
-  const [titleForm, setTitleForm] = useState({ name: "", description: "", pass_mark_percentage: 50 });
+  const [titleForm, setTitleForm] = useState({ name: "", description: "", pass_mark_percentage: 50, registration_open: false, exams_open: false });
   const [deleteTitleTarget, setDeleteTitleTarget] = useState(null);
   const [showResults, setShowResults] = useState(false);
 
