@@ -119,6 +119,42 @@ export default function Events() {
     },
   });
 
+  const generateOccurrences = (parentEvent, parentId) => {
+    const freq = parentEvent.recurrence_frequency;
+    const endDate = parseISO(parentEvent.recurrence_end_date);
+    const children = [];
+    let current = parseISO(parentEvent.event_date);
+    let count = 0;
+
+    while (count < 52) {
+      if (freq === "Weekly") current = addWeeks(current, 1);
+      else if (freq === "Biweekly") current = addWeeks(current, 2);
+      else current = addMonths(current, 1);
+
+      if (isBefore(endDate, current)) break;
+      count++;
+      children.push({
+        title: parentEvent.title,
+        category: parentEvent.category,
+        event_date: format(current, "yyyy-MM-dd"),
+        start_time: parentEvent.start_time || null,
+        end_time: parentEvent.end_time || null,
+        location: parentEvent.location,
+        description: parentEvent.description,
+        event_mode: parentEvent.event_mode || "In Person",
+        audience: parentEvent.audience || "All Members",
+        is_public: true,
+        is_recurring: true,
+        recurrence_frequency: freq,
+        recurrence_end_date: parentEvent.recurrence_end_date,
+        recurrence_parent_id: parentId,
+        reminder_days_before: parentEvent.reminder_days_before?.length ? parentEvent.reminder_days_before : null,
+        reminder_sent: false,
+      });
+    }
+    return children;
+  };
+
   const saveMutation = useMutation({
     mutationFn: async (formData) => {
       const payload = {
@@ -132,15 +168,32 @@ export default function Events() {
         event_mode: formData.event_mode || "In Person",
         audience: formData.audience || "All Members",
         is_public: true,
+        is_recurring: formData.is_recurring || false,
+        recurrence_frequency: formData.is_recurring ? formData.recurrence_frequency : null,
+        recurrence_end_date: formData.is_recurring ? formData.recurrence_end_date : null,
+        reminder_days_before: formData.reminder_days_before?.length ? formData.reminder_days_before : null,
+        reminder_sent: false,
       };
       if (editing) {
         const { error } = await supabase.from("events").update(payload).eq("id", editing.id);
         if (error) throw error;
         await logAudit("event_update", "events", editing.id, { title: formData.title });
       } else {
-        const { error } = await supabase.from("events").insert(payload);
+        const { data: inserted, error } = await supabase.from("events").insert(payload).select().single();
         if (error) throw error;
-        await logAudit("event_create", "events", null, { title: formData.title });
+        await logAudit("event_create", "events", inserted.id, { title: formData.title });
+
+        // Generate child occurrences for recurring events
+        if (formData.is_recurring && formData.recurrence_end_date) {
+          const children = generateOccurrences(
+            { ...formData, event_date: formData.event_date },
+            inserted.id
+          );
+          if (children.length > 0) {
+            const { error: childError } = await supabase.from("events").insert(children);
+            if (childError) console.error("Failed to create occurrences:", childError);
+          }
+        }
       }
     },
     onSuccess: () => {
@@ -153,6 +206,7 @@ export default function Events() {
 
   const deleteMutation = useMutation({
     mutationFn: async (event) => {
+      // If parent recurring event, children cascade via FK
       const { error } = await supabase.from("events").delete().eq("id", event.id);
       if (error) throw error;
       await logAudit("event_delete", "events", event.id, { title: event.title });
