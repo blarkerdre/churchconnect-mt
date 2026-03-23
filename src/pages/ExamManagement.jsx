@@ -674,6 +674,15 @@ function CourseRegistrationsView({ course }) {
             <Badge variant="secondary" className="ml-2">{filteredRegistrations.length}</Badge>
           </CardTitle>
           <div className="flex items-center gap-2">
+            <div className="relative">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+              <Input
+                placeholder="Search name, email, phone…"
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+                className="h-8 w-[200px] pl-8 text-xs"
+              />
+            </div>
             <Select value={sourceFilter} onValueChange={setSourceFilter}>
               <SelectTrigger className="w-[140px] h-8 text-xs">
                 <SelectValue />
