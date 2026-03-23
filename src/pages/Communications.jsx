@@ -227,7 +227,7 @@ export default function Communications() {
     <div className="space-y-6">
       <Tabs defaultValue="announcements" className="space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <TabsList className="flex flex-wrap h-auto gap-1">
+          <TabsList className="flex flex-nowrap h-auto gap-1 overflow-x-auto w-full justify-start">
             <TabsTrigger value="announcements" className="gap-1.5 text-xs">
               <Megaphone className="h-3.5 w-3.5" /> Announcements
             </TabsTrigger>

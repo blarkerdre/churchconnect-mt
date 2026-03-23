@@ -140,7 +140,7 @@ export default function Dashboard() {
               <div className="flex items-start justify-between">
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">{stat.title}</p>
-                  <p className="text-3xl font-display font-bold text-foreground mt-1">{stat.value}</p>
+                  <p className="text-2xl sm:text-3xl font-display font-bold text-foreground mt-1">{stat.value}</p>
                   <p className="text-xs text-muted-foreground mt-1">{stat.change}</p>
                 </div>
                 <div className={`h-10 w-10 rounded-xl bg-muted flex items-center justify-center ${stat.color}`}>
