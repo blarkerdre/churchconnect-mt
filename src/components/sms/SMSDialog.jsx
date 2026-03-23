@@ -28,6 +28,7 @@ export default function SMSDialog({
   referenceId = null,
   directRecipients = null,
   title = "Send Message",
+  defaultChannel = "sms",
 }) {
   const { isAdmin, leaderUnits } = useAuth();
   const { toast } = useToast();
@@ -35,14 +36,14 @@ export default function SMSDialog({
   const [audience, setAudience] = useState(prefillAudience || "All Members");
   const [sending, setSending] = useState(false);
   const [result, setResult] = useState(null);
-  const [channel, setChannel] = useState("sms");
+  const [channel, setChannel] = useState(defaultChannel);
 
   React.useEffect(() => {
     if (open) {
       setMessage(prefillMessage);
       setAudience(prefillAudience || "All Members");
       setResult(null);
-      setChannel("sms");
+      setChannel(defaultChannel);
     }
   }, [open, prefillMessage, prefillAudience]);
 
