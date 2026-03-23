@@ -1,32 +1,21 @@
 
 
-## Post-Session Demographics & Report — Unit Leaders Only
+## Add Meeting Notes to Session Report
 
-### Summary
-Move demographic recording (male/female/total) and report attachments to appear **only after a session is closed**, accessible **only to unit leaders** (not during session creation). This creates a proper workflow: create session → check-in members → close session → record demographics & upload meeting report.
+Add a text area for meeting notes in the Session Report section, saved alongside demographics.
 
-### Changes
+### Changes — `src/pages/Attendance.jsx`
 
-**`src/pages/Attendance.jsx`**
+1. Add `meeting_notes` to `demoForm` state, initialized from `selectedSession.notes` when session changes
+2. Add a `Textarea` labeled "Meeting Notes" in the Session Report section (between demographics and attachments)
+3. Include `notes` in the `updateDemographicsMutation` payload so it saves to `attendance_sessions.notes`
+4. Rename "Save Demographics" button to "Save Report" since it now saves both demographics and notes
 
-1. **Remove male/female/total inputs from the "New Session" dialog** — these fields should not be filled at creation time
-2. **Remove male_count/female_count/total_count from createSessionMutation** — leave them at DB defaults (0)
-3. **Add a new "Session Report" section** that appears only when:
-   - The selected session is **closed** (`status === "closed"`)
-   - The current user is a **unit leader** (`isUnitLeader` — not admin-only, specifically unit leaders)
-4. **Session Report section includes:**
-   - Editable male/female number inputs with auto-calculated total
-   - A "Save Demographics" button that updates the session row
-   - The existing `ReportAttachments` component for file uploads
-5. **Move ReportAttachments** from its current always-visible position into this new gated section
-6. **Demographics display** in the session list and check-ins panel remains read-only for everyone (unchanged)
+### Database
+No changes needed — `attendance_sessions` already has a `notes` text column.
 
 ### Technical Detail
-- New `updateDemographicsMutation`: calls `supabase.from("attendance_sessions").update({ male_count, female_count, total_count }).eq("id", sessionId)`
-- Gate: `{isClosed && isUnitLeader && ( <SessionReportSection /> )}`
-- Local state for demographic editing: `demoForm` with `male_count`/`female_count`, pre-populated from `selectedSession` values when session changes
-- No database changes needed — columns already exist
-
-### Files
-- `src/pages/Attendance.jsx` (only file)
+- `demoForm` state expands: `{ male_count, female_count, meeting_notes }` 
+- `useEffect` that syncs `demoForm` from `selectedSession` also sets `meeting_notes: selectedSession?.notes || ""`
+- Update mutation adds `notes: meeting_notes` to the `.update()` call
 
