@@ -1,11 +1,24 @@
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Trophy } from "lucide-react";
+import { Loader2, Trophy, Download } from "lucide-react";
 import PrintReportButton from "@/components/PrintReportButton";
+
+function downloadCSV(filename, headers, rows) {
+  const escape = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+  const csv = [headers.map(escape).join(","), ...rows.map(r => r.map(escape).join(","))].join("\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
 
 export default function CourseResultsView({ course }) {
   const { data: subjects = [] } = useQuery({
@@ -94,14 +107,66 @@ export default function CourseResultsView({ course }) {
     ]),
   });
 
+  const handleDownloadCourseCSV = () => {
+    const headers = ["Member", ...subjects.map(s => s.name), "Total Score", "Total Points", "%", "Status"];
+    const rows = members.map(m => [
+      m.name,
+      ...subjects.map(s => {
+        const sub = m.subjects[s.id];
+        return sub ? `${sub.score}/${sub.total_points}` : "—";
+      }),
+      m.totalScore,
+      m.totalPoints,
+      `${Math.round(m.percentage)}%`,
+      m.passed && m.subjectsTaken === subjects.length ? "Passed" : "Incomplete",
+    ]);
+    downloadCSV(`${course.name}_results.csv`, headers, rows);
+  };
+
+  const handleDownloadSubjectCSV = (subject) => {
+    const subjectMembers = [];
+    attempts.forEach(a => {
+      if (a.subject_id !== subject.id) return;
+      const existing = subjectMembers.find(sm => sm.memberId === a.member_id);
+      const pct = a.total_points > 0 ? (a.score / a.total_points) * 100 : 0;
+      if (!existing) {
+        subjectMembers.push({
+          memberId: a.member_id,
+          name: `${a.members?.first_name || ""} ${a.members?.last_name || ""}`.trim(),
+          score: a.score, totalPoints: a.total_points, pct,
+          passed: pct >= (subject.pass_mark_percentage ?? 50),
+        });
+      } else if (pct > existing.pct) {
+        existing.score = a.score;
+        existing.totalPoints = a.total_points;
+        existing.pct = pct;
+        existing.passed = pct >= (subject.pass_mark_percentage ?? 50);
+      }
+    });
+    const headers = ["Member", "Score", "Total Points", "%", "Pass Mark", "Status"];
+    const rows = subjectMembers.map(m => [
+      m.name, m.score, m.totalPoints, `${Math.round(m.pct)}%`, `${subject.pass_mark_percentage ?? 50}%`, m.passed ? "Passed" : "Failed",
+    ]);
+    downloadCSV(`${course.name}_${subject.name}_results.csv`, headers, rows);
+  };
+
   return (
     <Card className="border-0 shadow-sm">
       <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between flex-wrap gap-2">
           <CardTitle className="text-base font-display flex items-center gap-2">
             <Trophy className="h-4 w-4 text-primary" /> {course.name} — Course Results
           </CardTitle>
-          {members.length > 0 && <PrintReportButton buildRows={buildPrintRows} label="Print Results" />}
+          <div className="flex gap-2">
+            {members.length > 0 && (
+              <>
+                <Button variant="outline" size="sm" className="gap-1.5" onClick={handleDownloadCourseCSV}>
+                  <Download className="h-3.5 w-3.5" /> Download CSV
+                </Button>
+                <PrintReportButton buildRows={buildPrintRows} label="Print Results" />
+              </>
+            )}
+          </div>
         </div>
       </CardHeader>
       <CardContent>
@@ -122,6 +187,19 @@ export default function CourseResultsView({ course }) {
                 <span className="text-muted-foreground">Pass mark:</span> <strong>{course.pass_mark_percentage}%</strong>
               </div>
             </div>
+
+            {/* Per-subject CSV downloads */}
+            {subjects.length > 1 && (
+              <div className="flex flex-wrap gap-2 mb-4">
+                <span className="text-xs text-muted-foreground self-center">Subject CSV:</span>
+                {subjects.map(s => (
+                  <Button key={s.id} variant="ghost" size="sm" className="text-xs h-7 gap-1" onClick={() => handleDownloadSubjectCSV(s)}>
+                    <Download className="h-3 w-3" /> {s.name}
+                  </Button>
+                ))}
+              </div>
+            )}
+
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
