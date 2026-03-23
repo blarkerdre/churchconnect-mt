@@ -295,9 +295,9 @@ function ChurchUnitsSection() {
         ) : (
           <div className="space-y-2">
             {units.map((unit) => (
-              <div key={unit.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                <div className="flex items-center gap-3">
-                  <span className="text-sm font-medium text-foreground">{unit.name}</span>
+              <div key={unit.id} className="flex items-center justify-between p-2.5 sm:p-3 bg-muted/50 rounded-lg">
+                <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                  <span className="text-sm font-medium text-foreground truncate">{unit.name}</span>
                   <Badge variant={unit.is_active ? "default" : "secondary"} className="text-xs">
                     {unit.is_active ? "Active" : "Inactive"}
                   </Badge>
