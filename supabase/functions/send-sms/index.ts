@@ -73,8 +73,9 @@ Deno.serve(async (req) => {
     // Resolve the From number based on channel
     let fromNumber = TWILIO_FROM;
     if (msgChannel === "whatsapp") {
-      const waFrom = Deno.env.get("TWILIO_WHATSAPP_FROM");
-      if (!waFrom) throw new Error("TWILIO_WHATSAPP_FROM is not configured");
+      const waFromRaw = Deno.env.get("TWILIO_WHATSAPP_FROM");
+      if (!waFromRaw) throw new Error("TWILIO_WHATSAPP_FROM is not configured");
+      const waFrom = waFromRaw.replace(/\s/g, "");
       fromNumber = waFrom.startsWith("whatsapp:") ? waFrom : `whatsapp:${waFrom}`;
     }
 
