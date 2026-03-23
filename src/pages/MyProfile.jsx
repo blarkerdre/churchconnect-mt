@@ -769,7 +769,7 @@ function DynamicExamButtons({ memberId, onSelect }) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("exam_attempts")
-        .select("subject_id, training_type, score, total_points")
+        .select("subject_id, training_type, score, total_points, passed, retake_allowed")
         .eq("member_id", memberId);
       if (error) throw error;
       return data;
