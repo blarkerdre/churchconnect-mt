@@ -9,6 +9,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { Mail, MessageSquare, Shield, CheckCircle, XCircle, Clock, AlertTriangle, Loader2, Search, UserCog, Trash2, Plus, Edit, CalendarIcon, Download } from "lucide-react";
+
+const WhatsAppIcon = ({ className }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+  </svg>
+);
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -212,7 +218,7 @@ function SMSLogsPanel() {
   const { data: logs = [], isLoading } = useQuery({
     queryKey: ["sms-logs", typeFilter, fromDate?.toISOString(), toDate?.toISOString()],
     queryFn: async () => {
-      let query = supabase.from("sms_log").select("*").order("created_at", { ascending: false }).limit(500);
+      let query = supabase.from("sms_log").select("*").eq("channel", "sms").order("created_at", { ascending: false }).limit(500);
       if (typeFilter !== "All") query = query.eq("sms_type", typeFilter);
       if (fromDate) query = query.gte("created_at", fromDate.toISOString());
       if (toDate) query = query.lte("created_at", new Date(toDate.getFullYear(), toDate.getMonth(), toDate.getDate(), 23, 59, 59).toISOString());
@@ -250,6 +256,89 @@ function SMSLogsPanel() {
           <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
         ) : logs.length === 0 ? (
           <p className="text-center text-muted-foreground py-8">No SMS logs found</p>
+        ) : logs.map(log => (
+          <div key={log.id} className="border rounded-lg p-3 text-sm space-y-1">
+            <div className="flex items-center justify-between">
+              <span className="font-medium truncate">{log.recipient_phone}</span>
+              <div className="flex items-center gap-2">
+                <Badge variant="outline" className="text-xs">{log.sms_type}</Badge>
+                <Badge className={`border-0 text-xs ${
+                  log.delivery_status === "delivered" ? "bg-chart-3/10 text-chart-3" :
+                  ["failed", "undelivered"].includes(log.delivery_status) ? "bg-destructive/10 text-destructive" :
+                  log.status === "sent" ? "bg-primary/10 text-primary" : "bg-destructive/10 text-destructive"
+                }`}>{log.delivery_status || log.status}</Badge>
+              </div>
+            </div>
+            <p className="text-muted-foreground truncate">{log.message}</p>
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-muted-foreground">{format(new Date(log.created_at), "dd MMM yyyy, h:mm a")}</p>
+              {log.delivery_updated_at && <p className="text-xs text-muted-foreground">Updated: {format(new Date(log.delivery_updated_at), "h:mm a")}</p>}
+            </div>
+            {log.error_message && <p className="text-xs text-destructive">{log.error_message}</p>}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ── WhatsApp Logs Tab ── */
+const WHATSAPP_CSV_HEADERS = [
+  { label: "Phone", fn: r => r.recipient_phone },
+  { label: "Type", fn: r => r.sms_type },
+  { label: "Status", fn: r => r.status },
+  { label: "Delivery Status", fn: r => r.delivery_status || "" },
+  { label: "Message", fn: r => r.message },
+  { label: "Time", fn: r => format(new Date(r.created_at), "yyyy-MM-dd HH:mm:ss") },
+  { label: "Error", fn: r => r.error_message || "" },
+];
+
+function WhatsAppLogsPanel() {
+  const [typeFilter, setTypeFilter] = useState("All");
+  const [fromDate, setFromDate] = useState(() => subDays(new Date(), 7));
+  const [toDate, setToDate] = useState(() => new Date());
+
+  const { data: logs = [], isLoading } = useQuery({
+    queryKey: ["whatsapp-logs", typeFilter, fromDate?.toISOString(), toDate?.toISOString()],
+    queryFn: async () => {
+      let query = supabase.from("sms_log").select("*").eq("channel", "whatsapp").order("created_at", { ascending: false }).limit(500);
+      if (typeFilter !== "All") query = query.eq("sms_type", typeFilter);
+      if (fromDate) query = query.gte("created_at", fromDate.toISOString());
+      if (toDate) query = query.lte("created_at", new Date(toDate.getFullYear(), toDate.getMonth(), toDate.getDate(), 23, 59, 59).toISOString());
+      const { data, error } = await query;
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const sentCount = logs.filter(l => l.status === "sent").length;
+  const failedCount = logs.filter(l => l.status === "failed").length;
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center gap-3">
+        <DateRangePicker from={fromDate} to={toDate} onFromChange={setFromDate} onToChange={setToDate} />
+        <Select value={typeFilter} onValueChange={setTypeFilter}>
+          <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            {["All", "announcement", "event", "followup", "bulk"].map(t => (
+              <SelectItem key={t} value={t}>{t === "All" ? "All Types" : t.charAt(0).toUpperCase() + t.slice(1)}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <div className="flex gap-2 text-xs">
+          <Badge className="bg-chart-3/10 text-chart-3 border-0">{sentCount} sent</Badge>
+          {failedCount > 0 && <Badge className="bg-destructive/10 text-destructive border-0">{failedCount} failed</Badge>}
+        </div>
+        <Button size="sm" variant="outline" onClick={() => downloadCSV(logs, WHATSAPP_CSV_HEADERS, `whatsapp-logs-${format(new Date(), "yyyy-MM-dd")}.csv`)} disabled={logs.length === 0}>
+          <Download className="h-3.5 w-3.5 mr-1.5" /> CSV
+        </Button>
+      </div>
+      <div className="space-y-2">
+        {isLoading ? (
+          <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+        ) : logs.length === 0 ? (
+          <p className="text-center text-muted-foreground py-8">No WhatsApp logs found</p>
         ) : logs.map(log => (
           <div key={log.id} className="border rounded-lg p-3 text-sm space-y-1">
             <div className="flex items-center justify-between">
@@ -400,17 +489,19 @@ export default function SystemLogs() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-display font-bold text-foreground">System Logs</h1>
-        <p className="text-sm text-muted-foreground">Monitor emails, SMS, and admin activity</p>
+        <p className="text-sm text-muted-foreground">Monitor emails, SMS, WhatsApp, and admin activity</p>
       </div>
 
       <Tabs defaultValue="email" className="space-y-4">
         <TabsList className="w-full sm:w-auto overflow-x-auto">
           <TabsTrigger value="email" className="gap-1.5"><Mail className="h-3.5 w-3.5" /> Email</TabsTrigger>
           <TabsTrigger value="sms" className="gap-1.5"><MessageSquare className="h-3.5 w-3.5" /> SMS</TabsTrigger>
+          <TabsTrigger value="whatsapp" className="gap-1.5"><WhatsAppIcon className="h-3.5 w-3.5" /> WhatsApp</TabsTrigger>
           {isSuperAdmin && <TabsTrigger value="audit" className="gap-1.5"><Shield className="h-3.5 w-3.5" /> Audit</TabsTrigger>}
         </TabsList>
         <TabsContent value="email"><EmailLogsPanel /></TabsContent>
         <TabsContent value="sms"><SMSLogsPanel /></TabsContent>
+        <TabsContent value="whatsapp"><WhatsAppLogsPanel /></TabsContent>
         {isSuperAdmin && <TabsContent value="audit"><AuditLogsPanel /></TabsContent>}
       </Tabs>
     </div>
