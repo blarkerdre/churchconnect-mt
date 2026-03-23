@@ -142,6 +142,7 @@ export default function CertificateTemplateSettings() {
     }
   };
 
+  const [previewOpen, setPreviewOpen] = useState(false);
   const [previewUrl, setPreviewUrl] = useState(null);
   React.useEffect(() => {
     if (!form.background_image_url) { setPreviewUrl(null); return; }
