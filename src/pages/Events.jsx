@@ -7,7 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, Search, CalendarDays, MapPin, Clock, Users, Edit, Trash2, Loader2, MessageSquare, Globe, Monitor } from "lucide-react";
+import { Plus, Search, CalendarDays, MapPin, Clock, Users, Edit, Trash2, Loader2, MessageSquare, Globe, Monitor, Repeat } from "lucide-react";
+import { addWeeks, addMonths, format, parseISO, isBefore, isEqual } from "date-fns";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
