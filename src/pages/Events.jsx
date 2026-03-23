@@ -3,11 +3,14 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, Search, CalendarDays, MapPin, Clock, Users, Edit, Trash2, Loader2, MessageSquare, Globe, Monitor } from "lucide-react";
+import { Plus, Search, CalendarDays, MapPin, Clock, Users, Edit, Trash2, Loader2, MessageSquare, Globe, Monitor, Repeat } from "lucide-react";
+import { addWeeks, addMonths, format, parseISO, isBefore, isEqual } from "date-fns";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
@@ -118,6 +121,42 @@ export default function Events() {
     },
   });
 
+  const generateOccurrences = (parentEvent, parentId) => {
+    const freq = parentEvent.recurrence_frequency;
+    const endDate = parseISO(parentEvent.recurrence_end_date);
+    const children = [];
+    let current = parseISO(parentEvent.event_date);
+    let count = 0;
+
+    while (count < 52) {
+      if (freq === "Weekly") current = addWeeks(current, 1);
+      else if (freq === "Biweekly") current = addWeeks(current, 2);
+      else current = addMonths(current, 1);
+
+      if (isBefore(endDate, current)) break;
+      count++;
+      children.push({
+        title: parentEvent.title,
+        category: parentEvent.category,
+        event_date: format(current, "yyyy-MM-dd"),
+        start_time: parentEvent.start_time || null,
+        end_time: parentEvent.end_time || null,
+        location: parentEvent.location,
+        description: parentEvent.description,
+        event_mode: parentEvent.event_mode || "In Person",
+        audience: parentEvent.audience || "All Members",
+        is_public: true,
+        is_recurring: true,
+        recurrence_frequency: freq,
+        recurrence_end_date: parentEvent.recurrence_end_date,
+        recurrence_parent_id: parentId,
+        reminder_days_before: parentEvent.reminder_days_before?.length ? parentEvent.reminder_days_before : null,
+        reminder_sent: false,
+      });
+    }
+    return children;
+  };
+
   const saveMutation = useMutation({
     mutationFn: async (formData) => {
       const payload = {
@@ -131,15 +170,32 @@ export default function Events() {
         event_mode: formData.event_mode || "In Person",
         audience: formData.audience || "All Members",
         is_public: true,
+        is_recurring: formData.is_recurring || false,
+        recurrence_frequency: formData.is_recurring ? formData.recurrence_frequency : null,
+        recurrence_end_date: formData.is_recurring ? formData.recurrence_end_date : null,
+        reminder_days_before: formData.reminder_days_before?.length ? formData.reminder_days_before : null,
+        reminder_sent: false,
       };
       if (editing) {
         const { error } = await supabase.from("events").update(payload).eq("id", editing.id);
         if (error) throw error;
         await logAudit("event_update", "events", editing.id, { title: formData.title });
       } else {
-        const { error } = await supabase.from("events").insert(payload);
+        const { data: inserted, error } = await supabase.from("events").insert(payload).select().single();
         if (error) throw error;
-        await logAudit("event_create", "events", null, { title: formData.title });
+        await logAudit("event_create", "events", inserted.id, { title: formData.title });
+
+        // Generate child occurrences for recurring events
+        if (formData.is_recurring && formData.recurrence_end_date) {
+          const children = generateOccurrences(
+            { ...formData, event_date: formData.event_date },
+            inserted.id
+          );
+          if (children.length > 0) {
+            const { error: childError } = await supabase.from("events").insert(children);
+            if (childError) console.error("Failed to create occurrences:", childError);
+          }
+        }
       }
     },
     onSuccess: () => {
@@ -152,6 +208,7 @@ export default function Events() {
 
   const deleteMutation = useMutation({
     mutationFn: async (event) => {
+      // If parent recurring event, children cascade via FK
       const { error } = await supabase.from("events").delete().eq("id", event.id);
       if (error) throw error;
       await logAudit("event_delete", "events", event.id, { title: event.title });
@@ -202,6 +259,8 @@ export default function Events() {
       title: "", category: "Service", event_date: "", start_time: "", end_time: "",
       location: "", description: "", event_mode: "In Person",
       audience: lockedAudience || "All Members",
+      is_recurring: false, recurrence_frequency: "Weekly", recurrence_end_date: "",
+      reminder_days_before: [],
     });
     setDialogOpen(true);
   };
@@ -214,12 +273,19 @@ export default function Events() {
       location: e.location || "", description: e.description || "",
       event_mode: e.event_mode || "In Person",
       audience: e.audience || "All Members",
+      is_recurring: e.is_recurring || false,
+      recurrence_frequency: e.recurrence_frequency || "Weekly",
+      recurrence_end_date: e.recurrence_end_date || "",
+      reminder_days_before: e.reminder_days_before || [],
     });
     setDialogOpen(true);
   };
 
   const handleDelete = (e) => {
-    if (window.confirm("Delete this event?")) deleteMutation.mutate(e);
+    const msg = e.is_recurring && !e.recurrence_parent_id
+      ? "Delete this recurring event and all its occurrences?"
+      : "Delete this event?";
+    if (window.confirm(msg)) deleteMutation.mutate(e);
   };
 
   return (
@@ -276,6 +342,9 @@ export default function Events() {
                         <Badge className={`border-0 ${statusColors[status]}`}>{status}</Badge>
                         {e.event_mode && e.event_mode !== "In Person" && (
                           <Badge variant="outline" className="gap-1 text-xs"><ModeIcon className="h-3 w-3" />{e.event_mode}</Badge>
+                        )}
+                        {e.is_recurring && (
+                          <Badge variant="outline" className="gap-1 text-xs text-chart-4 border-chart-4/30"><Repeat className="h-3 w-3" />Recurring</Badge>
                         )}
                         {audience !== "All Members" && (
                           <Badge variant="outline" className="text-xs">{audience}</Badge>
@@ -360,9 +429,64 @@ export default function Events() {
             <div><Label>Location</Label><Input value={form.location || ""} onChange={e => setForm(f => ({ ...f, location: e.target.value }))} /></div>
             <div><Label>Description</Label><Textarea value={form.description || ""} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={3} /></div>
 
-            <Button onClick={() => saveMutation.mutate(form)} disabled={saveMutation.isPending} className="w-full bg-primary">
+            {/* Recurrence */}
+            {!editing?.recurrence_parent_id && (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between p-3 rounded-xl bg-muted/50 border border-border">
+                  <div className="flex items-center gap-2">
+                    <Repeat className="h-4 w-4 text-muted-foreground" />
+                    <div>
+                      <p className="text-sm font-medium text-foreground">Recurring Event</p>
+                      <p className="text-xs text-muted-foreground">Auto-generate repeating occurrences</p>
+                    </div>
+                  </div>
+                  <Switch checked={!!form.is_recurring} onCheckedChange={v => setForm(f => ({ ...f, is_recurring: v }))} disabled={!!editing} />
+                </div>
+                {form.is_recurring && (
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label>Frequency</Label>
+                      <Select value={form.recurrence_frequency || "Weekly"} onValueChange={v => setForm(f => ({ ...f, recurrence_frequency: v }))}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          {["Weekly", "Biweekly", "Monthly"].map(fr => <SelectItem key={fr} value={fr}>{fr}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label>Repeat Until</Label>
+                      <Input type="date" value={form.recurrence_end_date || ""} onChange={e => setForm(f => ({ ...f, recurrence_end_date: e.target.value }))} min={form.event_date || undefined} />
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Reminders */}
+            <div className="space-y-1.5">
+              <Label>Reminders</Label>
+              <div className="flex flex-wrap gap-3">
+                {[{ value: 1, label: "1 day before" }, { value: 3, label: "3 days before" }, { value: 7, label: "1 week before" }].map(opt => (
+                  <label key={opt.value} className="flex items-center gap-1.5 cursor-pointer text-sm text-foreground">
+                    <Checkbox
+                      checked={(form.reminder_days_before || []).includes(opt.value)}
+                      onCheckedChange={() => {
+                        const curr = form.reminder_days_before || [];
+                        setForm(f => ({
+                          ...f,
+                          reminder_days_before: curr.includes(opt.value) ? curr.filter(d => d !== opt.value) : [...curr, opt.value].sort((a, b) => a - b),
+                        }));
+                      }}
+                    />
+                    {opt.label}
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <Button onClick={() => saveMutation.mutate(form)} disabled={saveMutation.isPending || (form.is_recurring && !form.recurrence_end_date)} className="w-full bg-primary">
               {saveMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-              {editing ? "Save Changes" : "Create Event"}
+              {editing ? "Save Changes" : form.is_recurring ? "Create Recurring Event" : "Create Event"}
             </Button>
           </div>
         </DialogContent>

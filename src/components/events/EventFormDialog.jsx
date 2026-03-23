@@ -6,19 +6,28 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Loader2 } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Loader2, Repeat } from "lucide-react";
 import { useAppSetting } from "@/hooks/useAppSetting";
 import { useChurchUnits } from "@/hooks/useChurchUnits";
 
 const DEFAULT_CATEGORIES = ["Conference", "Special Service", "Revival", "Youth Event", "Women's Event", "Men's Event", "Children's Event", "Outreach", "Training", "Social", "Other"];
 const STATUSES = ["Upcoming", "Ongoing", "Completed", "Cancelled"];
 const EVENT_MODES = ["In Person", "Online", "Hybrid"];
+const RECURRENCE_FREQUENCIES = ["Weekly", "Biweekly", "Monthly"];
+const REMINDER_OPTIONS = [
+  { value: 1, label: "1 day before" },
+  { value: 3, label: "3 days before" },
+  { value: 7, label: "1 week before" },
+];
 
 const empty = {
   title: "", description: "", category: "Special Service", audience: "All Members",
   date: "", end_date: "", start_time: "", end_time: "", location: "", address: "",
   registration_required: false, registration_deadline: "", status: "Upcoming", notes: "",
   event_mode: "In Person",
+  is_recurring: false, recurrence_frequency: "Weekly", recurrence_end_date: "",
+  reminder_days_before: [],
 };
 
 export default function EventFormDialog({ open, onOpenChange, event, onSave, lockedCategory = null }) {
@@ -29,12 +38,33 @@ export default function EventFormDialog({ open, onOpenChange, event, onSave, loc
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    const base = event ? { ...empty, ...event } : empty;
+    const base = event
+      ? {
+          ...empty,
+          ...event,
+          reminder_days_before: event.reminder_days_before || [],
+          is_recurring: event.is_recurring || false,
+          recurrence_frequency: event.recurrence_frequency || "Weekly",
+          recurrence_end_date: event.recurrence_end_date || "",
+        }
+      : empty;
     if (lockedCategory && !event) base.category = lockedCategory;
     setForm(base);
   }, [event, open, lockedCategory]);
 
   const set = (k, v) => setForm(p => ({ ...p, [k]: v }));
+
+  const toggleReminder = (day) => {
+    setForm(p => {
+      const current = p.reminder_days_before || [];
+      return {
+        ...p,
+        reminder_days_before: current.includes(day)
+          ? current.filter(d => d !== day)
+          : [...current, day].sort((a, b) => a - b),
+      };
+    });
+  };
 
   const handleSave = async () => {
     setSaving(true);
@@ -52,7 +82,7 @@ export default function EventFormDialog({ open, onOpenChange, event, onSave, loc
         <div className="space-y-6 py-2">
           {/* Basic Info */}
           <div>
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">Event Details</h3>
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Event Details</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-1.5 md:col-span-2">
                 <Label>Title *</Label>
@@ -61,9 +91,9 @@ export default function EventFormDialog({ open, onOpenChange, event, onSave, loc
               <div className="space-y-1.5">
                 <Label>Category *</Label>
                 {lockedCategory ? (
-                  <div className="flex h-9 w-full items-center rounded-md border border-input bg-slate-50 px-3 py-2 text-sm text-slate-600">
+                  <div className="flex h-9 w-full items-center rounded-md border border-input bg-muted px-3 py-2 text-sm text-muted-foreground">
                     {lockedCategory}
-                    <span className="ml-2 text-xs text-slate-400">(locked to your unit)</span>
+                    <span className="ml-2 text-xs text-muted-foreground">(locked to your unit)</span>
                   </div>
                 ) : (
                   <Select value={form.category} onValueChange={v => set("category", v)}>
@@ -102,14 +132,14 @@ export default function EventFormDialog({ open, onOpenChange, event, onSave, loc
 
           {/* Date & Time */}
           <div>
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">Date & Time</h3>
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Date & Time</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label>Start Date *</Label>
                 <Input type="date" value={form.date} onChange={e => set("date", e.target.value)} />
               </div>
               <div className="space-y-1.5">
-                <Label>End Date <span className="text-slate-400 text-xs">(multi-day)</span></Label>
+                <Label>End Date <span className="text-muted-foreground text-xs">(multi-day)</span></Label>
                 <Input type="date" value={form.end_date} onChange={e => set("end_date", e.target.value)} />
               </div>
               <div className="space-y-1.5">
@@ -125,7 +155,7 @@ export default function EventFormDialog({ open, onOpenChange, event, onSave, loc
 
           {/* Location */}
           <div>
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">Location</h3>
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Location</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label>Venue Name</Label>
@@ -138,14 +168,76 @@ export default function EventFormDialog({ open, onOpenChange, event, onSave, loc
             </div>
           </div>
 
+          {/* Recurrence */}
+          {!event?.recurrence_parent_id && (
+            <div>
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Recurrence</h3>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between p-3 rounded-xl bg-muted/50 border border-border">
+                  <div className="flex items-center gap-2">
+                    <Repeat className="h-4 w-4 text-muted-foreground" />
+                    <div>
+                      <p className="text-sm font-medium text-foreground">Recurring Event</p>
+                      <p className="text-xs text-muted-foreground">Create repeating occurrences automatically</p>
+                    </div>
+                  </div>
+                  <Switch
+                    checked={!!form.is_recurring}
+                    onCheckedChange={v => set("is_recurring", v)}
+                    disabled={!!event}
+                  />
+                </div>
+                {form.is_recurring && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pl-4">
+                    <div className="space-y-1.5">
+                      <Label>Frequency</Label>
+                      <Select value={form.recurrence_frequency || "Weekly"} onValueChange={v => set("recurrence_frequency", v)}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          {RECURRENCE_FREQUENCIES.map(f => <SelectItem key={f} value={f}>{f}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>Repeat Until *</Label>
+                      <Input
+                        type="date"
+                        value={form.recurrence_end_date}
+                        onChange={e => set("recurrence_end_date", e.target.value)}
+                        min={form.date || undefined}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Reminders */}
+          <div>
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Reminders</h3>
+            <div className="flex flex-wrap gap-4 p-3 rounded-xl bg-muted/50 border border-border">
+              {REMINDER_OPTIONS.map(opt => (
+                <label key={opt.value} className="flex items-center gap-2 cursor-pointer">
+                  <Checkbox
+                    checked={(form.reminder_days_before || []).includes(opt.value)}
+                    onCheckedChange={() => toggleReminder(opt.value)}
+                  />
+                  <span className="text-sm text-foreground">{opt.label}</span>
+                </label>
+              ))}
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">Members will receive in-app notifications before the event</p>
+          </div>
+
           {/* Registration */}
           <div>
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">Registration</h3>
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Registration</h3>
             <div className="space-y-3">
-              <div className="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-100">
+              <div className="flex items-center justify-between p-3 rounded-xl bg-muted/50 border border-border">
                 <div>
-                  <p className="text-sm font-medium text-slate-700">Registration Required</p>
-                  <p className="text-xs text-slate-400">Enable to track registrations for this event</p>
+                  <p className="text-sm font-medium text-foreground">Registration Required</p>
+                  <p className="text-xs text-muted-foreground">Enable to track registrations for this event</p>
                 </div>
                 <Switch checked={!!form.registration_required} onCheckedChange={v => set("registration_required", v)} />
               </div>
@@ -166,9 +258,13 @@ export default function EventFormDialog({ open, onOpenChange, event, onSave, loc
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={handleSave} disabled={saving || !form.title || !form.date} className="bg-[#1e3a5f] hover:bg-[#152d4a]">
+          <Button
+            onClick={handleSave}
+            disabled={saving || !form.title || !form.date || (form.is_recurring && !form.recurrence_end_date)}
+            className="bg-primary hover:bg-primary/90"
+          >
             {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-            {event ? "Update Event" : "Create Event"}
+            {event ? "Update Event" : form.is_recurring ? "Create Recurring Event" : "Create Event"}
           </Button>
         </DialogFooter>
       </DialogContent>
