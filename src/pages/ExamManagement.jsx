@@ -39,6 +39,8 @@ const emptyQuestion = {
   question_type: "multiple_choice",
 };
 
+const WOFBI_DEFAULT_ABOUT = "WoFBI — Word of Faith Bible Institute — is a structured Bible training programme designed to equip believers with foundational knowledge of God's Word through courses and examinations.";
+
 export default function ExamManagement() {
   const { user, isAdmin, myMember } = useAuth();
   const qc = useQueryClient();
@@ -249,6 +251,9 @@ export default function ExamManagement() {
         </div>
       </div>
 
+
+      {/* WoFBI About Section (Admin Editable) */}
+      <WofbiAboutEditor />
 
       {/* Certificate Courses */}
       <Card className="border-0 shadow-sm">
@@ -585,6 +590,88 @@ export default function ExamManagement() {
   );
 }
 
+function WofbiAboutEditor() {
+  const qc = useQueryClient();
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState("");
+
+  const { data: aboutText = WOFBI_DEFAULT_ABOUT } = useQuery({
+    queryKey: ["app-settings", "wofbi_about"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("app_settings").select("value").eq("key", "wofbi_about").maybeSingle();
+      if (error) throw error;
+      return typeof data?.value === "string" ? data.value : WOFBI_DEFAULT_ABOUT;
+    },
+  });
+
+  const saveMutation = useMutation({
+    mutationFn: async (text) => {
+      const { error } = await supabase.from("app_settings").upsert({ key: "wofbi_about", value: text }, { onConflict: "key" });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["app-settings", "wofbi_about"] });
+      toast({ title: "WoFBI description updated" });
+      setEditing(false);
+    },
+    onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+  });
+
+  return (
+    <Card className="border-0 shadow-sm">
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-base font-display flex items-center gap-2">
+            <BookOpen className="h-4 w-4 text-primary" /> About WoFBI
+          </CardTitle>
+          {!editing && (
+            <Button size="sm" variant="outline" className="gap-1.5" onClick={() => { setDraft(aboutText); setEditing(true); }}>
+              <Edit className="h-3.5 w-3.5" /> Edit
+            </Button>
+          )}
+        </div>
+      </CardHeader>
+      <CardContent>
+        {editing ? (
+          <div className="space-y-3">
+            <Textarea value={draft} onChange={(e) => setDraft(e.target.value)} rows={4} placeholder="Describe what WoFBI is..." />
+            <div className="flex gap-2 justify-end">
+              <Button size="sm" variant="outline" onClick={() => setEditing(false)}>Cancel</Button>
+              <Button size="sm" className="gap-1.5" onClick={() => saveMutation.mutate(draft)} disabled={saveMutation.isPending}>
+                {saveMutation.isPending && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                <Save className="h-3.5 w-3.5" /> Save
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground">{aboutText}</p>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function WofbiAboutDisplay() {
+  const { data: aboutText = WOFBI_DEFAULT_ABOUT } = useQuery({
+    queryKey: ["app-settings", "wofbi_about"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("app_settings").select("value").eq("key", "wofbi_about").maybeSingle();
+      if (error) throw error;
+      return typeof data?.value === "string" ? data.value : WOFBI_DEFAULT_ABOUT;
+    },
+  });
+
+  if (!aboutText) return null;
+
+  return (
+    <Card className="border-0 shadow-sm bg-primary/5">
+      <CardContent className="p-4">
+        <p className="text-sm text-foreground leading-relaxed">{aboutText}</p>
+      </CardContent>
+    </Card>
+  );
+}
+
 function MemberExamsView({ memberId, courses, loading }) {
   const qc = useQueryClient();
   const [examSelection, setExamSelection] = useState(null);
@@ -664,6 +751,8 @@ function MemberExamsView({ memberId, courses, loading }) {
         </h1>
         <p className="text-sm text-muted-foreground mt-1">Register for courses and take your WoFBI exams</p>
       </div>
+
+      <WofbiAboutDisplay />
 
       {activeCourses.length === 0 ? (
         <Card className="border-0 shadow-sm">
