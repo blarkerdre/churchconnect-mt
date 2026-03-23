@@ -109,7 +109,7 @@ export default function DangerZoneSection() {
       </CardContent>
 
       <AlertDialog open={dialogOpen} onOpenChange={(open) => !loading && (open ? setDialogOpen(true) : resetAndClose())}>
-        <AlertDialogContent className="max-w-md">
+        <AlertDialogContent className="max-w-[95vw] sm:max-w-md">
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2 text-destructive">
               <AlertTriangle className="h-5 w-5" />
