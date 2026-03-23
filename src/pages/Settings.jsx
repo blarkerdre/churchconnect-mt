@@ -70,8 +70,8 @@ function NotificationPreferencesSection() {
         </div>
 
         {/* SMS toggle */}
-        <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
-          <div>
+        <div className="flex items-center justify-between p-3 sm:p-4 bg-muted/50 rounded-lg">
+          <div className="min-w-0 mr-2">
             <p className="text-sm font-medium text-foreground">SMS Notifications</p>
             <p className="text-xs text-muted-foreground mt-0.5">Send SMS alongside email for follow-up &amp; pastoral care assignments (Twilio costs apply)</p>
           </div>
