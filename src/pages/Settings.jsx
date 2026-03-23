@@ -438,7 +438,7 @@ export default function Settings() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-xl font-display font-bold text-foreground flex items-center gap-2">
+        <h1 className="text-lg sm:text-xl font-display font-bold text-foreground flex items-center gap-2">
           <SettingsIcon className="h-5 w-5 text-primary" /> Settings
         </h1>
         <p className="text-sm text-muted-foreground mt-1">Manage application configuration and options</p>
