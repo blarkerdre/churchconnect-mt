@@ -30,6 +30,23 @@ export default function CertificateTemplateSettings() {
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(emptyTemplate);
   const [uploading, setUploading] = useState(false);
+  const [useCustomType, setUseCustomType] = useState(false);
+
+  const { data: courses = [] } = useQuery({
+    queryKey: ["exam-titles-active"],
+    queryFn: async () => {
+      const { data } = await supabase.from("exam_titles").select("name").eq("is_active", true);
+      return data || [];
+    },
+  });
+  const { data: settingsTypes } = useAppSetting("training_types", []);
+
+  const allTypes = useMemo(() => {
+    const defaults = ["BFC", "BCC", "LCC", "LDC", "Water Baptism", "WIT"];
+    const courseNames = courses.map(c => c.name);
+    const merged = new Set(["Default", ...defaults, ...courseNames, ...(settingsTypes || [])]);
+    return [...merged];
+  }, [courses, settingsTypes]);
 
   const { data: templates = [], isLoading } = useQuery({
     queryKey: ["certificate-templates"],
