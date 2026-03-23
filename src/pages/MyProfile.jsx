@@ -769,7 +769,7 @@ function DynamicExamButtons({ memberId, onSelect }) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("exam_attempts")
-        .select("subject_id, training_type, score, total_points")
+        .select("subject_id, training_type, score, total_points, passed, retake_allowed")
         .eq("member_id", memberId);
       if (error) throw error;
       return data;
@@ -876,17 +876,23 @@ function DynamicExamButtons({ memberId, onSelect }) {
                 {subjects.map(s => {
                   const taken = !!bestBySubject[s.id];
                   const best = bestBySubject[s.id];
+                  const bestPct = best && best.total_points > 0 ? (best.score / best.total_points) * 100 : 0;
+                  const subjectPassMark = s.pass_mark_percentage ?? 50;
+                  const hasPassed = taken && bestPct >= subjectPassMark;
+                  // Check if any attempt for this subject has retake_allowed
+                  const canRetake = taken && !hasPassed && myAttempts.some(a => a.subject_id === s.id && a.retake_allowed === true);
+                  const isDisabled = taken && !canRetake;
                   return (
                     <Button
                       key={s.id}
                       variant={taken ? "secondary" : "outline"}
                       size="sm"
-                      disabled={taken}
+                      disabled={isDisabled}
                       onClick={() => onSelect({ type: course.name, subjectId: s.id, subjectName: s.name })}
                       className="gap-1.5"
                     >
                       <BookOpen className="h-3.5 w-3.5" />
-                      {s.name} {taken ? `✓ ${best.score}/${best.total_points}` : ""}
+                      {s.name} {taken ? (canRetake ? "↻ Retake" : `✓ ${best.score}/${best.total_points}`) : ""}
                     </Button>
                   );
                 })}

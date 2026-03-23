@@ -14,9 +14,10 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "@/components/ui/use-toast";
-import { Loader2, Plus, Trash2, Edit, BookOpen, Save, Tag, Layers } from "lucide-react";
+import { Loader2, Plus, Trash2, Edit, BookOpen, Save, Tag, Layers, Eye } from "lucide-react";
 import SubjectManager from "@/components/exams/SubjectManager";
 import CourseResultsView from "@/components/exams/CourseResultsView";
+import TakeExamDialog from "@/components/exams/TakeExamDialog";
 
 const OPTION_LETTERS = ["a", "b", "c", "d"];
 const QUESTION_TYPES = [
@@ -46,6 +47,7 @@ export default function ExamManagement() {
   const [editingQuestion, setEditingQuestion] = useState(null);
   const [form, setForm] = useState(emptyQuestion);
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [previewSubject, setPreviewSubject] = useState(null);
 
   // Course CRUD state
   const [titleDialogOpen, setTitleDialogOpen] = useState(false);
@@ -312,9 +314,16 @@ export default function ExamManagement() {
                     <h3 className="text-sm font-semibold text-foreground">
                       Questions — {selectedSubject.name}
                     </h3>
-                    <Button size="sm" className="gap-1.5" onClick={openNew}>
-                      <Plus className="h-4 w-4" /> Add Question
-                    </Button>
+                    <div className="flex gap-2">
+                      {questions.length > 0 && (
+                        <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setPreviewSubject(selectedSubject)}>
+                          <Eye className="h-3.5 w-3.5" /> Preview Exam
+                        </Button>
+                      )}
+                      <Button size="sm" className="gap-1.5" onClick={openNew}>
+                        <Plus className="h-4 w-4" /> Add Question
+                      </Button>
+                    </div>
                   </div>
 
                   <Card className="border-0 shadow-sm">
@@ -529,6 +538,19 @@ export default function ExamManagement() {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Preview Exam Dialog */}
+      {previewSubject && (
+        <TakeExamDialog
+          open={!!previewSubject}
+          onOpenChange={(open) => { if (!open) setPreviewSubject(null); }}
+          trainingType={selectedCourse?.name}
+          memberId={null}
+          subjectId={previewSubject.id}
+          subjectName={previewSubject.name}
+          previewMode
+        />
+      )}
     </div>
   );
 }

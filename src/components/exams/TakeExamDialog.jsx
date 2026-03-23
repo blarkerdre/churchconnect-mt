@@ -22,7 +22,7 @@ function shuffleArray(arr) {
   return a;
 }
 
-export default function TakeExamDialog({ open, onOpenChange, trainingType, memberId, subjectId, subjectName }) {
+export default function TakeExamDialog({ open, onOpenChange, trainingType, memberId, subjectId, subjectName, previewMode = false }) {
   const qc = useQueryClient();
   const [answers, setAnswers] = useState({});
   const [submitted, setSubmitted] = useState(false);
@@ -115,20 +115,24 @@ export default function TakeExamDialog({ open, onOpenChange, trainingType, membe
     return () => clearInterval(timerRef.current);
   }, [timeLeft !== null, submitted]);
 
-  // Auto-submit on timer expiry
+  // Auto-submit on timer expiry (not in preview mode)
   const doSubmit = useCallback(() => {
-    if (!submitted && shuffledQuestions.length > 0) {
+    if (!submitted && shuffledQuestions.length > 0 && !previewMode) {
       submitMutation.mutate();
     }
-  }, [submitted, shuffledQuestions]);
+  }, [submitted, shuffledQuestions, previewMode]);
 
   useEffect(() => {
     if (autoSubmitRef.current && timeLeft === 0 && !submitted) {
       autoSubmitRef.current = false;
-      toast({ title: "⏰ Time's up! Auto-submitting your exam." });
-      doSubmit();
+      if (previewMode) {
+        toast({ title: "⏰ Time's up! (Preview mode — no auto-submit)" });
+      } else {
+        toast({ title: "⏰ Time's up! Auto-submitting your exam." });
+        doSubmit();
+      }
     }
-  }, [timeLeft, submitted, doSubmit]);
+  }, [timeLeft, submitted, doSubmit, previewMode]);
 
   const submitMutation = useMutation({
     mutationFn: async () => {
@@ -298,6 +302,12 @@ export default function TakeExamDialog({ open, onOpenChange, trainingType, membe
           </div>
         </DialogHeader>
 
+        {previewMode && (
+          <div className="px-4 py-2.5 rounded-lg bg-accent/10 border border-accent/30 text-accent-foreground text-sm font-medium flex items-center gap-2">
+            👁️ Preview Mode — This is how members will see the exam
+          </div>
+        )}
+
         {isLoading ? (
           <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
         ) : shuffledQuestions.length === 0 && !submitted ? (
@@ -328,9 +338,15 @@ export default function TakeExamDialog({ open, onOpenChange, trainingType, membe
               })}
             </div>
             <DialogFooter>
-              <Button onClick={handleSubmit} disabled={submitMutation.isPending} className="w-full">
-                {submitMutation.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />} Submit Exam
-              </Button>
+              {previewMode ? (
+                <Button onClick={handleClose} variant="outline" className="w-full">
+                  Close Preview
+                </Button>
+              ) : (
+                <Button onClick={handleSubmit} disabled={submitMutation.isPending} className="w-full">
+                  {submitMutation.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />} Submit Exam
+                </Button>
+              )}
             </DialogFooter>
           </div>
         )}
