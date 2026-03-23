@@ -159,7 +159,7 @@ export default function Members() {
             </Select>
           )}
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="grid grid-cols-4 sm:flex sm:flex-wrap items-center gap-2">
           {isAdmin && (
             <>
               <Button variant="outline" size="sm" onClick={() => setQrOpen(true)} className="gap-1.5">
