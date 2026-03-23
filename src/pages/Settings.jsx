@@ -415,6 +415,10 @@ export default function Settings() {
         <TabsContent value="certificates">
           <CertificateTemplateSettings />
         </TabsContent>
+
+        <TabsContent value="links">
+          <ExternalLinksSection />
+        </TabsContent>
       </Tabs>
     </div>
   );

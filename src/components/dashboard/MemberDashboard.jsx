@@ -113,6 +113,33 @@ export default function MemberDashboard({ currentUser, myMember }) {
         </Link>
       </div>
 
+      {/* External Quick Links */}
+      {externalLinks.length > 0 && (
+        <div>
+          <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Quick Links</h3>
+          <div className="grid grid-cols-2 gap-3">
+            {externalLinks.map((link, idx) => {
+              const IconComp = getIconComponent(link.icon);
+              return (
+                <a key={idx} href={link.url} target="_blank" rel="noopener noreferrer">
+                  <Card className="border-0 shadow-sm hover:shadow-md transition-shadow cursor-pointer h-full">
+                    <CardContent className="p-4 flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                        <IconComp className="h-5 w-5 text-primary" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-foreground truncate">{link.title}</p>
+                        {link.description && <p className="text-xs text-muted-foreground truncate">{link.description}</p>}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </a>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Feed: Announcements + Events tabs */}
       <MemberFeed member={myMember} />
 
