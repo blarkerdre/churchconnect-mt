@@ -250,6 +250,9 @@ export default function ExamManagement() {
       </div>
 
 
+      {/* WoFBI About Section (Admin Editable) */}
+      <WofbiAboutEditor />
+
       {/* Certificate Courses */}
       <Card className="border-0 shadow-sm">
         <CardHeader className="pb-3">
