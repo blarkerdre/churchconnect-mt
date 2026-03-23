@@ -1,17 +1,15 @@
 
 
-## Plan: Clean Up SMS/WhatsApp UI
+## Plan: Use WhatsApp Brand Icon
+
+Lucide doesn't include a WhatsApp icon. I'll create a small inline SVG component for the WhatsApp logo and use it in place of `MessageSquare` in the WhatsApp tab and button.
 
 ### Changes
 
-**1. `src/components/sms/SMSDialog.jsx`** (lines 175-202)
-- Remove the channel toggle UI (the SMS/WhatsApp button pair) entirely
-- The channel will be determined solely by the `defaultChannel` prop — no user-facing option to switch
-
-**2. `src/pages/Communications.jsx`**
-- Line 235-236: Change WhatsApp tab icon from `Phone` to `MessageSquare`
-- Line 252: Change "New Communication" to "New Announcement"
-
-### Summary
-Three small UI tweaks — no logic or backend changes.
+**`src/pages/Communications.jsx`**
+- Add a small `WhatsAppIcon` component using the official WhatsApp SVG path (the phone-in-speech-bubble logo)
+- Replace `MessageSquare` with `WhatsAppIcon` in:
+  - The WhatsApp `TabsTrigger` (line 236)
+  - The "Send Bulk WhatsApp" button (line 322)
+  - The placeholder card icon (around line 326)
 
