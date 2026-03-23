@@ -8,7 +8,7 @@ import { toast } from "@/components/ui/use-toast";
 
 export default function WoFBIRegistrationQRCode({ open, onOpenChange }) {
   const qrRef = useRef();
-  const registrationUrl = `${window.location.origin}/exam-management`;
+  const registrationUrl = `${window.location.origin}/wofbi-register`;
 
   const handleCopy = () => {
     navigator.clipboard.writeText(registrationUrl);
