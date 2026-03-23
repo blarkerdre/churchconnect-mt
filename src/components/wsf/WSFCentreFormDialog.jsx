@@ -59,7 +59,10 @@ export default function WSFCentreFormDialog({ open, onOpenChange, centre, onSave
             </div>
             <div className="space-y-1.5 sm:col-span-2">
               <Label>House Provider</Label>
-              <Input value={form.host_name} onChange={e => set("host_name", e.target.value)} placeholder="Host's full name" />
+              <Select value={form.host_member_id} onValueChange={v => set("host_member_id", v)}>
+                <SelectTrigger><SelectValue placeholder="Select member" /></SelectTrigger>
+                <SelectContent>{allMembers.map(m => <SelectItem key={m.id} value={m.id}>{m.first_name} {m.last_name}</SelectItem>)}</SelectContent>
+              </Select>
             </div>
             <div className="space-y-1.5">
               <Label>WSF Leader Name</Label>
