@@ -445,7 +445,7 @@ export default function Settings() {
       </div>
 
       <Tabs defaultValue="notifications" className="space-y-4">
-        <TabsList className="flex flex-nowrap h-auto gap-1 overflow-x-auto w-full justify-start">
+        <TabsList className="flex flex-nowrap h-auto gap-1 overflow-x-auto w-full justify-start [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
           <TabsTrigger value="notifications" className="gap-1.5 text-xs"><Bell className="h-3.5 w-3.5" /> Notifications</TabsTrigger>
           <TabsTrigger value="units" className="gap-1.5 text-xs"><Users className="h-3.5 w-3.5" /> Units</TabsTrigger>
           <TabsTrigger value="wsf" className="gap-1.5 text-xs"><Globe className="h-3.5 w-3.5" /> WSF Centres</TabsTrigger>
