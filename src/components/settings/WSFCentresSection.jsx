@@ -200,7 +200,13 @@ export default function WSFCentresSection() {
           <DialogHeader><DialogTitle className="font-display">{editing ? "Edit Centre" : "New Centre"}</DialogTitle></DialogHeader>
           <div className="space-y-4 max-h-[70vh] overflow-y-auto">
             <div className="space-y-1.5"><Label>Centre Name *</Label><Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} /></div>
-            <div className="space-y-1.5"><Label>House Provider</Label><Input value={form.host_name} onChange={e => setForm(f => ({ ...f, host_name: e.target.value }))} placeholder="Host's full name" /></div>
+            <div className="space-y-1.5">
+              <Label>House Provider</Label>
+              <Select value={form.host_member_id} onValueChange={v => setForm(f => ({ ...f, host_member_id: v }))}>
+                <SelectTrigger><SelectValue placeholder="Select member" /></SelectTrigger>
+                <SelectContent>{allMembers.map(m => <SelectItem key={m.id} value={m.id}>{m.first_name} {m.last_name}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
             <div className="space-y-1.5"><Label>Address</Label><Input value={form.address} onChange={e => setForm(f => ({ ...f, address: e.target.value }))} placeholder="Street address" /></div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5"><Label>City</Label><Input value={form.city} onChange={e => setForm(f => ({ ...f, city: e.target.value }))} placeholder="Cardiff" /></div>
