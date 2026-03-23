@@ -15,7 +15,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "@/components/ui/use-toast";
-import { Loader2, Plus, Trash2, Edit, BookOpen, Save, Tag, Layers, Eye, CheckCircle2, Download, Users, QrCode } from "lucide-react";
+import { Loader2, Plus, Trash2, Edit, BookOpen, Save, Tag, Layers, Eye, CheckCircle2, Download, Users, QrCode, Search } from "lucide-react";
 import WoFBIRegistrationQRCode from "@/components/exams/WoFBIRegistrationQRCode";
 import SubjectManager from "@/components/exams/SubjectManager";
 import CourseResultsView from "@/components/exams/CourseResultsView";
@@ -606,6 +606,7 @@ function CourseRegistrationsView({ course }) {
   const qc = useQueryClient();
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [sourceFilter, setSourceFilter] = useState("all");
+  const [searchTerm, setSearchTerm] = useState("");
 
   const { data: registrations = [], isLoading } = useQuery({
     queryKey: ["course-registrations", course.id],
@@ -635,8 +636,13 @@ function CourseRegistrationsView({ course }) {
   });
 
   const filteredRegistrations = registrations.filter(r => {
-    if (sourceFilter === "member") return !!r.members?.user_id;
-    if (sourceFilter === "public") return !r.members?.user_id;
+    if (sourceFilter === "member" && !r.members?.user_id) return false;
+    if (sourceFilter === "public" && r.members?.user_id) return false;
+    if (searchTerm) {
+      const s = searchTerm.toLowerCase();
+      const name = `${r.members?.first_name || ""} ${r.members?.last_name || ""}`.toLowerCase();
+      if (!name.includes(s) && !(r.members?.email || "").toLowerCase().includes(s) && !(r.members?.phone || "").includes(s)) return false;
+    }
     return true;
   });
 
@@ -668,6 +674,15 @@ function CourseRegistrationsView({ course }) {
             <Badge variant="secondary" className="ml-2">{filteredRegistrations.length}</Badge>
           </CardTitle>
           <div className="flex items-center gap-2">
+            <div className="relative">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+              <Input
+                placeholder="Search name, email, phone…"
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+                className="h-8 w-[200px] pl-8 text-xs"
+              />
+            </div>
             <Select value={sourceFilter} onValueChange={setSourceFilter}>
               <SelectTrigger className="w-[140px] h-8 text-xs">
                 <SelectValue />
