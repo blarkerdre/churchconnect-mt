@@ -492,7 +492,6 @@ export default function MyProfile() {
         onOpenChange={(v) => { if (!v) setExamSelection(null); }}
         trainingType={examSelection?.type}
         memberId={member.id}
-        sessionId={examSelection?.sessionId}
         subjectId={examSelection?.subjectId}
         subjectName={examSelection?.subjectName}
       />

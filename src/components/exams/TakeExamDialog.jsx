@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -9,17 +9,44 @@ import { Progress } from "@/components/ui/progress";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
-import { Loader2, CheckCircle2, XCircle, Award, ArrowUp, ArrowDown } from "lucide-react";
+import { Loader2, CheckCircle2, XCircle, Award, ArrowUp, ArrowDown, Clock } from "lucide-react";
 
 const OPTION_LETTERS = ["a", "b", "c", "d"];
 
-export default function TakeExamDialog({ open, onOpenChange, trainingType, memberId, sessionId, subjectId, subjectName }) {
+function shuffleArray(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+export default function TakeExamDialog({ open, onOpenChange, trainingType, memberId, subjectId, subjectName }) {
   const qc = useQueryClient();
   const [answers, setAnswers] = useState({});
   const [submitted, setSubmitted] = useState(false);
   const [result, setResult] = useState(null);
+  const [shuffledQuestions, setShuffledQuestions] = useState([]);
+  const [timeLeft, setTimeLeft] = useState(null);
+  const timerRef = useRef(null);
+  const autoSubmitRef = useRef(false);
 
-  // Get course pass mark from exam_titles
+  // Get subject details for pass mark, time limit, randomize
+  const { data: subjectData } = useQuery({
+    queryKey: ["exam-subject-detail", subjectId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("exam_subjects")
+        .select("pass_mark_percentage, time_limit_minutes, randomize_questions")
+        .eq("id", subjectId)
+        .maybeSingle();
+      return data;
+    },
+    enabled: open && !!subjectId,
+  });
+
+  // Get course pass mark from exam_titles (fallback for legacy)
   const { data: courseData } = useQuery({
     queryKey: ["exam-title-detail", trainingType],
     queryFn: async () => {
@@ -30,12 +57,17 @@ export default function TakeExamDialog({ open, onOpenChange, trainingType, membe
         .maybeSingle();
       return data;
     },
-    enabled: open && !!trainingType,
+    enabled: open && !!trainingType && !subjectId,
   });
 
-  const passThreshold = courseData?.pass_mark_percentage ?? 50;
+  const passThreshold = subjectId
+    ? (subjectData?.pass_mark_percentage ?? 50)
+    : (courseData?.pass_mark_percentage ?? 50);
 
-  // Fetch questions: by subject_id if available, else by training_type
+  const timeLimitMinutes = subjectData?.time_limit_minutes ?? null;
+  const shouldRandomize = subjectData?.randomize_questions ?? false;
+
+  // Fetch questions
   const { data: questions = [], isLoading } = useQuery({
     queryKey: ["exam-questions-take", subjectId, trainingType],
     queryFn: async () => {
@@ -52,11 +84,58 @@ export default function TakeExamDialog({ open, onOpenChange, trainingType, membe
     enabled: open && !!(subjectId || trainingType),
   });
 
+  // Shuffle questions when loaded
+  useEffect(() => {
+    if (questions.length > 0 && !submitted) {
+      setShuffledQuestions(shouldRandomize ? shuffleArray(questions) : questions);
+    }
+  }, [questions, shouldRandomize, submitted]);
+
+  // Timer
+  useEffect(() => {
+    if (!open || submitted || !timeLimitMinutes || questions.length === 0) return;
+    setTimeLeft(timeLimitMinutes * 60);
+    autoSubmitRef.current = false;
+    return () => { if (timerRef.current) clearInterval(timerRef.current); };
+  }, [open, submitted, timeLimitMinutes, questions.length]);
+
+  useEffect(() => {
+    if (timeLeft === null || submitted) return;
+    if (timerRef.current) clearInterval(timerRef.current);
+    timerRef.current = setInterval(() => {
+      setTimeLeft(prev => {
+        if (prev <= 1) {
+          clearInterval(timerRef.current);
+          autoSubmitRef.current = true;
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(timerRef.current);
+  }, [timeLeft !== null, submitted]);
+
+  // Auto-submit on timer expiry
+  const doSubmit = useCallback(() => {
+    if (!submitted && shuffledQuestions.length > 0) {
+      submitMutation.mutate();
+    }
+  }, [submitted, shuffledQuestions]);
+
+  useEffect(() => {
+    if (autoSubmitRef.current && timeLeft === 0 && !submitted) {
+      autoSubmitRef.current = false;
+      toast({ title: "⏰ Time's up! Auto-submitting your exam." });
+      doSubmit();
+    }
+  }, [timeLeft, submitted, doSubmit]);
+
   const submitMutation = useMutation({
     mutationFn: async () => {
-      const totalPoints = questions.reduce((s, q) => s + q.points, 0);
+      const qs = shuffledQuestions;
+      const totalPoints = qs.reduce((s, q) => s + q.points, 0);
       let score = 0;
-      const answerRows = questions.map(q => {
+      const answerRows = qs.map(q => {
         const qType = q.question_type || "multiple_choice";
         const selected = answers[q.id] || null;
         let isCorrect = false;
@@ -76,7 +155,6 @@ export default function TakeExamDialog({ open, onOpenChange, trainingType, membe
           member_id: memberId,
           training_type: trainingType,
           subject_id: subjectId || null,
-          session_id: sessionId || null,
           completed_at: new Date().toISOString(),
           score,
           total_points: totalPoints,
@@ -90,7 +168,6 @@ export default function TakeExamDialog({ open, onOpenChange, trainingType, membe
       const { error: ansErr } = await supabase.from("exam_answers").insert(answersPayload);
       if (ansErr) throw ansErr;
 
-      // Check if all subjects in the course are completed and aggregate passes
       if (subjectId) {
         await checkCourseCompletion(memberId, trainingType);
       } else if (passed) {
@@ -102,6 +179,7 @@ export default function TakeExamDialog({ open, onOpenChange, trainingType, membe
     onSuccess: (data) => {
       setResult(data);
       setSubmitted(true);
+      if (timerRef.current) clearInterval(timerRef.current);
       qc.invalidateQueries({ queryKey: ["exam-attempts"] });
       qc.invalidateQueries({ queryKey: ["course-attempts"] });
       qc.invalidateQueries({ queryKey: ["my-course-attempts"] });
@@ -113,26 +191,13 @@ export default function TakeExamDialog({ open, onOpenChange, trainingType, membe
 
   const checkCourseCompletion = async (memberId, courseName) => {
     try {
-      // Get course
       const { data: course } = await supabase.from("exam_titles").select("id, pass_mark_percentage").eq("name", courseName).maybeSingle();
       if (!course) return;
-
-      // Get all active subjects
       const { data: subjects } = await supabase.from("exam_subjects").select("id").eq("course_id", course.id).eq("is_active", true);
       if (!subjects || subjects.length === 0) return;
-
       const subjectIds = subjects.map(s => s.id);
-
-      // Get all attempts for this member in these subjects
-      const { data: attempts } = await supabase
-        .from("exam_attempts")
-        .select("subject_id, score, total_points")
-        .eq("member_id", memberId)
-        .in("subject_id", subjectIds);
-
+      const { data: attempts } = await supabase.from("exam_attempts").select("subject_id, score, total_points").eq("member_id", memberId).in("subject_id", subjectIds);
       if (!attempts) return;
-
-      // Best attempt per subject
       const bestBySubject = {};
       attempts.forEach(a => {
         if (!a.subject_id) return;
@@ -141,18 +206,11 @@ export default function TakeExamDialog({ open, onOpenChange, trainingType, membe
           bestBySubject[a.subject_id] = a;
         }
       });
-
-      // Check all subjects completed
-      const completedSubjects = Object.keys(bestBySubject);
-      if (completedSubjects.length < subjectIds.length) return;
-
-      // Calculate aggregate
+      if (Object.keys(bestBySubject).length < subjectIds.length) return;
       const totalScore = Object.values(bestBySubject).reduce((s, a) => s + (a.score || 0), 0);
       const totalPoints = Object.values(bestBySubject).reduce((s, a) => s + (a.total_points || 0), 0);
       const aggregatePct = totalPoints > 0 ? (totalScore / totalPoints) * 100 : 0;
-
       if (aggregatePct >= course.pass_mark_percentage) {
-        // Issue certificate
         try {
           const { data: certData, error: certErr } = await supabase.functions.invoke("issue-certificate", {
             body: { member_id: memberId, training_type: courseName },
@@ -160,13 +218,9 @@ export default function TakeExamDialog({ open, onOpenChange, trainingType, membe
           if (!certErr && certData?.success) {
             toast({ title: "🎉 Certificate issued!", description: `You passed ${courseName} with ${Math.round(aggregatePct)}% aggregate.` });
           }
-        } catch (e) {
-          console.error("Certificate generation failed:", e);
-        }
+        } catch (e) { console.error("Certificate generation failed:", e); }
       }
-    } catch (e) {
-      console.error("Course completion check failed:", e);
-    }
+    } catch (e) { console.error("Course completion check failed:", e); }
   };
 
   const issueCertificate = async (memberId, trainingType, attemptId) => {
@@ -177,13 +231,11 @@ export default function TakeExamDialog({ open, onOpenChange, trainingType, membe
       if (!certErr && certData?.success) {
         await supabase.from("exam_attempts").update({ certificate_issued: true }).eq("id", attemptId);
       }
-    } catch (e) {
-      console.error("Certificate generation failed:", e);
-    }
+    } catch (e) { console.error("Certificate generation failed:", e); }
   };
 
   const handleSubmit = () => {
-    const unanswered = questions.filter(q => !answers[q.id]);
+    const unanswered = shuffledQuestions.filter(q => !answers[q.id]);
     if (unanswered.length > 0) {
       toast({ title: `Please answer all questions (${unanswered.length} remaining)`, variant: "destructive" });
       return;
@@ -191,10 +243,18 @@ export default function TakeExamDialog({ open, onOpenChange, trainingType, membe
     submitMutation.mutate();
   };
 
-  const handleClose = () => { setAnswers({}); setSubmitted(false); setResult(null); onOpenChange(false); };
+  const handleClose = () => {
+    setAnswers({});
+    setSubmitted(false);
+    setResult(null);
+    setTimeLeft(null);
+    setShuffledQuestions([]);
+    if (timerRef.current) clearInterval(timerRef.current);
+    onOpenChange(false);
+  };
 
   const answeredCount = Object.keys(answers).length;
-  const progress = questions.length > 0 ? (answeredCount / questions.length) * 100 : 0;
+  const progress = shuffledQuestions.length > 0 ? (answeredCount / shuffledQuestions.length) * 100 : 0;
 
   const moveItem = (questionId, items, fromIdx, direction) => {
     const toIdx = fromIdx + direction;
@@ -213,28 +273,46 @@ export default function TakeExamDialog({ open, onOpenChange, trainingType, membe
 
   const title = subjectName ? `${trainingType} — ${subjectName}` : `${trainingType} Examination`;
 
+  const formatTime = (seconds) => {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+  };
+
+  const isWarning = timeLeft !== null && timeLeft <= 120;
+
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="font-display flex items-center gap-2">{title}</DialogTitle>
+          <div className="flex items-center justify-between w-full">
+            <DialogTitle className="font-display flex items-center gap-2">{title}</DialogTitle>
+            {timeLeft !== null && !submitted && (
+              <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-mono font-bold ${
+                isWarning ? "bg-destructive/10 text-destructive animate-pulse" : "bg-muted text-foreground"
+              }`}>
+                <Clock className="h-4 w-4" />
+                {formatTime(timeLeft)}
+              </div>
+            )}
+          </div>
         </DialogHeader>
 
         {isLoading ? (
           <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
-        ) : questions.length === 0 ? (
+        ) : shuffledQuestions.length === 0 && !submitted ? (
           <p className="text-sm text-muted-foreground text-center py-8">No exam questions available yet.</p>
         ) : submitted && result ? (
-          <ExamResult result={result} passThreshold={passThreshold} questions={questions} onClose={handleClose} />
+          <ExamResult result={result} passThreshold={passThreshold} questions={shuffledQuestions} onClose={handleClose} />
         ) : (
           <div className="space-y-4 py-2">
             <div className="flex items-center justify-between text-xs text-muted-foreground">
-              <span>{answeredCount}/{questions.length} answered</span>
+              <span>{answeredCount}/{shuffledQuestions.length} answered</span>
               <span>Pass mark: {passThreshold}%</span>
             </div>
             <Progress value={progress} className="h-2" />
             <div className="space-y-6">
-              {questions.map((q, idx) => {
+              {shuffledQuestions.map((q, idx) => {
                 const qType = q.question_type || "multiple_choice";
                 return (
                   <div key={q.id} className="p-4 rounded-lg border border-border bg-card">
