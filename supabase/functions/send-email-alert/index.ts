@@ -170,6 +170,14 @@ Deno.serve(async (req) => {
     const messageId = `email-alert-${crypto.randomUUID()}`
     const firstName = member.first_name || 'Member'
 
+    let unsubscribeToken: string
+    try {
+      unsubscribeToken = await getOrCreateUnsubscribeToken(serviceClient, member.email)
+    } catch (tokenErr) {
+      console.error('Failed to get unsubscribe token', { to: member.email, error: tokenErr })
+      continue
+    }
+
     const payload = {
       to: member.email,
       from: fromAddress,
@@ -181,6 +189,7 @@ Deno.serve(async (req) => {
       label: 'email-alert',
       message_id: messageId,
       idempotency_key: messageId,
+      unsubscribe_token: unsubscribeToken,
       queued_at: new Date().toISOString(),
     }
 
