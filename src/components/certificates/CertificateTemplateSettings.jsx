@@ -95,9 +95,10 @@ export default function CertificateTemplateSettings() {
     onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
 
-  const openCreate = () => { setEditing(null); setForm(emptyTemplate); setDialogOpen(true); };
+  const openCreate = () => { setEditing(null); setForm(emptyTemplate); setUseCustomType(false); setDialogOpen(true); };
   const openEdit = (t) => {
     setEditing(t);
+    setUseCustomType(false);
     setForm({
       training_type: t.training_type,
       church_name: t.church_name,
@@ -111,7 +112,7 @@ export default function CertificateTemplateSettings() {
     });
     setDialogOpen(true);
   };
-  const closeDialog = () => { setDialogOpen(false); setEditing(null); setForm(emptyTemplate); };
+  const closeDialog = () => { setDialogOpen(false); setEditing(null); setForm(emptyTemplate); setUseCustomType(false); };
 
   const handleUpload = async (e) => {
     const file = e.target.files?.[0];
