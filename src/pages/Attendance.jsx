@@ -319,6 +319,10 @@ export default function Attendance() {
                       <div className="h-9 flex items-center px-3 rounded-md border border-input bg-muted text-sm font-medium text-foreground">{demoTotal}</div>
                     </div>
                   </div>
+                  <div>
+                    <Label className="text-xs">Meeting Notes</Label>
+                    <Textarea value={demoForm.meeting_notes} onChange={e => setDemoForm(f => ({ ...f, meeting_notes: e.target.value }))} rows={3} placeholder="Enter meeting notes, summary, or key points..." />
+                  </div>
                   <Button
                     size="sm"
                     className="w-full"
@@ -327,10 +331,11 @@ export default function Attendance() {
                       sessionId: selectedSession.id,
                       male_count: parseInt(demoForm.male_count) || 0,
                       female_count: parseInt(demoForm.female_count) || 0,
+                      meeting_notes: demoForm.meeting_notes,
                     })}
                   >
                     {updateDemographicsMutation.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-                    Save Demographics
+                    Save Report
                   </Button>
                   <div className="pt-2 border-t">
                     <ReportAttachments relatedTable="attendance_sessions" relatedId={selectedSession.id} />
