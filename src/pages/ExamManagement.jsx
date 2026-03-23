@@ -689,8 +689,8 @@ function CourseRegistrationsView({ course }) {
       <CardContent>
         {isLoading ? (
           <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
-        ) : registrations.length === 0 ? (
-          <p className="text-sm text-muted-foreground text-center py-8">No members registered for this course yet.</p>
+        ) : filteredRegistrations.length === 0 ? (
+          <p className="text-sm text-muted-foreground text-center py-8">{registrations.length > 0 ? "No registrations match the selected filter." : "No members registered for this course yet."}</p>
         ) : (
           <div className="overflow-x-auto">
             <Table>
