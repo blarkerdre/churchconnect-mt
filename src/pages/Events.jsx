@@ -429,9 +429,64 @@ export default function Events() {
             <div><Label>Location</Label><Input value={form.location || ""} onChange={e => setForm(f => ({ ...f, location: e.target.value }))} /></div>
             <div><Label>Description</Label><Textarea value={form.description || ""} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={3} /></div>
 
-            <Button onClick={() => saveMutation.mutate(form)} disabled={saveMutation.isPending} className="w-full bg-primary">
+            {/* Recurrence */}
+            {!editing?.recurrence_parent_id && (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between p-3 rounded-xl bg-muted/50 border border-border">
+                  <div className="flex items-center gap-2">
+                    <Repeat className="h-4 w-4 text-muted-foreground" />
+                    <div>
+                      <p className="text-sm font-medium text-foreground">Recurring Event</p>
+                      <p className="text-xs text-muted-foreground">Auto-generate repeating occurrences</p>
+                    </div>
+                  </div>
+                  <Switch checked={!!form.is_recurring} onCheckedChange={v => setForm(f => ({ ...f, is_recurring: v }))} disabled={!!editing} />
+                </div>
+                {form.is_recurring && (
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label>Frequency</Label>
+                      <Select value={form.recurrence_frequency || "Weekly"} onValueChange={v => setForm(f => ({ ...f, recurrence_frequency: v }))}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          {["Weekly", "Biweekly", "Monthly"].map(fr => <SelectItem key={fr} value={fr}>{fr}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label>Repeat Until</Label>
+                      <Input type="date" value={form.recurrence_end_date || ""} onChange={e => setForm(f => ({ ...f, recurrence_end_date: e.target.value }))} min={form.event_date || undefined} />
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Reminders */}
+            <div className="space-y-1.5">
+              <Label>Reminders</Label>
+              <div className="flex flex-wrap gap-3">
+                {[{ value: 1, label: "1 day before" }, { value: 3, label: "3 days before" }, { value: 7, label: "1 week before" }].map(opt => (
+                  <label key={opt.value} className="flex items-center gap-1.5 cursor-pointer text-sm text-foreground">
+                    <Checkbox
+                      checked={(form.reminder_days_before || []).includes(opt.value)}
+                      onCheckedChange={() => {
+                        const curr = form.reminder_days_before || [];
+                        setForm(f => ({
+                          ...f,
+                          reminder_days_before: curr.includes(opt.value) ? curr.filter(d => d !== opt.value) : [...curr, opt.value].sort((a, b) => a - b),
+                        }));
+                      }}
+                    />
+                    {opt.label}
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <Button onClick={() => saveMutation.mutate(form)} disabled={saveMutation.isPending || (form.is_recurring && !form.recurrence_end_date)} className="w-full bg-primary">
               {saveMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-              {editing ? "Save Changes" : "Create Event"}
+              {editing ? "Save Changes" : form.is_recurring ? "Create Recurring Event" : "Create Event"}
             </Button>
           </div>
         </DialogContent>
