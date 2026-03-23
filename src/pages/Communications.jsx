@@ -308,6 +308,27 @@ export default function Communications() {
             </div>
           </TabsContent>
         )}
+
+        {canManageComms && (
+          <TabsContent value="whatsapp">
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                {isAdmin && (
+                  <Button variant="outline" onClick={() => setWaHistoryOpen(true)}>
+                    <History className="h-4 w-4 mr-2" /> WhatsApp History
+                  </Button>
+                )}
+                <Button onClick={() => setWaOpen(true)} className="bg-primary hover:bg-primary/90">
+                  <Phone className="h-4 w-4 mr-2" /> Send Bulk WhatsApp
+                </Button>
+              </div>
+              <Card className="border-0 shadow-sm p-8 text-center text-muted-foreground">
+                <Phone className="h-10 w-10 mx-auto mb-3 opacity-20" />
+                <p className="text-sm">Use the button above to compose and send WhatsApp messages to members.</p>
+              </Card>
+            </div>
+          </TabsContent>
+        )}
       </Tabs>
 
       <AnnouncementForm
