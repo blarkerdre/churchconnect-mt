@@ -1,30 +1,25 @@
 
 
-## Make House Provider Selectable from Members
+## Add Admin Management of WoFBI Course Registrations
 
 ### Problem
-The "House Provider" field is currently a free-text input. It should be a dropdown that selects from existing church members.
+Admins currently cannot see which members have registered for WoFBI courses, nor can they download, edit, or delete registrations.
 
 ### Approach
-Add a new `host_member_id` UUID column to `wsf_centres` (keeping `host_name` for backward compatibility/display). The form will use a Select dropdown populated with all members. On save, store both the member ID and derive the display name.
-
-Actually, simpler approach: replace `host_name` (text) usage with a member selector. Store `host_member_id` as a new column, and on save derive `host_name` from the selected member for display convenience.
+Add a "Registrations" view alongside the existing "Subjects & Questions" and "Course Results" views for each selected course. This tab will show all registered members with options to download as CSV, and delete (unregister) individual registrations.
 
 ### Changes
 
-1. **Database migration** — Add `host_member_id UUID` column to `wsf_centres`.
+**File: `src/pages/ExamManagement.jsx`**
+- Add a third toggle button "Registrations" next to "Subjects & Questions" and "Course Results" (around line 315-322)
+- Add state for `showRegistrations`
+- Create a new inline `CourseRegistrationsView` component that:
+  - Fetches `course_registrations` joined with `members(first_name, last_name, email, phone)` for the selected course
+  - Displays a table with member name, email, phone, registration date
+  - Provides a "Download CSV" button for the registrations list
+  - Provides a delete button per row to unregister a member (with confirmation)
+  - Shows registration count stats
 
-2. **Update `WSFCentresSection.jsx`**:
-   - Add a query to fetch all members (`id, first_name, last_name`) for the dropdown.
-   - Replace the House Provider `<Input>` with a `<Select>` dropdown listing members by name.
-   - Store `host_member_id` in form state instead of (or alongside) `host_name`.
-   - On save, set both `host_member_id` and auto-populate `host_name` from the selected member's name.
-   - On the centre card, resolve the member name from the members list (fallback to `host_name` text if set).
-
-3. **Update `WSFCentreFormDialog.jsx`** — Same pattern: replace text input with member selector (this component receives `onSave` from parent, so it just needs the members list passed in or fetched).
-
-### Technical detail
-- Migration: `ALTER TABLE public.wsf_centres ADD COLUMN host_member_id UUID;`
-- No foreign key to `auth.users` — references `members.id` conceptually but kept as a plain UUID to avoid cascade issues.
-- `host_name` is kept and auto-populated so display works without extra joins elsewhere.
+### No database changes needed
+The `course_registrations` table already exists with appropriate RLS policies for admin management.
 
