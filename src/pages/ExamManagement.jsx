@@ -665,13 +665,25 @@ function CourseRegistrationsView({ course }) {
         <div className="flex items-center justify-between">
           <CardTitle className="text-base font-display flex items-center gap-2">
             <Users className="h-4 w-4 text-primary" /> Registrations — {course.name}
-            <Badge variant="secondary" className="ml-2">{registrations.length}</Badge>
+            <Badge variant="secondary" className="ml-2">{filteredRegistrations.length}</Badge>
           </CardTitle>
-          {registrations.length > 0 && (
-            <Button size="sm" variant="outline" className="gap-1.5" onClick={downloadCSV}>
-              <Download className="h-3.5 w-3.5" /> Download CSV
-            </Button>
-          )}
+          <div className="flex items-center gap-2">
+            <Select value={sourceFilter} onValueChange={setSourceFilter}>
+              <SelectTrigger className="w-[140px] h-8 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Sources</SelectItem>
+                <SelectItem value="member">Member</SelectItem>
+                <SelectItem value="public">QR / Public</SelectItem>
+              </SelectContent>
+            </Select>
+            {filteredRegistrations.length > 0 && (
+              <Button size="sm" variant="outline" className="gap-1.5" onClick={downloadCSV}>
+                <Download className="h-3.5 w-3.5" /> Download CSV
+              </Button>
+            )}
+          </div>
         </div>
       </CardHeader>
       <CardContent>
