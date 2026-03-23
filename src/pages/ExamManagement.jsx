@@ -60,6 +60,7 @@ export default function ExamManagement() {
   const [deleteTitleTarget, setDeleteTitleTarget] = useState(null);
   const [showResults, setShowResults] = useState(false);
   const [showRegistrations, setShowRegistrations] = useState(false);
+  const [qrOpen, setQrOpen] = useState(false);
 
   // Fetch courses (exam_titles)
   const { data: examTitles = [], isLoading: titlesLoading } = useQuery({
