@@ -36,7 +36,7 @@ export default function SMSDialog({
   const [audience, setAudience] = useState(prefillAudience || "All Members");
   const [sending, setSending] = useState(false);
   const [result, setResult] = useState(null);
-  const [channel, setChannel] = useState("sms");
+  const [channel, setChannel] = useState(defaultChannel);
 
   React.useEffect(() => {
     if (open) {
