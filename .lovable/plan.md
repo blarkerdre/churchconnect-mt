@@ -1,22 +1,18 @@
 
 
-## Plan: Fix `run_not_found` Email API Error — RESOLVED
+## Plan: Fix `missing_unsubscribe` Email API Error — RESOLVED
 
-### Root Cause
-The `process-email-queue` worker was forwarding `run_id` from any queued payload to the email API. For transactional emails, the API expects no `run_id` — it creates a run inline from the `idempotency_key`. Sending a fabricated `run_id` caused `404 run_not_found`.
+### Problem
+The `send-email-alert` Edge Function enqueued transactional emails **without** an `unsubscribe_token`, causing `400 missing_unsubscribe` rejections from the Email API.
 
 ### Fix Applied
-Updated `process-email-queue/index.ts` to only forward `run_id` when processing the `auth_emails` queue. For `transactional_emails`, `run_id` is now explicitly stripped regardless of what the payload contains. This protects against stale payloads and future regressions.
+Updated `send-email-alert/index.ts` to:
+1. Added `getOrCreateUnsubscribeToken()` helper (same pattern as `send-welcome-email`)
+2. For each recipient, looks up or creates an unsubscribe token in `email_unsubscribe_tokens`
+3. Includes `unsubscribe_token` in the enqueued payload
 
-### Deployed Functions
-All six email-related edge functions redeployed:
-- `process-email-queue` (the fix)
-- `issue-certificate`
-- `send-welcome-email`
-- `send-email-alert`
-- `notify-followup-assignment`
-- `notify-pastoral-assignment`
+### Deployed
+- `send-email-alert` redeployed successfully
 
-### Queue Status
-- Main queue (`transactional_emails`): empty — no active issues
-- DLQ: contains 7 historical messages (some with legacy `run_id`), left for audit
+### Note
+The stuck message (msg_id 11) already in the queue without a token will continue to fail until it exhausts retries and moves to DLQ. New email alerts will include the token and send successfully.
