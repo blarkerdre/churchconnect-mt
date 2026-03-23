@@ -22,6 +22,8 @@ function downloadCSV(filename, headers, rows) {
 }
 
 export default function CourseResultsView({ course }) {
+  const qc = useQueryClient();
+
   const { data: subjects = [] } = useQuery({
     queryKey: ["exam-subjects", course.id],
     queryFn: async () => {
@@ -52,6 +54,26 @@ export default function CourseResultsView({ course }) {
       return data;
     },
     enabled: subjectIds.length > 0,
+  });
+
+  const allowRetakeMutation = useMutation({
+    mutationFn: async ({ memberId, subjectId }) => {
+      // Find the latest failed attempt for this member+subject
+      const memberAttempts = attempts
+        .filter(a => a.member_id === memberId && a.subject_id === subjectId && a.passed === false)
+        .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+      if (memberAttempts.length === 0) throw new Error("No failed attempt found");
+      const { error } = await supabase
+        .from("exam_attempts")
+        .update({ retake_allowed: true })
+        .eq("id", memberAttempts[0].id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["course-attempts"] });
+      toast({ title: "Retake allowed for this member" });
+    },
+    onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
 
   // Group by member
