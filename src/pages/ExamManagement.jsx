@@ -314,15 +314,20 @@ export default function ExamManagement() {
         <>
           {/* Toggle: Subjects vs Results */}
           <div className="flex gap-2">
-            <Button variant={!showResults ? "default" : "outline"} size="sm" onClick={() => setShowResults(false)} className="gap-1.5">
+            <Button variant={!showResults && !showRegistrations ? "default" : "outline"} size="sm" onClick={() => { setShowResults(false); setShowRegistrations(false); }} className="gap-1.5">
               <Layers className="h-3.5 w-3.5" /> Subjects & Questions
             </Button>
-            <Button variant={showResults ? "default" : "outline"} size="sm" onClick={() => setShowResults(true)} className="gap-1.5">
+            <Button variant={showResults ? "default" : "outline"} size="sm" onClick={() => { setShowResults(true); setShowRegistrations(false); }} className="gap-1.5">
               Course Results
+            </Button>
+            <Button variant={showRegistrations ? "default" : "outline"} size="sm" onClick={() => { setShowRegistrations(true); setShowResults(false); }} className="gap-1.5">
+              <Users className="h-3.5 w-3.5" /> Registrations
             </Button>
           </div>
 
-          {showResults ? (
+          {showRegistrations ? (
+            <CourseRegistrationsView course={selectedCourse} />
+          ) : showResults ? (
             <CourseResultsView course={selectedCourse} />
           ) : (
             <>
