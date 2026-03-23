@@ -198,7 +198,7 @@ export default function Members() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border bg-muted/50">
-                  <th className="text-left p-4 font-medium text-muted-foreground">Name</th>
+                  <th className="text-left p-3 sm:p-4 font-medium text-muted-foreground">Name</th>
                   <th className="text-left p-4 font-medium text-muted-foreground hidden sm:table-cell">Contact</th>
                   {(isAdmin || viewOnly) && <th className="text-left p-4 font-medium text-muted-foreground hidden md:table-cell">Church Unit</th>}
                    <th className="text-left p-4 font-medium text-muted-foreground">Status</th>
