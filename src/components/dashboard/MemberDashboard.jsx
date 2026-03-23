@@ -6,6 +6,8 @@ import { CheckCircle2, XCircle, UserCircle, ChevronRight, Heart, Megaphone, Cale
 import { Link } from "react-router-dom";
 import MemberFeed from "@/components/profile/MemberFeed";
 import SelfCheckInWidget from "@/components/attendance/SelfCheckInWidget";
+import { useAppSetting } from "@/hooks/useAppSetting";
+import { getIconComponent } from "@/lib/icon-map";
 
 const GROWTH_FIELDS = [
   { key: "water_baptism", label: "Water Baptism" },
