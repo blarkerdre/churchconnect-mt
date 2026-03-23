@@ -247,7 +247,7 @@ export default function Events() {
           </Select>
         </div>
         {canManage && (
-          <Button onClick={openNew} className="bg-primary hover:bg-primary/90"><Plus className="h-4 w-4 mr-2" /> New Event</Button>
+          <Button onClick={openNew} className="w-full sm:w-auto bg-primary hover:bg-primary/90"><Plus className="h-4 w-4 mr-2" /> New Event</Button>
         )}
       </div>
 
