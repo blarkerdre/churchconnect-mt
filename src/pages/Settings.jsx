@@ -410,7 +410,7 @@ function FeatureTogglesSection() {
             {TOGGLEABLE_FEATURES.map((feature) => {
               const isEnabled = !disabledFeatures.includes(feature.path);
               return (
-                <div key={feature.path} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                <div key={feature.path} className="flex items-center justify-between p-2.5 sm:p-3 bg-muted/50 rounded-lg">
                   <div>
                     <p className="text-sm font-medium text-foreground">{feature.name}</p>
                     <p className="text-[11px] text-muted-foreground">{feature.path}</p>
