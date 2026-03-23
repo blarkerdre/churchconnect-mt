@@ -114,9 +114,12 @@ export default function WSFCentresSection() {
 
   const handleSave = () => {
     if (!form.name) return toast({ title: "Centre name is required", variant: "destructive" });
+    const selectedHost = allMembers.find(m => m.id === form.host_member_id);
+    const derivedHostName = selectedHost ? `${selectedHost.first_name} ${selectedHost.last_name}` : (form.host_name || null);
     saveMutation.mutate({
       name: form.name,
-      host_name: form.host_name || null,
+      host_name: derivedHostName,
+      host_member_id: form.host_member_id || null,
       location: form.location || null,
       address: form.address || null,
       postcode: form.postcode || null,
