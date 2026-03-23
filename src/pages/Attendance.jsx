@@ -69,15 +69,11 @@ export default function Attendance() {
 
   const createSessionMutation = useMutation({
     mutationFn: async (formData) => {
-      const total = (parseInt(formData.male_count) || 0) + (parseInt(formData.female_count) || 0);
       const { error } = await supabase.from("attendance_sessions").insert({
         title: formData.title || null,
         session_type: formData.session_type,
         session_date: formData.session_date,
         notes: formData.notes || null,
-        male_count: parseInt(formData.male_count) || 0,
-        female_count: parseInt(formData.female_count) || 0,
-        total_count: total,
         unit: formData.unit || null,
       });
       if (error) throw error;
@@ -86,6 +82,19 @@ export default function Attendance() {
       queryClient.invalidateQueries({ queryKey: ["attendance-sessions"] });
       toast({ title: "Session created" });
       setDialogOpen(false);
+    },
+    onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+  });
+
+  const updateDemographicsMutation = useMutation({
+    mutationFn: async ({ sessionId, male_count, female_count }) => {
+      const total = male_count + female_count;
+      const { error } = await supabase.from("attendance_sessions").update({ male_count, female_count, total_count: total }).eq("id", sessionId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["attendance-sessions"] });
+      toast({ title: "Demographics saved" });
     },
     onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
