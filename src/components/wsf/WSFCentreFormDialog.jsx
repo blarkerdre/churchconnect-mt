@@ -38,6 +38,14 @@ export default function WSFCentreFormDialog({ open, onOpenChange, centre, onSave
 
   const set = (k, v) => setForm(p => ({ ...p, [k]: v }));
 
+  const handleHostChange = (memberId) => {
+    set("host_member_id", memberId);
+    const m = allMembers.find(x => x.id === memberId);
+    if (m) {
+      setForm(p => ({ ...p, host_member_id: memberId, address: m.address || "", postcode: m.postcode || "", city: m.city || "" }));
+    }
+  };
+
   const handleSave = async () => {
     setSaving(true);
     await onSave(form);
