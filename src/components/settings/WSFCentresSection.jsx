@@ -108,7 +108,7 @@ export default function WSFCentresSection() {
 
   const openEdit = (c) => {
     setEditing(c);
-    setForm({ name: c.name, host_name: c.host_name || "", location: c.location || "", address: c.address || "", postcode: c.postcode || "", city: c.city || "", coverage_postcodes: c.coverage_postcodes || "", meeting_day: c.meeting_day || "", meeting_time: c.meeting_time || "", is_active: c.is_active, leader_id: c.leader_id || "" });
+    setForm({ name: c.name, host_name: c.host_name || "", host_member_id: c.host_member_id || "", location: c.location || "", address: c.address || "", postcode: c.postcode || "", city: c.city || "", coverage_postcodes: c.coverage_postcodes || "", meeting_day: c.meeting_day || "", meeting_time: c.meeting_time || "", is_active: c.is_active, leader_id: c.leader_id || "" });
     setDialogOpen(true);
   };
 
