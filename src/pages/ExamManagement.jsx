@@ -605,6 +605,7 @@ export default function ExamManagement() {
 function CourseRegistrationsView({ course }) {
   const qc = useQueryClient();
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [sourceFilter, setSourceFilter] = useState("all");
 
   const { data: registrations = [], isLoading } = useQuery({
     queryKey: ["course-registrations", course.id],
