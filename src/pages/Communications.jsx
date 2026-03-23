@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { useChurchUnits } from "@/hooks/useChurchUnits";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Megaphone, Pin, Search, Plus, Loader2, Trash2, Pencil, MessageSquare, History, Mail, Phone } from "lucide-react";
+import { Megaphone, Pin, Search, Plus, Loader2, Trash2, Pencil, MessageSquare, History, Mail } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { format } from "date-fns";
 import AnnouncementForm from "@/components/comms/AnnouncementForm";
@@ -233,7 +233,7 @@ export default function Communications() {
                   <MessageSquare className="h-3.5 w-3.5" /> SMS
                 </TabsTrigger>
                 <TabsTrigger value="whatsapp" className="gap-1.5 text-xs">
-                  <Phone className="h-3.5 w-3.5" /> WhatsApp
+                  <MessageSquare className="h-3.5 w-3.5" /> WhatsApp
                 </TabsTrigger>
               </>
             )}
@@ -249,7 +249,7 @@ export default function Communications() {
               </div>
               {canManageComms && (
                 <Button onClick={() => { setEditing(null); setFormOpen(true); }} className="bg-primary hover:bg-primary/90">
-                  <Plus className="h-4 w-4 mr-2" /> New Communication
+                  <Plus className="h-4 w-4 mr-2" /> New Announcement
                 </Button>
               )}
             </div>
@@ -319,11 +319,11 @@ export default function Communications() {
                   </Button>
                 )}
                 <Button onClick={() => setWaOpen(true)} className="bg-primary hover:bg-primary/90">
-                  <Phone className="h-4 w-4 mr-2" /> Send Bulk WhatsApp
+                  <MessageSquare className="h-4 w-4 mr-2" /> Send Bulk WhatsApp
                 </Button>
               </div>
               <Card className="border-0 shadow-sm p-8 text-center text-muted-foreground">
-                <Phone className="h-10 w-10 mx-auto mb-3 opacity-20" />
+                <MessageSquare className="h-10 w-10 mx-auto mb-3 opacity-20" />
                 <p className="text-sm">Use the button above to compose and send WhatsApp messages to members.</p>
               </Card>
             </div>
