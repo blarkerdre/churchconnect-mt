@@ -232,6 +232,9 @@ export default function Communications() {
                 <TabsTrigger value="sms" className="gap-1.5 text-xs">
                   <MessageSquare className="h-3.5 w-3.5" /> SMS
                 </TabsTrigger>
+                <TabsTrigger value="whatsapp" className="gap-1.5 text-xs">
+                  <Phone className="h-3.5 w-3.5" /> WhatsApp
+                </TabsTrigger>
               </>
             )}
           </TabsList>
