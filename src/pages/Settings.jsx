@@ -318,7 +318,7 @@ function ChurchUnitsSection() {
       </CardContent>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-sm">
+        <DialogContent className="max-w-[95vw] sm:max-w-sm">
           <DialogHeader>
             <DialogTitle>{editingUnit ? "Edit Unit" : "Add Church Unit"}</DialogTitle>
           </DialogHeader>

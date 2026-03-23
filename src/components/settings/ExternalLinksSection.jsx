@@ -114,17 +114,17 @@ export default function ExternalLinksSection() {
                       <p className="text-xs text-muted-foreground truncate">{link.url}</p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-0.5 shrink-0">
-                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => move(idx, -1)} disabled={idx === 0}>
+                  <div className="flex items-center gap-0 sm:gap-0.5 shrink-0">
+                    <Button variant="ghost" size="icon" className="h-6 w-6 sm:h-7 sm:w-7" onClick={() => move(idx, -1)} disabled={idx === 0}>
                       <ArrowUp className="h-3 w-3" />
                     </Button>
-                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => move(idx, 1)} disabled={idx === links.length - 1}>
+                    <Button variant="ghost" size="icon" className="h-6 w-6 sm:h-7 sm:w-7" onClick={() => move(idx, 1)} disabled={idx === links.length - 1}>
                       <ArrowDown className="h-3 w-3" />
                     </Button>
-                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(idx)}>
+                    <Button variant="ghost" size="icon" className="h-6 w-6 sm:h-7 sm:w-7" onClick={() => openEdit(idx)}>
                       <Pencil className="h-3 w-3" />
                     </Button>
-                    <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={() => handleDelete(idx)}>
+                    <Button variant="ghost" size="icon" className="h-6 w-6 sm:h-7 sm:w-7 text-destructive hover:text-destructive" onClick={() => handleDelete(idx)}>
                       <Trash2 className="h-3 w-3" />
                     </Button>
                   </div>
