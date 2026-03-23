@@ -446,11 +446,21 @@ export default function ExamManagement() {
               description: titleForm.description.trim() || null,
               pass_mark_percentage: Number(titleForm.pass_mark_percentage) || 50,
               is_active: true,
+              registration_open: titleForm.registration_open,
+              exams_open: titleForm.exams_open,
             });
           }} className="space-y-4">
             <div><Label>Course Name *</Label><Input value={titleForm.name} onChange={e => setTitleForm(f => ({ ...f, name: e.target.value }))} placeholder="e.g. BCC, LCC" /></div>
             <div><Label>Description</Label><Input value={titleForm.description} onChange={e => setTitleForm(f => ({ ...f, description: e.target.value }))} placeholder="Optional" /></div>
             <div><Label>Aggregate Pass Mark (%)</Label><Input type="number" min="0" max="100" value={titleForm.pass_mark_percentage} onChange={e => setTitleForm(f => ({ ...f, pass_mark_percentage: e.target.value }))} className="w-28" /></div>
+            <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50 border border-border">
+              <Label htmlFor="reg-open" className="cursor-pointer">Registration Open</Label>
+              <Switch id="reg-open" checked={titleForm.registration_open} onCheckedChange={v => setTitleForm(f => ({ ...f, registration_open: v }))} />
+            </div>
+            <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50 border border-border">
+              <Label htmlFor="exams-open" className="cursor-pointer">Exams Open</Label>
+              <Switch id="exams-open" checked={titleForm.exams_open} onCheckedChange={v => setTitleForm(f => ({ ...f, exams_open: v }))} />
+            </div>
             <DialogFooter>
               <Button type="submit" disabled={saveTitleMutation.isPending}>
                 {saveTitleMutation.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
