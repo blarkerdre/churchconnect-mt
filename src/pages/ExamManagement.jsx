@@ -243,7 +243,7 @@ export default function ExamManagement() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-xl font-display font-bold text-foreground flex items-center gap-2">
-            <BookOpen className="h-5 w-5 text-primary" /> Exam Management
+            <BookOpen className="h-5 w-5 text-primary" /> WoFBI Management
           </h1>
           <p className="text-sm text-muted-foreground mt-1">Manage certificate courses, subjects, and exam questions</p>
         </div>
@@ -285,7 +285,7 @@ export default function ExamManagement() {
                   </Badge>
                    {!t.is_active && <Badge variant="secondary" className="text-[9px] h-4">Inactive</Badge>}
                    {t.registration_open && <Badge variant="outline" className="text-[9px] h-4 border-chart-3/40 text-chart-3">Reg Open</Badge>}
-                   {t.exams_open && <Badge variant="outline" className="text-[9px] h-4 border-primary/40 text-primary">Exams Open</Badge>}
+                   {t.exams_open && <Badge variant="outline" className="text-[9px] h-4 border-primary/40 text-primary">WoFBI Open</Badge>}
                   <button className="opacity-0 group-hover:opacity-100 transition-opacity ml-1" onClick={(e) => {
                     e.stopPropagation();
                     setEditingTitle(t);
@@ -458,7 +458,7 @@ export default function ExamManagement() {
               <Switch id="reg-open" checked={titleForm.registration_open} onCheckedChange={v => setTitleForm(f => ({ ...f, registration_open: v }))} />
             </div>
             <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50 border border-border">
-              <Label htmlFor="exams-open" className="cursor-pointer">Exams Open</Label>
+              <Label htmlFor="exams-open" className="cursor-pointer">WoFBI Open</Label>
               <Switch id="exams-open" checked={titleForm.exams_open} onCheckedChange={v => setTitleForm(f => ({ ...f, exams_open: v }))} />
             </div>
             <DialogFooter>
@@ -649,7 +649,7 @@ function MemberExamsView({ memberId, courses, loading }) {
   if (!memberId) {
     return (
       <div className="text-center py-12">
-        <p className="text-muted-foreground">Please complete your member profile first to access exams.</p>
+        <p className="text-muted-foreground">Please complete your member profile first to access WoFBI.</p>
       </div>
     );
   }
@@ -660,9 +660,9 @@ function MemberExamsView({ memberId, courses, loading }) {
     <div className="space-y-6">
       <div>
         <h1 className="text-xl font-display font-bold text-foreground flex items-center gap-2">
-          <BookOpen className="h-5 w-5 text-primary" /> Exams
+          <BookOpen className="h-5 w-5 text-primary" /> WoFBI
         </h1>
-        <p className="text-sm text-muted-foreground mt-1">Register for courses and take your exams</p>
+        <p className="text-sm text-muted-foreground mt-1">Register for courses and take your WoFBI exams</p>
       </div>
 
       {activeCourses.length === 0 ? (
@@ -713,7 +713,7 @@ function MemberExamsView({ memberId, courses, loading }) {
                       <p className="text-xs text-muted-foreground italic">Registration is currently closed.</p>
                     )
                   ) : !course.exams_open ? (
-                    <p className="text-xs text-muted-foreground italic">Exams are not yet available. Please wait for the admin to open the exam window.</p>
+                    <p className="text-xs text-muted-foreground italic">WoFBI exams are not yet available. Please wait for the admin to open the exam window.</p>
                   ) : subjects.length === 0 ? (
                     <p className="text-xs text-muted-foreground">No subjects configured yet.</p>
                   ) : (
