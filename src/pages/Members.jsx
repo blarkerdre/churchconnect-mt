@@ -159,7 +159,7 @@ export default function Members() {
             </Select>
           )}
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="grid grid-cols-4 sm:flex sm:flex-wrap items-center gap-2">
           {isAdmin && (
             <>
               <Button variant="outline" size="sm" onClick={() => setQrOpen(true)} className="gap-1.5">
@@ -198,20 +198,20 @@ export default function Members() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border bg-muted/50">
-                  <th className="text-left p-4 font-medium text-muted-foreground">Name</th>
-                  <th className="text-left p-4 font-medium text-muted-foreground hidden sm:table-cell">Contact</th>
-                  {(isAdmin || viewOnly) && <th className="text-left p-4 font-medium text-muted-foreground hidden md:table-cell">Church Unit</th>}
-                   <th className="text-left p-4 font-medium text-muted-foreground">Status</th>
-                   {isAdmin && <th className="text-center p-4 font-medium text-muted-foreground">Account</th>}
-                  <th className="text-right p-4 font-medium text-muted-foreground">Actions</th>
+                  <th className="text-left p-3 sm:p-4 font-medium text-muted-foreground">Name</th>
+                  <th className="text-left p-3 sm:p-4 font-medium text-muted-foreground hidden sm:table-cell">Contact</th>
+                  {(isAdmin || viewOnly) && <th className="text-left p-3 sm:p-4 font-medium text-muted-foreground hidden md:table-cell">Church Unit</th>}
+                   <th className="text-left p-3 sm:p-4 font-medium text-muted-foreground">Status</th>
+                   {isAdmin && <th className="text-center p-3 sm:p-4 font-medium text-muted-foreground hidden sm:table-cell">Account</th>}
+                  <th className="text-right p-3 sm:p-4 font-medium text-muted-foreground">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {filtered.map((m) => (
                   <tr key={m.id} className="border-b border-border hover:bg-muted/30 transition-colors">
-                    <td className="p-4">
-                      <div className="flex items-center gap-3">
-                        <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm shrink-0">
+                    <td className="p-3 sm:p-4">
+                      <div className="flex items-center gap-2 sm:gap-3">
+                        <div className="h-8 w-8 sm:h-9 sm:w-9 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs sm:text-sm shrink-0">
                           {m.first_name[0]}{m.last_name[0]}
                         </div>
                         <div>
@@ -220,14 +220,14 @@ export default function Members() {
                         </div>
                       </div>
                     </td>
-                    <td className="p-4 hidden sm:table-cell">
+                    <td className="p-3 sm:p-4 hidden sm:table-cell">
                       <div className="flex flex-col gap-0.5">
                         {m.email && <span className="flex items-center gap-1 text-muted-foreground"><Mail className="h-3 w-3" /> {m.email}</span>}
                         {m.phone && <span className="flex items-center gap-1 text-muted-foreground"><Phone className="h-3 w-3" /> {m.phone}</span>}
                       </div>
                     </td>
                     {(isAdmin || viewOnly) && (
-                      <td className="p-4 hidden md:table-cell">
+                      <td className="p-3 sm:p-4 hidden md:table-cell">
                         {m.church_unit ? (
                           <div className="flex flex-wrap gap-1">
                             {m.church_unit.split(",").map(u => u.trim()).filter(Boolean).map(u => (
@@ -237,13 +237,13 @@ export default function Members() {
                         ) : <span className="text-xs text-muted-foreground">—</span>}
                       </td>
                     )}
-                    <td className="p-4">
-                      <Badge className={`${statusColors[m.membership_status] || "bg-muted text-muted-foreground"} border-0`}>
+                    <td className="p-3 sm:p-4">
+                      <Badge className={`${statusColors[m.membership_status] || "bg-muted text-muted-foreground"} border-0 text-xs whitespace-nowrap`}>
                         {m.membership_status}
                       </Badge>
                     </td>
                     {isAdmin && (
-                      <td className="p-4 text-center">
+                      <td className="p-3 sm:p-4 text-center hidden sm:table-cell">
                         {m.user_id ? (
                           <span className="inline-flex items-center gap-1 text-xs text-chart-3" title="Linked to user account">
                             <Link2 className="h-3.5 w-3.5" /> Linked
@@ -255,7 +255,7 @@ export default function Members() {
                         )}
                       </td>
                     )}
-                    <td className="p-4 text-right">
+                    <td className="p-3 sm:p-4 text-right">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button variant="ghost" size="icon"><MoreVertical className="h-4 w-4" /></Button>

@@ -61,8 +61,8 @@ function NotificationPreferencesSection() {
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Email — always on */}
-        <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
-          <div>
+        <div className="flex items-center justify-between p-3 sm:p-4 bg-muted/50 rounded-lg">
+          <div className="min-w-0 mr-2">
             <p className="text-sm font-medium text-foreground">Email Notifications</p>
             <p className="text-xs text-muted-foreground mt-0.5">Assignment notifications sent via email</p>
           </div>
@@ -70,8 +70,8 @@ function NotificationPreferencesSection() {
         </div>
 
         {/* SMS toggle */}
-        <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
-          <div>
+        <div className="flex items-center justify-between p-3 sm:p-4 bg-muted/50 rounded-lg">
+          <div className="min-w-0 mr-2">
             <p className="text-sm font-medium text-foreground">SMS Notifications</p>
             <p className="text-xs text-muted-foreground mt-0.5">Send SMS alongside email for follow-up &amp; pastoral care assignments (Twilio costs apply)</p>
           </div>
@@ -153,14 +153,14 @@ function SettingsListSection({ settingsKey, title, icon: Icon, description }) {
   return (
     <Card className="border-0 shadow-sm">
       <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div>
             <CardTitle className="text-base font-display flex items-center gap-2">
               <Icon className="h-4 w-4 text-accent" /> {title}
             </CardTitle>
             {description && <p className="text-xs text-muted-foreground mt-1">{description}</p>}
           </div>
-          <Button size="sm" onClick={openCreate} className="gap-1.5">
+          <Button size="sm" onClick={openCreate} className="gap-1.5 w-full sm:w-auto">
             <Plus className="h-4 w-4" /> Add
           </Button>
         </div>
@@ -173,8 +173,8 @@ function SettingsListSection({ settingsKey, title, icon: Icon, description }) {
         ) : (
           <div className="space-y-2">
             {items.map((item, idx) => (
-              <div key={idx} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                <span className="text-sm font-medium text-foreground">{item}</span>
+              <div key={idx} className="flex items-center justify-between p-2.5 sm:p-3 bg-muted/50 rounded-lg">
+                <span className="text-sm font-medium text-foreground truncate min-w-0 mr-2">{item}</span>
                 <div className="flex items-center gap-1">
                   <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(idx)}>
                     <Pencil className="h-3.5 w-3.5" />
@@ -275,14 +275,14 @@ function ChurchUnitsSection() {
   return (
     <Card className="border-0 shadow-sm">
       <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div>
             <CardTitle className="text-base font-display flex items-center gap-2">
               <Users className="h-4 w-4 text-accent" /> Church Units
             </CardTitle>
             <p className="text-xs text-muted-foreground mt-1">Departments and ministry groups</p>
           </div>
-          <Button size="sm" onClick={openCreate} className="gap-1.5">
+          <Button size="sm" onClick={openCreate} className="gap-1.5 w-full sm:w-auto">
             <Plus className="h-4 w-4" /> Add Unit
           </Button>
         </div>
@@ -295,9 +295,9 @@ function ChurchUnitsSection() {
         ) : (
           <div className="space-y-2">
             {units.map((unit) => (
-              <div key={unit.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                <div className="flex items-center gap-3">
-                  <span className="text-sm font-medium text-foreground">{unit.name}</span>
+              <div key={unit.id} className="flex items-center justify-between p-2.5 sm:p-3 bg-muted/50 rounded-lg">
+                <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                  <span className="text-sm font-medium text-foreground truncate">{unit.name}</span>
                   <Badge variant={unit.is_active ? "default" : "secondary"} className="text-xs">
                     {unit.is_active ? "Active" : "Inactive"}
                   </Badge>
@@ -445,7 +445,7 @@ export default function Settings() {
       </div>
 
       <Tabs defaultValue="notifications" className="space-y-4">
-        <TabsList className="flex flex-nowrap h-auto gap-1 overflow-x-auto w-full justify-start">
+        <TabsList className="flex flex-nowrap h-auto gap-1 overflow-x-auto w-full justify-start [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
           <TabsTrigger value="notifications" className="gap-1.5 text-xs"><Bell className="h-3.5 w-3.5" /> Notifications</TabsTrigger>
           <TabsTrigger value="units" className="gap-1.5 text-xs"><Users className="h-3.5 w-3.5" /> Units</TabsTrigger>
           <TabsTrigger value="wsf" className="gap-1.5 text-xs"><Globe className="h-3.5 w-3.5" /> WSF Centres</TabsTrigger>
