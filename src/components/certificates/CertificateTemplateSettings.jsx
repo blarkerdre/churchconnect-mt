@@ -448,7 +448,7 @@ export default function CertificateTemplateSettings() {
       </Dialog>
       {/* Preview Dialog */}
       <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
-        <DialogContent className="max-w-3xl">
+        <DialogContent className="max-w-[95vw] sm:max-w-3xl">
           <DialogHeader>
             <DialogTitle>Certificate Preview</DialogTitle>
           </DialogHeader>
