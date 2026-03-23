@@ -257,9 +257,9 @@ export default function ExamManagement() {
             <CardTitle className="text-base font-display flex items-center gap-2">
               <Tag className="h-4 w-4 text-primary" /> Certificate Courses
             </CardTitle>
-            <Button size="sm" variant="outline" className="gap-1.5" onClick={() => {
+             <Button size="sm" variant="outline" className="gap-1.5" onClick={() => {
               setEditingTitle(null);
-              setTitleForm({ name: "", description: "", pass_mark_percentage: 50 });
+              setTitleForm({ name: "", description: "", pass_mark_percentage: 50, registration_open: false, exams_open: false });
               setTitleDialogOpen(true);
             }}>
               <Plus className="h-3.5 w-3.5" /> Add Course
