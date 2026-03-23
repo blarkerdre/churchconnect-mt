@@ -525,6 +525,11 @@ export default function Settings() {
             <FeatureTogglesSection />
           </TabsContent>
         )}
+        {isSuperAdmin && (
+          <TabsContent value="danger">
+            <DangerZoneSection />
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   );
