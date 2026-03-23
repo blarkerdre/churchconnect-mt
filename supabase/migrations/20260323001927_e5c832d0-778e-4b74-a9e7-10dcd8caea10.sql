@@ -1,0 +1,1 @@
+ALTER TABLE public.sms_log ADD COLUMN channel text NOT NULL DEFAULT 'sms';

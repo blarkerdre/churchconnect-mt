@@ -1293,6 +1293,7 @@ export type Database = {
       }
       sms_log: {
         Row: {
+          channel: string
           created_at: string
           delivery_status: string | null
           delivery_updated_at: string | null
@@ -1308,6 +1309,7 @@ export type Database = {
           status: string
         }
         Insert: {
+          channel?: string
           created_at?: string
           delivery_status?: string | null
           delivery_updated_at?: string | null
@@ -1323,6 +1325,7 @@ export type Database = {
           status?: string
         }
         Update: {
+          channel?: string
           created_at?: string
           delivery_status?: string | null
           delivery_updated_at?: string | null
