@@ -538,6 +538,19 @@ export default function ExamManagement() {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Preview Exam Dialog */}
+      {previewSubject && (
+        <TakeExamDialog
+          open={!!previewSubject}
+          onOpenChange={(open) => { if (!open) setPreviewSubject(null); }}
+          trainingType={selectedCourse?.name}
+          memberId={null}
+          subjectId={previewSubject.id}
+          subjectName={previewSubject.name}
+          previewMode
+        />
+      )}
     </div>
   );
 }
