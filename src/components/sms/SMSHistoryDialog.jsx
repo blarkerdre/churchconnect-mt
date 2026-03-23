@@ -7,8 +7,8 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 
-export default function SMSHistoryDialog({ open, onOpenChange }) {
-  const [typeFilter, setTypeFilter] = useState("All");
+export default function SMSHistoryDialog({ open, onOpenChange, defaultFilter = "All" }) {
+  const [typeFilter, setTypeFilter] = useState(defaultFilter);
 
   const { data: logs = [], isLoading } = useQuery({
     queryKey: ["sms-logs", typeFilter],

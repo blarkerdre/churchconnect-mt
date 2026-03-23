@@ -43,7 +43,7 @@ export default function SMSDialog({
       setMessage(prefillMessage);
       setAudience(prefillAudience || "All Members");
       setResult(null);
-      setChannel("sms");
+      setChannel(defaultChannel);
     }
   }, [open, prefillMessage, prefillAudience]);
 
