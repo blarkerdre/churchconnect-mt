@@ -362,20 +362,6 @@ export default function Attendance() {
             {form.session_type === "Unit Meeting" && (
               <div><Label>Unit</Label><Input value={form.unit} onChange={e => setForm(f => ({ ...f, unit: e.target.value }))} placeholder="e.g. Choir, Ushering" /></div>
             )}
-            <div className="grid grid-cols-3 gap-3">
-              <div>
-                <Label>Male</Label>
-                <Input type="number" min="0" value={form.male_count} onChange={e => setForm(f => ({ ...f, male_count: e.target.value }))} />
-              </div>
-              <div>
-                <Label>Female</Label>
-                <Input type="number" min="0" value={form.female_count} onChange={e => setForm(f => ({ ...f, female_count: e.target.value }))} />
-              </div>
-              <div>
-                <Label>Total</Label>
-                <div className="h-9 flex items-center px-3 rounded-md border border-input bg-muted text-sm font-medium text-foreground">{formTotal}</div>
-              </div>
-            </div>
             <div><Label>Notes</Label><Textarea value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} rows={2} /></div>
             <Button onClick={() => createSessionMutation.mutate(form)} disabled={createSessionMutation.isPending || !form.session_date} className="w-full bg-primary">
               {createSessionMutation.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
