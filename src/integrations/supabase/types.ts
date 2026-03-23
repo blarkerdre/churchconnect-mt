@@ -302,6 +302,35 @@ export type Database = {
         }
         Relationships: []
       }
+      course_registrations: {
+        Row: {
+          course_id: string
+          id: string
+          member_id: string
+          registered_at: string
+        }
+        Insert: {
+          course_id: string
+          id?: string
+          member_id: string
+          registered_at?: string
+        }
+        Update: {
+          course_id?: string
+          id?: string
+          member_id?: string
+          registered_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "course_registrations_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "exam_titles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       documents: {
         Row: {
           created_at: string
@@ -827,28 +856,34 @@ export type Database = {
           created_at: string
           created_by: string | null
           description: string | null
+          exams_open: boolean
           id: string
           is_active: boolean
           name: string
           pass_mark_percentage: number
+          registration_open: boolean
         }
         Insert: {
           created_at?: string
           created_by?: string | null
           description?: string | null
+          exams_open?: boolean
           id?: string
           is_active?: boolean
           name: string
           pass_mark_percentage?: number
+          registration_open?: boolean
         }
         Update: {
           created_at?: string
           created_by?: string | null
           description?: string | null
+          exams_open?: boolean
           id?: string
           is_active?: boolean
           name?: string
           pass_mark_percentage?: number
+          registration_open?: boolean
         }
         Relationships: []
       }
