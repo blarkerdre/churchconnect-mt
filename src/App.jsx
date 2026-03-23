@@ -109,18 +109,18 @@ function AuthRoutes() {
               <Routes>
                 <Route path="/" element={<Dashboard />} />
                 <Route path="/my-profile" element={<MyProfile />} />
-                <Route path="/members" element={<Members />} />
-                <Route path="/events" element={<Events />} />
-                <Route path="/attendance" element={<LeaderRoute><Attendance /></LeaderRoute>} />
-                <Route path="/followups" element={<FollowupRoute><Followups /></FollowupRoute>} />
-                <Route path="/pastoral-care" element={<PastoralCare />} />
-                <Route path="/communications" element={<Communications />} />
-                <Route path="/transportation" element={<Transportation />} />
-                <Route path="/analytics" element={<AdminRoute><Analytics /></AdminRoute>} />
-                <Route path="/training-reports" element={<TrainingRoute><TrainingReports /></TrainingRoute>} />
-                <Route path="/exam-management" element={<ProtectedRoute><ExamManagement /></ProtectedRoute>} />
-                <Route path="/church-attendance" element={<TrainingRoute><ChurchAttendance /></TrainingRoute>} />
-                <Route path="/wsf" element={<WSFRoute><WSFManagement /></WSFRoute>} />
+                <Route path="/members" element={<FeatureGate path="/members"><Members /></FeatureGate>} />
+                <Route path="/events" element={<FeatureGate path="/events"><Events /></FeatureGate>} />
+                <Route path="/attendance" element={<FeatureGate path="/attendance"><LeaderRoute><Attendance /></LeaderRoute></FeatureGate>} />
+                <Route path="/followups" element={<FeatureGate path="/followups"><FollowupRoute><Followups /></FollowupRoute></FeatureGate>} />
+                <Route path="/pastoral-care" element={<FeatureGate path="/pastoral-care"><PastoralCare /></FeatureGate>} />
+                <Route path="/communications" element={<FeatureGate path="/communications"><Communications /></FeatureGate>} />
+                <Route path="/transportation" element={<FeatureGate path="/transportation"><Transportation /></FeatureGate>} />
+                <Route path="/analytics" element={<FeatureGate path="/analytics"><AdminRoute><Analytics /></AdminRoute></FeatureGate>} />
+                <Route path="/training-reports" element={<FeatureGate path="/training-reports"><TrainingRoute><TrainingReports /></TrainingRoute></FeatureGate>} />
+                <Route path="/exam-management" element={<FeatureGate path="/exam-management"><ProtectedRoute><ExamManagement /></ProtectedRoute></FeatureGate>} />
+                <Route path="/church-attendance" element={<FeatureGate path="/church-attendance"><TrainingRoute><ChurchAttendance /></TrainingRoute></FeatureGate>} />
+                <Route path="/wsf" element={<FeatureGate path="/wsf"><WSFRoute><WSFManagement /></WSFRoute></FeatureGate>} />
                 <Route path="/user-management" element={<AdminRoute><UserManagement /></AdminRoute>} />
                 <Route path="/settings" element={<AdminRoute><Settings /></AdminRoute>} />
                 <Route path="/system-logs" element={<AdminRoute><SystemLogs /></AdminRoute>} />

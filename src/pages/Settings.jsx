@@ -515,6 +515,12 @@ export default function Settings() {
         <TabsContent value="links">
           <ExternalLinksSection />
         </TabsContent>
+
+        {isSuperAdmin && (
+          <TabsContent value="features">
+            <FeatureTogglesSection />
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   );
