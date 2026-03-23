@@ -243,7 +243,7 @@ export default function Members() {
                       </Badge>
                     </td>
                     {isAdmin && (
-                      <td className="p-4 text-center">
+                      <td className="p-3 sm:p-4 text-center hidden sm:table-cell">
                         {m.user_id ? (
                           <span className="inline-flex items-center gap-1 text-xs text-chart-3" title="Linked to user account">
                             <Link2 className="h-3.5 w-3.5" /> Linked
