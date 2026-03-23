@@ -249,7 +249,7 @@ export default function Communications() {
               </div>
               {canManageComms && (
                 <Button onClick={() => { setEditing(null); setFormOpen(true); }} className="bg-primary hover:bg-primary/90">
-                  <Plus className="h-4 w-4 mr-2" /> New Communication
+                  <Plus className="h-4 w-4 mr-2" /> New Announcement
                 </Button>
               )}
             </div>
