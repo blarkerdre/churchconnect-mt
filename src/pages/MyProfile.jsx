@@ -755,6 +755,16 @@ function DynamicExamButtons({ memberId, onSelect }) {
     },
   });
 
+  const { data: registrations = [] } = useQuery({
+    queryKey: ["my-course-registrations", memberId],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("course_registrations").select("course_id").eq("member_id", memberId);
+      if (error) throw error;
+      return data.map(r => r.course_id);
+    },
+    enabled: !!memberId,
+  });
+
   const { data: allSubjects = [] } = useQuery({
     queryKey: ["all-exam-subjects"],
     queryFn: async () => {
@@ -778,6 +788,10 @@ function DynamicExamButtons({ memberId, onSelect }) {
   });
 
   if (isLoading || courses.length === 0) return null;
+
+  // Only show registered courses with exams_open
+  const registeredCourses = courses.filter(c => registrations.includes(c.id) && c.exams_open);
+  if (registeredCourses.length === 0) return null;
 
   // Build best attempt per subject
   const bestBySubject = {};
@@ -830,16 +844,9 @@ function DynamicExamButtons({ memberId, onSelect }) {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {courses.map(course => {
+        {registeredCourses.map(course => {
           const subjects = allSubjects.filter(s => s.course_id === course.id);
-          if (subjects.length === 0) {
-            // Legacy: no subjects, show flat button
-            return (
-              <Button key={course.id} variant="outline" size="sm" onClick={() => onSelect({ type: course.name })} className="gap-1.5">
-                <BookOpen className="h-3.5 w-3.5" /> {course.name} Exam
-              </Button>
-            );
-          }
+          if (subjects.length === 0) return null;
 
           const completedSubjectIds = subjects.filter(s => bestBySubject[s.id]).map(s => s.id);
           const totalScore = completedSubjectIds.reduce((sum, id) => sum + (bestBySubject[id]?.score || 0), 0);
@@ -879,7 +886,6 @@ function DynamicExamButtons({ memberId, onSelect }) {
                   const bestPct = best && best.total_points > 0 ? (best.score / best.total_points) * 100 : 0;
                   const subjectPassMark = s.pass_mark_percentage ?? 50;
                   const hasPassed = taken && bestPct >= subjectPassMark;
-                  // Check if any attempt for this subject has retake_allowed
                   const canRetake = taken && !hasPassed && myAttempts.some(a => a.subject_id === s.id && a.retake_allowed === true);
                   const isDisabled = taken && !canRetake;
                   return (
