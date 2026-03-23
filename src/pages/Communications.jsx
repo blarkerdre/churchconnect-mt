@@ -326,7 +326,7 @@ export default function Communications() {
                   </Button>
                 )}
                 <Button onClick={() => setWaOpen(true)} className="bg-primary hover:bg-primary/90">
-                  <MessageSquare className="h-4 w-4 mr-2" /> Send Bulk WhatsApp
+                  <WhatsAppIcon className="h-4 w-4 mr-2" /> Send Bulk WhatsApp
                 </Button>
               </div>
               <Card className="border-0 shadow-sm p-8 text-center text-muted-foreground">
