@@ -61,8 +61,8 @@ function NotificationPreferencesSection() {
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Email — always on */}
-        <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
-          <div>
+        <div className="flex items-center justify-between p-3 sm:p-4 bg-muted/50 rounded-lg">
+          <div className="min-w-0 mr-2">
             <p className="text-sm font-medium text-foreground">Email Notifications</p>
             <p className="text-xs text-muted-foreground mt-0.5">Assignment notifications sent via email</p>
           </div>
