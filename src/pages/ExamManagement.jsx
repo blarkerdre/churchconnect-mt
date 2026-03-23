@@ -47,6 +47,7 @@ export default function ExamManagement() {
   const [editingQuestion, setEditingQuestion] = useState(null);
   const [form, setForm] = useState(emptyQuestion);
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [previewSubject, setPreviewSubject] = useState(null);
 
   // Course CRUD state
   const [titleDialogOpen, setTitleDialogOpen] = useState(false);
