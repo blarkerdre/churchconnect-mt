@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -15,7 +16,7 @@ export default function SubjectManager({ course, onSelectSubject, selectedSubjec
   const qc = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState(null);
-  const [form, setForm] = useState({ name: "", description: "" });
+  const [form, setForm] = useState({ name: "", description: "", pass_mark_percentage: 50, time_limit_minutes: "", randomize_questions: false });
   const [deleteTarget, setDeleteTarget] = useState(null);
 
   const { data: subjects = [], isLoading } = useQuery({
@@ -45,6 +46,7 @@ export default function SubjectManager({ course, onSelectSubject, selectedSubjec
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["exam-subjects", course.id] });
+      qc.invalidateQueries({ queryKey: ["all-exam-subjects"] });
       toast({ title: editing ? "Subject updated" : "Subject added" });
       closeDialog();
     },
@@ -58,6 +60,7 @@ export default function SubjectManager({ course, onSelectSubject, selectedSubjec
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["exam-subjects", course.id] });
+      qc.invalidateQueries({ queryKey: ["all-exam-subjects"] });
       toast({ title: "Subject deleted" });
       setDeleteTarget(null);
     },
@@ -67,7 +70,7 @@ export default function SubjectManager({ course, onSelectSubject, selectedSubjec
   const closeDialog = () => {
     setDialogOpen(false);
     setEditing(null);
-    setForm({ name: "", description: "" });
+    setForm({ name: "", description: "", pass_mark_percentage: 50, time_limit_minutes: "", randomize_questions: false });
   };
 
   return (
@@ -78,7 +81,7 @@ export default function SubjectManager({ course, onSelectSubject, selectedSubjec
             <CardTitle className="text-base font-display flex items-center gap-2">
               <Layers className="h-4 w-4 text-primary" /> {course.name} — Subjects
             </CardTitle>
-            <Button size="sm" variant="outline" className="gap-1.5" onClick={() => { setEditing(null); setForm({ name: "", description: "" }); setDialogOpen(true); }}>
+            <Button size="sm" variant="outline" className="gap-1.5" onClick={() => { setEditing(null); setForm({ name: "", description: "", pass_mark_percentage: 50, time_limit_minutes: "", randomize_questions: false }); setDialogOpen(true); }}>
               <Plus className="h-3.5 w-3.5" /> Add Subject
             </Button>
           </div>
@@ -100,14 +103,17 @@ export default function SubjectManager({ course, onSelectSubject, selectedSubjec
                   }`}
                   onClick={() => onSelectSubject(s)}
                 >
-                  <div className="flex items-center gap-2 min-w-0">
+                  <div className="flex items-center gap-2 min-w-0 flex-wrap">
                     <span className="text-xs text-muted-foreground font-mono w-5">{idx + 1}.</span>
                     <span className="text-sm font-medium text-foreground">{s.name}</span>
                     {s.description && <span className="text-xs text-muted-foreground hidden sm:inline">— {s.description}</span>}
+                    <Badge variant="outline" className="text-[9px] h-4">Pass: {s.pass_mark_percentage}%</Badge>
+                    {s.time_limit_minutes && <Badge variant="outline" className="text-[9px] h-4">⏱ {s.time_limit_minutes}min</Badge>}
+                    {s.randomize_questions && <Badge variant="outline" className="text-[9px] h-4">🔀 Random</Badge>}
                     {!s.is_active && <Badge variant="secondary" className="text-[9px] h-4">Inactive</Badge>}
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
-                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); setEditing(s); setForm({ name: s.name, description: s.description || "" }); setDialogOpen(true); }}>
+                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); setEditing(s); setForm({ name: s.name, description: s.description || "", pass_mark_percentage: s.pass_mark_percentage ?? 50, time_limit_minutes: s.time_limit_minutes ?? "", randomize_questions: s.randomize_questions ?? false }); setDialogOpen(true); }}>
                       <Edit className="h-3.5 w-3.5" />
                     </Button>
                     <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={(e) => { e.stopPropagation(); setDeleteTarget(s); }}>
@@ -129,7 +135,13 @@ export default function SubjectManager({ course, onSelectSubject, selectedSubjec
           <form onSubmit={(e) => {
             e.preventDefault();
             if (!form.name.trim()) { toast({ title: "Subject name is required", variant: "destructive" }); return; }
-            saveMutation.mutate({ name: form.name.trim(), description: form.description.trim() || null });
+            saveMutation.mutate({
+              name: form.name.trim(),
+              description: form.description.trim() || null,
+              pass_mark_percentage: Number(form.pass_mark_percentage) || 50,
+              time_limit_minutes: form.time_limit_minutes ? Number(form.time_limit_minutes) : null,
+              randomize_questions: !!form.randomize_questions,
+            });
           }} className="space-y-4">
             <div className="space-y-1.5">
               <Label>Subject Name *</Label>
@@ -138,6 +150,19 @@ export default function SubjectManager({ course, onSelectSubject, selectedSubjec
             <div className="space-y-1.5">
               <Label>Description</Label>
               <Input value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} placeholder="Optional" />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Pass Mark (%)</Label>
+              <Input type="number" min="0" max="100" value={form.pass_mark_percentage} onChange={e => setForm(f => ({ ...f, pass_mark_percentage: e.target.value }))} className="w-28" />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Time Limit (minutes)</Label>
+              <Input type="number" min="1" value={form.time_limit_minutes} onChange={e => setForm(f => ({ ...f, time_limit_minutes: e.target.value }))} className="w-28" placeholder="No limit" />
+              <p className="text-xs text-muted-foreground">Leave empty for no time limit</p>
+            </div>
+            <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50 border border-border">
+              <Label htmlFor="randomize" className="text-sm font-medium">Randomize Questions</Label>
+              <Switch id="randomize" checked={!!form.randomize_questions} onCheckedChange={v => setForm(f => ({ ...f, randomize_questions: v }))} />
             </div>
             <DialogFooter>
               <Button type="submit" disabled={saveMutation.isPending}>
