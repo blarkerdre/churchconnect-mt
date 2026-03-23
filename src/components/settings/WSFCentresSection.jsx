@@ -185,7 +185,7 @@ export default function WSFCentresSection() {
                     {c.leader_id && <div className="flex items-center gap-1.5"><Users className="h-3 w-3" />Leader: {getLeaderName(c.leader_id)}</div>}
                     <div className="flex items-center gap-1.5"><Users className="h-3 w-3" />{memberCounts[c.id] || 0} members</div>
                   </div>
-                  <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => setMembersDialogCentre(c)}>
+                  <Button variant="outline" size="sm" className="h-7 text-xs w-full sm:w-auto" onClick={() => setMembersDialogCentre(c)}>
                     <UserCog className="h-3 w-3 mr-1" /> Manage Members
                   </Button>
                 </div>
