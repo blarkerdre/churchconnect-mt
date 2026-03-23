@@ -84,14 +84,14 @@ export default function ExternalLinksSection() {
   return (
     <Card className="border-0 shadow-sm">
       <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div>
             <CardTitle className="text-base font-display flex items-center gap-2">
               <Link2 className="h-4 w-4 text-accent" /> External Links
             </CardTitle>
             <p className="text-xs text-muted-foreground mt-1">Links displayed on member dashboard and sidebar for quick access to external apps</p>
           </div>
-          <Button size="sm" onClick={openCreate} className="gap-1.5">
+          <Button size="sm" onClick={openCreate} className="gap-1.5 w-full sm:w-auto">
             <Plus className="h-4 w-4" /> Add Link
           </Button>
         </div>
