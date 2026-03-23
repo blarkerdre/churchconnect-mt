@@ -20,9 +20,10 @@ export default function Attendance() {
   const queryClient = useQueryClient();
   const [selectedSessionId, setSelectedSessionId] = useState(null);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [form, setForm] = useState({ title: "", session_type: "Sunday Service", session_date: "", notes: "", male_count: 0, female_count: 0, unit: "" });
+  const [form, setForm] = useState({ title: "", session_type: "Sunday Service", session_date: "", notes: "", unit: "" });
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const [demoForm, setDemoForm] = useState({ male_count: 0, female_count: 0 });
 
   const { data: sessions = [], isLoading } = useQuery({
     queryKey: ["attendance-sessions"],
@@ -68,15 +69,11 @@ export default function Attendance() {
 
   const createSessionMutation = useMutation({
     mutationFn: async (formData) => {
-      const total = (parseInt(formData.male_count) || 0) + (parseInt(formData.female_count) || 0);
       const { error } = await supabase.from("attendance_sessions").insert({
         title: formData.title || null,
         session_type: formData.session_type,
         session_date: formData.session_date,
         notes: formData.notes || null,
-        male_count: parseInt(formData.male_count) || 0,
-        female_count: parseInt(formData.female_count) || 0,
-        total_count: total,
         unit: formData.unit || null,
       });
       if (error) throw error;
@@ -85,6 +82,19 @@ export default function Attendance() {
       queryClient.invalidateQueries({ queryKey: ["attendance-sessions"] });
       toast({ title: "Session created" });
       setDialogOpen(false);
+    },
+    onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+  });
+
+  const updateDemographicsMutation = useMutation({
+    mutationFn: async ({ sessionId, male_count, female_count }) => {
+      const total = male_count + female_count;
+      const { error } = await supabase.from("attendance_sessions").update({ male_count, female_count, total_count: total }).eq("id", sessionId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["attendance-sessions"] });
+      toast({ title: "Demographics saved" });
     },
     onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
@@ -138,7 +148,14 @@ export default function Attendance() {
     toast({ title: "Report downloaded" });
   };
 
-  const formTotal = (parseInt(form.male_count) || 0) + (parseInt(form.female_count) || 0);
+  const demoTotal = (parseInt(demoForm.male_count) || 0) + (parseInt(demoForm.female_count) || 0);
+
+  // Sync demoForm when selected session changes
+  React.useEffect(() => {
+    if (selectedSession) {
+      setDemoForm({ male_count: selectedSession.male_count || 0, female_count: selectedSession.female_count || 0 });
+    }
+  }, [selectedSession?.id]);
 
   return (
     <div className="space-y-6">
@@ -197,7 +214,7 @@ export default function Attendance() {
             </Button>
           )}
           {canManage && (
-            <Button onClick={() => { setForm({ title: "", session_type: "Sunday Service", session_date: "", notes: "", male_count: 0, female_count: 0, unit: "" }); setDialogOpen(true); }} className="bg-primary hover:bg-primary/90 w-full sm:w-auto">
+            <Button onClick={() => { setForm({ title: "", session_type: "Sunday Service", session_date: "", notes: "", unit: "" }); setDialogOpen(true); }} className="bg-primary hover:bg-primary/90 w-full sm:w-auto">
               <Plus className="h-4 w-4 mr-2" /> New Session
             </Button>
           )}
@@ -283,11 +300,41 @@ export default function Attendance() {
               </CardContent>
             </Card>
 
-            {/* Report Attachments */}
-            {selectedSession && (
+            {/* Session Report — only for unit leaders after session is closed */}
+            {selectedSession && isClosed && (isAdmin || isUnitLeader) && (
               <Card className="border-0 shadow-sm">
-                <CardContent className="p-4">
-                  <ReportAttachments relatedTable="attendance_sessions" relatedId={selectedSession.id} />
+                <CardHeader><CardTitle className="text-base font-display flex items-center gap-2"><FileText className="h-4 w-4 text-accent" /> Session Report</CardTitle></CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-3 gap-3">
+                    <div>
+                      <Label className="text-xs">Male</Label>
+                      <Input type="number" min="0" value={demoForm.male_count} onChange={e => setDemoForm(f => ({ ...f, male_count: e.target.value }))} />
+                    </div>
+                    <div>
+                      <Label className="text-xs">Female</Label>
+                      <Input type="number" min="0" value={demoForm.female_count} onChange={e => setDemoForm(f => ({ ...f, female_count: e.target.value }))} />
+                    </div>
+                    <div>
+                      <Label className="text-xs">Total</Label>
+                      <div className="h-9 flex items-center px-3 rounded-md border border-input bg-muted text-sm font-medium text-foreground">{demoTotal}</div>
+                    </div>
+                  </div>
+                  <Button
+                    size="sm"
+                    className="w-full"
+                    disabled={updateDemographicsMutation.isPending}
+                    onClick={() => updateDemographicsMutation.mutate({
+                      sessionId: selectedSession.id,
+                      male_count: parseInt(demoForm.male_count) || 0,
+                      female_count: parseInt(demoForm.female_count) || 0,
+                    })}
+                  >
+                    {updateDemographicsMutation.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+                    Save Demographics
+                  </Button>
+                  <div className="pt-2 border-t">
+                    <ReportAttachments relatedTable="attendance_sessions" relatedId={selectedSession.id} />
+                  </div>
                 </CardContent>
               </Card>
             )}
@@ -315,20 +362,6 @@ export default function Attendance() {
             {form.session_type === "Unit Meeting" && (
               <div><Label>Unit</Label><Input value={form.unit} onChange={e => setForm(f => ({ ...f, unit: e.target.value }))} placeholder="e.g. Choir, Ushering" /></div>
             )}
-            <div className="grid grid-cols-3 gap-3">
-              <div>
-                <Label>Male</Label>
-                <Input type="number" min="0" value={form.male_count} onChange={e => setForm(f => ({ ...f, male_count: e.target.value }))} />
-              </div>
-              <div>
-                <Label>Female</Label>
-                <Input type="number" min="0" value={form.female_count} onChange={e => setForm(f => ({ ...f, female_count: e.target.value }))} />
-              </div>
-              <div>
-                <Label>Total</Label>
-                <div className="h-9 flex items-center px-3 rounded-md border border-input bg-muted text-sm font-medium text-foreground">{formTotal}</div>
-              </div>
-            </div>
             <div><Label>Notes</Label><Textarea value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} rows={2} /></div>
             <Button onClick={() => createSessionMutation.mutate(form)} disabled={createSessionMutation.isPending || !form.session_date} className="w-full bg-primary">
               {createSessionMutation.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
