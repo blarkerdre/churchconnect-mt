@@ -179,8 +179,8 @@ export default function WSFCentresSection() {
                     </div>
                   </div>
                   <div className="text-xs text-muted-foreground space-y-1">
-                    {(c.host_member_id || c.host_name) && <div className="flex items-center gap-1.5"><Users className="h-3 w-3" />House Provider: {c.host_member_id ? (() => { const m = allMembers.find(m => m.id === c.host_member_id); return m ? `${m.first_name} ${m.last_name}` : c.host_name; })() : c.host_name}</div>}
-                    {(c.address || c.location) && <div className="flex items-center gap-1.5"><MapPin className="h-3 w-3" />{c.address || c.location}{c.postcode ? `, ${c.postcode}` : ""}</div>}
+                    {(c.host_member_id || c.host_name) && <div className="flex items-start gap-1.5"><Users className="h-3 w-3 shrink-0 mt-0.5" /><span className="truncate">House Provider: {c.host_member_id ? (() => { const m = allMembers.find(m => m.id === c.host_member_id); return m ? `${m.first_name} ${m.last_name}` : c.host_name; })() : c.host_name}</span></div>}
+                    {(c.address || c.location) && <div className="flex items-start gap-1.5"><MapPin className="h-3 w-3 shrink-0 mt-0.5" /><span className="truncate">{c.address || c.location}{c.postcode ? `, ${c.postcode}` : ""}</span></div>}
                     {c.meeting_day && <div className="flex items-center gap-1.5"><Clock className="h-3 w-3" />{c.meeting_day}{c.meeting_time ? ` at ${c.meeting_time}` : ""}</div>}
                     {c.leader_id && <div className="flex items-center gap-1.5"><Users className="h-3 w-3" />Leader: {getLeaderName(c.leader_id)}</div>}
                     <div className="flex items-center gap-1.5"><Users className="h-3 w-3" />{memberCounts[c.id] || 0} members</div>
