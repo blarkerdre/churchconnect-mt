@@ -67,6 +67,9 @@ export default function SMSHistoryDialog({ open, onOpenChange }) {
                 <div className="flex items-center justify-between">
                   <span className="font-medium truncate">{log.recipient_phone}</span>
                   <div className="flex items-center gap-2">
+                    <Badge variant="outline" className={`text-xs ${log.channel === "whatsapp" ? "border-[#25D366] text-[#25D366]" : ""}`}>
+                      {log.channel === "whatsapp" ? "WhatsApp" : "SMS"}
+                    </Badge>
                     <Badge variant="outline" className="text-xs">{log.sms_type}</Badge>
                     <Badge className={`border-0 text-xs ${
                       log.delivery_status === "delivered" ? "bg-chart-3/10 text-chart-3" :

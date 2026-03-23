@@ -67,8 +67,16 @@ Deno.serve(async (req) => {
     }
 
     const body = await req.json();
-    const { recipients, message, sms_type, reference_id } = body;
-    // recipients: Array<{ phone: string, member_id?: string }>
+    const { recipients, message, sms_type, reference_id, channel } = body;
+    const msgChannel = channel === "whatsapp" ? "whatsapp" : "sms";
+
+    // Resolve the From number based on channel
+    let fromNumber = TWILIO_FROM;
+    if (msgChannel === "whatsapp") {
+      const waFrom = Deno.env.get("TWILIO_WHATSAPP_FROM");
+      if (!waFrom) throw new Error("TWILIO_WHATSAPP_FROM is not configured");
+      fromNumber = waFrom.startsWith("whatsapp:") ? waFrom : `whatsapp:${waFrom}`;
+    }
 
     if (!recipients || !Array.isArray(recipients) || recipients.length === 0) {
       return new Response(JSON.stringify({ error: "No recipients provided" }), {
@@ -120,15 +128,18 @@ Deno.serve(async (req) => {
           sms_type: sms_type || "bulk",
           reference_id: reference_id || null,
           status: "failed",
+          channel: msgChannel,
           error_message: "Invalid phone number format (must be E.164)",
         });
         continue;
       }
 
       try {
+        const toNumber = msgChannel === "whatsapp" ? `whatsapp:${normalized}` : normalized;
+
         const params = new URLSearchParams({
-          To: normalized,
-          From: TWILIO_FROM,
+          To: toNumber,
+          From: fromNumber,
           Body: message,
           StatusCallback: webhookUrl,
         });
@@ -155,6 +166,7 @@ Deno.serve(async (req) => {
             sms_type: sms_type || "bulk",
             reference_id: reference_id || null,
             status: "sent",
+            channel: msgChannel,
             message_sid: data.sid || null,
             delivery_status: "queued",
           });
@@ -168,6 +180,7 @@ Deno.serve(async (req) => {
             sms_type: sms_type || "bulk",
             reference_id: reference_id || null,
             status: "failed",
+            channel: msgChannel,
             error_message: data.message || JSON.stringify(data),
           });
         }
@@ -175,12 +188,13 @@ Deno.serve(async (req) => {
         failed++;
         logs.push({
           sender_id: userId,
-            recipient_phone: normalized,
+          recipient_phone: normalized,
           recipient_member_id: recipient.member_id || null,
           message,
           sms_type: sms_type || "bulk",
           reference_id: reference_id || null,
           status: "failed",
+          channel: msgChannel,
           error_message: err instanceof Error ? err.message : "Unknown error",
         });
       }
