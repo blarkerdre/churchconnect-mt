@@ -124,9 +124,9 @@ export default function TrainingReports() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-xl font-display font-bold text-foreground flex items-center gap-2">
-            <TrendingUp className="h-5 w-5 text-primary" /> Training & Programme Reports
+            <TrendingUp className="h-5 w-5 text-primary" /> BFC Report
           </h1>
-          <p className="text-sm text-muted-foreground mt-1">Record attendance and outcomes for church growth programmes</p>
+          <p className="text-sm text-muted-foreground mt-1">Record attendance and outcomes for BFC sessions</p>
         </div>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>

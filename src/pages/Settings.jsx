@@ -399,7 +399,7 @@ export default function Settings() {
             settingsKey="training_types"
             title="Training Programme Types"
             icon={TrendingUp}
-            description="Church growth programme types for training reports"
+            description="Church growth programme types for BFC reports"
           />
         </TabsContent>
 
