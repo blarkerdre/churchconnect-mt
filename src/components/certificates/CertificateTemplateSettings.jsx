@@ -1,14 +1,16 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2, Award, Plus, Pencil, Trash2, Upload, Image } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
+import { useAppSetting } from "@/hooks/useAppSetting";
 
 const emptyTemplate = {
   training_type: "",
@@ -28,6 +30,23 @@ export default function CertificateTemplateSettings() {
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(emptyTemplate);
   const [uploading, setUploading] = useState(false);
+  const [useCustomType, setUseCustomType] = useState(false);
+
+  const { data: courses = [] } = useQuery({
+    queryKey: ["exam-titles-active"],
+    queryFn: async () => {
+      const { data } = await supabase.from("exam_titles").select("name").eq("is_active", true);
+      return data || [];
+    },
+  });
+  const { data: settingsTypes } = useAppSetting("training_types", []);
+
+  const allTypes = useMemo(() => {
+    const defaults = ["BFC", "BCC", "LCC", "LDC", "Water Baptism", "WIT"];
+    const courseNames = courses.map(c => c.name);
+    const merged = new Set(["Default", ...defaults, ...courseNames, ...(settingsTypes || [])]);
+    return [...merged];
+  }, [courses, settingsTypes]);
 
   const { data: templates = [], isLoading } = useQuery({
     queryKey: ["certificate-templates"],
@@ -76,9 +95,10 @@ export default function CertificateTemplateSettings() {
     onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
 
-  const openCreate = () => { setEditing(null); setForm(emptyTemplate); setDialogOpen(true); };
+  const openCreate = () => { setEditing(null); setForm(emptyTemplate); setUseCustomType(false); setDialogOpen(true); };
   const openEdit = (t) => {
     setEditing(t);
+    setUseCustomType(false);
     setForm({
       training_type: t.training_type,
       church_name: t.church_name,
@@ -92,7 +112,7 @@ export default function CertificateTemplateSettings() {
     });
     setDialogOpen(true);
   };
-  const closeDialog = () => { setDialogOpen(false); setEditing(null); setForm(emptyTemplate); };
+  const closeDialog = () => { setDialogOpen(false); setEditing(null); setForm(emptyTemplate); setUseCustomType(false); };
 
   const handleUpload = async (e) => {
     const file = e.target.files?.[0];
@@ -229,12 +249,43 @@ export default function CertificateTemplateSettings() {
           <div className="space-y-4 mt-2">
             <div className="space-y-1.5">
               <Label>Training Type *</Label>
-              <Input
-                value={form.training_type}
-                onChange={(e) => set("training_type", e.target.value)}
-                placeholder="e.g. Believers Foundation Class (BFC)"
-                disabled={!!editing}
-              />
+              {editing ? (
+                <Input value={form.training_type} disabled />
+              ) : useCustomType ? (
+                <div className="flex gap-2">
+                  <Input
+                    value={form.training_type}
+                    onChange={(e) => set("training_type", e.target.value)}
+                    placeholder="Enter custom training type"
+                    className="flex-1"
+                  />
+                  <Button variant="outline" size="sm" onClick={() => { setUseCustomType(false); set("training_type", ""); }}>
+                    Back
+                  </Button>
+                </div>
+              ) : (
+                <Select
+                  value={form.training_type}
+                  onValueChange={(v) => {
+                    if (v === "__other__") {
+                      setUseCustomType(true);
+                      set("training_type", "");
+                    } else {
+                      set("training_type", v);
+                    }
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select training type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {allTypes.map((t) => (
+                      <SelectItem key={t} value={t}>{t}</SelectItem>
+                    ))}
+                    <SelectItem value="__other__">Other (custom)</SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
             </div>
             <div className="space-y-1.5">
               <Label>Church Name</Label>
