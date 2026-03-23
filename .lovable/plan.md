@@ -1,22 +1,47 @@
 
 
-## Plan: Dynamic Training Types in IssueCertificateDialog (Backward Compatible)
+## Plan: WhatsApp Channel Integration via Twilio
 
-### The Concern
-Training types like **Water Baptism**, **Holy Spirit Baptism**, and **Workers in Training (WIT)** are NOT exam courses in `exam_titles` — they are standalone training milestones that still require manual certificate issuance. Replacing the hardcoded list with only `exam_titles` would remove these options.
+### Overview
+Add a channel toggle (SMS / WhatsApp) to the messaging dialog and update the edge function to route messages through Twilio's WhatsApp API when selected. Uses the same `/Messages.json` endpoint — only the `To` and `From` fields change.
 
-### Solution
-Merge **three sources** into the certificate dropdown, ensuring nothing is lost:
+### Prerequisites
+A new secret `TWILIO_WHATSAPP_FROM` is needed for the WhatsApp sender number (e.g. `whatsapp:+14155238886` for Twilio sandbox, or `whatsapp:+447888873207` if your number is WhatsApp-approved).
 
-1. **`exam_titles`** — dynamic courses from Exam Management (e.g., BCC, LCC)
-2. **`app_settings` → `training_types`** — custom/admin-configured types (already fetched)
-3. **Hardcoded fallback list** — kept as a safety net for Water Baptism, WIT, etc., in case they haven't been added to either of the above
+### Changes
 
-### File: `src/components/certificates/IssueCertificateDialog.jsx`
+**1. Database migration — add `channel` column to `sms_log`**
+```sql
+ALTER TABLE public.sms_log ADD COLUMN channel text NOT NULL DEFAULT 'sms';
+```
+No RLS changes needed — existing policies cover new columns automatically.
 
-1. Add a query to fetch active courses from `exam_titles`: `SELECT name FROM exam_titles WHERE is_active = true`
-2. Merge all three sources with deduplication: `[...new Set([...examTitleNames, ...customTypes, ...DEFAULT_TRAINING_TYPES])]`
-3. Keep `DEFAULT_TRAINING_TYPES` as a fallback — no training types are lost
+**2. Edge function: `supabase/functions/send-sms/index.ts`**
+- Accept `channel` field in request body (`"sms"` or `"whatsapp"`, default `"sms"`)
+- When `channel === "whatsapp"`:
+  - Prefix `To` with `whatsapp:`
+  - Use `TWILIO_WHATSAPP_FROM` env var as `From` (already includes `whatsapp:` prefix)
+- Otherwise use existing `TWILIO_FROM_NUMBER`
+- Include `channel` in the log objects inserted into `sms_log`
 
-This is a single-file change with no database modifications. The dropdown will automatically include any new courses created in Exam Management while preserving all existing non-exam training types.
+**3. Frontend: `src/components/sms/SMSDialog.jsx`**
+- Add `channel` state (`"sms"` or `"whatsapp"`)
+- Add a segmented toggle (using RadioGroup or simple button group) above the message textarea
+- Pass `channel` in the fetch body to the edge function
+- Update button text: "Send SMS" vs "Send WhatsApp"
+- Reset channel on dialog open
+
+**4. Frontend: `src/components/sms/SMSHistoryDialog.jsx`**
+- Show a small badge (SMS / WhatsApp) on each log entry using the `channel` column
+- Add "whatsapp" to the type filter options
+
+**5. Secret: `TWILIO_WHATSAPP_FROM`**
+- Use `add_secret` tool to request the WhatsApp sender number from the user
+
+### Technical Detail
+The Twilio WhatsApp API uses the same Messages endpoint. The only difference:
+```
+SMS:      To=+447123456789       From=+447888873207
+WhatsApp: To=whatsapp:+447123456789  From=whatsapp:+14155238886
+```
 
