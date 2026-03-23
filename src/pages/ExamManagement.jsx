@@ -15,7 +15,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "@/components/ui/use-toast";
-import { Loader2, Plus, Trash2, Edit, BookOpen, Save, Tag, Layers, Eye, CheckCircle2, Download, Users } from "lucide-react";
+import { Loader2, Plus, Trash2, Edit, BookOpen, Save, Tag, Layers, Eye, CheckCircle2, Download, Users, QrCode } from "lucide-react";
+import WoFBIRegistrationQRCode from "@/components/exams/WoFBIRegistrationQRCode";
 import SubjectManager from "@/components/exams/SubjectManager";
 import CourseResultsView from "@/components/exams/CourseResultsView";
 import TakeExamDialog from "@/components/exams/TakeExamDialog";
@@ -59,6 +60,7 @@ export default function ExamManagement() {
   const [deleteTitleTarget, setDeleteTitleTarget] = useState(null);
   const [showResults, setShowResults] = useState(false);
   const [showRegistrations, setShowRegistrations] = useState(false);
+  const [qrOpen, setQrOpen] = useState(false);
 
   // Fetch courses (exam_titles)
   const { data: examTitles = [], isLoading: titlesLoading } = useQuery({
@@ -250,7 +252,11 @@ export default function ExamManagement() {
           </h1>
           <p className="text-sm text-muted-foreground mt-1">Manage certificate courses, subjects, and exam questions</p>
         </div>
+        <Button variant="outline" onClick={() => setQrOpen(true)} className="gap-2">
+          <QrCode className="h-4 w-4" /> Registration QR
+        </Button>
       </div>
+      <WoFBIRegistrationQRCode open={qrOpen} onOpenChange={setQrOpen} />
 
 
       {/* WoFBI About Section (Admin Editable) */}
