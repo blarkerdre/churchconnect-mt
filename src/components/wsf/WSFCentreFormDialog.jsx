@@ -67,7 +67,7 @@ export default function WSFCentreFormDialog({ open, onOpenChange, centre, onSave
             </div>
             <div className="space-y-1.5 sm:col-span-2">
               <Label>House Provider</Label>
-              <Select value={form.host_member_id} onValueChange={v => set("host_member_id", v)}>
+              <Select value={form.host_member_id} onValueChange={handleHostChange}>
                 <SelectTrigger><SelectValue placeholder="Select member" /></SelectTrigger>
                 <SelectContent>{allMembers.map(m => <SelectItem key={m.id} value={m.id}>{m.first_name} {m.last_name}</SelectItem>)}</SelectContent>
               </Select>
