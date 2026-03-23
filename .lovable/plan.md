@@ -1,52 +1,31 @@
 
 
-## Mobile Responsiveness Improvements
+## Mobile-Friendly Settings and Members Pages
 
-This plan addresses alignment and overflow issues across all pages, forms, and dialogs on mobile (384px viewport).
+### Settings Page (`src/pages/Settings.jsx`)
 
-### 1. Dialog Component — Scrollable on Mobile
-**File: `src/components/ui/dialog.jsx`**
-- Add `max-h-[90vh] overflow-y-auto` to `DialogContent` so long forms (MemberForm, CertificateTemplate, etc.) scroll instead of overflowing the viewport
+1. **Hide tab scrollbar** — Add `-webkit-scrollbar` hiding via `scrollbar-hide` utility or inline style on the TabsList so the horizontal scroll works without a visible scrollbar
+2. **Settings list items** — Change item rows from `flex items-center justify-between` to allow text wrapping: reduce padding from `p-3` to `p-2.5 sm:p-3`, and allow item name text to truncate with `truncate min-w-0`
+3. **Card header layout** — In `SettingsListSection` and `ChurchUnitsSection`, stack the title and Add button vertically on mobile: `flex flex-col sm:flex-row sm:items-center gap-2`; make Add button full-width on mobile `w-full sm:w-auto`
+4. **Church units rows** — Stack unit name + badge and action buttons: wrap the unit name text with `truncate` to prevent overflow on narrow screens
+5. **Notification cards** — Reduce padding from `p-4` to `p-3 sm:p-4` on the notification preference cards
 
-### 2. Dashboard — Responsive Stat Values
-**File: `src/pages/Dashboard.jsx`**
-- Change stat value from `text-3xl` to `text-2xl sm:text-3xl` to prevent grid overflow on small screens
+### Members Page (`src/pages/Members.jsx`)
 
-### 3. Followups — Responsive Stat Values
-**File: `src/pages/Followups.jsx`**
-- Change stat values from `text-2xl` to `text-xl sm:text-2xl`
+1. **Table cell padding** — Reduce from `p-4` to `p-3 sm:p-4` for all `<th>` and `<td>` elements to reclaim space on 384px screens
+2. **Hide Account column on mobile** — Add `hidden sm:table-cell` to the Account column header and cells (it's admin-only detail not critical on mobile)
+3. **Status badge text** — Add `text-xs` and `whitespace-nowrap` to prevent badge wrapping
+4. **Action buttons row** — Make the toolbar buttons grid-based on mobile: change the button container to `grid grid-cols-4 sm:flex` so QR/CSV/Import/Register buttons lay out evenly on small screens
+5. **Member avatar** — Reduce from `h-9 w-9` to `h-8 w-8 sm:h-9 sm:w-9` on mobile
 
-### 4. Members — Responsive Stat Values
-**File: `src/pages/Members.jsx`**
-- Change stat values from `text-2xl` to `text-xl sm:text-2xl`
+### Member Form Dialog (`src/components/members/MemberFormDialog.jsx`)
 
-### 5. MyProfile — Mobile-Friendly Edit Layout
-**File: `src/pages/MyProfile.jsx`**
-- On the profile header card, stack the avatar and content vertically on mobile: change `flex items-start gap-4` to `flex flex-col sm:flex-row items-start gap-4`
-- Make Edit button full-width on mobile with `w-full sm:w-auto`
-- Make the avatar smaller on mobile: `h-12 w-12 sm:h-16 sm:w-16`
+1. **Dialog width** — Add responsive width: `max-w-[95vw] sm:max-w-2xl` so it doesn't clip on 384px screens
 
-### 6. Settings Tabs — Scrollable on Mobile
-**File: `src/pages/Settings.jsx`**
-- Wrap TabsList in a horizontally scrollable container: `overflow-x-auto` with `flex-nowrap` instead of `flex-wrap` so tabs don't stack awkwardly
+### Files to edit
+- `src/pages/Settings.jsx`
+- `src/pages/Members.jsx`
+- `src/components/members/MemberFormDialog.jsx`
 
-### 7. Communications Tabs — Scrollable on Mobile
-**File: `src/pages/Communications.jsx`**
-- Same pattern as Settings: make TabsList horizontally scrollable with `overflow-x-auto`
-
-### 8. AppLayout Header — Tighter Mobile Padding
-**File: `src/components/AppLayout.jsx`**
-- Reduce main content padding on mobile from `p-4` to `p-3 lg:p-8`
-- Reduce header padding from `px-4` to `px-3`
-
-### 9. Events — Full-Width New Event Button on Mobile
-**File: `src/pages/Events.jsx`**
-- Add `w-full sm:w-auto` to the "New Event" button
-
-### 10. Followups — Full-Width New Follow-up Button
-**File: `src/pages/Followups.jsx`**
-- Add `w-full sm:w-auto` to the "New Follow-up" button
-
-### Summary
-All changes are CSS-only (Tailwind classes). No logic or database changes. The key fix is making the Dialog component scrollable, which instantly improves every form in the app on mobile.
+All changes are CSS/Tailwind only — no logic changes.
 
