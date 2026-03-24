@@ -16,6 +16,7 @@ import { useToast } from "@/components/ui/use-toast";
 export default function TenantAdmin() {
   const { user } = useAuth();
   const { tenantId, switchTenant, tenantMemberships } = useTenant();
+  const { toast } = useToast();
   const queryClient = useQueryClient();
   const [createOpen, setCreateOpen] = useState(false);
   const [newTenant, setNewTenant] = useState({ name: "", slug: "", timezone: "Europe/London" });
