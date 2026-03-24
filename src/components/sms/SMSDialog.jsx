@@ -11,6 +11,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/components/ui/use-toast";
 import { normalizePhone } from "@/lib/phone-utils";
 import InvalidRecipientsPreview from "./InvalidRecipientsPreview";
+import { useTenantQuery } from "@/hooks/useTenantQuery";
 
 const AUDIENCES = [
   "All Members", "Ushering", "Choir", "Media", "Children's Ministry", "Protocol",
