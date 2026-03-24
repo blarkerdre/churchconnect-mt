@@ -73,7 +73,7 @@ export default function WSFAttendanceTab({ centres }) {
         const { error } = await supabase.from("wsf_attendance_reports").update(payload).eq("id", editing.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("wsf_attendance_reports").insert({ ...payload, reported_by: user?.id });
+        const { error } = await supabase.from("wsf_attendance_reports").insert(withTenant({ ...payload, reported_by: user?.id }));
         if (error) throw error;
       }
     },
