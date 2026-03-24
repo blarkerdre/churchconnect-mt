@@ -30,9 +30,9 @@ export default function WSFZonesSection() {
   });
 
   const { data: centreCounts = {} } = useQuery({
-    queryKey: ["wsf-zone-centre-counts"],
+    queryKey: ["wsf-zone-centre-counts", tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("wsf_centres").select("zone_id").not("zone_id", "is", null);
+      const { data, error } = await scopeQuery(supabase.from("wsf_centres").select("zone_id").not("zone_id", "is", null));
       if (error) throw error;
       const counts = {};
       data.forEach(c => { counts[c.zone_id] = (counts[c.zone_id] || 0) + 1; });
