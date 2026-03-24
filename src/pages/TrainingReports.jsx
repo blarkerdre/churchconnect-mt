@@ -178,10 +178,11 @@ export default function TrainingReports() {
           </h1>
           <p className="text-sm text-muted-foreground mt-1">Record attendance and outcomes for BFC and training sessions</p>
         </div>
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild>
-            <Button size="sm" className="gap-1.5"><Plus className="h-4 w-4" /> Record Session</Button>
-          </DialogTrigger>
+        {canRecordSession && (
+          <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+              <Button size="sm" className="gap-1.5"><Plus className="h-4 w-4" /> Record Session</Button>
+            </DialogTrigger>
           <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Record Training Session</DialogTitle>
