@@ -151,6 +151,7 @@ function AppRoutes() {
       <Route path="/register" element={<PublicRegistration />} />
       <Route path="/wofbi-register" element={<PublicWoFBIRegistration />} />
       <Route path="/presentation" element={<Presentation />} />
+      <Route path="/onboard" element={<Onboard />} />
 
       {/* Tenant-prefixed public routes (for future multi-tenant QR codes) */}
       <Route path="/t/:tenantSlug/register" element={<PublicRegistration />} />
