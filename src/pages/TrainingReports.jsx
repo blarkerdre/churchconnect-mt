@@ -60,6 +60,7 @@ export default function TrainingReports() {
   const [expandedRow, setExpandedRow] = useState(null);
   const { user } = useAuth();
   const qc = useQueryClient();
+  const { tenantId, scopeQuery, withTenant } = useTenantQuery();
 
   const { enabled: canRecordSession } = useSubFeature("training.record_session");
   const { enabled: canCsvExport } = useSubFeature("training.csv_export");
