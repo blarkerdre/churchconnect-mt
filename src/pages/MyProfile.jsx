@@ -270,7 +270,6 @@ export default function MyProfile() {
           <div className="flex items-start justify-between">
             <div className="flex flex-col sm:flex-row items-start gap-4 flex-1 min-w-0">
               <ProfilePhotoUpload member={member} user={user} onUpdated={() => queryClient.invalidateQueries({ queryKey: ["my-member-profile"] })} />
-              </div>
               <div className="flex-1 min-w-0">
                 {editing ? (
                   <div className="space-y-5">
