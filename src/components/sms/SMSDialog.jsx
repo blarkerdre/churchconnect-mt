@@ -32,6 +32,7 @@ export default function SMSDialog({
   defaultChannel = "sms",
 }) {
   const { isAdmin, leaderUnits } = useAuth();
+  const { tenantId } = useTenantQuery();
   const { toast } = useToast();
   const [message, setMessage] = useState(prefillMessage);
   const [audience, setAudience] = useState(prefillAudience || "All Members");
