@@ -44,3 +44,11 @@
 - Updated `track_member_status_change` to propagate tenant_id to status history
 - Updated `check_attendance_inactivation` to scope by tenant
 - Updated `auto_create_followup` to scope leader assignment and propagate tenant_id
+
+### ✅ Phase 7 — Tenant-Scoped RLS Policies (Complete)
+- Created `user_has_tenant_access()` security definer function — checks tenant_memberships
+- Added `AND user_has_tenant_access(tenant_id)` to all authenticated RLS policies across 30+ tables
+- Added `tenant_id` column to `wsf_zones` (was missing) and backfilled
+- Anon policies (public registration) left unchanged — no tenant membership context
+- User's own data policies (profiles insert/update, user_roles view own) kept without tenant check for bootstrap
+- Service role policies (email queue, unsubscribe tokens) untouched — not user-facing
