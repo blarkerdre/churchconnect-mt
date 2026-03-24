@@ -167,8 +167,32 @@ export default function Followups() {
   const filtered = followups.filter(f => {
     const matchSearch = `${f.person_name} ${f.followup_type} ${f.description || ""}`.toLowerCase().includes(search.toLowerCase());
     const matchStatus = statusFilter === "All" || f.status === statusFilter;
-    return matchSearch && matchStatus;
+    const dateOnly = f.due_date || f.created_at?.split("T")[0];
+    const matchDate = (!dateFrom || dateOnly >= dateFrom) && (!dateTo || dateOnly <= dateTo);
+    return matchSearch && matchStatus && matchDate;
   });
+
+  const downloadCSV = () => {
+    const headers = ["Name", "Type", "Status", "Priority", "Assigned To", "Due Date", "Completed Date", "Notes"];
+    const rows = filtered.map(f => [
+      f.person_name,
+      f.followup_type,
+      f.status,
+      f.priority || "",
+      f.assigned_to ? (profileMap[f.assigned_to] || "Unassigned") : "Unassigned",
+      f.due_date || "",
+      f.completed_date || "",
+      (f.notes || f.description || "").replace(/,/g, " "),
+    ]);
+    const csv = [headers, ...rows].map(r => r.map(c => `"${c}"`).join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `followups_${new Date().toISOString().split("T")[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   const overdueTasks = followups.filter(f =>
     f.due_date && f.status !== "Completed" && f.status !== "Overdue" && new Date(f.due_date) < new Date()
