@@ -30,15 +30,15 @@ function NotificationPreferencesSection() {
   const qc = useQueryClient();
   const { tenantId, scopeQuery, withTenant } = useTenantQuery();
   const { data: smsEnabled, isLoading } = useQuery({
-    queryKey: ["app-settings", "sms_notifications_enabled"],
+    queryKey: ["app-settings", "sms_notifications_enabled", tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let q = supabase
         .from("app_settings")
         .select("value")
-        .eq("key", "sms_notifications_enabled")
-        .maybeSingle();
+        .eq("key", "sms_notifications_enabled");
+      if (tenantId) q = q.eq("tenant_id", tenantId);
+      const { data, error } = await q.maybeSingle();
       if (error) throw error;
-      // Default to true (email + SMS) if not set
       return data?.value === true || data?.value === null || data === null;
     },
   });
