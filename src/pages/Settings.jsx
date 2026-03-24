@@ -368,6 +368,7 @@ const TOGGLEABLE_FEATURES = [
 
 function FeatureTogglesSection() {
   const qc = useQueryClient();
+  const { tenantId, withTenant } = useTenantQuery();
   const [expandedFeature, setExpandedFeature] = React.useState(null);
 
   const { data: disabledFeatures = [], isLoading } = useQuery({
