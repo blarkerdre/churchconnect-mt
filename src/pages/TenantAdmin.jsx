@@ -10,15 +10,21 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Separator } from "@/components/ui/separator";
-import { Building2, Users, UserCheck, Plus, CheckCircle2, ArrowRightLeft, Clock, Pencil, Save, Image, Palette, Users2 } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
+import {
+  Building2, Users, UserCheck, Plus, CheckCircle2, ArrowRightLeft, Clock, Pencil, Save,
+  Image, Palette, Users2, Archive, ArchiveRestore, Trash2, BarChart3, AlertTriangle,
+} from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import TenantUsersDialog from "@/components/tenants/TenantUsersDialog";
+import TenantAnalyticsTab from "@/components/tenants/TenantAnalyticsTab";
 
-// All feature modules that can be toggled per tenant
 const FEATURE_MODULES = [
   { key: "members", label: "Members", description: "Member directory and management" },
   { key: "events", label: "Events", description: "Event scheduling and registration" },
@@ -35,6 +41,13 @@ const FEATURE_MODULES = [
   { key: "sms", label: "SMS", description: "SMS messaging capability" },
 ];
 
+const PLAN_TIERS = [
+  { value: "free", label: "Free", memberLimit: 100, storageLimit: 500 },
+  { value: "starter", label: "Starter", memberLimit: 500, storageLimit: 2000 },
+  { value: "growth", label: "Growth", memberLimit: 2000, storageLimit: 5000 },
+  { value: "enterprise", label: "Enterprise", memberLimit: 10000, storageLimit: 20000 },
+];
+
 export default function TenantAdmin() {
   const { user } = useAuth();
   const { tenantId, switchTenant, tenantMemberships } = useTenant();
@@ -45,6 +58,8 @@ export default function TenantAdmin() {
   const [usersTenant, setUsersTenant] = useState(null);
   const [editForm, setEditForm] = useState({});
   const [newTenant, setNewTenant] = useState({ name: "", slug: "", timezone: "Europe/London" });
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
+  const [showArchived, setShowArchived] = useState(false);
 
   const { data: tenants = [], isLoading } = useQuery({
     queryKey: ["tenants-admin"],
@@ -70,6 +85,9 @@ export default function TenantAdmin() {
     },
     enabled: tenants.length > 0,
   });
+
+  const activeTenants = tenants.filter(t => !t.is_archived);
+  const archivedTenants = tenants.filter(t => t.is_archived);
 
   const createMutation = useMutation({
     mutationFn: async (payload) => {
@@ -115,6 +133,35 @@ export default function TenantAdmin() {
     },
   });
 
+  const archiveMutation = useMutation({
+    mutationFn: async ({ tenantId: tid, action }) => {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/archive-tenant`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({ tenant_id: tid, action }),
+        }
+      );
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error);
+      return result;
+    },
+    onSuccess: (_, vars) => {
+      toast({ title: `Tenant ${vars.action === "archive" ? "archived" : vars.action === "restore" ? "restored" : "deleted"} successfully` });
+      setDeleteConfirmText("");
+      queryClient.invalidateQueries({ queryKey: ["tenants-admin"] });
+      queryClient.invalidateQueries({ queryKey: ["tenant-stats"] });
+    },
+    onError: (err) => {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    },
+  });
+
   const handleCreate = (e) => {
     e.preventDefault();
     if (!newTenant.name || !newTenant.slug) return;
@@ -135,7 +182,9 @@ export default function TenantAdmin() {
       timezone: tenant.timezone,
       logo_url: tenant.logo_url || "",
       setup_complete: tenant.setup_complete,
-      // Feature flags from settings
+      plan_tier: tenant.plan_tier || "free",
+      member_limit: tenant.member_limit || 100,
+      storage_limit_mb: tenant.storage_limit_mb || 500,
       disabled_features: settings.disabled_features || [],
       primary_color: settings.primary_color || "",
       welcome_message: settings.welcome_message || "",
@@ -144,7 +193,7 @@ export default function TenantAdmin() {
 
   const handleSaveEdit = () => {
     if (!editTenant) return;
-    const { name, slug, timezone, logo_url, setup_complete, disabled_features, primary_color, welcome_message } = editForm;
+    const { name, slug, timezone, logo_url, setup_complete, plan_tier, member_limit, storage_limit_mb, disabled_features, primary_color, welcome_message } = editForm;
     const settings = {
       ...(editTenant.settings || {}),
       disabled_features,
@@ -158,6 +207,9 @@ export default function TenantAdmin() {
       timezone,
       logo_url: logo_url || null,
       setup_complete,
+      plan_tier,
+      member_limit: parseInt(member_limit) || 100,
+      storage_limit_mb: parseInt(storage_limit_mb) || 500,
       settings,
     });
   };
@@ -173,27 +225,37 @@ export default function TenantAdmin() {
     });
   };
 
+  const handlePlanChange = (tier) => {
+    const plan = PLAN_TIERS.find(p => p.value === tier);
+    setEditForm({
+      ...editForm,
+      plan_tier: tier,
+      member_limit: plan?.memberLimit || editForm.member_limit,
+      storage_limit_mb: plan?.storageLimit || editForm.storage_limit_mb,
+    });
+  };
+
   const autoSlug = (name) => name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 
   return (
     <div className="space-y-6">
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <Card>
-          <CardContent className="pt-6 flex items-center gap-4">
+          <CardContent className="pt-6 flex items-center gap-3">
             <div className="p-3 rounded-xl bg-primary/10">
-              <Building2 className="h-6 w-6 text-primary" />
+              <Building2 className="h-5 w-5 text-primary" />
             </div>
             <div>
-              <p className="text-2xl font-bold">{tenants.length}</p>
-              <p className="text-xs text-muted-foreground">Total Tenants</p>
+              <p className="text-2xl font-bold">{activeTenants.length}</p>
+              <p className="text-xs text-muted-foreground">Active Tenants</p>
             </div>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="pt-6 flex items-center gap-4">
+          <CardContent className="pt-6 flex items-center gap-3">
             <div className="p-3 rounded-xl bg-emerald-500/10">
-              <Users className="h-6 w-6 text-emerald-600" />
+              <Users className="h-5 w-5 text-emerald-600" />
             </div>
             <div>
               <p className="text-2xl font-bold">
@@ -204,9 +266,9 @@ export default function TenantAdmin() {
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="pt-6 flex items-center gap-4">
+          <CardContent className="pt-6 flex items-center gap-3">
             <div className="p-3 rounded-xl bg-blue-500/10">
-              <UserCheck className="h-6 w-6 text-blue-600" />
+              <UserCheck className="h-5 w-5 text-blue-600" />
             </div>
             <div>
               <p className="text-2xl font-bold">
@@ -216,134 +278,222 @@ export default function TenantAdmin() {
             </div>
           </CardContent>
         </Card>
+        <Card>
+          <CardContent className="pt-6 flex items-center gap-3">
+            <div className="p-3 rounded-xl bg-amber-500/10">
+              <Archive className="h-5 w-5 text-amber-600" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold">{archivedTenants.length}</p>
+              <p className="text-xs text-muted-foreground">Archived</p>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
-      {/* Tenants Table */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <div>
-            <CardTitle>All Tenants</CardTitle>
-            <CardDescription>Manage church tenants and switch context</CardDescription>
-          </div>
-          <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-            <DialogTrigger asChild>
-              <Button size="sm"><Plus className="h-4 w-4 mr-1" /> New Tenant</Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Create New Tenant</DialogTitle>
-              </DialogHeader>
-              <form onSubmit={handleCreate} className="space-y-4">
-                <div className="space-y-2">
-                  <Label>Church Name</Label>
-                  <Input
-                    value={newTenant.name}
-                    onChange={(e) => setNewTenant({ ...newTenant, name: e.target.value, slug: autoSlug(e.target.value) })}
-                    placeholder="e.g. Winners Chapel London"
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>URL Slug</Label>
-                  <Input
-                    value={newTenant.slug}
-                    onChange={(e) => setNewTenant({ ...newTenant, slug: e.target.value })}
-                    placeholder="e.g. wci-london"
-                    required
-                  />
-                  <p className="text-xs text-muted-foreground">Used in URLs: /t/{newTenant.slug || "slug"}/</p>
-                </div>
-                <div className="space-y-2">
-                  <Label>Timezone</Label>
-                  <Input
-                    value={newTenant.timezone}
-                    onChange={(e) => setNewTenant({ ...newTenant, timezone: e.target.value })}
-                    placeholder="Europe/London"
-                  />
-                </div>
-                <Button type="submit" className="w-full" disabled={createMutation.isPending}>
-                  {createMutation.isPending ? "Creating..." : "Create Tenant"}
-                </Button>
-              </form>
-            </DialogContent>
-          </Dialog>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <p className="text-muted-foreground text-sm py-4">Loading tenants...</p>
-          ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead className="hidden sm:table-cell">Slug</TableHead>
-                    <TableHead className="hidden md:table-cell">Timezone</TableHead>
-                    <TableHead className="text-center">Members</TableHead>
-                    <TableHead className="text-center">Users</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {tenants.map((t) => {
-                    const isActive = tenantId === t.id;
-                    const stats = tenantStats[t.id] || { members: 0, users: 0 };
-                    const isMember = tenantMemberships.some(m => m.tenant_id === t.id);
-                    return (
-                      <TableRow key={t.id} className={isActive ? "bg-primary/5" : ""}>
-                        <TableCell className="font-medium">
-                          <div className="flex items-center gap-2">
-                            {t.logo_url && <img src={t.logo_url} alt="" className="h-6 w-6 rounded object-contain" />}
-                            <div>
-                              <span>{t.name}</span>
-                              {isActive && <Badge variant="secondary" className="ml-2 text-[10px]">Active</Badge>}
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell className="hidden sm:table-cell">
-                          <code className="text-xs bg-muted px-1.5 py-0.5 rounded">{t.slug}</code>
-                        </TableCell>
-                        <TableCell className="hidden md:table-cell">
-                          <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                            <Clock className="h-3 w-3" />{t.timezone}
-                          </span>
-                        </TableCell>
-                        <TableCell className="text-center">{stats.members}</TableCell>
-                        <TableCell className="text-center">{stats.users}</TableCell>
-                        <TableCell>
-                          {t.setup_complete ? (
-                            <Badge variant="outline" className="text-emerald-600 border-emerald-200 bg-emerald-50">
-                              <CheckCircle2 className="h-3 w-3 mr-1" />Active
-                            </Badge>
-                          ) : (
-                            <Badge variant="outline" className="text-amber-600 border-amber-200 bg-amber-50">Setup</Badge>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex items-center gap-1 justify-end">
-                            <Button size="sm" variant="ghost" onClick={() => setUsersTenant(t)} title="Manage users">
-                              <Users2 className="h-3 w-3" />
-                            </Button>
-                            <Button size="sm" variant="ghost" onClick={() => openEdit(t)} title="Edit settings">
-                              <Pencil className="h-3 w-3" />
-                            </Button>
-                            {isMember && !isActive && (
-                              <Button size="sm" variant="outline" onClick={() => handleSwitch(t.id)}>
-                                <ArrowRightLeft className="h-3 w-3 mr-1" /> Switch
-                              </Button>
-                            )}
-                          </div>
-                        </TableCell>
+      {/* Main Tabs */}
+      <Tabs defaultValue="tenants">
+        <TabsList>
+          <TabsTrigger value="tenants">Tenants</TabsTrigger>
+          <TabsTrigger value="analytics"><BarChart3 className="h-3.5 w-3.5 mr-1" />Analytics</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="tenants">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between flex-wrap gap-2">
+              <div>
+                <CardTitle>All Tenants</CardTitle>
+                <CardDescription>Manage church tenants and their settings</CardDescription>
+              </div>
+              <div className="flex items-center gap-2">
+                {archivedTenants.length > 0 && (
+                  <Button size="sm" variant="outline" onClick={() => setShowArchived(!showArchived)}>
+                    <Archive className="h-3.5 w-3.5 mr-1" />
+                    {showArchived ? "Hide" : "Show"} Archived ({archivedTenants.length})
+                  </Button>
+                )}
+                <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+                  <DialogTrigger asChild>
+                    <Button size="sm"><Plus className="h-4 w-4 mr-1" /> New Tenant</Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Create New Tenant</DialogTitle>
+                    </DialogHeader>
+                    <form onSubmit={handleCreate} className="space-y-4">
+                      <div className="space-y-2">
+                        <Label>Church Name</Label>
+                        <Input
+                          value={newTenant.name}
+                          onChange={(e) => setNewTenant({ ...newTenant, name: e.target.value, slug: autoSlug(e.target.value) })}
+                          placeholder="e.g. Winners Chapel London"
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>URL Slug</Label>
+                        <Input
+                          value={newTenant.slug}
+                          onChange={(e) => setNewTenant({ ...newTenant, slug: e.target.value })}
+                          placeholder="e.g. wci-london"
+                          required
+                        />
+                        <p className="text-xs text-muted-foreground">Used in URLs: /t/{newTenant.slug || "slug"}/</p>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Timezone</Label>
+                        <Input
+                          value={newTenant.timezone}
+                          onChange={(e) => setNewTenant({ ...newTenant, timezone: e.target.value })}
+                          placeholder="Europe/London"
+                        />
+                      </div>
+                      <Button type="submit" className="w-full" disabled={createMutation.isPending}>
+                        {createMutation.isPending ? "Creating..." : "Create Tenant"}
+                      </Button>
+                    </form>
+                  </DialogContent>
+                </Dialog>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {isLoading ? (
+                <p className="text-muted-foreground text-sm py-4">Loading tenants...</p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Name</TableHead>
+                        <TableHead className="hidden sm:table-cell">Slug</TableHead>
+                        <TableHead className="hidden md:table-cell">Plan</TableHead>
+                        <TableHead className="text-center">Members</TableHead>
+                        <TableHead className="text-center">Users</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
                       </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                    </TableHeader>
+                    <TableBody>
+                      {[...activeTenants, ...(showArchived ? archivedTenants : [])].map((t) => {
+                        const isActive = tenantId === t.id;
+                        const stats = tenantStats[t.id] || { members: 0, users: 0 };
+                        const isMember = tenantMemberships.some(m => m.tenant_id === t.id);
+                        const memberUsage = t.member_limit > 0 ? Math.round((stats.members / t.member_limit) * 100) : 0;
+                        return (
+                          <TableRow key={t.id} className={`${isActive ? "bg-primary/5" : ""} ${t.is_archived ? "opacity-60" : ""}`}>
+                            <TableCell className="font-medium">
+                              <div className="flex items-center gap-2">
+                                {t.logo_url && <img src={t.logo_url} alt="" className="h-6 w-6 rounded object-contain" />}
+                                <div>
+                                  <span>{t.name}</span>
+                                  {isActive && <Badge variant="secondary" className="ml-2 text-[10px]">Active</Badge>}
+                                  {t.is_archived && <Badge variant="outline" className="ml-2 text-[10px] text-amber-600">Archived</Badge>}
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell className="hidden sm:table-cell">
+                              <code className="text-xs bg-muted px-1.5 py-0.5 rounded">{t.slug}</code>
+                            </TableCell>
+                            <TableCell className="hidden md:table-cell">
+                              <Badge variant="outline" className="text-xs capitalize">{t.plan_tier || "free"}</Badge>
+                              {memberUsage >= 80 && (
+                                <span className="ml-1 text-[10px] text-amber-600">{memberUsage}%</span>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-center">{stats.members}</TableCell>
+                            <TableCell className="text-center">{stats.users}</TableCell>
+                            <TableCell>
+                              {t.is_archived ? (
+                                <Badge variant="outline" className="text-amber-600 border-amber-200 bg-amber-50">
+                                  <Archive className="h-3 w-3 mr-1" />Archived
+                                </Badge>
+                              ) : t.setup_complete ? (
+                                <Badge variant="outline" className="text-emerald-600 border-emerald-200 bg-emerald-50">
+                                  <CheckCircle2 className="h-3 w-3 mr-1" />Active
+                                </Badge>
+                              ) : (
+                                <Badge variant="outline" className="text-amber-600 border-amber-200 bg-amber-50">Setup</Badge>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex items-center gap-1 justify-end">
+                                {t.is_archived ? (
+                                  <>
+                                    <Button size="sm" variant="ghost" onClick={() => archiveMutation.mutate({ tenantId: t.id, action: "restore" })} title="Restore">
+                                      <ArchiveRestore className="h-3 w-3" />
+                                    </Button>
+                                    <AlertDialog>
+                                      <AlertDialogTrigger asChild>
+                                        <Button size="sm" variant="ghost" className="text-destructive" title="Permanently delete">
+                                          <Trash2 className="h-3 w-3" />
+                                        </Button>
+                                      </AlertDialogTrigger>
+                                      <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                          <AlertDialogTitle className="flex items-center gap-2">
+                                            <AlertTriangle className="h-5 w-5 text-destructive" />
+                                            Permanently Delete Tenant
+                                          </AlertDialogTitle>
+                                          <AlertDialogDescription>
+                                            This will permanently delete <strong>{t.name}</strong> and ALL its data (members, events, attendance, etc.). This action cannot be undone.
+                                          </AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <div className="space-y-2">
+                                          <Label>Type <strong>DELETE {t.slug}</strong> to confirm:</Label>
+                                          <Input
+                                            value={deleteConfirmText}
+                                            onChange={(e) => setDeleteConfirmText(e.target.value)}
+                                            placeholder={`DELETE ${t.slug}`}
+                                          />
+                                        </div>
+                                        <AlertDialogFooter>
+                                          <AlertDialogCancel onClick={() => setDeleteConfirmText("")}>Cancel</AlertDialogCancel>
+                                          <AlertDialogAction
+                                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                            disabled={deleteConfirmText !== `DELETE ${t.slug}` || archiveMutation.isPending}
+                                            onClick={() => archiveMutation.mutate({ tenantId: t.id, action: "delete" })}
+                                          >
+                                            {archiveMutation.isPending ? "Deleting..." : "Delete Forever"}
+                                          </AlertDialogAction>
+                                        </AlertDialogFooter>
+                                      </AlertDialogContent>
+                                    </AlertDialog>
+                                  </>
+                                ) : (
+                                  <>
+                                    <Button size="sm" variant="ghost" onClick={() => setUsersTenant(t)} title="Manage users">
+                                      <Users2 className="h-3 w-3" />
+                                    </Button>
+                                    <Button size="sm" variant="ghost" onClick={() => openEdit(t)} title="Edit settings">
+                                      <Pencil className="h-3 w-3" />
+                                    </Button>
+                                    <Button size="sm" variant="ghost" onClick={() => archiveMutation.mutate({ tenantId: t.id, action: "archive" })} title="Archive">
+                                      <Archive className="h-3 w-3" />
+                                    </Button>
+                                    {isMember && !isActive && (
+                                      <Button size="sm" variant="outline" onClick={() => handleSwitch(t.id)}>
+                                        <ArrowRightLeft className="h-3 w-3 mr-1" /> Switch
+                                      </Button>
+                                    )}
+                                  </>
+                                )}
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="analytics">
+          <TenantAnalyticsTab tenants={tenants} />
+        </TabsContent>
+      </Tabs>
 
       {/* Edit Tenant Dialog */}
       <Dialog open={!!editTenant} onOpenChange={(open) => !open && setEditTenant(null)}>
@@ -352,9 +502,10 @@ export default function TenantAdmin() {
             <DialogTitle>Edit Tenant: {editTenant?.name}</DialogTitle>
           </DialogHeader>
           <Tabs defaultValue="general" className="w-full">
-            <TabsList className="w-full grid grid-cols-3">
+            <TabsList className="w-full grid grid-cols-4">
               <TabsTrigger value="general">General</TabsTrigger>
               <TabsTrigger value="branding">Branding</TabsTrigger>
+              <TabsTrigger value="plan">Plan</TabsTrigger>
               <TabsTrigger value="features">Features</TabsTrigger>
             </TabsList>
 
@@ -432,6 +583,64 @@ export default function TenantAdmin() {
                   placeholder="Welcome to our church management platform..."
                   rows={3}
                 />
+              </div>
+            </TabsContent>
+
+            {/* Plan & Limits Tab */}
+            <TabsContent value="plan" className="space-y-4 mt-4">
+              <div className="space-y-2">
+                <Label>Plan Tier</Label>
+                <Select value={editForm.plan_tier || "free"} onValueChange={handlePlanChange}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PLAN_TIERS.map(p => (
+                      <SelectItem key={p.value} value={p.value}>
+                        {p.label} — {p.memberLimit} members, {p.storageLimit}MB
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Member Limit</Label>
+                <Input
+                  type="number"
+                  value={editForm.member_limit || ""}
+                  onChange={(e) => setEditForm({ ...editForm, member_limit: e.target.value })}
+                  min={1}
+                />
+                {editTenant && tenantStats[editTenant.id] && (
+                  <div className="space-y-1">
+                    <div className="flex justify-between text-xs text-muted-foreground">
+                      <span>Current usage</span>
+                      <span>{tenantStats[editTenant.id].members}/{editForm.member_limit}</span>
+                    </div>
+                    <Progress
+                      value={Math.min(Math.round((tenantStats[editTenant.id].members / (editForm.member_limit || 1)) * 100), 100)}
+                      className="h-2"
+                    />
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label>Storage Limit (MB)</Label>
+                <Input
+                  type="number"
+                  value={editForm.storage_limit_mb || ""}
+                  onChange={(e) => setEditForm({ ...editForm, storage_limit_mb: e.target.value })}
+                  min={100}
+                />
+              </div>
+
+              <div className="p-3 bg-muted/50 rounded-lg text-xs text-muted-foreground space-y-1">
+                <p className="font-medium">Plan tier presets:</p>
+                {PLAN_TIERS.map(p => (
+                  <p key={p.value}>• <strong>{p.label}</strong>: {p.memberLimit} members, {p.storageLimit}MB storage</p>
+                ))}
               </div>
             </TabsContent>
 
