@@ -43,11 +43,19 @@ export default function Layout({ children }) {
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
   const { signOut, profile, isAdmin, isUnitLeader, isWSFLeader, roles, leaderUnits } = useAuth();
+  const { currentTenant } = useTenant();
   const isSuperAdmin = roles.includes("super_admin");
   const { data: externalLinks } = useAppSetting("external_links", []);
   const { data: disabledFeatures } = useAppSetting("disabled_features", []);
   const isFollowupUnit = leaderUnits.includes("Follow-up") || leaderUnits.includes("Follow-Up");
   const isTrainingAccess = isUnitLeader;
+
+  // Derive branding from tenant or fall back to defaults
+  const tenantName = currentTenant?.name || "Winners Chapel";
+  const tenantNameParts = tenantName.split(" ");
+  const tenantLine1 = tenantNameParts.length > 2 ? tenantNameParts.slice(0, 2).join(" ") : tenantName;
+  const tenantLine2 = tenantNameParts.length > 2 ? tenantNameParts.slice(2).join(" ") : "";
+  const tenantLogoUrl = currentTenant?.logo_url || null;
   const { isMemberOfUnit: isFollowupMember } = useUnitMembership("Follow-up");
 
   // Filter nav items based on role and disabled features
