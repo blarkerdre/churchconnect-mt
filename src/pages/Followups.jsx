@@ -233,7 +233,7 @@ export default function Followups() {
             </SelectContent>
           </Select>
         </div>
-        <Button onClick={openNew} className="w-full sm:w-auto bg-primary hover:bg-primary/90"><Plus className="h-4 w-4 mr-2" /> New Follow-up</Button>
+        {canCreateFollowup && <Button onClick={openNew} className="w-full sm:w-auto bg-primary hover:bg-primary/90"><Plus className="h-4 w-4 mr-2" /> New Follow-up</Button>}
       </div>
 
       {/* List */}
