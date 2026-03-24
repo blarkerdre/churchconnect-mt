@@ -14,6 +14,7 @@ import { toast } from "@/components/ui/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useUnitMembership } from "@/hooks/useUnitMembership";
 import { useSubFeature } from "@/hooks/useSubFeature";
+import { useTenantQuery } from "@/hooks/useTenantQuery";
 import PrintReportButton from "@/components/PrintReportButton";
 
 const statusColors = {
@@ -28,6 +29,7 @@ const ALL_STATUSES = ["Open", "In Progress", "Resolved", "Closed"];
 
 export default function PastoralCare() {
   const { user, isAdmin, leaderUnits } = useAuth();
+  const { tenantId, scopeQuery, withTenant } = useTenantQuery();
   const { isMemberOfUnit: isPastoralUnit } = useUnitMembership("Pastoral Care");
   const canManage = isAdmin || leaderUnits.includes("Pastoral Care") || isPastoralUnit;
   const isPastoralLeader = isAdmin || leaderUnits.includes("Pastoral Care");
@@ -45,12 +47,13 @@ export default function PastoralCare() {
   const [statusUpdate, setStatusUpdate] = useState({ status: "", resolution_notes: "", assigned_to: "" });
 
   const { data: cases = [], isLoading } = useQuery({
-    queryKey: ["pastoral-care"],
+    queryKey: ["pastoral-care", tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("pastoral_care")
-        .select("*, members(first_name, last_name)")
-        .order("created_at", { ascending: false });
+      const { data, error } = await scopeQuery(
+        supabase.from("pastoral_care")
+          .select("*, members(first_name, last_name)")
+          .order("created_at", { ascending: false })
+      );
       if (error) throw error;
       return data;
     },
@@ -92,14 +95,14 @@ export default function PastoralCare() {
   const requestMutation = useMutation({
     mutationFn: async (formData) => {
       const { data: member } = await supabase.from("members").select("id").eq("user_id", user.id).single();
-      const { error } = await supabase.from("pastoral_care").insert({
+      const { error } = await supabase.from("pastoral_care").insert(withTenant({
         subject: formData.subject,
         care_type: formData.care_type,
         description: formData.description || null,
         confidential: formData.confidential,
         created_by: user.id,
         member_id: member?.id || null,
-      });
+      }));
       if (error) throw error;
     },
     onSuccess: () => {

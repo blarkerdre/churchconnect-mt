@@ -16,6 +16,7 @@ import IssueCertificateDialog from "@/components/certificates/IssueCertificateDi
 import { logAudit } from "@/lib/audit";
 import { useAuth } from "@/hooks/useAuth";
 import { useSubFeature } from "@/hooks/useSubFeature";
+import { useTenantQuery } from "@/hooks/useTenantQuery";
 
 const statusColors = {
   "Active": "bg-chart-3/10 text-chart-3",
@@ -26,6 +27,7 @@ const statusColors = {
 
 export default function Members() {
   const { isAdmin, isUnitLeader, isWSFLeader, user, loading: authLoading, myMember } = useAuth();
+  const { tenantId, scopeQuery } = useTenantQuery();
   const isLeader = isUnitLeader || isWSFLeader;
   const viewOnly = isLeader && !isAdmin;
   const [search, setSearch] = useState("");
@@ -44,29 +46,18 @@ export default function Members() {
   const { enabled: canCsvExport } = useSubFeature("members.csv_export");
 
   const { data: members = [], isLoading } = useQuery({
-    queryKey: ["members", user?.id, isAdmin, viewOnly, myMember?.id],
+    queryKey: ["members", user?.id, isAdmin, viewOnly, myMember?.id, tenantId],
     queryFn: async () => {
-      if (isAdmin) {
-        const { data, error } = await supabase
-          .from("members")
-          .select("*")
-          .order("created_at", { ascending: false });
-        if (error) throw error;
-        return data;
-      } else if (viewOnly) {
-        // Unit leaders / WSF leaders see members via RLS (their unit/centre members)
-        const { data, error } = await supabase
-          .from("members")
-          .select("*")
-          .order("created_at", { ascending: false });
+      if (isAdmin || viewOnly) {
+        const { data, error } = await scopeQuery(
+          supabase.from("members").select("*").order("created_at", { ascending: false })
+        );
         if (error) throw error;
         return data;
       } else {
-        const { data, error } = await supabase
-          .from("members")
-          .select("*")
-          .eq("user_id", user?.id)
-          .order("created_at", { ascending: false });
+        const { data, error } = await scopeQuery(
+          supabase.from("members").select("*").eq("user_id", user?.id).order("created_at", { ascending: false })
+        );
         if (error) throw error;
         return data;
       }

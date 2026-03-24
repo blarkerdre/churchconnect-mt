@@ -13,10 +13,12 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { useTenantQuery } from "@/hooks/useTenantQuery";
 import ReportAttachments from "@/components/reports/ReportAttachments";
 
 export default function Attendance() {
   const { isAdmin, isUnitLeader } = useAuth();
+  const { tenantId, scopeQuery, withTenant } = useTenantQuery();
   const canManage = isAdmin || isUnitLeader;
   const queryClient = useQueryClient();
   const [selectedSessionId, setSelectedSessionId] = useState(null);
@@ -27,9 +29,9 @@ export default function Attendance() {
   const [demoForm, setDemoForm] = useState({ male_count: 0, female_count: 0, meeting_notes: "" });
 
   const { data: sessions = [], isLoading } = useQuery({
-    queryKey: ["attendance-sessions"],
+    queryKey: ["attendance-sessions", tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("attendance_sessions").select("*").order("session_date", { ascending: false });
+      const { data, error } = await scopeQuery(supabase.from("attendance_sessions").select("*").order("session_date", { ascending: false }));
       if (error) throw error;
       return data;
     },
@@ -60,9 +62,9 @@ export default function Attendance() {
   });
 
   const { data: totalMembers = 0 } = useQuery({
-    queryKey: ["total-members-count"],
+    queryKey: ["total-members-count", tenantId],
     queryFn: async () => {
-      const { count, error } = await supabase.from("members").select("*", { count: "exact", head: true }).eq("membership_status", "Active");
+      const { count, error } = await scopeQuery(supabase.from("members").select("*", { count: "exact", head: true }).eq("membership_status", "Active"));
       if (error) throw error;
       return count || 0;
     },
@@ -70,13 +72,13 @@ export default function Attendance() {
 
   const createSessionMutation = useMutation({
     mutationFn: async (formData) => {
-      const { error } = await supabase.from("attendance_sessions").insert({
+      const { error } = await supabase.from("attendance_sessions").insert(withTenant({
         title: formData.title || null,
         session_type: formData.session_type,
         session_date: formData.session_date,
         notes: formData.notes || null,
         unit: formData.unit || null,
-      });
+      }));
       if (error) throw error;
     },
     onSuccess: () => {

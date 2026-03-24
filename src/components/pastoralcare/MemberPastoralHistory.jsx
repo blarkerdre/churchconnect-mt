@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Lock, CalendarClock } from "lucide-react";
 import { format } from "date-fns";
+import { useTenantQuery } from "@/hooks/useTenantQuery";
 
 const statusColors = {
   "Open": "bg-accent/10 text-accent",
@@ -13,14 +14,14 @@ const statusColors = {
 };
 
 export default function MemberPastoralHistory({ memberId }) {
+  const { tenantId, scopeQuery } = useTenantQuery();
+
   const { data: records = [], isLoading } = useQuery({
-    queryKey: ["pastoral_care", memberId],
+    queryKey: ["pastoral_care", memberId, tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("pastoral_care")
-        .select("*")
-        .eq("member_id", memberId)
-        .order("created_at", { ascending: false });
+      const { data, error } = await scopeQuery(
+        supabase.from("pastoral_care").select("*").eq("member_id", memberId).order("created_at", { ascending: false })
+      );
       if (error) throw error;
       return data;
     },

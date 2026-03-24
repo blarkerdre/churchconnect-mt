@@ -30,8 +30,12 @@
 - Auto sign-in after registration, slug validation, timezone selection
 - Link from Auth page ("Sign in instead" / "Already have an account?")
 
-### 🔲 Phase 5 — Frontend Query Updates
-- Update ~50 components to use tenant-scoped queries
+### ✅ Phase 5 — Frontend Query Updates (Complete)
+- Updated ~15 page components to use `useTenantQuery` (`scopeQuery` for selects, `withTenant` for inserts)
+- Updated shared hooks: `useAppSetting`, `useChurchUnits`, `useUnitMembership`
+- Updated shared components: `MemberFormDialog`, `CheckInPanel`, `MemberPastoralHistory`
+- Updated `logAudit` to accept optional `tenantId` parameter
+- Pages updated: Dashboard, Members, Attendance, Events, Communications, Followups, PastoralCare, Analytics
 
 ### 🔲 Phase 6 — Trigger & Function Updates
 - Update all DB triggers to respect tenant boundaries
