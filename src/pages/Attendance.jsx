@@ -121,7 +121,7 @@ export default function Attendance() {
     const reportContent = [
       `ATTENDANCE REPORT`,
       `=================`,
-      `Session: ${selectedSession.title || selectedSession.session_type}`,
+      `Meeting: ${selectedSession.title || selectedSession.session_type}`,
       `Type: ${selectedSession.session_type}`,
       `Date: ${selectedSession.session_date}`,
       `Status: ${isClosed ? "Closed" : "Open"}`,
