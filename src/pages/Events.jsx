@@ -176,6 +176,7 @@ export default function Events() {
         recurrence_frequency: formData.is_recurring ? formData.recurrence_frequency : null,
         recurrence_end_date: formData.is_recurring ? formData.recurrence_end_date : null,
         reminder_days_before: formData.reminder_days_before?.length ? formData.reminder_days_before : null,
+        reminder_hours_before: formData.reminder_hours_before?.length ? formData.reminder_hours_before : null,
         reminder_sent: false,
       };
       if (editing) {
