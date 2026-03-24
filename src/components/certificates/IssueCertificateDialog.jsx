@@ -83,6 +83,7 @@ export default function IssueCertificateDialog({ open, onOpenChange, member }) {
           training_type: trainingType,
           completion_date: completionDate,
           notes: notes || null,
+          tenant_id: tenantId,
         },
       });
       if (error) throw error;
