@@ -58,6 +58,15 @@ export default function WSFCentresSection() {
     },
   });
 
+  const { data: zones = [] } = useQuery({
+    queryKey: ["wsf-zones"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("wsf_zones").select("*").eq("is_active", true).order("name");
+      if (error) throw error;
+      return data;
+    },
+  });
+
   const { data: memberCounts = {} } = useQuery({
     queryKey: ["wsf-member-counts"],
     queryFn: async () => {
