@@ -67,7 +67,7 @@ Deno.serve(async (req) => {
     }
 
     const body = await req.json();
-    const { recipients, message, sms_type, reference_id, channel } = body;
+    const { recipients, message, sms_type, reference_id, channel, tenant_id } = body;
     const msgChannel = channel === "whatsapp" ? "whatsapp" : "sms";
 
     // Resolve the From number based on channel
