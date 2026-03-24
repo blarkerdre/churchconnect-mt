@@ -1,0 +1,1 @@
+SELECT vault.create_secret('https://komqiadgeaapeuuzbovn.supabase.co', 'supabase_url');
