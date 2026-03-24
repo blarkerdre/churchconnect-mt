@@ -42,11 +42,12 @@ function downloadReport(session, eligibleMembers, records) {
 export default function CheckInPanel({ session, onClose }) {
   const [search, setSearch] = useState("");
   const queryClient = useQueryClient();
+  const { tenantId, scopeQuery, withTenant } = useTenantQuery();
 
   const { data: allMembers = [] } = useQuery({
-    queryKey: ["members-checkin"],
+    queryKey: ["members-checkin", tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("members").select("id, first_name, last_name, email, phone, church_unit, membership_status").order("first_name");
+      const { data, error } = await scopeQuery(supabase.from("members").select("id, first_name, last_name, email, phone, church_unit, membership_status").order("first_name"));
       if (error) throw error;
       return data;
     },
