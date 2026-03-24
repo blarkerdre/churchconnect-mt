@@ -378,11 +378,6 @@ export default function Events() {
                         {isAdmin && <Button variant="ghost" size="icon" onClick={() => handleDelete(e)}><Trash2 className="h-4 w-4 text-destructive" /></Button>}
                       </div>
                     )}
-                        </Button>
-                        <Button variant="ghost" size="icon" onClick={() => openEdit(e)}><Edit className="h-4 w-4" /></Button>
-                        {isAdmin && <Button variant="ghost" size="icon" onClick={() => handleDelete(e)}><Trash2 className="h-4 w-4 text-destructive" /></Button>}
-                      </div>
-                    )}
                   </div>
                 </CardContent>
               </Card>
