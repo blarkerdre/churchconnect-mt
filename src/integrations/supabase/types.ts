@@ -1517,6 +1517,77 @@ export type Database = {
         }
         Relationships: []
       }
+      tenant_memberships: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["tenant_role"]
+          tenant_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["tenant_role"]
+          tenant_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["tenant_role"]
+          tenant_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_memberships_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tenants: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          logo_url: string | null
+          name: string
+          settings: Json | null
+          setup_complete: boolean
+          slug: string
+          timezone: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          logo_url?: string | null
+          name: string
+          settings?: Json | null
+          setup_complete?: boolean
+          slug: string
+          timezone?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          logo_url?: string | null
+          name?: string
+          settings?: Json | null
+          setup_complete?: boolean
+          slug?: string
+          timezone?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       training_completions: {
         Row: {
           certificate_number: string
@@ -1933,6 +2004,10 @@ export type Database = {
         Returns: boolean
       }
       is_admin: { Args: { _user_id: string }; Returns: boolean }
+      is_tenant_admin: {
+        Args: { _tenant_id: string; _user_id: string }
+        Returns: boolean
+      }
       is_wsf_leader_for_centre: {
         Args: { _centre_id: string; _user_id: string }
         Returns: boolean
@@ -2063,6 +2138,10 @@ export type Database = {
             }
             Returns: undefined
           }
+      user_belongs_to_tenant: {
+        Args: { _tenant_id: string; _user_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       app_role:
@@ -2102,6 +2181,7 @@ export type Database = {
         | "Unit Meeting"
         | "WSF Meeting"
         | "Other"
+      tenant_role: "owner" | "admin" | "member"
       transport_status: "Pending" | "Confirmed" | "Completed" | "Cancelled"
     }
     CompositeTypes: {
@@ -2266,6 +2346,7 @@ export const Constants = {
         "WSF Meeting",
         "Other",
       ],
+      tenant_role: ["owner", "admin", "member"],
       transport_status: ["Pending", "Confirmed", "Completed", "Cancelled"],
     },
   },
