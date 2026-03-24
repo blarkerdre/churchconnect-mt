@@ -30,6 +30,7 @@ const STATIC_AUDIENCES = ["All Members", "Leaders Only"];
 
 export default function Communications() {
   const { user, isAdmin, isUnitLeader, isWSFLeader, leaderUnits } = useAuth();
+  const { tenantId, scopeQuery, withTenant } = useTenantQuery();
   const { data: churchUnitsData = [] } = useChurchUnits();
   const { toast } = useToast();
   const queryClient = useQueryClient();
