@@ -64,7 +64,6 @@ export default function TrainingReports() {
   const { enabled: canCsvExport } = useSubFeature("training.csv_export");
   const { enabled: canPrint } = useSubFeature("training.print");
   const { enabled: canAttachments } = useSubFeature("training.attachments");
-  const qc = useQueryClient();
 
   const { data: reports = [], isLoading } = useQuery({
     queryKey: ["training-reports", filterType, filterFrom, filterTo],
