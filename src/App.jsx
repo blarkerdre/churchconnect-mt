@@ -5,6 +5,7 @@ import { BrowserRouter as Router, Route, Routes, Navigate } from "react-router-d
 import { useUnitMembership } from "@/hooks/useUnitMembership";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import { TenantProvider } from "@/contexts/TenantContext";
+import TenantThemeProvider from "@/components/tenants/TenantThemeProvider";
 import { useAppSetting } from "@/hooks/useAppSetting";
 import Layout from "@/components/AppLayout";
 import Dashboard from "@/pages/Dashboard";
