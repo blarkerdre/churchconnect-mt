@@ -28,7 +28,7 @@ import BookOfTheMonthSettings from "@/components/settings/BookOfTheMonthSettings
 /* ─── Notification Preferences section ─── */
 function NotificationPreferencesSection() {
   const qc = useQueryClient();
-  
+  const { tenantId, scopeQuery, withTenant } = useTenantQuery();
   const { data: smsEnabled, isLoading } = useQuery({
     queryKey: ["app-settings", "sms_notifications_enabled"],
     queryFn: async () => {
