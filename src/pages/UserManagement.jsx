@@ -15,6 +15,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { logAudit } from "@/lib/audit";
 import UnitLeaderAssignments from "@/components/users/UnitLeaderAssignments";
 import BulkUnitAssignDialog from "@/components/users/BulkUnitAssignDialog";
+import { useTenantQuery } from "@/hooks/useTenantQuery";
 
 const ROLES = ["super_admin", "admin", "unit_leader", "wsf_leader", "member"];
 
