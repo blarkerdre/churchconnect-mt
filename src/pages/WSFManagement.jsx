@@ -4,9 +4,11 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import WSFAttendanceTab from "@/components/wsf/WSFAttendanceTab";
+import { useTenantQuery } from "@/hooks/useTenantQuery";
 
 export default function WSFManagement() {
   const { isAdmin, isWSFLeader, user } = useAuth();
+  const { tenantId, scopeQuery } = useTenantQuery();
 
   const { data: myMember } = useQuery({
     queryKey: ["my-member-record", user?.id],
@@ -19,9 +21,9 @@ export default function WSFManagement() {
   });
 
   const { data: centres = [] } = useQuery({
-    queryKey: ["wsf-centres"],
+    queryKey: ["wsf-centres", tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("wsf_centres").select("*").order("name");
+      const { data, error } = await scopeQuery(supabase.from("wsf_centres").select("*").order("name"));
       if (error) throw error;
       return data;
     },

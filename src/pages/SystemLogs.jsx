@@ -20,6 +20,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { format, subDays } from "date-fns";
 import { cn } from "@/lib/utils";
+import { useTenantQuery } from "@/hooks/useTenantQuery";
 
 /* ── Shared helpers ── */
 function downloadCSV(rows, headers, filename) {
@@ -103,14 +104,15 @@ function EmailLogsPanel() {
   const [templateFilter, setTemplateFilter] = useState("All");
   const [statusFilter, setStatusFilter] = useState("All");
   const [page, setPage] = useState(0);
+  const { tenantId, scopeQuery } = useTenantQuery();
 
   const { data: rawLogs = [], isLoading } = useQuery({
-    queryKey: ["email-logs", fromDate?.toISOString(), toDate?.toISOString()],
+    queryKey: ["email-logs", fromDate?.toISOString(), toDate?.toISOString(), tenantId],
     queryFn: async () => {
       let q = supabase.from("email_send_log").select("*").order("created_at", { ascending: false }).limit(1000);
       if (fromDate) q = q.gte("created_at", fromDate.toISOString());
       if (toDate) q = q.lte("created_at", new Date(toDate.getFullYear(), toDate.getMonth(), toDate.getDate(), 23, 59, 59).toISOString());
-      const { data, error } = await q;
+      const { data, error } = await scopeQuery(q);
       if (error) throw error;
       return data || [];
     },
@@ -214,15 +216,16 @@ function SMSLogsPanel() {
   const [typeFilter, setTypeFilter] = useState("All");
   const [fromDate, setFromDate] = useState(() => subDays(new Date(), 7));
   const [toDate, setToDate] = useState(() => new Date());
+  const { tenantId, scopeQuery } = useTenantQuery();
 
   const { data: logs = [], isLoading } = useQuery({
-    queryKey: ["sms-logs", typeFilter, fromDate?.toISOString(), toDate?.toISOString()],
+    queryKey: ["sms-logs", typeFilter, fromDate?.toISOString(), toDate?.toISOString(), tenantId],
     queryFn: async () => {
       let query = supabase.from("sms_log").select("*").eq("channel", "sms").order("created_at", { ascending: false }).limit(500);
       if (typeFilter !== "All") query = query.eq("sms_type", typeFilter);
       if (fromDate) query = query.gte("created_at", fromDate.toISOString());
       if (toDate) query = query.lte("created_at", new Date(toDate.getFullYear(), toDate.getMonth(), toDate.getDate(), 23, 59, 59).toISOString());
-      const { data, error } = await query;
+      const { data, error } = await scopeQuery(query);
       if (error) throw error;
       return data;
     },
@@ -297,15 +300,16 @@ function WhatsAppLogsPanel() {
   const [typeFilter, setTypeFilter] = useState("All");
   const [fromDate, setFromDate] = useState(() => subDays(new Date(), 7));
   const [toDate, setToDate] = useState(() => new Date());
+  const { tenantId, scopeQuery } = useTenantQuery();
 
   const { data: logs = [], isLoading } = useQuery({
-    queryKey: ["whatsapp-logs", typeFilter, fromDate?.toISOString(), toDate?.toISOString()],
+    queryKey: ["whatsapp-logs", typeFilter, fromDate?.toISOString(), toDate?.toISOString(), tenantId],
     queryFn: async () => {
       let query = supabase.from("sms_log").select("*").eq("channel", "whatsapp").order("created_at", { ascending: false }).limit(500);
       if (typeFilter !== "All") query = query.eq("sms_type", typeFilter);
       if (fromDate) query = query.gte("created_at", fromDate.toISOString());
       if (toDate) query = query.lte("created_at", new Date(toDate.getFullYear(), toDate.getMonth(), toDate.getDate(), 23, 59, 59).toISOString());
-      const { data, error } = await query;
+      const { data, error } = await scopeQuery(query);
       if (error) throw error;
       return data;
     },
@@ -382,23 +386,24 @@ function AuditLogsPanel() {
   const [actionFilter, setActionFilter] = useState("all");
   const [fromDate, setFromDate] = useState(() => subDays(new Date(), 7));
   const [toDate, setToDate] = useState(() => new Date());
+  const { tenantId, scopeQuery } = useTenantQuery();
 
   const { data: logs = [], isLoading } = useQuery({
-    queryKey: ["audit-log", fromDate?.toISOString(), toDate?.toISOString()],
+    queryKey: ["audit-log", fromDate?.toISOString(), toDate?.toISOString(), tenantId],
     queryFn: async () => {
       let q = supabase.from("audit_log").select("*").order("created_at", { ascending: false }).limit(500);
       if (fromDate) q = q.gte("created_at", fromDate.toISOString());
       if (toDate) q = q.lte("created_at", new Date(toDate.getFullYear(), toDate.getMonth(), toDate.getDate(), 23, 59, 59).toISOString());
-      const { data, error } = await q;
+      const { data, error } = await scopeQuery(q);
       if (error) throw error;
       return data;
     },
   });
 
   const { data: profiles = [] } = useQuery({
-    queryKey: ["all-profiles"],
+    queryKey: ["all-profiles", tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("profiles").select("user_id, full_name, email");
+      const { data, error } = await scopeQuery(supabase.from("profiles").select("user_id, full_name, email"));
       if (error) throw error;
       return data;
     },

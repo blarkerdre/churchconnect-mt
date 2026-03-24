@@ -15,6 +15,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useUnitMembership } from "@/hooks/useUnitMembership";
 import { useSubFeature } from "@/hooks/useSubFeature";
 import PrintReportButton from "@/components/PrintReportButton";
+import { useTenantQuery } from "@/hooks/useTenantQuery";
 
 const statusColors = {
   "Confirmed": "bg-chart-3/10 text-chart-3",
@@ -31,6 +32,7 @@ export default function Transportation() {
   const canManage = isAdmin || leaderUnits.includes("Transportation") || isTransportUnit;
   const { enabled: canCreateBooking } = useSubFeature("transportation.create_booking");
   const queryClient = useQueryClient();
+  const { tenantId, scopeQuery, withTenant } = useTenantQuery();
   const [search, setSearch] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
@@ -46,21 +48,21 @@ export default function Transportation() {
   const [locationForm, setLocationForm] = useState({ name: "", address: "", notes: "" });
 
   const { data: bookings = [], isLoading } = useQuery({
-    queryKey: ["transportation"],
+    queryKey: ["transportation", tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await scopeQuery(supabase
         .from("transportation")
         .select("*, members(first_name, last_name)")
-        .order("request_date", { ascending: false });
+        .order("request_date", { ascending: false }));
       if (error) throw error;
       return data;
     },
   });
 
   const { data: pickupLocations = [] } = useQuery({
-    queryKey: ["pickup-locations"],
+    queryKey: ["pickup-locations", tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("pickup_locations").select("*").eq("is_active", true).order("name");
+      const { data, error } = await scopeQuery(supabase.from("pickup_locations").select("*").eq("is_active", true).order("name"));
       if (error) throw error;
       return data;
     },
@@ -79,7 +81,7 @@ export default function Transportation() {
   const bookMutation = useMutation({
     mutationFn: async (formData) => {
       const { data: member } = await supabase.from("members").select("id").eq("user_id", user.id).single();
-      const { error } = await supabase.from("transportation").insert({
+      const { error } = await supabase.from("transportation").insert(withTenant({
         pickup_address: formData.pickup_address,
         destination: formData.destination || "Church",
         request_date: formData.request_date,
@@ -88,7 +90,7 @@ export default function Transportation() {
         passengers: parseInt(formData.passengers) || 1,
         user_id: user.id,
         member_id: member?.id || null,
-      });
+      }));
       if (error) throw error;
     },
     onSuccess: () => {
@@ -130,7 +132,7 @@ export default function Transportation() {
         const { error } = await supabase.from("pickup_locations").update({ name: formData.name, address: formData.address, notes: formData.notes || null }).eq("id", editingLocation.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("pickup_locations").insert({ name: formData.name, address: formData.address, notes: formData.notes || null, created_by: user.id });
+        const { error } = await supabase.from("pickup_locations").insert(withTenant({ name: formData.name, address: formData.address, notes: formData.notes || null, created_by: user.id }));
         if (error) throw error;
       }
     },
