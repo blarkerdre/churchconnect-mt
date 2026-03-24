@@ -47,7 +47,7 @@ function NotificationPreferencesSection() {
     mutationFn: async (enabled) => {
       const { error } = await supabase
         .from("app_settings")
-        .upsert(withTenant({ key: "sms_notifications_enabled", value: enabled }), { onConflict: "key" });
+        .upsert(withTenant({ key: "sms_notifications_enabled", value: enabled }), { onConflict: "key,tenant_id" });
       if (error) throw error;
     },
     onSuccess: () => {
