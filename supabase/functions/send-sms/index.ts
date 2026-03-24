@@ -171,6 +171,7 @@ Deno.serve(async (req) => {
             channel: msgChannel,
             message_sid: data.sid || null,
             delivery_status: "queued",
+            ...(tenant_id ? { tenant_id } : {}),
           });
         } else {
           failed++;
