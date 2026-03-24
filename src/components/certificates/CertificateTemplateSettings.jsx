@@ -11,6 +11,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 import { useAppSetting } from "@/hooks/useAppSetting";
+import { useTenantQuery } from "@/hooks/useTenantQuery";
 
 const emptyTemplate = {
   training_type: "",
@@ -26,6 +27,7 @@ const emptyTemplate = {
 
 export default function CertificateTemplateSettings() {
   const queryClient = useQueryClient();
+  const { tenantId, withTenant, scopeQuery } = useTenantQuery();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(emptyTemplate);
@@ -33,9 +35,9 @@ export default function CertificateTemplateSettings() {
   const [useCustomType, setUseCustomType] = useState(false);
 
   const { data: courses = [] } = useQuery({
-    queryKey: ["exam-titles-active"],
+    queryKey: ["exam-titles-active", tenantId],
     queryFn: async () => {
-      const { data } = await supabase.from("exam_titles").select("name").eq("is_active", true);
+      const { data } = await scopeQuery(supabase.from("exam_titles").select("name").eq("is_active", true));
       return data || [];
     },
   });
@@ -48,12 +50,14 @@ export default function CertificateTemplateSettings() {
   }, [courses, settingsTypes]);
 
   const { data: templates = [], isLoading } = useQuery({
-    queryKey: ["certificate-templates"],
+    queryKey: ["certificate-templates", tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("certificate_templates")
-        .select("*")
-        .order("training_type");
+      const { data, error } = await scopeQuery(
+        supabase
+          .from("certificate_templates")
+          .select("*")
+          .order("training_type")
+      );
       if (error) throw error;
       return data;
     },
@@ -70,12 +74,12 @@ export default function CertificateTemplateSettings() {
       } else {
         const { error } = await supabase
           .from("certificate_templates")
-          .insert(values);
+          .insert(withTenant(values));
         if (error) throw error;
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["certificate-templates"] });
+      queryClient.invalidateQueries({ queryKey: ["certificate-templates", tenantId] });
       toast({ title: editing ? "Template updated" : "Template created" });
       closeDialog();
     },
@@ -88,7 +92,7 @@ export default function CertificateTemplateSettings() {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["certificate-templates"] });
+      queryClient.invalidateQueries({ queryKey: ["certificate-templates", tenantId] });
       toast({ title: "Template deleted" });
     },
     onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
