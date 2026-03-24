@@ -18,6 +18,7 @@ import ReportAttachments from "@/components/reports/ReportAttachments";
 
 export default function Attendance() {
   const { isAdmin, isUnitLeader } = useAuth();
+  const { tenantId, scopeQuery, withTenant } = useTenantQuery();
   const canManage = isAdmin || isUnitLeader;
   const queryClient = useQueryClient();
   const [selectedSessionId, setSelectedSessionId] = useState(null);
