@@ -44,7 +44,7 @@ export default function Layout({ children }) {
   const [collapsed, setCollapsed] = useState(false);
   const [tenantDropdownOpen, setTenantDropdownOpen] = useState(false);
   const location = useLocation();
-  const { signOut, profile, isAdmin, isUnitLeader, isWSFLeader, roles, leaderUnits } = useAuth();
+  const { signOut, profile, isAdmin, isUnitLeader, isWSFLeader, roles, leaderUnits, isTenantOwner, isTenantAdmin } = useAuth();
   const { currentTenant, tenantId, tenantMemberships, switchTenant } = useTenant();
   const isSuperAdmin = roles.includes("super_admin");
   const { data: externalLinks } = useAppSetting("external_links", []);
@@ -79,7 +79,9 @@ export default function Layout({ children }) {
   // Determine role title
   const getRoleTitle = () => {
     if (isSuperAdmin) return "Super Admin";
-    if (isAdmin) return "Admin";
+    if (roles.includes("admin")) return "Admin";
+    if (isTenantOwner) return "Tenant Owner";
+    if (isTenantAdmin) return "Tenant Admin";
     if (isUnitLeader && isWSFLeader) return "Unit & WSF Leader";
     if (isUnitLeader) return "Unit Leader";
     if (isWSFLeader) return "WSF Leader";
