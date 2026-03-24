@@ -68,12 +68,12 @@ export default function SelfCheckInWidget() {
 
   const checkInMutation = useMutation({
     mutationFn: async (sessionId) => {
-      const { error } = await supabase.from("attendance_records").insert({
+      const { error } = await supabase.from("attendance_records").insert(withTenant({
         session_id: sessionId,
         member_id: myMember.id,
         check_in_method: "self",
         checked_in_at: new Date().toISOString(),
-      });
+      }));
       if (error) throw error;
     },
     onSuccess: () => {
