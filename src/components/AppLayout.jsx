@@ -79,7 +79,9 @@ export default function Layout({ children }) {
   // Determine role title
   const getRoleTitle = () => {
     if (isSuperAdmin) return "Super Admin";
-    if (isAdmin) return "Admin";
+    if (roles.includes("admin")) return "Admin";
+    if (isTenantOwner) return "Tenant Owner";
+    if (isTenantAdmin) return "Tenant Admin";
     if (isUnitLeader && isWSFLeader) return "Unit & WSF Leader";
     if (isUnitLeader) return "Unit Leader";
     if (isWSFLeader) return "WSF Leader";
