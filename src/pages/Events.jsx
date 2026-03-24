@@ -190,7 +190,7 @@ export default function Events() {
         if (error) throw error;
         await logAudit("event_update", "events", editing.id, { title: formData.title });
       } else {
-        const { data: inserted, error } = await supabase.from("events").insert(payload).select().single();
+        const { data: inserted, error } = await supabase.from("events").insert(withTenant(payload)).select().single();
         if (error) throw error;
         await logAudit("event_create", "events", inserted.id, { title: formData.title });
 
