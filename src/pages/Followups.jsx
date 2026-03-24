@@ -23,6 +23,8 @@ const typeIcons = { "First Timer": MessageSquare, "Absentee": AlertCircle, "New 
 export default function Followups() {
   const { user, isAdmin, profile } = useAuth();
   const [search, setSearch] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingFollowup, setEditingFollowup] = useState(null);
