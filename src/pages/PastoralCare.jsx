@@ -47,12 +47,13 @@ export default function PastoralCare() {
   const [statusUpdate, setStatusUpdate] = useState({ status: "", resolution_notes: "", assigned_to: "" });
 
   const { data: cases = [], isLoading } = useQuery({
-    queryKey: ["pastoral-care"],
+    queryKey: ["pastoral-care", tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("pastoral_care")
-        .select("*, members(first_name, last_name)")
-        .order("created_at", { ascending: false });
+      const { data, error } = await scopeQuery(
+        supabase.from("pastoral_care")
+          .select("*, members(first_name, last_name)")
+          .order("created_at", { ascending: false })
+      );
       if (error) throw error;
       return data;
     },
