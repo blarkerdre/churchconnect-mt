@@ -16,6 +16,7 @@ import IssueCertificateDialog from "@/components/certificates/IssueCertificateDi
 import { logAudit } from "@/lib/audit";
 import { useAuth } from "@/hooks/useAuth";
 import { useSubFeature } from "@/hooks/useSubFeature";
+import { useTenantQuery } from "@/hooks/useTenantQuery";
 
 const statusColors = {
   "Active": "bg-chart-3/10 text-chart-3",
