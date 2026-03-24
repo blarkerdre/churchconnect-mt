@@ -37,5 +37,10 @@
 - Updated `logAudit` to accept optional `tenantId` parameter
 - Pages updated: Dashboard, Members, Attendance, Events, Communications, Followups, PastoralCare, Analytics
 
-### 🔲 Phase 6 — Trigger & Function Updates
-- Update all DB triggers to respect tenant boundaries
+### ✅ Phase 6 — Trigger & Function Updates (Complete)
+- Updated `notify_all_users` to accept optional `_tenant_id` and scope to tenant members
+- Updated `notify_new_announcement`, `notify_new_event` to pass tenant_id
+- Updated `notify_pastoral_care_change` to propagate tenant_id to notifications
+- Updated `track_member_status_change` to propagate tenant_id to status history
+- Updated `check_attendance_inactivation` to scope by tenant
+- Updated `auto_create_followup` to scope leader assignment and propagate tenant_id
