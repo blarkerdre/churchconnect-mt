@@ -231,7 +231,7 @@ export default function Attendance() {
           )}
           {canManage && (
             <Button onClick={() => { setForm({ title: "", session_type: "Sunday Service", session_date: "", notes: "", unit: "" }); setDialogOpen(true); }} className="bg-primary hover:bg-primary/90 w-full sm:w-auto">
-              <Plus className="h-4 w-4 mr-2" /> New Session
+              <Plus className="h-4 w-4 mr-2" /> New Meeting
             </Button>
           )}
         </div>
