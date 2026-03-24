@@ -347,7 +347,7 @@ export default function MyProfile() {
                           <Label>Membership Status</Label>
                           <Select value={form.membership_status || ""} onValueChange={v => set("membership_status", v)}>
                             <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                            <SelectContent>{MEMBERSHIP_STATUSES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+                            <SelectContent>{MEMBERSHIP_STATUSES.map(s => <SelectItem key={s} value={s}>{s === "Active" ? "Active Member" : s}</SelectItem>)}</SelectContent>
                           </Select>
                         </div>
                       </div>
