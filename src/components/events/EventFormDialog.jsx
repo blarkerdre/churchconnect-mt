@@ -73,6 +73,18 @@ export default function EventFormDialog({ open, onOpenChange, event, onSave, loc
     });
   };
 
+  const toggleHourReminder = (hour) => {
+    setForm(p => {
+      const current = p.reminder_hours_before || [];
+      return {
+        ...p,
+        reminder_hours_before: current.includes(hour)
+          ? current.filter(h => h !== hour)
+          : [...current, hour].sort((a, b) => a - b),
+      };
+    });
+  };
+
   const handleSave = async () => {
     setSaving(true);
     await onSave({ ...form });
