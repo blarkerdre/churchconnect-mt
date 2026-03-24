@@ -108,7 +108,7 @@ export default function WSFCentresSection() {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["wsf-centres"] });
+      queryClient.invalidateQueries({ queryKey: ["wsf-centres", tenantId] });
       toast({ title: "Centre deleted" });
     },
     onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
