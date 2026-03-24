@@ -21,6 +21,7 @@ import SubjectManager from "@/components/exams/SubjectManager";
 import CourseResultsView from "@/components/exams/CourseResultsView";
 import TakeExamDialog from "@/components/exams/TakeExamDialog";
 import { useSubFeature } from "@/hooks/useSubFeature";
+import { useTenantQuery } from "@/hooks/useTenantQuery";
 
 const OPTION_LETTERS = ["a", "b", "c", "d"];
 const QUESTION_TYPES = [
