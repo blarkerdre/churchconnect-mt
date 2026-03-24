@@ -15,15 +15,18 @@ export default function WSFCentreMembersDialog({ open, onOpenChange, centre }) {
   const [addSearch, setAddSearch] = useState("");
   const [showAdd, setShowAdd] = useState(false);
   const queryClient = useQueryClient();
+  const { tenantId, scopeQuery } = useTenantQuery();
 
   const { data: centreMembers = [], isLoading } = useQuery({
-    queryKey: ["wsf-centre-members", centre?.id],
+    queryKey: ["wsf-centre-members", centre?.id, tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("members")
-        .select("id, first_name, last_name, email, phone")
-        .eq("wsf_centre_id", centre.id)
-        .order("first_name");
+      const { data, error } = await scopeQuery(
+        supabase
+          .from("members")
+          .select("id, first_name, last_name, email, phone")
+          .eq("wsf_centre_id", centre.id)
+          .order("first_name")
+      );
       if (error) throw error;
       return data;
     },
@@ -31,13 +34,15 @@ export default function WSFCentreMembersDialog({ open, onOpenChange, centre }) {
   });
 
   const { data: availableMembers = [], isLoading: loadingAvailable } = useQuery({
-    queryKey: ["wsf-available-members"],
+    queryKey: ["wsf-available-members", tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("members")
-        .select("id, first_name, last_name, email, wsf_centre_id")
-        .eq("membership_status", "Active")
-        .order("first_name");
+      const { data, error } = await scopeQuery(
+        supabase
+          .from("members")
+          .select("id, first_name, last_name, email, wsf_centre_id")
+          .eq("membership_status", "Active")
+          .order("first_name")
+      );
       if (error) throw error;
       return data;
     },
