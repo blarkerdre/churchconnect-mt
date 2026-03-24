@@ -522,6 +522,10 @@ export default function Settings() {
           <ExternalLinksSection />
         </TabsContent>
 
+        <TabsContent value="books">
+          <BookOfTheMonthSettings />
+        </TabsContent>
+
         {isSuperAdmin && (
           <TabsContent value="features">
             <FeatureTogglesSection />

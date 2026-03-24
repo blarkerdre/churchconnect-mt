@@ -145,6 +145,9 @@ export default function MemberDashboard({ currentUser, myMember }) {
         </div>
       )}
 
+      {/* Book of the Month */}
+      <BookOfTheMonth />
+
       {/* Feed: Announcements + Events tabs */}
       <MemberFeed member={myMember} />
 
