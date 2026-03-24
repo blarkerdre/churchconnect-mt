@@ -246,6 +246,13 @@ export default function WSFCentresSection() {
                 <SelectContent>{wsfLeaders.map(m => <SelectItem key={m.id} value={m.id}>{m.first_name} {m.last_name}</SelectItem>)}</SelectContent>
               </Select>
             </div>
+            <div className="space-y-1.5">
+              <Label>Zone</Label>
+              <Select value={form.zone_id} onValueChange={v => setForm(f => ({ ...f, zone_id: v }))}>
+                <SelectTrigger><SelectValue placeholder="Select zone" /></SelectTrigger>
+                <SelectContent>{zones.map(z => <SelectItem key={z.id} value={z.id}>{z.name}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
             <div className="flex items-center justify-between">
               <Label>Active</Label>
               <Switch checked={form.is_active} onCheckedChange={v => setForm(f => ({ ...f, is_active: v }))} />
