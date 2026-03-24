@@ -89,9 +89,9 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
   });
 
   const { data: allProfiles = [] } = useQuery({
-    queryKey: ["all-profiles-for-linking"],
+    queryKey: ["all-profiles-for-linking", tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("profiles").select("*").order("full_name");
+      const { data, error } = await scopeQuery(supabase.from("profiles").select("*").order("full_name"));
       if (error) throw error;
       return data;
     },
