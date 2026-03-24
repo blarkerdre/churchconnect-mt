@@ -42,7 +42,7 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
   const { data: churchUnits = [] } = useChurchUnits();
   const CHURCH_UNITS = churchUnits.map(u => u.name);
   const { isAdmin, roles: currentUserRoles, user: currentUser } = useAuth();
-  const { tenantId, withTenant } = useTenantQuery();
+  const { tenantId, withTenant, scopeQuery } = useTenantQuery();
   const isSuperAdmin = currentUserRoles.includes("super_admin");
   const queryClient = useQueryClient();
   const [form, setForm] = useState(emptyMember);
@@ -59,9 +59,9 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
 
   const memberUserId = member?.user_id;
   const { data: memberRoles = [] } = useQuery({
-    queryKey: ["member-roles", memberUserId],
+    queryKey: ["member-roles", memberUserId, tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("user_roles").select("*").eq("user_id", memberUserId);
+      const { data, error } = await scopeQuery(supabase.from("user_roles").select("*").eq("user_id", memberUserId));
       if (error) throw error;
       return data;
     },
@@ -71,7 +71,7 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
   const toggleRoleMutation = useMutation({
     mutationFn: async ({ userId, role, add }) => {
       if (add) {
-        const { error } = await supabase.from("user_roles").insert({ user_id: userId, role });
+        const { error } = await supabase.from("user_roles").insert(withTenant({ user_id: userId, role }));
         if (error) throw error;
         await logAudit("role_add", "user_roles", userId, { role, target_name: `${member?.first_name} ${member?.last_name}` });
       } else {
@@ -89,9 +89,9 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
   });
 
   const { data: allProfiles = [] } = useQuery({
-    queryKey: ["all-profiles-for-linking"],
+    queryKey: ["all-profiles-for-linking", tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("profiles").select("*").order("full_name");
+      const { data, error } = await scopeQuery(supabase.from("profiles").select("*").order("full_name"));
       if (error) throw error;
       return data;
     },
@@ -141,9 +141,9 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
   });
 
   const { data: wsfCentres = [] } = useQuery({
-    queryKey: ["wsf-centres"],
+    queryKey: ["wsf-centres", tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("wsf_centres").select("*").eq("is_active", true).order("name");
+      const { data, error } = await scopeQuery(supabase.from("wsf_centres").select("*").eq("is_active", true).order("name"));
       if (error) throw error;
       return data;
     },

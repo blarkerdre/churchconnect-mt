@@ -2,6 +2,7 @@ import React from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useTenantQuery } from "@/hooks/useTenantQuery";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -11,6 +12,7 @@ import { toast } from "@/components/ui/use-toast";
 
 export default function SelfCheckInWidget() {
   const { user } = useAuth();
+  const { tenantId, withTenant, scopeQuery } = useTenantQuery();
   const queryClient = useQueryClient();
   const today = format(new Date(), "yyyy-MM-dd");
 
@@ -31,13 +33,15 @@ export default function SelfCheckInWidget() {
 
   // Get today's sessions
   const { data: sessions = [], isLoading: sessionsLoading } = useQuery({
-    queryKey: ["today-sessions", today],
+    queryKey: ["today-sessions", today, tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("attendance_sessions")
-        .select("id, title, session_type, session_date")
-        .eq("session_date", today)
-        .order("created_at");
+      const { data, error } = await scopeQuery(
+        supabase
+          .from("attendance_sessions")
+          .select("id, title, session_type, session_date")
+          .eq("session_date", today)
+          .order("created_at")
+      );
       if (error) throw error;
       return data;
     },
@@ -64,12 +68,12 @@ export default function SelfCheckInWidget() {
 
   const checkInMutation = useMutation({
     mutationFn: async (sessionId) => {
-      const { error } = await supabase.from("attendance_records").insert({
+      const { error } = await supabase.from("attendance_records").insert(withTenant({
         session_id: sessionId,
         member_id: myMember.id,
         check_in_method: "self",
         checked_in_at: new Date().toISOString(),
-      });
+      }));
       if (error) throw error;
     },
     onSuccess: () => {
