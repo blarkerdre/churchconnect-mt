@@ -47,6 +47,7 @@ const WOFBI_DEFAULT_ABOUT = "WoFBI — Word of Faith Bible Institute — is a st
 export default function ExamManagement() {
   const { user, isAdmin, myMember } = useAuth();
   const qc = useQueryClient();
+  const { tenantId, scopeQuery, withTenant } = useTenantQuery();
   const [selectedCourse, setSelectedCourse] = useState(null);
   const [selectedSubject, setSelectedSubject] = useState(null);
   const [dialogOpen, setDialogOpen] = useState(false);
