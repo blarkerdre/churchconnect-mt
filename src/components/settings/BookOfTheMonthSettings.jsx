@@ -170,6 +170,7 @@ export default function BookOfTheMonthSettings() {
             <div className="space-y-1"><Label>Author *</Label><Input value={form.author} onChange={e => setForm(f => ({ ...f, author: e.target.value }))} /></div>
             <div className="space-y-1"><Label>Month *</Label><Input type="month" value={form.month} onChange={e => setForm(f => ({ ...f, month: e.target.value }))} /></div>
             <div className="space-y-1"><Label>Description</Label><Textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={3} /></div>
+            <div className="space-y-1"><Label>Purchase Link</Label><Input type="url" placeholder="https://..." value={form.purchase_url} onChange={e => setForm(f => ({ ...f, purchase_url: e.target.value }))} /></div>
             <div className="space-y-1">
               <Label>Cover Image</Label>
               {form.cover_image_url && (
