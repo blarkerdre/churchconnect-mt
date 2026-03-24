@@ -16,13 +16,13 @@ Deno.serve(async (req) => {
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, serviceKey);
 
-    const today = new Date().toISOString().split("T")[0];
+    const now = new Date();
+    const today = now.toISOString().split("T")[0];
 
     // Get all events with reminders that haven't been fully sent yet
     const { data: events, error: fetchError } = await supabase
       .from("events")
-      .select("id, title, event_date, location, start_time, audience, reminder_days_before, reminder_sent")
-      .not("reminder_days_before", "is", null)
+      .select("id, title, event_date, location, start_time, audience, reminder_days_before, reminder_hours_before, reminder_sent")
       .eq("reminder_sent", false)
       .gte("event_date", today);
 
@@ -37,13 +37,33 @@ Deno.serve(async (req) => {
         (eventDate.getTime() - todayDate.getTime()) / (1000 * 60 * 60 * 24)
       );
 
-      const reminders: number[] = event.reminder_days_before || [];
-      if (!reminders.includes(diffDays)) continue;
+      let shouldNotify = false;
+
+      // Check day-based reminders
+      const dayReminders: number[] = event.reminder_days_before || [];
+      if (dayReminders.includes(diffDays)) {
+        shouldNotify = true;
+      }
+
+      // Check hour-based reminders
+      const hourReminders: number[] = event.reminder_hours_before || [];
+      if (hourReminders.length > 0 && event.start_time) {
+        const eventDateTime = new Date(`${event.event_date}T${event.start_time}`);
+        const diffMs = eventDateTime.getTime() - now.getTime();
+        const diffHours = Math.round(diffMs / (1000 * 60 * 60));
+        if (hourReminders.includes(diffHours)) {
+          shouldNotify = true;
+        }
+      }
+
+      if (!shouldNotify) continue;
 
       // Build notification message
       const timeStr = event.start_time ? ` at ${event.start_time}` : "";
       const locStr = event.location ? ` - ${event.location}` : "";
-      const message = `${event.title} is in ${diffDays} day${diffDays !== 1 ? "s" : ""}${timeStr}${locStr}`;
+      const message = diffDays > 0
+        ? `${event.title} is in ${diffDays} day${diffDays !== 1 ? "s" : ""}${timeStr}${locStr}`
+        : `${event.title} is today${timeStr}${locStr}`;
 
       // Use notify_all_users to send to all users with roles
       const { error: notifyError } = await supabase.rpc("notify_all_users", {
@@ -61,9 +81,11 @@ Deno.serve(async (req) => {
 
       notificationCount++;
 
-      // If this is the last reminder (1 day before or event day), mark as sent
-      const minReminder = Math.min(...reminders);
-      if (diffDays <= minReminder) {
+      // If this is the last reminder (event day or past all reminders), mark as sent
+      const minDayReminder = dayReminders.length > 0 ? Math.min(...dayReminders) : Infinity;
+      const minHourReminder = hourReminders.length > 0 ? Math.min(...hourReminders) : Infinity;
+      
+      if (diffDays <= minDayReminder && (minHourReminder === Infinity || diffDays === 0)) {
         await supabase
           .from("events")
           .update({ reminder_sent: true })

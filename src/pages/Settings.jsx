@@ -12,13 +12,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 import {
   Settings as SettingsIcon, Plus, Pencil, Trash2, Loader2,
-  Users, Church, CalendarDays, TrendingUp, Heart, Globe, Bell, Award, Link2, ToggleLeft, ShieldAlert
+  Users, Church, CalendarDays, TrendingUp, Heart, Globe, Bell, Award, Link2, ToggleLeft, ShieldAlert, BookOpen
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import WSFCentresSection from "@/components/settings/WSFCentresSection";
 import CertificateTemplateSettings from "@/components/certificates/CertificateTemplateSettings";
 import ExternalLinksSection from "@/components/settings/ExternalLinksSection";
 import DangerZoneSection from "@/components/settings/DangerZoneSection";
+import BookOfTheMonthSettings from "@/components/settings/BookOfTheMonthSettings";
 
 /* ─── Notification Preferences section ─── */
 function NotificationPreferencesSection() {
@@ -456,6 +457,7 @@ export default function Settings() {
           <TabsTrigger value="pastoral" className="gap-1.5 text-xs"><Heart className="h-3.5 w-3.5" /><span className="hidden sm:inline"> Pastoral</span></TabsTrigger>
           <TabsTrigger value="certificates" className="gap-1.5 text-xs"><Award className="h-3.5 w-3.5" /><span className="hidden sm:inline"> Certs</span></TabsTrigger>
           <TabsTrigger value="links" className="gap-1.5 text-xs"><Link2 className="h-3.5 w-3.5" /><span className="hidden sm:inline"> Links</span></TabsTrigger>
+          <TabsTrigger value="books" className="gap-1.5 text-xs"><BookOpen className="h-3.5 w-3.5" /><span className="hidden sm:inline"> Books</span></TabsTrigger>
           {isSuperAdmin && (
             <TabsTrigger value="features" className="gap-1.5 text-xs"><ToggleLeft className="h-3.5 w-3.5" /><span className="hidden sm:inline"> Features</span></TabsTrigger>
           )}
@@ -518,6 +520,10 @@ export default function Settings() {
 
         <TabsContent value="links">
           <ExternalLinksSection />
+        </TabsContent>
+
+        <TabsContent value="books">
+          <BookOfTheMonthSettings />
         </TabsContent>
 
         {isSuperAdmin && (

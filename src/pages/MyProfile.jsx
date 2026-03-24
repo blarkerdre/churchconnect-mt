@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -10,7 +10,14 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, User, Mail, Phone, MapPin, Calendar, CheckCircle2, XCircle, Church, Edit, Save, X, Shield, BookOpen } from "lucide-react";
+import { Loader2, User, Mail, Phone, MapPin, Calendar, CheckCircle2, XCircle, Church, Edit, Save, X, Shield, BookOpen, Camera } from "lucide-react";
+import { format } from "date-fns";
+import { toast } from "@/components/ui/use-toast";
+import { suggestClosestWSFCentre } from "@/lib/wsf-suggest";
+import { useChurchUnits } from "@/hooks/useChurchUnits";
+import MyCertificates from "@/components/certificates/MyCertificates";
+import MemberJourneyTimeline from "@/components/members/MemberJourneyTimeline";
+import TakeExamDialog from "@/components/exams/TakeExamDialog";
 import { format } from "date-fns";
 import { toast } from "@/components/ui/use-toast";
 import { suggestClosestWSFCentre } from "@/lib/wsf-suggest";
@@ -31,6 +38,51 @@ const statusColors = {
   "First Timer": "bg-chart-4/10 text-chart-4",
   "Visitor": "bg-primary/10 text-primary",
 };
+
+function ProfilePhotoUpload({ member, user, onUpdated }) {
+  const fileRef = useRef(null);
+  const [uploading, setUploading] = useState(false);
+
+  const handleUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const ext = file.name.split(".").pop();
+      const path = `${user.id}/${Date.now()}.${ext}`;
+      const { error: uploadError } = await supabase.storage.from("profile-photos").upload(path, file, { upsert: true });
+      if (uploadError) throw uploadError;
+      const { data: urlData } = supabase.storage.from("profile-photos").getPublicUrl(path);
+      const { error: rpcError } = await supabase.rpc("update_own_member_profile", {
+        _member_id: member.id,
+        _photo_url: urlData.publicUrl,
+      });
+      if (rpcError) throw rpcError;
+      onUpdated();
+      toast({ title: "Profile photo updated" });
+    } catch (err) {
+      toast({ title: "Upload failed", description: err.message, variant: "destructive" });
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  return (
+    <div className="relative shrink-0 cursor-pointer group" onClick={() => fileRef.current?.click()}>
+      {member.photo_url ? (
+        <img src={member.photo_url} alt="" className="h-12 w-12 sm:h-16 sm:w-16 rounded-full object-cover" />
+      ) : (
+        <div className="h-12 w-12 sm:h-16 sm:w-16 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-lg sm:text-xl">
+          {member.first_name[0]}{member.last_name[0]}
+        </div>
+      )}
+      <div className="absolute inset-0 rounded-full bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+        {uploading ? <Loader2 className="h-4 w-4 animate-spin text-white" /> : <Camera className="h-4 w-4 text-white" />}
+      </div>
+      <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleUpload} />
+    </div>
+  );
+}
 
 export default function MyProfile() {
   const { user, roles, isAdmin, isUnitLeader, isWSFLeader } = useAuth();
@@ -262,9 +314,7 @@ export default function MyProfile() {
         <CardContent className="p-6">
           <div className="flex items-start justify-between">
             <div className="flex flex-col sm:flex-row items-start gap-4 flex-1 min-w-0">
-              <div className="h-12 w-12 sm:h-16 sm:w-16 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-lg sm:text-xl shrink-0">
-                {member.first_name[0]}{member.last_name[0]}
-              </div>
+              <ProfilePhotoUpload member={member} user={user} onUpdated={() => queryClient.invalidateQueries({ queryKey: ["my-member-profile"] })} />
               <div className="flex-1 min-w-0">
                 {editing ? (
                   <div className="space-y-5">
@@ -450,7 +500,16 @@ export default function MyProfile() {
         </CardContent>
       </Card>
 
-      {/* Growth Milestones (read-only view) */}
+      {/* Profile Note / Prayer Request */}
+      {!editing && member.notes && (
+        <Card className="border-0 shadow-sm border-l-4 border-l-primary/30">
+          <CardContent className="p-4">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">Prayer Request</p>
+            <p className="text-sm text-foreground whitespace-pre-wrap">{member.notes}</p>
+          </CardContent>
+        </Card>
+      )}
+
       {!editing && (
         <Card className="border-0 shadow-sm">
           <CardHeader className="pb-2"><CardTitle className="text-base">Growth Milestones</CardTitle></CardHeader>

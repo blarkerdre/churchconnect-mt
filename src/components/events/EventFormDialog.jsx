@@ -14,11 +14,16 @@ import { useChurchUnits } from "@/hooks/useChurchUnits";
 const DEFAULT_CATEGORIES = ["Conference", "Special Service", "Revival", "Youth Event", "Women's Event", "Men's Event", "Children's Event", "Outreach", "Training", "Social", "Other"];
 const STATUSES = ["Upcoming", "Ongoing", "Completed", "Cancelled"];
 const EVENT_MODES = ["In Person", "Online", "Hybrid"];
-const RECURRENCE_FREQUENCIES = ["Weekly", "Biweekly", "Monthly"];
+const RECURRENCE_FREQUENCIES = ["Daily", "Weekly", "Biweekly", "Monthly"];
 const REMINDER_OPTIONS = [
   { value: 1, label: "1 day before" },
   { value: 3, label: "3 days before" },
   { value: 7, label: "1 week before" },
+];
+const HOUR_REMINDER_OPTIONS = [
+  { value: 1, label: "1 hour before" },
+  { value: 2, label: "2 hours before" },
+  { value: 6, label: "6 hours before" },
 ];
 
 const empty = {
@@ -28,12 +33,13 @@ const empty = {
   event_mode: "In Person",
   is_recurring: false, recurrence_frequency: "Weekly", recurrence_end_date: "",
   reminder_days_before: [],
+  reminder_hours_before: [],
 };
 
 export default function EventFormDialog({ open, onOpenChange, event, onSave, lockedCategory = null }) {
   const { data: CATEGORIES } = useAppSetting("event_categories", DEFAULT_CATEGORIES);
   const { data: churchUnitsData = [] } = useChurchUnits();
-  const AUDIENCES = ["All Members", ...churchUnitsData.map(u => u.name), "Leaders Only"];
+  const AUDIENCES = ["All Members", ...churchUnitsData.map(u => u.name), "WSF", "WSF Leaders", "Leaders Only"];
   const [form, setForm] = useState(empty);
   const [saving, setSaving] = useState(false);
 
@@ -43,6 +49,7 @@ export default function EventFormDialog({ open, onOpenChange, event, onSave, loc
           ...empty,
           ...event,
           reminder_days_before: event.reminder_days_before || [],
+          reminder_hours_before: event.reminder_hours_before || [],
           is_recurring: event.is_recurring || false,
           recurrence_frequency: event.recurrence_frequency || "Weekly",
           recurrence_end_date: event.recurrence_end_date || "",
@@ -62,6 +69,18 @@ export default function EventFormDialog({ open, onOpenChange, event, onSave, loc
         reminder_days_before: current.includes(day)
           ? current.filter(d => d !== day)
           : [...current, day].sort((a, b) => a - b),
+      };
+    });
+  };
+
+  const toggleHourReminder = (hour) => {
+    setForm(p => {
+      const current = p.reminder_hours_before || [];
+      return {
+        ...p,
+        reminder_hours_before: current.includes(hour)
+          ? current.filter(h => h !== hour)
+          : [...current, hour].sort((a, b) => a - b),
       };
     });
   };
@@ -216,16 +235,31 @@ export default function EventFormDialog({ open, onOpenChange, event, onSave, loc
           {/* Reminders */}
           <div>
             <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Reminders</h3>
-            <div className="flex flex-wrap gap-4 p-3 rounded-xl bg-muted/50 border border-border">
-              {REMINDER_OPTIONS.map(opt => (
-                <label key={opt.value} className="flex items-center gap-2 cursor-pointer">
-                  <Checkbox
-                    checked={(form.reminder_days_before || []).includes(opt.value)}
-                    onCheckedChange={() => toggleReminder(opt.value)}
-                  />
-                  <span className="text-sm text-foreground">{opt.label}</span>
-                </label>
-              ))}
+            <div className="space-y-2 p-3 rounded-xl bg-muted/50 border border-border">
+              <p className="text-xs font-medium text-muted-foreground">Days before</p>
+              <div className="flex flex-wrap gap-4">
+                {REMINDER_OPTIONS.map(opt => (
+                  <label key={opt.value} className="flex items-center gap-2 cursor-pointer">
+                    <Checkbox
+                      checked={(form.reminder_days_before || []).includes(opt.value)}
+                      onCheckedChange={() => toggleReminder(opt.value)}
+                    />
+                    <span className="text-sm text-foreground">{opt.label}</span>
+                  </label>
+                ))}
+              </div>
+              <p className="text-xs font-medium text-muted-foreground mt-2">Hours before</p>
+              <div className="flex flex-wrap gap-4">
+                {HOUR_REMINDER_OPTIONS.map(opt => (
+                  <label key={opt.value} className="flex items-center gap-2 cursor-pointer">
+                    <Checkbox
+                      checked={(form.reminder_hours_before || []).includes(opt.value)}
+                      onCheckedChange={() => toggleHourReminder(opt.value)}
+                    />
+                    <span className="text-sm text-foreground">{opt.label}</span>
+                  </label>
+                ))}
+              </div>
             </div>
             <p className="text-xs text-muted-foreground mt-1">Members will receive in-app notifications before the event</p>
           </div>
