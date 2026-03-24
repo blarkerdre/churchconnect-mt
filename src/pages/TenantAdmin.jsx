@@ -11,11 +11,12 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Building2, Users, UserCheck, Plus, CheckCircle2, ArrowRightLeft, Globe, Clock } from "lucide-react";
-import { toast } from "@/hooks/use-toast";
+import { useToast } from "@/components/ui/use-toast";
 
 export default function TenantAdmin() {
   const { user } = useAuth();
   const { tenantId, switchTenant, tenantMemberships } = useTenant();
+  const { toast } = useToast();
   const queryClient = useQueryClient();
   const [createOpen, setCreateOpen] = useState(false);
   const [newTenant, setNewTenant] = useState({ name: "", slug: "", timezone: "Europe/London" });
