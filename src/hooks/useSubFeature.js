@@ -1,4 +1,5 @@
 import { useAppSetting } from "@/hooks/useAppSetting";
+import { useTenant } from "@/contexts/TenantContext";
 
 /**
  * Sub-feature registry — maps parent feature paths to toggleable sub-features.
@@ -61,11 +62,52 @@ export const SUB_FEATURES = {
 };
 
 /**
+ * Mapping from tenant-level feature flag keys (in tenants.settings.features)
+ * to the route paths they control. When a tenant disables a feature,
+ * it's treated as if the route is in disabled_features.
+ */
+const TENANT_FEATURE_TO_ROUTES = {
+  sms_enabled: [], // SMS is a sub-feature, handled at sub-feature level
+  exams_enabled: ["/exam-management"],
+  transportation: ["/transportation"],
+  pastoral_care: ["/pastoral-care"],
+  wsf_enabled: ["/wsf"],
+};
+
+/**
+ * Hook to check if a module route is enabled at the tenant level.
+ * Returns true if the feature is enabled or if no tenant context is available.
+ */
+export function useTenantFeatureEnabled(routePath) {
+  const { currentTenant } = useTenant();
+  if (!currentTenant?.settings?.features) return true;
+
+  const features = currentTenant.settings.features;
+  for (const [featureKey, routes] of Object.entries(TENANT_FEATURE_TO_ROUTES)) {
+    if (routes.includes(routePath) && features[featureKey] === false) {
+      return false;
+    }
+  }
+  return true;
+}
+
+/**
  * Hook to check if a sub-feature is enabled.
  * Returns { enabled: boolean, isLoading: boolean }
  */
 export function useSubFeature(key) {
   const { data: disabledSubFeatures = [], isLoading } = useAppSetting("disabled_sub_features", []);
+  const { currentTenant } = useTenant();
+
+  // Check tenant-level SMS toggle
+  const tenantFeatures = currentTenant?.settings?.features;
+  if (tenantFeatures?.sms_enabled === false) {
+    const smsKeys = ["communications.sms", "communications.whatsapp", "events.sms", "followups.sms"];
+    if (smsKeys.includes(key)) {
+      return { enabled: false, isLoading };
+    }
+  }
+
   return {
     enabled: !disabledSubFeatures.includes(key),
     isLoading,
