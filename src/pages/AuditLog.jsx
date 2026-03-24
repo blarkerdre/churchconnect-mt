@@ -26,18 +26,17 @@ const actionColors = {
 
 export default function AuditLog() {
   const { roles } = useAuth();
+  const { tenantId, scopeQuery } = useTenantQuery();
   const isSuperAdmin = roles.includes("super_admin");
   const [search, setSearch] = useState("");
   const [actionFilter, setActionFilter] = useState("all");
 
   const { data: logs = [], isLoading } = useQuery({
-    queryKey: ["audit-log"],
+    queryKey: ["audit-log", tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("audit_log")
-        .select("*")
-        .order("created_at", { ascending: false })
-        .limit(200);
+      const { data, error } = await scopeQuery(
+        supabase.from("audit_log").select("*").order("created_at", { ascending: false }).limit(200)
+      );
       if (error) throw error;
       return data;
     },
@@ -45,9 +44,9 @@ export default function AuditLog() {
   });
 
   const { data: profiles = [] } = useQuery({
-    queryKey: ["all-profiles"],
+    queryKey: ["all-profiles", tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("profiles").select("user_id, full_name, email");
+      const { data, error } = await scopeQuery(supabase.from("profiles").select("user_id, full_name, email"));
       if (error) throw error;
       return data;
     },
