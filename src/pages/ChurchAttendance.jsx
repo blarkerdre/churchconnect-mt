@@ -48,14 +48,14 @@ export default function ChurchAttendance() {
   const { enabled: canRecordAttendance } = useSubFeature("church_attendance.record");
 
   const { data: reports = [], isLoading } = useQuery({
-    queryKey: ["church-attendance-reports", filterType],
+    queryKey: ["church-attendance-reports", filterType, tenantId],
     queryFn: async () => {
       let q = supabase
         .from("church_attendance_reports")
         .select("*")
         .order("service_date", { ascending: false });
       if (filterType !== "all") q = q.eq("service_type", filterType);
-      const { data, error } = await q;
+      const { data, error } = await scopeQuery(q);
       if (error) throw error;
       return data;
     },
