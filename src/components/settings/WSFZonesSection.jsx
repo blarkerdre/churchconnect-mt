@@ -46,7 +46,7 @@ export default function WSFZonesSection() {
         const { error } = await supabase.from("wsf_zones").update(payload).eq("id", editing.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("wsf_zones").insert(payload);
+        const { error } = await supabase.from("wsf_zones").insert(withTenant(payload));
         if (error) throw error;
       }
     },
