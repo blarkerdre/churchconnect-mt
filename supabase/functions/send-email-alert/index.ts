@@ -86,7 +86,7 @@ Deno.serve(async (req) => {
     })
   }
 
-  const { subject, body, audience } = await req.json()
+  const { subject, body, audience, tenant_id } = await req.json()
 
   if (!subject?.trim() || !body?.trim() || !audience?.trim()) {
     return new Response(JSON.stringify({ error: 'subject, body, and audience are required' }), {
@@ -100,8 +100,11 @@ Deno.serve(async (req) => {
     .not('email', 'is', null)
     .neq('email', '')
 
+  if (tenant_id) {
+    query = query.eq('tenant_id', tenant_id)
+  }
+
   if (audience !== 'All Members') {
-    // Filter by church_unit containing the audience name
     query = query.ilike('church_unit', `%${audience}%`)
   }
 
@@ -210,6 +213,7 @@ Deno.serve(async (req) => {
       template_name: 'email-alert',
       recipient_email: member.email,
       status: 'pending',
+      ...(tenant_id ? { tenant_id } : {}),
     })
 
     enqueued++

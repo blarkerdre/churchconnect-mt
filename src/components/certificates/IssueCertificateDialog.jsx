@@ -11,6 +11,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 import { format } from "date-fns";
+import { useTenantQuery } from "@/hooks/useTenantQuery";
 
 const DEFAULT_TRAINING_TYPES = [
   "Believers Foundation Class (BFC)",
@@ -23,6 +24,7 @@ const DEFAULT_TRAINING_TYPES = [
 
 export default function IssueCertificateDialog({ open, onOpenChange, member }) {
   const queryClient = useQueryClient();
+  const { tenantId } = useTenantQuery();
   const [trainingType, setTrainingType] = useState("");
   const [completionDate, setCompletionDate] = useState(new Date().toISOString().split("T")[0]);
   const [notes, setNotes] = useState("");
@@ -81,6 +83,7 @@ export default function IssueCertificateDialog({ open, onOpenChange, member }) {
           training_type: trainingType,
           completion_date: completionDate,
           notes: notes || null,
+          tenant_id: tenantId,
         },
       });
       if (error) throw error;

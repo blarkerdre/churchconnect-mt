@@ -60,7 +60,7 @@ Deno.serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, serviceKey);
 
-    const { assigned_to, member_name, description, followup_id, followup_type } = await req.json();
+    const { assigned_to, member_name, description, followup_id, followup_type, tenant_id } = await req.json();
 
     if (!assigned_to) {
       return new Response(JSON.stringify({ message: "No assignee" }), {
@@ -150,6 +150,7 @@ Deno.serve(async (req) => {
           template_name: "followup-assignment",
           recipient_email: recipientEmail,
           status: "pending",
+          ...(tenant_id ? { tenant_id } : {}),
         });
         console.log("Follow-up assignment email enqueued for", recipientEmail);
       }
@@ -208,6 +209,7 @@ Deno.serve(async (req) => {
               message_sid: data.sid || null,
               error_message: response.ok ? null : (data.message || JSON.stringify(data)),
               delivery_status: response.ok ? "queued" : null,
+              ...(tenant_id ? { tenant_id } : {}),
             });
 
             if (response.ok) {

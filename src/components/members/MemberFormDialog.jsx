@@ -221,6 +221,7 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
             full_name: `${form.first_name} ${form.last_name}`,
             role: accountRole,
             member_data: payload,
+            tenant_id: tenantId,
           },
         });
         if (error) throw error;
