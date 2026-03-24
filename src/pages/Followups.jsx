@@ -23,6 +23,7 @@ const typeIcons = { "First Timer": MessageSquare, "Absentee": AlertCircle, "New 
 
 export default function Followups() {
   const { user, isAdmin, isUnitLeader, profile } = useAuth();
+  const { tenantId, scopeQuery, withTenant } = useTenantQuery();
   const [search, setSearch] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
