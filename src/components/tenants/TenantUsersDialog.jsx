@@ -8,8 +8,11 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { UserPlus, Trash2, Shield, Crown, User } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Separator } from "@/components/ui/separator";
+import { UserPlus, Trash2, Shield, Crown, User, Mail, Clock, CheckCircle2, XCircle } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 
 const ROLE_CONFIG = {
   owner: { label: "Owner", icon: Crown, color: "text-amber-600 bg-amber-50 border-amber-200" },
@@ -19,6 +22,7 @@ const ROLE_CONFIG = {
 
 export default function TenantUsersDialog({ tenant, open, onOpenChange }) {
   const { toast } = useToast();
+  const { user } = useAuth();
   const queryClient = useQueryClient();
   const [addEmail, setAddEmail] = useState("");
   const [addRole, setAddRole] = useState("member");
@@ -37,42 +41,48 @@ export default function TenantUsersDialog({ tenant, open, onOpenChange }) {
     enabled: !!tenant?.id && open,
   });
 
-  const addMutation = useMutation({
-    mutationFn: async ({ email, role }) => {
-      // Find user by email in profiles
-      const { data: profile, error: profileErr } = await supabase
-        .from("profiles")
-        .select("user_id, full_name, email")
-        .eq("email", email.toLowerCase().trim())
-        .maybeSingle();
-      if (profileErr) throw profileErr;
-      if (!profile) throw new Error("No user found with that email address");
-
-      // Check if already a member
-      const { data: existing } = await supabase
-        .from("tenant_memberships")
-        .select("id")
+  const { data: invitations = [] } = useQuery({
+    queryKey: ["tenant-invitations", tenant?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("tenant_invitations")
+        .select("*")
         .eq("tenant_id", tenant.id)
-        .eq("user_id", profile.user_id)
-        .maybeSingle();
-      if (existing) throw new Error("User is already a member of this tenant");
-
-      const { error } = await supabase.from("tenant_memberships").insert({
-        tenant_id: tenant.id,
-        user_id: profile.user_id,
-        role,
-      });
+        .order("created_at", { ascending: false });
       if (error) throw error;
+      return data;
     },
-    onSuccess: () => {
-      toast({ title: "User added to tenant" });
+    enabled: !!tenant?.id && open,
+  });
+
+  const inviteMutation = useMutation({
+    mutationFn: async ({ email, role }) => {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/invite-to-tenant`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({ tenant_id: tenant.id, email, role }),
+        }
+      );
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error);
+      return result;
+    },
+    onSuccess: (result) => {
+      toast({ title: result.auto_added ? "User added to tenant" : "Invitation sent" });
       setAddEmail("");
       setAddRole("member");
       queryClient.invalidateQueries({ queryKey: ["tenant-users", tenant?.id] });
+      queryClient.invalidateQueries({ queryKey: ["tenant-invitations", tenant?.id] });
       queryClient.invalidateQueries({ queryKey: ["tenant-stats"] });
     },
     onError: (err) => {
-      toast({ title: "Error adding user", description: err.message, variant: "destructive" });
+      toast({ title: "Error inviting user", description: err.message, variant: "destructive" });
     },
   });
 
@@ -111,13 +121,28 @@ export default function TenantUsersDialog({ tenant, open, onOpenChange }) {
     },
   });
 
-  const handleAdd = (e) => {
+  const cancelInviteMutation = useMutation({
+    mutationFn: async (invitationId) => {
+      const { error } = await supabase
+        .from("tenant_invitations")
+        .update({ status: "cancelled" })
+        .eq("id", invitationId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({ title: "Invitation cancelled" });
+      queryClient.invalidateQueries({ queryKey: ["tenant-invitations", tenant?.id] });
+    },
+  });
+
+  const handleInvite = (e) => {
     e.preventDefault();
     if (!addEmail.trim()) return;
-    addMutation.mutate({ email: addEmail, role: addRole });
+    inviteMutation.mutate({ email: addEmail, role: addRole });
   };
 
   const ownerCount = memberships.filter(m => m.role === "owner").length;
+  const pendingInvitations = invitations.filter(i => i.status === "pending");
 
   if (!tenant) return null;
 
@@ -128,13 +153,13 @@ export default function TenantUsersDialog({ tenant, open, onOpenChange }) {
           <DialogTitle>Users — {tenant.name}</DialogTitle>
         </DialogHeader>
 
-        {/* Add User Form */}
-        <form onSubmit={handleAdd} className="flex flex-col sm:flex-row gap-2 p-3 bg-muted/50 rounded-lg">
+        {/* Invite User Form */}
+        <form onSubmit={handleInvite} className="flex flex-col sm:flex-row gap-2 p-3 bg-muted/50 rounded-lg">
           <div className="flex-1">
             <Input
               value={addEmail}
               onChange={(e) => setAddEmail(e.target.value)}
-              placeholder="User email address"
+              placeholder="Email address to invite"
               type="email"
               required
             />
@@ -149,74 +174,143 @@ export default function TenantUsersDialog({ tenant, open, onOpenChange }) {
               <SelectItem value="owner">Owner</SelectItem>
             </SelectContent>
           </Select>
-          <Button type="submit" size="sm" disabled={addMutation.isPending}>
-            <UserPlus className="h-4 w-4 mr-1" />
-            {addMutation.isPending ? "Adding..." : "Add"}
+          <Button type="submit" size="sm" disabled={inviteMutation.isPending}>
+            <Mail className="h-4 w-4 mr-1" />
+            {inviteMutation.isPending ? "Sending..." : "Invite"}
           </Button>
         </form>
 
-        {/* Users Table */}
-        {isLoading ? (
-          <p className="text-sm text-muted-foreground py-4">Loading users...</p>
-        ) : memberships.length === 0 ? (
-          <p className="text-sm text-muted-foreground py-4">No users in this tenant yet.</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>User</TableHead>
-                  <TableHead>Role</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {memberships.map((m) => {
-                  const profile = m.profiles;
-                  const roleConf = ROLE_CONFIG[m.role] || ROLE_CONFIG.member;
-                  const isOnlyOwner = m.role === "owner" && ownerCount <= 1;
-                  return (
-                    <TableRow key={m.id}>
-                      <TableCell>
-                        <div>
-                          <p className="font-medium text-sm">{profile?.full_name || "Unknown"}</p>
-                          <p className="text-xs text-muted-foreground">{profile?.email}</p>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Select
-                          value={m.role}
-                          onValueChange={(newRole) => updateRoleMutation.mutate({ membershipId: m.id, role: newRole })}
-                        >
-                          <SelectTrigger className="w-28 h-7 text-xs">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="member">Member</SelectItem>
-                            <SelectItem value="admin">Admin</SelectItem>
-                            <SelectItem value="owner">Owner</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="text-destructive hover:text-destructive"
-                          disabled={isOnlyOwner || removeMutation.isPending}
-                          onClick={() => removeMutation.mutate(m.id)}
-                          title={isOnlyOwner ? "Cannot remove the only owner" : "Remove from tenant"}
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
-                      </TableCell>
+        <Tabs defaultValue="users">
+          <TabsList className="w-full grid grid-cols-2">
+            <TabsTrigger value="users">Users ({memberships.length})</TabsTrigger>
+            <TabsTrigger value="invitations">
+              Invitations {pendingInvitations.length > 0 && `(${pendingInvitations.length})`}
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="users">
+            {isLoading ? (
+              <p className="text-sm text-muted-foreground py-4">Loading users...</p>
+            ) : memberships.length === 0 ? (
+              <p className="text-sm text-muted-foreground py-4">No users in this tenant yet.</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>User</TableHead>
+                      <TableHead>Role</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          </div>
-        )}
+                  </TableHeader>
+                  <TableBody>
+                    {memberships.map((m) => {
+                      const profile = m.profiles;
+                      const isOnlyOwner = m.role === "owner" && ownerCount <= 1;
+                      return (
+                        <TableRow key={m.id}>
+                          <TableCell>
+                            <div>
+                              <p className="font-medium text-sm">{profile?.full_name || "Unknown"}</p>
+                              <p className="text-xs text-muted-foreground">{profile?.email}</p>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Select
+                              value={m.role}
+                              onValueChange={(newRole) => updateRoleMutation.mutate({ membershipId: m.id, role: newRole })}
+                            >
+                              <SelectTrigger className="w-28 h-7 text-xs">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="member">Member</SelectItem>
+                                <SelectItem value="admin">Admin</SelectItem>
+                                <SelectItem value="owner">Owner</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="text-destructive hover:text-destructive"
+                              disabled={isOnlyOwner || removeMutation.isPending}
+                              onClick={() => removeMutation.mutate(m.id)}
+                              title={isOnlyOwner ? "Cannot remove the only owner" : "Remove from tenant"}
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="invitations">
+            {invitations.length === 0 ? (
+              <p className="text-sm text-muted-foreground py-4">No invitations sent yet.</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Role</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {invitations.map((inv) => (
+                      <TableRow key={inv.id}>
+                        <TableCell>
+                          <p className="text-sm">{inv.email}</p>
+                          <p className="text-[10px] text-muted-foreground flex items-center gap-1">
+                            <Clock className="h-3 w-3" />
+                            {new Date(inv.created_at).toLocaleDateString()}
+                          </p>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="text-xs">{inv.role}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          {inv.status === "pending" ? (
+                            <Badge variant="outline" className="text-amber-600 border-amber-200 bg-amber-50 text-xs">Pending</Badge>
+                          ) : inv.status === "accepted" ? (
+                            <Badge variant="outline" className="text-emerald-600 border-emerald-200 bg-emerald-50 text-xs">
+                              <CheckCircle2 className="h-3 w-3 mr-1" />Accepted
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="text-muted-foreground text-xs">
+                              <XCircle className="h-3 w-3 mr-1" />{inv.status}
+                            </Badge>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {inv.status === "pending" && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="text-destructive"
+                              onClick={() => cancelInviteMutation.mutate(inv.id)}
+                            >
+                              Cancel
+                            </Button>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
 
         <p className="text-xs text-muted-foreground">
           {memberships.length} user{memberships.length !== 1 ? "s" : ""} in this tenant
