@@ -55,7 +55,7 @@ export default function SessionFormDialog({ open, onOpenChange, onSave, isAdmin 
         <DialogHeader><DialogTitle>New Attendance Meeting</DialogTitle></DialogHeader>
         <div className="space-y-4 py-2">
           <div className="space-y-1.5">
-            <Label>Session Title *</Label>
+            <Label>Meeting Title *</Label>
             <Input value={form.title} onChange={e => set("title", e.target.value)} placeholder="e.g. Sunday Service - 9 Mar" />
           </div>
           <div className="grid grid-cols-2 gap-3">
