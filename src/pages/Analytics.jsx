@@ -52,9 +52,9 @@ export default function Analytics() {
 
   // WSF data
   const { data: wsfCentres = [] } = useQuery({
-    queryKey: ["analytics-wsf"],
+    queryKey: ["analytics-wsf", tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("wsf_centres").select("id, name, is_active");
+      const { data, error } = await scopeQuery(supabase.from("wsf_centres").select("id, name, is_active"));
       if (error) throw error;
       return data;
     },
