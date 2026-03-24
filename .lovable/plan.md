@@ -1,46 +1,36 @@
 
 
-## Rename "Session" to "Meeting" Throughout Attendance Module
+## Filter, Print & Download for Church/WSF Attendance + Settings Access Restriction
 
-### Overview
-Replace all user-facing instances of "Session" with "Meeting" across the attendance module UI. This is a text/label-only change — no logic, database, or variable name changes needed.
+### Part 1: Church Attendance — Add Date Range Filter, Print & Download
 
-### Files & Changes
+**`src/pages/ChurchAttendance.jsx`**:
+- Add date range filter (From/To date inputs) alongside the existing service type filter
+- Filter reports client-side by date range
+- Add Download button (CSV format with all columns: Date, Service Type, Title, Adult Male, Adult Female, Children, Teens, Total, Notes)
+- Add Print button using `PrintReportButton` component
+- Place these buttons in the toolbar area next to the filter
 
-**`src/pages/Attendance.jsx`**:
-- Line 84: toast "Session created" → "Meeting created"
-- Line 110: toast "Session closed" → "Meeting closed"
-- Line 124: Report text "Session:" → "Meeting:"
-- Line 167: Summary card label "Sessions" → "Meetings"
-- Line 188: SelectTrigger placeholder "Select session" → "Select meeting"
-- Line 225: confirm text "Close this session?" → "Close this meeting?"
-- Line 229: button label "Close Session" → "Close Meeting"
-- Line 234: button label "New Session" → "New Meeting"
-- Line 245: card title "All Sessions" → "All Meetings"
-- Line 248: empty state "No sessions found" → "No meetings found"
-- Line 299: empty state "No check-ins for this session" → "No check-ins for this meeting"
-- Line 322: card title "Session Report" → "Meeting Report"
-- Line 399: dialog title "New Session" → "New Meeting"
-- Line 420: button text "Create Session" → "Create Meeting"
-- Line 211: print report title "Session Report" → "Meeting Report"
+### Part 2: WSF Attendance — Add Date Range Filter & Print
 
-**`src/components/attendance/SessionFormDialog.jsx`**:
-- Line 55: dialog title "New Attendance Session" → "New Attendance Meeting"
-- Line 58: label "Session Title" → "Meeting Title"
-- Line 99: button text "Create Session" → "Create Meeting"
+**`src/components/wsf/WSFAttendanceTab.jsx`**:
+- Add date range filter (From/To date inputs) alongside the existing centre filter
+- Filter reports client-side by date range
+- Add Print button using `PrintReportButton` (Download already exists)
+- Update existing download to also respect date filter (it already filters by centre)
 
-**`src/components/attendance/CheckInPanel.jsx`**:
-- Line 194: confirm text "Close this session?" → "Close this meeting?"
-- Line 197: button label "Close Session" → "Close Meeting"
+### Part 3: Settings — Restrict Sections to Super Admin
 
-**`src/components/attendance/SelfCheckInWidget.jsx`**:
-- No user-facing "Session" text to change (uses dynamic titles)
+**`src/pages/Settings.jsx`**:
+- Hide the "Certificates", "Links" (External Links), "Features" (Feature Toggles), and "Danger Zone" tabs from regular admins
+- Only show these tabs when `isSuperAdmin` is true
+- Currently only "Features" and "Danger" are restricted; extend the same pattern to "certificates" and "links" tabs
 
-**`src/components/attendance/SelfCheckIn.jsx`**:
-- Line 88: button text "Back to Sessions" → "Back to Meetings"
+### Technical Details
 
-### Scope
-- Only user-visible labels, titles, placeholders, toasts, and confirm dialogs
-- No variable, query key, or database column renames
-- No logic changes
+- Date filters use `<Input type="date">` with state for `dateFrom` and `dateTo`
+- Client-side filtering: `reports.filter(r => (!dateFrom || r.service_date >= dateFrom) && (!dateTo || r.service_date <= dateTo))`
+- Church Attendance download generates CSV; WSF already has text download
+- Print uses existing `PrintReportButton` component
+- Settings tabs wrapped with `{isSuperAdmin && (...)}` pattern already used for features/danger
 
