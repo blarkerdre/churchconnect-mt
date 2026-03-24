@@ -141,7 +141,7 @@ export default function UserManagement() {
       return { userId, disabled };
     },
     onSuccess: ({ userId, disabled }) => {
-      setDisabledUsers(prev => ({ ...prev, [userId]: disabled }));
+      queryClient.invalidateQueries({ queryKey: ["banned-users"] });
       toast({ title: disabled ? "User account disabled" : "User account enabled" });
     },
     onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
