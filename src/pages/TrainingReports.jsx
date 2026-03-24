@@ -282,10 +282,12 @@ export default function TrainingReports() {
                   ))}
                 </SelectContent>
               </Select>
-              <Button variant="outline" size="sm" onClick={handleDownloadCSV} disabled={reports.length === 0} className="gap-1.5">
-                <Download className="h-3.5 w-3.5" /> CSV
-              </Button>
-              <PrintReportButton buildRows={buildPrintRows} label="Print" />
+              {canCsvExport && (
+                <Button variant="outline" size="sm" onClick={handleDownloadCSV} disabled={reports.length === 0} className="gap-1.5">
+                  <Download className="h-3.5 w-3.5" /> CSV
+                </Button>
+              )}
+              {canPrint && <PrintReportButton buildRows={buildPrintRows} label="Print" />}
             </div>
           </div>
         </CardHeader>
