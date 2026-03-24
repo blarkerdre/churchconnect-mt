@@ -67,12 +67,13 @@ export default function Followups() {
 
   // Fetch followups with member info
   const { data: followups = [], isLoading } = useQuery({
-    queryKey: ["followups"],
+    queryKey: ["followups", tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("followups")
-        .select("*, members(first_name, last_name, email, phone, membership_status)")
-        .order("created_at", { ascending: false });
+      const { data, error } = await scopeQuery(
+        supabase.from("followups")
+          .select("*, members(first_name, last_name, email, phone, membership_status)")
+          .order("created_at", { ascending: false })
+      );
       if (error) throw error;
       return data.map(f => ({
         ...f,
