@@ -15,6 +15,7 @@ import { toast } from "@/components/ui/use-toast";
 import { format, parseISO } from "date-fns";
 import { Loader2, Plus, Droplets, Flame, BookOpen, Users, TrendingUp, Paperclip, Download, Printer } from "lucide-react";
 import { useAppSetting } from "@/hooks/useAppSetting";
+import { useTenantQuery } from "@/hooks/useTenantQuery";
 import ReportAttachments from "@/components/reports/ReportAttachments";
 import PrintReportButton from "@/components/PrintReportButton";
 import { useSubFeature } from "@/hooks/useSubFeature";
