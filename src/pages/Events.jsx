@@ -19,6 +19,7 @@ import { logAudit } from "@/lib/audit";
 import SMSDialog from "@/components/sms/SMSDialog";
 import { useAppSetting } from "@/hooks/useAppSetting";
 import { useChurchUnits } from "@/hooks/useChurchUnits";
+import { useSubFeature } from "@/hooks/useSubFeature";
 
 const statusColors = {
   "Upcoming": "bg-primary/10 text-primary",
