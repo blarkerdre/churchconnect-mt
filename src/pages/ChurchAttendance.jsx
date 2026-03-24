@@ -104,8 +104,13 @@ export default function ChurchAttendance() {
     (parseInt(form.children) || 0) +
     (parseInt(form.teens) || 0);
 
+  // Client-side date filtering
+  const filteredReports = reports.filter(r =>
+    (!dateFrom || r.service_date >= dateFrom) && (!dateTo || r.service_date <= dateTo)
+  );
+
   // Summary stats
-  const totalServices = reports.length;
+  const totalServices = filteredReports.length;
   const totalAttendance = reports.reduce((s, r) => s + r.total_attendance, 0);
   const totalAdultMale = reports.reduce((s, r) => s + r.adult_male, 0);
   const totalAdultFemale = reports.reduce((s, r) => s + r.adult_female, 0);
