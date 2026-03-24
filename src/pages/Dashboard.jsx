@@ -67,6 +67,14 @@ export default function Dashboard() {
     enabled: isLeaderOrAdmin,
   });
 
+  // Early returns AFTER all hooks
+  if (!authLoading && !isAdmin && isWSFLeader) {
+    return <WSFLeaderDashboard />;
+  }
+  if (!authLoading && !isAdmin) {
+    return <MemberDashboard currentUser={profile} myMember={myMember} />;
+  }
+
   const total = members.length;
   const firstTimers = members.filter(m => m.membership_status === "First Timer").length;
   const newThisMonth = members.filter(m => {
