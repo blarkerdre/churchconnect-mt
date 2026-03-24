@@ -50,7 +50,7 @@ export default function BookOfTheMonthSettings() {
         const { error } = await supabase.from("books_of_the_month").update(payload).eq("id", editing.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("books_of_the_month").insert(payload);
+        const { error } = await supabase.from("books_of_the_month").insert(withTenant(payload));
         if (error) throw error;
       }
     },
