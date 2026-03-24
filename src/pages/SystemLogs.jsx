@@ -20,6 +20,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { format, subDays } from "date-fns";
 import { cn } from "@/lib/utils";
+import { useTenantQuery } from "@/hooks/useTenantQuery";
 
 /* ── Shared helpers ── */
 function downloadCSV(rows, headers, filename) {
