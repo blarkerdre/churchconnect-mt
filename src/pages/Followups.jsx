@@ -115,7 +115,7 @@ export default function Followups() {
         const { error } = await supabase.from("followups").update(payload).eq("id", form.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("followups").insert(payload);
+        const { error } = await supabase.from("followups").insert(withTenant(payload));
         if (error) throw error;
       }
     },

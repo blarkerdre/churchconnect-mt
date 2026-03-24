@@ -157,7 +157,7 @@ export default function Communications() {
         if (error) throw error;
         await logAudit("announcement_update", "announcements", editing.id, { title: form.title });
       } else {
-        const { error } = await supabase.from("announcements").insert(payload);
+        const { error } = await supabase.from("announcements").insert(withTenant(payload));
         if (error) throw error;
         await logAudit("announcement_create", "announcements", null, { title: form.title, audience: form.audience });
       }

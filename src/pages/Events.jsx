@@ -201,7 +201,7 @@ export default function Events() {
             inserted.id
           );
           if (children.length > 0) {
-            const { error: childError } = await supabase.from("events").insert(children);
+            const { error: childError } = await supabase.from("events").insert(children.map(c => withTenant(c)));
             if (childError) console.error("Failed to create occurrences:", childError);
           }
         }
