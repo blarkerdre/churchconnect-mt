@@ -123,7 +123,7 @@ export default function PastoralCare() {
       if (isNewAssignment) {
         try {
           await supabase.functions.invoke("notify-pastoral-assignment", {
-            body: { assigned_to: updates.assigned_to, subject: caseData?.subject || "Pastoral Care Case", care_type: caseData?.care_type, description: caseData?.description, case_id: id },
+            body: { assigned_to: updates.assigned_to, subject: caseData?.subject || "Pastoral Care Case", care_type: caseData?.care_type, description: caseData?.description, case_id: id, tenant_id: tenantId },
           });
         } catch (notifyErr) {
           console.error("Failed to send pastoral assignment notification:", notifyErr);

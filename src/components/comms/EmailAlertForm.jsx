@@ -30,7 +30,7 @@ export default function EmailAlertForm({ currentUser, myUnits = [], isAdmin }) {
     setSending(true);
     try {
       const { data, error } = await supabase.functions.invoke("send-email-alert", {
-        body: { subject: subject.trim(), body: body.trim(), audience },
+        body: { subject: subject.trim(), body: body.trim(), audience, tenant_id: tenantId },
       });
 
       if (error) throw error;

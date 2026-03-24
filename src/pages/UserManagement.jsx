@@ -100,7 +100,7 @@ export default function UserManagement() {
   const addUserMutation = useMutation({
     mutationFn: async (formData) => {
       const { data, error } = await supabase.functions.invoke("admin-create-user", {
-        body: { email: formData.email, password: formData.password, full_name: formData.full_name, role: formData.role },
+        body: { email: formData.email, password: formData.password, full_name: formData.full_name, role: formData.role, tenant_id: tenantId },
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
