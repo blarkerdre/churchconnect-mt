@@ -1,70 +1,71 @@
 
 
-## Recurrent Events with Notifications and Reminders
+## Multi-Feature Enhancement Plan
 
 ### Summary
-Add recurrence support to events so admins can create repeating events (weekly, biweekly, monthly) with automatic occurrence generation. Add a reminder/notification system that alerts members before upcoming events via in-app notifications.
+Five enhancements: (1) Add Daily recurrence + hour-based reminders to events, (2) Add WSF/WSF Leader to audience options, (3) Profile picture upload with profile note display, (4) Books of the Month section on the member dashboard.
 
-### User Flow
-1. When creating/editing an event, toggle "Recurring Event" on
-2. Choose frequency: Weekly, Biweekly, Monthly
-3. Set recurrence end date (or number of occurrences)
-4. Optionally enable reminders (1 day before, 3 days before, 1 week before)
-5. On save, the system generates individual event rows for each occurrence
-6. A scheduled backend function sends reminder notifications before each event
+---
 
-### Database Changes
+### 1. Daily Recurrence + Hour-Based Reminders
 
-**Migration: Add recurrence and reminder columns to `events` table**
-- `is_recurring` boolean default false
-- `recurrence_frequency` text (Weekly, Biweekly, Monthly) nullable
-- `recurrence_end_date` date nullable
-- `recurrence_parent_id` uuid nullable (self-reference to group occurrences)
-- `reminder_days_before` integer[] nullable (e.g. `{1, 3, 7}`)
-- `reminder_sent` boolean default false
+**Current state**: Recurrence supports Weekly, Biweekly, Monthly. Reminders support 1/3/7 days before only.
 
-### Changes
+**Changes**:
 
-**1. Migration: Add columns to events table**
-Add the recurrence and reminder fields listed above.
+- **`src/pages/Events.jsx`**: Add "Daily" to frequency options array. Add hour-based reminder options (1 hour, 2 hours, 6 hours before) alongside day-based ones. Update `generateOccurrences` to handle Daily frequency using `addDays`. Store hour reminders as fractional day values (e.g. `0.04` for 1hr, `0.08` for 2hrs, `0.25` for 6hrs) in the existing `reminder_days_before` integer[] column — or better, add a new `reminder_hours_before` integer[] column.
+- **`src/components/events/EventFormDialog.jsx`**: Same — add Daily to `RECURRENCE_FREQUENCIES`, add hour-based reminder checkboxes.
+- **Database migration**: Add `reminder_hours_before integer[]` column to events table.
+- **`supabase/functions/send-event-reminders/index.ts`**: Update to also check hour-based reminders by comparing event datetime (date + start_time) against current time.
 
-**2. Update `src/pages/Events.jsx`**
-- Update the inline event form to include a "Recurring Event" toggle
-- When enabled, show frequency selector and end date
-- Show reminder options (checkboxes for 1 day, 3 days, 1 week before)
-- On save, if recurring, generate all occurrence rows in a single insert (calculate dates client-side based on frequency and end date)
-- Group recurring events visually with a "Recurring" badge
-- Parent events show occurrence count
+### 2. WSF & WSF Leader in Audience
 
-**3. Update `src/components/events/EventFormDialog.jsx`**
-- Add the same recurrence section (this dialog is used elsewhere)
-- Add reminder options section
+**Current state**: Audiences built from church units + WSF centre names. No generic "WSF" or "WSF Leaders" option.
 
-**4. New Edge Function: `supabase/functions/send-event-reminders/index.ts`**
-- Scheduled via pg_cron to run daily
-- Queries events where `event_date` minus `reminder_days_before` equals today and `reminder_sent` is false
-- Creates in-app notifications for all users (or scoped by audience)
-- Marks reminders as sent to avoid duplicates
+**Changes**:
+- **`src/pages/Events.jsx`**: Add "WSF" and "WSF Leaders" to the `allAudiences` array.
+- **`src/components/events/EventFormDialog.jsx`**: Add "WSF" and "WSF Leaders" to the `AUDIENCES` builder.
 
-**5. pg_cron job for daily reminder check**
-- Schedule `send-event-reminders` to run once daily at a sensible time (e.g. 8:00 AM)
+### 3. Profile Picture Upload + Profile Note
 
-### Recurrence Logic
-When saving a recurring event:
-1. First event is the "parent" (recurrence_parent_id = null)
-2. Calculate all future dates based on frequency until recurrence_end_date
-3. Insert child events with `recurrence_parent_id` pointing to parent
-4. All children inherit title, category, location, time, audience, and reminder settings
-5. Editing the parent offers option to update all future occurrences
+**Current state**: `members.photo_url` column exists but no upload UI. Profile displays initials only. Notes field exists as "Prayer Request".
 
-### Reminder Logic
-- Each event can have multiple reminder intervals (e.g. remind 1 day and 7 days before)
-- The daily cron function checks: for each event where `event_date - reminder_day = today`, insert a notification for each relevant user
-- Uses the existing `notifications` table and `notify_all_users` function (scoped by audience when needed)
+**Changes**:
+- **Database migration**: Create a public `profile-photos` storage bucket with RLS allowing authenticated users to upload to their own path.
+- **`src/pages/MyProfile.jsx`**:
+  - Replace the initials circle with a clickable avatar that shows the photo if `photo_url` exists.
+  - Add a file input (hidden, triggered by clicking the avatar) that uploads to `profile-photos/{user_id}/{filename}`, gets the public URL, and saves it via `update_own_member_profile` RPC.
+  - Show a camera/edit icon overlay on the avatar.
+  - Display the member's notes/prayer request prominently in the read-only view as a "Profile Note" card.
+- **`src/components/dashboard/MemberDashboard.jsx`**: Show profile photo in the welcome banner instead of initials when available.
 
-### Technical Detail
-- Occurrence generation happens client-side on save to keep it simple and avoid needing a separate function
-- Maximum occurrences capped at 52 (one year of weekly events) to prevent accidental data bloat
-- Deleting a parent event prompts to delete all occurrences
-- The reminder cron uses the existing notification infrastructure
+### 4. Books of the Month on Dashboard
+
+**Changes**:
+- **Database migration**: Create `books_of_the_month` table with columns: `id`, `title`, `author`, `description`, `cover_image_url`, `month` (date), `created_by`, `created_at`, `is_active`.
+  - RLS: Admins can manage, authenticated can view.
+- **Database migration**: Create a public `book-covers` storage bucket for cover images.
+- **`src/components/dashboard/MemberDashboard.jsx`**: Add a "Book of the Month" card section that queries `books_of_the_month` for the current month and displays the book cover, title, author, and description.
+- **`src/pages/Settings.jsx`** (or a new admin section): Add a simple form for admins to set the book of the month — title, author, description, cover image upload.
+
+---
+
+### Technical Details
+
+**New DB columns**: `events.reminder_hours_before integer[]`
+
+**New DB tables**: `books_of_the_month` (id uuid PK, title text, author text, description text, cover_image_url text, month date, created_by uuid, created_at timestamptz, is_active bool default true)
+
+**New storage buckets**: `profile-photos` (public), `book-covers` (public)
+
+**Files to create/modify**:
+- Migration: add `reminder_hours_before` to events, create `books_of_the_month` table, create storage buckets
+- `src/pages/Events.jsx` — Daily recurrence, hour reminders, WSF audiences
+- `src/components/events/EventFormDialog.jsx` — Daily recurrence, hour reminders, WSF audiences
+- `supabase/functions/send-event-reminders/index.ts` — hour-based reminder logic
+- `src/pages/MyProfile.jsx` — photo upload, profile note display
+- `src/components/dashboard/MemberDashboard.jsx` — photo in banner, Books of the Month card
+- New: `src/components/dashboard/BookOfTheMonth.jsx` — book display component
+- New: `src/components/settings/BookOfTheMonthSettings.jsx` — admin upload/manage component
+- `src/pages/Settings.jsx` — add Books of the Month settings section
 
