@@ -71,7 +71,7 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
   const toggleRoleMutation = useMutation({
     mutationFn: async ({ userId, role, add }) => {
       if (add) {
-        const { error } = await supabase.from("user_roles").insert({ user_id: userId, role });
+        const { error } = await supabase.from("user_roles").insert(withTenant({ user_id: userId, role }));
         if (error) throw error;
         await logAudit("role_add", "user_roles", userId, { role, target_name: `${member?.first_name} ${member?.last_name}` });
       } else {
