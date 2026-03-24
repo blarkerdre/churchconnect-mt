@@ -34,6 +34,15 @@ export default function WSFAttendanceTab({ centres }) {
   const isWsfLeader = ledCentres.length > 0;
   const canAccess = isAdmin || isWsfLeader;
 
+  // Fetch zones for grouping
+  const { data: zones = [] } = useQuery({
+    queryKey: ["wsf-zones"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("wsf_zones").select("*").order("name");
+      if (error) throw error;
+      return data;
+    },
+  });
   // Determine which centres to show reports for
   const visibleCentreIds = isAdmin ? centres.map(c => c.id) : ledCentres.map(c => c.id);
 
