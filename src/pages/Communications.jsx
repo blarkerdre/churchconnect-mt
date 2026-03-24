@@ -309,7 +309,7 @@ export default function Communications() {
           </TabsContent>
         )}
 
-        {canManageComms && (
+        {canManageComms && smsEnabled && (
           <TabsContent value="sms">
             <div className="space-y-4">
               <div className="flex items-center gap-2">
