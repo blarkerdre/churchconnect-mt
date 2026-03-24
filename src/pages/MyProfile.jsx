@@ -20,7 +20,7 @@ import MemberJourneyTimeline from "@/components/members/MemberJourneyTimeline";
 import TakeExamDialog from "@/components/exams/TakeExamDialog";
 
 const GENDERS = ["Male", "Female"];
-const MEMBERSHIP_STATUSES = ["Active", "Inactive", "First Timer", "New Convert", "Visitor"];
+const MEMBERSHIP_STATUSES = ["Active", "First Timer", "New Convert", "Visitor"];
 const HIDE_SPIRITUAL_STATUSES = ["First Timer", "New Convert", "Visitor"];
 const SHOW_BAPTISM_STATUSES = ["First Timer", "New Convert"];
 
