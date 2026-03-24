@@ -18,6 +18,7 @@ import { normalizePhone } from "@/lib/phone-utils";
 import { useChurchUnits } from "@/hooks/useChurchUnits";
 import { useAuth } from "@/hooks/useAuth";
 import { logAudit } from "@/lib/audit";
+import { useTenantQuery } from "@/hooks/useTenantQuery";
 import MemberJourneyTimeline from "@/components/members/MemberJourneyTimeline";
 
 const STATUSES = ["Active", "New Convert", "First Timer", "Visitor"];
@@ -41,6 +42,7 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
   const { data: churchUnits = [] } = useChurchUnits();
   const CHURCH_UNITS = churchUnits.map(u => u.name);
   const { isAdmin, roles: currentUserRoles, user: currentUser } = useAuth();
+  const { tenantId, withTenant } = useTenantQuery();
   const isSuperAdmin = currentUserRoles.includes("super_admin");
   const queryClient = useQueryClient();
   const [form, setForm] = useState(emptyMember);
@@ -225,7 +227,7 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
         if (data?.error) throw new Error(data.error);
         toast({ title: "Member registered with user account", description: `Account created for ${form.email}` });
       } else {
-        const { error } = await supabase.from("members").insert(payload).select().single();
+        const { error } = await supabase.from("members").insert(withTenant(payload)).select().single();
         if (error) throw error;
         toast({ title: "Member registered" });
       }

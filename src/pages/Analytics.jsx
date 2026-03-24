@@ -9,6 +9,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, FileText } from "lucide-react";
 import { useSubFeature } from "@/hooks/useSubFeature";
+import { useTenantQuery } from "@/hooks/useTenantQuery";
 import { format, subMonths, startOfMonth, endOfMonth, parseISO } from "date-fns";
 
 const COLORS = [
@@ -22,27 +23,28 @@ export default function Analytics() {
   const [dateFrom, setDateFrom] = useState(format(subMonths(new Date(), 6), "yyyy-MM-dd"));
   const [dateTo, setDateTo] = useState(format(new Date(), "yyyy-MM-dd"));
   const { enabled: canDownloadReport } = useSubFeature("analytics.download_report");
+  const { tenantId, scopeQuery } = useTenantQuery();
 
   // Attendance sessions + records
   const { data: sessions = [], isLoading: loadingSessions } = useQuery({
-    queryKey: ["analytics-sessions", dateFrom, dateTo],
+    queryKey: ["analytics-sessions", dateFrom, dateTo, tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("attendance_sessions")
-        .select("*, attendance_records(id, member_id)")
-        .gte("session_date", dateFrom)
-        .lte("session_date", dateTo)
-        .order("session_date", { ascending: true });
+      const { data, error } = await scopeQuery(
+        supabase.from("attendance_sessions")
+          .select("*, attendance_records(id, member_id)")
+          .gte("session_date", dateFrom)
+          .lte("session_date", dateTo)
+          .order("session_date", { ascending: true })
+      );
       if (error) throw error;
       return data;
     },
   });
 
-  // Members
   const { data: members = [], isLoading: loadingMembers } = useQuery({
-    queryKey: ["analytics-members"],
+    queryKey: ["analytics-members", tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("members").select("id, membership_status, church_unit, water_baptism, holy_spirit_baptism, bfc_completed, bcc_completed, lcc_completed, ldc_completed, winners_satellite, created_at");
+      const { data, error } = await scopeQuery(supabase.from("members").select("id, membership_status, church_unit, water_baptism, holy_spirit_baptism, bfc_completed, bcc_completed, lcc_completed, ldc_completed, winners_satellite, created_at"));
       if (error) throw error;
       return data;
     },
@@ -50,22 +52,23 @@ export default function Analytics() {
 
   // WSF data
   const { data: wsfCentres = [] } = useQuery({
-    queryKey: ["analytics-wsf"],
+    queryKey: ["analytics-wsf", tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("wsf_centres").select("id, name, is_active");
+      const { data, error } = await scopeQuery(supabase.from("wsf_centres").select("id, name, is_active"));
       if (error) throw error;
       return data;
     },
   });
 
   const { data: wsfReports = [] } = useQuery({
-    queryKey: ["analytics-wsf-reports", dateFrom, dateTo],
+    queryKey: ["analytics-wsf-reports", dateFrom, dateTo, tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("wsf_attendance_reports")
-        .select("centre_id, meeting_date, male, female, children, first_timers, testimonies")
-        .gte("meeting_date", dateFrom)
-        .lte("meeting_date", dateTo);
+      const { data, error } = await scopeQuery(
+        supabase.from("wsf_attendance_reports")
+          .select("centre_id, meeting_date, male, female, children, first_timers, testimonies")
+          .gte("meeting_date", dateFrom)
+          .lte("meeting_date", dateTo)
+      );
       if (error) throw error;
       return data;
     },

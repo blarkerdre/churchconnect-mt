@@ -24,11 +24,13 @@ import { logAudit } from "@/lib/audit";
 import SMSDialog from "@/components/sms/SMSDialog";
 import SMSHistoryDialog from "@/components/sms/SMSHistoryDialog";
 import { useSubFeature } from "@/hooks/useSubFeature";
+import { useTenantQuery } from "@/hooks/useTenantQuery";
 
 const STATIC_AUDIENCES = ["All Members", "Leaders Only"];
 
 export default function Communications() {
   const { user, isAdmin, isUnitLeader, isWSFLeader, leaderUnits } = useAuth();
+  const { tenantId, scopeQuery, withTenant } = useTenantQuery();
   const { data: churchUnitsData = [] } = useChurchUnits();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -101,12 +103,13 @@ export default function Communications() {
   const lockedAudience = !isAdmin && effectiveScopes.length === 1 ? effectiveScopes[0] : null;
 
   const { data: announcements = [], isLoading } = useQuery({
-    queryKey: ["announcements"],
+    queryKey: ["announcements", tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("announcements")
-        .select("*, profiles:created_by(full_name)")
-        .order("created_at", { ascending: false });
+      const { data, error } = await scopeQuery(
+        supabase.from("announcements")
+          .select("*, profiles:created_by(full_name)")
+          .order("created_at", { ascending: false })
+      );
       if (error) throw error;
       return data.map(a => ({
         id: a.id, title: a.title, body: a.content,
@@ -154,7 +157,7 @@ export default function Communications() {
         if (error) throw error;
         await logAudit("announcement_update", "announcements", editing.id, { title: form.title });
       } else {
-        const { error } = await supabase.from("announcements").insert(payload);
+        const { error } = await supabase.from("announcements").insert(withTenant(payload));
         if (error) throw error;
         await logAudit("announcement_create", "announcements", null, { title: form.title, audience: form.audience });
       }

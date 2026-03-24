@@ -10,16 +10,18 @@ import MemberDashboard from "@/components/dashboard/MemberDashboard";
 import WSFLeaderDashboard from "@/components/dashboard/WSFLeaderDashboard";
 import { useAuth } from "@/hooks/useAuth";
 import { useSubFeature } from "@/hooks/useSubFeature";
+import { useTenantQuery } from "@/hooks/useTenantQuery";
 
 export default function Dashboard() {
   const { isAdmin, isUnitLeader, isWSFLeader, profile, myMember, loading: authLoading } = useAuth();
   const { enabled: selfCheckinEnabled } = useSubFeature("dashboard.self_checkin");
+  const { tenantId, scopeQuery } = useTenantQuery();
 
   const isLeaderOrAdmin = isAdmin;
   const { data: members = [], isLoading: membersLoading } = useQuery({
-    queryKey: ["dashboard-members"],
+    queryKey: ["dashboard-members", tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("members").select("id, membership_status, water_baptism, holy_spirit_baptism, bfc_completed, winners_satellite, created_at");
+      const { data, error } = await scopeQuery(supabase.from("members").select("id, membership_status, water_baptism, holy_spirit_baptism, bfc_completed, winners_satellite, created_at"));
       if (error) throw error;
       return data;
     },
@@ -27,10 +29,10 @@ export default function Dashboard() {
   });
 
   const { data: events = [] } = useQuery({
-    queryKey: ["dashboard-events"],
+    queryKey: ["dashboard-events", tenantId],
     queryFn: async () => {
       const today = format(new Date(), "yyyy-MM-dd");
-      const { data, error } = await supabase.from("events").select("id, title, event_date").gte("event_date", today).order("event_date").limit(5);
+      const { data, error } = await scopeQuery(supabase.from("events").select("id, title, event_date").gte("event_date", today).order("event_date").limit(5));
       if (error) throw error;
       return data;
     },
@@ -38,9 +40,9 @@ export default function Dashboard() {
   });
 
   const { data: pastoralCases = [] } = useQuery({
-    queryKey: ["dashboard-pastoral"],
+    queryKey: ["dashboard-pastoral", tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("pastoral_care").select("id, status").in("status", ["Open", "In Progress"]);
+      const { data, error } = await scopeQuery(supabase.from("pastoral_care").select("id, status").in("status", ["Open", "In Progress"]));
       if (error) throw error;
       return data;
     },
@@ -48,9 +50,9 @@ export default function Dashboard() {
   });
 
   const { data: recentMembers = [] } = useQuery({
-    queryKey: ["dashboard-recent-members"],
+    queryKey: ["dashboard-recent-members", tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("members").select("id, first_name, last_name, membership_status, created_at").order("created_at", { ascending: false }).limit(5);
+      const { data, error } = await scopeQuery(supabase.from("members").select("id, first_name, last_name, membership_status, created_at").order("created_at", { ascending: false }).limit(5));
       if (error) throw error;
       return data;
     },
@@ -58,9 +60,9 @@ export default function Dashboard() {
   });
 
   const { data: recentFollowups = [] } = useQuery({
-    queryKey: ["dashboard-recent-followups"],
+    queryKey: ["dashboard-recent-followups", tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("followups").select("id, description, followup_type, status, created_at").order("created_at", { ascending: false }).limit(3);
+      const { data, error } = await scopeQuery(supabase.from("followups").select("id, description, followup_type, status, created_at").order("created_at", { ascending: false }).limit(3));
       if (error) throw error;
       return data;
     },

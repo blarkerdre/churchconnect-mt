@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Search, CheckCircle2, Clock, XCircle, MinusCircle, Users, X, Lock, Download } from "lucide-react";
+import { useTenantQuery } from "@/hooks/useTenantQuery";
 
 const STATUS_CONFIG = {
   Present: { color: "bg-chart-3/10 text-chart-3 border-chart-3/20", icon: CheckCircle2, iconColor: "text-chart-3" },
@@ -41,11 +42,12 @@ function downloadReport(session, eligibleMembers, records) {
 export default function CheckInPanel({ session, onClose }) {
   const [search, setSearch] = useState("");
   const queryClient = useQueryClient();
+  const { tenantId, scopeQuery, withTenant } = useTenantQuery();
 
   const { data: allMembers = [] } = useQuery({
-    queryKey: ["members-checkin"],
+    queryKey: ["members-checkin", tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("members").select("id, first_name, last_name, email, phone, church_unit, membership_status").order("first_name");
+      const { data, error } = await scopeQuery(supabase.from("members").select("id, first_name, last_name, email, phone, church_unit, membership_status").order("first_name"));
       if (error) throw error;
       return data;
     },
@@ -68,11 +70,11 @@ export default function CheckInPanel({ session, onClose }) {
         const { error } = await supabase.from("attendance_records").delete().eq("id", existing.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("attendance_records").insert({
+        const { error } = await supabase.from("attendance_records").insert(withTenant({
           session_id: session.id,
           member_id: member.id,
           check_in_method: "manual",
-        });
+        }));
         if (error) throw error;
       }
     },

@@ -15,6 +15,7 @@ import FollowupFormDialog from "@/components/followups/FollowupFormDialog";
 import FollowupDetailPanel from "@/components/followups/FollowupDetailPanel";
 import OverdueReminder from "@/components/followups/OverdueReminder";
 import { useSubFeature } from "@/hooks/useSubFeature";
+import { useTenantQuery } from "@/hooks/useTenantQuery";
 
 const priorityColors = { "Urgent": "bg-destructive/10 text-destructive", "High": "bg-chart-5/10 text-chart-5", "Medium": "bg-accent/10 text-accent", "Low": "bg-muted text-muted-foreground" };
 const statusColors = { "Pending": "bg-accent/10 text-accent", "In Progress": "bg-primary/10 text-primary", "Completed": "bg-chart-3/10 text-chart-3", "Overdue": "bg-destructive/10 text-destructive" };
@@ -22,6 +23,7 @@ const typeIcons = { "First Timer": MessageSquare, "Absentee": AlertCircle, "New 
 
 export default function Followups() {
   const { user, isAdmin, isUnitLeader, profile } = useAuth();
+  const { tenantId, scopeQuery, withTenant } = useTenantQuery();
   const [search, setSearch] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
@@ -65,12 +67,13 @@ export default function Followups() {
 
   // Fetch followups with member info
   const { data: followups = [], isLoading } = useQuery({
-    queryKey: ["followups"],
+    queryKey: ["followups", tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("followups")
-        .select("*, members(first_name, last_name, email, phone, membership_status)")
-        .order("created_at", { ascending: false });
+      const { data, error } = await scopeQuery(
+        supabase.from("followups")
+          .select("*, members(first_name, last_name, email, phone, membership_status)")
+          .order("created_at", { ascending: false })
+      );
       if (error) throw error;
       return data.map(f => ({
         ...f,
@@ -84,9 +87,9 @@ export default function Followups() {
 
   // Fetch members for the form
   const { data: members = [] } = useQuery({
-    queryKey: ["members-list"],
+    queryKey: ["members-list", tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("members").select("id, first_name, last_name, email, phone, membership_status, church_unit").order("first_name");
+      const { data, error } = await scopeQuery(supabase.from("members").select("id, first_name, last_name, email, phone, membership_status, church_unit").order("first_name"));
       if (error) throw error;
       return data;
     },
@@ -112,7 +115,7 @@ export default function Followups() {
         const { error } = await supabase.from("followups").update(payload).eq("id", form.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("followups").insert(payload);
+        const { error } = await supabase.from("followups").insert(withTenant(payload));
         if (error) throw error;
       }
     },

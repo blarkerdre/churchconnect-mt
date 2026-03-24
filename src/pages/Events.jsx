@@ -20,6 +20,7 @@ import SMSDialog from "@/components/sms/SMSDialog";
 import { useAppSetting } from "@/hooks/useAppSetting";
 import { useChurchUnits } from "@/hooks/useChurchUnits";
 import { useSubFeature } from "@/hooks/useSubFeature";
+import { useTenantQuery } from "@/hooks/useTenantQuery";
 
 const statusColors = {
   "Upcoming": "bg-primary/10 text-primary",
@@ -55,6 +56,7 @@ function getEventStatus(eventDate) {
 export default function Events() {
   const { data: EVENT_CATEGORIES } = useAppSetting("event_categories", ["Service", "Youth Event", "Conference", "Women's Event", "Men's Event", "Outreach", "Other"]);
   const { isAdmin, isUnitLeader, isWSFLeader, user, leaderUnits } = useAuth();
+  const { tenantId, scopeQuery, withTenant } = useTenantQuery();
   const canManage = isAdmin || isUnitLeader || isWSFLeader;
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
@@ -106,18 +108,18 @@ export default function Events() {
   const lockedAudience = availableAudiences.length === 1 ? availableAudiences[0] : null;
 
   const { data: events = [], isLoading } = useQuery({
-    queryKey: ["events"],
+    queryKey: ["events", tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("events").select("*").order("event_date", { ascending: false });
+      const { data, error } = await scopeQuery(supabase.from("events").select("*").order("event_date", { ascending: false }));
       if (error) throw error;
       return data;
     },
   });
 
   const { data: registrationCounts = {} } = useQuery({
-    queryKey: ["event-reg-counts"],
+    queryKey: ["event-reg-counts", tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("event_registrations").select("event_id");
+      const { data, error } = await scopeQuery(supabase.from("event_registrations").select("event_id"));
       if (error) throw error;
       const counts = {};
       data.forEach(r => { counts[r.event_id] = (counts[r.event_id] || 0) + 1; });
@@ -188,7 +190,7 @@ export default function Events() {
         if (error) throw error;
         await logAudit("event_update", "events", editing.id, { title: formData.title });
       } else {
-        const { data: inserted, error } = await supabase.from("events").insert(payload).select().single();
+        const { data: inserted, error } = await supabase.from("events").insert(withTenant(payload)).select().single();
         if (error) throw error;
         await logAudit("event_create", "events", inserted.id, { title: formData.title });
 
@@ -199,7 +201,7 @@ export default function Events() {
             inserted.id
           );
           if (children.length > 0) {
-            const { error: childError } = await supabase.from("events").insert(children);
+            const { error: childError } = await supabase.from("events").insert(children.map(c => withTenant(c)));
             if (childError) console.error("Failed to create occurrences:", childError);
           }
         }
