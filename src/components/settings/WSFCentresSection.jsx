@@ -89,7 +89,7 @@ export default function WSFCentresSection() {
         const { error } = await supabase.from("wsf_centres").update(payload).eq("id", editing.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("wsf_centres").insert(payload);
+        const { error } = await supabase.from("wsf_centres").insert(withTenant(payload));
         if (error) throw error;
       }
     },
