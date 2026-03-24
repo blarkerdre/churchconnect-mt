@@ -106,13 +106,14 @@ function SettingsListSection({ settingsKey, title, icon: Icon, description }) {
   const [itemName, setItemName] = useState("");
 
   const { data: items = [], isLoading } = useQuery({
-    queryKey: ["app-settings", settingsKey],
+    queryKey: ["app-settings", settingsKey, tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let q = supabase
         .from("app_settings")
         .select("value")
-        .eq("key", settingsKey)
-        .maybeSingle();
+        .eq("key", settingsKey);
+      if (tenantId) q = q.eq("tenant_id", tenantId);
+      const { data, error } = await q.maybeSingle();
       if (error) throw error;
       return Array.isArray(data?.value) ? data.value : [];
     },
