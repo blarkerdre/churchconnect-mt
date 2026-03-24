@@ -123,7 +123,7 @@ function SettingsListSection({ settingsKey, title, icon: Icon, description }) {
     mutationFn: async (newItems) => {
       const { error } = await supabase
         .from("app_settings")
-        .upsert({ key: settingsKey, value: newItems }, { onConflict: "key" });
+        .upsert(withTenant({ key: settingsKey, value: newItems }), { onConflict: "key" });
       if (error) throw error;
     },
     onSuccess: () => {
