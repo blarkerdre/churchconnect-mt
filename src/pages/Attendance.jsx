@@ -202,7 +202,7 @@ export default function Attendance() {
           </>
         )}
         <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto sm:ml-auto">
-          {selectedSession && (
+          {canManage && selectedSession && (
             <>
               <Button variant="outline" size="sm" onClick={generateReport}>
                 <Download className="h-4 w-4" /><span className="hidden sm:inline ml-2">Download</span>
