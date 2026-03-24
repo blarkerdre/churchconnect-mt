@@ -27,6 +27,7 @@ const statusColors = {
 
 export default function Members() {
   const { isAdmin, isUnitLeader, isWSFLeader, user, loading: authLoading, myMember } = useAuth();
+  const { tenantId, scopeQuery } = useTenantQuery();
   const isLeader = isUnitLeader || isWSFLeader;
   const viewOnly = isLeader && !isAdmin;
   const [search, setSearch] = useState("");
