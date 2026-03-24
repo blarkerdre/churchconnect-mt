@@ -95,7 +95,7 @@ export default function ExamSessionManager() {
       if (error) throw error;
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["exam-sessions"] });
+      qc.invalidateQueries({ queryKey: ["exam-sessions", tenantId] });
       toast({ title: "Session deleted" });
       setDeleteTarget(null);
     },

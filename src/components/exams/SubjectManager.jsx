@@ -15,20 +15,18 @@ import { Loader2, Plus, Trash2, Edit, Layers } from "lucide-react";
 
 export default function SubjectManager({ course, onSelectSubject, selectedSubjectId }) {
   const qc = useQueryClient();
+  const { tenantId, withTenant, scopeQuery } = useTenantQuery();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState({ name: "", description: "", pass_mark_percentage: 50, time_limit_minutes: "", randomize_questions: false });
   const [deleteTarget, setDeleteTarget] = useState(null);
 
   const { data: subjects = [], isLoading } = useQuery({
-    queryKey: ["exam-subjects", course.id],
+    queryKey: ["exam-subjects", course.id, tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("exam_subjects")
-        .select("*")
-        .eq("course_id", course.id)
-        .order("sort_order")
-        .order("created_at");
+      const { data, error } = await scopeQuery(
+        supabase.from("exam_subjects").select("*").eq("course_id", course.id).order("sort_order").order("created_at")
+      );
       if (error) throw error;
       return data;
     },
@@ -41,7 +39,7 @@ export default function SubjectManager({ course, onSelectSubject, selectedSubjec
         const { error } = await supabase.from("exam_subjects").update(payload).eq("id", editing.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("exam_subjects").insert({ ...payload, course_id: course.id, sort_order: subjects.length });
+        const { error } = await supabase.from("exam_subjects").insert(withTenant({ ...payload, course_id: course.id, sort_order: subjects.length }));
         if (error) throw error;
       }
     },
