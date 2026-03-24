@@ -1,17 +1,11 @@
 
 
-## Support Multiple Books of the Month
+## Remove Cards from Member Dashboard
 
-### What Changes
-Update the dashboard `BookOfTheMonth` component to fetch and display **all** active books for the current month instead of just one.
+Remove three sections from `src/components/dashboard/MemberDashboard.jsx`:
 
-### Changes
+1. **Quick Actions grid** (Pastoral Care + Transportation cards) — the entire `grid grid-cols-2` block with both Link cards
+2. **External Quick Links section** — the entire conditional block rendering `externalLinks`
 
-**`src/components/dashboard/BookOfTheMonth.jsx`**
-- Change query from `.maybeSingle()` to `.select("*")` returning an array
-- Update heading to "Books of the Month" (plural) when multiple
-- Render each book as a card in a vertical stack
-- Return `null` if the array is empty
-
-No database or settings changes needed — the table already supports multiple books per month and the admin form already allows adding multiple.
+Also remove unused imports: `Heart`, `CalendarDays`, `Link` (if no longer used), `getIconComponent`, `useAppSetting`.
 
