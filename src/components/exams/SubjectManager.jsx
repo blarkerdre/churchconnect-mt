@@ -10,6 +10,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
+import { useTenantQuery } from "@/hooks/useTenantQuery";
 import { Loader2, Plus, Trash2, Edit, Layers } from "lucide-react";
 
 export default function SubjectManager({ course, onSelectSubject, selectedSubjectId }) {

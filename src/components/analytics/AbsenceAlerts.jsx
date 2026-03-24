@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import ReEngagementDialog from "./ReEngagementDialog";
+import { useTenantQuery } from "@/hooks/useTenantQuery";
 
 export default function AbsenceAlerts({ sessions, records }) {
   const [search, setSearch] = useState("");

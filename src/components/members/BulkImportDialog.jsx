@@ -6,6 +6,7 @@ import { Upload, FileText, AlertTriangle, CheckCircle2, Loader2 } from "lucide-r
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 import { normalizePhone } from "@/lib/phone-utils";
+import { useTenantQuery } from "@/hooks/useTenantQuery";
 
 const EXPECTED_COLUMNS = [
   "first_name", "last_name", "email", "phone", "gender",

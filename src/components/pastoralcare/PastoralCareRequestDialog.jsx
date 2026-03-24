@@ -9,6 +9,7 @@ import { Loader2, Heart } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useTenantQuery } from "@/hooks/useTenantQuery";
 
 const CATEGORIES = [
   "Prayer Request", "Counselling", "Visitation", "Hospital Visit",

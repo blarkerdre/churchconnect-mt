@@ -11,6 +11,7 @@ import { Plus, Edit, Trash2, MapPin, Clock, Users, Loader2, Globe, UserCog } fro
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
+import { useTenantQuery } from "@/hooks/useTenantQuery";
 import WSFCentreMembersDialog from "@/components/wsf/WSFCentreMembersDialog";
 
 const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
