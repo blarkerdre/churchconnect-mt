@@ -8,6 +8,7 @@ import { UserPlus, UserMinus, Search, Loader2 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
+import { useTenantQuery } from "@/hooks/useTenantQuery";
 
 export default function WSFCentreMembersDialog({ open, onOpenChange, centre }) {
   const [search, setSearch] = useState("");
