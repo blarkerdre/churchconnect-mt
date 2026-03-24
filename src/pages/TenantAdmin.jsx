@@ -42,6 +42,7 @@ export default function TenantAdmin() {
   const queryClient = useQueryClient();
   const [createOpen, setCreateOpen] = useState(false);
   const [editTenant, setEditTenant] = useState(null);
+  const [usersTenant, setUsersTenant] = useState(null);
   const [editForm, setEditForm] = useState({});
   const [newTenant, setNewTenant] = useState({ name: "", slug: "", timezone: "Europe/London" });
 
