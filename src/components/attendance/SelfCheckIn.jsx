@@ -1,12 +1,14 @@
 import React from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useTenantQuery } from "@/hooks/useTenantQuery";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { CheckCircle2, X, CalendarCheck } from "lucide-react";
 
 export default function SelfCheckIn({ session, member, onClose }) {
   const queryClient = useQueryClient();
+  const { withTenant } = useTenantQuery();
 
   const { data: records = [] } = useQuery({
     queryKey: ["self-checkin-records", session.id, member?.id],
@@ -28,11 +30,11 @@ export default function SelfCheckIn({ session, member, onClose }) {
   const checkInMutation = useMutation({
     mutationFn: async () => {
       if (myRecord) return; // Already checked in
-      const { error } = await supabase.from("attendance_records").insert({
+      const { error } = await supabase.from("attendance_records").insert(withTenant({
         session_id: session.id,
         member_id: member.id,
         check_in_method: "self",
-      });
+      }));
       if (error) throw error;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["self-checkin-records", session.id, member?.id] }),
