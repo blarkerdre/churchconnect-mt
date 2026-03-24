@@ -269,8 +269,7 @@ export default function MyProfile() {
         <CardContent className="p-6">
           <div className="flex items-start justify-between">
             <div className="flex flex-col sm:flex-row items-start gap-4 flex-1 min-w-0">
-              <div className="h-12 w-12 sm:h-16 sm:w-16 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-lg sm:text-xl shrink-0">
-                {member.first_name[0]}{member.last_name[0]}
+              <ProfilePhotoUpload member={member} user={user} onUpdated={() => queryClient.invalidateQueries({ queryKey: ["my-member-profile"] })} />
               </div>
               <div className="flex-1 min-w-0">
                 {editing ? (
