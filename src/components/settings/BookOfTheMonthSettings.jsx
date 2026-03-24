@@ -95,7 +95,7 @@ export default function BookOfTheMonthSettings() {
   const openNew = () => {
     setEditing(null);
     const now = new Date();
-    setForm({ title: "", author: "", description: "", month: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`, cover_image_url: "" });
+    setForm({ title: "", author: "", description: "", month: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`, cover_image_url: "", purchase_url: "" });
     setDialogOpen(true);
   };
 
