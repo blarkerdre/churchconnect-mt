@@ -1822,6 +1822,7 @@ export type Database = {
           name: string
           postcode: string | null
           updated_at: string
+          zone_id: string | null
         }
         Insert: {
           address?: string | null
@@ -1839,6 +1840,7 @@ export type Database = {
           name: string
           postcode?: string | null
           updated_at?: string
+          zone_id?: string | null
         }
         Update: {
           address?: string | null
@@ -1856,6 +1858,7 @@ export type Database = {
           name?: string
           postcode?: string | null
           updated_at?: string
+          zone_id?: string | null
         }
         Relationships: [
           {
@@ -1865,7 +1868,41 @@ export type Database = {
             referencedRelation: "members"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "wsf_centres_zone_id_fkey"
+            columns: ["zone_id"]
+            isOneToOne: false
+            referencedRelation: "wsf_zones"
+            referencedColumns: ["id"]
+          },
         ]
+      }
+      wsf_zones: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
     }
     Views: {

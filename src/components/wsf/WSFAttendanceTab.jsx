@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from "@/components/ui/select";
 import { Plus, Edit, Trash2, Loader2, FileText } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -34,6 +34,15 @@ export default function WSFAttendanceTab({ centres }) {
   const isWsfLeader = ledCentres.length > 0;
   const canAccess = isAdmin || isWsfLeader;
 
+  // Fetch zones for grouping
+  const { data: zones = [] } = useQuery({
+    queryKey: ["wsf-zones"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("wsf_zones").select("*").order("name");
+      if (error) throw error;
+      return data;
+    },
+  });
   // Determine which centres to show reports for
   const visibleCentreIds = isAdmin ? centres.map(c => c.id) : ledCentres.map(c => c.id);
 
@@ -147,9 +156,31 @@ export default function WSFAttendanceTab({ centres }) {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Centres</SelectItem>
-              {availableCentres.map(c => (
-                <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-              ))}
+              {(() => {
+                const zonedCentres = availableCentres.filter(c => c.zone_id);
+                const unzonedCentres = availableCentres.filter(c => !c.zone_id);
+                const usedZones = zones.filter(z => zonedCentres.some(c => c.zone_id === z.id));
+                return (
+                  <>
+                    {usedZones.map(z => (
+                      <SelectGroup key={z.id}>
+                        <SelectLabel>{z.name}</SelectLabel>
+                        {zonedCentres.filter(c => c.zone_id === z.id).map(c => (
+                          <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                        ))}
+                      </SelectGroup>
+                    ))}
+                    {unzonedCentres.length > 0 && (
+                      <SelectGroup>
+                        {usedZones.length > 0 && <SelectLabel>Unassigned</SelectLabel>}
+                        {unzonedCentres.map(c => (
+                          <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                        ))}
+                      </SelectGroup>
+                    )}
+                  </>
+                );
+              })()}
             </SelectContent>
           </Select>
           {filteredReports.length > 0 && (
