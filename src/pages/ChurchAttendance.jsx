@@ -111,11 +111,33 @@ export default function ChurchAttendance() {
 
   // Summary stats
   const totalServices = filteredReports.length;
-  const totalAttendance = reports.reduce((s, r) => s + r.total_attendance, 0);
-  const totalAdultMale = reports.reduce((s, r) => s + r.adult_male, 0);
-  const totalAdultFemale = reports.reduce((s, r) => s + r.adult_female, 0);
-  const totalChildren = reports.reduce((s, r) => s + r.children, 0);
-  const totalTeens = reports.reduce((s, r) => s + r.teens, 0);
+  const totalAttendance = filteredReports.reduce((s, r) => s + r.total_attendance, 0);
+  const totalAdultMale = filteredReports.reduce((s, r) => s + r.adult_male, 0);
+  const totalAdultFemale = filteredReports.reduce((s, r) => s + r.adult_female, 0);
+  const totalChildren = filteredReports.reduce((s, r) => s + r.children, 0);
+  const totalTeens = filteredReports.reduce((s, r) => s + r.teens, 0);
+
+  const downloadCSV = () => {
+    const headers = ["Date", "Service Type", "Title", "Adult Male", "Adult Female", "Children", "Teens", "Total", "Notes"];
+    const rows = filteredReports.map(r => [
+      r.service_date, r.service_type, r.title || "", r.adult_male, r.adult_female, r.children, r.teens, r.total_attendance, r.notes || ""
+    ]);
+    const csv = [headers.join(","), ...rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(","))].join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "church-attendance-report.csv";
+    a.click();
+  };
+
+  const buildPrintRows = () => ({
+    title: "Church Attendance Report",
+    headers: ["Date", "Service Type", "Title", "Adult M", "Adult F", "Children", "Teens", "Total"],
+    rows: filteredReports.map(r => [
+      format(parseISO(r.service_date), "dd MMM yyyy"), r.service_type, r.title || "—",
+      r.adult_male, r.adult_female, r.children, r.teens, r.total_attendance
+    ]),
+  });
 
   if (isLoading) {
     return <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>;
