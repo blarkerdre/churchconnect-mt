@@ -7,13 +7,14 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Heart, Search, Lock, User, CalendarDays, Plus, Loader2, UserCheck } from "lucide-react";
+import { Heart, Search, Lock, User, CalendarDays, Plus, Loader2, UserCheck, Download } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useUnitMembership } from "@/hooks/useUnitMembership";
 import { useSubFeature } from "@/hooks/useSubFeature";
+import PrintReportButton from "@/components/PrintReportButton";
 
 const statusColors = {
   "Open": "bg-accent/10 text-accent",
@@ -23,6 +24,7 @@ const statusColors = {
 };
 
 const CARE_TYPES = ["Counselling", "Visitation", "Prayer Request", "Hospital Visit", "Bereavement", "Marriage", "Financial Support", "Other"];
+const ALL_STATUSES = ["Open", "In Progress", "Resolved", "Closed"];
 
 export default function PastoralCare() {
   const { user, isAdmin, leaderUnits } = useAuth();
@@ -33,6 +35,9 @@ export default function PastoralCare() {
   const { enabled: canAssignCases } = useSubFeature("pastoral.assign_cases");
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const [filterStatus, setFilterStatus] = useState("All");
   const [requestDialogOpen, setRequestDialogOpen] = useState(false);
   const [manageDialogOpen, setManageDialogOpen] = useState(false);
   const [selectedCase, setSelectedCase] = useState(null);
@@ -51,22 +56,17 @@ export default function PastoralCare() {
     },
   });
 
-  // Fetch Pastoral Care unit members for assignment
   const { data: pastoralUnitMembers = [] } = useQuery({
     queryKey: ["pastoral-unit-members"],
     enabled: isPastoralLeader,
     queryFn: async () => {
-      // Get user IDs of pastoral care unit members
       const { data: assignments, error: aErr } = await supabase
         .from("unit_leader_assignments")
         .select("user_id")
         .in("unit_name", ["Pastoral Care", "pastoral care", "Pastoral care"]);
       if (aErr) throw aErr;
-      
       const userIds = (assignments || []).map(a => a.user_id);
       if (userIds.length === 0) return [];
-
-      // Get their profiles
       const { data: profiles, error: pErr } = await supabase
         .from("profiles")
         .select("user_id, full_name, email")
@@ -76,8 +76,18 @@ export default function PastoralCare() {
     },
   });
 
-  // Non-pastoral unit members only see their own requests
   const visibleCases = canManage ? cases : cases.filter(c => c.created_by === user?.id);
+
+  const filtered = visibleCases.filter(r => {
+    const matchSearch = `${r.subject} ${r.members?.first_name || ""} ${r.members?.last_name || ""} ${r.care_type}`.toLowerCase().includes(search.toLowerCase());
+    const matchStatus = filterStatus === "All" || r.status === filterStatus;
+    const dateField = r.created_at?.split("T")[0] || "";
+    const matchDate = (!dateFrom || dateField >= dateFrom) && (!dateTo || dateField <= dateTo);
+    return matchSearch && matchStatus && matchDate;
+  });
+
+  const assigneeMap = {};
+  pastoralUnitMembers.forEach(p => { assigneeMap[p.user_id] = p.full_name || p.email || "Unknown"; });
 
   const requestMutation = useMutation({
     mutationFn: async (formData) => {
@@ -104,23 +114,13 @@ export default function PastoralCare() {
     mutationFn: async ({ id, updates, caseData }) => {
       const payload = { status: updates.status, resolution_notes: updates.resolution_notes };
       const isNewAssignment = updates.assigned_to && updates.assigned_to !== caseData?.assigned_to;
-      if (updates.assigned_to) {
-        payload.assigned_to = updates.assigned_to;
-      }
+      if (updates.assigned_to) payload.assigned_to = updates.assigned_to;
       const { error } = await supabase.from("pastoral_care").update(payload).eq("id", id);
       if (error) throw error;
-
-      // Send notification if newly assigned
       if (isNewAssignment) {
         try {
           await supabase.functions.invoke("notify-pastoral-assignment", {
-            body: {
-              assigned_to: updates.assigned_to,
-              subject: caseData?.subject || "Pastoral Care Case",
-              care_type: caseData?.care_type,
-              description: caseData?.description,
-              case_id: id,
-            },
+            body: { assigned_to: updates.assigned_to, subject: caseData?.subject || "Pastoral Care Case", care_type: caseData?.care_type, description: caseData?.description, case_id: id },
           });
         } catch (notifyErr) {
           console.error("Failed to send pastoral assignment notification:", notifyErr);
@@ -135,13 +135,25 @@ export default function PastoralCare() {
     onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
 
-  const filtered = visibleCases.filter(r =>
-    `${r.subject} ${r.members?.first_name || ""} ${r.members?.last_name || ""} ${r.care_type}`.toLowerCase().includes(search.toLowerCase())
-  );
-
-  // Build a lookup for assigned_to display
-  const assigneeMap = {};
-  pastoralUnitMembers.forEach(p => { assigneeMap[p.user_id] = p.full_name || p.email || "Unknown"; });
+  const downloadCSV = () => {
+    const headers = ["Subject", "Member", "Type", "Status", "Confidential", "Assigned To", "Created Date", "Resolution Notes"];
+    const rows = filtered.map(r => [
+      r.subject,
+      r.members ? `${r.members.first_name} ${r.members.last_name}` : "",
+      r.care_type,
+      r.status,
+      r.confidential ? "Yes" : "No",
+      r.assigned_to ? (assigneeMap[r.assigned_to] || "") : "",
+      r.created_at ? new Date(r.created_at).toLocaleDateString("en-GB") : "",
+      r.resolution_notes || "",
+    ]);
+    const csv = [headers, ...rows].map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `pastoral-care-${new Date().toISOString().split("T")[0]}.csv`;
+    a.click();
+  };
 
   const openManage = (c) => {
     setSelectedCase(c);
@@ -152,22 +164,61 @@ export default function PastoralCare() {
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <Card className="border-0 shadow-sm"><CardContent className="p-4 text-center"><p className="text-2xl font-display font-bold text-foreground">{visibleCases.length}</p><p className="text-xs text-muted-foreground">Total Cases</p></CardContent></Card>
-        <Card className="border-0 shadow-sm"><CardContent className="p-4 text-center"><p className="text-2xl font-display font-bold text-accent">{visibleCases.filter(r => r.status === "Open").length}</p><p className="text-xs text-muted-foreground">Open</p></CardContent></Card>
-        <Card className="border-0 shadow-sm"><CardContent className="p-4 text-center"><p className="text-2xl font-display font-bold text-primary">{visibleCases.filter(r => r.status === "In Progress").length}</p><p className="text-xs text-muted-foreground">In Progress</p></CardContent></Card>
-        <Card className="border-0 shadow-sm"><CardContent className="p-4 text-center"><p className="text-2xl font-display font-bold text-chart-3">{visibleCases.filter(r => r.status === "Resolved").length}</p><p className="text-xs text-muted-foreground">Resolved</p></CardContent></Card>
+        <Card className="border-0 shadow-sm"><CardContent className="p-4 text-center"><p className="text-2xl font-display font-bold text-foreground">{filtered.length}</p><p className="text-xs text-muted-foreground">Total Cases</p></CardContent></Card>
+        <Card className="border-0 shadow-sm"><CardContent className="p-4 text-center"><p className="text-2xl font-display font-bold text-accent">{filtered.filter(r => r.status === "Open").length}</p><p className="text-xs text-muted-foreground">Open</p></CardContent></Card>
+        <Card className="border-0 shadow-sm"><CardContent className="p-4 text-center"><p className="text-2xl font-display font-bold text-primary">{filtered.filter(r => r.status === "In Progress").length}</p><p className="text-xs text-muted-foreground">In Progress</p></CardContent></Card>
+        <Card className="border-0 shadow-sm"><CardContent className="p-4 text-center"><p className="text-2xl font-display font-bold text-chart-3">{filtered.filter(r => r.status === "Resolved").length}</p><p className="text-xs text-muted-foreground">Resolved</p></CardContent></Card>
       </div>
 
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="relative w-full sm:w-72">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input placeholder="Search cases..." value={search} onChange={e => setSearch(e.target.value)} className="pl-10" />
+      <div className="flex flex-col gap-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="relative w-full sm:w-72">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input placeholder="Search cases..." value={search} onChange={e => setSearch(e.target.value)} className="pl-10" />
+          </div>
+          {canCreateRequest && (
+            <Button onClick={() => { setForm({ subject: "", care_type: "Prayer Request", description: "", confidential: false }); setRequestDialogOpen(true); }} className="bg-primary hover:bg-primary/90">
+              <Plus className="h-4 w-4 mr-2" /> New Request
+            </Button>
+          )}
         </div>
-        {canCreateRequest && (
-          <Button onClick={() => { setForm({ subject: "", care_type: "Prayer Request", description: "", confidential: false }); setRequestDialogOpen(true); }} className="bg-primary hover:bg-primary/90">
-            <Plus className="h-4 w-4 mr-2" /> New Request
+        <div className="flex flex-wrap items-end gap-3">
+          <div className="w-full sm:w-auto">
+            <Label className="text-xs text-muted-foreground">From</Label>
+            <Input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="w-full sm:w-40" />
+          </div>
+          <div className="w-full sm:w-auto">
+            <Label className="text-xs text-muted-foreground">To</Label>
+            <Input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="w-full sm:w-40" />
+          </div>
+          <div className="w-full sm:w-auto">
+            <Label className="text-xs text-muted-foreground">Status</Label>
+            <Select value={filterStatus} onValueChange={setFilterStatus}>
+              <SelectTrigger className="w-full sm:w-36"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="All">All</SelectItem>
+                {ALL_STATUSES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <Button variant="outline" onClick={downloadCSV} disabled={filtered.length === 0}>
+            <Download className="h-4 w-4 mr-2" /> CSV
           </Button>
-        )}
+          <PrintReportButton label="Print" buildRows={() => ({
+            title: "Pastoral Care Report",
+            headers: ["Subject", "Member", "Type", "Status", "Confidential", "Assigned To", "Created", "Resolution Notes"],
+            rows: filtered.map(r => [
+              r.subject,
+              r.members ? `${r.members.first_name} ${r.members.last_name}` : "",
+              r.care_type,
+              r.status,
+              r.confidential ? "Yes" : "No",
+              r.assigned_to ? (assigneeMap[r.assigned_to] || "") : "",
+              r.created_at ? new Date(r.created_at).toLocaleDateString("en-GB") : "",
+              r.resolution_notes || "",
+            ]),
+          })} />
+        </div>
       </div>
 
       {isLoading ? (
@@ -263,7 +314,7 @@ export default function PastoralCare() {
               <Select value={statusUpdate.status} onValueChange={v => setStatusUpdate(f => ({ ...f, status: v }))}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {["Open", "In Progress", "Resolved", "Closed"].map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                  {ALL_STATUSES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>

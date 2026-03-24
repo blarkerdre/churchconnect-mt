@@ -7,13 +7,14 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Car, MapPin, Clock, User, Plus, Loader2, CheckCircle, XCircle, Trash2, Edit, Settings } from "lucide-react";
+import { Car, MapPin, Clock, User, Plus, Loader2, CheckCircle, XCircle, Trash2, Edit, Settings, Search, Download } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useUnitMembership } from "@/hooks/useUnitMembership";
 import { useSubFeature } from "@/hooks/useSubFeature";
+import PrintReportButton from "@/components/PrintReportButton";
 
 const statusColors = {
   "Confirmed": "bg-chart-3/10 text-chart-3",
@@ -22,12 +23,18 @@ const statusColors = {
   "Cancelled": "bg-destructive/10 text-destructive",
 };
 
+const ALL_STATUSES = ["Pending", "Confirmed", "Completed", "Cancelled"];
+
 export default function Transportation() {
   const { user, isAdmin, leaderUnits } = useAuth();
   const { isMemberOfUnit: isTransportUnit } = useUnitMembership("Transportation");
   const canManage = isAdmin || leaderUnits.includes("Transportation") || isTransportUnit;
   const { enabled: canCreateBooking } = useSubFeature("transportation.create_booking");
   const queryClient = useQueryClient();
+  const [search, setSearch] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const [filterStatus, setFilterStatus] = useState("All");
   const [bookDialogOpen, setBookDialogOpen] = useState(false);
   const [manageDialogOpen, setManageDialogOpen] = useState(false);
   const [locationDialogOpen, setLocationDialogOpen] = useState(false);
@@ -60,6 +67,14 @@ export default function Transportation() {
   });
 
   const visibleBookings = canManage ? bookings : bookings.filter(b => b.user_id === user?.id);
+
+  const filtered = visibleBookings.filter(b => {
+    const name = b.members ? `${b.members.first_name} ${b.members.last_name}` : "";
+    const matchSearch = `${name} ${b.pickup_address} ${b.destination || ""}`.toLowerCase().includes(search.toLowerCase());
+    const matchStatus = filterStatus === "All" || b.status === filterStatus;
+    const matchDate = (!dateFrom || b.request_date >= dateFrom) && (!dateTo || b.request_date <= dateTo);
+    return matchSearch && matchStatus && matchDate;
+  });
 
   const bookMutation = useMutation({
     mutationFn: async (formData) => {
@@ -157,38 +172,107 @@ export default function Transportation() {
     setEditLocationDialogOpen(true);
   };
 
+  const downloadCSV = () => {
+    const headers = ["Member", "Pickup", "Destination", "Date", "Time", "Passengers", "Status", "Driver", "Driver Phone", "Notes"];
+    const rows = filtered.map(b => [
+      b.members ? `${b.members.first_name} ${b.members.last_name}` : "",
+      b.pickup_address,
+      b.destination || "Church",
+      b.request_date,
+      b.pickup_time || "",
+      b.passengers || 1,
+      b.status,
+      b.assigned_driver || "",
+      b.driver_phone || "",
+      b.notes || "",
+    ]);
+    const csv = [headers, ...rows].map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `transportation-${new Date().toISOString().split("T")[0]}.csv`;
+    a.click();
+  };
+
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <Card className="border-0 shadow-sm"><CardContent className="p-3 sm:p-4 text-center"><p className="text-xl sm:text-2xl font-display font-bold text-foreground">{visibleBookings.length}</p><p className="text-xs text-muted-foreground">Total</p></CardContent></Card>
-        <Card className="border-0 shadow-sm"><CardContent className="p-3 sm:p-4 text-center"><p className="text-xl sm:text-2xl font-display font-bold text-accent">{visibleBookings.filter(b => b.status === "Pending").length}</p><p className="text-xs text-muted-foreground">Pending</p></CardContent></Card>
-        <Card className="border-0 shadow-sm"><CardContent className="p-3 sm:p-4 text-center"><p className="text-xl sm:text-2xl font-display font-bold text-chart-3">{visibleBookings.filter(b => b.status === "Confirmed").length}</p><p className="text-xs text-muted-foreground">Confirmed</p></CardContent></Card>
-        <Card className="border-0 shadow-sm"><CardContent className="p-3 sm:p-4 text-center"><p className="text-xl sm:text-2xl font-display font-bold text-muted-foreground">{visibleBookings.filter(b => b.status === "Completed").length}</p><p className="text-xs text-muted-foreground">Completed</p></CardContent></Card>
+        <Card className="border-0 shadow-sm"><CardContent className="p-3 sm:p-4 text-center"><p className="text-xl sm:text-2xl font-display font-bold text-foreground">{filtered.length}</p><p className="text-xs text-muted-foreground">Total</p></CardContent></Card>
+        <Card className="border-0 shadow-sm"><CardContent className="p-3 sm:p-4 text-center"><p className="text-xl sm:text-2xl font-display font-bold text-accent">{filtered.filter(b => b.status === "Pending").length}</p><p className="text-xs text-muted-foreground">Pending</p></CardContent></Card>
+        <Card className="border-0 shadow-sm"><CardContent className="p-3 sm:p-4 text-center"><p className="text-xl sm:text-2xl font-display font-bold text-chart-3">{filtered.filter(b => b.status === "Confirmed").length}</p><p className="text-xs text-muted-foreground">Confirmed</p></CardContent></Card>
+        <Card className="border-0 shadow-sm"><CardContent className="p-3 sm:p-4 text-center"><p className="text-xl sm:text-2xl font-display font-bold text-muted-foreground">{filtered.filter(b => b.status === "Completed").length}</p><p className="text-xs text-muted-foreground">Completed</p></CardContent></Card>
       </div>
 
-      <div className="flex flex-wrap justify-end gap-2">
-        {canManage && (
-          <Button variant="outline" onClick={() => setLocationDialogOpen(true)}>
-            <Settings className="h-4 w-4 mr-2" /> Pickup Locations
+      <div className="flex flex-col gap-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="relative w-full sm:w-72">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input placeholder="Search bookings..." value={search} onChange={e => setSearch(e.target.value)} className="pl-10" />
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {canManage && (
+              <Button variant="outline" onClick={() => setLocationDialogOpen(true)}>
+                <Settings className="h-4 w-4 mr-2" /> Pickup Locations
+              </Button>
+            )}
+            {canCreateBooking && (
+              <Button onClick={() => { setForm({ pickup_address: "", destination: "Church", request_date: "", pickup_time: "", notes: "", passengers: 1 }); setBookDialogOpen(true); }} className="bg-primary hover:bg-primary/90">
+                <Plus className="h-4 w-4 mr-2" /> Book Transport
+              </Button>
+            )}
+          </div>
+        </div>
+        <div className="flex flex-wrap items-end gap-3">
+          <div className="w-full sm:w-auto">
+            <Label className="text-xs text-muted-foreground">From</Label>
+            <Input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="w-full sm:w-40" />
+          </div>
+          <div className="w-full sm:w-auto">
+            <Label className="text-xs text-muted-foreground">To</Label>
+            <Input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="w-full sm:w-40" />
+          </div>
+          <div className="w-full sm:w-auto">
+            <Label className="text-xs text-muted-foreground">Status</Label>
+            <Select value={filterStatus} onValueChange={setFilterStatus}>
+              <SelectTrigger className="w-full sm:w-36"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="All">All</SelectItem>
+                {ALL_STATUSES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <Button variant="outline" onClick={downloadCSV} disabled={filtered.length === 0}>
+            <Download className="h-4 w-4 mr-2" /> CSV
           </Button>
-        )}
-        {canCreateBooking && (
-          <Button onClick={() => { setForm({ pickup_address: "", destination: "Church", request_date: "", pickup_time: "", notes: "", passengers: 1 }); setBookDialogOpen(true); }} className="bg-primary hover:bg-primary/90">
-            <Plus className="h-4 w-4 mr-2" /> Book Transport
-          </Button>
-        )}
+          <PrintReportButton label="Print" buildRows={() => ({
+            title: "Transportation Report",
+            headers: ["Member", "Pickup", "Destination", "Date", "Time", "Passengers", "Status", "Driver", "Driver Phone", "Notes"],
+            rows: filtered.map(b => [
+              b.members ? `${b.members.first_name} ${b.members.last_name}` : "",
+              b.pickup_address,
+              b.destination || "Church",
+              b.request_date,
+              b.pickup_time || "",
+              b.passengers || 1,
+              b.status,
+              b.assigned_driver || "",
+              b.driver_phone || "",
+              b.notes || "",
+            ]),
+          })} />
+        </div>
       </div>
 
       {isLoading ? (
         <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>
-      ) : visibleBookings.length === 0 ? (
+      ) : filtered.length === 0 ? (
         <Card className="border-0 shadow-sm p-12 text-center text-muted-foreground">
           <Car className="h-10 w-10 mx-auto mb-3 opacity-20" />
           <p className="text-lg font-medium">No bookings found</p>
         </Card>
       ) : (
         <div className="space-y-3">
-          {visibleBookings.map(b => (
+          {filtered.map(b => (
             <Card key={b.id} className="border-0 shadow-sm hover:shadow-md transition-shadow">
               <CardContent className="p-5">
                 <div className="flex items-start gap-4">
@@ -265,7 +349,7 @@ export default function Transportation() {
               <Select value={manageForm.status} onValueChange={v => setManageForm(f => ({ ...f, status: v }))}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {["Pending", "Confirmed", "Completed", "Cancelled"].map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                  {ALL_STATUSES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
