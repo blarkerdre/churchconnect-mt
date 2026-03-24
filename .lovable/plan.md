@@ -59,3 +59,16 @@
 - Updated SystemLogs: EmailLogsPanel, SMSLogsPanel, WhatsAppLogsPanel, AuditLogsPanel
 - Updated TrainingReports, ChurchAttendance, WSFManagement, Transportation, ExamManagement
 - All queries include `tenantId` in queryKeys, selects use `scopeQuery`, inserts use `withTenant`
+
+### ✅ Phase 9 — Edge Function Tenant Awareness (Complete)
+- `admin-create-user`: Accepts `tenant_id`, adds to user_roles, creates tenant_membership, updates profile
+- `admin-delete-user`: Now also deletes tenant_memberships during cleanup
+- `send-sms`: Accepts `tenant_id`, includes in all sms_log inserts
+- `public-register`: Accepts `tenant_id` (from URL slug resolution), includes in member insert
+- `issue-certificate`: Accepts `tenant_id`, includes in email_send_log
+- `send-email-alert`: Accepts `tenant_id`, scopes member query by tenant, includes in email_send_log
+- `send-event-reminders`: Reads `tenant_id` from event, passes to `notify_all_users` RPC
+- `notify-followup-assignment`: Accepts `tenant_id`, includes in email_send_log and sms_log
+- `notify-pastoral-assignment`: Accepts `tenant_id`, includes in email_send_log and sms_log
+- Frontend: All `supabase.functions.invoke()` and `fetch()` calls now pass `tenant_id` from `useTenantQuery` or URL slug
+- Updated components: UserManagement, MemberFormDialog, EmailAlertForm, SMSDialog, IssueCertificateDialog, TakeExamDialog, PastoralCare, PublicRegistration, MyProfile
