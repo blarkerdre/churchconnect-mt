@@ -5,12 +5,14 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from "@/components/ui/select";
 import { Plus, Edit, Trash2, Loader2, FileText } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { format } from "date-fns";
 import WSFAttendanceFormDialog from "./WSFAttendanceFormDialog";
+import PrintReportButton from "@/components/PrintReportButton";
 
 export default function WSFAttendanceTab({ centres }) {
   const { user, isAdmin } = useAuth();
@@ -19,6 +21,8 @@ export default function WSFAttendanceTab({ centres }) {
   const [editing, setEditing] = useState(null);
   const [selectedCentre, setSelectedCentre] = useState(null);
   const [filterCentreId, setFilterCentreId] = useState("all");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
 
   // Find centres this user leads (by matching user_id to leader's member record)
   const { data: userMember } = useQuery({
@@ -105,9 +109,21 @@ export default function WSFAttendanceTab({ centres }) {
     setDialogOpen(true);
   };
 
-  const filteredReports = filterCentreId === "all"
-    ? reports
-    : reports.filter(r => r.centre_id === filterCentreId);
+  const filteredReports = reports.filter(r =>
+    (filterCentreId === "all" || r.centre_id === filterCentreId) &&
+    (!dateFrom || r.meeting_date >= dateFrom) &&
+    (!dateTo || r.meeting_date <= dateTo)
+  );
+
+  const buildPrintRows = () => ({
+    title: "WSF Attendance Report",
+    headers: ["Date", "Centre", "Male", "Female", "Adults", "Children", "Total", "1st Timers", "Testimonies"],
+    rows: filteredReports.map(r => {
+      const adults = r.male + r.female;
+      const total = adults + r.children;
+      return [format(new Date(r.meeting_date), "dd MMM yyyy"), r.wsf_centres?.name || "—", r.male, r.female, adults, r.children, total, r.first_timers, r.testimonies];
+    }),
+  });
 
   const downloadReport = () => {
     const lines = [
@@ -149,9 +165,9 @@ export default function WSFAttendanceTab({ centres }) {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2">
           <Select value={filterCentreId} onValueChange={setFilterCentreId}>
-            <SelectTrigger className="w-48">
+            <SelectTrigger className="w-44">
               <SelectValue placeholder="All centres" />
             </SelectTrigger>
             <SelectContent>
@@ -183,10 +199,15 @@ export default function WSFAttendanceTab({ centres }) {
               })()}
             </SelectContent>
           </Select>
+          <Input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="w-36" />
+          <Input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="w-36" />
           {filteredReports.length > 0 && (
-            <Button variant="outline" size="sm" onClick={downloadReport}>
-              <FileText className="h-4 w-4 mr-2" /> Download
-            </Button>
+            <>
+              <Button variant="outline" size="sm" onClick={downloadReport}>
+                <FileText className="h-4 w-4 mr-1" /> Download
+              </Button>
+              <PrintReportButton buildRows={buildPrintRows} label="Print" />
+            </>
           )}
         </div>
         <Button size="lg" className="bg-primary text-primary-foreground shadow-md font-semibold px-6" onClick={() => openNew()}>
