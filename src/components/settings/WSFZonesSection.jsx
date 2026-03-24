@@ -51,8 +51,8 @@ export default function WSFZonesSection() {
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["wsf-zones"] });
-      queryClient.invalidateQueries({ queryKey: ["wsf-zone-centre-counts"] });
+      queryClient.invalidateQueries({ queryKey: ["wsf-zones", tenantId] });
+      queryClient.invalidateQueries({ queryKey: ["wsf-zone-centre-counts", tenantId] });
       toast({ title: editing ? "Zone updated" : "Zone created" });
       setDialogOpen(false);
     },
