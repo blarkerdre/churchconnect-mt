@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import WSFCentresSection from "@/components/settings/WSFCentresSection";
+import WSFZonesSection from "@/components/settings/WSFZonesSection";
 import CertificateTemplateSettings from "@/components/certificates/CertificateTemplateSettings";
 import ExternalLinksSection from "@/components/settings/ExternalLinksSection";
 import DangerZoneSection from "@/components/settings/DangerZoneSection";
