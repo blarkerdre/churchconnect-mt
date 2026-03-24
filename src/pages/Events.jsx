@@ -117,9 +117,9 @@ export default function Events() {
   });
 
   const { data: registrationCounts = {} } = useQuery({
-    queryKey: ["event-reg-counts"],
+    queryKey: ["event-reg-counts", tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("event_registrations").select("event_id");
+      const { data, error } = await scopeQuery(supabase.from("event_registrations").select("event_id"));
       if (error) throw error;
       const counts = {};
       data.forEach(r => { counts[r.event_id] = (counts[r.event_id] || 0) + 1; });
