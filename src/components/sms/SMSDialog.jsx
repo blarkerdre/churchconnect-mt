@@ -122,6 +122,7 @@ export default function SMSDialog({
             sms_type: smsType,
             reference_id: referenceId,
             channel,
+            tenant_id: tenantId,
           }),
         }
       );
