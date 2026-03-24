@@ -9,6 +9,7 @@ import ProfileCompletionBanner from "@/components/profile/ProfileCompletionBanne
 import MemberDashboard from "@/components/dashboard/MemberDashboard";
 import WSFLeaderDashboard from "@/components/dashboard/WSFLeaderDashboard";
 import { useAuth } from "@/hooks/useAuth";
+import { useSubFeature } from "@/hooks/useSubFeature";
 
 export default function Dashboard() {
   const { isAdmin, isUnitLeader, isWSFLeader, profile, myMember, loading: authLoading } = useAuth();
