@@ -8,6 +8,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, FileText } from "lucide-react";
+import { useSubFeature } from "@/hooks/useSubFeature";
 import { format, subMonths, startOfMonth, endOfMonth, parseISO } from "date-fns";
 
 const COLORS = [
