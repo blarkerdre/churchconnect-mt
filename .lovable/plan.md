@@ -1,85 +1,41 @@
 
 
-## Multi-Tenant Migration Progress
+## Plan: Bridge Tenant Roles with Application Access
 
-### ✅ Phase 1.1 — Tenant Foundation (Complete)
-- Created `tenants` table with RLS
-- Created `tenant_memberships` table with RLS
-- Created helper functions: `user_belongs_to_tenant()`, `is_tenant_admin()`
-- Default tenant "Winners Chapel International Cardiff" (slug: `wci-cardiff`, ID: `a0000000-0000-0000-0000-000000000001`)
-- Backfilled 2 users into tenant_memberships
-- Added `tenant_id` to Batch A tables (members, profiles, user_roles, followups, pastoral_care, notifications, messages)
+### Problem
+Tenant `owner` and `admin` roles (stored in `tenant_memberships`) are disconnected from application-level roles (stored in `user_roles`). A tenant owner without an `admin` entry in `user_roles` cannot access most features (Members, Events, Settings, Analytics, etc.).
 
-### ✅ Phase 1.2 — All Tables Get tenant_id (Complete)
-- Batch B-D: all remaining tables
-- All existing rows backfilled with default tenant ID
+### Approach
+Modify the `useAuth` hook to also check tenant membership roles, so that a tenant owner/admin is automatically treated as an app-level admin within their tenant context. This avoids duplicating role data across two tables.
 
-### ✅ Phase 2 — Tenant Context System (Complete)
-- `TenantProvider` context — fetches tenant memberships, auto-selects from URL slug or default
-- `useTenantQuery` hook — provides `tenantId`, `withTenant()`, `scopeQuery()`
-- Path-based routing with `/t/:tenantSlug/` prefix support
+### Changes
 
-### ✅ Phase 3 — Tenant-Aware Features (Complete)
-- QR codes use tenant slug in URLs
-- Sidebar branding reads from TenantContext
-- Tenant feature flags integrated into useSubFeature
+**1. Update `useAuth.jsx` — fetch tenant membership role**
+- After fetching `user_roles`, also query `tenant_memberships` for the current user
+- Expose a new `tenantRole` value (owner/admin/member) from the memberships
+- Update the derived booleans (`isAdmin`, etc.) to include tenant role checks:
+  - `isAdmin` = has `admin`/`super_admin` in `user_roles` **OR** has `owner`/`admin` role in `tenant_memberships`
+- This ensures tenant owners/admins automatically pass all `AdminRoute`, `LeaderRoute`, and nav filtering checks
 
-### ✅ Phase 4 — Onboarding Wizard (Complete)
-- `register-tenant` edge function — creates tenant, auth user, tenant_membership (owner), user_role (super_admin), profile
-- 4-step wizard at `/onboard`: Church Info → Admin Account → Feature Selection → Review & Launch
-- Auto sign-in after registration, slug validation, timezone selection
-- Link from Auth page ("Sign in instead" / "Already have an account?")
+**2. Update `AppLayout.jsx` — role title display**
+- Update `getRoleTitle()` to reflect tenant-derived admin status (e.g., show "Tenant Admin" or "Admin" for tenant owners/admins who don't have an explicit `user_roles` entry)
 
-### ✅ Phase 5 — Frontend Query Updates (Complete)
-- Updated ~15 page components to use `useTenantQuery` (`scopeQuery` for selects, `withTenant` for inserts)
-- Updated shared hooks: `useAppSetting`, `useChurchUnits`, `useUnitMembership`
-- Updated shared components: `MemberFormDialog`, `CheckInPanel`, `MemberPastoralHistory`
-- Updated `logAudit` to accept optional `tenantId` parameter
-- Pages updated: Dashboard, Members, Attendance, Events, Communications, Followups, PastoralCare, Analytics
+**3. Update route guards in `App.jsx`**
+- No structural changes needed — the guards already use `isAdmin` from `useAuth`, which will now incorporate tenant roles
 
-### ✅ Phase 6 — Trigger & Function Updates (Complete)
-- Updated `notify_all_users` to accept optional `_tenant_id` and scope to tenant members
-- Updated `notify_new_announcement`, `notify_new_event` to pass tenant_id
-- Updated `notify_pastoral_care_change` to propagate tenant_id to notifications
-- Updated `track_member_status_change` to propagate tenant_id to status history
-- Updated `check_attendance_inactivation` to scope by tenant
-- Updated `auto_create_followup` to scope leader assignment and propagate tenant_id
+### Technical Details
+- The `tenant_memberships` query in `useAuth` will fetch all memberships for the user: `SELECT tenant_id, role FROM tenant_memberships WHERE user_id = ?`
+- The `isAdmin` derivation becomes: `roles.includes("admin") || roles.includes("super_admin") || tenantMemberships.some(m => m.role === "owner" || m.role === "admin")`
+- `isTenantOwner` will also be exposed for owner-exclusive features
+- No database migrations required — this is purely a frontend logic change
+- The existing `is_admin()` RLS function only checks `user_roles`, so RLS policies will still gate data access separately. To fully bridge this at the DB level, we'd need to update `is_admin()` to also check `tenant_memberships` — this will be included as a migration
 
-### ✅ Phase 7 — Tenant-Scoped RLS Policies (Complete)
-- Created `user_has_tenant_access()` security definer function — checks tenant_memberships
-- Added `AND user_has_tenant_access(tenant_id)` to all authenticated RLS policies across 30+ tables
-- Added `tenant_id` column to `wsf_zones` (was missing) and backfilled
-- Anon policies (public registration) left unchanged — no tenant membership context
-- User's own data policies (profiles insert/update, user_roles view own) kept without tenant check for bootstrap
-- Service role policies (email queue, unsubscribe tokens) untouched — not user-facing
+**4. Database migration — update `is_admin()` function**
+- Modify the `is_admin` security definer function to also return `true` if the user has `owner` or `admin` role in `tenant_memberships` for any tenant they belong to
+- This ensures RLS policies also respect tenant admin status
 
-### ✅ Phase 8 — Remaining Page/Component Updates (Complete)
-- Updated Settings page: NotificationPreferences, SettingsListSection, ChurchUnitsSection, FeatureTogglesSection
-- Updated UserManagement: profiles and user_roles queries scoped by tenant
-- Updated SystemLogs: EmailLogsPanel, SMSLogsPanel, WhatsAppLogsPanel, AuditLogsPanel
-- Updated TrainingReports, ChurchAttendance, WSFManagement, Transportation, ExamManagement
-- All queries include `tenantId` in queryKeys, selects use `scopeQuery`, inserts use `withTenant`
+### Files Modified
+- `src/hooks/useAuth.jsx` — add tenant membership fetch, update `isAdmin` derivation
+- `src/components/AppLayout.jsx` — update role title logic
+- New migration — update `is_admin()` database function
 
-### ✅ Phase 9 — Edge Function Tenant Awareness (Complete)
-- `admin-create-user`: Accepts `tenant_id`, adds to user_roles, creates tenant_membership, updates profile
-- `admin-delete-user`: Now also deletes tenant_memberships during cleanup
-- `send-sms`: Accepts `tenant_id`, includes in all sms_log inserts
-- `public-register`: Accepts `tenant_id` (from URL slug resolution), includes in member insert
-- `issue-certificate`: Accepts `tenant_id`, includes in email_send_log
-- `send-email-alert`: Accepts `tenant_id`, scopes member query by tenant, includes in email_send_log
-- `send-event-reminders`: Reads `tenant_id` from event, passes to `notify_all_users` RPC
-- `notify-followup-assignment`: Accepts `tenant_id`, includes in email_send_log and sms_log
-- `notify-pastoral-assignment`: Accepts `tenant_id`, includes in email_send_log and sms_log
-- Frontend: All `supabase.functions.invoke()` and `fetch()` calls now pass `tenant_id` from `useTenantQuery` or URL slug
-- Updated components: UserManagement, MemberFormDialog, EmailAlertForm, SMSDialog, IssueCertificateDialog, TakeExamDialog, PastoralCare, PublicRegistration, MyProfile
-
-### ✅ Phase 10 — Dynamic Tenant Theming & File Storage (Complete)
-- `TenantThemeProvider` — converts tenant `primary_color` to HSL, applies CSS variables dynamically
-- Sidebar, ring, chart colors all adapt to tenant branding
-- Tenant-scoped file storage — uploads prefixed with `tenantId/` in `church-documents` and `book-covers` buckets
-- Storage RLS policies enforce folder-level tenant isolation via `user_has_tenant_access()`
-- Profile photos remain user-scoped (not tenant-scoped)
-
-### ✅ Phase 11 — Testing & Bug Fixes (Complete)
-- Fixed missing `Presentation` page import in App.jsx (caused runtime crash on `/presentation` route)
-- Fixed `BookOfTheMonthSettings` — queries now tenant-scoped with `scopeQuery`, inserts use `withTenant`, queryKeys include `tenantId`
