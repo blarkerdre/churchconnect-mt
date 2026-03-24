@@ -454,7 +454,7 @@ export default function Events() {
                       <Select value={form.recurrence_frequency || "Weekly"} onValueChange={v => setForm(f => ({ ...f, recurrence_frequency: v }))}>
                         <SelectTrigger><SelectValue /></SelectTrigger>
                         <SelectContent>
-                          {["Weekly", "Biweekly", "Monthly"].map(fr => <SelectItem key={fr} value={fr}>{fr}</SelectItem>)}
+                          {["Daily", "Weekly", "Biweekly", "Monthly"].map(fr => <SelectItem key={fr} value={fr}>{fr}</SelectItem>)}
                         </SelectContent>
                       </Select>
                     </div>
