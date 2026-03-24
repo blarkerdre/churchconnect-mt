@@ -168,19 +168,21 @@ export default function Attendance() {
       </div>
 
       {/* Date Filter */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 p-3 bg-muted/50 rounded-lg border border-border">
-        <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-          <Filter className="h-4 w-4" /> Filter by date:
+      {canManage && (
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 p-3 bg-muted/50 rounded-lg border border-border">
+          <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+            <Filter className="h-4 w-4" /> Filter by date:
+          </div>
+          <div className="flex items-center gap-2 flex-1">
+            <Input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="h-9 text-sm flex-1" placeholder="From" />
+            <span className="text-xs text-muted-foreground">to</span>
+            <Input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="h-9 text-sm flex-1" placeholder="To" />
+          </div>
+          {(dateFrom || dateTo) && (
+            <Button variant="ghost" size="sm" onClick={() => { setDateFrom(""); setDateTo(""); }} className="text-xs">Clear</Button>
+          )}
         </div>
-        <div className="flex items-center gap-2 flex-1">
-          <Input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="h-9 text-sm flex-1" placeholder="From" />
-          <span className="text-xs text-muted-foreground">to</span>
-          <Input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="h-9 text-sm flex-1" placeholder="To" />
-        </div>
-        {(dateFrom || dateTo) && (
-          <Button variant="ghost" size="sm" onClick={() => { setDateFrom(""); setDateTo(""); }} className="text-xs">Clear</Button>
-        )}
-      </div>
+      )}
 
       <div className="flex flex-wrap items-center gap-3">
         {filteredSessions.length > 0 && (
@@ -200,7 +202,7 @@ export default function Attendance() {
           </>
         )}
         <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto sm:ml-auto">
-          {selectedSession && (
+          {canManage && selectedSession && (
             <>
               <Button variant="outline" size="sm" onClick={generateReport}>
                 <Download className="h-4 w-4" /><span className="hidden sm:inline ml-2">Download</span>
