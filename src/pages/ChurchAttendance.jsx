@@ -252,6 +252,41 @@ export default function ChurchAttendance() {
         <Card className="border-0 shadow-sm"><CardContent className="p-4 text-center"><p className="text-2xl font-display font-bold text-violet-500">{totalTeens}</p><p className="text-xs text-muted-foreground">Teens</p></CardContent></Card>
       </div>
 
+      {/* Attendance Trend Chart */}
+      {chartData.length >= 2 && (
+        <Card className="border-0 shadow-sm">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base font-display flex items-center gap-2">
+              <BarChart3 className="h-4 w-4 text-primary" /> Attendance Trends
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="h-72">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={chartData} margin={{ top: 5, right: 10, left: -10, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                  <XAxis dataKey="date" tick={{ fontSize: 11 }} className="fill-muted-foreground" />
+                  <YAxis tick={{ fontSize: 11 }} className="fill-muted-foreground" />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: "hsl(var(--card))",
+                      borderColor: "hsl(var(--border))",
+                      borderRadius: 8,
+                      fontSize: 12,
+                    }}
+                  />
+                  <Legend wrapperStyle={{ fontSize: 12 }} />
+                  <Bar dataKey="Adult Male" fill="hsl(var(--chart-3))" radius={[2, 2, 0, 0]} />
+                  <Bar dataKey="Adult Female" fill="hsl(var(--accent))" radius={[2, 2, 0, 0]} />
+                  <Bar dataKey="Children" fill="hsl(30, 90%, 55%)" radius={[2, 2, 0, 0]} />
+                  <Bar dataKey="Teens" fill="hsl(270, 60%, 55%)" radius={[2, 2, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Filter + Table */}
       <Card className="border-0 shadow-sm">
         <CardHeader className="pb-3">
