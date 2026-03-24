@@ -8,6 +8,7 @@ import { useTenantQuery } from "@/hooks/useTenantQuery";
 
 export default function WSFManagement() {
   const { isAdmin, isWSFLeader, user } = useAuth();
+  const { tenantId, scopeQuery } = useTenantQuery();
 
   const { data: myMember } = useQuery({
     queryKey: ["my-member-record", user?.id],
