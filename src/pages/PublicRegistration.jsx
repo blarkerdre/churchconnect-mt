@@ -35,12 +35,21 @@ const HIDE_SPIRITUAL_STATUSES = ["First Timer", "New Convert", "Visitor"];
 const SHOW_BAPTISM_STATUSES = ["First Timer", "New Convert"];
 
 export default function PublicRegistration() {
+  const { tenantSlug } = useParams();
   const { data: churchUnitsData = [] } = useChurchUnits();
   const CHURCH_UNITS = churchUnitsData.map(u => u.name);
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [wsfCentres, setWsfCentres] = useState([]);
+  const [resolvedTenantId, setResolvedTenantId] = useState(null);
+
+  useEffect(() => {
+    if (tenantSlug) {
+      supabase.from("tenants").select("id").eq("slug", tenantSlug).maybeSingle()
+        .then(({ data }) => { if (data?.id) setResolvedTenantId(data.id); });
+    }
+  }, [tenantSlug]);
 
   useEffect(() => {
     supabase.from("wsf_centres").select("*").eq("is_active", true).order("name")
