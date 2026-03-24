@@ -200,6 +200,7 @@ Deno.serve(async (req) => {
           status: "failed",
           channel: msgChannel,
           error_message: err instanceof Error ? err.message : "Unknown error",
+          ...(tenant_id ? { tenant_id } : {}),
         });
       }
     }
