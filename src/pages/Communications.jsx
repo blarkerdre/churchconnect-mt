@@ -297,7 +297,7 @@ export default function Communications() {
               </>
             )}
           </div>
-        </TabsContent>
+        </TabsContent>}
 
         {canManageComms && (
           <TabsContent value="email">
