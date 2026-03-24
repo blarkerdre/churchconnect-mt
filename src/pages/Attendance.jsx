@@ -208,7 +208,7 @@ export default function Attendance() {
               <PrintReportButton
                 label="Print"
                 buildRows={() => ({
-                  title: `Session Report – ${selectedSession.title || selectedSession.session_type} (${selectedSession.session_date})`,
+                  title: `Meeting Report – ${selectedSession.title || selectedSession.session_type} (${selectedSession.session_date})`,
                   headers: ["#", "Name", "Method", "Time"],
                   rows: records.map((r, i) => [
                     i + 1,
