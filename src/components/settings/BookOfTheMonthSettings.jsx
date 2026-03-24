@@ -55,7 +55,7 @@ export default function BookOfTheMonthSettings() {
       }
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["books-of-the-month-all"] });
+      qc.invalidateQueries({ queryKey: ["books-of-the-month-all", tenantId] });
       qc.invalidateQueries({ queryKey: ["book-of-the-month"] });
       toast({ title: editing ? "Book updated" : "Book added" });
       setDialogOpen(false);
