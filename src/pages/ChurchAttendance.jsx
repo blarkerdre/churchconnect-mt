@@ -16,6 +16,7 @@ import { format, parseISO } from "date-fns";
 import { Loader2, Plus, Users, Church, Baby, UserCheck, Paperclip } from "lucide-react";
 import { useAppSetting } from "@/hooks/useAppSetting";
 import ReportAttachments from "@/components/reports/ReportAttachments";
+import { useSubFeature } from "@/hooks/useSubFeature";
 
 const DEFAULT_SERVICE_TYPES = ["Sunday Service", "Midweek Service", "Special Program", "Thanksgiving Service", "Other"];
 
