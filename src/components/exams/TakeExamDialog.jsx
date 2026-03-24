@@ -232,7 +232,7 @@ export default function TakeExamDialog({ open, onOpenChange, trainingType, membe
   const issueCertificate = async (memberId, trainingType, attemptId) => {
     try {
       const { data: certData, error: certErr } = await supabase.functions.invoke("issue-certificate", {
-        body: { member_id: memberId, training_type: trainingType },
+        body: { member_id: memberId, training_type: trainingType, tenant_id: tenantId },
       });
       if (!certErr && certData?.success) {
         await supabase.from("exam_attempts").update({ certificate_issued: true }).eq("id", attemptId);
