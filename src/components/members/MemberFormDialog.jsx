@@ -59,9 +59,9 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
 
   const memberUserId = member?.user_id;
   const { data: memberRoles = [] } = useQuery({
-    queryKey: ["member-roles", memberUserId],
+    queryKey: ["member-roles", memberUserId, tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("user_roles").select("*").eq("user_id", memberUserId);
+      const { data, error } = await scopeQuery(supabase.from("user_roles").select("*").eq("user_id", memberUserId));
       if (error) throw error;
       return data;
     },
