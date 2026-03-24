@@ -70,12 +70,12 @@ export default function ExamSessionManager() {
         // Delete existing courses and re-insert
         await supabase.from("exam_session_courses").delete().eq("session_id", sessionId);
       } else {
-        const { data, error } = await supabase.from("exam_sessions").insert(sessionData).select("id").single();
+        const { data, error } = await supabase.from("exam_sessions").insert(withTenant(sessionData)).select("id").single();
         if (error) throw error;
         sessionId = data.id;
       }
       if (courses.length > 0) {
-        const rows = courses.map((title, idx) => ({ session_id: sessionId, exam_title: title, sort_order: idx }));
+        const rows = courses.map((title, idx) => withTenant({ session_id: sessionId, exam_title: title, sort_order: idx }));
         const { error } = await supabase.from("exam_session_courses").insert(rows);
         if (error) throw error;
       }
