@@ -39,6 +39,7 @@ export default function ChurchAttendance() {
   const [expandedRow, setExpandedRow] = useState(null);
   const { user } = useAuth();
   const qc = useQueryClient();
+  const { enabled: canRecordAttendance } = useSubFeature("church_attendance.record");
 
   const { data: reports = [], isLoading } = useQuery({
     queryKey: ["church-attendance-reports", filterType],
