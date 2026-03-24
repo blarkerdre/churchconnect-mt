@@ -37,6 +37,13 @@ export default function Members() {
   const [certMember, setCertMember] = useState(null);
   const queryClient = useQueryClient();
 
+  const { enabled: canAddMember } = useSubFeature("members.add_member");
+  const { enabled: canBulkImport } = useSubFeature("members.bulk_import");
+  const { enabled: canQrCode } = useSubFeature("members.qr_code");
+  const { enabled: canCertificate } = useSubFeature("members.certificate");
+  const { enabled: canCsvExport } = useSubFeature("members.csv_export");
+  const queryClient = useQueryClient();
+
   const { data: members = [], isLoading } = useQuery({
     queryKey: ["members", user?.id, isAdmin, viewOnly, myMember?.id],
     queryFn: async () => {
