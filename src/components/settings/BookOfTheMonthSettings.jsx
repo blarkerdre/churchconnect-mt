@@ -16,7 +16,7 @@ export default function BookOfTheMonthSettings() {
   const qc = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState(null);
-  const [form, setForm] = useState({ title: "", author: "", description: "", month: "", cover_image_url: "" });
+  const [form, setForm] = useState({ title: "", author: "", description: "", month: "", cover_image_url: "", purchase_url: "" });
   const [uploading, setUploading] = useState(false);
 
   const { data: books = [], isLoading } = useQuery({
