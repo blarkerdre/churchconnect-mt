@@ -198,10 +198,15 @@ export default function WSFAttendanceTab({ centres }) {
               })()}
             </SelectContent>
           </Select>
+          <Input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="w-36" />
+          <Input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="w-36" />
           {filteredReports.length > 0 && (
-            <Button variant="outline" size="sm" onClick={downloadReport}>
-              <FileText className="h-4 w-4 mr-2" /> Download
-            </Button>
+            <>
+              <Button variant="outline" size="sm" onClick={downloadReport}>
+                <FileText className="h-4 w-4 mr-1" /> Download
+              </Button>
+              <PrintReportButton buildRows={buildPrintRows} label="Print" />
+            </>
           )}
         </div>
         <Button size="lg" className="bg-primary text-primary-foreground shadow-md font-semibold px-6" onClick={() => openNew()}>
