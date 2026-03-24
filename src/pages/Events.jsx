@@ -56,6 +56,7 @@ function getEventStatus(eventDate) {
 export default function Events() {
   const { data: EVENT_CATEGORIES } = useAppSetting("event_categories", ["Service", "Youth Event", "Conference", "Women's Event", "Men's Event", "Outreach", "Other"]);
   const { isAdmin, isUnitLeader, isWSFLeader, user, leaderUnits } = useAuth();
+  const { tenantId, scopeQuery, withTenant } = useTenantQuery();
   const canManage = isAdmin || isUnitLeader || isWSFLeader;
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
