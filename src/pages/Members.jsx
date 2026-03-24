@@ -15,6 +15,7 @@ import BulkImportDialog from "@/components/members/BulkImportDialog";
 import IssueCertificateDialog from "@/components/certificates/IssueCertificateDialog";
 import { logAudit } from "@/lib/audit";
 import { useAuth } from "@/hooks/useAuth";
+import { useSubFeature } from "@/hooks/useSubFeature";
 
 const statusColors = {
   "Active": "bg-chart-3/10 text-chart-3",
