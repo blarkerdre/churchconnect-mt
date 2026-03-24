@@ -152,6 +152,7 @@ export default function Events() {
         recurrence_end_date: parentEvent.recurrence_end_date,
         recurrence_parent_id: parentId,
         reminder_days_before: parentEvent.reminder_days_before?.length ? parentEvent.reminder_days_before : null,
+        reminder_hours_before: parentEvent.reminder_hours_before?.length ? parentEvent.reminder_hours_before : null,
         reminder_sent: false,
       });
     }
