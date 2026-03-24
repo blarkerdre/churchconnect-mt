@@ -16,10 +16,12 @@
 - Batch D: app_settings, church_units, wsf_centres, wsf_attendance, wsf_attendance_reports, pickup_locations, transportation, books_of_the_month, documents, first_timers, audit_log, email_send_log, training_reports, training_completions, member_status_history, sms_log, unit_leader_assignments, suppressed_emails
 - All existing rows backfilled with default tenant ID
 
-### 🔲 Phase 2 — Tenant Context System
-- TenantProvider React context
-- Path-based routing (`/t/:tenantSlug/...`)
-- Supabase client wrapper for tenant-scoped queries
+### ✅ Phase 2 — Tenant Context System (Complete)
+- `TenantProvider` context (`src/contexts/TenantContext.jsx`) — fetches tenant memberships, auto-selects tenant from URL slug or default
+- `useTenantQuery` hook (`src/hooks/useTenantQuery.jsx`) — provides `tenantId`, `withTenant()`, `scopeQuery()` helpers
+- Path-based routing: `/t/:tenantSlug/register` and `/t/:tenantSlug/wofbi-register` added alongside existing routes
+- TenantProvider wraps all authenticated routes inside ProtectedRoute
+- Existing routes continue working unchanged
 
 ### 🔲 Phase 3 — Tenant-Aware Features
 - QR codes, edge functions, notifications, emails, feature flags
