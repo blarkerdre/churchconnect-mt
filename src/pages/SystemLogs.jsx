@@ -386,14 +386,15 @@ function AuditLogsPanel() {
   const [actionFilter, setActionFilter] = useState("all");
   const [fromDate, setFromDate] = useState(() => subDays(new Date(), 7));
   const [toDate, setToDate] = useState(() => new Date());
+  const { tenantId, scopeQuery } = useTenantQuery();
 
   const { data: logs = [], isLoading } = useQuery({
-    queryKey: ["audit-log", fromDate?.toISOString(), toDate?.toISOString()],
+    queryKey: ["audit-log", fromDate?.toISOString(), toDate?.toISOString(), tenantId],
     queryFn: async () => {
       let q = supabase.from("audit_log").select("*").order("created_at", { ascending: false }).limit(500);
       if (fromDate) q = q.gte("created_at", fromDate.toISOString());
       if (toDate) q = q.lte("created_at", new Date(toDate.getFullYear(), toDate.getMonth(), toDate.getDate(), 23, 59, 59).toISOString());
-      const { data, error } = await q;
+      const { data, error } = await scopeQuery(q);
       if (error) throw error;
       return data;
     },
