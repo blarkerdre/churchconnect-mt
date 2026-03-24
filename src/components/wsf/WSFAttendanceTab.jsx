@@ -108,9 +108,21 @@ export default function WSFAttendanceTab({ centres }) {
     setDialogOpen(true);
   };
 
-  const filteredReports = filterCentreId === "all"
-    ? reports
-    : reports.filter(r => r.centre_id === filterCentreId);
+  const filteredReports = reports.filter(r =>
+    (filterCentreId === "all" || r.centre_id === filterCentreId) &&
+    (!dateFrom || r.meeting_date >= dateFrom) &&
+    (!dateTo || r.meeting_date <= dateTo)
+  );
+
+  const buildPrintRows = () => ({
+    title: "WSF Attendance Report",
+    headers: ["Date", "Centre", "Male", "Female", "Adults", "Children", "Total", "1st Timers", "Testimonies"],
+    rows: filteredReports.map(r => {
+      const adults = r.male + r.female;
+      const total = adults + r.children;
+      return [format(new Date(r.meeting_date), "dd MMM yyyy"), r.wsf_centres?.name || "—", r.male, r.female, adults, r.children, total, r.first_timers, r.testimonies];
+    }),
+  });
 
   const downloadReport = () => {
     const lines = [
