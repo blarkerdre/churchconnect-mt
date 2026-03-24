@@ -92,7 +92,7 @@ export default function CertificateTemplateSettings() {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["certificate-templates"] });
+      queryClient.invalidateQueries({ queryKey: ["certificate-templates", tenantId] });
       toast({ title: "Template deleted" });
     },
     onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
