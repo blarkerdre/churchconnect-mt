@@ -261,7 +261,7 @@ export default function Communications() {
           </TabsList>
         </div>
 
-        <TabsContent value="announcements">
+        {announcementsEnabled && <TabsContent value="announcements">
           <div className="space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div className="relative w-full sm:w-72">
