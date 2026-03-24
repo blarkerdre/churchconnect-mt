@@ -1,27 +1,46 @@
 
 
-## Fix Automatic Follow-up SMS to Assigned Person
+# Phase 1.1: Tenant Foundation Tables
 
-### Problem
-The `auto_create_followup` database trigger tries to call the `notify-followup-assignment` edge function via `http_post`, but the vault secret `supabase_url` is missing. This means the trigger silently skips the notification call, so no SMS (or email) is sent to the assigned person.
+## What We're Building
+Create the core multi-tenant database tables and helper functions that all future phases depend on. The existing app continues working unchanged.
 
-### Solution
+## Step 1: Create `tenants` Table
+- `id` (uuid PK), `name` (text), `slug` (text, unique), `logo_url` (text), `timezone` (text, default 'Europe/London'), `settings` (jsonb for branding/features), `setup_complete` (boolean, default false), `created_by` (uuid), `created_at`, `updated_at`
+- RLS: authenticated users can read tenants they belong to; service role for creation
 
-**Step 1: Add the missing vault secret**
-- Insert `supabase_url` into the Supabase vault so the trigger can construct the edge function URL.
-- SQL migration: `SELECT vault.create_secret('https://komqiadgeaapeuuzbovn.supabase.co', 'supabase_url');`
+## Step 2: Create `tenant_memberships` Table
+- `id` (uuid PK), `tenant_id` (uuid FK → tenants), `user_id` (uuid FK → auth.users), `role` (text: 'owner', 'admin', 'member'), `created_at`
+- Unique constraint on (user_id, tenant_id)
+- RLS: users can read own memberships; tenant owners/admins can manage
 
-**Step 2: Verify the SMS message content**
-The `notify-followup-assignment` edge function already sends a personalized SMS directed to the assigned person:
-> "Hi {name}, you've been assigned a new follow-up task for {member_name}. Please check the Church Management System. - Winners Chapel Cardiff"
+## Step 3: Create Helper Functions
+- `user_belongs_to_tenant(uuid, uuid)` — checks tenant_memberships, SECURITY DEFINER
+- `is_tenant_admin(uuid, uuid)` — checks if user has 'owner' or 'admin' role in tenant_memberships, SECURITY DEFINER
 
-This is already correct and directed at the assigned person. No code changes needed.
+## Step 4: Create Default Tenant & Backfill
+- Insert a default tenant row for "Winners Chapel International Cardiff" with slug `wci-cardiff`
+- Insert `tenant_memberships` for all existing users with `user_roles` entries, mapping: super_admin/admin → 'admin', others → 'member'; the first super_admin becomes 'owner'
 
-**Step 3: Test end-to-end**
-- Register or update a member to "First Timer" or "New Convert" status
-- Verify the trigger fires, calls the edge function, and an SMS log entry appears
+## Step 5: Add `tenant_id` to Core Tables (Batch A)
+Add nullable `tenant_id uuid REFERENCES tenants(id)` column + index to:
+- `members`, `profiles`, `user_roles`, `followups`, `pastoral_care`, `notifications`, `messages`
+- Backfill all existing rows with the default tenant ID
 
-### Technical Details
-- **File changes**: None -- only a vault secret insertion via migration
-- **Root cause**: The trigger checks `IF _supabase_url IS NOT NULL AND _service_key IS NOT NULL` before calling `http_post`. Since `supabase_url` is NULL, the notification is skipped silently.
+## What Stays the Same
+- All existing queries, RLS policies, and edge functions remain unchanged
+- `tenant_id` columns are nullable so current inserts still work
+- No frontend changes in this phase
+
+## Technical Details
+
+Migration SQL outline:
+
+```text
+Migration 1: tenants + tenant_memberships tables + RLS + helper functions
+Migration 2: Default tenant insert + membership backfill
+Migration 3: Add tenant_id to Batch A tables + backfill
+```
+
+Each migration is additive only — no columns dropped, no policies changed, no breaking changes.
 
