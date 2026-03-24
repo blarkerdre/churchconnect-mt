@@ -222,7 +222,7 @@ export default function Attendance() {
           )}
           {canManage && selectedSession && !isClosed && (
             <Button variant="outline" size="sm" onClick={() => {
-              if (window.confirm("Close this session? No more check-ins will be allowed.")) {
+              if (window.confirm("Close this meeting? No more check-ins will be allowed.")) {
                 closeSessionMutation.mutate(selectedSession.id);
               }
             }} className="text-destructive border-destructive/30 hover:bg-destructive/10">
