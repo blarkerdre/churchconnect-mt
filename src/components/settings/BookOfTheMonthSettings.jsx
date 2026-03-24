@@ -14,7 +14,7 @@ import { useTenantQuery } from "@/hooks/useTenantQuery";
 
 export default function BookOfTheMonthSettings() {
   const { user } = useAuth();
-  const { tenantId } = useTenantQuery();
+  const { tenantId, withTenant, scopeQuery } = useTenantQuery();
   const qc = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState(null);
@@ -22,12 +22,13 @@ export default function BookOfTheMonthSettings() {
   const [uploading, setUploading] = useState(false);
 
   const { data: books = [], isLoading } = useQuery({
-    queryKey: ["books-of-the-month-all"],
+    queryKey: ["books-of-the-month-all", tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const q = supabase
         .from("books_of_the_month")
         .select("*")
         .order("month", { ascending: false });
+      const { data, error } = await scopeQuery(q);
       if (error) throw error;
       return data;
     },
@@ -49,12 +50,12 @@ export default function BookOfTheMonthSettings() {
         const { error } = await supabase.from("books_of_the_month").update(payload).eq("id", editing.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("books_of_the_month").insert(payload);
+        const { error } = await supabase.from("books_of_the_month").insert(withTenant(payload));
         if (error) throw error;
       }
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["books-of-the-month-all"] });
+      qc.invalidateQueries({ queryKey: ["books-of-the-month-all", tenantId] });
       qc.invalidateQueries({ queryKey: ["book-of-the-month"] });
       toast({ title: editing ? "Book updated" : "Book added" });
       setDialogOpen(false);
@@ -68,7 +69,7 @@ export default function BookOfTheMonthSettings() {
       if (error) throw error;
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["books-of-the-month-all"] });
+      qc.invalidateQueries({ queryKey: ["books-of-the-month-all", tenantId] });
       qc.invalidateQueries({ queryKey: ["book-of-the-month"] });
       toast({ title: "Book deleted" });
     },
