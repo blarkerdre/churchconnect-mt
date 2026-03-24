@@ -72,3 +72,14 @@
 - `notify-pastoral-assignment`: Accepts `tenant_id`, includes in email_send_log and sms_log
 - Frontend: All `supabase.functions.invoke()` and `fetch()` calls now pass `tenant_id` from `useTenantQuery` or URL slug
 - Updated components: UserManagement, MemberFormDialog, EmailAlertForm, SMSDialog, IssueCertificateDialog, TakeExamDialog, PastoralCare, PublicRegistration, MyProfile
+
+### ✅ Phase 10 — Dynamic Tenant Theming & File Storage (Complete)
+- `TenantThemeProvider` — converts tenant `primary_color` to HSL, applies CSS variables dynamically
+- Sidebar, ring, chart colors all adapt to tenant branding
+- Tenant-scoped file storage — uploads prefixed with `tenantId/` in `church-documents` and `book-covers` buckets
+- Storage RLS policies enforce folder-level tenant isolation via `user_has_tenant_access()`
+- Profile photos remain user-scoped (not tenant-scoped)
+
+### ✅ Phase 11 — Testing & Bug Fixes (Complete)
+- Fixed missing `Presentation` page import in App.jsx (caused runtime crash on `/presentation` route)
+- Fixed `BookOfTheMonthSettings` — queries now tenant-scoped with `scopeQuery`, inserts use `withTenant`, queryKeys include `tenantId`
