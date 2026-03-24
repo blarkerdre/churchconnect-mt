@@ -42,9 +42,10 @@ const allNavItems = [
 export default function Layout({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
+  const [tenantDropdownOpen, setTenantDropdownOpen] = useState(false);
   const location = useLocation();
   const { signOut, profile, isAdmin, isUnitLeader, isWSFLeader, roles, leaderUnits } = useAuth();
-  const { currentTenant } = useTenant();
+  const { currentTenant, tenantId, tenantMemberships, switchTenant } = useTenant();
   const isSuperAdmin = roles.includes("super_admin");
   const { data: externalLinks } = useAppSetting("external_links", []);
   const { data: disabledFeatures } = useAppSetting("disabled_features", []);
