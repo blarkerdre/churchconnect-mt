@@ -68,7 +68,8 @@ Deno.serve(async (req) => {
       );
     }
 
-    // 1. Create auth user
+    // 1. Create auth user or reuse existing
+    let userId: string;
     const { data: newUser, error: userError } = await admin.auth.admin.createUser({
       email: admin_email,
       password: admin_password,
@@ -77,16 +78,32 @@ Deno.serve(async (req) => {
     });
 
     if (userError) {
-      return new Response(
-        JSON.stringify({ error: userError.message }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+      // If user already exists, look them up and reuse
+      if (userError.message?.includes("already been registered")) {
+        const { data: { users }, error: listError } = await admin.auth.admin.listUsers();
+        if (listError) {
+          return new Response(
+            JSON.stringify({ error: "Failed to look up existing user" }),
+            { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
         }
-      );
+        const existingUser = users.find((u: any) => u.email?.toLowerCase() === admin_email.toLowerCase());
+        if (!existingUser) {
+          return new Response(
+            JSON.stringify({ error: "User exists but could not be found" }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+        userId = existingUser.id;
+      } else {
+        return new Response(
+          JSON.stringify({ error: userError.message }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    } else {
+      userId = newUser.user.id;
     }
-
-    const userId = newUser.user.id;
 
     // 2. Build disabled_features array from feature toggles
     // Features map: key -> route path
