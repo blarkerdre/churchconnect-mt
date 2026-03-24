@@ -25,6 +25,7 @@ function shuffleArray(arr) {
 
 export default function TakeExamDialog({ open, onOpenChange, trainingType, memberId, subjectId, subjectName, previewMode = false }) {
   const qc = useQueryClient();
+  const { tenantId } = useTenantQuery();
   const [answers, setAnswers] = useState({});
   const [submitted, setSubmitted] = useState(false);
   const [result, setResult] = useState(null);
