@@ -281,6 +281,7 @@ export default function Events() {
       recurrence_frequency: e.recurrence_frequency || "Weekly",
       recurrence_end_date: e.recurrence_end_date || "",
       reminder_days_before: e.reminder_days_before || [],
+      reminder_hours_before: e.reminder_hours_before || [],
     });
     setDialogOpen(true);
   };
