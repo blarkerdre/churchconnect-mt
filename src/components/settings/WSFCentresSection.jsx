@@ -94,8 +94,8 @@ export default function WSFCentresSection() {
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["wsf-centres"] });
-      queryClient.invalidateQueries({ queryKey: ["wsf-member-counts"] });
+      queryClient.invalidateQueries({ queryKey: ["wsf-centres", tenantId] });
+      queryClient.invalidateQueries({ queryKey: ["wsf-member-counts", tenantId] });
       toast({ title: editing ? "Centre updated" : "Centre created" });
       setDialogOpen(false);
     },
