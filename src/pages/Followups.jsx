@@ -13,6 +13,7 @@ import { useAuth } from "@/hooks/useAuth";
 import FollowupFormDialog from "@/components/followups/FollowupFormDialog";
 import FollowupDetailPanel from "@/components/followups/FollowupDetailPanel";
 import OverdueReminder from "@/components/followups/OverdueReminder";
+import { useSubFeature } from "@/hooks/useSubFeature";
 
 const priorityColors = { "Urgent": "bg-destructive/10 text-destructive", "High": "bg-chart-5/10 text-chart-5", "Medium": "bg-accent/10 text-accent", "Low": "bg-muted text-muted-foreground" };
 const statusColors = { "Pending": "bg-accent/10 text-accent", "In Progress": "bg-primary/10 text-primary", "Completed": "bg-chart-3/10 text-chart-3", "Overdue": "bg-destructive/10 text-destructive" };
