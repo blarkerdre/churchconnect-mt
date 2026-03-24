@@ -578,13 +578,16 @@ export default function Settings() {
           />
         </TabsContent>
 
-        <TabsContent value="certificates">
-          <CertificateTemplateSettings />
-        </TabsContent>
-
-        <TabsContent value="links">
-          <ExternalLinksSection />
-        </TabsContent>
+        {isSuperAdmin && (
+          <TabsContent value="certificates">
+            <CertificateTemplateSettings />
+          </TabsContent>
+        )}
+        {isSuperAdmin && (
+          <TabsContent value="links">
+            <ExternalLinksSection />
+          </TabsContent>
+        )}
 
         <TabsContent value="books">
           <BookOfTheMonthSettings />

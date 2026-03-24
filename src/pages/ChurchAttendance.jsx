@@ -285,7 +285,7 @@ export default function ChurchAttendance() {
                    </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {reports.map((r) => (
+                  {filteredReports.map((r) => (
                     <React.Fragment key={r.id}>
                       <TableRow>
                         <TableCell className="text-sm">{format(parseISO(r.service_date), "dd MMM yyyy")}</TableCell>
