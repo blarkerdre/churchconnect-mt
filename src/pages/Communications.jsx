@@ -103,12 +103,13 @@ export default function Communications() {
   const lockedAudience = !isAdmin && effectiveScopes.length === 1 ? effectiveScopes[0] : null;
 
   const { data: announcements = [], isLoading } = useQuery({
-    queryKey: ["announcements"],
+    queryKey: ["announcements", tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("announcements")
-        .select("*, profiles:created_by(full_name)")
-        .order("created_at", { ascending: false });
+      const { data, error } = await scopeQuery(
+        supabase.from("announcements")
+          .select("*, profiles:created_by(full_name)")
+          .order("created_at", { ascending: false })
+      );
       if (error) throw error;
       return data.map(a => ({
         id: a.id, title: a.title, body: a.content,
