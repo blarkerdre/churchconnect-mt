@@ -156,9 +156,31 @@ export default function WSFAttendanceTab({ centres }) {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Centres</SelectItem>
-              {availableCentres.map(c => (
-                <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-              ))}
+              {(() => {
+                const zonedCentres = availableCentres.filter(c => c.zone_id);
+                const unzonedCentres = availableCentres.filter(c => !c.zone_id);
+                const usedZones = zones.filter(z => zonedCentres.some(c => c.zone_id === z.id));
+                return (
+                  <>
+                    {usedZones.map(z => (
+                      <SelectGroup key={z.id}>
+                        <SelectLabel>{z.name}</SelectLabel>
+                        {zonedCentres.filter(c => c.zone_id === z.id).map(c => (
+                          <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                        ))}
+                      </SelectGroup>
+                    ))}
+                    {unzonedCentres.length > 0 && (
+                      <SelectGroup>
+                        {usedZones.length > 0 && <SelectLabel>Unassigned</SelectLabel>}
+                        {unzonedCentres.map(c => (
+                          <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                        ))}
+                      </SelectGroup>
+                    )}
+                  </>
+                );
+              })()}
             </SelectContent>
           </Select>
           {filteredReports.length > 0 && (
