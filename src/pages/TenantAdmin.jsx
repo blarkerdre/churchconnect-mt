@@ -467,6 +467,13 @@ export default function TenantAdmin() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Tenant Users Dialog */}
+      <TenantUsersDialog
+        tenant={usersTenant}
+        open={!!usersTenant}
+        onOpenChange={(open) => !open && setUsersTenant(null)}
+      />
     </div>
   );
 }
