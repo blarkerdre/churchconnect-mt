@@ -205,9 +205,11 @@ export default function Analytics() {
               <Label className="text-xs">To</Label>
               <Input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="w-40" />
             </div>
-            <Button variant="outline" size="sm" onClick={generateReport}>
-              <FileText className="h-4 w-4 mr-2" /> Download Report
-            </Button>
+            {canDownloadReport && (
+              <Button variant="outline" size="sm" onClick={generateReport}>
+                <FileText className="h-4 w-4 mr-2" /> Download Report
+              </Button>
+            )}
           </div>
         </CardContent>
       </Card>

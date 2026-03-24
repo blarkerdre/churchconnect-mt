@@ -330,7 +330,7 @@ export default function Communications() {
           </TabsContent>
         )}
 
-        {canManageComms && (
+        {canManageComms && whatsappEnabled && (
           <TabsContent value="whatsapp">
             <div className="space-y-4">
               <div className="flex items-center gap-2">

@@ -368,9 +368,16 @@ export default function Events() {
                     </div>
                     {canManage && (
                       <div className="flex items-center gap-1">
-                        <Button variant="ghost" size="icon" title="Notify via SMS"
-                          onClick={() => setSmsEvent(e)}>
-                          <MessageSquare className="h-4 w-4 text-primary" />
+                        {canSmsAttendees && (
+                          <Button variant="ghost" size="icon" title="Notify via SMS"
+                            onClick={() => setSmsEvent(e)}>
+                            <MessageSquare className="h-4 w-4 text-primary" />
+                          </Button>
+                        )}
+                        <Button variant="ghost" size="icon" onClick={() => openEdit(e)}><Edit className="h-4 w-4" /></Button>
+                        {isAdmin && <Button variant="ghost" size="icon" onClick={() => handleDelete(e)}><Trash2 className="h-4 w-4 text-destructive" /></Button>}
+                      </div>
+                    )}
                         </Button>
                         <Button variant="ghost" size="icon" onClick={() => openEdit(e)}><Edit className="h-4 w-4" /></Button>
                         {isAdmin && <Button variant="ghost" size="icon" onClick={() => handleDelete(e)}><Trash2 className="h-4 w-4 text-destructive" /></Button>}

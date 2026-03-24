@@ -134,7 +134,7 @@ export default function Dashboard() {
   return (
     <div className="space-y-6">
       <ProfileCompletionBanner />
-      <SelfCheckInWidget />
+      {selfCheckinEnabled && <SelfCheckInWidget />}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
         {stats.map((stat) => (
           <Card key={stat.title} className="border-0 shadow-sm">

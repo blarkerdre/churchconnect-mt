@@ -195,6 +195,7 @@ export default function ChurchAttendance() {
             </form>
           </DialogContent>
         </Dialog>
+        )}
       </div>
 
       {/* Summary Cards */}
