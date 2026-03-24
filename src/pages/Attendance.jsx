@@ -201,9 +201,24 @@ export default function Attendance() {
         )}
         <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto sm:ml-auto">
           {selectedSession && (
-            <Button variant="outline" size="sm" onClick={generateReport}>
-              <FileText className="h-4 w-4" /><span className="hidden sm:inline ml-2">Report</span>
-            </Button>
+            <>
+              <Button variant="outline" size="sm" onClick={generateReport}>
+                <Download className="h-4 w-4" /><span className="hidden sm:inline ml-2">Download</span>
+              </Button>
+              <PrintReportButton
+                label="Print"
+                buildRows={() => ({
+                  title: `Session Report – ${selectedSession.title || selectedSession.session_type} (${selectedSession.session_date})`,
+                  headers: ["#", "Name", "Method", "Time"],
+                  rows: records.map((r, i) => [
+                    i + 1,
+                    `${r.members?.first_name || ""} ${r.members?.last_name || ""}`,
+                    r.check_in_method || "manual",
+                    r.checked_in_at ? new Date(r.checked_in_at).toLocaleTimeString() : "—",
+                  ]),
+                })}
+              />
+            </>
           )}
           {canManage && selectedSession && !isClosed && (
             <Button variant="outline" size="sm" onClick={() => {
@@ -355,22 +370,6 @@ export default function Attendance() {
                     <ReportAttachments relatedTable="attendance_sessions" relatedId={selectedSession.id} />
                   </div>
                   <div className="flex flex-wrap gap-2">
-                    <Button variant="outline" size="sm" onClick={generateReport}>
-                      <Download className="h-4 w-4 mr-2" /> Download
-                    </Button>
-                    <PrintReportButton
-                      label="Print"
-                      buildRows={() => ({
-                        title: `Session Report – ${selectedSession.title || selectedSession.session_type} (${selectedSession.session_date})`,
-                        headers: ["#", "Name", "Method", "Time"],
-                        rows: records.map((r, i) => [
-                          i + 1,
-                          `${r.members?.first_name || ""} ${r.members?.last_name || ""}`,
-                          r.check_in_method || "manual",
-                          r.checked_in_at ? new Date(r.checked_in_at).toLocaleTimeString() : "—",
-                        ]),
-                      })}
-                    />
                   </div>
                   {!selectedSession.report_saved && (
                     <Button
