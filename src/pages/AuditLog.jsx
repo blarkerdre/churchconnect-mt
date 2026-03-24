@@ -7,6 +7,7 @@ import { Loader2, Search, Shield, UserCog, Trash2, Plus, Edit, Clock } from "luc
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useTenantQuery } from "@/hooks/useTenantQuery";
 import { format } from "date-fns";
 
 const actionIcons = {
