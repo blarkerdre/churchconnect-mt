@@ -417,7 +417,7 @@ export default function Attendance() {
             <div><Label>Notes</Label><Textarea value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} rows={2} /></div>
             <Button onClick={() => createSessionMutation.mutate(form)} disabled={createSessionMutation.isPending || !form.session_date} className="w-full bg-primary">
               {createSessionMutation.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-              Create Session
+              Create Meeting
             </Button>
           </div>
         </DialogContent>
