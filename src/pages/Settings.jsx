@@ -475,7 +475,8 @@ export default function Settings() {
           <ChurchUnitsSection />
         </TabsContent>
 
-        <TabsContent value="wsf">
+        <TabsContent value="wsf" className="space-y-6">
+          <WSFZonesSection />
           <WSFCentresSection />
         </TabsContent>
 
