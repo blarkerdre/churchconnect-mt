@@ -152,9 +152,11 @@ function AuthRoutes() {
         element={
           <ProtectedRoute>
             <TenantProvider>
-              <Layout>
-                <AppPages />
-              </Layout>
+              <TenantThemeProvider>
+                <Layout>
+                  <AppPages />
+                </Layout>
+              </TenantThemeProvider>
             </TenantProvider>
           </ProtectedRoute>
         }
