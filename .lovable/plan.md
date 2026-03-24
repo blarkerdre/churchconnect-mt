@@ -1,43 +1,79 @@
 
 
-## Add WSF Zones Management
+## Add Granular Sub-Feature Toggles
 
 ### Overview
-Create a zonal grouping system for WSF centres. Admins can CRUD zones, and each WSF centre is assigned to a zone.
+Extend the existing feature toggle system so Super Admins can disable specific components (sub-features) within each feature module -- not just the entire page. For example, disable "Bulk Import" within Members, or "SMS" within Communications, while keeping the rest of the feature active.
 
-### Database Changes
+### Approach
+Store a new `app_settings` key `disabled_sub_features` as a JSON array of string identifiers (e.g. `"members.bulk_import"`, `"communications.sms"`). Each feature page checks this list to conditionally hide specific buttons, tabs, or sections.
 
-1. **New table: `wsf_zones`**
-   - `id` uuid PK
-   - `name` text NOT NULL
-   - `description` text nullable
-   - `is_active` boolean DEFAULT true
-   - `created_at`, `updated_at` timestamps
-   - RLS: Admins can manage, authenticated can view
+### Sub-Features per Module
 
-2. **Add column to `wsf_centres`**
-   - `zone_id` uuid nullable, FK → `wsf_zones(id)` ON DELETE SET NULL
+| Feature | Toggleable Components |
+|---|---|
+| **Members** | Bulk Import, Registration QR Code, Issue Certificate, Add Member |
+| **Events** | Create Event, SMS Attendees, Recurring Events |
+| **Communications** | Announcements, Email Alerts, SMS, WhatsApp |
+| **Follow-ups** | Create Follow-up, SMS Follow-up |
+| **Pastoral Care** | Create Request, Assign Cases |
+| **Transportation** | Create Booking |
+| **Analytics** | Absence Alerts, Trends, Consistency |
+| **Training Reports** | Print Report, CSV Export, Attachments |
+| **Church Attendance** | Record Attendance |
+| **WoFBI** | Create Course, Take Exam, Registration QR |
+| **WSF Centres** | Create Centre, Record Attendance |
+| **Dashboard** | Self Check-In Widget, Book of the Month |
 
-### UI Changes
+### Changes
 
-3. **New component: `src/components/settings/WSFZonesSection.jsx`**
-   - CRUD interface for zones (similar pattern to `WSFCentresSection`)
-   - Card list with name, description, active badge, count of assigned centres
-   - Dialog form for create/edit with name, description, active toggle
+1. **`src/hooks/useSubFeature.js`** (new)
+   - Simple hook: `useSubFeature(key)` returns `{ enabled: boolean }`
+   - Reads from `useAppSetting("disabled_sub_features", [])`
+   - Returns `enabled: !disabledList.includes(key)`
 
-4. **Update `WSFCentresSection.jsx`**
-   - Add zone selector (dropdown) in the centre create/edit form
-   - Display assigned zone name on each centre card
-   - Query `wsf_zones` table for the dropdown options
+2. **`src/pages/Settings.jsx`** -- Expand Feature Toggles section
+   - Below each feature toggle, add an expandable list of sub-feature toggles
+   - Each sub-feature has its own Switch, stored in `disabled_sub_features`
+   - Only shown when the parent feature is enabled
+   - Collapsible per feature to keep the UI clean
 
-5. **Add `WSFZonesSection` to Settings page**
-   - Render above or alongside the existing WSF Centres section
-
-6. **Update `WSFAttendanceTab` and `WSFManagement`**
-   - Group centres by zone in the attendance view for better organization
+3. **Update all feature pages** to wrap toggleable components:
+   - `Members.jsx` -- hide Bulk Import button, QR button, Certificate button based on sub-feature keys
+   - `Events.jsx` -- hide Create Event button, SMS button
+   - `Communications.jsx` -- hide SMS tab, WhatsApp tab, Email tab
+   - `Followups.jsx` -- hide Create button, SMS button
+   - `PastoralCare.jsx` -- hide Create Request, Assign
+   - `Transportation.jsx` -- hide Create Booking
+   - `Analytics.jsx` -- hide sub-sections
+   - `TrainingReports.jsx` -- hide Print, CSV, Attachments
+   - `ExamManagement.jsx` -- hide Create Course, QR
+   - `WSFManagement.jsx` -- hide Create Centre, Attendance
+   - `Dashboard.jsx` -- hide Self Check-In, Book of the Month
+   - `ChurchAttendance.jsx` -- hide Record button
 
 ### Technical Details
-- Follows existing patterns from `WSFCentresSection` for mutations and queries
-- Zone selector uses the standard `Select` component
-- Query key: `["wsf-zones"]`
+
+- Sub-feature keys follow `"parent.component"` naming (e.g. `"members.bulk_import"`)
+- The hook is a thin wrapper over `useAppSetting` so it shares the same query cache
+- Super admins always see all sub-features regardless of toggle state (same pattern as feature toggles)
+- No database migration needed -- uses existing `app_settings` table with a new key
+
+### Sub-Feature Registry (used in Settings UI)
+
+```javascript
+const SUB_FEATURES = {
+  "/members": [
+    { key: "members.add_member", name: "Add Member" },
+    { key: "members.bulk_import", name: "Bulk Import" },
+    { key: "members.qr_code", name: "Registration QR Code" },
+    { key: "members.certificate", name: "Issue Certificate" },
+  ],
+  "/events": [
+    { key: "events.create", name: "Create Event" },
+    { key: "events.sms", name: "SMS Attendees" },
+  ],
+  // ... etc for all features
+};
+```
 
