@@ -17,6 +17,7 @@ import {
 import { SUB_FEATURES, useDisabledSubFeatures } from "@/hooks/useSubFeature";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useAuth } from "@/hooks/useAuth";
+import { useTenantQuery } from "@/hooks/useTenantQuery";
 import WSFCentresSection from "@/components/settings/WSFCentresSection";
 import WSFZonesSection from "@/components/settings/WSFZonesSection";
 import CertificateTemplateSettings from "@/components/certificates/CertificateTemplateSettings";
