@@ -56,7 +56,7 @@ Deno.serve(async (req) => {
     }
 
     const body = await req.json();
-    const { member_id, training_type, completion_date, notes } = body;
+    const { member_id, training_type, completion_date, notes, tenant_id } = body;
 
     if (!member_id || !training_type) {
       return new Response(
