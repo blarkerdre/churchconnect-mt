@@ -2,6 +2,7 @@ import React, { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useTenantQuery } from "@/hooks/useTenantQuery";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "@/components/ui/use-toast";
 import { Loader2, Upload, Download, Trash2, FileText, Paperclip } from "lucide-react";
@@ -12,18 +13,20 @@ export default function ReportAttachments({ relatedTable, relatedId }) {
   const fileRef = useRef(null);
   const [uploading, setUploading] = useState(false);
   const { user } = useAuth();
+  const { tenantId, withTenant, scopeQuery } = useTenantQuery();
   const qc = useQueryClient();
 
   const { data: docs = [], isLoading } = useQuery({
-    queryKey: ["report-attachments", relatedTable, relatedId],
+    queryKey: ["report-attachments", relatedTable, relatedId, tenantId],
     enabled: !!relatedId,
     queryFn: async () => {
-      const { data, error } = await supabase
+      const q = supabase
         .from("documents")
         .select("*")
         .eq("related_table", relatedTable)
         .eq("related_id", relatedId)
         .order("created_at", { ascending: false });
+      const { data, error } = await scopeQuery(q);
       if (error) throw error;
       return data;
     },
@@ -36,7 +39,7 @@ export default function ReportAttachments({ relatedTable, relatedId }) {
       if (error) throw error;
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["report-attachments", relatedTable, relatedId] });
+      qc.invalidateQueries({ queryKey: ["report-attachments", relatedTable, relatedId, tenantId] });
       toast({ title: "File deleted" });
     },
     onError: (err) => toast({ title: "Delete failed", description: err.message, variant: "destructive" }),
@@ -52,10 +55,12 @@ export default function ReportAttachments({ relatedTable, relatedId }) {
     setUploading(true);
     try {
       const ext = file.name.split(".").pop();
-      const path = `${relatedTable}/${relatedId}/${crypto.randomUUID()}.${ext}`;
+      // Prefix path with tenantId for tenant-scoped storage isolation
+      const tenantPrefix = tenantId || "shared";
+      const path = `${tenantPrefix}/${relatedTable}/${relatedId}/${crypto.randomUUID()}.${ext}`;
       const { error: upErr } = await supabase.storage.from("church-documents").upload(path, file);
       if (upErr) throw upErr;
-      const { error: dbErr } = await supabase.from("documents").insert({
+      const { error: dbErr } = await supabase.from("documents").insert(withTenant({
         file_name: file.name,
         file_path: path,
         file_size: file.size,
@@ -63,9 +68,9 @@ export default function ReportAttachments({ relatedTable, relatedId }) {
         uploaded_by: user?.id,
         related_table: relatedTable,
         related_id: relatedId,
-      });
+      }));
       if (dbErr) throw dbErr;
-      qc.invalidateQueries({ queryKey: ["report-attachments", relatedTable, relatedId] });
+      qc.invalidateQueries({ queryKey: ["report-attachments", relatedTable, relatedId, tenantId] });
       toast({ title: "File uploaded" });
     } catch (err) {
       toast({ title: "Upload failed", description: err.message, variant: "destructive" });
