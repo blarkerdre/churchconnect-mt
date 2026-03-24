@@ -29,6 +29,8 @@ export default function PastoralCare() {
   const { isMemberOfUnit: isPastoralUnit } = useUnitMembership("Pastoral Care");
   const canManage = isAdmin || leaderUnits.includes("Pastoral Care") || isPastoralUnit;
   const isPastoralLeader = isAdmin || leaderUnits.includes("Pastoral Care");
+  const { enabled: canCreateRequest } = useSubFeature("pastoral.create_request");
+  const { enabled: canAssignCases } = useSubFeature("pastoral.assign_cases");
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [requestDialogOpen, setRequestDialogOpen] = useState(false);
