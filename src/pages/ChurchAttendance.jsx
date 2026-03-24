@@ -37,6 +37,8 @@ export default function ChurchAttendance() {
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState(emptyForm);
   const [filterType, setFilterType] = useState("all");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const [expandedRow, setExpandedRow] = useState(null);
   const { user } = useAuth();
   const qc = useQueryClient();
