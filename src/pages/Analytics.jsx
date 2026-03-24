@@ -23,6 +23,7 @@ export default function Analytics() {
   const [dateFrom, setDateFrom] = useState(format(subMonths(new Date(), 6), "yyyy-MM-dd"));
   const [dateTo, setDateTo] = useState(format(new Date(), "yyyy-MM-dd"));
   const { enabled: canDownloadReport } = useSubFeature("analytics.download_report");
+  const { tenantId, scopeQuery } = useTenantQuery();
 
   // Attendance sessions + records
   const { data: sessions = [], isLoading: loadingSessions } = useQuery({
