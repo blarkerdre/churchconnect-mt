@@ -81,8 +81,8 @@ export default function ExamSessionManager() {
       }
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["exam-sessions"] });
-      qc.invalidateQueries({ queryKey: ["exam-session-courses"] });
+      qc.invalidateQueries({ queryKey: ["exam-sessions", tenantId] });
+      qc.invalidateQueries({ queryKey: ["exam-session-courses", tenantId] });
       toast({ title: editingSession ? "Session updated" : "Session created" });
       closeDialog();
     },
