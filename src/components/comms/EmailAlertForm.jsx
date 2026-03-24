@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Send, Mail, Users, Loader2, CheckCircle2 } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { useTenantQuery } from "@/hooks/useTenantQuery";
 
 const AUDIENCES = [
   "All Members", "Ushering", "Choir", "Media", "Children's Ministry", "Protocol",
