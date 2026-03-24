@@ -21,7 +21,7 @@ const statusColors = { "Pending": "bg-accent/10 text-accent", "In Progress": "bg
 const typeIcons = { "First Timer": MessageSquare, "Absentee": AlertCircle, "New Convert": HeartHandshake, "Pastoral": Phone, "General": CalendarCheck };
 
 export default function Followups() {
-  const { user, isAdmin, profile } = useAuth();
+  const { user, isAdmin, isUnitLeader, profile } = useAuth();
   const [search, setSearch] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
@@ -253,35 +253,43 @@ export default function Followups() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input placeholder="Search follow-ups..." value={search} onChange={e => setSearch(e.target.value)} className="pl-10" />
           </div>
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-full sm:w-40"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {["All", "Pending", "In Progress", "Completed", "Overdue"].map(s => <SelectItem key={s} value={s}>{s === "All" ? "All Status" : s}</SelectItem>)}
-            </SelectContent>
-          </Select>
-          <Input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="w-full sm:w-40" placeholder="From" />
-          <Input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="w-full sm:w-40" placeholder="To" />
+          {(isAdmin || isUnitLeader) && (
+            <>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-full sm:w-40"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {["All", "Pending", "In Progress", "Completed", "Overdue"].map(s => <SelectItem key={s} value={s}>{s === "All" ? "All Status" : s}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              <Input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="w-full sm:w-40" placeholder="From" />
+              <Input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="w-full sm:w-40" placeholder="To" />
+            </>
+          )}
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {canCreateFollowup && <Button onClick={openNew} className="bg-primary hover:bg-primary/90"><Plus className="h-4 w-4 mr-2" /> New Follow-up</Button>}
-          <Button variant="outline" onClick={downloadCSV}><Download className="h-4 w-4 mr-2" /> Download</Button>
-          <PrintReportButton
-            label="Print"
-            buildRows={() => ({
-              title: "Follow-ups Report",
-              headers: ["Name", "Type", "Status", "Priority", "Assigned To", "Due Date", "Completed", "Notes"],
-              rows: filtered.map(f => [
-                f.person_name,
-                f.followup_type,
-                f.status,
-                f.priority || "",
-                f.assigned_to ? (profileMap[f.assigned_to] || "Unassigned") : "Unassigned",
-                f.due_date || "",
-                f.completed_date || "",
-                f.notes || f.description || "",
-              ]),
-            })}
-          />
+          {(isAdmin || isUnitLeader) && (
+            <>
+              <Button variant="outline" onClick={downloadCSV}><Download className="h-4 w-4 mr-2" /> Download</Button>
+              <PrintReportButton
+                label="Print"
+                buildRows={() => ({
+                  title: "Follow-ups Report",
+                  headers: ["Name", "Type", "Status", "Priority", "Assigned To", "Due Date", "Completed", "Notes"],
+                  rows: filtered.map(f => [
+                    f.person_name,
+                    f.followup_type,
+                    f.status,
+                    f.priority || "",
+                    f.assigned_to ? (profileMap[f.assigned_to] || "Unassigned") : "Unassigned",
+                    f.due_date || "",
+                    f.completed_date || "",
+                    f.notes || f.description || "",
+                  ]),
+                })}
+              />
+            </>
+          )}
         </div>
       </div>
 
