@@ -12,6 +12,7 @@ import { toast } from "@/components/ui/use-toast";
 
 export default function SelfCheckInWidget() {
   const { user } = useAuth();
+  const { tenantId, withTenant, scopeQuery } = useTenantQuery();
   const queryClient = useQueryClient();
   const today = format(new Date(), "yyyy-MM-dd");
 
