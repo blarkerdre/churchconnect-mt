@@ -21,6 +21,7 @@ export default function EmailAlertForm({ currentUser, myUnits = [], isAdmin }) {
   const [body, setBody] = useState("");
   const [audience, setAudience] = useState(isAdmin ? "All Members" : (myUnits[0] || "All Members"));
   const [sending, setSending] = useState(false);
+  const { tenantId } = useTenantQuery();
 
   const availableAudiences = isAdmin ? AUDIENCES : AUDIENCES.filter(a => myUnits.includes(a));
 
