@@ -69,9 +69,9 @@ export default function ExamManagement() {
 
   // Fetch courses (exam_titles)
   const { data: examTitles = [], isLoading: titlesLoading } = useQuery({
-    queryKey: ["exam-titles"],
+    queryKey: ["exam-titles", tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("exam_titles").select("*").order("name");
+      const { data, error } = await scopeQuery(supabase.from("exam_titles").select("*").order("name"));
       if (error) throw error;
       return data;
     },
