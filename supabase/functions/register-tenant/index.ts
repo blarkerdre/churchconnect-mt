@@ -158,12 +158,12 @@ Deno.serve(async (req) => {
 
     // 7. Seed app_settings with disabled_features for this tenant
     if (disabledFeatures.length > 0) {
-      await admin.from("app_settings").upsert({
+      await admin.from("app_settings").insert({
         key: "disabled_features",
         value: disabledFeatures,
         tenant_id: tenant.id,
         updated_by: userId,
-      }, { onConflict: "key,tenant_id" });
+      });
     }
 
     return new Response(
