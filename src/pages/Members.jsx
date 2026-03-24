@@ -15,6 +15,7 @@ import BulkImportDialog from "@/components/members/BulkImportDialog";
 import IssueCertificateDialog from "@/components/certificates/IssueCertificateDialog";
 import { logAudit } from "@/lib/audit";
 import { useAuth } from "@/hooks/useAuth";
+import { useSubFeature } from "@/hooks/useSubFeature";
 
 const statusColors = {
   "Active": "bg-chart-3/10 text-chart-3",
@@ -35,6 +36,12 @@ export default function Members() {
   const [importOpen, setImportOpen] = useState(false);
   const [certMember, setCertMember] = useState(null);
   const queryClient = useQueryClient();
+
+  const { enabled: canAddMember } = useSubFeature("members.add_member");
+  const { enabled: canBulkImport } = useSubFeature("members.bulk_import");
+  const { enabled: canQrCode } = useSubFeature("members.qr_code");
+  const { enabled: canCertificate } = useSubFeature("members.certificate");
+  const { enabled: canCsvExport } = useSubFeature("members.csv_export");
 
   const { data: members = [], isLoading } = useQuery({
     queryKey: ["members", user?.id, isAdmin, viewOnly, myMember?.id],
@@ -162,18 +169,26 @@ export default function Members() {
         <div className="grid grid-cols-4 sm:flex sm:flex-wrap items-center gap-2">
           {isAdmin && (
             <>
-              <Button variant="outline" size="sm" onClick={() => setQrOpen(true)} className="gap-1.5">
-                <QrCode className="h-4 w-4" /><span className="hidden sm:inline">QR Code</span>
-              </Button>
-              <Button variant="outline" size="sm" onClick={handleDownloadCSV} className="gap-1.5">
-                <Download className="h-4 w-4" /><span className="hidden sm:inline">CSV</span>
-              </Button>
-              <Button variant="outline" size="sm" onClick={() => setImportOpen(true)} className="gap-1.5">
-                <Upload className="h-4 w-4" /><span className="hidden sm:inline">Import CSV</span>
-              </Button>
-              <Button onClick={openNew} className="bg-primary hover:bg-primary/90 w-full sm:w-auto">
-                <Plus className="h-4 w-4 mr-2" /> Register Member
-              </Button>
+              {canQrCode && (
+                <Button variant="outline" size="sm" onClick={() => setQrOpen(true)} className="gap-1.5">
+                  <QrCode className="h-4 w-4" /><span className="hidden sm:inline">QR Code</span>
+                </Button>
+              )}
+              {canCsvExport && (
+                <Button variant="outline" size="sm" onClick={handleDownloadCSV} className="gap-1.5">
+                  <Download className="h-4 w-4" /><span className="hidden sm:inline">CSV</span>
+                </Button>
+              )}
+              {canBulkImport && (
+                <Button variant="outline" size="sm" onClick={() => setImportOpen(true)} className="gap-1.5">
+                  <Upload className="h-4 w-4" /><span className="hidden sm:inline">Import CSV</span>
+                </Button>
+              )}
+              {canAddMember && (
+                <Button onClick={openNew} className="bg-primary hover:bg-primary/90 w-full sm:w-auto">
+                  <Plus className="h-4 w-4 mr-2" /> Register Member
+                </Button>
+              )}
             </>
           )}
         </div>
@@ -264,7 +279,7 @@ export default function Members() {
                           {canEditMember(m) && (
                             <DropdownMenuItem onClick={() => openEdit(m)}><Edit className="h-4 w-4 mr-2" /> Edit</DropdownMenuItem>
                           )}
-                          {isAdmin && (
+                          {isAdmin && canCertificate && (
                             <DropdownMenuItem onClick={() => setCertMember(m)}><Award className="h-4 w-4 mr-2" /> Issue Certificate</DropdownMenuItem>
                           )}
                           {isAdmin && (

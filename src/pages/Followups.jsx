@@ -13,6 +13,7 @@ import { useAuth } from "@/hooks/useAuth";
 import FollowupFormDialog from "@/components/followups/FollowupFormDialog";
 import FollowupDetailPanel from "@/components/followups/FollowupDetailPanel";
 import OverdueReminder from "@/components/followups/OverdueReminder";
+import { useSubFeature } from "@/hooks/useSubFeature";
 
 const priorityColors = { "Urgent": "bg-destructive/10 text-destructive", "High": "bg-chart-5/10 text-chart-5", "Medium": "bg-accent/10 text-accent", "Low": "bg-muted text-muted-foreground" };
 const statusColors = { "Pending": "bg-accent/10 text-accent", "In Progress": "bg-primary/10 text-primary", "Completed": "bg-chart-3/10 text-chart-3", "Overdue": "bg-destructive/10 text-destructive" };
@@ -27,6 +28,8 @@ export default function Followups() {
   const [selectedFollowup, setSelectedFollowup] = useState(null);
   const [smsFollowup, setSmsFollowup] = useState(null);
   const queryClient = useQueryClient();
+  const { enabled: canCreateFollowup } = useSubFeature("followups.create");
+  const { enabled: canSmsFollowup } = useSubFeature("followups.sms");
 
   // Fetch profiles for resolving assigned_to user IDs to names
   const { data: profiles = [] } = useQuery({
@@ -230,7 +233,7 @@ export default function Followups() {
             </SelectContent>
           </Select>
         </div>
-        <Button onClick={openNew} className="w-full sm:w-auto bg-primary hover:bg-primary/90"><Plus className="h-4 w-4 mr-2" /> New Follow-up</Button>
+        {canCreateFollowup && <Button onClick={openNew} className="w-full sm:w-auto bg-primary hover:bg-primary/90"><Plus className="h-4 w-4 mr-2" /> New Follow-up</Button>}
       </div>
 
       {/* List */}
@@ -285,7 +288,7 @@ export default function Followups() {
                             <UserCheck className="h-3 w-3" /> Convert to Member
                           </button>
                         )}
-                         {f.person_phone && (
+                         {f.person_phone && canSmsFollowup && (
                           <button
                             onClick={(e) => {
                               e.stopPropagation();

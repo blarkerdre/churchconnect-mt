@@ -23,6 +23,7 @@ const WhatsAppIcon = ({ className }) => (
 import { logAudit } from "@/lib/audit";
 import SMSDialog from "@/components/sms/SMSDialog";
 import SMSHistoryDialog from "@/components/sms/SMSHistoryDialog";
+import { useSubFeature } from "@/hooks/useSubFeature";
 
 const STATIC_AUDIENCES = ["All Members", "Leaders Only"];
 
@@ -41,6 +42,11 @@ export default function Communications() {
   const [waHistoryOpen, setWaHistoryOpen] = useState(false);
 
   const canManageComms = isAdmin || isUnitLeader || isWSFLeader;
+
+  const { enabled: announcementsEnabled } = useSubFeature("communications.announcements");
+  const { enabled: emailEnabled } = useSubFeature("communications.email");
+  const { enabled: smsEnabled } = useSubFeature("communications.sms");
+  const { enabled: whatsappEnabled } = useSubFeature("communications.whatsapp");
 
   // Get WSF centre names for WSF leader scoping
   const { data: myWsfCentres = [] } = useQuery({
@@ -225,29 +231,37 @@ export default function Communications() {
 
   return (
     <div className="space-y-6">
-      <Tabs defaultValue="announcements" className="space-y-4">
+      <Tabs defaultValue={announcementsEnabled ? "announcements" : (emailEnabled ? "email" : (smsEnabled ? "sms" : "whatsapp"))} className="space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <TabsList className="flex flex-nowrap h-auto gap-1 overflow-x-auto w-full justify-start">
-            <TabsTrigger value="announcements" className="gap-1.5 text-xs">
-              <Megaphone className="h-3.5 w-3.5" /> Announcements
-            </TabsTrigger>
+            {announcementsEnabled && (
+              <TabsTrigger value="announcements" className="gap-1.5 text-xs">
+                <Megaphone className="h-3.5 w-3.5" /> Announcements
+              </TabsTrigger>
+            )}
             {canManageComms && (
               <>
-                <TabsTrigger value="email" className="gap-1.5 text-xs">
-                  <Mail className="h-3.5 w-3.5" /> Email
-                </TabsTrigger>
-                <TabsTrigger value="sms" className="gap-1.5 text-xs">
-                  <MessageSquare className="h-3.5 w-3.5" /> SMS
-                </TabsTrigger>
-                <TabsTrigger value="whatsapp" className="gap-1.5 text-xs">
-                  <WhatsAppIcon className="h-3.5 w-3.5" /> WhatsApp
-                </TabsTrigger>
+                {emailEnabled && (
+                  <TabsTrigger value="email" className="gap-1.5 text-xs">
+                    <Mail className="h-3.5 w-3.5" /> Email
+                  </TabsTrigger>
+                )}
+                {smsEnabled && (
+                  <TabsTrigger value="sms" className="gap-1.5 text-xs">
+                    <MessageSquare className="h-3.5 w-3.5" /> SMS
+                  </TabsTrigger>
+                )}
+                {whatsappEnabled && (
+                  <TabsTrigger value="whatsapp" className="gap-1.5 text-xs">
+                    <WhatsAppIcon className="h-3.5 w-3.5" /> WhatsApp
+                  </TabsTrigger>
+                )}
               </>
             )}
           </TabsList>
         </div>
 
-        <TabsContent value="announcements">
+        {announcementsEnabled && <TabsContent value="announcements">
           <div className="space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div className="relative w-full sm:w-72">
@@ -283,9 +297,9 @@ export default function Communications() {
               </>
             )}
           </div>
-        </TabsContent>
+        </TabsContent>}
 
-        {canManageComms && (
+        {canManageComms && emailEnabled && (
           <TabsContent value="email">
             <EmailAlertForm
               currentUser={user}
@@ -295,7 +309,7 @@ export default function Communications() {
           </TabsContent>
         )}
 
-        {canManageComms && (
+        {canManageComms && smsEnabled && (
           <TabsContent value="sms">
             <div className="space-y-4">
               <div className="flex items-center gap-2">
@@ -316,7 +330,7 @@ export default function Communications() {
           </TabsContent>
         )}
 
-        {canManageComms && (
+        {canManageComms && whatsappEnabled && (
           <TabsContent value="whatsapp">
             <div className="space-y-4">
               <div className="flex items-center gap-2">

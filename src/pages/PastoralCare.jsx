@@ -13,6 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useUnitMembership } from "@/hooks/useUnitMembership";
+import { useSubFeature } from "@/hooks/useSubFeature";
 
 const statusColors = {
   "Open": "bg-accent/10 text-accent",
@@ -28,6 +29,8 @@ export default function PastoralCare() {
   const { isMemberOfUnit: isPastoralUnit } = useUnitMembership("Pastoral Care");
   const canManage = isAdmin || leaderUnits.includes("Pastoral Care") || isPastoralUnit;
   const isPastoralLeader = isAdmin || leaderUnits.includes("Pastoral Care");
+  const { enabled: canCreateRequest } = useSubFeature("pastoral.create_request");
+  const { enabled: canAssignCases } = useSubFeature("pastoral.assign_cases");
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [requestDialogOpen, setRequestDialogOpen] = useState(false);
@@ -160,9 +163,11 @@ export default function PastoralCare() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input placeholder="Search cases..." value={search} onChange={e => setSearch(e.target.value)} className="pl-10" />
         </div>
-        <Button onClick={() => { setForm({ subject: "", care_type: "Prayer Request", description: "", confidential: false }); setRequestDialogOpen(true); }} className="bg-primary hover:bg-primary/90">
-          <Plus className="h-4 w-4 mr-2" /> New Request
-        </Button>
+        {canCreateRequest && (
+          <Button onClick={() => { setForm({ subject: "", care_type: "Prayer Request", description: "", confidential: false }); setRequestDialogOpen(true); }} className="bg-primary hover:bg-primary/90">
+            <Plus className="h-4 w-4 mr-2" /> New Request
+          </Button>
+        )}
       </div>
 
       {isLoading ? (
@@ -196,7 +201,7 @@ export default function PastoralCare() {
                       )}
                     </div>
                   </div>
-                  {canManage && (r.status === "Open" || r.status === "In Progress") && (
+                  {canManage && canAssignCases && (r.status === "Open" || r.status === "In Progress") && (
                     <Button variant="outline" size="sm" onClick={() => openManage(r)}>Manage</Button>
                   )}
                 </div>

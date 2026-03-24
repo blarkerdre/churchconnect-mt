@@ -13,6 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useUnitMembership } from "@/hooks/useUnitMembership";
+import { useSubFeature } from "@/hooks/useSubFeature";
 
 const statusColors = {
   "Confirmed": "bg-chart-3/10 text-chart-3",
@@ -25,6 +26,7 @@ export default function Transportation() {
   const { user, isAdmin, leaderUnits } = useAuth();
   const { isMemberOfUnit: isTransportUnit } = useUnitMembership("Transportation");
   const canManage = isAdmin || leaderUnits.includes("Transportation") || isTransportUnit;
+  const { enabled: canCreateBooking } = useSubFeature("transportation.create_booking");
   const queryClient = useQueryClient();
   const [bookDialogOpen, setBookDialogOpen] = useState(false);
   const [manageDialogOpen, setManageDialogOpen] = useState(false);
@@ -170,9 +172,11 @@ export default function Transportation() {
             <Settings className="h-4 w-4 mr-2" /> Pickup Locations
           </Button>
         )}
-        <Button onClick={() => { setForm({ pickup_address: "", destination: "Church", request_date: "", pickup_time: "", notes: "", passengers: 1 }); setBookDialogOpen(true); }} className="bg-primary hover:bg-primary/90">
-          <Plus className="h-4 w-4 mr-2" /> Book Transport
-        </Button>
+        {canCreateBooking && (
+          <Button onClick={() => { setForm({ pickup_address: "", destination: "Church", request_date: "", pickup_time: "", notes: "", passengers: 1 }); setBookDialogOpen(true); }} className="bg-primary hover:bg-primary/90">
+            <Plus className="h-4 w-4 mr-2" /> Book Transport
+          </Button>
+        )}
       </div>
 
       {isLoading ? (

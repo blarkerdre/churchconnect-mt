@@ -19,6 +19,7 @@ import { logAudit } from "@/lib/audit";
 import SMSDialog from "@/components/sms/SMSDialog";
 import { useAppSetting } from "@/hooks/useAppSetting";
 import { useChurchUnits } from "@/hooks/useChurchUnits";
+import { useSubFeature } from "@/hooks/useSubFeature";
 
 const statusColors = {
   "Upcoming": "bg-primary/10 text-primary",
@@ -62,6 +63,9 @@ export default function Events() {
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState({});
   const [smsEvent, setSmsEvent] = useState(null);
+
+  const { enabled: canCreateEvent } = useSubFeature("events.create");
+  const { enabled: canSmsAttendees } = useSubFeature("events.sms");
 
   const { data: churchUnitsData = [] } = useChurchUnits();
 
@@ -317,7 +321,7 @@ export default function Events() {
             </SelectContent>
           </Select>
         </div>
-        {canManage && (
+        {canManage && canCreateEvent && (
           <Button onClick={openNew} className="w-full sm:w-auto bg-primary hover:bg-primary/90"><Plus className="h-4 w-4 mr-2" /> New Event</Button>
         )}
       </div>
@@ -364,10 +368,12 @@ export default function Events() {
                     </div>
                     {canManage && (
                       <div className="flex items-center gap-1">
-                        <Button variant="ghost" size="icon" title="Notify via SMS"
-                          onClick={() => setSmsEvent(e)}>
-                          <MessageSquare className="h-4 w-4 text-primary" />
-                        </Button>
+                        {canSmsAttendees && (
+                          <Button variant="ghost" size="icon" title="Notify via SMS"
+                            onClick={() => setSmsEvent(e)}>
+                            <MessageSquare className="h-4 w-4 text-primary" />
+                          </Button>
+                        )}
                         <Button variant="ghost" size="icon" onClick={() => openEdit(e)}><Edit className="h-4 w-4" /></Button>
                         {isAdmin && <Button variant="ghost" size="icon" onClick={() => handleDelete(e)}><Trash2 className="h-4 w-4 text-destructive" /></Button>}
                       </div>
