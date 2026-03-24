@@ -2378,6 +2378,7 @@ export type Database = {
           id: string
           is_active: boolean
           name: string
+          tenant_id: string | null
           updated_at: string
         }
         Insert: {
@@ -2386,6 +2387,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           name: string
+          tenant_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -2394,9 +2396,18 @@ export type Database = {
           id?: string
           is_active?: boolean
           name?: string
+          tenant_id?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "wsf_zones_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
@@ -2574,6 +2585,7 @@ export type Database = {
         Args: { _tenant_id: string; _user_id: string }
         Returns: boolean
       }
+      user_has_tenant_access: { Args: { _tenant_id: string }; Returns: boolean }
     }
     Enums: {
       app_role:
