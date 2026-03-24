@@ -107,7 +107,7 @@ export default function Attendance() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["attendance-sessions"] });
-      toast({ title: "Session closed" });
+      toast({ title: "Meeting closed" });
     },
     onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
