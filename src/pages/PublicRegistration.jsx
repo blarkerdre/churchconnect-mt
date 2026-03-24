@@ -110,6 +110,7 @@ export default function PublicRegistration() {
           ldc_completed: form.ldc_completed,
           gdpr_consent: form.gdpr_consent,
           website: form.website, // honeypot
+          ...(resolvedTenantId ? { tenant_id: resolvedTenantId } : {}),
         },
       });
 
