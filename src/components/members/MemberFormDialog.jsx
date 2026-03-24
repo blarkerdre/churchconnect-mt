@@ -20,7 +20,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { logAudit } from "@/lib/audit";
 import MemberJourneyTimeline from "@/components/members/MemberJourneyTimeline";
 
-const STATUSES = ["Active", "Inactive", "New Convert", "First Timer", "Visitor"];
+const STATUSES = ["Active", "New Convert", "First Timer", "Visitor"];
 const GENDERS = ["Male", "Female"];
 const HIDE_SPIRITUAL_STATUSES = ["First Timer", "New Convert", "Visitor"];
 const SHOW_BAPTISM_STATUSES = ["First Timer", "New Convert"];

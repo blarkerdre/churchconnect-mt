@@ -159,7 +159,7 @@ export default function Members() {
               <SelectContent>
                 <SelectItem value="all">All Status</SelectItem>
                 <SelectItem value="Active">Active</SelectItem>
-                <SelectItem value="Inactive">Inactive</SelectItem>
+                
                 <SelectItem value="New Convert">New Convert</SelectItem>
                 <SelectItem value="First Timer">First Timer</SelectItem>
               </SelectContent>
