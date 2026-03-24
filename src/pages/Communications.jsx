@@ -43,6 +43,11 @@ export default function Communications() {
 
   const canManageComms = isAdmin || isUnitLeader || isWSFLeader;
 
+  const { enabled: announcementsEnabled } = useSubFeature("communications.announcements");
+  const { enabled: emailEnabled } = useSubFeature("communications.email");
+  const { enabled: smsEnabled } = useSubFeature("communications.sms");
+  const { enabled: whatsappEnabled } = useSubFeature("communications.whatsapp");
+
   // Get WSF centre names for WSF leader scoping
   const { data: myWsfCentres = [] } = useQuery({
     queryKey: ["my-wsf-centres-comms", user?.id],
