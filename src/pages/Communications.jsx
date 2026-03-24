@@ -299,7 +299,7 @@ export default function Communications() {
           </div>
         </TabsContent>}
 
-        {canManageComms && (
+        {canManageComms && emailEnabled && (
           <TabsContent value="email">
             <EmailAlertForm
               currentUser={user}
