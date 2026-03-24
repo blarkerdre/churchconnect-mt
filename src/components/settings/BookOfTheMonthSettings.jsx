@@ -16,7 +16,7 @@ export default function BookOfTheMonthSettings() {
   const qc = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState(null);
-  const [form, setForm] = useState({ title: "", author: "", description: "", month: "", cover_image_url: "" });
+  const [form, setForm] = useState({ title: "", author: "", description: "", month: "", cover_image_url: "", purchase_url: "" });
   const [uploading, setUploading] = useState(false);
 
   const { data: books = [], isLoading } = useQuery({
@@ -38,6 +38,7 @@ export default function BookOfTheMonthSettings() {
         author: formData.author,
         description: formData.description || null,
         cover_image_url: formData.cover_image_url || null,
+        purchase_url: formData.purchase_url || null,
         month: formData.month + "-01",
         is_active: true,
         created_by: user?.id,
@@ -94,7 +95,7 @@ export default function BookOfTheMonthSettings() {
   const openNew = () => {
     setEditing(null);
     const now = new Date();
-    setForm({ title: "", author: "", description: "", month: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`, cover_image_url: "" });
+    setForm({ title: "", author: "", description: "", month: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`, cover_image_url: "", purchase_url: "" });
     setDialogOpen(true);
   };
 
@@ -106,6 +107,7 @@ export default function BookOfTheMonthSettings() {
       description: book.description || "",
       month: book.month?.slice(0, 7) || "",
       cover_image_url: book.cover_image_url || "",
+      purchase_url: book.purchase_url || "",
     });
     setDialogOpen(true);
   };
@@ -168,6 +170,7 @@ export default function BookOfTheMonthSettings() {
             <div className="space-y-1"><Label>Author *</Label><Input value={form.author} onChange={e => setForm(f => ({ ...f, author: e.target.value }))} /></div>
             <div className="space-y-1"><Label>Month *</Label><Input type="month" value={form.month} onChange={e => setForm(f => ({ ...f, month: e.target.value }))} /></div>
             <div className="space-y-1"><Label>Description</Label><Textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={3} /></div>
+            <div className="space-y-1"><Label>Purchase Link</Label><Input type="url" placeholder="https://..." value={form.purchase_url} onChange={e => setForm(f => ({ ...f, purchase_url: e.target.value }))} /></div>
             <div className="space-y-1">
               <Label>Cover Image</Label>
               {form.cover_image_url && (
