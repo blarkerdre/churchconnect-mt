@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,7 +13,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "@/components/ui/use-toast";
 import { format, parseISO } from "date-fns";
-import { Loader2, Plus, Users, Church, Baby, UserCheck, Paperclip, FileText, Printer } from "lucide-react";
+import { Loader2, Plus, Users, Church, Baby, UserCheck, Paperclip, FileText, Printer, BarChart3 } from "lucide-react";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { useAppSetting } from "@/hooks/useAppSetting";
 import ReportAttachments from "@/components/reports/ReportAttachments";
 import { useSubFeature } from "@/hooks/useSubFeature";
@@ -116,6 +117,19 @@ export default function ChurchAttendance() {
   const totalAdultFemale = filteredReports.reduce((s, r) => s + r.adult_female, 0);
   const totalChildren = filteredReports.reduce((s, r) => s + r.children, 0);
   const totalTeens = filteredReports.reduce((s, r) => s + r.teens, 0);
+
+  // Chart data — sorted chronologically, last 20 services
+  const chartData = useMemo(() => {
+    const sorted = [...filteredReports].sort((a, b) => a.service_date.localeCompare(b.service_date));
+    return sorted.slice(-20).map(r => ({
+      date: format(parseISO(r.service_date), "dd MMM"),
+      "Adult Male": r.adult_male,
+      "Adult Female": r.adult_female,
+      "Children": r.children,
+      "Teens": r.teens,
+      "Total": r.total_attendance,
+    }));
+  }, [filteredReports]);
 
   const downloadCSV = () => {
     const headers = ["Date", "Service Type", "Title", "Adult Male", "Adult Female", "Children", "Teens", "Total", "Notes"];
@@ -237,6 +251,41 @@ export default function ChurchAttendance() {
         <Card className="border-0 shadow-sm"><CardContent className="p-4 text-center"><p className="text-2xl font-display font-bold text-orange-500">{totalChildren}</p><p className="text-xs text-muted-foreground">Children</p></CardContent></Card>
         <Card className="border-0 shadow-sm"><CardContent className="p-4 text-center"><p className="text-2xl font-display font-bold text-violet-500">{totalTeens}</p><p className="text-xs text-muted-foreground">Teens</p></CardContent></Card>
       </div>
+
+      {/* Attendance Trend Chart */}
+      {chartData.length >= 2 && (
+        <Card className="border-0 shadow-sm">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base font-display flex items-center gap-2">
+              <BarChart3 className="h-4 w-4 text-primary" /> Attendance Trends
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="h-72">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={chartData} margin={{ top: 5, right: 10, left: -10, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                  <XAxis dataKey="date" tick={{ fontSize: 11 }} className="fill-muted-foreground" />
+                  <YAxis tick={{ fontSize: 11 }} className="fill-muted-foreground" />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: "hsl(var(--card))",
+                      borderColor: "hsl(var(--border))",
+                      borderRadius: 8,
+                      fontSize: 12,
+                    }}
+                  />
+                  <Legend wrapperStyle={{ fontSize: 12 }} />
+                  <Bar dataKey="Adult Male" fill="hsl(var(--chart-3))" radius={[2, 2, 0, 0]} />
+                  <Bar dataKey="Adult Female" fill="hsl(var(--accent))" radius={[2, 2, 0, 0]} />
+                  <Bar dataKey="Children" fill="hsl(30, 90%, 55%)" radius={[2, 2, 0, 0]} />
+                  <Bar dataKey="Teens" fill="hsl(270, 60%, 55%)" radius={[2, 2, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Filter + Table */}
       <Card className="border-0 shadow-sm">
