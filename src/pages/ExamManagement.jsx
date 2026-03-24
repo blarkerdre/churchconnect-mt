@@ -790,7 +790,7 @@ function WofbiAboutEditor() {
 
   const saveMutation = useMutation({
     mutationFn: async (text) => {
-      const { error } = await supabase.from("app_settings").upsert({ key: "wofbi_about", value: text }, { onConflict: "key" });
+      const { error } = await supabase.from("app_settings").upsert({ key: "wofbi_about", value: text }, { onConflict: "key,tenant_id" });
       if (error) throw error;
     },
     onSuccess: () => {
