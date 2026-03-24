@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Lock, CalendarClock } from "lucide-react";
 import { format } from "date-fns";
+import { useTenantQuery } from "@/hooks/useTenantQuery";
 
 const statusColors = {
   "Open": "bg-accent/10 text-accent",
