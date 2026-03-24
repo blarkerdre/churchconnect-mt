@@ -13,6 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useUnitMembership } from "@/hooks/useUnitMembership";
+import { useSubFeature } from "@/hooks/useSubFeature";
 
 const statusColors = {
   "Confirmed": "bg-chart-3/10 text-chart-3",
