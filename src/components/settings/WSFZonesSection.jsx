@@ -15,14 +15,15 @@ import { useTenantQuery } from "@/hooks/useTenantQuery";
 
 export default function WSFZonesSection() {
   const queryClient = useQueryClient();
+  const { tenantId, withTenant, scopeQuery } = useTenantQuery();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState({ name: "", description: "", is_active: true });
 
   const { data: zones = [], isLoading } = useQuery({
-    queryKey: ["wsf-zones"],
+    queryKey: ["wsf-zones", tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("wsf_zones").select("*").order("name");
+      const { data, error } = await scopeQuery(supabase.from("wsf_zones").select("*").order("name"));
       if (error) throw error;
       return data;
     },
