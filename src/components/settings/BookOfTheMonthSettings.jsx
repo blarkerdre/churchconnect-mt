@@ -107,6 +107,7 @@ export default function BookOfTheMonthSettings() {
       description: book.description || "",
       month: book.month?.slice(0, 7) || "",
       cover_image_url: book.cover_image_url || "",
+      purchase_url: book.purchase_url || "",
     });
     setDialogOpen(true);
   };
