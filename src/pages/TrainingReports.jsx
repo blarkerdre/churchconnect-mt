@@ -254,6 +254,7 @@ export default function TrainingReports() {
             </form>
           </DialogContent>
         </Dialog>
+        )}
       </div>
 
       {/* Summary Cards */}
