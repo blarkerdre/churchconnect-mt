@@ -22,12 +22,13 @@ export default function BookOfTheMonthSettings() {
   const [uploading, setUploading] = useState(false);
 
   const { data: books = [], isLoading } = useQuery({
-    queryKey: ["books-of-the-month-all"],
+    queryKey: ["books-of-the-month-all", tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const q = supabase
         .from("books_of_the_month")
         .select("*")
         .order("month", { ascending: false });
+      const { data, error } = await scopeQuery(q);
       if (error) throw error;
       return data;
     },
