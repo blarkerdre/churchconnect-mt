@@ -61,13 +61,14 @@ export default function Analytics() {
   });
 
   const { data: wsfReports = [] } = useQuery({
-    queryKey: ["analytics-wsf-reports", dateFrom, dateTo],
+    queryKey: ["analytics-wsf-reports", dateFrom, dateTo, tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("wsf_attendance_reports")
-        .select("centre_id, meeting_date, male, female, children, first_timers, testimonies")
-        .gte("meeting_date", dateFrom)
-        .lte("meeting_date", dateTo);
+      const { data, error } = await scopeQuery(
+        supabase.from("wsf_attendance_reports")
+          .select("centre_id, meeting_date, male, female, children, first_timers, testimonies")
+          .gte("meeting_date", dateFrom)
+          .lte("meeting_date", dateTo)
+      );
       if (error) throw error;
       return data;
     },
