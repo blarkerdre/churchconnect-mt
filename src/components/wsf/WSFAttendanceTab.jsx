@@ -10,6 +10,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { useTenantQuery } from "@/hooks/useTenantQuery";
 import { format } from "date-fns";
 import WSFAttendanceFormDialog from "./WSFAttendanceFormDialog";
 import PrintReportButton from "@/components/PrintReportButton";

@@ -11,6 +11,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 import { useAppSetting } from "@/hooks/useAppSetting";
+import { useTenantQuery } from "@/hooks/useTenantQuery";
 
 const emptyTemplate = {
   training_type: "",
