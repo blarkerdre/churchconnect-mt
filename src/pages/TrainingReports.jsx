@@ -68,7 +68,7 @@ export default function TrainingReports() {
   const { enabled: canAttachments } = useSubFeature("training.attachments");
 
   const { data: reports = [], isLoading } = useQuery({
-    queryKey: ["training-reports", filterType, filterFrom, filterTo],
+    queryKey: ["training-reports", filterType, filterFrom, filterTo, tenantId],
     queryFn: async () => {
       let q = supabase
         .from("training_reports")
@@ -77,7 +77,7 @@ export default function TrainingReports() {
       if (filterType !== "all") q = q.eq("training_type", filterType);
       if (filterFrom) q = q.gte("session_date", filterFrom);
       if (filterTo) q = q.lte("session_date", filterTo);
-      const { data, error } = await q;
+      const { data, error } = await scopeQuery(q);
       if (error) throw error;
       return data;
     },
