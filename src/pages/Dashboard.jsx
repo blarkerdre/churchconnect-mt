@@ -13,6 +13,7 @@ import { useSubFeature } from "@/hooks/useSubFeature";
 
 export default function Dashboard() {
   const { isAdmin, isUnitLeader, isWSFLeader, profile, myMember, loading: authLoading } = useAuth();
+  const { enabled: selfCheckinEnabled } = useSubFeature("dashboard.self_checkin");
 
   // Only admins see the admin dashboard
   // Show WSF Leader dashboard for WSF leaders who aren't admin
