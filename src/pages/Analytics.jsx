@@ -27,24 +27,24 @@ export default function Analytics() {
 
   // Attendance sessions + records
   const { data: sessions = [], isLoading: loadingSessions } = useQuery({
-    queryKey: ["analytics-sessions", dateFrom, dateTo],
+    queryKey: ["analytics-sessions", dateFrom, dateTo, tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("attendance_sessions")
-        .select("*, attendance_records(id, member_id)")
-        .gte("session_date", dateFrom)
-        .lte("session_date", dateTo)
-        .order("session_date", { ascending: true });
+      const { data, error } = await scopeQuery(
+        supabase.from("attendance_sessions")
+          .select("*, attendance_records(id, member_id)")
+          .gte("session_date", dateFrom)
+          .lte("session_date", dateTo)
+          .order("session_date", { ascending: true })
+      );
       if (error) throw error;
       return data;
     },
   });
 
-  // Members
   const { data: members = [], isLoading: loadingMembers } = useQuery({
-    queryKey: ["analytics-members"],
+    queryKey: ["analytics-members", tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("members").select("id, membership_status, church_unit, water_baptism, holy_spirit_baptism, bfc_completed, bcc_completed, lcc_completed, ldc_completed, winners_satellite, created_at");
+      const { data, error } = await scopeQuery(supabase.from("members").select("id, membership_status, church_unit, water_baptism, holy_spirit_baptism, bfc_completed, bcc_completed, lcc_completed, ldc_completed, winners_satellite, created_at"));
       if (error) throw error;
       return data;
     },
