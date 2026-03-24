@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useTenantQuery } from "@/hooks/useTenantQuery";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -124,30 +125,36 @@ function EventItem({ event, member }) {
 }
 
 export default function MemberFeed({ member }) {
+  const { tenantId, scopeQuery } = useTenantQuery();
+
   const { data: announcements = [], isLoading: loadingAnn } = useQuery({
-    queryKey: ["member-feed-announcements"],
+    queryKey: ["member-feed-announcements", tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("announcements")
-        .select("*")
-        .eq("is_published", true)
-        .order("created_at", { ascending: false })
-        .limit(50);
+      const { data, error } = await scopeQuery(
+        supabase
+          .from("announcements")
+          .select("*")
+          .eq("is_published", true)
+          .order("created_at", { ascending: false })
+          .limit(50)
+      );
       if (error) throw error;
       return data;
     },
   });
 
   const { data: events = [], isLoading: loadingEvents } = useQuery({
-    queryKey: ["member-feed-events"],
+    queryKey: ["member-feed-events", tenantId],
     queryFn: async () => {
       const today = format(new Date(), "yyyy-MM-dd");
-      const { data, error } = await supabase
-        .from("events")
-        .select("*")
-        .gte("event_date", today)
-        .order("event_date")
-        .limit(20);
+      const { data, error } = await scopeQuery(
+        supabase
+          .from("events")
+          .select("*")
+          .gte("event_date", today)
+          .order("event_date")
+          .limit(20)
+      );
       if (error) throw error;
       return data;
     },

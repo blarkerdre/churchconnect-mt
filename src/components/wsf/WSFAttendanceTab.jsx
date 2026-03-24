@@ -10,12 +10,14 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { useTenantQuery } from "@/hooks/useTenantQuery";
 import { format } from "date-fns";
 import WSFAttendanceFormDialog from "./WSFAttendanceFormDialog";
 import PrintReportButton from "@/components/PrintReportButton";
 
 export default function WSFAttendanceTab({ centres }) {
   const { user, isAdmin } = useAuth();
+  const { tenantId, withTenant, scopeQuery } = useTenantQuery();
   const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState(null);
@@ -40,9 +42,9 @@ export default function WSFAttendanceTab({ centres }) {
 
   // Fetch zones for grouping
   const { data: zones = [] } = useQuery({
-    queryKey: ["wsf-zones"],
+    queryKey: ["wsf-zones", tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("wsf_zones").select("*").order("name");
+      const { data, error } = await scopeQuery(supabase.from("wsf_zones").select("*").order("name"));
       if (error) throw error;
       return data;
     },
@@ -71,7 +73,7 @@ export default function WSFAttendanceTab({ centres }) {
         const { error } = await supabase.from("wsf_attendance_reports").update(payload).eq("id", editing.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("wsf_attendance_reports").insert({ ...payload, reported_by: user?.id });
+        const { error } = await supabase.from("wsf_attendance_reports").insert(withTenant({ ...payload, reported_by: user?.id }));
         if (error) throw error;
       }
     },
