@@ -372,13 +372,14 @@ function FeatureTogglesSection() {
   const [expandedFeature, setExpandedFeature] = React.useState(null);
 
   const { data: disabledFeatures = [], isLoading } = useQuery({
-    queryKey: ["app-settings", "disabled_features"],
+    queryKey: ["app-settings", "disabled_features", tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let q = supabase
         .from("app_settings")
         .select("value")
-        .eq("key", "disabled_features")
-        .maybeSingle();
+        .eq("key", "disabled_features");
+      if (tenantId) q = q.eq("tenant_id", tenantId);
+      const { data, error } = await q.maybeSingle();
       if (error) throw error;
       return Array.isArray(data?.value) ? data.value : [];
     },
