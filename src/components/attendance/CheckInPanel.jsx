@@ -194,7 +194,7 @@ export default function CheckInPanel({ session, onClose }) {
             onClick={() => { if (window.confirm("Close this meeting?")) closeMutation.mutate(); }}
             className="gap-2 h-11"
           >
-            <Lock className="h-4 w-4" /> Close Session
+            <Lock className="h-4 w-4" /> Close Meeting
           </Button>
         </div>
       )}

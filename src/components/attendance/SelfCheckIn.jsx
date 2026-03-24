@@ -85,7 +85,7 @@ export default function SelfCheckIn({ session, member, onClose }) {
           </div>
         )}
 
-        <Button variant="outline" onClick={onClose} className="w-full">Back to Sessions</Button>
+        <Button variant="outline" onClick={onClose} className="w-full">Back to Meetings</Button>
       </Card>
     </div>
   );
