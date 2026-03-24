@@ -227,7 +227,7 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
         if (data?.error) throw new Error(data.error);
         toast({ title: "Member registered with user account", description: `Account created for ${form.email}` });
       } else {
-        const { error } = await supabase.from("members").insert(payload).select().single();
+        const { error } = await supabase.from("members").insert(withTenant(payload)).select().single();
         if (error) throw error;
         toast({ title: "Member registered" });
       }
