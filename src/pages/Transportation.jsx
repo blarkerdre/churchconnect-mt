@@ -32,6 +32,7 @@ export default function Transportation() {
   const canManage = isAdmin || leaderUnits.includes("Transportation") || isTransportUnit;
   const { enabled: canCreateBooking } = useSubFeature("transportation.create_booking");
   const queryClient = useQueryClient();
+  const { tenantId, scopeQuery, withTenant } = useTenantQuery();
   const [search, setSearch] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
