@@ -48,9 +48,9 @@ export default function UserManagement() {
   const [statusFilter, setStatusFilter] = useState("all");
 
   const { data: profiles = [], isLoading } = useQuery({
-    queryKey: ["all-profiles"],
+    queryKey: ["all-profiles", tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("profiles").select("*").order("created_at", { ascending: false });
+      const { data, error } = await scopeQuery(supabase.from("profiles").select("*").order("created_at", { ascending: false }));
       if (error) throw error;
       return data;
     },
