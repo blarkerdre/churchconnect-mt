@@ -104,14 +104,15 @@ function EmailLogsPanel() {
   const [templateFilter, setTemplateFilter] = useState("All");
   const [statusFilter, setStatusFilter] = useState("All");
   const [page, setPage] = useState(0);
+  const { tenantId, scopeQuery } = useTenantQuery();
 
   const { data: rawLogs = [], isLoading } = useQuery({
-    queryKey: ["email-logs", fromDate?.toISOString(), toDate?.toISOString()],
+    queryKey: ["email-logs", fromDate?.toISOString(), toDate?.toISOString(), tenantId],
     queryFn: async () => {
       let q = supabase.from("email_send_log").select("*").order("created_at", { ascending: false }).limit(1000);
       if (fromDate) q = q.gte("created_at", fromDate.toISOString());
       if (toDate) q = q.lte("created_at", new Date(toDate.getFullYear(), toDate.getMonth(), toDate.getDate(), 23, 59, 59).toISOString());
-      const { data, error } = await q;
+      const { data, error } = await scopeQuery(q);
       if (error) throw error;
       return data || [];
     },
