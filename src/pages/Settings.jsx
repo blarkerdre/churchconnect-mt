@@ -391,7 +391,7 @@ function FeatureTogglesSection() {
     mutationFn: async (newDisabled) => {
       const { error } = await supabase
         .from("app_settings")
-        .upsert({ key: "disabled_features", value: newDisabled }, { onConflict: "key" });
+        .upsert(withTenant({ key: "disabled_features", value: newDisabled }), { onConflict: "key" });
       if (error) throw error;
     },
     onSuccess: () => {
