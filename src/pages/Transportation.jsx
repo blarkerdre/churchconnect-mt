@@ -60,9 +60,9 @@ export default function Transportation() {
   });
 
   const { data: pickupLocations = [] } = useQuery({
-    queryKey: ["pickup-locations"],
+    queryKey: ["pickup-locations", tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("pickup_locations").select("*").eq("is_active", true).order("name");
+      const { data, error } = await scopeQuery(supabase.from("pickup_locations").select("*").eq("is_active", true).order("name"));
       if (error) throw error;
       return data;
     },
