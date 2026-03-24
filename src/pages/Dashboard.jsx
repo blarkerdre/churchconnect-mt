@@ -15,18 +15,6 @@ export default function Dashboard() {
   const { isAdmin, isUnitLeader, isWSFLeader, profile, myMember, loading: authLoading } = useAuth();
   const { enabled: selfCheckinEnabled } = useSubFeature("dashboard.self_checkin");
 
-  // Only admins see the admin dashboard
-  // Show WSF Leader dashboard for WSF leaders who aren't admin
-  if (!authLoading && !isAdmin && isWSFLeader) {
-    return <WSFLeaderDashboard />;
-  }
-
-  // Show member dashboard for unit leaders and regular members
-  if (!authLoading && !isAdmin) {
-    return <MemberDashboard currentUser={profile} myMember={myMember} />;
-  }
-
-  // Admin dashboard below
   const isLeaderOrAdmin = isAdmin;
   const { data: members = [], isLoading: membersLoading } = useQuery({
     queryKey: ["dashboard-members"],
@@ -78,6 +66,14 @@ export default function Dashboard() {
     },
     enabled: isLeaderOrAdmin,
   });
+
+  // Early returns AFTER all hooks
+  if (!authLoading && !isAdmin && isWSFLeader) {
+    return <WSFLeaderDashboard />;
+  }
+  if (!authLoading && !isAdmin) {
+    return <MemberDashboard currentUser={profile} myMember={myMember} />;
+  }
 
   const total = members.length;
   const firstTimers = members.filter(m => m.membership_status === "First Timer").length;
