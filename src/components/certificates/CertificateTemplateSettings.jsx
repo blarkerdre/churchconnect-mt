@@ -74,7 +74,7 @@ export default function CertificateTemplateSettings() {
       } else {
         const { error } = await supabase
           .from("certificate_templates")
-          .insert(values);
+          .insert(withTenant(values));
         if (error) throw error;
       }
     },
