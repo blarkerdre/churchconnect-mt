@@ -12,6 +12,7 @@ import { useTenantQuery } from "@/hooks/useTenantQuery";
 
 export default function MessagingPane({ currentUser, allUsers }) {
   const { user } = useAuth();
+  const { withTenant } = useTenantQuery();
   const [selectedUser, setSelectedUser] = useState(null);
   const [draft, setDraft] = useState("");
   const queryClient = useQueryClient();
