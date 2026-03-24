@@ -70,11 +70,11 @@ export default function CheckInPanel({ session, onClose }) {
         const { error } = await supabase.from("attendance_records").delete().eq("id", existing.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("attendance_records").insert({
+        const { error } = await supabase.from("attendance_records").insert(withTenant({
           session_id: session.id,
           member_id: member.id,
           check_in_method: "manual",
-        });
+        }));
         if (error) throw error;
       }
     },
