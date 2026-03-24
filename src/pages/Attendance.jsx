@@ -396,7 +396,7 @@ export default function Attendance() {
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-[95vw] sm:max-w-md">
-          <DialogHeader><DialogTitle className="font-display">New Session</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle className="font-display">New Meeting</DialogTitle></DialogHeader>
           <div className="space-y-4 mt-2">
             <div><Label>Title (optional)</Label><Input value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} /></div>
             <div>
