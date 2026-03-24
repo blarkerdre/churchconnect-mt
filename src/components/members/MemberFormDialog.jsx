@@ -312,7 +312,7 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
                 <Label>Membership Status</Label>
                 <Select value={form.membership_status} onValueChange={(v) => set("membership_status", v)}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>{STATUSES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+                  <SelectContent>{STATUSES.map(s => <SelectItem key={s} value={s}>{s === "Active" ? "Active Member" : s}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
             </div>

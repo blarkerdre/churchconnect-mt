@@ -158,7 +158,7 @@ export default function Members() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="Active">Active</SelectItem>
+                <SelectItem value="Active">Active Member</SelectItem>
                 
                 <SelectItem value="New Convert">New Convert</SelectItem>
                 <SelectItem value="First Timer">First Timer</SelectItem>
