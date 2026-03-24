@@ -470,22 +470,41 @@ export default function Events() {
             {/* Reminders */}
             <div className="space-y-1.5">
               <Label>Reminders</Label>
-              <div className="flex flex-wrap gap-3">
-                {[{ value: 1, label: "1 day before" }, { value: 3, label: "3 days before" }, { value: 7, label: "1 week before" }].map(opt => (
-                  <label key={opt.value} className="flex items-center gap-1.5 cursor-pointer text-sm text-foreground">
-                    <Checkbox
-                      checked={(form.reminder_days_before || []).includes(opt.value)}
-                      onCheckedChange={() => {
-                        const curr = form.reminder_days_before || [];
-                        setForm(f => ({
-                          ...f,
-                          reminder_days_before: curr.includes(opt.value) ? curr.filter(d => d !== opt.value) : [...curr, opt.value].sort((a, b) => a - b),
-                        }));
-                      }}
-                    />
-                    {opt.label}
-                  </label>
-                ))}
+              <div className="space-y-2">
+                <div className="flex flex-wrap gap-3">
+                  {[{ value: 1, label: "1 day before" }, { value: 3, label: "3 days before" }, { value: 7, label: "1 week before" }].map(opt => (
+                    <label key={opt.value} className="flex items-center gap-1.5 cursor-pointer text-sm text-foreground">
+                      <Checkbox
+                        checked={(form.reminder_days_before || []).includes(opt.value)}
+                        onCheckedChange={() => {
+                          const curr = form.reminder_days_before || [];
+                          setForm(f => ({
+                            ...f,
+                            reminder_days_before: curr.includes(opt.value) ? curr.filter(d => d !== opt.value) : [...curr, opt.value].sort((a, b) => a - b),
+                          }));
+                        }}
+                      />
+                      {opt.label}
+                    </label>
+                  ))}
+                </div>
+                <div className="flex flex-wrap gap-3">
+                  {[{ value: 1, label: "1 hr before" }, { value: 2, label: "2 hrs before" }, { value: 6, label: "6 hrs before" }].map(opt => (
+                    <label key={opt.value} className="flex items-center gap-1.5 cursor-pointer text-sm text-foreground">
+                      <Checkbox
+                        checked={(form.reminder_hours_before || []).includes(opt.value)}
+                        onCheckedChange={() => {
+                          const curr = form.reminder_hours_before || [];
+                          setForm(f => ({
+                            ...f,
+                            reminder_hours_before: curr.includes(opt.value) ? curr.filter(h => h !== opt.value) : [...curr, opt.value].sort((a, b) => a - b),
+                          }));
+                        }}
+                      />
+                      {opt.label}
+                    </label>
+                  ))}
+                </div>
               </div>
             </div>
 
