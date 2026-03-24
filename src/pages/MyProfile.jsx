@@ -112,6 +112,7 @@ function ProfilePhotoUpload({ member, user, onUpdated }) {
 
 export default function MyProfile() {
   const { user, roles, isAdmin, isUnitLeader, isWSFLeader } = useAuth();
+  const { tenantId } = useTenantQuery();
   const { data: churchUnitsData = [] } = useChurchUnits();
   const CHURCH_UNITS = churchUnitsData.map(u => u.name);
   const queryClient = useQueryClient();
