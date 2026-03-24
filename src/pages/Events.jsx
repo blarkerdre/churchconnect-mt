@@ -108,9 +108,9 @@ export default function Events() {
   const lockedAudience = availableAudiences.length === 1 ? availableAudiences[0] : null;
 
   const { data: events = [], isLoading } = useQuery({
-    queryKey: ["events"],
+    queryKey: ["events", tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("events").select("*").order("event_date", { ascending: false });
+      const { data, error } = await scopeQuery(supabase.from("events").select("*").order("event_date", { ascending: false }));
       if (error) throw error;
       return data;
     },
