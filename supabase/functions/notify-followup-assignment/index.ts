@@ -150,6 +150,7 @@ Deno.serve(async (req) => {
           template_name: "followup-assignment",
           recipient_email: recipientEmail,
           status: "pending",
+          ...(tenant_id ? { tenant_id } : {}),
         });
         console.log("Follow-up assignment email enqueued for", recipientEmail);
       }
