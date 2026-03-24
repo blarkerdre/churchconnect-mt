@@ -11,66 +11,71 @@ import { Plus, Edit, Trash2, MapPin, Clock, Users, Loader2, Globe, UserCog } fro
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
+import { useTenantQuery } from "@/hooks/useTenantQuery";
 import WSFCentreMembersDialog from "@/components/wsf/WSFCentreMembersDialog";
 
 const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
 export default function WSFCentresSection() {
   const queryClient = useQueryClient();
+  const { tenantId, withTenant, scopeQuery } = useTenantQuery();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [membersDialogCentre, setMembersDialogCentre] = useState(null);
   const [form, setForm] = useState({ name: "", host_name: "", host_member_id: "", location: "", address: "", postcode: "", city: "Cardiff", coverage_postcodes: "", meeting_day: "", meeting_time: "", is_active: true, leader_id: "", zone_id: "" });
 
   const { data: centres = [], isLoading } = useQuery({
-    queryKey: ["wsf-centres"],
+    queryKey: ["wsf-centres", tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("wsf_centres").select("*").order("name");
+      const { data, error } = await scopeQuery(supabase.from("wsf_centres").select("*").order("name"));
       if (error) throw error;
       return data;
     },
   });
 
   const { data: wsfLeaders = [] } = useQuery({
-    queryKey: ["wsf-leader-users"],
+    queryKey: ["wsf-leader-users", tenantId],
     queryFn: async () => {
-      const { data: roleData, error: roleError } = await supabase
-        .from("user_roles").select("user_id").eq("role", "wsf_leader");
+      const { data: roleData, error: roleError } = await scopeQuery(
+        supabase.from("user_roles").select("user_id").eq("role", "wsf_leader")
+      );
       if (roleError) throw roleError;
       if (!roleData?.length) return [];
       const userIds = roleData.map(r => r.user_id);
-      const { data, error } = await supabase
-        .from("members").select("id, first_name, last_name, user_id")
-        .in("user_id", userIds).order("first_name");
+      const { data, error } = await scopeQuery(
+        supabase.from("members").select("id, first_name, last_name, user_id")
+          .in("user_id", userIds).order("first_name")
+      );
       if (error) throw error;
       return data;
     },
   });
 
   const { data: allMembers = [] } = useQuery({
-    queryKey: ["all-members-for-host"],
+    queryKey: ["all-members-for-host", tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("members").select("id, first_name, last_name, address, postcode, city")
-        .order("first_name");
+      const { data, error } = await scopeQuery(
+        supabase.from("members").select("id, first_name, last_name, address, postcode, city")
+          .order("first_name")
+      );
       if (error) throw error;
       return data;
     },
   });
 
   const { data: zones = [] } = useQuery({
-    queryKey: ["wsf-zones"],
+    queryKey: ["wsf-zones", tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("wsf_zones").select("*").eq("is_active", true).order("name");
+      const { data, error } = await scopeQuery(supabase.from("wsf_zones").select("*").eq("is_active", true).order("name"));
       if (error) throw error;
       return data;
     },
   });
 
   const { data: memberCounts = {} } = useQuery({
-    queryKey: ["wsf-member-counts"],
+    queryKey: ["wsf-member-counts", tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("members").select("wsf_centre_id").not("wsf_centre_id", "is", null);
+      const { data, error } = await scopeQuery(supabase.from("members").select("wsf_centre_id").not("wsf_centre_id", "is", null));
       if (error) throw error;
       const counts = {};
       data.forEach(m => { counts[m.wsf_centre_id] = (counts[m.wsf_centre_id] || 0) + 1; });
@@ -84,13 +89,13 @@ export default function WSFCentresSection() {
         const { error } = await supabase.from("wsf_centres").update(payload).eq("id", editing.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("wsf_centres").insert(payload);
+        const { error } = await supabase.from("wsf_centres").insert(withTenant(payload));
         if (error) throw error;
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["wsf-centres"] });
-      queryClient.invalidateQueries({ queryKey: ["wsf-member-counts"] });
+      queryClient.invalidateQueries({ queryKey: ["wsf-centres", tenantId] });
+      queryClient.invalidateQueries({ queryKey: ["wsf-member-counts", tenantId] });
       toast({ title: editing ? "Centre updated" : "Centre created" });
       setDialogOpen(false);
     },
@@ -103,7 +108,7 @@ export default function WSFCentresSection() {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["wsf-centres"] });
+      queryClient.invalidateQueries({ queryKey: ["wsf-centres", tenantId] });
       toast({ title: "Centre deleted" });
     },
     onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),

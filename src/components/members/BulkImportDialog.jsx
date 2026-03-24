@@ -6,6 +6,7 @@ import { Upload, FileText, AlertTriangle, CheckCircle2, Loader2 } from "lucide-r
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 import { normalizePhone } from "@/lib/phone-utils";
+import { useTenantQuery } from "@/hooks/useTenantQuery";
 
 const EXPECTED_COLUMNS = [
   "first_name", "last_name", "email", "phone", "gender",
@@ -75,6 +76,7 @@ export default function BulkImportDialog({ open, onOpenChange, onComplete }) {
   const [rowErrors, setRowErrors] = useState([]);
   const [results, setResults] = useState({ created: 0, updated: 0, skipped: 0 });
   const fileRef = useRef(null);
+  const { withTenant } = useTenantQuery();
 
   const reset = () => {
     setStep("upload");
@@ -137,7 +139,7 @@ export default function BulkImportDialog({ open, onOpenChange, onComplete }) {
       }
 
       if (toInsert.length > 0) {
-        const { data, error } = await supabase.from("members").insert(toInsert).select("id");
+        const { data, error } = await supabase.from("members").insert(toInsert.map(m => withTenant(m))).select("id");
         if (error) { skipped += toInsert.length; } else { created += data.length; }
       }
 
