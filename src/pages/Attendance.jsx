@@ -81,7 +81,7 @@ export default function Attendance() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["attendance-sessions"] });
-      toast({ title: "Session created" });
+      toast({ title: "Meeting created" });
       setDialogOpen(false);
     },
     onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
