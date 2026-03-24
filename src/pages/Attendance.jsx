@@ -29,9 +29,9 @@ export default function Attendance() {
   const [demoForm, setDemoForm] = useState({ male_count: 0, female_count: 0, meeting_notes: "" });
 
   const { data: sessions = [], isLoading } = useQuery({
-    queryKey: ["attendance-sessions"],
+    queryKey: ["attendance-sessions", tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("attendance_sessions").select("*").order("session_date", { ascending: false });
+      const { data, error } = await scopeQuery(supabase.from("attendance_sessions").select("*").order("session_date", { ascending: false }));
       if (error) throw error;
       return data;
     },
