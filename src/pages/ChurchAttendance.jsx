@@ -41,7 +41,7 @@ export default function ChurchAttendance() {
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [expandedRow, setExpandedRow] = useState(null);
-  const { user } = useAuth();
+  const { user, isAdmin, isUnitLeader } = useAuth();
   const qc = useQueryClient();
   const { enabled: canRecordAttendance } = useSubFeature("church_attendance.record");
 
