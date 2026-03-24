@@ -21,7 +21,7 @@ const statusColors = { "Pending": "bg-accent/10 text-accent", "In Progress": "bg
 const typeIcons = { "First Timer": MessageSquare, "Absentee": AlertCircle, "New Convert": HeartHandshake, "Pastoral": Phone, "General": CalendarCheck };
 
 export default function Followups() {
-  const { user, isAdmin, profile } = useAuth();
+  const { user, isAdmin, isUnitLeader, profile } = useAuth();
   const [search, setSearch] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
