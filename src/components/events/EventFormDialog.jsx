@@ -235,16 +235,31 @@ export default function EventFormDialog({ open, onOpenChange, event, onSave, loc
           {/* Reminders */}
           <div>
             <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Reminders</h3>
-            <div className="flex flex-wrap gap-4 p-3 rounded-xl bg-muted/50 border border-border">
-              {REMINDER_OPTIONS.map(opt => (
-                <label key={opt.value} className="flex items-center gap-2 cursor-pointer">
-                  <Checkbox
-                    checked={(form.reminder_days_before || []).includes(opt.value)}
-                    onCheckedChange={() => toggleReminder(opt.value)}
-                  />
-                  <span className="text-sm text-foreground">{opt.label}</span>
-                </label>
-              ))}
+            <div className="space-y-2 p-3 rounded-xl bg-muted/50 border border-border">
+              <p className="text-xs font-medium text-muted-foreground">Days before</p>
+              <div className="flex flex-wrap gap-4">
+                {REMINDER_OPTIONS.map(opt => (
+                  <label key={opt.value} className="flex items-center gap-2 cursor-pointer">
+                    <Checkbox
+                      checked={(form.reminder_days_before || []).includes(opt.value)}
+                      onCheckedChange={() => toggleReminder(opt.value)}
+                    />
+                    <span className="text-sm text-foreground">{opt.label}</span>
+                  </label>
+                ))}
+              </div>
+              <p className="text-xs font-medium text-muted-foreground mt-2">Hours before</p>
+              <div className="flex flex-wrap gap-4">
+                {HOUR_REMINDER_OPTIONS.map(opt => (
+                  <label key={opt.value} className="flex items-center gap-2 cursor-pointer">
+                    <Checkbox
+                      checked={(form.reminder_hours_before || []).includes(opt.value)}
+                      onCheckedChange={() => toggleHourReminder(opt.value)}
+                    />
+                    <span className="text-sm text-foreground">{opt.label}</span>
+                  </label>
+                ))}
+              </div>
             </div>
             <p className="text-xs text-muted-foreground mt-1">Members will receive in-app notifications before the event</p>
           </div>
