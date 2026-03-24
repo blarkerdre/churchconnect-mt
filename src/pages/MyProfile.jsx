@@ -455,7 +455,16 @@ export default function MyProfile() {
         </CardContent>
       </Card>
 
-      {/* Growth Milestones (read-only view) */}
+      {/* Profile Note / Prayer Request */}
+      {!editing && member.notes && (
+        <Card className="border-0 shadow-sm border-l-4 border-l-primary/30">
+          <CardContent className="p-4">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">Prayer Request</p>
+            <p className="text-sm text-foreground whitespace-pre-wrap">{member.notes}</p>
+          </CardContent>
+        </Card>
+      )}
+
       {!editing && (
         <Card className="border-0 shadow-sm">
           <CardHeader className="pb-2"><CardTitle className="text-base">Growth Milestones</CardTitle></CardHeader>
