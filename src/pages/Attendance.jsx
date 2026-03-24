@@ -7,7 +7,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { CheckCircle2, Clock, Users, CalendarCheck, Plus, Loader2, Lock, FileText, Filter } from "lucide-react";
+import { CheckCircle2, Clock, Users, CalendarCheck, Plus, Loader2, Lock, FileText, Filter, Download, Printer } from "lucide-react";
+import PrintReportButton from "@/components/PrintReportButton";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
@@ -89,7 +90,7 @@ export default function Attendance() {
   const updateDemographicsMutation = useMutation({
     mutationFn: async ({ sessionId, male_count, female_count, meeting_notes }) => {
       const total = male_count + female_count;
-      const { error } = await supabase.from("attendance_sessions").update({ male_count, female_count, total_count: total, notes: meeting_notes || null }).eq("id", sessionId);
+      const { error } = await supabase.from("attendance_sessions").update({ male_count, female_count, total_count: total, notes: meeting_notes || null, report_saved: true }).eq("id", sessionId);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -305,41 +306,88 @@ export default function Attendance() {
               <Card className="border-0 shadow-sm">
                 <CardHeader><CardTitle className="text-base font-display flex items-center gap-2"><FileText className="h-4 w-4 text-accent" /> Session Report</CardTitle></CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="grid grid-cols-3 gap-3">
-                    <div>
-                      <Label className="text-xs">Male</Label>
-                      <Input type="number" min="0" value={demoForm.male_count} onChange={e => setDemoForm(f => ({ ...f, male_count: e.target.value }))} />
-                    </div>
-                    <div>
-                      <Label className="text-xs">Female</Label>
-                      <Input type="number" min="0" value={demoForm.female_count} onChange={e => setDemoForm(f => ({ ...f, female_count: e.target.value }))} />
-                    </div>
-                    <div>
-                      <Label className="text-xs">Total</Label>
-                      <div className="h-9 flex items-center px-3 rounded-md border border-input bg-muted text-sm font-medium text-foreground">{demoTotal}</div>
-                    </div>
-                  </div>
-                  <div>
-                    <Label className="text-xs">Meeting Notes</Label>
-                    <Textarea value={demoForm.meeting_notes} onChange={e => setDemoForm(f => ({ ...f, meeting_notes: e.target.value }))} rows={3} placeholder="Enter meeting notes, summary, or key points..." />
-                  </div>
-                  <Button
-                    size="sm"
-                    className="w-full"
-                    disabled={updateDemographicsMutation.isPending}
-                    onClick={() => updateDemographicsMutation.mutate({
-                      sessionId: selectedSession.id,
-                      male_count: parseInt(demoForm.male_count) || 0,
-                      female_count: parseInt(demoForm.female_count) || 0,
-                      meeting_notes: demoForm.meeting_notes,
-                    })}
-                  >
-                    {updateDemographicsMutation.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-                    Save Report
-                  </Button>
+                  {selectedSession.report_saved ? (
+                    <>
+                      <div className="grid grid-cols-3 gap-3">
+                        <div className="bg-primary/5 rounded-lg p-2 text-center border border-primary/10">
+                          <p className="text-lg font-bold text-primary">{selectedSession.male_count}</p>
+                          <p className="text-[11px] text-muted-foreground">Male</p>
+                        </div>
+                        <div className="bg-accent/5 rounded-lg p-2 text-center border border-accent/10">
+                          <p className="text-lg font-bold text-accent">{selectedSession.female_count}</p>
+                          <p className="text-[11px] text-muted-foreground">Female</p>
+                        </div>
+                        <div className="bg-muted rounded-lg p-2 text-center border border-border">
+                          <p className="text-lg font-bold text-foreground">{selectedSession.total_count}</p>
+                          <p className="text-[11px] text-muted-foreground">Total</p>
+                        </div>
+                      </div>
+                      {selectedSession.notes && (
+                        <div>
+                          <Label className="text-xs text-muted-foreground">Meeting Notes</Label>
+                          <p className="text-sm text-foreground mt-1 whitespace-pre-wrap bg-muted/50 rounded-lg p-3 border border-border">{selectedSession.notes}</p>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      <div className="grid grid-cols-3 gap-3">
+                        <div>
+                          <Label className="text-xs">Male</Label>
+                          <Input type="number" min="0" value={demoForm.male_count} onChange={e => setDemoForm(f => ({ ...f, male_count: e.target.value }))} />
+                        </div>
+                        <div>
+                          <Label className="text-xs">Female</Label>
+                          <Input type="number" min="0" value={demoForm.female_count} onChange={e => setDemoForm(f => ({ ...f, female_count: e.target.value }))} />
+                        </div>
+                        <div>
+                          <Label className="text-xs">Total</Label>
+                          <div className="h-9 flex items-center px-3 rounded-md border border-input bg-muted text-sm font-medium text-foreground">{demoTotal}</div>
+                        </div>
+                      </div>
+                      <div>
+                        <Label className="text-xs">Meeting Notes</Label>
+                        <Textarea value={demoForm.meeting_notes} onChange={e => setDemoForm(f => ({ ...f, meeting_notes: e.target.value }))} rows={3} placeholder="Enter meeting notes, summary, or key points..." />
+                      </div>
+                    </>
+                  )}
                   <div className="pt-2 border-t">
                     <ReportAttachments relatedTable="attendance_sessions" relatedId={selectedSession.id} />
                   </div>
+                  <div className="flex flex-wrap gap-2">
+                    <Button variant="outline" size="sm" onClick={generateReport}>
+                      <Download className="h-4 w-4 mr-2" /> Download
+                    </Button>
+                    <PrintReportButton
+                      label="Print"
+                      buildRows={() => ({
+                        title: `Session Report – ${selectedSession.title || selectedSession.session_type} (${selectedSession.session_date})`,
+                        headers: ["#", "Name", "Method", "Time"],
+                        rows: records.map((r, i) => [
+                          i + 1,
+                          `${r.members?.first_name || ""} ${r.members?.last_name || ""}`,
+                          r.check_in_method || "manual",
+                          r.checked_in_at ? new Date(r.checked_in_at).toLocaleTimeString() : "—",
+                        ]),
+                      })}
+                    />
+                  </div>
+                  {!selectedSession.report_saved && (
+                    <Button
+                      size="sm"
+                      className="w-full"
+                      disabled={updateDemographicsMutation.isPending}
+                      onClick={() => updateDemographicsMutation.mutate({
+                        sessionId: selectedSession.id,
+                        male_count: parseInt(demoForm.male_count) || 0,
+                        female_count: parseInt(demoForm.female_count) || 0,
+                        meeting_notes: demoForm.meeting_notes,
+                      })}
+                    >
+                      {updateDemographicsMutation.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+                      Save Report
+                    </Button>
+                  )}
                 </CardContent>
               </Card>
             )}
