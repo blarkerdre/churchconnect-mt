@@ -1,0 +1,1 @@
+ALTER TABLE public.attendance_sessions ADD COLUMN report_saved boolean NOT NULL DEFAULT false;
