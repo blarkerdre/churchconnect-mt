@@ -1,15 +1,28 @@
 
 
-## Add Purchase Link to Books of the Month
+## Fix: Persist Disabled User Status Across Refreshes
 
-### Summary
-Add a `purchase_url` column to the `books_of_the_month` table and display it as a "Buy Now" link on the dashboard card. Also update the admin settings form to include the URL field.
+### Problem
+The `disabledUsers` state is a client-side `useState({})` that resets on every page load. The `admin-toggle-user` edge function correctly bans/unbans users in `auth.users`, but the UI never reads back `banned_until` from the database.
+
+### Solution
+Create a new edge function `admin-list-banned-users` that returns the list of banned user IDs from `auth.users`, then call it on page load to initialize `disabledUsers`.
 
 ### Changes
 
-1. **Database migration** — Add `purchase_url text` nullable column to `books_of_the_month`
+1. **New edge function `supabase/functions/admin-list-banned-users/index.ts`**
+   - Verify caller is admin (same pattern as other admin functions)
+   - Use `supabase.auth.admin.listUsers()` to get all users
+   - Return an array of user IDs where `banned_until` is set and in the future
+   - Return as `{ banned_user_ids: string[] }`
 
-2. **`src/components/dashboard/BookOfTheMonth.jsx`** — Render a "Buy Now" link button below each book's description when `purchase_url` is set (opens in new tab)
+2. **`src/pages/UserManagement.jsx`**
+   - Add a `useQuery` that calls the `admin-list-banned-users` edge function on mount
+   - Initialize `disabledUsers` state from the query result instead of empty `{}`
+   - Remove the manual `setDisabledUsers` in `toggleUserMutation.onSuccess` and instead invalidate the banned-users query so it refetches
 
-3. **`src/components/settings/BookOfTheMonthSettings.jsx`** — Add a "Purchase Link" input field to the add/edit form, and include it in the save payload
+### Technical Details
+- The edge function pages through `listUsers` (default limit 1000) to handle larger user bases
+- Uses the same CORS headers and admin verification pattern as existing edge functions
+- The query key `["banned-users"]` is invalidated after toggle so UI stays in sync
 
