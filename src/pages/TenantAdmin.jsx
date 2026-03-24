@@ -322,7 +322,10 @@ export default function TenantAdmin() {
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex items-center gap-1 justify-end">
-                            <Button size="sm" variant="ghost" onClick={() => openEdit(t)}>
+                            <Button size="sm" variant="ghost" onClick={() => setUsersTenant(t)} title="Manage users">
+                              <Users2 className="h-3 w-3" />
+                            </Button>
+                            <Button size="sm" variant="ghost" onClick={() => openEdit(t)} title="Edit settings">
                               <Pencil className="h-3 w-3" />
                             </Button>
                             {isMember && !isActive && (
