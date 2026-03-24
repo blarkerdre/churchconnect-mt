@@ -21,9 +21,9 @@ export default function WSFManagement() {
   });
 
   const { data: centres = [] } = useQuery({
-    queryKey: ["wsf-centres"],
+    queryKey: ["wsf-centres", tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("wsf_centres").select("*").order("name");
+      const { data, error } = await scopeQuery(supabase.from("wsf_centres").select("*").order("name"));
       if (error) throw error;
       return data;
     },

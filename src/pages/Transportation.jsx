@@ -132,7 +132,7 @@ export default function Transportation() {
         const { error } = await supabase.from("pickup_locations").update({ name: formData.name, address: formData.address, notes: formData.notes || null }).eq("id", editingLocation.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("pickup_locations").insert({ name: formData.name, address: formData.address, notes: formData.notes || null, created_by: user.id });
+        const { error } = await supabase.from("pickup_locations").insert(withTenant({ name: formData.name, address: formData.address, notes: formData.notes || null, created_by: user.id }));
         if (error) throw error;
       }
     },

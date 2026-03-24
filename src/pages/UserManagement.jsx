@@ -57,9 +57,9 @@ export default function UserManagement() {
   });
 
   const { data: allRoles = [] } = useQuery({
-    queryKey: ["all-user-roles"],
+    queryKey: ["all-user-roles", tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("user_roles").select("*");
+      const { data, error } = await scopeQuery(supabase.from("user_roles").select("*"));
       if (error) throw error;
       return data;
     },
