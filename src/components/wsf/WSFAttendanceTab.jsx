@@ -164,9 +164,9 @@ export default function WSFAttendanceTab({ centres }) {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2">
           <Select value={filterCentreId} onValueChange={setFilterCentreId}>
-            <SelectTrigger className="w-48">
+            <SelectTrigger className="w-44">
               <SelectValue placeholder="All centres" />
             </SelectTrigger>
             <SelectContent>
