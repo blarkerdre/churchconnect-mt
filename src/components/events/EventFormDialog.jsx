@@ -49,6 +49,7 @@ export default function EventFormDialog({ open, onOpenChange, event, onSave, loc
           ...empty,
           ...event,
           reminder_days_before: event.reminder_days_before || [],
+          reminder_hours_before: event.reminder_hours_before || [],
           is_recurring: event.is_recurring || false,
           recurrence_frequency: event.recurrence_frequency || "Weekly",
           recurrence_end_date: event.recurrence_end_date || "",
