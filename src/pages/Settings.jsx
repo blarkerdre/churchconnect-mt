@@ -100,6 +100,7 @@ function NotificationPreferencesSection() {
 /* ─── Reusable list section backed by app_settings ─── */
 function SettingsListSection({ settingsKey, title, icon: Icon, description }) {
   const qc = useQueryClient();
+  const { tenantId, scopeQuery, withTenant } = useTenantQuery();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingIdx, setEditingIdx] = useState(null);
   const [itemName, setItemName] = useState("");
