@@ -100,8 +100,11 @@ Deno.serve(async (req) => {
     .not('email', 'is', null)
     .neq('email', '')
 
+  if (tenant_id) {
+    query = query.eq('tenant_id', tenant_id)
+  }
+
   if (audience !== 'All Members') {
-    // Filter by church_unit containing the audience name
     query = query.ilike('church_unit', `%${audience}%`)
   }
 
