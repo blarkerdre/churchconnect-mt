@@ -286,6 +286,7 @@ export type Database = {
           logo_url: string | null
           signatory_name: string
           signatory_title: string
+          tenant_id: string | null
           text_positions: Json | null
           training_type: string
           updated_at: string
@@ -301,6 +302,7 @@ export type Database = {
           logo_url?: string | null
           signatory_name?: string
           signatory_title?: string
+          tenant_id?: string | null
           text_positions?: Json | null
           training_type: string
           updated_at?: string
@@ -316,11 +318,20 @@ export type Database = {
           logo_url?: string | null
           signatory_name?: string
           signatory_title?: string
+          tenant_id?: string | null
           text_positions?: Json | null
           training_type?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "certificate_templates_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       church_attendance_reports: {
         Row: {
@@ -411,18 +422,21 @@ export type Database = {
           id: string
           member_id: string
           registered_at: string
+          tenant_id: string | null
         }
         Insert: {
           course_id: string
           id?: string
           member_id: string
           registered_at?: string
+          tenant_id?: string | null
         }
         Update: {
           course_id?: string
           id?: string
           member_id?: string
           registered_at?: string
+          tenant_id?: string | null
         }
         Relationships: [
           {
@@ -437,6 +451,13 @@ export type Database = {
             columns: ["member_id"]
             isOneToOne: false
             referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "course_registrations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
         ]
@@ -729,6 +750,7 @@ export type Database = {
           is_correct: boolean | null
           question_id: string
           selected_answer: string | null
+          tenant_id: string | null
         }
         Insert: {
           attempt_id: string
@@ -737,6 +759,7 @@ export type Database = {
           is_correct?: boolean | null
           question_id: string
           selected_answer?: string | null
+          tenant_id?: string | null
         }
         Update: {
           attempt_id?: string
@@ -745,6 +768,7 @@ export type Database = {
           is_correct?: boolean | null
           question_id?: string
           selected_answer?: string | null
+          tenant_id?: string | null
         }
         Relationships: [
           {
@@ -759,6 +783,13 @@ export type Database = {
             columns: ["question_id"]
             isOneToOne: false
             referencedRelation: "exam_questions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "exam_answers_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
         ]
@@ -776,6 +807,7 @@ export type Database = {
           session_id: string | null
           started_at: string
           subject_id: string | null
+          tenant_id: string | null
           total_points: number | null
           training_type: string
         }
@@ -791,6 +823,7 @@ export type Database = {
           session_id?: string | null
           started_at?: string
           subject_id?: string | null
+          tenant_id?: string | null
           total_points?: number | null
           training_type: string
         }
@@ -806,6 +839,7 @@ export type Database = {
           session_id?: string | null
           started_at?: string
           subject_id?: string | null
+          tenant_id?: string | null
           total_points?: number | null
           training_type?: string
         }
@@ -831,6 +865,13 @@ export type Database = {
             referencedRelation: "exam_subjects"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "exam_attempts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
         ]
       }
       exam_questions: {
@@ -849,6 +890,7 @@ export type Database = {
           question_type: string
           sort_order: number
           subject_id: string | null
+          tenant_id: string | null
           training_type: string
         }
         Insert: {
@@ -866,6 +908,7 @@ export type Database = {
           question_type?: string
           sort_order?: number
           subject_id?: string | null
+          tenant_id?: string | null
           training_type: string
         }
         Update: {
@@ -883,6 +926,7 @@ export type Database = {
           question_type?: string
           sort_order?: number
           subject_id?: string | null
+          tenant_id?: string | null
           training_type?: string
         }
         Relationships: [
@@ -893,6 +937,13 @@ export type Database = {
             referencedRelation: "exam_subjects"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "exam_questions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
         ]
       }
       exam_session_courses: {
@@ -901,18 +952,21 @@ export type Database = {
           id: string
           session_id: string
           sort_order: number
+          tenant_id: string | null
         }
         Insert: {
           exam_title: string
           id?: string
           session_id: string
           sort_order?: number
+          tenant_id?: string | null
         }
         Update: {
           exam_title?: string
           id?: string
           session_id?: string
           sort_order?: number
+          tenant_id?: string | null
         }
         Relationships: [
           {
@@ -920,6 +974,13 @@ export type Database = {
             columns: ["session_id"]
             isOneToOne: false
             referencedRelation: "exam_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "exam_session_courses_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
         ]
@@ -935,6 +996,7 @@ export type Database = {
           pass_mark_percentage: number
           started_at: string | null
           status: string
+          tenant_id: string | null
           updated_at: string
         }
         Insert: {
@@ -947,6 +1009,7 @@ export type Database = {
           pass_mark_percentage?: number
           started_at?: string | null
           status?: string
+          tenant_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -959,9 +1022,18 @@ export type Database = {
           pass_mark_percentage?: number
           started_at?: string | null
           status?: string
+          tenant_id?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "exam_sessions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       exam_subjects: {
         Row: {
@@ -974,6 +1046,7 @@ export type Database = {
           pass_mark_percentage: number
           randomize_questions: boolean
           sort_order: number
+          tenant_id: string | null
           time_limit_minutes: number | null
         }
         Insert: {
@@ -986,6 +1059,7 @@ export type Database = {
           pass_mark_percentage?: number
           randomize_questions?: boolean
           sort_order?: number
+          tenant_id?: string | null
           time_limit_minutes?: number | null
         }
         Update: {
@@ -998,6 +1072,7 @@ export type Database = {
           pass_mark_percentage?: number
           randomize_questions?: boolean
           sort_order?: number
+          tenant_id?: string | null
           time_limit_minutes?: number | null
         }
         Relationships: [
@@ -1006,6 +1081,13 @@ export type Database = {
             columns: ["course_id"]
             isOneToOne: false
             referencedRelation: "exam_titles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "exam_subjects_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
         ]
@@ -1021,6 +1103,7 @@ export type Database = {
           name: string
           pass_mark_percentage: number
           registration_open: boolean
+          tenant_id: string | null
         }
         Insert: {
           created_at?: string
@@ -1032,6 +1115,7 @@ export type Database = {
           name: string
           pass_mark_percentage?: number
           registration_open?: boolean
+          tenant_id?: string | null
         }
         Update: {
           created_at?: string
@@ -1043,8 +1127,17 @@ export type Database = {
           name?: string
           pass_mark_percentage?: number
           registration_open?: boolean
+          tenant_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "exam_titles_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       first_timers: {
         Row: {
