@@ -35,8 +35,12 @@ export default function MemberDashboard({ currentUser, myMember }) {
       {/* Welcome Banner */}
       <Card className="border-0 shadow-sm bg-gradient-to-r from-primary to-primary/70 text-primary-foreground overflow-hidden">
         <CardContent className="p-6 flex items-center gap-4">
-          <div className="h-14 w-14 rounded-2xl bg-accent flex items-center justify-center text-xl font-bold text-accent-foreground shrink-0">
-            {myMember ? `${myMember.first_name?.[0]}${myMember.last_name?.[0]}` : currentUser?.full_name?.[0] || "?"}
+          <div className="h-14 w-14 rounded-2xl bg-accent flex items-center justify-center text-xl font-bold text-accent-foreground shrink-0 overflow-hidden">
+            {myMember?.photo_url ? (
+              <img src={myMember.photo_url} alt="" className="h-full w-full object-cover" />
+            ) : (
+              myMember ? `${myMember.first_name?.[0]}${myMember.last_name?.[0]}` : currentUser?.full_name?.[0] || "?"
+            )}
           </div>
           <div className="flex-1 min-w-0">
             <h2 className="text-lg font-bold leading-tight">
