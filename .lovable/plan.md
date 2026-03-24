@@ -1,36 +1,33 @@
 
 
-## Filter, Print & Download for Church/WSF Attendance + Settings Access Restriction
+## Add Date Filter, Print & Download to Follow-ups
 
-### Part 1: Church Attendance — Add Date Range Filter, Print & Download
+### Changes
 
-**`src/pages/ChurchAttendance.jsx`**:
-- Add date range filter (From/To date inputs) alongside the existing service type filter
-- Filter reports client-side by date range
-- Add Download button (CSV format with all columns: Date, Service Type, Title, Adult Male, Adult Female, Children, Teens, Total, Notes)
-- Add Print button using `PrintReportButton` component
-- Place these buttons in the toolbar area next to the filter
+**`src/pages/Followups.jsx`**:
 
-### Part 2: WSF Attendance — Add Date Range Filter & Print
+1. **Add state** for `dateFrom` and `dateTo` (strings, empty default)
 
-**`src/components/wsf/WSFAttendanceTab.jsx`**:
-- Add date range filter (From/To date inputs) alongside the existing centre filter
-- Filter reports client-side by date range
-- Add Print button using `PrintReportButton` (Download already exists)
-- Update existing download to also respect date filter (it already filters by centre)
+2. **Add date filter inputs** in the controls area (lines 222-237) — two `<Input type="date">` for From/To dates alongside the existing search and status filter
 
-### Part 3: Settings — Restrict Sections to Super Admin
+3. **Update filtering logic** (line 164-168) to also filter by date range using `created_at` (or `due_date`):
+   ```js
+   const dateOnly = f.due_date || f.created_at?.split("T")[0];
+   const matchDate = (!dateFrom || dateOnly >= dateFrom) && (!dateTo || dateOnly <= dateTo);
+   return matchSearch && matchStatus && matchDate;
+   ```
 
-**`src/pages/Settings.jsx`**:
-- Hide the "Certificates", "Links" (External Links), "Features" (Feature Toggles), and "Danger Zone" tabs from regular admins
-- Only show these tabs when `isSuperAdmin` is true
-- Currently only "Features" and "Danger" are restricted; extend the same pattern to "certificates" and "links" tabs
+4. **Add Download CSV button** in the controls area that exports filtered followups with columns: Name, Type, Status, Priority, Assigned To, Due Date, Completed Date, Notes
+
+5. **Add Print button** using existing `PrintReportButton` component with the same columns
+
+6. **Import** `Download` icon from lucide-react and `PrintReportButton` component
 
 ### Technical Details
 
-- Date filters use `<Input type="date">` with state for `dateFrom` and `dateTo`
-- Client-side filtering: `reports.filter(r => (!dateFrom || r.service_date >= dateFrom) && (!dateTo || r.service_date <= dateTo))`
-- Church Attendance download generates CSV; WSF already has text download
-- Print uses existing `PrintReportButton` component
-- Settings tabs wrapped with `{isSuperAdmin && (...)}` pattern already used for features/danger
+- Date filtering uses `due_date` field (falls back to `created_at` date portion)
+- CSV download uses `Blob` + anchor click pattern (same as ChurchAttendance)
+- Print uses `PrintReportButton` with `buildRows` returning filtered data
+- `profileMap` used to resolve `assigned_to` IDs to names in exports
+- Stats cards (lines 215-220) will reflect filtered data for consistency
 
