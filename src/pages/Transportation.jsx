@@ -26,6 +26,7 @@ export default function Transportation() {
   const { user, isAdmin, leaderUnits } = useAuth();
   const { isMemberOfUnit: isTransportUnit } = useUnitMembership("Transportation");
   const canManage = isAdmin || leaderUnits.includes("Transportation") || isTransportUnit;
+  const { enabled: canCreateBooking } = useSubFeature("transportation.create_booking");
   const queryClient = useQueryClient();
   const [bookDialogOpen, setBookDialogOpen] = useState(false);
   const [manageDialogOpen, setManageDialogOpen] = useState(false);
