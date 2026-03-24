@@ -38,6 +38,7 @@ export default function BookOfTheMonthSettings() {
         author: formData.author,
         description: formData.description || null,
         cover_image_url: formData.cover_image_url || null,
+        purchase_url: formData.purchase_url || null,
         month: formData.month + "-01",
         is_active: true,
         created_by: user?.id,
