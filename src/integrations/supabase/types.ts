@@ -130,6 +130,7 @@ export type Database = {
           id: string
           male_count: number
           notes: string | null
+          report_saved: boolean
           session_date: string
           session_type: Database["public"]["Enums"]["session_type"]
           status: string
@@ -145,6 +146,7 @@ export type Database = {
           id?: string
           male_count?: number
           notes?: string | null
+          report_saved?: boolean
           session_date: string
           session_type: Database["public"]["Enums"]["session_type"]
           status?: string
@@ -160,6 +162,7 @@ export type Database = {
           id?: string
           male_count?: number
           notes?: string | null
+          report_saved?: boolean
           session_date?: string
           session_type?: Database["public"]["Enums"]["session_type"]
           status?: string
