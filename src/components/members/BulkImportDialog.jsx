@@ -139,7 +139,7 @@ export default function BulkImportDialog({ open, onOpenChange, onComplete }) {
       }
 
       if (toInsert.length > 0) {
-        const { data, error } = await supabase.from("members").insert(toInsert).select("id");
+        const { data, error } = await supabase.from("members").insert(toInsert.map(m => withTenant(m))).select("id");
         if (error) { skipped += toInsert.length; } else { created += data.length; }
       }
 
