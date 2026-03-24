@@ -52,10 +52,10 @@ export default function SessionFormDialog({ open, onOpenChange, onSave, isAdmin 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
-        <DialogHeader><DialogTitle>New Attendance Session</DialogTitle></DialogHeader>
+        <DialogHeader><DialogTitle>New Attendance Meeting</DialogTitle></DialogHeader>
         <div className="space-y-4 py-2">
           <div className="space-y-1.5">
-            <Label>Session Title *</Label>
+            <Label>Meeting Title *</Label>
             <Input value={form.title} onChange={e => set("title", e.target.value)} placeholder="e.g. Sunday Service - 9 Mar" />
           </div>
           <div className="grid grid-cols-2 gap-3">
@@ -96,7 +96,7 @@ export default function SessionFormDialog({ open, onOpenChange, onSave, isAdmin 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
           <Button onClick={handleSave} disabled={saving || !form.title || !form.date} className="bg-[#1e3a5f] hover:bg-[#152d4a]">
-            {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />} Create Session
+            {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />} Create Meeting
           </Button>
         </DialogFooter>
       </DialogContent>
