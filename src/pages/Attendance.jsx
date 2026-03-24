@@ -81,7 +81,7 @@ export default function Attendance() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["attendance-sessions"] });
-      toast({ title: "Session created" });
+      toast({ title: "Meeting created" });
       setDialogOpen(false);
     },
     onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
@@ -107,7 +107,7 @@ export default function Attendance() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["attendance-sessions"] });
-      toast({ title: "Session closed" });
+      toast({ title: "Meeting closed" });
     },
     onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
@@ -121,7 +121,7 @@ export default function Attendance() {
     const reportContent = [
       `ATTENDANCE REPORT`,
       `=================`,
-      `Session: ${selectedSession.title || selectedSession.session_type}`,
+      `Meeting: ${selectedSession.title || selectedSession.session_type}`,
       `Type: ${selectedSession.session_type}`,
       `Date: ${selectedSession.session_date}`,
       `Status: ${isClosed ? "Closed" : "Open"}`,
@@ -164,7 +164,7 @@ export default function Attendance() {
         <Card className="border-0 shadow-sm"><CardContent className="p-3 sm:p-4 text-center"><p className="text-xl sm:text-2xl font-display font-bold text-chart-3">{presentCount}</p><p className="text-xs text-muted-foreground">Checked In</p></CardContent></Card>
         <Card className="border-0 shadow-sm"><CardContent className="p-3 sm:p-4 text-center"><p className="text-xl sm:text-2xl font-display font-bold text-foreground">{totalMembers}</p><p className="text-xs text-muted-foreground">Total</p></CardContent></Card>
         <Card className="border-0 shadow-sm"><CardContent className="p-3 sm:p-4 text-center"><p className="text-xl sm:text-2xl font-display font-bold text-primary">{attendanceRate}%</p><p className="text-xs text-muted-foreground">Rate</p></CardContent></Card>
-        <Card className="border-0 shadow-sm"><CardContent className="p-3 sm:p-4 text-center"><p className="text-xl sm:text-2xl font-display font-bold text-accent">{filteredSessions.length}</p><p className="text-xs text-muted-foreground">Sessions</p></CardContent></Card>
+        <Card className="border-0 shadow-sm"><CardContent className="p-3 sm:p-4 text-center"><p className="text-xl sm:text-2xl font-display font-bold text-accent">{filteredSessions.length}</p><p className="text-xs text-muted-foreground">Meetings</p></CardContent></Card>
       </div>
 
       {/* Date Filter */}
@@ -185,7 +185,7 @@ export default function Attendance() {
       <div className="flex flex-wrap items-center gap-3">
         {filteredSessions.length > 0 && (
           <Select value={selectedSession?.id || ""} onValueChange={setSelectedSessionId}>
-            <SelectTrigger className="w-full sm:w-72"><SelectValue placeholder="Select session" /></SelectTrigger>
+            <SelectTrigger className="w-full sm:w-72"><SelectValue placeholder="Select meeting" /></SelectTrigger>
             <SelectContent>
               {filteredSessions.map(s => <SelectItem key={s.id} value={s.id}>{s.title || s.session_type} – {s.session_date}</SelectItem>)}
             </SelectContent>
@@ -208,7 +208,7 @@ export default function Attendance() {
               <PrintReportButton
                 label="Print"
                 buildRows={() => ({
-                  title: `Session Report – ${selectedSession.title || selectedSession.session_type} (${selectedSession.session_date})`,
+                  title: `Meeting Report – ${selectedSession.title || selectedSession.session_type} (${selectedSession.session_date})`,
                   headers: ["#", "Name", "Method", "Time"],
                   rows: records.map((r, i) => [
                     i + 1,
@@ -222,16 +222,16 @@ export default function Attendance() {
           )}
           {canManage && selectedSession && !isClosed && (
             <Button variant="outline" size="sm" onClick={() => {
-              if (window.confirm("Close this session? No more check-ins will be allowed.")) {
+              if (window.confirm("Close this meeting? No more check-ins will be allowed.")) {
                 closeSessionMutation.mutate(selectedSession.id);
               }
             }} className="text-destructive border-destructive/30 hover:bg-destructive/10">
-              <Lock className="h-4 w-4" /><span className="hidden sm:inline ml-2">Close Session</span>
+              <Lock className="h-4 w-4" /><span className="hidden sm:inline ml-2">Close Meeting</span>
             </Button>
           )}
           {canManage && (
             <Button onClick={() => { setForm({ title: "", session_type: "Sunday Service", session_date: "", notes: "", unit: "" }); setDialogOpen(true); }} className="bg-primary hover:bg-primary/90 w-full sm:w-auto">
-              <Plus className="h-4 w-4 mr-2" /> New Session
+              <Plus className="h-4 w-4 mr-2" /> New Meeting
             </Button>
           )}
         </div>
@@ -242,10 +242,10 @@ export default function Attendance() {
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <Card className="border-0 shadow-sm">
-            <CardHeader><CardTitle className="text-base font-display flex items-center gap-2"><CalendarCheck className="h-4 w-4 text-accent" /> All Sessions</CardTitle></CardHeader>
+            <CardHeader><CardTitle className="text-base font-display flex items-center gap-2"><CalendarCheck className="h-4 w-4 text-accent" /> All Meetings</CardTitle></CardHeader>
             <CardContent className="space-y-2">
               {filteredSessions.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-4">No sessions found</p>
+                <p className="text-sm text-muted-foreground text-center py-4">No meetings found</p>
               ) : filteredSessions.map(s => (
                 <button
                   key={s.id}
@@ -296,7 +296,7 @@ export default function Attendance() {
                   </div>
                 )}
                 {records.length === 0 ? (
-                  <p className="text-sm text-muted-foreground text-center py-4">No check-ins for this session</p>
+                  <p className="text-sm text-muted-foreground text-center py-4">No check-ins for this meeting</p>
                 ) : records.map(r => (
                   <div key={r.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
                     <div className="flex items-center gap-3">
@@ -319,7 +319,7 @@ export default function Attendance() {
             {/* Session Report — only for unit leaders after session is closed */}
             {selectedSession && isClosed && (isAdmin || isUnitLeader) && (
               <Card className="border-0 shadow-sm">
-                <CardHeader><CardTitle className="text-base font-display flex items-center gap-2"><FileText className="h-4 w-4 text-accent" /> Session Report</CardTitle></CardHeader>
+                <CardHeader><CardTitle className="text-base font-display flex items-center gap-2"><FileText className="h-4 w-4 text-accent" /> Meeting Report</CardTitle></CardHeader>
                 <CardContent className="space-y-4">
                   {selectedSession.report_saved ? (
                     <>
@@ -396,7 +396,7 @@ export default function Attendance() {
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-[95vw] sm:max-w-md">
-          <DialogHeader><DialogTitle className="font-display">New Session</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle className="font-display">New Meeting</DialogTitle></DialogHeader>
           <div className="space-y-4 mt-2">
             <div><Label>Title (optional)</Label><Input value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} /></div>
             <div>
@@ -417,7 +417,7 @@ export default function Attendance() {
             <div><Label>Notes</Label><Textarea value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} rows={2} /></div>
             <Button onClick={() => createSessionMutation.mutate(form)} disabled={createSessionMutation.isPending || !form.session_date} className="w-full bg-primary">
               {createSessionMutation.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-              Create Session
+              Create Meeting
             </Button>
           </div>
         </DialogContent>
