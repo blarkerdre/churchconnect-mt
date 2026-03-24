@@ -242,7 +242,7 @@ function ChurchUnitsSection() {
         const { error } = await supabase.from("church_units").update({ name, is_active }).eq("id", id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("church_units").insert({ name, is_active });
+        const { error } = await supabase.from("church_units").insert(withTenant({ name, is_active }));
         if (error) throw error;
       }
     },
