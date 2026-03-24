@@ -10,6 +10,7 @@ import MemberDashboard from "@/components/dashboard/MemberDashboard";
 import WSFLeaderDashboard from "@/components/dashboard/WSFLeaderDashboard";
 import { useAuth } from "@/hooks/useAuth";
 import { useSubFeature } from "@/hooks/useSubFeature";
+import { useTenantQuery } from "@/hooks/useTenantQuery";
 
 export default function Dashboard() {
   const { isAdmin, isUnitLeader, isWSFLeader, profile, myMember, loading: authLoading } = useAuth();
