@@ -14,6 +14,7 @@ import { toast } from "@/components/ui/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useUnitMembership } from "@/hooks/useUnitMembership";
 import { useSubFeature } from "@/hooks/useSubFeature";
+import { useTenantQuery } from "@/hooks/useTenantQuery";
 import PrintReportButton from "@/components/PrintReportButton";
 
 const statusColors = {
