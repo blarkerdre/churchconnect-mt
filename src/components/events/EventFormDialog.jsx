@@ -14,11 +14,16 @@ import { useChurchUnits } from "@/hooks/useChurchUnits";
 const DEFAULT_CATEGORIES = ["Conference", "Special Service", "Revival", "Youth Event", "Women's Event", "Men's Event", "Children's Event", "Outreach", "Training", "Social", "Other"];
 const STATUSES = ["Upcoming", "Ongoing", "Completed", "Cancelled"];
 const EVENT_MODES = ["In Person", "Online", "Hybrid"];
-const RECURRENCE_FREQUENCIES = ["Weekly", "Biweekly", "Monthly"];
+const RECURRENCE_FREQUENCIES = ["Daily", "Weekly", "Biweekly", "Monthly"];
 const REMINDER_OPTIONS = [
   { value: 1, label: "1 day before" },
   { value: 3, label: "3 days before" },
   { value: 7, label: "1 week before" },
+];
+const HOUR_REMINDER_OPTIONS = [
+  { value: 1, label: "1 hour before" },
+  { value: 2, label: "2 hours before" },
+  { value: 6, label: "6 hours before" },
 ];
 
 const empty = {
