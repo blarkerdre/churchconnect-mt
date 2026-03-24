@@ -1062,6 +1062,7 @@ export type Database = {
           notes: string | null
           priority: string | null
           status: Database["public"]["Enums"]["followup_status"]
+          tenant_id: string | null
           updated_at: string
         }
         Insert: {
@@ -1077,6 +1078,7 @@ export type Database = {
           notes?: string | null
           priority?: string | null
           status?: Database["public"]["Enums"]["followup_status"]
+          tenant_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -1092,6 +1094,7 @@ export type Database = {
           notes?: string | null
           priority?: string | null
           status?: Database["public"]["Enums"]["followup_status"]
+          tenant_id?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -1100,6 +1103,13 @@ export type Database = {
             columns: ["member_id"]
             isOneToOne: false
             referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "followups_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
         ]
@@ -1167,6 +1177,7 @@ export type Database = {
           phone: string | null
           photo_url: string | null
           postcode: string | null
+          tenant_id: string | null
           updated_at: string
           user_id: string | null
           water_baptism: boolean | null
@@ -1201,6 +1212,7 @@ export type Database = {
           phone?: string | null
           photo_url?: string | null
           postcode?: string | null
+          tenant_id?: string | null
           updated_at?: string
           user_id?: string | null
           water_baptism?: boolean | null
@@ -1235,6 +1247,7 @@ export type Database = {
           phone?: string | null
           photo_url?: string | null
           postcode?: string | null
+          tenant_id?: string | null
           updated_at?: string
           user_id?: string | null
           water_baptism?: boolean | null
@@ -1250,6 +1263,13 @@ export type Database = {
             referencedRelation: "wsf_centres"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "members_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
         ]
       }
       messages: {
@@ -1261,6 +1281,7 @@ export type Database = {
           recipient_id: string | null
           sender_id: string
           subject: string | null
+          tenant_id: string | null
         }
         Insert: {
           content: string
@@ -1270,6 +1291,7 @@ export type Database = {
           recipient_id?: string | null
           sender_id: string
           subject?: string | null
+          tenant_id?: string | null
         }
         Update: {
           content?: string
@@ -1279,8 +1301,17 @@ export type Database = {
           recipient_id?: string | null
           sender_id?: string
           subject?: string | null
+          tenant_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "messages_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       notifications: {
         Row: {
@@ -1290,6 +1321,7 @@ export type Database = {
           message: string | null
           reference_id: string | null
           reference_type: string | null
+          tenant_id: string | null
           title: string
           type: string
           user_id: string
@@ -1301,6 +1333,7 @@ export type Database = {
           message?: string | null
           reference_id?: string | null
           reference_type?: string | null
+          tenant_id?: string | null
           title: string
           type?: string
           user_id: string
@@ -1312,11 +1345,20 @@ export type Database = {
           message?: string | null
           reference_id?: string | null
           reference_type?: string | null
+          tenant_id?: string | null
           title?: string
           type?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "notifications_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       pastoral_care: {
         Row: {
@@ -1331,6 +1373,7 @@ export type Database = {
           resolution_notes: string | null
           status: Database["public"]["Enums"]["pastoral_care_status"]
           subject: string
+          tenant_id: string | null
           updated_at: string
         }
         Insert: {
@@ -1345,6 +1388,7 @@ export type Database = {
           resolution_notes?: string | null
           status?: Database["public"]["Enums"]["pastoral_care_status"]
           subject: string
+          tenant_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -1359,6 +1403,7 @@ export type Database = {
           resolution_notes?: string | null
           status?: Database["public"]["Enums"]["pastoral_care_status"]
           subject?: string
+          tenant_id?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -1367,6 +1412,13 @@ export type Database = {
             columns: ["member_id"]
             isOneToOne: false
             referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pastoral_care_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
         ]
@@ -1411,6 +1463,7 @@ export type Database = {
           email: string | null
           full_name: string | null
           id: string
+          tenant_id: string | null
           updated_at: string
           user_id: string
         }
@@ -1420,6 +1473,7 @@ export type Database = {
           email?: string | null
           full_name?: string | null
           id?: string
+          tenant_id?: string | null
           updated_at?: string
           user_id: string
         }
@@ -1429,10 +1483,19 @@ export type Database = {
           email?: string | null
           full_name?: string | null
           id?: string
+          tenant_id?: string | null
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       sms_log: {
         Row: {
@@ -1764,19 +1827,30 @@ export type Database = {
         Row: {
           id: string
           role: Database["public"]["Enums"]["app_role"]
+          tenant_id: string | null
           user_id: string
         }
         Insert: {
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
+          tenant_id?: string | null
           user_id: string
         }
         Update: {
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
+          tenant_id?: string | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "user_roles_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       wsf_attendance: {
         Row: {
