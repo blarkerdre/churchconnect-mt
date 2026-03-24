@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { HeartHandshake, Search, Phone, MessageSquare, CalendarCheck, Plus, AlertCircle, Loader2, UserCheck, User } from "lucide-react";
+import { HeartHandshake, Search, Phone, MessageSquare, CalendarCheck, Plus, AlertCircle, Loader2, UserCheck, User, Download } from "lucide-react";
+import PrintReportButton from "@/components/PrintReportButton";
 import SMSDialog from "@/components/sms/SMSDialog";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -22,6 +23,8 @@ const typeIcons = { "First Timer": MessageSquare, "Absentee": AlertCircle, "New 
 export default function Followups() {
   const { user, isAdmin, profile } = useAuth();
   const [search, setSearch] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingFollowup, setEditingFollowup] = useState(null);
@@ -164,8 +167,32 @@ export default function Followups() {
   const filtered = followups.filter(f => {
     const matchSearch = `${f.person_name} ${f.followup_type} ${f.description || ""}`.toLowerCase().includes(search.toLowerCase());
     const matchStatus = statusFilter === "All" || f.status === statusFilter;
-    return matchSearch && matchStatus;
+    const dateOnly = f.due_date || f.created_at?.split("T")[0];
+    const matchDate = (!dateFrom || dateOnly >= dateFrom) && (!dateTo || dateOnly <= dateTo);
+    return matchSearch && matchStatus && matchDate;
   });
+
+  const downloadCSV = () => {
+    const headers = ["Name", "Type", "Status", "Priority", "Assigned To", "Due Date", "Completed Date", "Notes"];
+    const rows = filtered.map(f => [
+      f.person_name,
+      f.followup_type,
+      f.status,
+      f.priority || "",
+      f.assigned_to ? (profileMap[f.assigned_to] || "Unassigned") : "Unassigned",
+      f.due_date || "",
+      f.completed_date || "",
+      (f.notes || f.description || "").replace(/,/g, " "),
+    ]);
+    const csv = [headers, ...rows].map(r => r.map(c => `"${c}"`).join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `followups_${new Date().toISOString().split("T")[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   const overdueTasks = followups.filter(f =>
     f.due_date && f.status !== "Completed" && f.status !== "Overdue" && new Date(f.due_date) < new Date()
@@ -213,15 +240,15 @@ export default function Followups() {
 
       {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <Card className="border-0 shadow-sm"><CardContent className="p-4 text-center"><p className="text-xl sm:text-2xl font-display font-bold text-foreground">{followups.length}</p><p className="text-xs text-muted-foreground">Total</p></CardContent></Card>
-        <Card className="border-0 shadow-sm"><CardContent className="p-4 text-center"><p className="text-xl sm:text-2xl font-display font-bold text-accent">{followups.filter(f => f.status === "Pending").length}</p><p className="text-xs text-muted-foreground">Pending</p></CardContent></Card>
-        <Card className="border-0 shadow-sm"><CardContent className="p-4 text-center"><p className="text-xl sm:text-2xl font-display font-bold text-primary">{followups.filter(f => f.status === "In Progress").length}</p><p className="text-xs text-muted-foreground">In Progress</p></CardContent></Card>
-        <Card className="border-0 shadow-sm"><CardContent className="p-4 text-center"><p className="text-xl sm:text-2xl font-display font-bold text-chart-3">{followups.filter(f => f.status === "Completed").length}</p><p className="text-xs text-muted-foreground">Completed</p></CardContent></Card>
+        <Card className="border-0 shadow-sm"><CardContent className="p-4 text-center"><p className="text-xl sm:text-2xl font-display font-bold text-foreground">{filtered.length}</p><p className="text-xs text-muted-foreground">Total</p></CardContent></Card>
+        <Card className="border-0 shadow-sm"><CardContent className="p-4 text-center"><p className="text-xl sm:text-2xl font-display font-bold text-accent">{filtered.filter(f => f.status === "Pending").length}</p><p className="text-xs text-muted-foreground">Pending</p></CardContent></Card>
+        <Card className="border-0 shadow-sm"><CardContent className="p-4 text-center"><p className="text-xl sm:text-2xl font-display font-bold text-primary">{filtered.filter(f => f.status === "In Progress").length}</p><p className="text-xs text-muted-foreground">In Progress</p></CardContent></Card>
+        <Card className="border-0 shadow-sm"><CardContent className="p-4 text-center"><p className="text-xl sm:text-2xl font-display font-bold text-chart-3">{filtered.filter(f => f.status === "Completed").length}</p><p className="text-xs text-muted-foreground">Completed</p></CardContent></Card>
       </div>
 
       {/* Controls */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 flex-1">
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 flex-1 flex-wrap">
           <div className="relative w-full sm:w-72">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input placeholder="Search follow-ups..." value={search} onChange={e => setSearch(e.target.value)} className="pl-10" />
@@ -232,8 +259,30 @@ export default function Followups() {
               {["All", "Pending", "In Progress", "Completed", "Overdue"].map(s => <SelectItem key={s} value={s}>{s === "All" ? "All Status" : s}</SelectItem>)}
             </SelectContent>
           </Select>
+          <Input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="w-full sm:w-40" placeholder="From" />
+          <Input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="w-full sm:w-40" placeholder="To" />
         </div>
-        {canCreateFollowup && <Button onClick={openNew} className="w-full sm:w-auto bg-primary hover:bg-primary/90"><Plus className="h-4 w-4 mr-2" /> New Follow-up</Button>}
+        <div className="flex flex-wrap items-center gap-2">
+          {canCreateFollowup && <Button onClick={openNew} className="bg-primary hover:bg-primary/90"><Plus className="h-4 w-4 mr-2" /> New Follow-up</Button>}
+          <Button variant="outline" onClick={downloadCSV}><Download className="h-4 w-4 mr-2" /> Download</Button>
+          <PrintReportButton
+            label="Print"
+            buildRows={() => ({
+              title: "Follow-ups Report",
+              headers: ["Name", "Type", "Status", "Priority", "Assigned To", "Due Date", "Completed", "Notes"],
+              rows: filtered.map(f => [
+                f.person_name,
+                f.followup_type,
+                f.status,
+                f.priority || "",
+                f.assigned_to ? (profileMap[f.assigned_to] || "Unassigned") : "Unassigned",
+                f.due_date || "",
+                f.completed_date || "",
+                f.notes || f.description || "",
+              ]),
+            })}
+          />
+        </div>
       </div>
 
       {/* List */}
