@@ -79,7 +79,7 @@ export default function CertificateTemplateSettings() {
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["certificate-templates"] });
+      queryClient.invalidateQueries({ queryKey: ["certificate-templates", tenantId] });
       toast({ title: editing ? "Template updated" : "Template created" });
       closeDialog();
     },
