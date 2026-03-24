@@ -89,7 +89,7 @@ export default function Attendance() {
   const updateDemographicsMutation = useMutation({
     mutationFn: async ({ sessionId, male_count, female_count, meeting_notes }) => {
       const total = male_count + female_count;
-      const { error } = await supabase.from("attendance_sessions").update({ male_count, female_count, total_count: total, notes: meeting_notes || null }).eq("id", sessionId);
+      const { error } = await supabase.from("attendance_sessions").update({ male_count, female_count, total_count: total, notes: meeting_notes || null, report_saved: true }).eq("id", sessionId);
       if (error) throw error;
     },
     onSuccess: () => {
