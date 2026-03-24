@@ -231,23 +231,31 @@ export default function Communications() {
 
   return (
     <div className="space-y-6">
-      <Tabs defaultValue="announcements" className="space-y-4">
+      <Tabs defaultValue={announcementsEnabled ? "announcements" : (emailEnabled ? "email" : (smsEnabled ? "sms" : "whatsapp"))} className="space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <TabsList className="flex flex-nowrap h-auto gap-1 overflow-x-auto w-full justify-start">
-            <TabsTrigger value="announcements" className="gap-1.5 text-xs">
-              <Megaphone className="h-3.5 w-3.5" /> Announcements
-            </TabsTrigger>
+            {announcementsEnabled && (
+              <TabsTrigger value="announcements" className="gap-1.5 text-xs">
+                <Megaphone className="h-3.5 w-3.5" /> Announcements
+              </TabsTrigger>
+            )}
             {canManageComms && (
               <>
-                <TabsTrigger value="email" className="gap-1.5 text-xs">
-                  <Mail className="h-3.5 w-3.5" /> Email
-                </TabsTrigger>
-                <TabsTrigger value="sms" className="gap-1.5 text-xs">
-                  <MessageSquare className="h-3.5 w-3.5" /> SMS
-                </TabsTrigger>
-                <TabsTrigger value="whatsapp" className="gap-1.5 text-xs">
-                  <WhatsAppIcon className="h-3.5 w-3.5" /> WhatsApp
-                </TabsTrigger>
+                {emailEnabled && (
+                  <TabsTrigger value="email" className="gap-1.5 text-xs">
+                    <Mail className="h-3.5 w-3.5" /> Email
+                  </TabsTrigger>
+                )}
+                {smsEnabled && (
+                  <TabsTrigger value="sms" className="gap-1.5 text-xs">
+                    <MessageSquare className="h-3.5 w-3.5" /> SMS
+                  </TabsTrigger>
+                )}
+                {whatsappEnabled && (
+                  <TabsTrigger value="whatsapp" className="gap-1.5 text-xs">
+                    <WhatsAppIcon className="h-3.5 w-3.5" /> WhatsApp
+                  </TabsTrigger>
+                )}
               </>
             )}
           </TabsList>
