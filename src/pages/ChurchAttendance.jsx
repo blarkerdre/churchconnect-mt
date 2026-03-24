@@ -118,6 +118,19 @@ export default function ChurchAttendance() {
   const totalChildren = filteredReports.reduce((s, r) => s + r.children, 0);
   const totalTeens = filteredReports.reduce((s, r) => s + r.teens, 0);
 
+  // Chart data — sorted chronologically, last 20 services
+  const chartData = useMemo(() => {
+    const sorted = [...filteredReports].sort((a, b) => a.service_date.localeCompare(b.service_date));
+    return sorted.slice(-20).map(r => ({
+      date: format(parseISO(r.service_date), "dd MMM"),
+      "Adult Male": r.adult_male,
+      "Adult Female": r.adult_female,
+      "Children": r.children,
+      "Teens": r.teens,
+      "Total": r.total_attendance,
+    }));
+  }, [filteredReports]);
+
   const downloadCSV = () => {
     const headers = ["Date", "Service Type", "Title", "Adult Male", "Adult Female", "Children", "Teens", "Total", "Notes"];
     const rows = filteredReports.map(r => [
