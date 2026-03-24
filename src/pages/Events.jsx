@@ -264,6 +264,7 @@ export default function Events() {
       audience: lockedAudience || "All Members",
       is_recurring: false, recurrence_frequency: "Weekly", recurrence_end_date: "",
       reminder_days_before: [],
+      reminder_hours_before: [],
     });
     setDialogOpen(true);
   };
