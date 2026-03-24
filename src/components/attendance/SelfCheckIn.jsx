@@ -8,6 +8,7 @@ import { CheckCircle2, X, CalendarCheck } from "lucide-react";
 
 export default function SelfCheckIn({ session, member, onClose }) {
   const queryClient = useQueryClient();
+  const { withTenant } = useTenantQuery();
 
   const { data: records = [] } = useQuery({
     queryKey: ["self-checkin-records", session.id, member?.id],
