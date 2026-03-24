@@ -29,6 +29,7 @@ const ALL_STATUSES = ["Open", "In Progress", "Resolved", "Closed"];
 
 export default function PastoralCare() {
   const { user, isAdmin, leaderUnits } = useAuth();
+  const { tenantId, scopeQuery, withTenant } = useTenantQuery();
   const { isMemberOfUnit: isPastoralUnit } = useUnitMembership("Pastoral Care");
   const canManage = isAdmin || leaderUnits.includes("Pastoral Care") || isPastoralUnit;
   const isPastoralLeader = isAdmin || leaderUnits.includes("Pastoral Care");
