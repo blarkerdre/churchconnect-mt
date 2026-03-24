@@ -228,9 +228,9 @@ function ChurchUnitsSection() {
   const [unitActive, setUnitActive] = useState(true);
 
   const { data: units = [], isLoading } = useQuery({
-    queryKey: ["church-units", false],
+    queryKey: ["church-units", false, tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("church_units").select("*").order("name");
+      const { data, error } = await scopeQuery(supabase.from("church_units").select("*").order("name"));
       if (error) throw error;
       return data;
     },
