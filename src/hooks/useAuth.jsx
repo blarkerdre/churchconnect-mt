@@ -4,8 +4,10 @@ import { supabase } from "@/integrations/supabase/client";
 const noop = async () => ({ data: null, error: new Error("Auth not initialized") });
 const AuthContext = createContext({
   user: null, profile: null, roles: [], loading: true, leaderUnits: [], myMember: null,
+  tenantMemberships: [],
   signUp: noop, signIn: noop, signOut: noop, resetPassword: noop, updatePassword: noop,
   isAdmin: false, isUnitLeader: false, isWSFLeader: false, isMember: false,
+  isTenantOwner: false, isTenantAdmin: false,
   refreshUser: () => {},
 });
 
@@ -15,6 +17,7 @@ export function AuthProvider({ children }) {
   const [roles, setRoles] = useState([]);
   const [leaderUnits, setLeaderUnits] = useState([]);
   const [myMember, setMyMember] = useState(null);
+  const [tenantMemberships, setTenantMemberships] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -28,6 +31,7 @@ export function AuthProvider({ children }) {
           setRoles([]);
           setLeaderUnits([]);
           setMyMember(null);
+          setTenantMemberships([]);
           setLoading(false);
         }
       }
@@ -47,16 +51,18 @@ export function AuthProvider({ children }) {
 
   async function fetchUserData(userId, userEmail) {
     try {
-      const [profileRes, rolesRes, unitsRes, memberRes] = await Promise.all([
+      const [profileRes, rolesRes, unitsRes, memberRes, tmRes] = await Promise.all([
         supabase.from("profiles").select("*").eq("user_id", userId).single(),
         supabase.from("user_roles").select("role").eq("user_id", userId),
         supabase.from("unit_leader_assignments").select("unit_name").eq("user_id", userId),
         supabase.from("members").select("*, wsf_centres!fk_members_wsf_centre(name)").eq("user_id", userId).maybeSingle(),
+        supabase.from("tenant_memberships").select("tenant_id, role").eq("user_id", userId),
       ]);
 
       setProfile(profileRes.data);
       setRoles(rolesRes.data?.map((r) => r.role) || []);
       setLeaderUnits(unitsRes.data?.map((u) => u.unit_name) || []);
+      setTenantMemberships(tmRes.data || []);
 
       let member = memberRes.data;
 
@@ -112,6 +118,7 @@ export function AuthProvider({ children }) {
     setRoles([]);
     setLeaderUnits([]);
     setMyMember(null);
+    setTenantMemberships([]);
   };
 
   const resetPassword = async (email) => {
@@ -126,7 +133,12 @@ export function AuthProvider({ children }) {
     return { data, error };
   };
 
-  const isAdmin = roles.includes("admin") || roles.includes("super_admin");
+  // Derive tenant-level admin status
+  const isTenantOwner = tenantMemberships.some((m) => m.role === "owner");
+  const isTenantAdmin = tenantMemberships.some((m) => m.role === "owner" || m.role === "admin");
+
+  // Bridge: treat tenant owners/admins as app-level admins
+  const isAdmin = roles.includes("admin") || roles.includes("super_admin") || isTenantAdmin;
   const isUnitLeader = roles.includes("unit_leader");
   const isWSFLeader = roles.includes("wsf_leader");
   const isMember = roles.includes("member");
@@ -134,9 +146,10 @@ export function AuthProvider({ children }) {
   return (
     <AuthContext.Provider
       value={{
-        user, profile, roles, loading, leaderUnits, myMember,
+        user, profile, roles, loading, leaderUnits, myMember, tenantMemberships,
         signUp, signIn, signOut, resetPassword, updatePassword,
         isAdmin, isUnitLeader, isWSFLeader, isMember,
+        isTenantOwner, isTenantAdmin,
         refreshUser: () => user && fetchUserData(user.id, user.email),
       }}
     >
