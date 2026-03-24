@@ -33,6 +33,7 @@ const empty = {
   event_mode: "In Person",
   is_recurring: false, recurrence_frequency: "Weekly", recurrence_end_date: "",
   reminder_days_before: [],
+  reminder_hours_before: [],
 };
 
 export default function EventFormDialog({ open, onOpenChange, event, onSave, lockedCategory = null }) {
