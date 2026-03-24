@@ -2441,16 +2441,28 @@ export type Database = {
         }
         Returns: number
       }
-      notify_all_users: {
-        Args: {
-          _message: string
-          _reference_id?: string
-          _reference_type?: string
-          _title: string
-          _type?: string
-        }
-        Returns: undefined
-      }
+      notify_all_users:
+        | {
+            Args: {
+              _message: string
+              _reference_id?: string
+              _reference_type?: string
+              _title: string
+              _type?: string
+            }
+            Returns: undefined
+          }
+        | {
+            Args: {
+              _message: string
+              _reference_id?: string
+              _reference_type?: string
+              _tenant_id?: string
+              _title: string
+              _type?: string
+            }
+            Returns: undefined
+          }
       read_email_batch: {
         Args: { batch_size: number; queue_name: string; vt: number }
         Returns: {
