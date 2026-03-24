@@ -17,6 +17,7 @@ import { Loader2, Plus, Droplets, Flame, BookOpen, Users, TrendingUp, Paperclip,
 import { useAppSetting } from "@/hooks/useAppSetting";
 import ReportAttachments from "@/components/reports/ReportAttachments";
 import PrintReportButton from "@/components/PrintReportButton";
+import { useSubFeature } from "@/hooks/useSubFeature";
 
 const ICON_MAP = {
   "Water Baptism": { icon: Droplets, color: "text-blue-500" },
