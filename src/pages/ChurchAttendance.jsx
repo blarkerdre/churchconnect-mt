@@ -243,15 +243,27 @@ export default function ChurchAttendance() {
         <CardHeader className="pb-3">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <CardTitle className="text-base font-display">Attendance Records</CardTitle>
-            <Select value={filterType} onValueChange={setFilterType}>
-              <SelectTrigger className="w-48"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Services</SelectItem>
-                {SERVICE_TYPES.map((t) => (
-                  <SelectItem key={t} value={t}>{t}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="flex flex-wrap items-center gap-2">
+              <Select value={filterType} onValueChange={setFilterType}>
+                <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Services</SelectItem>
+                  {SERVICE_TYPES.map((t) => (
+                    <SelectItem key={t} value={t}>{t}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="w-36" placeholder="From" />
+              <Input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="w-36" placeholder="To" />
+              {filteredReports.length > 0 && (
+                <>
+                  <Button variant="outline" size="sm" onClick={downloadCSV}>
+                    <FileText className="h-4 w-4 mr-1" /> Download
+                  </Button>
+                  <PrintReportButton buildRows={buildPrintRows} label="Print" />
+                </>
+              )}
+            </div>
           </div>
         </CardHeader>
         <CardContent>
