@@ -48,6 +48,63 @@ export default function MyProfile() {
   const [form, setForm] = useState({});
   const [examSelection, setExamSelection] = useState(null);
 
+  // ... rest defined below after component
+}
+
+function ProfilePhotoUpload({ member, user, onUpdated }) {
+  const fileRef = useRef(null);
+  const [uploading, setUploading] = useState(false);
+
+  const handleUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const ext = file.name.split(".").pop();
+      const path = `${user.id}/${Date.now()}.${ext}`;
+      const { error: uploadError } = await supabase.storage.from("profile-photos").upload(path, file, { upsert: true });
+      if (uploadError) throw uploadError;
+      const { data: urlData } = supabase.storage.from("profile-photos").getPublicUrl(path);
+      const { error: rpcError } = await supabase.rpc("update_own_member_profile", {
+        _member_id: member.id,
+        _photo_url: urlData.publicUrl,
+      });
+      if (rpcError) throw rpcError;
+      onUpdated();
+      toast({ title: "Profile photo updated" });
+    } catch (err) {
+      toast({ title: "Upload failed", description: err.message, variant: "destructive" });
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  return (
+    <div className="relative shrink-0 cursor-pointer group" onClick={() => fileRef.current?.click()}>
+      {member.photo_url ? (
+        <img src={member.photo_url} alt="" className="h-12 w-12 sm:h-16 sm:w-16 rounded-full object-cover" />
+      ) : (
+        <div className="h-12 w-12 sm:h-16 sm:w-16 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-lg sm:text-xl">
+          {member.first_name[0]}{member.last_name[0]}
+        </div>
+      )}
+      <div className="absolute inset-0 rounded-full bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+        {uploading ? <Loader2 className="h-4 w-4 animate-spin text-white" /> : <Camera className="h-4 w-4 text-white" />}
+      </div>
+      <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleUpload} />
+    </div>
+  );
+}
+
+function MyProfileInner() {
+  const { user, roles, isAdmin, isUnitLeader, isWSFLeader } = useAuth();
+  const { data: churchUnitsData = [] } = useChurchUnits();
+  const CHURCH_UNITS = churchUnitsData.map(u => u.name);
+  const queryClient = useQueryClient();
+  const [editing, setEditing] = useState(false);
+  const [form, setForm] = useState({});
+  const [examSelection, setExamSelection] = useState(null);
+
   const isSuperAdmin = roles.includes("super_admin");
   const getRoleTitle = () => {
     if (isSuperAdmin) return "Super Admin";
