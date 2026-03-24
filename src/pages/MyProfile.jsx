@@ -32,6 +32,34 @@ const statusColors = {
   "Visitor": "bg-primary/10 text-primary",
 };
 
+const buildOwnMemberProfilePayload = (memberId, updates = {}) => ({
+  _member_id: memberId,
+  _first_name: updates.first_name ?? null,
+  _last_name: updates.last_name ?? null,
+  _email: updates.email ?? null,
+  _phone: updates.phone ?? null,
+  _address: updates.address ?? null,
+  _city: updates.city ?? null,
+  _postcode: updates.postcode ?? null,
+  _date_of_birth: updates.date_of_birth ?? null,
+  _gender: updates.gender ?? null,
+  _emergency_contact_name: updates.emergency_contact_name ?? null,
+  _emergency_contact_phone: updates.emergency_contact_phone ?? null,
+  _notes: updates.notes ?? null,
+  _photo_url: updates.photo_url ?? null,
+  _membership_status: updates.membership_status ?? null,
+  _church_unit: updates.church_unit ?? null,
+  _water_baptism: updates.water_baptism ?? null,
+  _holy_spirit_baptism: updates.holy_spirit_baptism ?? null,
+  _winners_satellite: updates.winners_satellite ?? null,
+  _wsf_centre_id: updates.wsf_centre_id ?? null,
+  _workers_in_training: updates.workers_in_training ?? null,
+  _bfc_completed: updates.bfc_completed ?? null,
+  _bcc_completed: updates.bcc_completed ?? null,
+  _lcc_completed: updates.lcc_completed ?? null,
+  _ldc_completed: updates.ldc_completed ?? null,
+});
+
 function ProfilePhotoUpload({ member, user, onUpdated }) {
   const fileRef = useRef(null);
   const [uploading, setUploading] = useState(false);
@@ -46,10 +74,13 @@ function ProfilePhotoUpload({ member, user, onUpdated }) {
       const { error: uploadError } = await supabase.storage.from("profile-photos").upload(path, file, { upsert: true });
       if (uploadError) throw uploadError;
       const { data: urlData } = supabase.storage.from("profile-photos").getPublicUrl(path);
-      const { error: rpcError } = await supabase.rpc("update_own_member_profile", {
-        _member_id: member.id,
-        _photo_url: urlData.publicUrl,
-      });
+      const { error: rpcError } = await supabase.rpc(
+        "update_own_member_profile",
+        buildOwnMemberProfilePayload(member.id, {
+          photo_url: urlData.publicUrl,
+          workers_in_training: member.workers_in_training,
+        })
+      );
       if (rpcError) throw rpcError;
       onUpdated();
       toast({ title: "Profile photo updated" });
@@ -151,32 +182,13 @@ export default function MyProfile() {
 
   const updateMutation = useMutation({
     mutationFn: async (updates) => {
-      const { error } = await supabase.rpc("update_own_member_profile", {
-        _member_id: member.id,
-        _first_name: updates.first_name,
-        _last_name: updates.last_name,
-        _email: updates.email,
-        _phone: updates.phone,
-        _address: updates.address,
-        _city: updates.city,
-        _postcode: updates.postcode,
-        _date_of_birth: updates.date_of_birth,
-        _gender: updates.gender,
-        _emergency_contact_name: updates.emergency_contact_name,
-        _emergency_contact_phone: updates.emergency_contact_phone,
-        _notes: updates.notes,
-        _photo_url: updates.photo_url,
-        _membership_status: updates.membership_status,
-        _church_unit: updates.church_unit,
-        _water_baptism: updates.water_baptism,
-        _holy_spirit_baptism: updates.holy_spirit_baptism,
-        _winners_satellite: updates.winners_satellite,
-        _wsf_centre_id: updates.wsf_centre_id,
-        _bfc_completed: updates.bfc_completed,
-        _bcc_completed: updates.bcc_completed,
-        _lcc_completed: updates.lcc_completed,
-        _ldc_completed: updates.ldc_completed,
-      });
+      const { error } = await supabase.rpc(
+        "update_own_member_profile",
+        buildOwnMemberProfilePayload(member.id, {
+          ...updates,
+          workers_in_training: member.workers_in_training,
+        })
+      );
       if (error) throw error;
     },
     onSuccess: () => {
