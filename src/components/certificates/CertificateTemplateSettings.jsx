@@ -50,12 +50,14 @@ export default function CertificateTemplateSettings() {
   }, [courses, settingsTypes]);
 
   const { data: templates = [], isLoading } = useQuery({
-    queryKey: ["certificate-templates"],
+    queryKey: ["certificate-templates", tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("certificate_templates")
-        .select("*")
-        .order("training_type");
+      const { data, error } = await scopeQuery(
+        supabase
+          .from("certificate_templates")
+          .select("*")
+          .order("training_type")
+      );
       if (error) throw error;
       return data;
     },
