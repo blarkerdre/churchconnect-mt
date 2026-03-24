@@ -48,12 +48,12 @@ export default function Transportation() {
   const [locationForm, setLocationForm] = useState({ name: "", address: "", notes: "" });
 
   const { data: bookings = [], isLoading } = useQuery({
-    queryKey: ["transportation"],
+    queryKey: ["transportation", tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await scopeQuery(supabase
         .from("transportation")
         .select("*, members(first_name, last_name)")
-        .order("request_date", { ascending: false });
+        .order("request_date", { ascending: false }));
       if (error) throw error;
       return data;
     },
