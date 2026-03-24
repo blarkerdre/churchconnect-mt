@@ -7,7 +7,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { CheckCircle2, Clock, Users, CalendarCheck, Plus, Loader2, Lock, FileText, Filter } from "lucide-react";
+import { CheckCircle2, Clock, Users, CalendarCheck, Plus, Loader2, Lock, FileText, Filter, Download, Printer } from "lucide-react";
+import PrintReportButton from "@/components/PrintReportButton";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
