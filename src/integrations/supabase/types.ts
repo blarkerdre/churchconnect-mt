@@ -200,6 +200,42 @@ export type Database = {
         }
         Relationships: []
       }
+      books_of_the_month: {
+        Row: {
+          author: string
+          cover_image_url: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          is_active: boolean
+          month: string
+          title: string
+        }
+        Insert: {
+          author: string
+          cover_image_url?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          month: string
+          title: string
+        }
+        Update: {
+          author?: string
+          cover_image_url?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          month?: string
+          title?: string
+        }
+        Relationships: []
+      }
       certificate_templates: {
         Row: {
           accent_color: string
@@ -549,6 +585,7 @@ export type Database = {
           recurrence_frequency: string | null
           recurrence_parent_id: string | null
           reminder_days_before: number[] | null
+          reminder_hours_before: number[] | null
           reminder_sent: boolean
           requires_registration: boolean | null
           start_time: string | null
@@ -573,6 +610,7 @@ export type Database = {
           recurrence_frequency?: string | null
           recurrence_parent_id?: string | null
           reminder_days_before?: number[] | null
+          reminder_hours_before?: number[] | null
           reminder_sent?: boolean
           requires_registration?: boolean | null
           start_time?: string | null
@@ -597,6 +635,7 @@ export type Database = {
           recurrence_frequency?: string | null
           recurrence_parent_id?: string | null
           reminder_days_before?: number[] | null
+          reminder_hours_before?: number[] | null
           reminder_sent?: boolean
           requires_registration?: boolean | null
           start_time?: string | null
