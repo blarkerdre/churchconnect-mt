@@ -27,6 +27,7 @@ const emptyTemplate = {
 
 export default function CertificateTemplateSettings() {
   const queryClient = useQueryClient();
+  const { tenantId, withTenant, scopeQuery } = useTenantQuery();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(emptyTemplate);
