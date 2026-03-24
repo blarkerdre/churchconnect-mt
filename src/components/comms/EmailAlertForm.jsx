@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Send, Mail, Users, Loader2, CheckCircle2 } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { useTenantQuery } from "@/hooks/useTenantQuery";
 
 const AUDIENCES = [
   "All Members", "Ushering", "Choir", "Media", "Children's Ministry", "Protocol",
@@ -20,6 +21,7 @@ export default function EmailAlertForm({ currentUser, myUnits = [], isAdmin }) {
   const [body, setBody] = useState("");
   const [audience, setAudience] = useState(isAdmin ? "All Members" : (myUnits[0] || "All Members"));
   const [sending, setSending] = useState(false);
+  const { tenantId } = useTenantQuery();
 
   const availableAudiences = isAdmin ? AUDIENCES : AUDIENCES.filter(a => myUnits.includes(a));
 
@@ -28,7 +30,7 @@ export default function EmailAlertForm({ currentUser, myUnits = [], isAdmin }) {
     setSending(true);
     try {
       const { data, error } = await supabase.functions.invoke("send-email-alert", {
-        body: { subject: subject.trim(), body: body.trim(), audience },
+        body: { subject: subject.trim(), body: body.trim(), audience, tenant_id: tenantId },
       });
 
       if (error) throw error;

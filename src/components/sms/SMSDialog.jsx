@@ -11,6 +11,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/components/ui/use-toast";
 import { normalizePhone } from "@/lib/phone-utils";
 import InvalidRecipientsPreview from "./InvalidRecipientsPreview";
+import { useTenantQuery } from "@/hooks/useTenantQuery";
 
 const AUDIENCES = [
   "All Members", "Ushering", "Choir", "Media", "Children's Ministry", "Protocol",
@@ -31,6 +32,7 @@ export default function SMSDialog({
   defaultChannel = "sms",
 }) {
   const { isAdmin, leaderUnits } = useAuth();
+  const { tenantId } = useTenantQuery();
   const { toast } = useToast();
   const [message, setMessage] = useState(prefillMessage);
   const [audience, setAudience] = useState(prefillAudience || "All Members");
@@ -121,6 +123,7 @@ export default function SMSDialog({
             sms_type: smsType,
             reference_id: referenceId,
             channel,
+            tenant_id: tenantId,
           }),
         }
       );

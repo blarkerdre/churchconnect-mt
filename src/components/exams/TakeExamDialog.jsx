@@ -10,6 +10,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 import { Loader2, CheckCircle2, XCircle, Award, ArrowUp, ArrowDown, Clock } from "lucide-react";
+import { useTenantQuery } from "@/hooks/useTenantQuery";
 
 const OPTION_LETTERS = ["a", "b", "c", "d"];
 
@@ -24,6 +25,7 @@ function shuffleArray(arr) {
 
 export default function TakeExamDialog({ open, onOpenChange, trainingType, memberId, subjectId, subjectName, previewMode = false }) {
   const qc = useQueryClient();
+  const { tenantId } = useTenantQuery();
   const [answers, setAnswers] = useState({});
   const [submitted, setSubmitted] = useState(false);
   const [result, setResult] = useState(null);
@@ -217,7 +219,7 @@ export default function TakeExamDialog({ open, onOpenChange, trainingType, membe
       if (aggregatePct >= course.pass_mark_percentage) {
         try {
           const { data: certData, error: certErr } = await supabase.functions.invoke("issue-certificate", {
-            body: { member_id: memberId, training_type: courseName },
+            body: { member_id: memberId, training_type: courseName, tenant_id: tenantId },
           });
           if (!certErr && certData?.success) {
             toast({ title: "🎉 Certificate issued!", description: `You passed ${courseName} with ${Math.round(aggregatePct)}% aggregate.` });
@@ -230,7 +232,7 @@ export default function TakeExamDialog({ open, onOpenChange, trainingType, membe
   const issueCertificate = async (memberId, trainingType, attemptId) => {
     try {
       const { data: certData, error: certErr } = await supabase.functions.invoke("issue-certificate", {
-        body: { member_id: memberId, training_type: trainingType },
+        body: { member_id: memberId, training_type: trainingType, tenant_id: tenantId },
       });
       if (!certErr && certData?.success) {
         await supabase.from("exam_attempts").update({ certificate_issued: true }).eq("id", attemptId);

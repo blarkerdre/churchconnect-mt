@@ -67,7 +67,7 @@ Deno.serve(async (req) => {
     }
 
     const body = await req.json();
-    const { recipients, message, sms_type, reference_id, channel } = body;
+    const { recipients, message, sms_type, reference_id, channel, tenant_id } = body;
     const msgChannel = channel === "whatsapp" ? "whatsapp" : "sms";
 
     // Resolve the From number based on channel
@@ -131,6 +131,7 @@ Deno.serve(async (req) => {
           status: "failed",
           channel: msgChannel,
           error_message: "Invalid phone number format (must be E.164)",
+          ...(tenant_id ? { tenant_id } : {}),
         });
         continue;
       }
@@ -170,6 +171,7 @@ Deno.serve(async (req) => {
             channel: msgChannel,
             message_sid: data.sid || null,
             delivery_status: "queued",
+            ...(tenant_id ? { tenant_id } : {}),
           });
         } else {
           failed++;
@@ -183,6 +185,7 @@ Deno.serve(async (req) => {
             status: "failed",
             channel: msgChannel,
             error_message: data.message || JSON.stringify(data),
+            ...(tenant_id ? { tenant_id } : {}),
           });
         }
       } catch (err) {
@@ -197,6 +200,7 @@ Deno.serve(async (req) => {
           status: "failed",
           channel: msgChannel,
           error_message: err instanceof Error ? err.message : "Unknown error",
+          ...(tenant_id ? { tenant_id } : {}),
         });
       }
     }

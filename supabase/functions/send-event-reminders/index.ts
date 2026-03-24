@@ -22,7 +22,7 @@ Deno.serve(async (req) => {
     // Get all events with reminders that haven't been fully sent yet
     const { data: events, error: fetchError } = await supabase
       .from("events")
-      .select("id, title, event_date, location, start_time, audience, reminder_days_before, reminder_hours_before, reminder_sent")
+      .select("id, title, event_date, location, start_time, audience, reminder_days_before, reminder_hours_before, reminder_sent, tenant_id")
       .eq("reminder_sent", false)
       .gte("event_date", today);
 
@@ -65,14 +65,19 @@ Deno.serve(async (req) => {
         ? `${event.title} is in ${diffDays} day${diffDays !== 1 ? "s" : ""}${timeStr}${locStr}`
         : `${event.title} is today${timeStr}${locStr}`;
 
-      // Use notify_all_users to send to all users with roles
-      const { error: notifyError } = await supabase.rpc("notify_all_users", {
+      // Use notify_all_users with tenant_id to scope notifications
+      const rpcParams: Record<string, unknown> = {
         _title: `Event Reminder: ${event.title}`,
         _message: message,
         _type: "event",
         _reference_id: event.id,
         _reference_type: "event",
-      });
+      };
+      if (event.tenant_id) {
+        rpcParams._tenant_id = event.tenant_id;
+      }
+
+      const { error: notifyError } = await supabase.rpc("notify_all_users", rpcParams);
 
       if (notifyError) {
         console.error(`Failed to notify for event ${event.id}:`, notifyError);

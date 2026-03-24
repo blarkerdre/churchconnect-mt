@@ -278,6 +278,8 @@ Deno.serve(async (req) => {
       }
     }
 
+    const tenantId = sanitize(body.tenant_id, 36);
+
     const memberPayload = {
       first_name: firstName,
       last_name: lastName,
@@ -303,6 +305,7 @@ Deno.serve(async (req) => {
       ldc_completed: ldcCompleted,
       gdpr_consent: true,
       gdpr_consent_date: new Date().toISOString(),
+      ...(tenantId ? { tenant_id: tenantId } : {}),
     };
 
     let resultMemberId: string | null = null;

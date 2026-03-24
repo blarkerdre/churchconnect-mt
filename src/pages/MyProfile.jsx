@@ -18,6 +18,7 @@ import { useChurchUnits } from "@/hooks/useChurchUnits";
 import MyCertificates from "@/components/certificates/MyCertificates";
 import MemberJourneyTimeline from "@/components/members/MemberJourneyTimeline";
 import TakeExamDialog from "@/components/exams/TakeExamDialog";
+import { useTenantQuery } from "@/hooks/useTenantQuery";
 
 const GENDERS = ["Male", "Female"];
 const MEMBERSHIP_STATUSES = ["Active", "First Timer", "New Convert", "Visitor"];
@@ -111,6 +112,7 @@ function ProfilePhotoUpload({ member, user, onUpdated }) {
 
 export default function MyProfile() {
   const { user, roles, isAdmin, isUnitLeader, isWSFLeader } = useAuth();
+  const { tenantId } = useTenantQuery();
   const { data: churchUnitsData = [] } = useChurchUnits();
   const CHURCH_UNITS = churchUnitsData.map(u => u.name);
   const queryClient = useQueryClient();
@@ -648,7 +650,8 @@ function CreateMemberProfile({ user, onCreated, wsfCentres, churchUnits }) {
           lcc_completed: form.lcc_completed,
           ldc_completed: form.ldc_completed,
           gdpr_consent: form.gdpr_consent,
-          notes: form.notes || null,
+           notes: form.notes || null,
+          ...(tenantId ? { tenant_id: tenantId } : {}),
         },
       });
       if (error) throw error;
