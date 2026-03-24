@@ -23,6 +23,7 @@ const WhatsAppIcon = ({ className }) => (
 import { logAudit } from "@/lib/audit";
 import SMSDialog from "@/components/sms/SMSDialog";
 import SMSHistoryDialog from "@/components/sms/SMSHistoryDialog";
+import { useSubFeature } from "@/hooks/useSubFeature";
 
 const STATIC_AUDIENCES = ["All Members", "Leaders Only"];
 
