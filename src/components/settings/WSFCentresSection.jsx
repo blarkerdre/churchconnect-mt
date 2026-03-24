@@ -193,6 +193,7 @@ export default function WSFCentresSection() {
                     {(c.address || c.location) && <div className="flex items-center gap-1.5"><MapPin className="h-3 w-3" />{c.address || c.location}{c.postcode ? `, ${c.postcode}` : ""}</div>}
                     {c.meeting_day && <div className="flex items-center gap-1.5"><Clock className="h-3 w-3" />{c.meeting_day}{c.meeting_time ? ` at ${c.meeting_time}` : ""}</div>}
                     {c.leader_id && <div className="flex items-center gap-1.5"><Users className="h-3 w-3" />Leader: {getLeaderName(c.leader_id)}</div>}
+                    {c.zone_id && <div className="flex items-center gap-1.5"><MapPin className="h-3 w-3" />Zone: {zones.find(z => z.id === c.zone_id)?.name || "—"}</div>}
                     <div className="flex items-center gap-1.5"><Users className="h-3 w-3" />{memberCounts[c.id] || 0} members</div>
                   </div>
                   <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => setMembersDialogCentre(c)}>
