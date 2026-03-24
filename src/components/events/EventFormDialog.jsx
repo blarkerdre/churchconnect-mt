@@ -38,7 +38,7 @@ const empty = {
 export default function EventFormDialog({ open, onOpenChange, event, onSave, lockedCategory = null }) {
   const { data: CATEGORIES } = useAppSetting("event_categories", DEFAULT_CATEGORIES);
   const { data: churchUnitsData = [] } = useChurchUnits();
-  const AUDIENCES = ["All Members", ...churchUnitsData.map(u => u.name), "Leaders Only"];
+  const AUDIENCES = ["All Members", ...churchUnitsData.map(u => u.name), "WSF", "WSF Leaders", "Leaders Only"];
   const [form, setForm] = useState(empty);
   const [saving, setSaving] = useState(false);
 
