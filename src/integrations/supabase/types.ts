@@ -1854,6 +1854,53 @@ export type Database = {
           },
         ]
       }
+      tenant_invitations: {
+        Row: {
+          accepted_at: string | null
+          created_at: string
+          email: string
+          expires_at: string
+          id: string
+          invited_by: string
+          role: string
+          status: string
+          tenant_id: string
+          token: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          created_at?: string
+          email: string
+          expires_at?: string
+          id?: string
+          invited_by: string
+          role?: string
+          status?: string
+          tenant_id: string
+          token?: string
+        }
+        Update: {
+          accepted_at?: string | null
+          created_at?: string
+          email?: string
+          expires_at?: string
+          id?: string
+          invited_by?: string
+          role?: string
+          status?: string
+          tenant_id?: string
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_invitations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tenant_memberships: {
         Row: {
           created_at: string
@@ -1888,38 +1935,56 @@ export type Database = {
       }
       tenants: {
         Row: {
+          archived_at: string | null
+          archived_by: string | null
           created_at: string
           created_by: string | null
           id: string
+          is_archived: boolean
           logo_url: string | null
+          member_limit: number
           name: string
+          plan_tier: string
           settings: Json | null
           setup_complete: boolean
           slug: string
+          storage_limit_mb: number
           timezone: string
           updated_at: string
         }
         Insert: {
+          archived_at?: string | null
+          archived_by?: string | null
           created_at?: string
           created_by?: string | null
           id?: string
+          is_archived?: boolean
           logo_url?: string | null
+          member_limit?: number
           name: string
+          plan_tier?: string
           settings?: Json | null
           setup_complete?: boolean
           slug: string
+          storage_limit_mb?: number
           timezone?: string
           updated_at?: string
         }
         Update: {
+          archived_at?: string | null
+          archived_by?: string | null
           created_at?: string
           created_by?: string | null
           id?: string
+          is_archived?: boolean
           logo_url?: string | null
+          member_limit?: number
           name?: string
+          plan_tier?: string
           settings?: Json | null
           setup_complete?: boolean
           slug?: string
+          storage_limit_mb?: number
           timezone?: string
           updated_at?: string
         }
