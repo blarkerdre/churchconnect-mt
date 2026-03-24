@@ -245,7 +245,7 @@ export default function Attendance() {
             <CardHeader><CardTitle className="text-base font-display flex items-center gap-2"><CalendarCheck className="h-4 w-4 text-accent" /> All Meetings</CardTitle></CardHeader>
             <CardContent className="space-y-2">
               {filteredSessions.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-4">No sessions found</p>
+                <p className="text-sm text-muted-foreground text-center py-4">No meetings found</p>
               ) : filteredSessions.map(s => (
                 <button
                   key={s.id}
