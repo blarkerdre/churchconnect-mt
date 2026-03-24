@@ -201,7 +201,7 @@ export default function PastoralCare() {
                       )}
                     </div>
                   </div>
-                  {canManage && (r.status === "Open" || r.status === "In Progress") && (
+                  {canManage && canAssignCases && (r.status === "Open" || r.status === "In Progress") && (
                     <Button variant="outline" size="sm" onClick={() => openManage(r)}>Manage</Button>
                   )}
                 </div>
