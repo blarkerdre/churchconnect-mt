@@ -37,7 +37,6 @@ serve(async (req) => {
     }
 
     // Clear all foreign key references before deleting
-    // Nullify references in tables that reference auth.users
     await Promise.all([
       supabase.from("followups").update({ assigned_to: null }).eq("assigned_to", user_id),
       supabase.from("followups").update({ created_by: null }).eq("created_by", user_id),
@@ -57,7 +56,7 @@ serve(async (req) => {
     await supabase.from("messages").delete().eq("sender_id", user_id);
     await supabase.from("messages").update({ recipient_id: null }).eq("recipient_id", user_id);
 
-    // Delete owned records
+    // Delete owned records (including tenant_memberships)
     await Promise.all([
       supabase.from("event_registrations").delete().eq("user_id", user_id),
       supabase.from("unit_leader_assignments").delete().eq("user_id", user_id),
@@ -66,6 +65,7 @@ serve(async (req) => {
       supabase.from("sms_log").delete().eq("sender_id", user_id),
       supabase.from("user_roles").delete().eq("user_id", user_id),
       supabase.from("profiles").delete().eq("user_id", user_id),
+      supabase.from("tenant_memberships").delete().eq("user_id", user_id),
     ]);
 
     // Finally delete the auth user

@@ -23,7 +23,7 @@ serve(async (req) => {
     const { data: isAdmin } = await supabase.rpc("is_admin", { _user_id: caller.id });
     if (!isAdmin) return new Response(JSON.stringify({ error: "Admin access required" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
-    const { email, password, full_name, role, member_data } = await req.json();
+    const { email, password, full_name, role, member_data, tenant_id } = await req.json();
     if (!email || !password) return new Response(JSON.stringify({ error: "Email and password required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
     // Only super_admin can assign elevated roles
@@ -44,9 +44,19 @@ serve(async (req) => {
 
     const userId = newUser?.user?.id;
 
-    // Assign role
+    // Assign role (with tenant_id)
     if (role && userId) {
-      await supabase.from("user_roles").insert({ user_id: userId, role });
+      await supabase.from("user_roles").insert({ user_id: userId, role, ...(tenant_id ? { tenant_id } : {}) });
+    }
+
+    // Add tenant membership if tenant_id provided
+    if (tenant_id && userId) {
+      await supabase.from("tenant_memberships").insert({ user_id: userId, tenant_id, role: "member" });
+    }
+
+    // Update profile with tenant_id if available
+    if (tenant_id && userId) {
+      await supabase.from("profiles").update({ tenant_id }).eq("user_id", userId);
     }
 
     // Create linked member record if member_data provided
@@ -79,6 +89,7 @@ serve(async (req) => {
         gdpr_consent: member_data.gdpr_consent ?? false,
         gdpr_consent_date: member_data.gdpr_consent_date || null,
         user_id: userId,
+        ...(tenant_id ? { tenant_id } : {}),
       };
 
       const { data: memberRow, error: memberError } = await supabase

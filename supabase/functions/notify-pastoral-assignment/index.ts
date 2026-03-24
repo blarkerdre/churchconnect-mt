@@ -207,6 +207,7 @@ Deno.serve(async (req) => {
               message_sid: data.sid || null,
               error_message: response.ok ? null : (data.message || JSON.stringify(data)),
               delivery_status: response.ok ? "queued" : null,
+              ...(tenant_id ? { tenant_id } : {}),
             });
 
             if (response.ok) {
