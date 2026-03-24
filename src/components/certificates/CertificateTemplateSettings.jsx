@@ -35,9 +35,9 @@ export default function CertificateTemplateSettings() {
   const [useCustomType, setUseCustomType] = useState(false);
 
   const { data: courses = [] } = useQuery({
-    queryKey: ["exam-titles-active"],
+    queryKey: ["exam-titles-active", tenantId],
     queryFn: async () => {
-      const { data } = await supabase.from("exam_titles").select("name").eq("is_active", true);
+      const { data } = await scopeQuery(supabase.from("exam_titles").select("name").eq("is_active", true));
       return data || [];
     },
   });
