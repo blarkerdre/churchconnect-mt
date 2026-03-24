@@ -86,7 +86,7 @@ Deno.serve(async (req) => {
     })
   }
 
-  const { subject, body, audience } = await req.json()
+  const { subject, body, audience, tenant_id } = await req.json()
 
   if (!subject?.trim() || !body?.trim() || !audience?.trim()) {
     return new Response(JSON.stringify({ error: 'subject, body, and audience are required' }), {
