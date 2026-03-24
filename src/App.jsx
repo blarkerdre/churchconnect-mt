@@ -29,6 +29,7 @@ import MyProfile from "@/pages/MyProfile";
 import PublicRegistration from "@/pages/PublicRegistration";
 import PublicWoFBIRegistration from "@/pages/PublicWoFBIRegistration";
 import Onboard from "@/pages/Onboard";
+import TenantAdmin from "@/pages/TenantAdmin";
 
 
 function ProtectedRoute({ children }) {
