@@ -30,11 +30,11 @@ export default function SelfCheckIn({ session, member, onClose }) {
   const checkInMutation = useMutation({
     mutationFn: async () => {
       if (myRecord) return; // Already checked in
-      const { error } = await supabase.from("attendance_records").insert({
+      const { error } = await supabase.from("attendance_records").insert(withTenant({
         session_id: session.id,
         member_id: member.id,
         check_in_method: "self",
-      });
+      }));
       if (error) throw error;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["self-checkin-records", session.id, member?.id] }),

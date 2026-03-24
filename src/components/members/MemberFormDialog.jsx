@@ -141,9 +141,9 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
   });
 
   const { data: wsfCentres = [] } = useQuery({
-    queryKey: ["wsf-centres"],
+    queryKey: ["wsf-centres", tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("wsf_centres").select("*").eq("is_active", true).order("name");
+      const { data, error } = await scopeQuery(supabase.from("wsf_centres").select("*").eq("is_active", true).order("name"));
       if (error) throw error;
       return data;
     },
