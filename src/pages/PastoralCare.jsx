@@ -219,7 +219,8 @@ export default function PastoralCare() {
               r.resolution_notes || "",
             ]),
           })} />
-        </div>
+          </div>
+        )}
       </div>
 
       {isLoading ? (
