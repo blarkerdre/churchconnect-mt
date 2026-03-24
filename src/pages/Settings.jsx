@@ -221,6 +221,7 @@ function SettingsListSection({ settingsKey, title, icon: Icon, description }) {
 /* ─── Church Units section (uses dedicated table) ─── */
 function ChurchUnitsSection() {
   const qc = useQueryClient();
+  const { tenantId, scopeQuery, withTenant } = useTenantQuery();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingUnit, setEditingUnit] = useState(null);
   const [unitName, setUnitName] = useState("");
