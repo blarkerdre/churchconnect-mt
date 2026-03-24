@@ -63,8 +63,18 @@ export default function UserManagement() {
     },
   });
 
-  // Track disabled status client-side after toggling
-  const [disabledUsers, setDisabledUsers] = useState({});
+  // Fetch banned users from backend so disabled state persists across refreshes
+  const { data: bannedUserIds = [] } = useQuery({
+    queryKey: ["banned-users"],
+    queryFn: async () => {
+      const { data, error } = await supabase.functions.invoke("admin-list-banned-users");
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      return data.banned_user_ids || [];
+    },
+  });
+
+  const disabledUsers = Object.fromEntries(bannedUserIds.map(id => [id, true]));
 
   const toggleRoleMutation = useMutation({
     mutationFn: async ({ userId, role, add, targetName }) => {
