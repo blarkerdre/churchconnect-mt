@@ -1,25 +1,27 @@
 
 
-## Fix Course Registration Email Not Sending
+## Fix Automatic Follow-up SMS to Assigned Person
 
-### Root Cause
-The `send-course-registration-email` edge function has no recent runtime logs, indicating it's either not deployed or not being invoked. The `public-wofbi-register` function (which triggers it) also shows no logs.
+### Problem
+The `auto_create_followup` database trigger tries to call the `notify-followup-assignment` edge function via `http_post`, but the vault secret `supabase_url` is missing. This means the trigger silently skips the notification call, so no SMS (or email) is sent to the assigned person.
 
 ### Solution
 
-1. **Redeploy both edge functions**
-   - Deploy `public-wofbi-register` and `send-course-registration-email` to ensure the latest code is live
+**Step 1: Add the missing vault secret**
+- Insert `supabase_url` into the Supabase vault so the trigger can construct the edge function URL.
+- SQL migration: `SELECT vault.create_secret('https://komqiadgeaapeuuzbovn.supabase.co', 'supabase_url');`
 
-2. **Test the registration flow**
-   - Invoke `send-course-registration-email` directly with test data to confirm it works
-   - Check logs for any runtime errors (missing secrets, import failures, etc.)
+**Step 2: Verify the SMS message content**
+The `notify-followup-assignment` edge function already sends a personalized SMS directed to the assigned person:
+> "Hi {name}, you've been assigned a new follow-up task for {member_name}. Please check the Church Management System. - Winners Chapel Cardiff"
 
-3. **If direct send still fails — migrate to queue-based pattern** (optional improvement)
-   - The current function uses `sendLovableEmail` (direct API call). If the API key or send URL has issues, emails silently fail with no retry.
-   - Could migrate to the queue-based `enqueue_email` pattern used by other email functions for retry safety, but this is a secondary concern — the immediate fix is redeployment.
+This is already correct and directed at the assigned person. No code changes needed.
+
+**Step 3: Test end-to-end**
+- Register or update a member to "First Timer" or "New Convert" status
+- Verify the trigger fires, calls the edge function, and an SMS log entry appears
 
 ### Technical Details
-- Files involved: `supabase/functions/send-course-registration-email/index.ts`, `supabase/functions/public-wofbi-register/index.ts`
-- No code changes needed initially — just redeployment and verification
-- If redeployment doesn't fix it, will inspect runtime logs for the actual error
+- **File changes**: None -- only a vault secret insertion via migration
+- **Root cause**: The trigger checks `IF _supabase_url IS NOT NULL AND _service_key IS NOT NULL` before calling `http_post`. Since `supabase_url` is NULL, the notification is skipped silently.
 
