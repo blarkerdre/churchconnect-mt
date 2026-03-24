@@ -60,7 +60,7 @@ Deno.serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, serviceKey);
 
-    const { assigned_to, member_name, description, followup_id, followup_type } = await req.json();
+    const { assigned_to, member_name, description, followup_id, followup_type, tenant_id } = await req.json();
 
     if (!assigned_to) {
       return new Response(JSON.stringify({ message: "No assignee" }), {
