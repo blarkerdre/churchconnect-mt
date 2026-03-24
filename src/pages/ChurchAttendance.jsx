@@ -267,8 +267,8 @@ export default function ChurchAttendance() {
           </div>
         </CardHeader>
         <CardContent>
-          {reports.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-8">No church attendance reports recorded yet</p>
+          {filteredReports.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-8">No church attendance reports found</p>
           ) : (
             <div className="overflow-x-auto">
               <Table>
