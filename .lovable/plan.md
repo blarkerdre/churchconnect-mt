@@ -1,32 +1,25 @@
 
 
-## Restrict Print, Filter, and Download to Admins & Unit Leaders
+## Fix Course Registration Email Not Sending
 
-Currently, several pages expose print, filter, and download controls to all authenticated users. This plan gates those controls behind admin or unit leader role checks.
+### Root Cause
+The `send-course-registration-email` edge function has no recent runtime logs, indicating it's either not deployed or not being invoked. The `public-wofbi-register` function (which triggers it) also shows no logs.
 
-### Pages to Update
+### Solution
 
-1. **`src/pages/ChurchAttendance.jsx`**
-   - Import `isAdmin, isUnitLeader` from `useAuth()` (currently only imports `user`)
-   - Wrap date filter inputs, service type filter, Download button, and PrintReportButton in `(isAdmin || isUnitLeader)` conditional
+1. **Redeploy both edge functions**
+   - Deploy `public-wofbi-register` and `send-course-registration-email` to ensure the latest code is live
 
-2. **`src/pages/PastoralCare.jsx`**
-   - Already has `canManage` (admin or pastoral unit). Wrap the date filters, status filter, CSV button, and PrintReportButton in a `canManage` check
+2. **Test the registration flow**
+   - Invoke `send-course-registration-email` directly with test data to confirm it works
+   - Check logs for any runtime errors (missing secrets, import failures, etc.)
 
-3. **`src/pages/Followups.jsx`**
-   - Import `isUnitLeader` from `useAuth()` (currently only has `isAdmin`)
-   - Wrap Download button and PrintReportButton in `(isAdmin || isUnitLeader)` conditional
-   - Wrap date filters and status filter in the same conditional
+3. **If direct send still fails — migrate to queue-based pattern** (optional improvement)
+   - The current function uses `sendLovableEmail` (direct API call). If the API key or send URL has issues, emails silently fail with no retry.
+   - Could migrate to the queue-based `enqueue_email` pattern used by other email functions for retry safety, but this is a secondary concern — the immediate fix is redeployment.
 
-4. **`src/pages/Attendance.jsx`**
-   - Already has `isAdmin, isUnitLeader` and `canManage`. Wrap Download button and PrintReportButton in `canManage` check
-
-5. **`src/pages/Members.jsx`**
-   - CSV download is already gated by `isAdmin`. Expand to `(isAdmin || isUnitLeader)` so unit leaders can also export
-
-### What stays unchanged
-- TrainingReports.jsx (already uses sub-feature toggles for CSV/print)
-- SystemLogs.jsx (page is admin-only)
-- Events.jsx (no download/print features)
-- WSFManagement.jsx (no download/print features)
+### Technical Details
+- Files involved: `supabase/functions/send-course-registration-email/index.ts`, `supabase/functions/public-wofbi-register/index.ts`
+- No code changes needed initially — just redeployment and verification
+- If redeployment doesn't fix it, will inspect runtime logs for the actual error
 
