@@ -296,7 +296,7 @@ export default function Attendance() {
                   </div>
                 )}
                 {records.length === 0 ? (
-                  <p className="text-sm text-muted-foreground text-center py-4">No check-ins for this session</p>
+                  <p className="text-sm text-muted-foreground text-center py-4">No check-ins for this meeting</p>
                 ) : records.map(r => (
                   <div key={r.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
                     <div className="flex items-center gap-3">
