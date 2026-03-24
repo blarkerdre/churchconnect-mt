@@ -137,7 +137,8 @@ export default function Onboard() {
         });
         navigate("/auth");
       } else {
-        navigate("/");
+        // Redirect to tenant-prefixed dashboard
+        navigate(`/t/${form.slug.trim()}/`);
       }
     } catch (err) {
       toast({

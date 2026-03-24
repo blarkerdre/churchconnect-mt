@@ -88,16 +88,26 @@ Deno.serve(async (req) => {
 
     const userId = newUser.user.id;
 
-    // 2. Create tenant
-    const defaultFeatures = {
-      sms_enabled: true,
-      exams_enabled: true,
-      transportation: true,
-      pastoral_care: true,
-      wsf_enabled: true,
-      ...(features || {}),
+    // 2. Build disabled_features array from feature toggles
+    // Features map: key -> route path
+    const featureRouteMap: Record<string, string> = {
+      sms_enabled: "/communications",
+      exams_enabled: "/exam-management",
+      transportation: "/transportation",
+      pastoral_care: "/pastoral-care",
+      wsf_enabled: "/wsf",
     };
 
+    const disabledFeatures: string[] = [];
+    if (features) {
+      for (const [key, route] of Object.entries(featureRouteMap)) {
+        if (features[key] === false) {
+          disabledFeatures.push(route);
+        }
+      }
+    }
+
+    // 3. Create tenant
     const { data: tenant, error: tenantError } = await admin
       .from("tenants")
       .insert({
@@ -106,14 +116,16 @@ Deno.serve(async (req) => {
         timezone: timezone || "Europe/London",
         logo_url: logo_url || null,
         created_by: userId,
-        settings: { features: defaultFeatures },
-        setup_complete: false,
+        settings: {
+          features: features || {},
+          disabled_features: disabledFeatures,
+        },
+        setup_complete: true,
       })
       .select("id")
       .single();
 
     if (tenantError) {
-      // Cleanup: delete created user
       await admin.auth.admin.deleteUser(userId);
       return new Response(
         JSON.stringify({ error: `Tenant creation failed: ${tenantError.message}` }),
@@ -124,27 +136,35 @@ Deno.serve(async (req) => {
       );
     }
 
-    // 3. Create tenant membership (owner)
+    // 4. Create tenant membership (owner)
     await admin.from("tenant_memberships").insert({
       tenant_id: tenant.id,
       user_id: userId,
       role: "owner",
     });
 
-    // 4. Create user_roles entry (super_admin for the tenant owner)
+    // 5. Create user_roles entry (super_admin for the tenant owner)
     await admin.from("user_roles").insert({
       user_id: userId,
       role: "super_admin",
       tenant_id: tenant.id,
     });
 
-    // 5. Create profile
-    await admin.from("profiles").insert({
-      user_id: userId,
+    // 6. Update profile (created by handle_new_user trigger) with tenant_id
+    await admin.from("profiles").update({
       full_name: admin_full_name || admin_email,
-      email: admin_email,
       tenant_id: tenant.id,
-    });
+    }).eq("user_id", userId);
+
+    // 7. Seed app_settings with disabled_features for this tenant
+    if (disabledFeatures.length > 0) {
+      await admin.from("app_settings").upsert({
+        key: "disabled_features",
+        value: disabledFeatures,
+        tenant_id: tenant.id,
+        updated_by: userId,
+      }, { onConflict: "key,tenant_id" });
+    }
 
     return new Response(
       JSON.stringify({
