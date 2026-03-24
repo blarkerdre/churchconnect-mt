@@ -8,6 +8,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, FileText } from "lucide-react";
+import { useSubFeature } from "@/hooks/useSubFeature";
 import { format, subMonths, startOfMonth, endOfMonth, parseISO } from "date-fns";
 
 const COLORS = [
@@ -20,6 +21,7 @@ const COLORS = [
 export default function Analytics() {
   const [dateFrom, setDateFrom] = useState(format(subMonths(new Date(), 6), "yyyy-MM-dd"));
   const [dateTo, setDateTo] = useState(format(new Date(), "yyyy-MM-dd"));
+  const { enabled: canDownloadReport } = useSubFeature("analytics.download_report");
 
   // Attendance sessions + records
   const { data: sessions = [], isLoading: loadingSessions } = useQuery({
@@ -203,9 +205,11 @@ export default function Analytics() {
               <Label className="text-xs">To</Label>
               <Input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="w-40" />
             </div>
-            <Button variant="outline" size="sm" onClick={generateReport}>
-              <FileText className="h-4 w-4 mr-2" /> Download Report
-            </Button>
+            {canDownloadReport && (
+              <Button variant="outline" size="sm" onClick={generateReport}>
+                <FileText className="h-4 w-4 mr-2" /> Download Report
+              </Button>
+            )}
           </div>
         </CardContent>
       </Card>

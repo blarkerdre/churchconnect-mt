@@ -17,6 +17,7 @@ import { Loader2, Plus, Droplets, Flame, BookOpen, Users, TrendingUp, Paperclip,
 import { useAppSetting } from "@/hooks/useAppSetting";
 import ReportAttachments from "@/components/reports/ReportAttachments";
 import PrintReportButton from "@/components/PrintReportButton";
+import { useSubFeature } from "@/hooks/useSubFeature";
 
 const ICON_MAP = {
   "Water Baptism": { icon: Droplets, color: "text-blue-500" },
@@ -58,6 +59,11 @@ export default function TrainingReports() {
   const [expandedRow, setExpandedRow] = useState(null);
   const { user } = useAuth();
   const qc = useQueryClient();
+
+  const { enabled: canRecordSession } = useSubFeature("training.record_session");
+  const { enabled: canCsvExport } = useSubFeature("training.csv_export");
+  const { enabled: canPrint } = useSubFeature("training.print");
+  const { enabled: canAttachments } = useSubFeature("training.attachments");
 
   const { data: reports = [], isLoading } = useQuery({
     queryKey: ["training-reports", filterType, filterFrom, filterTo],
@@ -171,10 +177,11 @@ export default function TrainingReports() {
           </h1>
           <p className="text-sm text-muted-foreground mt-1">Record attendance and outcomes for BFC and training sessions</p>
         </div>
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild>
-            <Button size="sm" className="gap-1.5"><Plus className="h-4 w-4" /> Record Session</Button>
-          </DialogTrigger>
+        {canRecordSession && (
+          <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+              <Button size="sm" className="gap-1.5"><Plus className="h-4 w-4" /> Record Session</Button>
+            </DialogTrigger>
           <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Record Training Session</DialogTitle>
@@ -246,6 +253,7 @@ export default function TrainingReports() {
             </form>
           </DialogContent>
         </Dialog>
+        )}
       </div>
 
       {/* Summary Cards */}
@@ -273,10 +281,12 @@ export default function TrainingReports() {
                   ))}
                 </SelectContent>
               </Select>
-              <Button variant="outline" size="sm" onClick={handleDownloadCSV} disabled={reports.length === 0} className="gap-1.5">
-                <Download className="h-3.5 w-3.5" /> CSV
-              </Button>
-              <PrintReportButton buildRows={buildPrintRows} label="Print" />
+              {canCsvExport && (
+                <Button variant="outline" size="sm" onClick={handleDownloadCSV} disabled={reports.length === 0} className="gap-1.5">
+                  <Download className="h-3.5 w-3.5" /> CSV
+                </Button>
+              )}
+              {canPrint && <PrintReportButton buildRows={buildPrintRows} label="Print" />}
             </div>
           </div>
         </CardHeader>
@@ -318,9 +328,11 @@ export default function TrainingReports() {
                           <TableCell className="text-center">{r.holy_ghost_baptism}</TableCell>
                           <TableCell className="text-center">{r.water_baptism}</TableCell>
                           <TableCell>
-                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setExpandedRow(expandedRow === r.id ? null : r.id)}>
-                              <Paperclip className="h-3.5 w-3.5" />
-                            </Button>
+                            {canAttachments && (
+                              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setExpandedRow(expandedRow === r.id ? null : r.id)}>
+                                <Paperclip className="h-3.5 w-3.5" />
+                              </Button>
+                            )}
                           </TableCell>
                         </TableRow>
                         {expandedRow === r.id && (

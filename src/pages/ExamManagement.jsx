@@ -20,6 +20,7 @@ import WoFBIRegistrationQRCode from "@/components/exams/WoFBIRegistrationQRCode"
 import SubjectManager from "@/components/exams/SubjectManager";
 import CourseResultsView from "@/components/exams/CourseResultsView";
 import TakeExamDialog from "@/components/exams/TakeExamDialog";
+import { useSubFeature } from "@/hooks/useSubFeature";
 
 const OPTION_LETTERS = ["a", "b", "c", "d"];
 const QUESTION_TYPES = [
@@ -61,6 +62,8 @@ export default function ExamManagement() {
   const [showResults, setShowResults] = useState(false);
   const [showRegistrations, setShowRegistrations] = useState(false);
   const [qrOpen, setQrOpen] = useState(false);
+  const { enabled: canCreateCourse } = useSubFeature("wofbi.create_course");
+  const { enabled: canRegQr } = useSubFeature("wofbi.registration_qr");
 
   // Fetch courses (exam_titles)
   const { data: examTitles = [], isLoading: titlesLoading } = useQuery({
@@ -252,9 +255,11 @@ export default function ExamManagement() {
           </h1>
           <p className="text-sm text-muted-foreground mt-1">Manage certificate courses, subjects, and exam questions</p>
         </div>
-        <Button variant="outline" onClick={() => setQrOpen(true)} className="gap-2">
-          <QrCode className="h-4 w-4" /> Registration QR
-        </Button>
+        {canRegQr && (
+          <Button variant="outline" onClick={() => setQrOpen(true)} className="gap-2">
+            <QrCode className="h-4 w-4" /> Registration QR
+          </Button>
+        )}
       </div>
       <WoFBIRegistrationQRCode open={qrOpen} onOpenChange={setQrOpen} />
 
@@ -269,13 +274,15 @@ export default function ExamManagement() {
             <CardTitle className="text-base font-display flex items-center gap-2">
               <Tag className="h-4 w-4 text-primary" /> Certificate Courses
             </CardTitle>
-             <Button size="sm" variant="outline" className="gap-1.5" onClick={() => {
-              setEditingTitle(null);
-              setTitleForm({ name: "", description: "", pass_mark_percentage: 50, registration_open: false, exams_open: false });
-              setTitleDialogOpen(true);
-            }}>
-              <Plus className="h-3.5 w-3.5" /> Add Course
-            </Button>
+             {canCreateCourse && (
+               <Button size="sm" variant="outline" className="gap-1.5" onClick={() => {
+                setEditingTitle(null);
+                setTitleForm({ name: "", description: "", pass_mark_percentage: 50, registration_open: false, exams_open: false });
+                setTitleDialogOpen(true);
+              }}>
+                <Plus className="h-3.5 w-3.5" /> Add Course
+              </Button>
+             )}
           </div>
         </CardHeader>
         <CardContent>

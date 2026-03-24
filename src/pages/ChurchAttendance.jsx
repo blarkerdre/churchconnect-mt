@@ -16,6 +16,7 @@ import { format, parseISO } from "date-fns";
 import { Loader2, Plus, Users, Church, Baby, UserCheck, Paperclip } from "lucide-react";
 import { useAppSetting } from "@/hooks/useAppSetting";
 import ReportAttachments from "@/components/reports/ReportAttachments";
+import { useSubFeature } from "@/hooks/useSubFeature";
 
 const DEFAULT_SERVICE_TYPES = ["Sunday Service", "Midweek Service", "Special Program", "Thanksgiving Service", "Other"];
 
@@ -38,6 +39,7 @@ export default function ChurchAttendance() {
   const [expandedRow, setExpandedRow] = useState(null);
   const { user } = useAuth();
   const qc = useQueryClient();
+  const { enabled: canRecordAttendance } = useSubFeature("church_attendance.record");
 
   const { data: reports = [], isLoading } = useQuery({
     queryKey: ["church-attendance-reports", filterType],
@@ -121,10 +123,11 @@ export default function ChurchAttendance() {
           </h1>
           <p className="text-sm text-muted-foreground mt-1">Record and track total church service attendance</p>
         </div>
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild>
-            <Button size="sm" className="gap-1.5"><Plus className="h-4 w-4" /> Record Attendance</Button>
-          </DialogTrigger>
+        {canRecordAttendance && (
+          <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+              <Button size="sm" className="gap-1.5"><Plus className="h-4 w-4" /> Record Attendance</Button>
+            </DialogTrigger>
           <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Record Church Attendance</DialogTitle>
@@ -192,6 +195,7 @@ export default function ChurchAttendance() {
             </form>
           </DialogContent>
         </Dialog>
+        )}
       </div>
 
       {/* Summary Cards */}

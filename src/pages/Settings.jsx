@@ -12,8 +12,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 import {
   Settings as SettingsIcon, Plus, Pencil, Trash2, Loader2,
-  Users, Church, CalendarDays, TrendingUp, Heart, Globe, Bell, Award, Link2, ToggleLeft, ShieldAlert, BookOpen
+  Users, Church, CalendarDays, TrendingUp, Heart, Globe, Bell, Award, Link2, ToggleLeft, ShieldAlert, BookOpen, ChevronDown, ChevronRight
 } from "lucide-react";
+import { SUB_FEATURES, useDisabledSubFeatures } from "@/hooks/useSubFeature";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useAuth } from "@/hooks/useAuth";
 import WSFCentresSection from "@/components/settings/WSFCentresSection";
 import WSFZonesSection from "@/components/settings/WSFZonesSection";
@@ -362,6 +364,7 @@ const TOGGLEABLE_FEATURES = [
 
 function FeatureTogglesSection() {
   const qc = useQueryClient();
+  const [expandedFeature, setExpandedFeature] = React.useState(null);
 
   const { data: disabledFeatures = [], isLoading } = useQuery({
     queryKey: ["app-settings", "disabled_features"],
@@ -375,6 +378,8 @@ function FeatureTogglesSection() {
       return Array.isArray(data?.value) ? data.value : [];
     },
   });
+
+  const { data: disabledSubFeatures = [], isLoading: subLoading } = useDisabledSubFeatures();
 
   const toggleMutation = useMutation({
     mutationFn: async (newDisabled) => {
@@ -390,11 +395,32 @@ function FeatureTogglesSection() {
     onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
 
+  const subToggleMutation = useMutation({
+    mutationFn: async (newDisabled) => {
+      const { error } = await supabase
+        .from("app_settings")
+        .upsert({ key: "disabled_sub_features", value: newDisabled }, { onConflict: "key" });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["app-settings", "disabled_sub_features"] });
+      toast({ title: "Sub-feature visibility updated" });
+    },
+    onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+  });
+
   const handleToggle = (path, enabled) => {
     const updated = enabled
       ? disabledFeatures.filter((p) => p !== path)
       : [...disabledFeatures, path];
     toggleMutation.mutate(updated);
+  };
+
+  const handleSubToggle = (key, enabled) => {
+    const updated = enabled
+      ? disabledSubFeatures.filter((k) => k !== key)
+      : [...disabledSubFeatures, key];
+    subToggleMutation.mutate(updated);
   };
 
   return (
@@ -403,26 +429,58 @@ function FeatureTogglesSection() {
         <CardTitle className="text-base font-display flex items-center gap-2">
           <ToggleLeft className="h-4 w-4 text-accent" /> Feature Toggles
         </CardTitle>
-        <p className="text-xs text-muted-foreground mt-1">Enable or disable app modules. Disabled features are hidden from all users except super admins.</p>
+        <p className="text-xs text-muted-foreground mt-1">Enable or disable app modules and their components. Disabled features are hidden from all users except super admins.</p>
       </CardHeader>
       <CardContent>
-        {isLoading ? (
+        {isLoading || subLoading ? (
           <div className="flex justify-center py-6"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
         ) : (
           <div className="space-y-2">
             {TOGGLEABLE_FEATURES.map((feature) => {
               const isEnabled = !disabledFeatures.includes(feature.path);
+              const subFeatures = SUB_FEATURES[feature.path] || [];
+              const isExpanded = expandedFeature === feature.path;
               return (
-                <div key={feature.path} className="flex items-center justify-between p-2.5 sm:p-3 bg-muted/50 rounded-lg">
-                  <div>
-                    <p className="text-sm font-medium text-foreground">{feature.name}</p>
-                    <p className="text-[11px] text-muted-foreground">{feature.path}</p>
+                <div key={feature.path} className="rounded-lg overflow-hidden">
+                  <div className="flex items-center justify-between p-2.5 sm:p-3 bg-muted/50">
+                    <div className="flex items-center gap-2 min-w-0">
+                      {subFeatures.length > 0 && isEnabled && (
+                        <button
+                          onClick={() => setExpandedFeature(isExpanded ? null : feature.path)}
+                          className="p-0.5 rounded hover:bg-muted transition-colors"
+                        >
+                          {isExpanded ? <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" /> : <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />}
+                        </button>
+                      )}
+                      <div>
+                        <p className="text-sm font-medium text-foreground">{feature.name}</p>
+                        <p className="text-[11px] text-muted-foreground">{feature.path}</p>
+                      </div>
+                    </div>
+                    <Switch
+                      checked={isEnabled}
+                      onCheckedChange={(checked) => handleToggle(feature.path, checked)}
+                      disabled={toggleMutation.isPending}
+                    />
                   </div>
-                  <Switch
-                    checked={isEnabled}
-                    onCheckedChange={(checked) => handleToggle(feature.path, checked)}
-                    disabled={toggleMutation.isPending}
-                  />
+                  {isEnabled && isExpanded && subFeatures.length > 0 && (
+                    <div className="pl-8 pr-3 pb-2 pt-1 bg-muted/30 space-y-1">
+                      {subFeatures.map((sub) => {
+                        const subEnabled = !disabledSubFeatures.includes(sub.key);
+                        return (
+                          <div key={sub.key} className="flex items-center justify-between py-1.5 px-2 rounded hover:bg-muted/50">
+                            <span className="text-xs text-foreground">{sub.name}</span>
+                            <Switch
+                              checked={subEnabled}
+                              onCheckedChange={(checked) => handleSubToggle(sub.key, checked)}
+                              disabled={subToggleMutation.isPending}
+                              className="scale-90"
+                            />
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               );
             })}
