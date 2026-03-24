@@ -185,6 +185,7 @@ Deno.serve(async (req) => {
             status: "failed",
             channel: msgChannel,
             error_message: data.message || JSON.stringify(data),
+            ...(tenant_id ? { tenant_id } : {}),
           });
         }
       } catch (err) {
