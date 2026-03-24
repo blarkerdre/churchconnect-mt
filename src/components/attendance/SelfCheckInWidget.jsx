@@ -33,13 +33,15 @@ export default function SelfCheckInWidget() {
 
   // Get today's sessions
   const { data: sessions = [], isLoading: sessionsLoading } = useQuery({
-    queryKey: ["today-sessions", today],
+    queryKey: ["today-sessions", today, tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("attendance_sessions")
-        .select("id, title, session_type, session_date")
-        .eq("session_date", today)
-        .order("created_at");
+      const { data, error } = await scopeQuery(
+        supabase
+          .from("attendance_sessions")
+          .select("id, title, session_type, session_date")
+          .eq("session_date", today)
+          .order("created_at")
+      );
       if (error) throw error;
       return data;
     },
