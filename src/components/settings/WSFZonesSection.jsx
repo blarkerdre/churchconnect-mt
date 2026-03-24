@@ -65,7 +65,7 @@ export default function WSFZonesSection() {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["wsf-zones"] });
+      queryClient.invalidateQueries({ queryKey: ["wsf-zones", tenantId] });
       queryClient.invalidateQueries({ queryKey: ["wsf-centres"] });
       toast({ title: "Zone deleted" });
     },
