@@ -247,8 +247,8 @@ export default function Followups() {
       </div>
 
       {/* Controls */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 flex-1">
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 flex-1 flex-wrap">
           <div className="relative w-full sm:w-72">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input placeholder="Search follow-ups..." value={search} onChange={e => setSearch(e.target.value)} className="pl-10" />
@@ -259,8 +259,30 @@ export default function Followups() {
               {["All", "Pending", "In Progress", "Completed", "Overdue"].map(s => <SelectItem key={s} value={s}>{s === "All" ? "All Status" : s}</SelectItem>)}
             </SelectContent>
           </Select>
+          <Input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="w-full sm:w-40" placeholder="From" />
+          <Input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="w-full sm:w-40" placeholder="To" />
         </div>
-        {canCreateFollowup && <Button onClick={openNew} className="w-full sm:w-auto bg-primary hover:bg-primary/90"><Plus className="h-4 w-4 mr-2" /> New Follow-up</Button>}
+        <div className="flex flex-wrap items-center gap-2">
+          {canCreateFollowup && <Button onClick={openNew} className="bg-primary hover:bg-primary/90"><Plus className="h-4 w-4 mr-2" /> New Follow-up</Button>}
+          <Button variant="outline" onClick={downloadCSV}><Download className="h-4 w-4 mr-2" /> Download</Button>
+          <PrintReportButton
+            label="Print"
+            buildRows={() => ({
+              title: "Follow-ups Report",
+              headers: ["Name", "Type", "Status", "Priority", "Assigned To", "Due Date", "Completed", "Notes"],
+              rows: filtered.map(f => [
+                f.person_name,
+                f.followup_type,
+                f.status,
+                f.priority || "",
+                f.assigned_to ? (profileMap[f.assigned_to] || "Unassigned") : "Unassigned",
+                f.due_date || "",
+                f.completed_date || "",
+                f.notes || f.description || "",
+              ]),
+            })}
+          />
+        </div>
       </div>
 
       {/* List */}
