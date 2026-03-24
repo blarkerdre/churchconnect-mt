@@ -44,7 +44,7 @@ export default function Layout({ children }) {
   const [collapsed, setCollapsed] = useState(false);
   const [tenantDropdownOpen, setTenantDropdownOpen] = useState(false);
   const location = useLocation();
-  const { signOut, profile, isAdmin, isUnitLeader, isWSFLeader, roles, leaderUnits } = useAuth();
+  const { signOut, profile, isAdmin, isUnitLeader, isWSFLeader, roles, leaderUnits, isTenantOwner, isTenantAdmin } = useAuth();
   const { currentTenant, tenantId, tenantMemberships, switchTenant } = useTenant();
   const isSuperAdmin = roles.includes("super_admin");
   const { data: externalLinks } = useAppSetting("external_links", []);
