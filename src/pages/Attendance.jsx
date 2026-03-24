@@ -319,7 +319,7 @@ export default function Attendance() {
             {/* Session Report — only for unit leaders after session is closed */}
             {selectedSession && isClosed && (isAdmin || isUnitLeader) && (
               <Card className="border-0 shadow-sm">
-                <CardHeader><CardTitle className="text-base font-display flex items-center gap-2"><FileText className="h-4 w-4 text-accent" /> Session Report</CardTitle></CardHeader>
+                <CardHeader><CardTitle className="text-base font-display flex items-center gap-2"><FileText className="h-4 w-4 text-accent" /> Meeting Report</CardTitle></CardHeader>
                 <CardContent className="space-y-4">
                   {selectedSession.report_saved ? (
                     <>
