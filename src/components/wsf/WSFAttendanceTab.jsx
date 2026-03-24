@@ -11,6 +11,7 @@ import { toast } from "@/components/ui/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { format } from "date-fns";
 import WSFAttendanceFormDialog from "./WSFAttendanceFormDialog";
+import PrintReportButton from "@/components/PrintReportButton";
 
 export default function WSFAttendanceTab({ centres }) {
   const { user, isAdmin } = useAuth();
@@ -19,6 +20,8 @@ export default function WSFAttendanceTab({ centres }) {
   const [editing, setEditing] = useState(null);
   const [selectedCentre, setSelectedCentre] = useState(null);
   const [filterCentreId, setFilterCentreId] = useState("all");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
 
   // Find centres this user leads (by matching user_id to leader's member record)
   const { data: userMember } = useQuery({
