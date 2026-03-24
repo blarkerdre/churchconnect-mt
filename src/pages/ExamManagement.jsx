@@ -62,6 +62,8 @@ export default function ExamManagement() {
   const [showResults, setShowResults] = useState(false);
   const [showRegistrations, setShowRegistrations] = useState(false);
   const [qrOpen, setQrOpen] = useState(false);
+  const { enabled: canCreateCourse } = useSubFeature("wofbi.create_course");
+  const { enabled: canRegQr } = useSubFeature("wofbi.registration_qr");
 
   // Fetch courses (exam_titles)
   const { data: examTitles = [], isLoading: titlesLoading } = useQuery({
