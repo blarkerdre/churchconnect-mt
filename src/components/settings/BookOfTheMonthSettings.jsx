@@ -14,7 +14,7 @@ import { useTenantQuery } from "@/hooks/useTenantQuery";
 
 export default function BookOfTheMonthSettings() {
   const { user } = useAuth();
-  const { tenantId } = useTenantQuery();
+  const { tenantId, withTenant, scopeQuery } = useTenantQuery();
   const qc = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState(null);
