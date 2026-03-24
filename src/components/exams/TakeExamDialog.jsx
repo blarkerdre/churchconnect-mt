@@ -219,7 +219,7 @@ export default function TakeExamDialog({ open, onOpenChange, trainingType, membe
       if (aggregatePct >= course.pass_mark_percentage) {
         try {
           const { data: certData, error: certErr } = await supabase.functions.invoke("issue-certificate", {
-            body: { member_id: memberId, training_type: courseName },
+            body: { member_id: memberId, training_type: courseName, tenant_id: tenantId },
           });
           if (!certErr && certData?.success) {
             toast({ title: "🎉 Certificate issued!", description: `You passed ${courseName} with ${Math.round(aggregatePct)}% aggregate.` });
