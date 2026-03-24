@@ -21,6 +21,7 @@ import SubjectManager from "@/components/exams/SubjectManager";
 import CourseResultsView from "@/components/exams/CourseResultsView";
 import TakeExamDialog from "@/components/exams/TakeExamDialog";
 import { useSubFeature } from "@/hooks/useSubFeature";
+import { useTenantQuery } from "@/hooks/useTenantQuery";
 
 const OPTION_LETTERS = ["a", "b", "c", "d"];
 const QUESTION_TYPES = [
@@ -46,6 +47,7 @@ const WOFBI_DEFAULT_ABOUT = "WoFBI — Word of Faith Bible Institute — is a st
 export default function ExamManagement() {
   const { user, isAdmin, myMember } = useAuth();
   const qc = useQueryClient();
+  const { tenantId, scopeQuery, withTenant } = useTenantQuery();
   const [selectedCourse, setSelectedCourse] = useState(null);
   const [selectedSubject, setSelectedSubject] = useState(null);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -67,9 +69,9 @@ export default function ExamManagement() {
 
   // Fetch courses (exam_titles)
   const { data: examTitles = [], isLoading: titlesLoading } = useQuery({
-    queryKey: ["exam-titles"],
+    queryKey: ["exam-titles", tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("exam_titles").select("*").order("name");
+      const { data, error } = await scopeQuery(supabase.from("exam_titles").select("*").order("name"));
       if (error) throw error;
       return data;
     },
@@ -89,7 +91,7 @@ export default function ExamManagement() {
         const { error } = await supabase.from("exam_titles").update(payload).eq("id", editingTitle.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("exam_titles").insert({ ...payload, created_by: user?.id });
+        const { error } = await supabase.from("exam_titles").insert(withTenant({ ...payload, created_by: user?.id }));
         if (error) throw error;
       }
     },
@@ -119,14 +121,14 @@ export default function ExamManagement() {
 
   // Questions — scoped to selected subject
   const { data: questions = [], isLoading } = useQuery({
-    queryKey: ["exam-questions-by-subject", selectedSubject?.id],
+    queryKey: ["exam-questions-by-subject", selectedSubject?.id, tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await scopeQuery(supabase
         .from("exam_questions")
         .select("*")
         .eq("subject_id", selectedSubject.id)
         .order("sort_order")
-        .order("created_at");
+        .order("created_at"));
       if (error) throw error;
       return data;
     },

@@ -15,6 +15,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { logAudit } from "@/lib/audit";
 import UnitLeaderAssignments from "@/components/users/UnitLeaderAssignments";
 import BulkUnitAssignDialog from "@/components/users/BulkUnitAssignDialog";
+import { useTenantQuery } from "@/hooks/useTenantQuery";
 
 const ROLES = ["super_admin", "admin", "unit_leader", "wsf_leader", "member"];
 
@@ -38,6 +39,7 @@ export default function UserManagement() {
   const { isAdmin, roles, user } = useAuth();
   const isSuperAdmin = roles.includes("super_admin");
   const queryClient = useQueryClient();
+  const { tenantId, scopeQuery, withTenant } = useTenantQuery();
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [addForm, setAddForm] = useState({ email: "", password: "", full_name: "", role: "member" });
   const [bulkAssignOpen, setBulkAssignOpen] = useState(false);
@@ -46,18 +48,18 @@ export default function UserManagement() {
   const [statusFilter, setStatusFilter] = useState("all");
 
   const { data: profiles = [], isLoading } = useQuery({
-    queryKey: ["all-profiles"],
+    queryKey: ["all-profiles", tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("profiles").select("*").order("created_at", { ascending: false });
+      const { data, error } = await scopeQuery(supabase.from("profiles").select("*").order("created_at", { ascending: false }));
       if (error) throw error;
       return data;
     },
   });
 
   const { data: allRoles = [] } = useQuery({
-    queryKey: ["all-user-roles"],
+    queryKey: ["all-user-roles", tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("user_roles").select("*");
+      const { data, error } = await scopeQuery(supabase.from("user_roles").select("*"));
       if (error) throw error;
       return data;
     },

@@ -17,6 +17,7 @@ import {
 import { SUB_FEATURES, useDisabledSubFeatures } from "@/hooks/useSubFeature";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useAuth } from "@/hooks/useAuth";
+import { useTenantQuery } from "@/hooks/useTenantQuery";
 import WSFCentresSection from "@/components/settings/WSFCentresSection";
 import WSFZonesSection from "@/components/settings/WSFZonesSection";
 import CertificateTemplateSettings from "@/components/certificates/CertificateTemplateSettings";
@@ -27,17 +28,17 @@ import BookOfTheMonthSettings from "@/components/settings/BookOfTheMonthSettings
 /* ─── Notification Preferences section ─── */
 function NotificationPreferencesSection() {
   const qc = useQueryClient();
-  
+  const { tenantId, scopeQuery, withTenant } = useTenantQuery();
   const { data: smsEnabled, isLoading } = useQuery({
-    queryKey: ["app-settings", "sms_notifications_enabled"],
+    queryKey: ["app-settings", "sms_notifications_enabled", tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let q = supabase
         .from("app_settings")
         .select("value")
-        .eq("key", "sms_notifications_enabled")
-        .maybeSingle();
+        .eq("key", "sms_notifications_enabled");
+      if (tenantId) q = q.eq("tenant_id", tenantId);
+      const { data, error } = await q.maybeSingle();
       if (error) throw error;
-      // Default to true (email + SMS) if not set
       return data?.value === true || data?.value === null || data === null;
     },
   });
@@ -46,7 +47,7 @@ function NotificationPreferencesSection() {
     mutationFn: async (enabled) => {
       const { error } = await supabase
         .from("app_settings")
-        .upsert({ key: "sms_notifications_enabled", value: enabled }, { onConflict: "key" });
+        .upsert(withTenant({ key: "sms_notifications_enabled", value: enabled }), { onConflict: "key" });
       if (error) throw error;
     },
     onSuccess: () => {
@@ -99,18 +100,20 @@ function NotificationPreferencesSection() {
 /* ─── Reusable list section backed by app_settings ─── */
 function SettingsListSection({ settingsKey, title, icon: Icon, description }) {
   const qc = useQueryClient();
+  const { tenantId, scopeQuery, withTenant } = useTenantQuery();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingIdx, setEditingIdx] = useState(null);
   const [itemName, setItemName] = useState("");
 
   const { data: items = [], isLoading } = useQuery({
-    queryKey: ["app-settings", settingsKey],
+    queryKey: ["app-settings", settingsKey, tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let q = supabase
         .from("app_settings")
         .select("value")
-        .eq("key", settingsKey)
-        .maybeSingle();
+        .eq("key", settingsKey);
+      if (tenantId) q = q.eq("tenant_id", tenantId);
+      const { data, error } = await q.maybeSingle();
       if (error) throw error;
       return Array.isArray(data?.value) ? data.value : [];
     },
@@ -120,7 +123,7 @@ function SettingsListSection({ settingsKey, title, icon: Icon, description }) {
     mutationFn: async (newItems) => {
       const { error } = await supabase
         .from("app_settings")
-        .upsert({ key: settingsKey, value: newItems }, { onConflict: "key" });
+        .upsert(withTenant({ key: settingsKey, value: newItems }), { onConflict: "key" });
       if (error) throw error;
     },
     onSuccess: () => {
@@ -218,15 +221,16 @@ function SettingsListSection({ settingsKey, title, icon: Icon, description }) {
 /* ─── Church Units section (uses dedicated table) ─── */
 function ChurchUnitsSection() {
   const qc = useQueryClient();
+  const { tenantId, scopeQuery, withTenant } = useTenantQuery();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingUnit, setEditingUnit] = useState(null);
   const [unitName, setUnitName] = useState("");
   const [unitActive, setUnitActive] = useState(true);
 
   const { data: units = [], isLoading } = useQuery({
-    queryKey: ["church-units", false],
+    queryKey: ["church-units", false, tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("church_units").select("*").order("name");
+      const { data, error } = await scopeQuery(supabase.from("church_units").select("*").order("name"));
       if (error) throw error;
       return data;
     },
@@ -238,7 +242,7 @@ function ChurchUnitsSection() {
         const { error } = await supabase.from("church_units").update({ name, is_active }).eq("id", id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("church_units").insert({ name, is_active });
+        const { error } = await supabase.from("church_units").insert(withTenant({ name, is_active }));
         if (error) throw error;
       }
     },
@@ -364,16 +368,18 @@ const TOGGLEABLE_FEATURES = [
 
 function FeatureTogglesSection() {
   const qc = useQueryClient();
+  const { tenantId, withTenant } = useTenantQuery();
   const [expandedFeature, setExpandedFeature] = React.useState(null);
 
   const { data: disabledFeatures = [], isLoading } = useQuery({
-    queryKey: ["app-settings", "disabled_features"],
+    queryKey: ["app-settings", "disabled_features", tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let q = supabase
         .from("app_settings")
         .select("value")
-        .eq("key", "disabled_features")
-        .maybeSingle();
+        .eq("key", "disabled_features");
+      if (tenantId) q = q.eq("tenant_id", tenantId);
+      const { data, error } = await q.maybeSingle();
       if (error) throw error;
       return Array.isArray(data?.value) ? data.value : [];
     },
@@ -385,7 +391,7 @@ function FeatureTogglesSection() {
     mutationFn: async (newDisabled) => {
       const { error } = await supabase
         .from("app_settings")
-        .upsert({ key: "disabled_features", value: newDisabled }, { onConflict: "key" });
+        .upsert(withTenant({ key: "disabled_features", value: newDisabled }), { onConflict: "key" });
       if (error) throw error;
     },
     onSuccess: () => {
@@ -399,7 +405,7 @@ function FeatureTogglesSection() {
     mutationFn: async (newDisabled) => {
       const { error } = await supabase
         .from("app_settings")
-        .upsert({ key: "disabled_sub_features", value: newDisabled }, { onConflict: "key" });
+        .upsert(withTenant({ key: "disabled_sub_features", value: newDisabled }), { onConflict: "key" });
       if (error) throw error;
     },
     onSuccess: () => {

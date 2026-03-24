@@ -15,6 +15,7 @@ import { toast } from "@/components/ui/use-toast";
 import { format, parseISO } from "date-fns";
 import { Loader2, Plus, Droplets, Flame, BookOpen, Users, TrendingUp, Paperclip, Download, Printer } from "lucide-react";
 import { useAppSetting } from "@/hooks/useAppSetting";
+import { useTenantQuery } from "@/hooks/useTenantQuery";
 import ReportAttachments from "@/components/reports/ReportAttachments";
 import PrintReportButton from "@/components/PrintReportButton";
 import { useSubFeature } from "@/hooks/useSubFeature";
@@ -59,6 +60,7 @@ export default function TrainingReports() {
   const [expandedRow, setExpandedRow] = useState(null);
   const { user } = useAuth();
   const qc = useQueryClient();
+  const { tenantId, scopeQuery, withTenant } = useTenantQuery();
 
   const { enabled: canRecordSession } = useSubFeature("training.record_session");
   const { enabled: canCsvExport } = useSubFeature("training.csv_export");
@@ -66,7 +68,7 @@ export default function TrainingReports() {
   const { enabled: canAttachments } = useSubFeature("training.attachments");
 
   const { data: reports = [], isLoading } = useQuery({
-    queryKey: ["training-reports", filterType, filterFrom, filterTo],
+    queryKey: ["training-reports", filterType, filterFrom, filterTo, tenantId],
     queryFn: async () => {
       let q = supabase
         .from("training_reports")
@@ -75,7 +77,7 @@ export default function TrainingReports() {
       if (filterType !== "all") q = q.eq("training_type", filterType);
       if (filterFrom) q = q.gte("session_date", filterFrom);
       if (filterTo) q = q.lte("session_date", filterTo);
-      const { data, error } = await q;
+      const { data, error } = await scopeQuery(q);
       if (error) throw error;
       return data;
     },
@@ -83,7 +85,7 @@ export default function TrainingReports() {
 
   const saveMutation = useMutation({
     mutationFn: async (payload) => {
-      const { error } = await supabase.from("training_reports").insert(payload);
+      const { error } = await supabase.from("training_reports").insert(withTenant(payload));
       if (error) throw error;
     },
     onSuccess: () => {

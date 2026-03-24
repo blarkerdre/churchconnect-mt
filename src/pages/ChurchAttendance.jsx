@@ -18,6 +18,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsive
 import { useAppSetting } from "@/hooks/useAppSetting";
 import ReportAttachments from "@/components/reports/ReportAttachments";
 import { useSubFeature } from "@/hooks/useSubFeature";
+import { useTenantQuery } from "@/hooks/useTenantQuery";
 import PrintReportButton from "@/components/PrintReportButton";
 
 const DEFAULT_SERVICE_TYPES = ["Sunday Service", "Midweek Service", "Special Program", "Thanksgiving Service", "Other"];
@@ -43,17 +44,18 @@ export default function ChurchAttendance() {
   const [expandedRow, setExpandedRow] = useState(null);
   const { user, isAdmin, isUnitLeader } = useAuth();
   const qc = useQueryClient();
+  const { tenantId, scopeQuery, withTenant } = useTenantQuery();
   const { enabled: canRecordAttendance } = useSubFeature("church_attendance.record");
 
   const { data: reports = [], isLoading } = useQuery({
-    queryKey: ["church-attendance-reports", filterType],
+    queryKey: ["church-attendance-reports", filterType, tenantId],
     queryFn: async () => {
       let q = supabase
         .from("church_attendance_reports")
         .select("*")
         .order("service_date", { ascending: false });
       if (filterType !== "all") q = q.eq("service_type", filterType);
-      const { data, error } = await q;
+      const { data, error } = await scopeQuery(q);
       if (error) throw error;
       return data;
     },
@@ -61,7 +63,7 @@ export default function ChurchAttendance() {
 
   const saveMutation = useMutation({
     mutationFn: async (payload) => {
-      const { error } = await supabase.from("church_attendance_reports").insert(payload);
+      const { error } = await supabase.from("church_attendance_reports").insert(withTenant(payload));
       if (error) throw error;
     },
     onSuccess: () => {
