@@ -28,7 +28,7 @@ import ResetPassword from "@/pages/ResetPassword";
 import MyProfile from "@/pages/MyProfile";
 import PublicRegistration from "@/pages/PublicRegistration";
 import PublicWoFBIRegistration from "@/pages/PublicWoFBIRegistration";
-import Presentation from "@/pages/Presentation";
+import Onboard from "@/pages/Onboard";
 
 
 function ProtectedRoute({ children }) {
@@ -151,6 +151,7 @@ function AppRoutes() {
       <Route path="/register" element={<PublicRegistration />} />
       <Route path="/wofbi-register" element={<PublicWoFBIRegistration />} />
       <Route path="/presentation" element={<Presentation />} />
+      <Route path="/onboard" element={<Onboard />} />
 
       {/* Tenant-prefixed public routes (for future multi-tenant QR codes) */}
       <Route path="/t/:tenantSlug/register" element={<PublicRegistration />} />
