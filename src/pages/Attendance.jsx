@@ -62,9 +62,9 @@ export default function Attendance() {
   });
 
   const { data: totalMembers = 0 } = useQuery({
-    queryKey: ["total-members-count"],
+    queryKey: ["total-members-count", tenantId],
     queryFn: async () => {
-      const { count, error } = await supabase.from("members").select("*", { count: "exact", head: true }).eq("membership_status", "Active");
+      const { count, error } = await scopeQuery(supabase.from("members").select("*", { count: "exact", head: true }).eq("membership_status", "Active"));
       if (error) throw error;
       return count || 0;
     },
