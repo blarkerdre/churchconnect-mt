@@ -25,6 +25,7 @@ export type Database = {
           is_published: boolean | null
           publish_date: string | null
           target_audience: string | null
+          tenant_id: string | null
           title: string
           updated_at: string
         }
@@ -38,6 +39,7 @@ export type Database = {
           is_published?: boolean | null
           publish_date?: string | null
           target_audience?: string | null
+          tenant_id?: string | null
           title: string
           updated_at?: string
         }
@@ -51,10 +53,19 @@ export type Database = {
           is_published?: boolean | null
           publish_date?: string | null
           target_audience?: string | null
+          tenant_id?: string | null
           title?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "announcements_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       app_settings: {
         Row: {
@@ -88,6 +99,7 @@ export type Database = {
           id: string
           member_id: string
           session_id: string
+          tenant_id: string | null
         }
         Insert: {
           check_in_method?: string | null
@@ -96,6 +108,7 @@ export type Database = {
           id?: string
           member_id: string
           session_id: string
+          tenant_id?: string | null
         }
         Update: {
           check_in_method?: string | null
@@ -104,6 +117,7 @@ export type Database = {
           id?: string
           member_id?: string
           session_id?: string
+          tenant_id?: string | null
         }
         Relationships: [
           {
@@ -120,6 +134,13 @@ export type Database = {
             referencedRelation: "attendance_sessions"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "attendance_records_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
         ]
       }
       attendance_sessions: {
@@ -134,6 +155,7 @@ export type Database = {
           session_date: string
           session_type: Database["public"]["Enums"]["session_type"]
           status: string
+          tenant_id: string | null
           title: string | null
           total_count: number
           unit: string | null
@@ -150,6 +172,7 @@ export type Database = {
           session_date: string
           session_type: Database["public"]["Enums"]["session_type"]
           status?: string
+          tenant_id?: string | null
           title?: string | null
           total_count?: number
           unit?: string | null
@@ -166,12 +189,21 @@ export type Database = {
           session_date?: string
           session_type?: Database["public"]["Enums"]["session_type"]
           status?: string
+          tenant_id?: string | null
           title?: string | null
           total_count?: number
           unit?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "attendance_sessions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       audit_log: {
         Row: {
@@ -302,6 +334,7 @@ export type Database = {
           service_date: string
           service_type: string
           teens: number
+          tenant_id: string | null
           title: string | null
           total_attendance: number
           updated_at: string
@@ -317,6 +350,7 @@ export type Database = {
           service_date: string
           service_type?: string
           teens?: number
+          tenant_id?: string | null
           title?: string | null
           total_attendance?: number
           updated_at?: string
@@ -332,11 +366,20 @@ export type Database = {
           service_date?: string
           service_type?: string
           teens?: number
+          tenant_id?: string | null
           title?: string | null
           total_attendance?: number
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "church_attendance_reports_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       church_units: {
         Row: {
@@ -533,6 +576,7 @@ export type Database = {
           id: string
           member_id: string | null
           status: string | null
+          tenant_id: string | null
           user_id: string | null
         }
         Insert: {
@@ -543,6 +587,7 @@ export type Database = {
           id?: string
           member_id?: string | null
           status?: string | null
+          tenant_id?: string | null
           user_id?: string | null
         }
         Update: {
@@ -553,6 +598,7 @@ export type Database = {
           id?: string
           member_id?: string | null
           status?: string | null
+          tenant_id?: string | null
           user_id?: string | null
         }
         Relationships: [
@@ -568,6 +614,13 @@ export type Database = {
             columns: ["member_id"]
             isOneToOne: false
             referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_registrations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
         ]
@@ -595,6 +648,7 @@ export type Database = {
           reminder_sent: boolean
           requires_registration: boolean | null
           start_time: string | null
+          tenant_id: string | null
           title: string
           updated_at: string
         }
@@ -620,6 +674,7 @@ export type Database = {
           reminder_sent?: boolean
           requires_registration?: boolean | null
           start_time?: string | null
+          tenant_id?: string | null
           title: string
           updated_at?: string
         }
@@ -645,6 +700,7 @@ export type Database = {
           reminder_sent?: boolean
           requires_registration?: boolean | null
           start_time?: string | null
+          tenant_id?: string | null
           title?: string
           updated_at?: string
         }
@@ -654,6 +710,13 @@ export type Database = {
             columns: ["recurrence_parent_id"]
             isOneToOne: false
             referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
         ]
