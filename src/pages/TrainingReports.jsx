@@ -85,7 +85,7 @@ export default function TrainingReports() {
 
   const saveMutation = useMutation({
     mutationFn: async (payload) => {
-      const { error } = await supabase.from("training_reports").insert(payload);
+      const { error } = await supabase.from("training_reports").insert(withTenant(payload));
       if (error) throw error;
     },
     onSuccess: () => {

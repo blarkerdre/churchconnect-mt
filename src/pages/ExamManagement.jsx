@@ -121,14 +121,14 @@ export default function ExamManagement() {
 
   // Questions — scoped to selected subject
   const { data: questions = [], isLoading } = useQuery({
-    queryKey: ["exam-questions-by-subject", selectedSubject?.id],
+    queryKey: ["exam-questions-by-subject", selectedSubject?.id, tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await scopeQuery(supabase
         .from("exam_questions")
         .select("*")
         .eq("subject_id", selectedSubject.id)
         .order("sort_order")
-        .order("created_at");
+        .order("created_at"));
       if (error) throw error;
       return data;
     },
