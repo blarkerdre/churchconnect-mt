@@ -4,6 +4,7 @@ import { queryClientInstance } from "@/lib/query-client";
 import { BrowserRouter as Router, Route, Routes, Navigate } from "react-router-dom";
 import { useUnitMembership } from "@/hooks/useUnitMembership";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
+import { TenantProvider } from "@/contexts/TenantContext";
 import { useAppSetting } from "@/hooks/useAppSetting";
 import Layout from "@/components/AppLayout";
 import Dashboard from "@/pages/Dashboard";
@@ -96,6 +97,32 @@ function FeatureGate({ path, children }) {
   return children;
 }
 
+/** Shared set of authenticated app routes — used both at root and under /t/:tenantSlug */
+function AppPages() {
+  return (
+    <Routes>
+      <Route path="/" element={<Dashboard />} />
+      <Route path="/my-profile" element={<MyProfile />} />
+      <Route path="/members" element={<FeatureGate path="/members"><Members /></FeatureGate>} />
+      <Route path="/events" element={<FeatureGate path="/events"><Events /></FeatureGate>} />
+      <Route path="/attendance" element={<FeatureGate path="/attendance"><LeaderRoute><Attendance /></LeaderRoute></FeatureGate>} />
+      <Route path="/followups" element={<FeatureGate path="/followups"><FollowupRoute><Followups /></FollowupRoute></FeatureGate>} />
+      <Route path="/pastoral-care" element={<FeatureGate path="/pastoral-care"><PastoralCare /></FeatureGate>} />
+      <Route path="/communications" element={<FeatureGate path="/communications"><Communications /></FeatureGate>} />
+      <Route path="/transportation" element={<FeatureGate path="/transportation"><Transportation /></FeatureGate>} />
+      <Route path="/analytics" element={<FeatureGate path="/analytics"><AdminRoute><Analytics /></AdminRoute></FeatureGate>} />
+      <Route path="/training-reports" element={<FeatureGate path="/training-reports"><TrainingRoute><TrainingReports /></TrainingRoute></FeatureGate>} />
+      <Route path="/exam-management" element={<FeatureGate path="/exam-management"><ProtectedRoute><ExamManagement /></ProtectedRoute></FeatureGate>} />
+      <Route path="/church-attendance" element={<FeatureGate path="/church-attendance"><TrainingRoute><ChurchAttendance /></TrainingRoute></FeatureGate>} />
+      <Route path="/wsf" element={<FeatureGate path="/wsf"><WSFRoute><WSFManagement /></WSFRoute></FeatureGate>} />
+      <Route path="/user-management" element={<AdminRoute><UserManagement /></AdminRoute>} />
+      <Route path="/settings" element={<AdminRoute><Settings /></AdminRoute>} />
+      <Route path="/system-logs" element={<AdminRoute><SystemLogs /></AdminRoute>} />
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
+  );
+}
+
 function AuthRoutes() {
   return (
     <Routes>
@@ -105,28 +132,11 @@ function AuthRoutes() {
         path="/*"
         element={
           <ProtectedRoute>
-            <Layout>
-              <Routes>
-                <Route path="/" element={<Dashboard />} />
-                <Route path="/my-profile" element={<MyProfile />} />
-                <Route path="/members" element={<FeatureGate path="/members"><Members /></FeatureGate>} />
-                <Route path="/events" element={<FeatureGate path="/events"><Events /></FeatureGate>} />
-                <Route path="/attendance" element={<FeatureGate path="/attendance"><LeaderRoute><Attendance /></LeaderRoute></FeatureGate>} />
-                <Route path="/followups" element={<FeatureGate path="/followups"><FollowupRoute><Followups /></FollowupRoute></FeatureGate>} />
-                <Route path="/pastoral-care" element={<FeatureGate path="/pastoral-care"><PastoralCare /></FeatureGate>} />
-                <Route path="/communications" element={<FeatureGate path="/communications"><Communications /></FeatureGate>} />
-                <Route path="/transportation" element={<FeatureGate path="/transportation"><Transportation /></FeatureGate>} />
-                <Route path="/analytics" element={<FeatureGate path="/analytics"><AdminRoute><Analytics /></AdminRoute></FeatureGate>} />
-                <Route path="/training-reports" element={<FeatureGate path="/training-reports"><TrainingRoute><TrainingReports /></TrainingRoute></FeatureGate>} />
-                <Route path="/exam-management" element={<FeatureGate path="/exam-management"><ProtectedRoute><ExamManagement /></ProtectedRoute></FeatureGate>} />
-                <Route path="/church-attendance" element={<FeatureGate path="/church-attendance"><TrainingRoute><ChurchAttendance /></TrainingRoute></FeatureGate>} />
-                <Route path="/wsf" element={<FeatureGate path="/wsf"><WSFRoute><WSFManagement /></WSFRoute></FeatureGate>} />
-                <Route path="/user-management" element={<AdminRoute><UserManagement /></AdminRoute>} />
-                <Route path="/settings" element={<AdminRoute><Settings /></AdminRoute>} />
-                <Route path="/system-logs" element={<AdminRoute><SystemLogs /></AdminRoute>} />
-                <Route path="*" element={<Navigate to="/" replace />} />
-              </Routes>
-            </Layout>
+            <TenantProvider>
+              <Layout>
+                <AppPages />
+              </Layout>
+            </TenantProvider>
           </ProtectedRoute>
         }
       />
@@ -137,9 +147,16 @@ function AuthRoutes() {
 function AppRoutes() {
   return (
     <Routes>
+      {/* Public routes — no auth required */}
       <Route path="/register" element={<PublicRegistration />} />
       <Route path="/wofbi-register" element={<PublicWoFBIRegistration />} />
       <Route path="/presentation" element={<Presentation />} />
+
+      {/* Tenant-prefixed public routes (for future multi-tenant QR codes) */}
+      <Route path="/t/:tenantSlug/register" element={<PublicRegistration />} />
+      <Route path="/t/:tenantSlug/wofbi-register" element={<PublicWoFBIRegistration />} />
+
+      {/* Authenticated routes — current paths */}
       <Route path="/*" element={<AuthProvider><AuthRoutes /></AuthProvider>} />
     </Routes>
   );
