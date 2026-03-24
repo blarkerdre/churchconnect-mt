@@ -213,6 +213,7 @@ Deno.serve(async (req) => {
       template_name: 'email-alert',
       recipient_email: member.email,
       status: 'pending',
+      ...(tenant_id ? { tenant_id } : {}),
     })
 
     enqueued++

@@ -366,6 +366,7 @@ Deno.serve(async (req) => {
           template_name: "certificate",
           recipient_email: member.email,
           status: "pending",
+          ...(tenant_id ? { tenant_id } : {}),
         });
       } catch (emailErr) {
         console.warn("Failed to send certificate email:", emailErr);
