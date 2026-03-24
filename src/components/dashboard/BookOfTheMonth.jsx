@@ -1,6 +1,7 @@
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { BookOpen } from "lucide-react";
+import { BookOpen, ExternalLink } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -45,6 +46,13 @@ export default function BookOfTheMonth() {
                 <p className="text-xs text-muted-foreground mt-0.5">by {book.author}</p>
                 {book.description && (
                   <p className="text-xs text-muted-foreground mt-2 line-clamp-3">{book.description}</p>
+                )}
+                {book.purchase_url && (
+                  <Button asChild variant="outline" size="sm" className="mt-2 gap-1.5 h-7 text-xs">
+                    <a href={book.purchase_url} target="_blank" rel="noopener noreferrer">
+                      <ExternalLink className="h-3 w-3" /> Buy Now
+                    </a>
+                  </Button>
                 )}
               </div>
             </div>
