@@ -226,7 +226,7 @@ export default function Attendance() {
                 closeSessionMutation.mutate(selectedSession.id);
               }
             }} className="text-destructive border-destructive/30 hover:bg-destructive/10">
-              <Lock className="h-4 w-4" /><span className="hidden sm:inline ml-2">Close Session</span>
+              <Lock className="h-4 w-4" /><span className="hidden sm:inline ml-2">Close Meeting</span>
             </Button>
           )}
           {canManage && (
