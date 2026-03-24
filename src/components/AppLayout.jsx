@@ -100,11 +100,11 @@ export default function Layout({ children }) {
         {/* Logo */}
         <div className={`p-4 border-b border-sidebar-border ${collapsed ? "px-3" : "p-6"}`}>
           <div className="flex items-center gap-3">
-            <img src={winnersLogo} alt="Winners Chapel Logo" className="h-10 w-10 object-contain shrink-0" />
+            <img src={tenantLogoUrl || winnersLogo} alt={`${tenantName} Logo`} className="h-10 w-10 object-contain shrink-0" />
             {!collapsed && (
               <div className="min-w-0">
-                <h1 className="font-display font-bold text-sm leading-tight text-sidebar-foreground">Winners Chapel</h1>
-                <p className="text-[11px] text-sidebar-foreground/50 leading-tight">International Cardiff</p>
+                <h1 className="font-display font-bold text-sm leading-tight text-sidebar-foreground">{tenantLine1}</h1>
+                {tenantLine2 && <p className="text-[11px] text-sidebar-foreground/50 leading-tight">{tenantLine2}</p>}
               </div>
             )}
           </div>
