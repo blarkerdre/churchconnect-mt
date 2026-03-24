@@ -130,6 +130,20 @@ function AuthRoutes() {
     <Routes>
       <Route path="/auth" element={<Auth />} />
       <Route path="/reset-password" element={<ResetPassword />} />
+      {/* Tenant-prefixed authenticated routes */}
+      <Route
+        path="/t/:tenantSlug/*"
+        element={
+          <ProtectedRoute>
+            <TenantProvider>
+              <Layout>
+                <AppPages />
+              </Layout>
+            </TenantProvider>
+          </ProtectedRoute>
+        }
+      />
+      {/* Default authenticated routes (no tenant prefix) */}
       <Route
         path="/*"
         element={
