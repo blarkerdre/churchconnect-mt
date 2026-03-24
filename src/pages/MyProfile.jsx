@@ -650,7 +650,8 @@ function CreateMemberProfile({ user, onCreated, wsfCentres, churchUnits }) {
           lcc_completed: form.lcc_completed,
           ldc_completed: form.ldc_completed,
           gdpr_consent: form.gdpr_consent,
-          notes: form.notes || null,
+           notes: form.notes || null,
+          ...(tenantId ? { tenant_id: tenantId } : {}),
         },
       });
       if (error) throw error;
