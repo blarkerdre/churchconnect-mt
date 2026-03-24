@@ -32,7 +32,7 @@ export default function SMSDialog({
   defaultChannel = "sms",
 }) {
   const { isAdmin, leaderUnits } = useAuth();
-  const { tenantId } = useTenantQuery();
+  const { tenantId, scopeQuery } = useTenantQuery();
   const { toast } = useToast();
   const [message, setMessage] = useState(prefillMessage);
   const [audience, setAudience] = useState(prefillAudience || "All Members");
@@ -56,14 +56,14 @@ export default function SMSDialog({
       : [];
 
   const { data: members = [] } = useQuery({
-    queryKey: ["sms-recipients", audience, directRecipients ? "direct" : "audience"],
+    queryKey: ["sms-recipients", audience, directRecipients ? "direct" : "audience", tenantId],
     queryFn: async () => {
       if (directRecipients) return [];
       let query = supabase.from("members").select("id, first_name, last_name, phone, church_unit");
       if (audience !== "All Members") {
         query = query.ilike("church_unit", `%${audience}%`);
       }
-      const { data } = await query;
+      const { data } = await scopeQuery(query);
       return (data || []).filter(m => m.phone && m.phone.trim());
     },
     enabled: open && !directRecipients,
