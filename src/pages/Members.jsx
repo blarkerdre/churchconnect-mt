@@ -167,7 +167,7 @@ export default function Members() {
           )}
         </div>
         <div className="grid grid-cols-4 sm:flex sm:flex-wrap items-center gap-2">
-          {isAdmin && (
+          {(isAdmin || isUnitLeader) && (
             <>
               {canQrCode && (
                 <Button variant="outline" size="sm" onClick={() => setQrOpen(true)} className="gap-1.5">

@@ -182,29 +182,30 @@ export default function PastoralCare() {
             </Button>
           )}
         </div>
-        <div className="flex flex-wrap items-end gap-3">
-          <div className="w-full sm:w-auto">
-            <Label className="text-xs text-muted-foreground">From</Label>
-            <Input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="w-full sm:w-40" />
-          </div>
-          <div className="w-full sm:w-auto">
-            <Label className="text-xs text-muted-foreground">To</Label>
-            <Input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="w-full sm:w-40" />
-          </div>
-          <div className="w-full sm:w-auto">
-            <Label className="text-xs text-muted-foreground">Status</Label>
-            <Select value={filterStatus} onValueChange={setFilterStatus}>
-              <SelectTrigger className="w-full sm:w-36"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="All">All</SelectItem>
-                {ALL_STATUSES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </div>
-          <Button variant="outline" onClick={downloadCSV} disabled={filtered.length === 0}>
-            <Download className="h-4 w-4 mr-2" /> CSV
-          </Button>
-          <PrintReportButton label="Print" buildRows={() => ({
+        {canManage && (
+          <div className="flex flex-wrap items-end gap-3">
+            <div className="w-full sm:w-auto">
+              <Label className="text-xs text-muted-foreground">From</Label>
+              <Input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="w-full sm:w-40" />
+            </div>
+            <div className="w-full sm:w-auto">
+              <Label className="text-xs text-muted-foreground">To</Label>
+              <Input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="w-full sm:w-40" />
+            </div>
+            <div className="w-full sm:w-auto">
+              <Label className="text-xs text-muted-foreground">Status</Label>
+              <Select value={filterStatus} onValueChange={setFilterStatus}>
+                <SelectTrigger className="w-full sm:w-36"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="All">All</SelectItem>
+                  {ALL_STATUSES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <Button variant="outline" onClick={downloadCSV} disabled={filtered.length === 0}>
+              <Download className="h-4 w-4 mr-2" /> CSV
+            </Button>
+            <PrintReportButton label="Print" buildRows={() => ({
             title: "Pastoral Care Report",
             headers: ["Subject", "Member", "Type", "Status", "Confidential", "Assigned To", "Created", "Resolution Notes"],
             rows: filtered.map(r => [
