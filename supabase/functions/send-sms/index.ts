@@ -131,6 +131,7 @@ Deno.serve(async (req) => {
           status: "failed",
           channel: msgChannel,
           error_message: "Invalid phone number format (must be E.164)",
+          ...(tenant_id ? { tenant_id } : {}),
         });
         continue;
       }
