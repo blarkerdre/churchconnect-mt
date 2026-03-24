@@ -47,7 +47,7 @@ function NotificationPreferencesSection() {
     mutationFn: async (enabled) => {
       const { error } = await supabase
         .from("app_settings")
-        .upsert(withTenant({ key: "sms_notifications_enabled", value: enabled }), { onConflict: "key" });
+        .upsert(withTenant({ key: "sms_notifications_enabled", value: enabled }), { onConflict: "key,tenant_id" });
       if (error) throw error;
     },
     onSuccess: () => {
@@ -123,7 +123,7 @@ function SettingsListSection({ settingsKey, title, icon: Icon, description }) {
     mutationFn: async (newItems) => {
       const { error } = await supabase
         .from("app_settings")
-        .upsert(withTenant({ key: settingsKey, value: newItems }), { onConflict: "key" });
+        .upsert(withTenant({ key: settingsKey, value: newItems }), { onConflict: "key,tenant_id" });
       if (error) throw error;
     },
     onSuccess: () => {
@@ -391,7 +391,7 @@ function FeatureTogglesSection() {
     mutationFn: async (newDisabled) => {
       const { error } = await supabase
         .from("app_settings")
-        .upsert(withTenant({ key: "disabled_features", value: newDisabled }), { onConflict: "key" });
+        .upsert(withTenant({ key: "disabled_features", value: newDisabled }), { onConflict: "key,tenant_id" });
       if (error) throw error;
     },
     onSuccess: () => {
@@ -405,7 +405,7 @@ function FeatureTogglesSection() {
     mutationFn: async (newDisabled) => {
       const { error } = await supabase
         .from("app_settings")
-        .upsert(withTenant({ key: "disabled_sub_features", value: newDisabled }), { onConflict: "key" });
+        .upsert(withTenant({ key: "disabled_sub_features", value: newDisabled }), { onConflict: "key,tenant_id" });
       if (error) throw error;
     },
     onSuccess: () => {
