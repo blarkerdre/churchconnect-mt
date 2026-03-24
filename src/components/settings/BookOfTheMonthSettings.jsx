@@ -81,7 +81,8 @@ export default function BookOfTheMonthSettings() {
     setUploading(true);
     try {
       const ext = file.name.split(".").pop();
-      const path = `${Date.now()}.${ext}`;
+      const tenantPrefix = tenantId || "shared";
+      const path = `${tenantPrefix}/${Date.now()}.${ext}`;
       const { error: uploadError } = await supabase.storage.from("book-covers").upload(path, file);
       if (uploadError) throw uploadError;
       const { data: urlData } = supabase.storage.from("book-covers").getPublicUrl(path);
