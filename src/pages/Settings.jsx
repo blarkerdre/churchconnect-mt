@@ -19,6 +19,7 @@ import WSFCentresSection from "@/components/settings/WSFCentresSection";
 import CertificateTemplateSettings from "@/components/certificates/CertificateTemplateSettings";
 import ExternalLinksSection from "@/components/settings/ExternalLinksSection";
 import DangerZoneSection from "@/components/settings/DangerZoneSection";
+import BookOfTheMonthSettings from "@/components/settings/BookOfTheMonthSettings";
 
 /* ─── Notification Preferences section ─── */
 function NotificationPreferencesSection() {
