@@ -24,6 +24,7 @@ const DEFAULT_TRAINING_TYPES = [
 
 export default function IssueCertificateDialog({ open, onOpenChange, member }) {
   const queryClient = useQueryClient();
+  const { tenantId } = useTenantQuery();
   const [trainingType, setTrainingType] = useState("");
   const [completionDate, setCompletionDate] = useState(new Date().toISOString().split("T")[0]);
   const [notes, setNotes] = useState("");
