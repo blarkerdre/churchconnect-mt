@@ -163,9 +163,11 @@ export default function PastoralCare() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input placeholder="Search cases..." value={search} onChange={e => setSearch(e.target.value)} className="pl-10" />
         </div>
-        <Button onClick={() => { setForm({ subject: "", care_type: "Prayer Request", description: "", confidential: false }); setRequestDialogOpen(true); }} className="bg-primary hover:bg-primary/90">
-          <Plus className="h-4 w-4 mr-2" /> New Request
-        </Button>
+        {canCreateRequest && (
+          <Button onClick={() => { setForm({ subject: "", care_type: "Prayer Request", description: "", confidential: false }); setRequestDialogOpen(true); }} className="bg-primary hover:bg-primary/90">
+            <Plus className="h-4 w-4 mr-2" /> New Request
+          </Button>
+        )}
       </div>
 
       {isLoading ? (
