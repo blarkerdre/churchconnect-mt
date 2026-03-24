@@ -10,9 +10,11 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { useTenantQuery } from "@/hooks/useTenantQuery";
 
 export default function BookOfTheMonthSettings() {
   const { user } = useAuth();
+  const { tenantId } = useTenantQuery();
   const qc = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState(null);
@@ -79,7 +81,8 @@ export default function BookOfTheMonthSettings() {
     setUploading(true);
     try {
       const ext = file.name.split(".").pop();
-      const path = `${Date.now()}.${ext}`;
+      const tenantPrefix = tenantId || "shared";
+      const path = `${tenantPrefix}/${Date.now()}.${ext}`;
       const { error: uploadError } = await supabase.storage.from("book-covers").upload(path, file);
       if (uploadError) throw uploadError;
       const { data: urlData } = supabase.storage.from("book-covers").getPublicUrl(path);
