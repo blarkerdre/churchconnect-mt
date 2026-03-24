@@ -87,9 +87,9 @@ export default function Followups() {
 
   // Fetch members for the form
   const { data: members = [] } = useQuery({
-    queryKey: ["members-list"],
+    queryKey: ["members-list", tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("members").select("id, first_name, last_name, email, phone, membership_status, church_unit").order("first_name");
+      const { data, error } = await scopeQuery(supabase.from("members").select("id, first_name, last_name, email, phone, membership_status, church_unit").order("first_name"));
       if (error) throw error;
       return data;
     },
