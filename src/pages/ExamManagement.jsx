@@ -91,7 +91,7 @@ export default function ExamManagement() {
         const { error } = await supabase.from("exam_titles").update(payload).eq("id", editingTitle.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("exam_titles").insert({ ...payload, created_by: user?.id });
+        const { error } = await supabase.from("exam_titles").insert(withTenant({ ...payload, created_by: user?.id }));
         if (error) throw error;
       }
     },
