@@ -72,13 +72,13 @@ export default function Attendance() {
 
   const createSessionMutation = useMutation({
     mutationFn: async (formData) => {
-      const { error } = await supabase.from("attendance_sessions").insert({
+      const { error } = await supabase.from("attendance_sessions").insert(withTenant({
         title: formData.title || null,
         session_type: formData.session_type,
         session_date: formData.session_date,
         notes: formData.notes || null,
         unit: formData.unit || null,
-      });
+      }));
       if (error) throw error;
     },
     onSuccess: () => {
