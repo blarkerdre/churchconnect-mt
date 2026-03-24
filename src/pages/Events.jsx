@@ -129,7 +129,8 @@ export default function Events() {
     let count = 0;
 
     while (count < 52) {
-      if (freq === "Weekly") current = addWeeks(current, 1);
+      if (freq === "Daily") current = addDays(current, 1);
+      else if (freq === "Weekly") current = addWeeks(current, 1);
       else if (freq === "Biweekly") current = addWeeks(current, 2);
       else current = addMonths(current, 1);
 
