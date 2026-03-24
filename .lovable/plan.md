@@ -11,7 +11,7 @@
 - Added `tenant_id` to Batch A tables (members, profiles, user_roles, followups, pastoral_care, notifications, messages)
 
 ### ✅ Phase 1.2 — All Tables Get tenant_id (Complete)
-- Batch B-D: all remaining tables (attendance, events, exams, settings, WSF, etc.)
+- Batch B-D: all remaining tables
 - All existing rows backfilled with default tenant ID
 
 ### ✅ Phase 2 — Tenant Context System (Complete)
@@ -20,13 +20,15 @@
 - Path-based routing with `/t/:tenantSlug/` prefix support
 
 ### ✅ Phase 3 — Tenant-Aware Features (Complete)
-- QR codes use tenant slug in URLs (`/t/:slug/register`, `/t/:slug/wofbi-register`)
-- Sidebar branding reads tenant name/logo from TenantContext (falls back to Winners Chapel logo)
-- Tenant feature flags in `tenants.settings.features` integrated into `useSubFeature` and `useTenantFeatureEnabled`
-- SMS-related sub-features auto-disabled when tenant has `sms_enabled: false`
+- QR codes use tenant slug in URLs
+- Sidebar branding reads from TenantContext
+- Tenant feature flags integrated into useSubFeature
 
-### 🔲 Phase 4 — Onboarding Wizard
-- Multi-step wizard for new church registration
+### ✅ Phase 4 — Onboarding Wizard (Complete)
+- `register-tenant` edge function — creates tenant, auth user, tenant_membership (owner), user_role (super_admin), profile
+- 4-step wizard at `/onboard`: Church Info → Admin Account → Feature Selection → Review & Launch
+- Auto sign-in after registration, slug validation, timezone selection
+- Link from Auth page ("Sign in instead" / "Already have an account?")
 
 ### 🔲 Phase 5 — Frontend Query Updates
 - Update ~50 components to use tenant-scoped queries
