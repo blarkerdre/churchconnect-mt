@@ -1,31 +1,32 @@
 
 
-## Rename "Active" to "Active Member" in All Form Dropdowns
+## Restrict Print, Filter, and Download to Admins & Unit Leaders
 
-Change the display label from "Active" to "Active Member" in all dropdown/select options across forms and filters. The underlying database value stays `"Active"` — only the visible label changes.
+Currently, several pages expose print, filter, and download controls to all authenticated users. This plan gates those controls behind admin or unit leader role checks.
 
-### Files to Change
+### Pages to Update
 
-1. **`src/components/members/MemberFormDialog.jsx`** (line 23)
-   - Change `"Active"` to `"Active Member"` in the `STATUSES` array display — but keep the value as `"Active"`. Need to update the status dropdown to use separate label/value pairs, or render `"Active Member"` as label while storing `"Active"`.
+1. **`src/pages/ChurchAttendance.jsx`**
+   - Import `isAdmin, isUnitLeader` from `useAuth()` (currently only imports `user`)
+   - Wrap date filter inputs, service type filter, Download button, and PrintReportButton in `(isAdmin || isUnitLeader)` conditional
 
-2. **`src/pages/Members.jsx`** (line 161)
-   - Change `<SelectItem value="Active">Active</SelectItem>` to `<SelectItem value="Active">Active Member</SelectItem>`
+2. **`src/pages/PastoralCare.jsx`**
+   - Already has `canManage` (admin or pastoral unit). Wrap the date filters, status filter, CSV button, and PrintReportButton in a `canManage` check
 
-3. **`src/pages/PublicRegistration.jsx`** (line 17)
-   - Update the STATUSES array and the dropdown rendering to show "Active Member" for the "Active" value
+3. **`src/pages/Followups.jsx`**
+   - Import `isUnitLeader` from `useAuth()` (currently only has `isAdmin`)
+   - Wrap Download button and PrintReportButton in `(isAdmin || isUnitLeader)` conditional
+   - Wrap date filters and status filter in the same conditional
 
-4. **`src/pages/MyProfile.jsx`** (line 23 and line 665)
-   - Update both `MEMBERSHIP_STATUSES` arrays to display "Active Member" for "Active"
+4. **`src/pages/Attendance.jsx`**
+   - Already has `isAdmin, isUnitLeader` and `canManage`. Wrap Download button and PrintReportButton in `canManage` check
 
-5. **`src/components/members/BulkImportDialog.jsx`** (line 16)
-   - Update `VALID_STATUSES` display — the CSV import should accept both "Active" and "Active Member"
-
-### Approach
-Since the DB stores `"Active"`, each dropdown will use `value="Active"` but display `"Active Member"` as the label. For arrays used to generate `<option>`/`<SelectItem>` elements, we'll use a mapping: render the label as `s === "Active" ? "Active Member" : s` while keeping the value as-is.
+5. **`src/pages/Members.jsx`**
+   - CSV download is already gated by `isAdmin`. Expand to `(isAdmin || isUnitLeader)` so unit leaders can also export
 
 ### What stays unchanged
-- Database values remain `"Active"`
-- Badge displays, analytics, stats cards — kept as-is (or can be updated if desired)
-- Summary card labels like "Active" count
+- TrainingReports.jsx (already uses sub-feature toggles for CSV/print)
+- SystemLogs.jsx (page is admin-only)
+- Events.jsx (no download/print features)
+- WSFManagement.jsx (no download/print features)
 
