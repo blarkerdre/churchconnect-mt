@@ -13,11 +13,12 @@ export default function AbsenceAlerts({ sessions, records }) {
   const [search, setSearch] = useState("");
   const [minMissed, setMinMissed] = useState(2);
   const [emailTarget, setEmailTarget] = useState(null);
+  const { tenantId, scopeQuery } = useTenantQuery();
 
   const { data: members = [] } = useQuery({
-    queryKey: ["members-emails"],
+    queryKey: ["members-emails", tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("members").select("id, first_name, last_name, email").order("first_name");
+      const { data, error } = await scopeQuery(supabase.from("members").select("id, first_name, last_name, email").order("first_name"));
       if (error) throw error;
       return data;
     },

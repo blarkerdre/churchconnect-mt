@@ -36,7 +36,7 @@ export default function MessagingPane({ currentUser, allUsers }) {
 
   const sendMutation = useMutation({
     mutationFn: async (data) => {
-      const { error } = await supabase.from("messages").insert(data);
+      const { error } = await supabase.from("messages").insert(withTenant(data));
       if (error) throw error;
     },
     onSuccess: () => {

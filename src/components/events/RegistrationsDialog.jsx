@@ -12,6 +12,7 @@ import { useTenantQuery } from "@/hooks/useTenantQuery";
 
 export default function RegistrationsDialog({ open, onOpenChange, event }) {
   const { user } = useAuth();
+  const { withTenant } = useTenantQuery();
   const [newName, setNewName] = useState("");
   const [newEmail, setNewEmail] = useState("");
   const [adding, setAdding] = useState(false);
@@ -33,7 +34,7 @@ export default function RegistrationsDialog({ open, onOpenChange, event }) {
 
   const addMutation = useMutation({
     mutationFn: async (data) => {
-      const { error } = await supabase.from("event_registrations").insert(data);
+      const { error } = await supabase.from("event_registrations").insert(withTenant(data));
       if (error) throw error;
     },
     onSuccess: () => {
