@@ -31,6 +31,7 @@ import PublicRegistration from "@/pages/PublicRegistration";
 import PublicWoFBIRegistration from "@/pages/PublicWoFBIRegistration";
 import Onboard from "@/pages/Onboard";
 import TenantAdmin from "@/pages/TenantAdmin";
+import Presentation from "@/pages/Presentation";
 
 
 function ProtectedRoute({ children }) {
