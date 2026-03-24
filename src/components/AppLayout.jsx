@@ -10,6 +10,7 @@ import {
 import winnersLogo from "@/assets/winners-chapel-logo.png";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
+import { useTenant } from "@/contexts/TenantContext";
 import NotificationBell from "@/components/notifications/NotificationBell";
 import MobileBottomNav from "@/components/navigation/MobileBottomNav";
 import { getEnvironmentLabel, getBackendHost, isBackendMismatch } from "@/lib/environment";
@@ -42,11 +43,19 @@ export default function Layout({ children }) {
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
   const { signOut, profile, isAdmin, isUnitLeader, isWSFLeader, roles, leaderUnits } = useAuth();
+  const { currentTenant } = useTenant();
   const isSuperAdmin = roles.includes("super_admin");
   const { data: externalLinks } = useAppSetting("external_links", []);
   const { data: disabledFeatures } = useAppSetting("disabled_features", []);
   const isFollowupUnit = leaderUnits.includes("Follow-up") || leaderUnits.includes("Follow-Up");
   const isTrainingAccess = isUnitLeader;
+
+  // Derive branding from tenant or fall back to defaults
+  const tenantName = currentTenant?.name || "Winners Chapel";
+  const tenantNameParts = tenantName.split(" ");
+  const tenantLine1 = tenantNameParts.length > 2 ? tenantNameParts.slice(0, 2).join(" ") : tenantName;
+  const tenantLine2 = tenantNameParts.length > 2 ? tenantNameParts.slice(2).join(" ") : "";
+  const tenantLogoUrl = currentTenant?.logo_url || null;
   const { isMemberOfUnit: isFollowupMember } = useUnitMembership("Follow-up");
 
   // Filter nav items based on role and disabled features
@@ -91,11 +100,11 @@ export default function Layout({ children }) {
         {/* Logo */}
         <div className={`p-4 border-b border-sidebar-border ${collapsed ? "px-3" : "p-6"}`}>
           <div className="flex items-center gap-3">
-            <img src={winnersLogo} alt="Winners Chapel Logo" className="h-10 w-10 object-contain shrink-0" />
+            <img src={tenantLogoUrl || winnersLogo} alt={`${tenantName} Logo`} className="h-10 w-10 object-contain shrink-0" />
             {!collapsed && (
               <div className="min-w-0">
-                <h1 className="font-display font-bold text-sm leading-tight text-sidebar-foreground">Winners Chapel</h1>
-                <p className="text-[11px] text-sidebar-foreground/50 leading-tight">International Cardiff</p>
+                <h1 className="font-display font-bold text-sm leading-tight text-sidebar-foreground">{tenantLine1}</h1>
+                {tenantLine2 && <p className="text-[11px] text-sidebar-foreground/50 leading-tight">{tenantLine2}</p>}
               </div>
             )}
           </div>

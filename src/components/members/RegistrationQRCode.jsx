@@ -5,10 +5,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Download, Copy, QrCode } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
+import { useTenant } from "@/contexts/TenantContext";
 
 export default function RegistrationQRCode({ open, onOpenChange }) {
   const qrRef = useRef();
-  const registrationUrl = `${window.location.origin}/register`;
+  const { tenantSlug } = useTenant();
+  const registrationUrl = tenantSlug
+    ? `${window.location.origin}/t/${tenantSlug}/register`
+    : `${window.location.origin}/register`;
 
   const handleCopy = () => {
     navigator.clipboard.writeText(registrationUrl);

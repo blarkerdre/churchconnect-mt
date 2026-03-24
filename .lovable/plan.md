@@ -11,20 +11,19 @@
 - Added `tenant_id` to Batch A tables (members, profiles, user_roles, followups, pastoral_care, notifications, messages)
 
 ### ✅ Phase 1.2 — All Tables Get tenant_id (Complete)
-- Batch B: attendance_sessions, attendance_records, church_attendance_reports, events, event_registrations, announcements
-- Batch C: exam_titles, exam_subjects, exam_questions, exam_sessions, exam_session_courses, exam_attempts, exam_answers, course_registrations, certificate_templates
-- Batch D: app_settings, church_units, wsf_centres, wsf_attendance, wsf_attendance_reports, pickup_locations, transportation, books_of_the_month, documents, first_timers, audit_log, email_send_log, training_reports, training_completions, member_status_history, sms_log, unit_leader_assignments, suppressed_emails
+- Batch B-D: all remaining tables (attendance, events, exams, settings, WSF, etc.)
 - All existing rows backfilled with default tenant ID
 
 ### ✅ Phase 2 — Tenant Context System (Complete)
-- `TenantProvider` context (`src/contexts/TenantContext.jsx`) — fetches tenant memberships, auto-selects tenant from URL slug or default
-- `useTenantQuery` hook (`src/hooks/useTenantQuery.jsx`) — provides `tenantId`, `withTenant()`, `scopeQuery()` helpers
-- Path-based routing: `/t/:tenantSlug/register` and `/t/:tenantSlug/wofbi-register` added alongside existing routes
-- TenantProvider wraps all authenticated routes inside ProtectedRoute
-- Existing routes continue working unchanged
+- `TenantProvider` context — fetches tenant memberships, auto-selects from URL slug or default
+- `useTenantQuery` hook — provides `tenantId`, `withTenant()`, `scopeQuery()`
+- Path-based routing with `/t/:tenantSlug/` prefix support
 
-### 🔲 Phase 3 — Tenant-Aware Features
-- QR codes, edge functions, notifications, emails, feature flags
+### ✅ Phase 3 — Tenant-Aware Features (Complete)
+- QR codes use tenant slug in URLs (`/t/:slug/register`, `/t/:slug/wofbi-register`)
+- Sidebar branding reads tenant name/logo from TenantContext (falls back to Winners Chapel logo)
+- Tenant feature flags in `tenants.settings.features` integrated into `useSubFeature` and `useTenantFeatureEnabled`
+- SMS-related sub-features auto-disabled when tenant has `sms_enabled: false`
 
 ### 🔲 Phase 4 — Onboarding Wizard
 - Multi-step wizard for new church registration
