@@ -9,6 +9,7 @@ import { Loader2, Heart } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useTenantQuery } from "@/hooks/useTenantQuery";
 
 const CATEGORIES = [
   "Prayer Request", "Counselling", "Visitation", "Hospital Visit",
@@ -17,6 +18,7 @@ const CATEGORIES = [
 
 export default function PastoralCareRequestDialog({ open, onOpenChange, currentUser, myMember }) {
   const { user } = useAuth();
+  const { withTenant } = useTenantQuery();
   const queryClient = useQueryClient();
   const [form, setForm] = useState({ category: "", title: "", description: "" });
   const [submitted, setSubmitted] = useState(false);
@@ -25,7 +27,7 @@ export default function PastoralCareRequestDialog({ open, onOpenChange, currentU
 
   const mutation = useMutation({
     mutationFn: async (data) => {
-      const { error } = await supabase.from("pastoral_care").insert(data);
+      const { error } = await supabase.from("pastoral_care").insert(withTenant(data));
       if (error) throw error;
     },
     onSuccess: () => {

@@ -8,9 +8,11 @@ import { Badge } from "@/components/ui/badge";
 import { Send, User, MessageSquare } from "lucide-react";
 import { format } from "date-fns";
 import { useAuth } from "@/hooks/useAuth";
+import { useTenantQuery } from "@/hooks/useTenantQuery";
 
 export default function MessagingPane({ currentUser, allUsers }) {
   const { user } = useAuth();
+  const { withTenant } = useTenantQuery();
   const [selectedUser, setSelectedUser] = useState(null);
   const [draft, setDraft] = useState("");
   const queryClient = useQueryClient();
@@ -34,7 +36,7 @@ export default function MessagingPane({ currentUser, allUsers }) {
 
   const sendMutation = useMutation({
     mutationFn: async (data) => {
-      const { error } = await supabase.from("messages").insert(data);
+      const { error } = await supabase.from("messages").insert(withTenant(data));
       if (error) throw error;
     },
     onSuccess: () => {

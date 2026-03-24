@@ -12,6 +12,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "@/components/ui/use-toast";
+import { useTenantQuery } from "@/hooks/useTenantQuery";
 import { Loader2, Plus, Play, Square, Eye, Trash2, Edit, ClipboardList, Trophy, ChevronDown, ChevronUp } from "lucide-react";
 
 const STATUS_COLORS = {
@@ -22,6 +23,7 @@ const STATUS_COLORS = {
 
 export default function ExamSessionManager() {
   const { user } = useAuth();
+  const { tenantId, withTenant, scopeQuery } = useTenantQuery();
   const qc = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingSession, setEditingSession] = useState(null);
@@ -30,30 +32,29 @@ export default function ExamSessionManager() {
   const [viewingSession, setViewingSession] = useState(null);
 
   const { data: sessions = [], isLoading } = useQuery({
-    queryKey: ["exam-sessions"],
+    queryKey: ["exam-sessions", tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("exam_sessions")
-        .select("*")
-        .order("created_at", { ascending: false });
+      const { data, error } = await scopeQuery(
+        supabase.from("exam_sessions").select("*").order("created_at", { ascending: false })
+      );
       if (error) throw error;
       return data;
     },
   });
 
   const { data: examTitles = [] } = useQuery({
-    queryKey: ["exam-titles"],
+    queryKey: ["exam-titles", tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("exam_titles").select("*").eq("is_active", true).order("name");
+      const { data, error } = await scopeQuery(supabase.from("exam_titles").select("*").eq("is_active", true).order("name"));
       if (error) throw error;
       return data;
     },
   });
 
   const { data: sessionCourses = [] } = useQuery({
-    queryKey: ["exam-session-courses"],
+    queryKey: ["exam-session-courses", tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("exam_session_courses").select("*").order("sort_order");
+      const { data, error } = await scopeQuery(supabase.from("exam_session_courses").select("*").order("sort_order"));
       if (error) throw error;
       return data;
     },
@@ -69,19 +70,19 @@ export default function ExamSessionManager() {
         // Delete existing courses and re-insert
         await supabase.from("exam_session_courses").delete().eq("session_id", sessionId);
       } else {
-        const { data, error } = await supabase.from("exam_sessions").insert(sessionData).select("id").single();
+        const { data, error } = await supabase.from("exam_sessions").insert(withTenant(sessionData)).select("id").single();
         if (error) throw error;
         sessionId = data.id;
       }
       if (courses.length > 0) {
-        const rows = courses.map((title, idx) => ({ session_id: sessionId, exam_title: title, sort_order: idx }));
+        const rows = courses.map((title, idx) => withTenant({ session_id: sessionId, exam_title: title, sort_order: idx }));
         const { error } = await supabase.from("exam_session_courses").insert(rows);
         if (error) throw error;
       }
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["exam-sessions"] });
-      qc.invalidateQueries({ queryKey: ["exam-session-courses"] });
+      qc.invalidateQueries({ queryKey: ["exam-sessions", tenantId] });
+      qc.invalidateQueries({ queryKey: ["exam-session-courses", tenantId] });
       toast({ title: editingSession ? "Session updated" : "Session created" });
       closeDialog();
     },
@@ -94,7 +95,7 @@ export default function ExamSessionManager() {
       if (error) throw error;
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["exam-sessions"] });
+      qc.invalidateQueries({ queryKey: ["exam-sessions", tenantId] });
       toast({ title: "Session deleted" });
       setDeleteTarget(null);
     },

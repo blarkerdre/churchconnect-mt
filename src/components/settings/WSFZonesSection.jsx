@@ -11,26 +11,28 @@ import { Plus, Edit, Trash2, Loader2, MapPin } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
+import { useTenantQuery } from "@/hooks/useTenantQuery";
 
 export default function WSFZonesSection() {
   const queryClient = useQueryClient();
+  const { tenantId, withTenant, scopeQuery } = useTenantQuery();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState({ name: "", description: "", is_active: true });
 
   const { data: zones = [], isLoading } = useQuery({
-    queryKey: ["wsf-zones"],
+    queryKey: ["wsf-zones", tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("wsf_zones").select("*").order("name");
+      const { data, error } = await scopeQuery(supabase.from("wsf_zones").select("*").order("name"));
       if (error) throw error;
       return data;
     },
   });
 
   const { data: centreCounts = {} } = useQuery({
-    queryKey: ["wsf-zone-centre-counts"],
+    queryKey: ["wsf-zone-centre-counts", tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("wsf_centres").select("zone_id").not("zone_id", "is", null);
+      const { data, error } = await scopeQuery(supabase.from("wsf_centres").select("zone_id").not("zone_id", "is", null));
       if (error) throw error;
       const counts = {};
       data.forEach(c => { counts[c.zone_id] = (counts[c.zone_id] || 0) + 1; });
@@ -44,13 +46,13 @@ export default function WSFZonesSection() {
         const { error } = await supabase.from("wsf_zones").update(payload).eq("id", editing.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("wsf_zones").insert(payload);
+        const { error } = await supabase.from("wsf_zones").insert(withTenant(payload));
         if (error) throw error;
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["wsf-zones"] });
-      queryClient.invalidateQueries({ queryKey: ["wsf-zone-centre-counts"] });
+      queryClient.invalidateQueries({ queryKey: ["wsf-zones", tenantId] });
+      queryClient.invalidateQueries({ queryKey: ["wsf-zone-centre-counts", tenantId] });
       toast({ title: editing ? "Zone updated" : "Zone created" });
       setDialogOpen(false);
     },
@@ -63,7 +65,7 @@ export default function WSFZonesSection() {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["wsf-zones"] });
+      queryClient.invalidateQueries({ queryKey: ["wsf-zones", tenantId] });
       queryClient.invalidateQueries({ queryKey: ["wsf-centres"] });
       toast({ title: "Zone deleted" });
     },
