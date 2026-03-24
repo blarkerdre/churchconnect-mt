@@ -1,0 +1,1 @@
+ALTER TABLE public.books_of_the_month ADD COLUMN purchase_url text;

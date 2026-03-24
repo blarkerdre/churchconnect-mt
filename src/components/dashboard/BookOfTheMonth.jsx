@@ -47,6 +47,13 @@ export default function BookOfTheMonth() {
                 {book.description && (
                   <p className="text-xs text-muted-foreground mt-2 line-clamp-3">{book.description}</p>
                 )}
+                {book.purchase_url && (
+                  <Button asChild variant="outline" size="sm" className="mt-2 gap-1.5 h-7 text-xs">
+                    <a href={book.purchase_url} target="_blank" rel="noopener noreferrer">
+                      <ExternalLink className="h-3 w-3" /> Buy Now
+                    </a>
+                  </Button>
+                )}
               </div>
             </div>
           ))}
