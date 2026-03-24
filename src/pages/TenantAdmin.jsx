@@ -14,8 +14,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Separator } from "@/components/ui/separator";
-import { Building2, Users, UserCheck, Plus, CheckCircle2, ArrowRightLeft, Clock, Pencil, Save, Image, Palette } from "lucide-react";
+import { Building2, Users, UserCheck, Plus, CheckCircle2, ArrowRightLeft, Clock, Pencil, Save, Image, Palette, Users2 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
+import TenantUsersDialog from "@/components/tenants/TenantUsersDialog";
 
 // All feature modules that can be toggled per tenant
 const FEATURE_MODULES = [
