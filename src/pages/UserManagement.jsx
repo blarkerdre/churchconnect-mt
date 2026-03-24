@@ -39,6 +39,7 @@ export default function UserManagement() {
   const { isAdmin, roles, user } = useAuth();
   const isSuperAdmin = roles.includes("super_admin");
   const queryClient = useQueryClient();
+  const { tenantId, scopeQuery, withTenant } = useTenantQuery();
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [addForm, setAddForm] = useState({ email: "", password: "", full_name: "", role: "member" });
   const [bulkAssignOpen, setBulkAssignOpen] = useState(false);
