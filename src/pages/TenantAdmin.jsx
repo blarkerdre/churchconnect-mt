@@ -8,10 +8,31 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Building2, Users, UserCheck, Plus, CheckCircle2, ArrowRightLeft, Globe, Clock } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
+import { Building2, Users, UserCheck, Plus, CheckCircle2, ArrowRightLeft, Clock, Pencil, Save, Image, Palette } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
+
+// All feature modules that can be toggled per tenant
+const FEATURE_MODULES = [
+  { key: "members", label: "Members", description: "Member directory and management" },
+  { key: "events", label: "Events", description: "Event scheduling and registration" },
+  { key: "attendance", label: "Attendance", description: "Unit meeting attendance tracking" },
+  { key: "followups", label: "Follow-ups", description: "Follow-up task management" },
+  { key: "pastoral-care", label: "Pastoral Care", description: "Pastoral care requests and tracking" },
+  { key: "communications", label: "Communications", description: "Announcements, email, and messaging" },
+  { key: "transportation", label: "Transportation", description: "Transport booking and management" },
+  { key: "analytics", label: "Analytics", description: "Attendance and growth analytics" },
+  { key: "training-reports", label: "Training Reports", description: "BFC and training progress" },
+  { key: "church-attendance", label: "Church Attendance", description: "Sunday service attendance" },
+  { key: "exam-management", label: "WoFBI Exams", description: "Exam sessions and results" },
+  { key: "wsf", label: "WSF Centres", description: "Winners Satellite Fellowship management" },
+  { key: "sms", label: "SMS", description: "SMS messaging capability" },
+];
 
 export default function TenantAdmin() {
   const { user } = useAuth();
@@ -19,9 +40,10 @@ export default function TenantAdmin() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [createOpen, setCreateOpen] = useState(false);
+  const [editTenant, setEditTenant] = useState(null);
+  const [editForm, setEditForm] = useState({});
   const [newTenant, setNewTenant] = useState({ name: "", slug: "", timezone: "Europe/London" });
 
-  // Fetch all tenants (super admin sees all via service role — but we use RLS, so need a policy or just show memberships)
   const { data: tenants = [], isLoading } = useQuery({
     queryKey: ["tenants-admin"],
     queryFn: async () => {
@@ -31,7 +53,6 @@ export default function TenantAdmin() {
     },
   });
 
-  // Fetch member counts per tenant
   const { data: tenantStats = {} } = useQuery({
     queryKey: ["tenant-stats"],
     queryFn: async () => {
@@ -58,7 +79,6 @@ export default function TenantAdmin() {
         setup_complete: true,
       }).select().single();
       if (error) throw error;
-      // Add creator as owner
       await supabase.from("tenant_memberships").insert({
         user_id: user.id,
         tenant_id: data.id,
@@ -78,6 +98,21 @@ export default function TenantAdmin() {
     },
   });
 
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, ...updates }) => {
+      const { error } = await supabase.from("tenants").update(updates).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({ title: "Tenant updated successfully" });
+      setEditTenant(null);
+      queryClient.invalidateQueries({ queryKey: ["tenants-admin"] });
+    },
+    onError: (err) => {
+      toast({ title: "Error updating tenant", description: err.message, variant: "destructive" });
+    },
+  });
+
   const handleCreate = (e) => {
     e.preventDefault();
     if (!newTenant.name || !newTenant.slug) return;
@@ -87,6 +122,53 @@ export default function TenantAdmin() {
   const handleSwitch = (tid) => {
     switchTenant(tid);
     toast({ title: "Switched tenant context" });
+  };
+
+  const openEdit = (tenant) => {
+    const settings = tenant.settings || {};
+    setEditTenant(tenant);
+    setEditForm({
+      name: tenant.name,
+      slug: tenant.slug,
+      timezone: tenant.timezone,
+      logo_url: tenant.logo_url || "",
+      setup_complete: tenant.setup_complete,
+      // Feature flags from settings
+      disabled_features: settings.disabled_features || [],
+      primary_color: settings.primary_color || "",
+      welcome_message: settings.welcome_message || "",
+    });
+  };
+
+  const handleSaveEdit = () => {
+    if (!editTenant) return;
+    const { name, slug, timezone, logo_url, setup_complete, disabled_features, primary_color, welcome_message } = editForm;
+    const settings = {
+      ...(editTenant.settings || {}),
+      disabled_features,
+      primary_color: primary_color || undefined,
+      welcome_message: welcome_message || undefined,
+    };
+    updateMutation.mutate({
+      id: editTenant.id,
+      name,
+      slug,
+      timezone,
+      logo_url: logo_url || null,
+      setup_complete,
+      settings,
+    });
+  };
+
+  const toggleFeature = (featureKey) => {
+    const current = editForm.disabled_features || [];
+    const path = `/${featureKey}`;
+    setEditForm({
+      ...editForm,
+      disabled_features: current.includes(path)
+        ? current.filter(f => f !== path)
+        : [...current, path],
+    });
   };
 
   const autoSlug = (name) => name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
@@ -210,8 +292,11 @@ export default function TenantAdmin() {
                       <TableRow key={t.id} className={isActive ? "bg-primary/5" : ""}>
                         <TableCell className="font-medium">
                           <div className="flex items-center gap-2">
-                            {t.name}
-                            {isActive && <Badge variant="secondary" className="text-[10px]">Active</Badge>}
+                            {t.logo_url && <img src={t.logo_url} alt="" className="h-6 w-6 rounded object-contain" />}
+                            <div>
+                              <span>{t.name}</span>
+                              {isActive && <Badge variant="secondary" className="ml-2 text-[10px]">Active</Badge>}
+                            </div>
                           </div>
                         </TableCell>
                         <TableCell className="hidden sm:table-cell">
@@ -234,11 +319,16 @@ export default function TenantAdmin() {
                           )}
                         </TableCell>
                         <TableCell className="text-right">
-                          {isMember && !isActive && (
-                            <Button size="sm" variant="outline" onClick={() => handleSwitch(t.id)}>
-                              <ArrowRightLeft className="h-3 w-3 mr-1" /> Switch
+                          <div className="flex items-center gap-1 justify-end">
+                            <Button size="sm" variant="ghost" onClick={() => openEdit(t)}>
+                              <Pencil className="h-3 w-3" />
                             </Button>
-                          )}
+                            {isMember && !isActive && (
+                              <Button size="sm" variant="outline" onClick={() => handleSwitch(t.id)}>
+                                <ArrowRightLeft className="h-3 w-3 mr-1" /> Switch
+                              </Button>
+                            )}
+                          </div>
                         </TableCell>
                       </TableRow>
                     );
@@ -249,6 +339,129 @@ export default function TenantAdmin() {
           )}
         </CardContent>
       </Card>
+
+      {/* Edit Tenant Dialog */}
+      <Dialog open={!!editTenant} onOpenChange={(open) => !open && setEditTenant(null)}>
+        <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Tenant: {editTenant?.name}</DialogTitle>
+          </DialogHeader>
+          <Tabs defaultValue="general" className="w-full">
+            <TabsList className="w-full grid grid-cols-3">
+              <TabsTrigger value="general">General</TabsTrigger>
+              <TabsTrigger value="branding">Branding</TabsTrigger>
+              <TabsTrigger value="features">Features</TabsTrigger>
+            </TabsList>
+
+            {/* General Tab */}
+            <TabsContent value="general" className="space-y-4 mt-4">
+              <div className="space-y-2">
+                <Label>Church Name</Label>
+                <Input
+                  value={editForm.name || ""}
+                  onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>URL Slug</Label>
+                <Input
+                  value={editForm.slug || ""}
+                  onChange={(e) => setEditForm({ ...editForm, slug: e.target.value })}
+                />
+                <p className="text-xs text-muted-foreground">Used in URLs: /t/{editForm.slug || "slug"}/</p>
+              </div>
+              <div className="space-y-2">
+                <Label>Timezone</Label>
+                <Input
+                  value={editForm.timezone || ""}
+                  onChange={(e) => setEditForm({ ...editForm, timezone: e.target.value })}
+                />
+              </div>
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label>Setup Complete</Label>
+                  <p className="text-xs text-muted-foreground">Mark as fully configured</p>
+                </div>
+                <Switch
+                  checked={editForm.setup_complete || false}
+                  onCheckedChange={(v) => setEditForm({ ...editForm, setup_complete: v })}
+                />
+              </div>
+            </TabsContent>
+
+            {/* Branding Tab */}
+            <TabsContent value="branding" className="space-y-4 mt-4">
+              <div className="space-y-2">
+                <Label className="flex items-center gap-1.5"><Image className="h-3.5 w-3.5" /> Logo URL</Label>
+                <Input
+                  value={editForm.logo_url || ""}
+                  onChange={(e) => setEditForm({ ...editForm, logo_url: e.target.value })}
+                  placeholder="https://example.com/logo.png"
+                />
+                {editForm.logo_url && (
+                  <div className="flex items-center gap-3 p-3 bg-muted rounded-lg">
+                    <img src={editForm.logo_url} alt="Logo preview" className="h-12 w-12 object-contain rounded" />
+                    <span className="text-xs text-muted-foreground">Logo preview</span>
+                  </div>
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label className="flex items-center gap-1.5"><Palette className="h-3.5 w-3.5" /> Primary Color</Label>
+                <div className="flex gap-2">
+                  <Input
+                    value={editForm.primary_color || ""}
+                    onChange={(e) => setEditForm({ ...editForm, primary_color: e.target.value })}
+                    placeholder="#1a2d4d"
+                    className="flex-1"
+                  />
+                  {editForm.primary_color && (
+                    <div className="h-9 w-9 rounded border" style={{ backgroundColor: editForm.primary_color }} />
+                  )}
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Welcome Message</Label>
+                <Textarea
+                  value={editForm.welcome_message || ""}
+                  onChange={(e) => setEditForm({ ...editForm, welcome_message: e.target.value })}
+                  placeholder="Welcome to our church management platform..."
+                  rows={3}
+                />
+              </div>
+            </TabsContent>
+
+            {/* Features Tab */}
+            <TabsContent value="features" className="space-y-1 mt-4">
+              <p className="text-xs text-muted-foreground mb-3">Toggle modules on/off for this tenant. Disabled modules won't appear in navigation.</p>
+              {FEATURE_MODULES.map((f) => {
+                const path = `/${f.key}`;
+                const isDisabled = (editForm.disabled_features || []).includes(path);
+                return (
+                  <div key={f.key} className="flex items-center justify-between py-2.5 px-1">
+                    <div>
+                      <p className="text-sm font-medium">{f.label}</p>
+                      <p className="text-xs text-muted-foreground">{f.description}</p>
+                    </div>
+                    <Switch
+                      checked={!isDisabled}
+                      onCheckedChange={() => toggleFeature(f.key)}
+                    />
+                  </div>
+                );
+              })}
+            </TabsContent>
+          </Tabs>
+
+          <Separator className="my-2" />
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setEditTenant(null)}>Cancel</Button>
+            <Button onClick={handleSaveEdit} disabled={updateMutation.isPending}>
+              <Save className="h-4 w-4 mr-1" />
+              {updateMutation.isPending ? "Saving..." : "Save Changes"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
