@@ -13,10 +13,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "@/components/ui/use-toast";
 import { format, parseISO } from "date-fns";
-import { Loader2, Plus, Users, Church, Baby, UserCheck, Paperclip } from "lucide-react";
+import { Loader2, Plus, Users, Church, Baby, UserCheck, Paperclip, FileText, Printer } from "lucide-react";
 import { useAppSetting } from "@/hooks/useAppSetting";
 import ReportAttachments from "@/components/reports/ReportAttachments";
 import { useSubFeature } from "@/hooks/useSubFeature";
+import PrintReportButton from "@/components/PrintReportButton";
 
 const DEFAULT_SERVICE_TYPES = ["Sunday Service", "Midweek Service", "Special Program", "Thanksgiving Service", "Other"];
 
@@ -36,6 +37,8 @@ export default function ChurchAttendance() {
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState(emptyForm);
   const [filterType, setFilterType] = useState("all");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const [expandedRow, setExpandedRow] = useState(null);
   const { user } = useAuth();
   const qc = useQueryClient();
@@ -101,13 +104,40 @@ export default function ChurchAttendance() {
     (parseInt(form.children) || 0) +
     (parseInt(form.teens) || 0);
 
+  // Client-side date filtering
+  const filteredReports = reports.filter(r =>
+    (!dateFrom || r.service_date >= dateFrom) && (!dateTo || r.service_date <= dateTo)
+  );
+
   // Summary stats
-  const totalServices = reports.length;
-  const totalAttendance = reports.reduce((s, r) => s + r.total_attendance, 0);
-  const totalAdultMale = reports.reduce((s, r) => s + r.adult_male, 0);
-  const totalAdultFemale = reports.reduce((s, r) => s + r.adult_female, 0);
-  const totalChildren = reports.reduce((s, r) => s + r.children, 0);
-  const totalTeens = reports.reduce((s, r) => s + r.teens, 0);
+  const totalServices = filteredReports.length;
+  const totalAttendance = filteredReports.reduce((s, r) => s + r.total_attendance, 0);
+  const totalAdultMale = filteredReports.reduce((s, r) => s + r.adult_male, 0);
+  const totalAdultFemale = filteredReports.reduce((s, r) => s + r.adult_female, 0);
+  const totalChildren = filteredReports.reduce((s, r) => s + r.children, 0);
+  const totalTeens = filteredReports.reduce((s, r) => s + r.teens, 0);
+
+  const downloadCSV = () => {
+    const headers = ["Date", "Service Type", "Title", "Adult Male", "Adult Female", "Children", "Teens", "Total", "Notes"];
+    const rows = filteredReports.map(r => [
+      r.service_date, r.service_type, r.title || "", r.adult_male, r.adult_female, r.children, r.teens, r.total_attendance, r.notes || ""
+    ]);
+    const csv = [headers.join(","), ...rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(","))].join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "church-attendance-report.csv";
+    a.click();
+  };
+
+  const buildPrintRows = () => ({
+    title: "Church Attendance Report",
+    headers: ["Date", "Service Type", "Title", "Adult M", "Adult F", "Children", "Teens", "Total"],
+    rows: filteredReports.map(r => [
+      format(parseISO(r.service_date), "dd MMM yyyy"), r.service_type, r.title || "—",
+      r.adult_male, r.adult_female, r.children, r.teens, r.total_attendance
+    ]),
+  });
 
   if (isLoading) {
     return <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>;
@@ -213,20 +243,32 @@ export default function ChurchAttendance() {
         <CardHeader className="pb-3">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <CardTitle className="text-base font-display">Attendance Records</CardTitle>
-            <Select value={filterType} onValueChange={setFilterType}>
-              <SelectTrigger className="w-48"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Services</SelectItem>
-                {SERVICE_TYPES.map((t) => (
-                  <SelectItem key={t} value={t}>{t}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="flex flex-wrap items-center gap-2">
+              <Select value={filterType} onValueChange={setFilterType}>
+                <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Services</SelectItem>
+                  {SERVICE_TYPES.map((t) => (
+                    <SelectItem key={t} value={t}>{t}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="w-36" placeholder="From" />
+              <Input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="w-36" placeholder="To" />
+              {filteredReports.length > 0 && (
+                <>
+                  <Button variant="outline" size="sm" onClick={downloadCSV}>
+                    <FileText className="h-4 w-4 mr-1" /> Download
+                  </Button>
+                  <PrintReportButton buildRows={buildPrintRows} label="Print" />
+                </>
+              )}
+            </div>
           </div>
         </CardHeader>
         <CardContent>
-          {reports.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-8">No church attendance reports recorded yet</p>
+          {filteredReports.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-8">No church attendance reports found</p>
           ) : (
             <div className="overflow-x-auto">
               <Table>
@@ -243,7 +285,7 @@ export default function ChurchAttendance() {
                    </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {reports.map((r) => (
+                  {filteredReports.map((r) => (
                     <React.Fragment key={r.id}>
                       <TableRow>
                         <TableCell className="text-sm">{format(parseISO(r.service_date), "dd MMM yyyy")}</TableCell>

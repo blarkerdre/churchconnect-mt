@@ -514,8 +514,12 @@ export default function Settings() {
           <TabsTrigger value="events" className="gap-1.5 text-xs"><CalendarDays className="h-3.5 w-3.5" /><span className="hidden sm:inline"> Events</span></TabsTrigger>
           <TabsTrigger value="training" className="gap-1.5 text-xs"><TrendingUp className="h-3.5 w-3.5" /><span className="hidden sm:inline"> Training</span></TabsTrigger>
           <TabsTrigger value="pastoral" className="gap-1.5 text-xs"><Heart className="h-3.5 w-3.5" /><span className="hidden sm:inline"> Pastoral</span></TabsTrigger>
-          <TabsTrigger value="certificates" className="gap-1.5 text-xs"><Award className="h-3.5 w-3.5" /><span className="hidden sm:inline"> Certs</span></TabsTrigger>
-          <TabsTrigger value="links" className="gap-1.5 text-xs"><Link2 className="h-3.5 w-3.5" /><span className="hidden sm:inline"> Links</span></TabsTrigger>
+          {isSuperAdmin && (
+            <TabsTrigger value="certificates" className="gap-1.5 text-xs"><Award className="h-3.5 w-3.5" /><span className="hidden sm:inline"> Certs</span></TabsTrigger>
+          )}
+          {isSuperAdmin && (
+            <TabsTrigger value="links" className="gap-1.5 text-xs"><Link2 className="h-3.5 w-3.5" /><span className="hidden sm:inline"> Links</span></TabsTrigger>
+          )}
           <TabsTrigger value="books" className="gap-1.5 text-xs"><BookOpen className="h-3.5 w-3.5" /><span className="hidden sm:inline"> Books</span></TabsTrigger>
           {isSuperAdmin && (
             <TabsTrigger value="features" className="gap-1.5 text-xs"><ToggleLeft className="h-3.5 w-3.5" /><span className="hidden sm:inline"> Features</span></TabsTrigger>
@@ -574,13 +578,16 @@ export default function Settings() {
           />
         </TabsContent>
 
-        <TabsContent value="certificates">
-          <CertificateTemplateSettings />
-        </TabsContent>
-
-        <TabsContent value="links">
-          <ExternalLinksSection />
-        </TabsContent>
+        {isSuperAdmin && (
+          <TabsContent value="certificates">
+            <CertificateTemplateSettings />
+          </TabsContent>
+        )}
+        {isSuperAdmin && (
+          <TabsContent value="links">
+            <ExternalLinksSection />
+          </TabsContent>
+        )}
 
         <TabsContent value="books">
           <BookOfTheMonthSettings />
