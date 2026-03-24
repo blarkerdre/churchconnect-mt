@@ -42,7 +42,6 @@ export default function Members() {
   const { enabled: canQrCode } = useSubFeature("members.qr_code");
   const { enabled: canCertificate } = useSubFeature("members.certificate");
   const { enabled: canCsvExport } = useSubFeature("members.csv_export");
-  const queryClient = useQueryClient();
 
   const { data: members = [], isLoading } = useQuery({
     queryKey: ["members", user?.id, isAdmin, viewOnly, myMember?.id],
