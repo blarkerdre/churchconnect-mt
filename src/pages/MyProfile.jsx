@@ -39,18 +39,6 @@ const statusColors = {
   "Visitor": "bg-primary/10 text-primary",
 };
 
-export default function MyProfile() {
-  const { user, roles, isAdmin, isUnitLeader, isWSFLeader } = useAuth();
-  const { data: churchUnitsData = [] } = useChurchUnits();
-  const CHURCH_UNITS = churchUnitsData.map(u => u.name);
-  const queryClient = useQueryClient();
-  const [editing, setEditing] = useState(false);
-  const [form, setForm] = useState({});
-  const [examSelection, setExamSelection] = useState(null);
-
-  // ... rest defined below after component
-}
-
 function ProfilePhotoUpload({ member, user, onUpdated }) {
   const fileRef = useRef(null);
   const [uploading, setUploading] = useState(false);
@@ -96,7 +84,7 @@ function ProfilePhotoUpload({ member, user, onUpdated }) {
   );
 }
 
-function MyProfileInner() {
+export default function MyProfile() {
   const { user, roles, isAdmin, isUnitLeader, isWSFLeader } = useAuth();
   const { data: churchUnitsData = [] } = useChurchUnits();
   const CHURCH_UNITS = churchUnitsData.map(u => u.name);
