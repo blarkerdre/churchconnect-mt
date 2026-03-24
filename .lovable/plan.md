@@ -52,3 +52,10 @@
 - Anon policies (public registration) left unchanged — no tenant membership context
 - User's own data policies (profiles insert/update, user_roles view own) kept without tenant check for bootstrap
 - Service role policies (email queue, unsubscribe tokens) untouched — not user-facing
+
+### ✅ Phase 8 — Remaining Page/Component Updates (Complete)
+- Updated Settings page: NotificationPreferences, SettingsListSection, ChurchUnitsSection, FeatureTogglesSection
+- Updated UserManagement: profiles and user_roles queries scoped by tenant
+- Updated SystemLogs: EmailLogsPanel, SMSLogsPanel, WhatsAppLogsPanel, AuditLogsPanel
+- Updated TrainingReports, ChurchAttendance, WSFManagement, Transportation, ExamManagement
+- All queries include `tenantId` in queryKeys, selects use `scopeQuery`, inserts use `withTenant`
