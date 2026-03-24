@@ -64,6 +64,9 @@ export default function Events() {
   const [form, setForm] = useState({});
   const [smsEvent, setSmsEvent] = useState(null);
 
+  const { enabled: canCreateEvent } = useSubFeature("events.create");
+  const { enabled: canSmsAttendees } = useSubFeature("events.sms");
+
   const { data: churchUnitsData = [] } = useChurchUnits();
 
   // Get WSF centre names for WSF leader scoping
