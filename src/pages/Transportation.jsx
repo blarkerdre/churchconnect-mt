@@ -81,7 +81,7 @@ export default function Transportation() {
   const bookMutation = useMutation({
     mutationFn: async (formData) => {
       const { data: member } = await supabase.from("members").select("id").eq("user_id", user.id).single();
-      const { error } = await supabase.from("transportation").insert({
+      const { error } = await supabase.from("transportation").insert(withTenant({
         pickup_address: formData.pickup_address,
         destination: formData.destination || "Church",
         request_date: formData.request_date,
@@ -90,7 +90,7 @@ export default function Transportation() {
         passengers: parseInt(formData.passengers) || 1,
         user_id: user.id,
         member_id: member?.id || null,
-      });
+      }));
       if (error) throw error;
     },
     onSuccess: () => {
