@@ -12,10 +12,9 @@ export function useAppSetting(key, fallback = []) {
   const { data, ...rest } = useQuery({
     queryKey: ["app-settings", key, tenantId],
     queryFn: async () => {
-      const { data, error } = await scopeQuery(
-        supabase.from("app_settings").select("value").eq("key", key)
-      ).then(res => ({ ...res, data: res.data?.[0] || null }));
-      // scopeQuery returns the full result; we need maybeSingle behavior
+      let q = supabase.from("app_settings").select("value").eq("key", key);
+      if (tenantId) q = q.eq("tenant_id", tenantId);
+      const { data, error } = await q.maybeSingle();
       if (error) throw error;
       if (data?.value && Array.isArray(data.value)) return data.value;
       return fallback;
