@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,7 +13,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "@/components/ui/use-toast";
 import { format, parseISO } from "date-fns";
-import { Loader2, Plus, Users, Church, Baby, UserCheck, Paperclip, FileText, Printer } from "lucide-react";
+import { Loader2, Plus, Users, Church, Baby, UserCheck, Paperclip, FileText, Printer, BarChart3 } from "lucide-react";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { useAppSetting } from "@/hooks/useAppSetting";
 import ReportAttachments from "@/components/reports/ReportAttachments";
 import { useSubFeature } from "@/hooks/useSubFeature";
