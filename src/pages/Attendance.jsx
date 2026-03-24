@@ -242,7 +242,7 @@ export default function Attendance() {
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <Card className="border-0 shadow-sm">
-            <CardHeader><CardTitle className="text-base font-display flex items-center gap-2"><CalendarCheck className="h-4 w-4 text-accent" /> All Sessions</CardTitle></CardHeader>
+            <CardHeader><CardTitle className="text-base font-display flex items-center gap-2"><CalendarCheck className="h-4 w-4 text-accent" /> All Meetings</CardTitle></CardHeader>
             <CardContent className="space-y-2">
               {filteredSessions.length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-4">No sessions found</p>
