@@ -4,18 +4,23 @@ import { BookOpen, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useTenantQuery } from "@/hooks/useTenantQuery";
 
 export default function BookOfTheMonth() {
+  const { tenantId, scopeQuery } = useTenantQuery();
+
   const { data: books = [] } = useQuery({
-    queryKey: ["book-of-the-month"],
+    queryKey: ["book-of-the-month", tenantId],
     queryFn: async () => {
       const now = new Date();
       const monthStart = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
-      const { data, error } = await supabase
-        .from("books_of_the_month")
-        .select("*")
-        .eq("is_active", true)
-        .eq("month", monthStart);
+      const { data, error } = await scopeQuery(
+        supabase
+          .from("books_of_the_month")
+          .select("*")
+          .eq("is_active", true)
+          .eq("month", monthStart)
+      );
       if (error) throw error;
       return data || [];
     },
