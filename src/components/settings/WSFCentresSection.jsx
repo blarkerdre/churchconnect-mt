@@ -138,6 +138,7 @@ export default function WSFCentresSection() {
       meeting_time: form.meeting_time || null,
       is_active: form.is_active,
       leader_id: form.leader_id || null,
+      zone_id: form.zone_id || null,
     });
   };
 
