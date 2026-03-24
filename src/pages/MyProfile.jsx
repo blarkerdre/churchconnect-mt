@@ -54,7 +54,8 @@ function ProfilePhotoUpload({ member, user, onUpdated }) {
       onUpdated();
       toast({ title: "Profile photo updated" });
     } catch (err) {
-      toast({ title: "Upload failed", description: err.message, variant: "destructive" });
+      console.error("Photo upload error:", err);
+      toast({ title: "Upload failed", description: `${err.message}${err.statusCode ? ` (${err.statusCode})` : ""}`, variant: "destructive" });
     } finally {
       setUploading(false);
     }
