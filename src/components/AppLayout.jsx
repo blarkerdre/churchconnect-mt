@@ -36,6 +36,7 @@ const allNavItems = [
   { name: "User Management", icon: Shield, path: "/user-management", access: "admin" },
   { name: "System Logs", icon: FileText, path: "/system-logs", access: "admin" },
   { name: "Settings", icon: Settings, path: "/settings", access: "admin" },
+  { name: "Tenant Admin", icon: Globe, path: "/tenant-admin", access: "super_admin" },
 ];
 
 export default function Layout({ children }) {
