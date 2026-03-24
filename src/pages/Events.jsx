@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Plus, Search, CalendarDays, MapPin, Clock, Users, Edit, Trash2, Loader2, MessageSquare, Globe, Monitor, Repeat } from "lucide-react";
-import { addWeeks, addMonths, format, parseISO, isBefore, isEqual } from "date-fns";
+import { addDays, addWeeks, addMonths, format, parseISO, isBefore, isEqual } from "date-fns";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
@@ -87,7 +87,7 @@ export default function Events() {
   });
 
   // Build AUDIENCES list
-  const allAudiences = ["All Members", ...churchUnitsData.map(u => u.name), ...myWsfCentres.map(c => c.name), "Leaders Only"];
+  const allAudiences = ["All Members", ...churchUnitsData.map(u => u.name), ...myWsfCentres.map(c => c.name), "WSF", "WSF Leaders", "Leaders Only"];
   const uniqueAudiences = [...new Set(allAudiences)];
 
   // Determine available audiences for the current user
@@ -129,7 +129,8 @@ export default function Events() {
     let count = 0;
 
     while (count < 52) {
-      if (freq === "Weekly") current = addWeeks(current, 1);
+      if (freq === "Daily") current = addDays(current, 1);
+      else if (freq === "Weekly") current = addWeeks(current, 1);
       else if (freq === "Biweekly") current = addWeeks(current, 2);
       else current = addMonths(current, 1);
 
@@ -151,6 +152,7 @@ export default function Events() {
         recurrence_end_date: parentEvent.recurrence_end_date,
         recurrence_parent_id: parentId,
         reminder_days_before: parentEvent.reminder_days_before?.length ? parentEvent.reminder_days_before : null,
+        reminder_hours_before: parentEvent.reminder_hours_before?.length ? parentEvent.reminder_hours_before : null,
         reminder_sent: false,
       });
     }
@@ -174,6 +176,7 @@ export default function Events() {
         recurrence_frequency: formData.is_recurring ? formData.recurrence_frequency : null,
         recurrence_end_date: formData.is_recurring ? formData.recurrence_end_date : null,
         reminder_days_before: formData.reminder_days_before?.length ? formData.reminder_days_before : null,
+        reminder_hours_before: formData.reminder_hours_before?.length ? formData.reminder_hours_before : null,
         reminder_sent: false,
       };
       if (editing) {
@@ -261,6 +264,7 @@ export default function Events() {
       audience: lockedAudience || "All Members",
       is_recurring: false, recurrence_frequency: "Weekly", recurrence_end_date: "",
       reminder_days_before: [],
+      reminder_hours_before: [],
     });
     setDialogOpen(true);
   };
@@ -277,6 +281,7 @@ export default function Events() {
       recurrence_frequency: e.recurrence_frequency || "Weekly",
       recurrence_end_date: e.recurrence_end_date || "",
       reminder_days_before: e.reminder_days_before || [],
+      reminder_hours_before: e.reminder_hours_before || [],
     });
     setDialogOpen(true);
   };
@@ -449,7 +454,7 @@ export default function Events() {
                       <Select value={form.recurrence_frequency || "Weekly"} onValueChange={v => setForm(f => ({ ...f, recurrence_frequency: v }))}>
                         <SelectTrigger><SelectValue /></SelectTrigger>
                         <SelectContent>
-                          {["Weekly", "Biweekly", "Monthly"].map(fr => <SelectItem key={fr} value={fr}>{fr}</SelectItem>)}
+                          {["Daily", "Weekly", "Biweekly", "Monthly"].map(fr => <SelectItem key={fr} value={fr}>{fr}</SelectItem>)}
                         </SelectContent>
                       </Select>
                     </div>
@@ -465,22 +470,41 @@ export default function Events() {
             {/* Reminders */}
             <div className="space-y-1.5">
               <Label>Reminders</Label>
-              <div className="flex flex-wrap gap-3">
-                {[{ value: 1, label: "1 day before" }, { value: 3, label: "3 days before" }, { value: 7, label: "1 week before" }].map(opt => (
-                  <label key={opt.value} className="flex items-center gap-1.5 cursor-pointer text-sm text-foreground">
-                    <Checkbox
-                      checked={(form.reminder_days_before || []).includes(opt.value)}
-                      onCheckedChange={() => {
-                        const curr = form.reminder_days_before || [];
-                        setForm(f => ({
-                          ...f,
-                          reminder_days_before: curr.includes(opt.value) ? curr.filter(d => d !== opt.value) : [...curr, opt.value].sort((a, b) => a - b),
-                        }));
-                      }}
-                    />
-                    {opt.label}
-                  </label>
-                ))}
+              <div className="space-y-2">
+                <div className="flex flex-wrap gap-3">
+                  {[{ value: 1, label: "1 day before" }, { value: 3, label: "3 days before" }, { value: 7, label: "1 week before" }].map(opt => (
+                    <label key={opt.value} className="flex items-center gap-1.5 cursor-pointer text-sm text-foreground">
+                      <Checkbox
+                        checked={(form.reminder_days_before || []).includes(opt.value)}
+                        onCheckedChange={() => {
+                          const curr = form.reminder_days_before || [];
+                          setForm(f => ({
+                            ...f,
+                            reminder_days_before: curr.includes(opt.value) ? curr.filter(d => d !== opt.value) : [...curr, opt.value].sort((a, b) => a - b),
+                          }));
+                        }}
+                      />
+                      {opt.label}
+                    </label>
+                  ))}
+                </div>
+                <div className="flex flex-wrap gap-3">
+                  {[{ value: 1, label: "1 hr before" }, { value: 2, label: "2 hrs before" }, { value: 6, label: "6 hrs before" }].map(opt => (
+                    <label key={opt.value} className="flex items-center gap-1.5 cursor-pointer text-sm text-foreground">
+                      <Checkbox
+                        checked={(form.reminder_hours_before || []).includes(opt.value)}
+                        onCheckedChange={() => {
+                          const curr = form.reminder_hours_before || [];
+                          setForm(f => ({
+                            ...f,
+                            reminder_hours_before: curr.includes(opt.value) ? curr.filter(h => h !== opt.value) : [...curr, opt.value].sort((a, b) => a - b),
+                          }));
+                        }}
+                      />
+                      {opt.label}
+                    </label>
+                  ))}
+                </div>
               </div>
             </div>
 
