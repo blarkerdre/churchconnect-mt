@@ -29,6 +29,7 @@ import MyProfile from "@/pages/MyProfile";
 import PublicRegistration from "@/pages/PublicRegistration";
 import PublicWoFBIRegistration from "@/pages/PublicWoFBIRegistration";
 import Onboard from "@/pages/Onboard";
+import TenantAdmin from "@/pages/TenantAdmin";
 
 
 function ProtectedRoute({ children }) {
@@ -118,6 +119,7 @@ function AppPages() {
       <Route path="/user-management" element={<AdminRoute><UserManagement /></AdminRoute>} />
       <Route path="/settings" element={<AdminRoute><Settings /></AdminRoute>} />
       <Route path="/system-logs" element={<AdminRoute><SystemLogs /></AdminRoute>} />
+      <Route path="/tenant-admin" element={<SuperAdminRoute><TenantAdmin /></SuperAdminRoute>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
