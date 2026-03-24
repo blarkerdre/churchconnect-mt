@@ -42,7 +42,7 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
   const { data: churchUnits = [] } = useChurchUnits();
   const CHURCH_UNITS = churchUnits.map(u => u.name);
   const { isAdmin, roles: currentUserRoles, user: currentUser } = useAuth();
-  const { tenantId, withTenant } = useTenantQuery();
+  const { tenantId, withTenant, scopeQuery } = useTenantQuery();
   const isSuperAdmin = currentUserRoles.includes("super_admin");
   const queryClient = useQueryClient();
   const [form, setForm] = useState(emptyMember);
