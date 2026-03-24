@@ -14,8 +14,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Separator } from "@/components/ui/separator";
-import { Building2, Users, UserCheck, Plus, CheckCircle2, ArrowRightLeft, Clock, Pencil, Save, Image, Palette } from "lucide-react";
+import { Building2, Users, UserCheck, Plus, CheckCircle2, ArrowRightLeft, Clock, Pencil, Save, Image, Palette, Users2 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
+import TenantUsersDialog from "@/components/tenants/TenantUsersDialog";
 
 // All feature modules that can be toggled per tenant
 const FEATURE_MODULES = [
@@ -41,6 +42,7 @@ export default function TenantAdmin() {
   const queryClient = useQueryClient();
   const [createOpen, setCreateOpen] = useState(false);
   const [editTenant, setEditTenant] = useState(null);
+  const [usersTenant, setUsersTenant] = useState(null);
   const [editForm, setEditForm] = useState({});
   const [newTenant, setNewTenant] = useState({ name: "", slug: "", timezone: "Europe/London" });
 
@@ -320,7 +322,10 @@ export default function TenantAdmin() {
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex items-center gap-1 justify-end">
-                            <Button size="sm" variant="ghost" onClick={() => openEdit(t)}>
+                            <Button size="sm" variant="ghost" onClick={() => setUsersTenant(t)} title="Manage users">
+                              <Users2 className="h-3 w-3" />
+                            </Button>
+                            <Button size="sm" variant="ghost" onClick={() => openEdit(t)} title="Edit settings">
                               <Pencil className="h-3 w-3" />
                             </Button>
                             {isMember && !isActive && (
@@ -462,6 +467,13 @@ export default function TenantAdmin() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Tenant Users Dialog */}
+      <TenantUsersDialog
+        tenant={usersTenant}
+        open={!!usersTenant}
+        onOpenChange={(open) => !open && setUsersTenant(null)}
+      />
     </div>
   );
 }
