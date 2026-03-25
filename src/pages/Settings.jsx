@@ -12,11 +12,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 import {
   Settings as SettingsIcon, Plus, Pencil, Trash2, Loader2,
-  Users, Church, CalendarDays, TrendingUp, Heart, Globe, Bell, Award, Link2, ToggleLeft, ShieldAlert, BookOpen, ChevronDown, ChevronRight
+  Users, Church, CalendarDays, TrendingUp, Heart, Globe, Bell, Award, Link2, ToggleLeft, ShieldAlert, BookOpen, ChevronDown, ChevronRight, Upload, X, ImageIcon
 } from "lucide-react";
 import { SUB_FEATURES, useDisabledSubFeatures } from "@/hooks/useSubFeature";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useAuth } from "@/hooks/useAuth";
+import { useTenant } from "@/contexts/TenantContext";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
 import WSFCentresSection from "@/components/settings/WSFCentresSection";
 import WSFZonesSection from "@/components/settings/WSFZonesSection";
@@ -497,6 +498,138 @@ function FeatureTogglesSection() {
   );
 }
 
+/* ─── Church Branding section ─── */
+function ChurchBrandingSection() {
+  const qc = useQueryClient();
+  const { currentTenant, tenantId, isTenantAdmin } = useTenant();
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = React.useRef(null);
+
+  const logoUrl = currentTenant?.logo_url || null;
+
+  const handleUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file || !tenantId) return;
+    if (!file.type.startsWith("image/")) {
+      toast({ title: "Please select an image file", variant: "destructive" });
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      toast({ title: "Image must be under 2MB", variant: "destructive" });
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const ext = file.name.split(".").pop();
+      const path = `${tenantId}/tenant-logo.${ext}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("profile-photos")
+        .upload(path, file, { upsert: true });
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = supabase.storage
+        .from("profile-photos")
+        .getPublicUrl(path);
+
+      const publicUrl = urlData.publicUrl + "?t=" + Date.now();
+
+      const { error: updateError } = await supabase
+        .from("tenants")
+        .update({ logo_url: publicUrl })
+        .eq("id", tenantId);
+      if (updateError) throw updateError;
+
+      qc.invalidateQueries({ queryKey: ["tenant-branding"] });
+      qc.invalidateQueries({ queryKey: ["tenants"] });
+      toast({ title: "Logo updated successfully" });
+      // Force re-render by reloading tenant context
+      window.location.reload();
+    } catch (err) {
+      toast({ title: "Upload failed", description: err.message, variant: "destructive" });
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  const handleRemove = async () => {
+    if (!tenantId || !window.confirm("Remove the church logo?")) return;
+    setUploading(true);
+    try {
+      const { error } = await supabase
+        .from("tenants")
+        .update({ logo_url: null })
+        .eq("id", tenantId);
+      if (error) throw error;
+
+      qc.invalidateQueries({ queryKey: ["tenant-branding"] });
+      qc.invalidateQueries({ queryKey: ["tenants"] });
+      toast({ title: "Logo removed" });
+      window.location.reload();
+    } catch (err) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  if (!isTenantAdmin) return null;
+
+  return (
+    <Card className="border-0 shadow-sm">
+      <CardHeader className="pb-3">
+        <CardTitle className="text-base font-display flex items-center gap-2">
+          <ImageIcon className="h-4 w-4 text-accent" /> Church Branding
+        </CardTitle>
+        <p className="text-xs text-muted-foreground mt-1">Upload your church logo. It will appear on the login page and throughout the app.</p>
+      </CardHeader>
+      <CardContent>
+        <div className="flex flex-col sm:flex-row items-center gap-4">
+          <div className="h-24 w-24 rounded-xl bg-muted/50 border-2 border-dashed border-border flex items-center justify-center overflow-hidden shrink-0">
+            {logoUrl ? (
+              <img src={logoUrl} alt="Church logo" className="h-full w-full object-contain" />
+            ) : (
+              <ImageIcon className="h-8 w-8 text-muted-foreground" />
+            )}
+          </div>
+          <div className="flex flex-col gap-2 w-full sm:w-auto">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleUpload}
+            />
+            <Button
+              size="sm"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploading}
+              className="gap-1.5"
+            >
+              {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+              {logoUrl ? "Change Logo" : "Upload Logo"}
+            </Button>
+            {logoUrl && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleRemove}
+                disabled={uploading}
+                className="gap-1.5 text-destructive hover:text-destructive"
+              >
+                <X className="h-4 w-4" /> Remove Logo
+              </Button>
+            )}
+            <p className="text-[11px] text-muted-foreground">PNG, JPG or SVG. Max 2MB.</p>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 /* ─── Main Settings page ─── */
 export default function Settings() {
   const { roles } = useAuth();
@@ -511,8 +644,9 @@ export default function Settings() {
         <p className="text-sm text-muted-foreground mt-1">Manage application configuration and options</p>
       </div>
 
-      <Tabs defaultValue="notifications" className="space-y-4">
+      <Tabs defaultValue="branding" className="space-y-4">
         <TabsList className="flex flex-nowrap h-auto gap-1 overflow-x-auto w-full justify-start [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+          <TabsTrigger value="branding" className="gap-1.5 text-xs"><ImageIcon className="h-3.5 w-3.5" /><span className="hidden sm:inline"> Branding</span></TabsTrigger>
           <TabsTrigger value="notifications" className="gap-1.5 text-xs"><Bell className="h-3.5 w-3.5" /><span className="hidden sm:inline"> Notifications</span></TabsTrigger>
           <TabsTrigger value="units" className="gap-1.5 text-xs"><Users className="h-3.5 w-3.5" /><span className="hidden sm:inline"> Units</span></TabsTrigger>
           <TabsTrigger value="wsf" className="gap-1.5 text-xs"><Globe className="h-3.5 w-3.5" /><span className="hidden sm:inline"> WSF</span></TabsTrigger>
@@ -534,6 +668,10 @@ export default function Settings() {
             <TabsTrigger value="danger" className="gap-1.5 text-xs text-destructive"><ShieldAlert className="h-3.5 w-3.5" /><span className="hidden sm:inline"> Danger</span></TabsTrigger>
           )}
         </TabsList>
+
+        <TabsContent value="branding">
+          <ChurchBrandingSection />
+        </TabsContent>
 
         <TabsContent value="notifications">
           <NotificationPreferencesSection />
