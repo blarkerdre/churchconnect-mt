@@ -11,11 +11,15 @@ import WSFLeaderDashboard from "@/components/dashboard/WSFLeaderDashboard";
 import { useAuth } from "@/hooks/useAuth";
 import { useSubFeature } from "@/hooks/useSubFeature";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
+import { useTenant } from "@/contexts/TenantContext";
+import { Badge } from "@/components/ui/badge";
 
 export default function Dashboard() {
   const { isAdmin, isUnitLeader, isWSFLeader, profile, myMember, loading: authLoading } = useAuth();
   const { enabled: selfCheckinEnabled } = useSubFeature("dashboard.self_checkin");
   const { tenantId, scopeQuery } = useTenantQuery();
+  const { currentTenant, tenantRole } = useTenant();
+  const roleLabel = tenantRole ? tenantRole.charAt(0).toUpperCase() + tenantRole.slice(1) : "";
 
   const isLeaderOrAdmin = isAdmin;
   const { data: members = [], isLoading: membersLoading } = useQuery({
@@ -131,6 +135,11 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6">
+      {/* Tenant context bar */}
+      <div className="flex items-center gap-2">
+        <h2 className="text-lg font-bold text-foreground">{currentTenant?.name || "Dashboard"}</h2>
+        {roleLabel && <Badge className="text-xs">{roleLabel}</Badge>}
+      </div>
       <ProfileCompletionBanner />
       {selfCheckinEnabled && <SelfCheckInWidget />}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
