@@ -36,6 +36,7 @@ import Presentation from "@/pages/Presentation";
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
+  const { tenantSlug } = useParams();
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -43,7 +44,8 @@ function ProtectedRoute({ children }) {
       </div>
     );
   }
-  if (!user) return <Navigate to="/auth" replace />;
+  const authPath = tenantSlug ? `/t/${tenantSlug}/auth` : "/auth";
+  if (!user) return <Navigate to={authPath} replace />;
   return children;
 }
 
