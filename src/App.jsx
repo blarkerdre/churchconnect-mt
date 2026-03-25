@@ -1,7 +1,7 @@
 import { Toaster } from "@/components/ui/toaster";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClientInstance } from "@/lib/query-client";
-import { BrowserRouter as Router, Route, Routes, Navigate } from "react-router-dom";
+import { BrowserRouter as Router, Route, Routes, Navigate, useParams } from "react-router-dom";
 import { useUnitMembership } from "@/hooks/useUnitMembership";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import { TenantProvider } from "@/contexts/TenantContext";
@@ -36,6 +36,7 @@ import Presentation from "@/pages/Presentation";
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
+  const { tenantSlug } = useParams();
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -43,7 +44,8 @@ function ProtectedRoute({ children }) {
       </div>
     );
   }
-  if (!user) return <Navigate to="/auth" replace />;
+  const authPath = tenantSlug ? `/t/${tenantSlug}/auth` : "/auth";
+  if (!user) return <Navigate to={authPath} replace />;
   return children;
 }
 
@@ -175,7 +177,8 @@ function AppRoutes() {
       <Route path="/presentation" element={<Presentation />} />
       <Route path="/onboard" element={<Onboard />} />
 
-      {/* Tenant-prefixed public routes (for future multi-tenant QR codes) */}
+      {/* Tenant-prefixed public routes */}
+      <Route path="/t/:tenantSlug/auth" element={<Auth />} />
       <Route path="/t/:tenantSlug/register" element={<PublicRegistration />} />
       <Route path="/t/:tenantSlug/wofbi-register" element={<PublicWoFBIRegistration />} />
 

@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Navigate } from "react-router-dom";
+import { Navigate, useParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,13 +8,35 @@ import { Label } from "@/components/ui/label";
 import { Mail, Lock, User, ArrowRight } from "lucide-react";
 import winnersLogo from "@/assets/winners-chapel-logo.png";
 import { useToast } from "@/components/ui/use-toast";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function Auth() {
   const { user, loading, signIn, signUp, resetPassword } = useAuth();
   const { toast } = useToast();
+  const { tenantSlug } = useParams();
   const [mode, setMode] = useState("login"); // login | signup | forgot
   const [form, setForm] = useState({ email: "", password: "", fullName: "" });
   const [submitting, setSubmitting] = useState(false);
+
+  // Fetch tenant branding when a slug is present
+  const { data: tenant } = useQuery({
+    queryKey: ["tenant-branding", tenantSlug],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("tenants")
+        .select("id, name, slug, logo_url")
+        .eq("slug", tenantSlug)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!tenantSlug,
+  });
+
+  const churchName = tenant?.name || "Winners Chapel";
+  const churchSubtitle = tenant ? null : "International Cardiff";
+  const logoUrl = tenant?.logo_url || winnersLogo;
 
   if (loading) {
     return (
@@ -24,7 +46,10 @@ export default function Auth() {
     );
   }
 
-  if (user) return <Navigate to="/" replace />;
+  if (user) {
+    const redirectTo = tenantSlug ? `/t/${tenantSlug}` : "/";
+    return <Navigate to={redirectTo} replace />;
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -65,9 +90,9 @@ export default function Auth() {
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="flex flex-col items-center mb-8">
-          <img src={winnersLogo} alt="Winners Chapel Logo" className="h-16 w-16 object-contain mb-4" />
-          <h1 className="font-display text-2xl font-bold text-foreground">Winners Chapel</h1>
-          <p className="text-sm text-muted-foreground">International Cardiff</p>
+          <img src={logoUrl} alt={`${churchName} Logo`} className="h-16 w-16 object-contain mb-4" />
+          <h1 className="font-display text-2xl font-bold text-foreground">{churchName}</h1>
+          {churchSubtitle && <p className="text-sm text-muted-foreground">{churchSubtitle}</p>}
         </div>
 
         <Card className="border-0 shadow-lg">
