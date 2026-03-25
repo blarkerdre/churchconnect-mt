@@ -646,6 +646,7 @@ export default function Settings() {
 
       <Tabs defaultValue="branding" className="space-y-4">
         <TabsList className="flex flex-nowrap h-auto gap-1 overflow-x-auto w-full justify-start [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+          <TabsTrigger value="branding" className="gap-1.5 text-xs"><ImageIcon className="h-3.5 w-3.5" /><span className="hidden sm:inline"> Branding</span></TabsTrigger>
           <TabsTrigger value="notifications" className="gap-1.5 text-xs"><Bell className="h-3.5 w-3.5" /><span className="hidden sm:inline"> Notifications</span></TabsTrigger>
           <TabsTrigger value="units" className="gap-1.5 text-xs"><Users className="h-3.5 w-3.5" /><span className="hidden sm:inline"> Units</span></TabsTrigger>
           <TabsTrigger value="wsf" className="gap-1.5 text-xs"><Globe className="h-3.5 w-3.5" /><span className="hidden sm:inline"> WSF</span></TabsTrigger>
@@ -667,6 +668,10 @@ export default function Settings() {
             <TabsTrigger value="danger" className="gap-1.5 text-xs text-destructive"><ShieldAlert className="h-3.5 w-3.5" /><span className="hidden sm:inline"> Danger</span></TabsTrigger>
           )}
         </TabsList>
+
+        <TabsContent value="branding">
+          <ChurchBrandingSection />
+        </TabsContent>
 
         <TabsContent value="notifications">
           <NotificationPreferencesSection />
