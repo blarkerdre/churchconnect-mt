@@ -15,10 +15,12 @@ import {
 import { AlertTriangle, Loader2, Trash2, ShieldAlert } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
+import { useTenantQuery } from "@/hooks/useTenantQuery";
 
 const CONFIRMATION_PHRASE = "DELETE ALL DATA";
 
 export default function DangerZoneSection() {
+  const { tenantId } = useTenantQuery();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [step, setStep] = useState(1); // 1 = warning + phrase, 2 = password
   const [phrase, setPhrase] = useState("");
@@ -50,7 +52,7 @@ export default function DangerZoneSection() {
     setLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke("purge-all-data", {
-        body: { password },
+        body: { password, tenant_id: tenantId },
       });
 
       if (error) throw error;
