@@ -368,6 +368,39 @@ export default function DangerZoneSection() {
             </Button>
           </div>
 
+          {/* Import */}
+          <div className="p-4 bg-muted/50 border rounded-lg space-y-3">
+            <div className="flex items-start gap-3">
+              <Upload className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-semibold text-foreground">Import Data from Backup</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Restore data from a previously exported ZIP file containing CSV files. Existing records will not be overwritten — only new records will be added.
+                </p>
+              </div>
+            </div>
+            <div>
+              <input
+                type="file"
+                accept=".zip"
+                id="import-zip-input"
+                className="hidden"
+                onChange={handleImportZip}
+                disabled={importing}
+              />
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1.5"
+                onClick={() => document.getElementById("import-zip-input")?.click()}
+                disabled={importing}
+              >
+                {importing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
+                {importing ? "Importing..." : "Import from ZIP"}
+              </Button>
+            </div>
+          </div>
+
           {/* Delete */}
           <div className="p-4 bg-destructive/5 border border-destructive/20 rounded-lg space-y-3">
             <div className="flex items-start gap-3">
