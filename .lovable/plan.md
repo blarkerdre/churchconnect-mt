@@ -1,37 +1,34 @@
 
 
-## Plan: Add Tenant Badge to Dashboard
+## Plan: Tenant Logo Upload/Remove + Password Visibility Toggle
 
-### What
-Add a small indicator card below the welcome banner on all dashboard views (Member, Admin, WSF Leader) showing the current tenant name and the user's role within that tenant.
+### 1. Password visibility toggle on Auth and ResetPassword pages
 
-### Changes
+**Files**: `src/pages/Auth.jsx`, `src/pages/ResetPassword.jsx`
 
-**1. `src/components/dashboard/MemberDashboard.jsx`**
-- Import `useTenant` from `@/contexts/TenantContext`
-- Replace the hardcoded "Winners Chapel International Cardiff" subtitle in the welcome banner with `currentTenant?.name`
-- Add a role badge (e.g., "Member", "Admin", "Owner") next to the tenant name using the tenant context's `tenantRole`
+- Add a `showPassword` state boolean
+- Add an `Eye`/`EyeOff` icon button inside the password input's relative container (positioned right)
+- Toggle between `type="password"` and `type="text"` based on state
+- Add padding-right (`pr-10`) to the input so text doesn't overlap the icon
 
-**2. `src/pages/Dashboard.jsx` (Admin dashboard)**
-- Import `useTenant` from `@/contexts/TenantContext`
-- Add a tenant context bar above or within the stats grid showing the tenant name and role badge (e.g., "Admin" / "Owner")
+### 2. Tenant logo upload/remove in Settings
 
-**3. `src/components/dashboard/WSFLeaderDashboard.jsx`**
-- Same treatment — import `useTenant` and add tenant name + role indicator
+**File**: `src/pages/Settings.jsx` (new section or within an existing branding area)
 
-### Design
-The tenant name replaces the hardcoded church name in the welcome banner subtitle. The tenant role appears as a small badge alongside it. This keeps it visible on both mobile and desktop without adding extra cards.
+Add a "Church Branding" settings card that allows tenant admins to:
 
-```text
-┌─────────────────────────────────┐
-│ Welcome, John!                  │
-│ My Church Name · Owner          │
-│ [Active] [Choir]                │
-└─────────────────────────────────┘
-```
+- **View** the current tenant logo (from `currentTenant.logo_url`)
+- **Upload** a new logo image via file input to the existing `profile-photos` public bucket (path: `{tenantId}/tenant-logo.{ext}`)
+- **Remove** the logo (set `logo_url` to null on the tenants table)
+- After upload, update the `tenants` row with the new public URL via `supabase.from("tenants").update({ logo_url }).eq("id", tenantId)`
+- Invalidate relevant queries so sidebar and auth page reflect changes
+
+**RLS consideration**: Tenant admins already have update access to their tenant row via `tenant_memberships` role checks. The existing `profile-photos` bucket is public and already has upload policies. We'll use the tenant-prefixed path (`{tenantId}/tenant-logo`) for isolation.
 
 ### Technical Details
-- `useTenant()` already exposes `currentTenant` (with `.name`, `.logo_url`), `tenantRole`, `isTenantAdmin`, `isTenantOwner`
-- No new queries or migrations needed
-- Role label: capitalize `tenantRole` (owner → Owner, admin → Admin, member → Member)
+
+- **Storage path**: `{tenantId}/tenant-logo.{extension}` in the `profile-photos` bucket
+- **Storage RLS**: May need an INSERT policy on `storage.objects` for the `profile-photos` bucket allowing authenticated users to upload to their tenant prefix. Will check existing policies.
+- **Tenant update RLS**: Need to verify tenant admins can update their own tenant row. If not, a new RLS policy on `tenants` for UPDATE by tenant admins will be added via migration.
+- **No new tables or migrations** needed beyond potential RLS policies
 
