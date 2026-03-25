@@ -12,7 +12,7 @@ import {
   AlertDialogFooter,
   AlertDialogCancel,
 } from "@/components/ui/alert-dialog";
-import { AlertTriangle, Loader2, Trash2, ShieldAlert, Download, RotateCcw, Archive } from "lucide-react";
+import { AlertTriangle, Loader2, Trash2, ShieldAlert, Download, RotateCcw, Archive, Upload } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
