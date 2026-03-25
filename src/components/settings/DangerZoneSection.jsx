@@ -20,6 +20,7 @@ import { useTenantQuery } from "@/hooks/useTenantQuery";
 const CONFIRMATION_PHRASE = "DELETE ALL DATA";
 
 export default function DangerZoneSection() {
+  const { tenantId } = useTenantQuery();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [step, setStep] = useState(1); // 1 = warning + phrase, 2 = password
   const [phrase, setPhrase] = useState("");
