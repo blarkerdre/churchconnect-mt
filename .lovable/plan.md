@@ -1,103 +1,35 @@
 
 
-## Plan: Data Export/Backup + Soft-Delete with Recovery
+## Plan: Seed Test Environment with Distinct Demo Data
 
-### Overview
-Add two capabilities to the Danger Zone: (1) export all tenant data as CSV before purging, and (2) soft-delete data into an archive table with a 30-day recovery window instead of immediate permanent deletion.
+### Current State
+Both Test and Live environments are identical: 13 members with no `tenant_id`, 0 tenants, 0 tenant memberships. The app is non-functional because tenant context is required.
 
----
+### What We'll Do
 
-### 1. Database Migration
+**Step 1: Create a Test tenant**
+- Insert a tenant named **"Demo Church (TEST)"** with slug `demo-test` into the Test environment
+- This distinct name will immediately differentiate it from Live
 
-Create a new `purged_data_archives` table to store soft-deleted snapshots:
+**Step 2: Link your user to the tenant**
+- Create a `tenant_memberships` record for your user (`932364f2-...`) as `owner`
+- Update your `user_roles` to include the tenant_id
+- Update your profile with the tenant_id
 
-```sql
-CREATE TABLE public.purged_data_archives (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id uuid NOT NULL,
-  purged_by uuid NOT NULL,
-  purged_at timestamptz NOT NULL DEFAULT now(),
-  expires_at timestamptz NOT NULL DEFAULT (now() + interval '30 days'),
-  status text NOT NULL DEFAULT 'archived', -- 'archived' | 'restored' | 'expired'
-  data jsonb NOT NULL, -- all tenant data as JSON
-  created_at timestamptz NOT NULL DEFAULT now()
-);
+**Step 3: Assign existing 13 members to the test tenant**
+- Update all members with `tenant_id IS NULL` to belong to the new tenant
 
-ALTER TABLE public.purged_data_archives ENABLE ROW LEVEL SECURITY;
+**Step 4: Seed additional demo data unique to Test**
+- **5 extra demo members** with obvious test names (e.g., "Test User Alpha", "Test User Beta") so you can spot them
+- **2 attendance sessions** with a few attendance records
+- **2 upcoming events** (e.g., "TEST - Youth Rally", "TEST - Prayer Meeting")
+- **1 announcement** marked "[TEST] Welcome to Demo Church"
 
-CREATE POLICY "Super admins can manage archives"
-  ON public.purged_data_archives FOR ALL TO authenticated
-  USING (has_role(auth.uid(), 'super_admin') AND user_has_tenant_access(tenant_id))
-  WITH CHECK (has_role(auth.uid(), 'super_admin') AND user_has_tenant_access(tenant_id));
-```
-
-### 2. New Edge Function: `export-tenant-data`
-
-- Accepts `tenant_id`, validates super_admin + tenant membership
-- Queries all tenant-scoped tables (members, attendance, events, follow-ups, etc.)
-- Returns a JSON response with all data organized by table name
-- Frontend converts this to CSV files and triggers a ZIP download
-
-### 3. Update Edge Function: `purge-all-data`
-
-- Before deleting, snapshot all tenant data into `purged_data_archives` as a JSON blob
-- Proceed with existing tenant-scoped deletion logic
-- Return archive ID in response so user knows recovery is possible
-
-### 4. New Edge Function: `restore-purged-data`
-
-- Accepts `archive_id`, validates super_admin + tenant ownership
-- Reads the JSON snapshot from `purged_data_archives`
-- Re-inserts data into all original tables in FK-safe order
-- Marks the archive as `status = 'restored'`
-
-### 5. Frontend: `DangerZoneSection.jsx`
-
-Add two new UI elements:
-
-**Export Button** (before the delete button):
-- "Export All Data" button that calls `export-tenant-data`
-- Converts response JSON into multiple CSV files
-- Bundles into a ZIP download using JSZip library
-
-**Recovery Section** (new card or sub-section):
-- Query `purged_data_archives` for active archives for the current tenant
-- Show archive date, expiry countdown, and "Restore" button
-- "Restore" button calls `restore-purged-data` with confirmation dialog
-
-**Updated Delete Dialog**:
-- Add note: "Data will be archived for 30 days and can be restored from this page"
-- Show "Export data first" link/button in the confirmation dialog
-
-### 6. Install JSZip dependency
-
-Add `jszip` package for client-side ZIP generation of CSV exports.
-
----
+This gives Test visibly different content from Live, making it easy to tell which environment you're in.
 
 ### Technical Details
 
-**Export tables** (same list as purge): members, attendance_records, attendance_sessions, followups, pastoral_care, events, event_registrations, announcements, messages, notifications, sms_log, email_send_log, transportation, documents, first_timers, member_status_history, training_completions, training_reports, church_attendance_reports, exam_answers, exam_attempts, course_registrations, wsf_attendance, wsf_attendance_reports, unit_leader_assignments, audit_log.
+All inserts will use the database insert tool targeting the Test environment. The tenant ID will be a fixed UUID (e.g., `a0000000-0000-0000-0000-000000000001`) matching the `DEFAULT_TENANT_ID` constant in `TenantContext.jsx`. All seeded records will reference this tenant.
 
-**Archive JSON structure**:
-```json
-{
-  "members": [...],
-  "attendance_records": [...],
-  "followups": [...],
-  ...
-}
-```
-
-**Restore order** (reverse of delete -- parents first): members, attendance_sessions, attendance_records, events, event_registrations, etc.
-
-**Automatic expiry**: Archives older than 30 days can be cleaned up via a scheduled function or checked at query time (filter `expires_at > now()`).
-
-### Files Changed
-- **New migration**: `purged_data_archives` table
-- **New edge function**: `supabase/functions/export-tenant-data/index.ts`
-- **New edge function**: `supabase/functions/restore-purged-data/index.ts`
-- **Edit**: `supabase/functions/purge-all-data/index.ts` -- add archival step before deletion
-- **Edit**: `src/components/settings/DangerZoneSection.jsx` -- add export button, recovery UI, updated messaging
-- **Install**: `jszip` package
+No schema changes or code changes are needed — this is purely a data seeding operation.
 
