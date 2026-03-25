@@ -38,6 +38,52 @@ function jsonToCsv(data) {
   return [headers.join(","), ...rows].join("\n");
 }
 
+function csvToJson(csvText) {
+  const lines = csvText.split("\n").filter((l) => l.trim());
+  if (lines.length < 2) return [];
+  const headers = lines[0].split(",").map((h) => h.trim());
+  const rows = [];
+  for (let i = 1; i < lines.length; i++) {
+    const values = [];
+    let current = "";
+    let inQuotes = false;
+    for (let c = 0; c < lines[i].length; c++) {
+      const ch = lines[i][c];
+      if (ch === '"') {
+        if (inQuotes && lines[i][c + 1] === '"') {
+          current += '"';
+          c++;
+        } else {
+          inQuotes = !inQuotes;
+        }
+      } else if (ch === "," && !inQuotes) {
+        values.push(current);
+        current = "";
+      } else {
+        current += ch;
+      }
+    }
+    values.push(current);
+    const obj = {};
+    headers.forEach((h, idx) => {
+      let val = values[idx] ?? "";
+      if (val === "") {
+        obj[h] = null;
+      } else if (val === "true") {
+        obj[h] = true;
+      } else if (val === "false") {
+        obj[h] = false;
+      } else if (/^\{.*\}$|^\[.*\]$/.test(val)) {
+        try { obj[h] = JSON.parse(val); } catch { obj[h] = val; }
+      } else {
+        obj[h] = val;
+      }
+    });
+    rows.push(obj);
+  }
+  return rows;
+}
+
 export default function DangerZoneSection() {
   const { tenantId } = useTenantQuery();
   const queryClient = useQueryClient();
