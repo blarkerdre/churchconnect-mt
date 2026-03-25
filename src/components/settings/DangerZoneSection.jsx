@@ -52,7 +52,7 @@ export default function DangerZoneSection() {
     setLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke("purge-all-data", {
-        body: { password },
+        body: { password, tenant_id: tenantId },
       });
 
       if (error) throw error;
