@@ -241,6 +241,53 @@ export default function DangerZoneSection() {
     }
   };
 
+  const handleImportZip = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file || !tenantId) return;
+    setImporting(true);
+    try {
+      const zip = await JSZip.loadAsync(file);
+      const importData = {};
+      for (const [filename, zipEntry] of Object.entries(zip.files)) {
+        if (zipEntry.dir || !filename.endsWith(".csv")) continue;
+        const tableName = filename.replace(".csv", "").replace(/^.*\//, "");
+        const csvText = await zipEntry.async("text");
+        const rows = csvToJson(csvText);
+        if (rows.length > 0) importData[tableName] = rows;
+      }
+
+      if (Object.keys(importData).length === 0) {
+        toast({ title: "No data found", description: "The ZIP file contained no valid CSV files.", variant: "destructive" });
+        return;
+      }
+
+      const { data, error } = await supabase.functions.invoke("import-tenant-data", {
+        body: { tenant_id: tenantId, data: importData },
+      });
+
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      toast({
+        title: "Data imported successfully",
+        description: data.warnings?.length
+          ? `${data.message} With ${data.warnings.length} warning(s).`
+          : data.message,
+      });
+      setImportDialogOpen(false);
+      queryClient.invalidateQueries();
+    } catch (err) {
+      toast({
+        title: "Import failed",
+        description: err.message || "An unexpected error occurred",
+        variant: "destructive",
+      });
+    } finally {
+      setImporting(false);
+      e.target.value = "";
+    }
+  };
+
   return (
     <div className="space-y-4">
       {/* Recovery Section */}
