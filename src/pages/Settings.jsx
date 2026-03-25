@@ -12,11 +12,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 import {
   Settings as SettingsIcon, Plus, Pencil, Trash2, Loader2,
-  Users, Church, CalendarDays, TrendingUp, Heart, Globe, Bell, Award, Link2, ToggleLeft, ShieldAlert, BookOpen, ChevronDown, ChevronRight
+  Users, Church, CalendarDays, TrendingUp, Heart, Globe, Bell, Award, Link2, ToggleLeft, ShieldAlert, BookOpen, ChevronDown, ChevronRight, Upload, X, ImageIcon
 } from "lucide-react";
 import { SUB_FEATURES, useDisabledSubFeatures } from "@/hooks/useSubFeature";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useAuth } from "@/hooks/useAuth";
+import { useTenant } from "@/contexts/TenantContext";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
 import WSFCentresSection from "@/components/settings/WSFCentresSection";
 import WSFZonesSection from "@/components/settings/WSFZonesSection";
