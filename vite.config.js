@@ -4,11 +4,17 @@ import path from 'path'
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
-  const projectId = env.VITE_SUPABASE_PROJECT_ID || 'komqiadgeaapeuuzbovn'
-  const supabaseUrl = env.VITE_SUPABASE_URL || `https://${projectId}.supabase.co`
-  const publishableKey =
-    env.VITE_SUPABASE_PUBLISHABLE_KEY ||
-    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtvbXFpYWRnZWFhcGV1dXpib3ZuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM4NDgwMzYsImV4cCI6MjA4OTQyNDAzNn0.mFAVDs2hXaQgyI8_ptYv-56G1WgEkPzy_8Jg4xSlFrY'
+  const requireEnv = (name) => {
+    const value = env[name]
+    if (!value) {
+      throw new Error(`Missing required environment variable: ${name}`)
+    }
+    return value
+  }
+
+  const projectId = requireEnv('VITE_SUPABASE_PROJECT_ID')
+  const supabaseUrl = requireEnv('VITE_SUPABASE_URL')
+  const publishableKey = requireEnv('VITE_SUPABASE_PUBLISHABLE_KEY')
 
   return {
     plugins: [react()],
