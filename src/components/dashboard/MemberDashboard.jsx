@@ -7,6 +7,7 @@ import { Link } from "react-router-dom";
 import MemberFeed from "@/components/profile/MemberFeed";
 import SelfCheckInWidget from "@/components/attendance/SelfCheckInWidget";
 import BookOfTheMonth from "@/components/dashboard/BookOfTheMonth";
+import { useTenant } from "@/contexts/TenantContext";
 
 const GROWTH_FIELDS = [
   { key: "water_baptism", label: "Water Baptism" },
@@ -19,7 +20,9 @@ const GROWTH_FIELDS = [
 ];
 
 export default function MemberDashboard({ currentUser, myMember }) {
-  
+  const { currentTenant, tenantRole } = useTenant();
+  const roleLabel = tenantRole ? tenantRole.charAt(0).toUpperCase() + tenantRole.slice(1) : "";
+
   const statusColors = {
     Active: "bg-chart-3/10 text-chart-3",
     Inactive: "bg-muted text-muted-foreground",
@@ -44,7 +47,10 @@ export default function MemberDashboard({ currentUser, myMember }) {
             <h2 className="text-lg font-bold leading-tight">
               Welcome, {myMember?.first_name || currentUser?.full_name || "Member"}!
             </h2>
-            <p className="text-primary-foreground/60 text-sm mt-0.5">Winners Chapel International Cardiff</p>
+            <p className="text-primary-foreground/60 text-sm mt-0.5 flex items-center gap-1.5">
+              {currentTenant?.name || "My Church"}
+              {roleLabel && <Badge className="bg-primary-foreground/20 text-primary-foreground text-[10px] border-0 py-0 px-1.5">{roleLabel}</Badge>}
+            </p>
             {myMember && (
               <div className="flex items-center gap-2 mt-2 flex-wrap">
                 <Badge className={`${statusColors[myMember.membership_status] || "bg-primary-foreground/20 text-primary-foreground"} text-xs border-0`}>
