@@ -15,6 +15,7 @@ import {
 import { AlertTriangle, Loader2, Trash2, ShieldAlert } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
+import { useTenantQuery } from "@/hooks/useTenantQuery";
 
 const CONFIRMATION_PHRASE = "DELETE ALL DATA";
 
