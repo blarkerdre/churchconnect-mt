@@ -16,6 +16,7 @@ import MobileBottomNav from "@/components/navigation/MobileBottomNav";
 import { getEnvironmentLabel, getBackendHost, isBackendMismatch } from "@/lib/environment";
 import { useAppSetting } from "@/hooks/useAppSetting";
 import { getIconComponent } from "@/lib/icon-map";
+import EnvironmentBanner from "@/components/EnvironmentBanner";
 
 // Role requirements: null = any authenticated user, "admin" = admin/super_admin, "leader" = admin or unit_leader
 const allNavItems = [
