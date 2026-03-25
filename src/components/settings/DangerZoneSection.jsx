@@ -96,6 +96,8 @@ export default function DangerZoneSection() {
   const [restoreDialogOpen, setRestoreDialogOpen] = useState(false);
   const [selectedArchive, setSelectedArchive] = useState(null);
   const [restoring, setRestoring] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
 
   const { data: archives, isLoading: archivesLoading } = useQuery({
     queryKey: ["purged-archives", tenantId],
