@@ -59,8 +59,19 @@ Deno.serve(async (req) => {
       );
     }
 
-    // 3. Re-authenticate with password
-    const { password } = await req.json();
+    // 3. Parse body and validate
+    const { password, tenant_id } = await req.json();
+
+    if (!tenant_id) {
+      return new Response(
+        JSON.stringify({ error: "tenant_id is required" }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
     if (!password) {
       return new Response(
         JSON.stringify({ error: "Password is required for re-authentication" }),
@@ -71,11 +82,27 @@ Deno.serve(async (req) => {
       );
     }
 
-    const { error: signInError } =
-      await adminClient.auth.signInWithPassword({
-        email: user.email!,
-        password,
-      });
+    // 4. Verify caller belongs to this tenant
+    const { data: belongsToTenant } = await adminClient.rpc("user_belongs_to_tenant", {
+      _user_id: user.id,
+      _tenant_id: tenant_id,
+    });
+
+    if (!belongsToTenant) {
+      return new Response(
+        JSON.stringify({ error: "You do not belong to this tenant" }),
+        {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    // 5. Re-authenticate with password
+    const { error: signInError } = await adminClient.auth.signInWithPassword({
+      email: user.email!,
+      password,
+    });
 
     if (signInError) {
       return new Response(
@@ -89,98 +116,124 @@ Deno.serve(async (req) => {
 
     const actingUserId = user.id;
 
-    // 4. Delete transactional data in FK-safe order using service role client
-    // Child tables first, then parent tables
+    // 6. Delete transactional data scoped to tenant in FK-safe order
 
     // Exam related (child first)
-    await adminClient.from("exam_answers").delete().neq("id", "00000000-0000-0000-0000-000000000000");
-    await adminClient.from("exam_attempts").delete().neq("id", "00000000-0000-0000-0000-000000000000");
-    await adminClient.from("course_registrations").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+    await adminClient.from("exam_answers").delete().eq("tenant_id", tenant_id);
+    await adminClient.from("exam_attempts").delete().eq("tenant_id", tenant_id);
+    await adminClient.from("course_registrations").delete().eq("tenant_id", tenant_id);
 
     // Attendance
-    await adminClient.from("attendance_records").delete().neq("id", "00000000-0000-0000-0000-000000000000");
-    await adminClient.from("attendance_sessions").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+    await adminClient.from("attendance_records").delete().eq("tenant_id", tenant_id);
+    await adminClient.from("attendance_sessions").delete().eq("tenant_id", tenant_id);
 
     // WSF attendance
-    await adminClient.from("wsf_attendance").delete().neq("id", "00000000-0000-0000-0000-000000000000");
-    await adminClient.from("wsf_attendance_reports").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+    await adminClient.from("wsf_attendance").delete().eq("tenant_id", tenant_id);
+    await adminClient.from("wsf_attendance_reports").delete().eq("tenant_id", tenant_id);
 
     // Follow-ups & pastoral care
-    await adminClient.from("followups").delete().neq("id", "00000000-0000-0000-0000-000000000000");
-    await adminClient.from("pastoral_care").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+    await adminClient.from("followups").delete().eq("tenant_id", tenant_id);
+    await adminClient.from("pastoral_care").delete().eq("tenant_id", tenant_id);
 
     // Events
-    await adminClient.from("event_registrations").delete().neq("id", "00000000-0000-0000-0000-000000000000");
-    await adminClient.from("events").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+    await adminClient.from("event_registrations").delete().eq("tenant_id", tenant_id);
+    await adminClient.from("events").delete().eq("tenant_id", tenant_id);
 
     // Communications
-    await adminClient.from("announcements").delete().neq("id", "00000000-0000-0000-0000-000000000000");
-    await adminClient.from("messages").delete().neq("id", "00000000-0000-0000-0000-000000000000");
-    await adminClient.from("notifications").delete().neq("id", "00000000-0000-0000-0000-000000000000");
-    await adminClient.from("sms_log").delete().neq("id", "00000000-0000-0000-0000-000000000000");
-    await adminClient.from("email_send_log").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+    await adminClient.from("announcements").delete().eq("tenant_id", tenant_id);
+    await adminClient.from("messages").delete().eq("tenant_id", tenant_id);
+    await adminClient.from("notifications").delete().eq("tenant_id", tenant_id);
+    await adminClient.from("sms_log").delete().eq("tenant_id", tenant_id);
+    await adminClient.from("email_send_log").delete().eq("tenant_id", tenant_id);
 
     // Transportation
-    await adminClient.from("transportation").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+    await adminClient.from("transportation").delete().eq("tenant_id", tenant_id);
 
     // Documents
-    await adminClient.from("documents").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+    await adminClient.from("documents").delete().eq("tenant_id", tenant_id);
 
     // First timers
-    await adminClient.from("first_timers").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+    await adminClient.from("first_timers").delete().eq("tenant_id", tenant_id);
 
     // Member status history
-    await adminClient.from("member_status_history").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+    await adminClient.from("member_status_history").delete().eq("tenant_id", tenant_id);
 
     // Training
-    await adminClient.from("training_completions").delete().neq("id", "00000000-0000-0000-0000-000000000000");
-    await adminClient.from("training_reports").delete().neq("id", "00000000-0000-0000-0000-000000000000");
-    await adminClient.from("church_attendance_reports").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+    await adminClient.from("training_completions").delete().eq("tenant_id", tenant_id);
+    await adminClient.from("training_reports").delete().eq("tenant_id", tenant_id);
+    await adminClient.from("church_attendance_reports").delete().eq("tenant_id", tenant_id);
 
     // Audit log
-    await adminClient.from("audit_log").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+    await adminClient.from("audit_log").delete().eq("tenant_id", tenant_id);
 
     // Suppressed emails
-    await adminClient.from("suppressed_emails").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+    await adminClient.from("suppressed_emails").delete().eq("tenant_id", tenant_id);
 
-    // Members (preserve none - all member records go)
-    await adminClient.from("members").delete().neq("id", "00000000-0000-0000-0000-000000000000");
-
-    // User roles (keep acting super admin's role)
-    await adminClient.from("user_roles").delete().neq("user_id", actingUserId);
+    // Members
+    await adminClient.from("members").delete().eq("tenant_id", tenant_id);
 
     // Unit leader assignments
-    await adminClient.from("unit_leader_assignments").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+    await adminClient.from("unit_leader_assignments").delete().eq("tenant_id", tenant_id);
 
-    // Profiles (keep acting super admin's profile)
-    await adminClient.from("profiles").delete().neq("user_id", actingUserId);
+    // 7. Get tenant users (excluding acting admin) for account cleanup
+    const { data: tenantUsers } = await adminClient
+      .from("tenant_memberships")
+      .select("user_id")
+      .eq("tenant_id", tenant_id)
+      .neq("user_id", actingUserId);
 
-    // 5. Clear storage bucket files
+    // Remove profiles for tenant users (except acting admin)
+    await adminClient.from("profiles").delete()
+      .eq("tenant_id", tenant_id)
+      .neq("user_id", actingUserId);
+
+    // Remove user_roles for tenant users (except acting admin)
+    if (tenantUsers && tenantUsers.length > 0) {
+      const userIds = tenantUsers.map((u) => u.user_id);
+      await adminClient.from("user_roles").delete().in("user_id", userIds);
+    }
+
+    // 8. Clear storage bucket files prefixed with tenant_id
     try {
       const { data: files } = await adminClient.storage
         .from("church-documents")
-        .list("", { limit: 1000 });
+        .list(tenant_id, { limit: 1000 });
 
       if (files && files.length > 0) {
-        const filePaths = files.map((f) => f.name);
+        const filePaths = files.map((f) => `${tenant_id}/${f.name}`);
         await adminClient.storage.from("church-documents").remove(filePaths);
       }
     } catch (storageErr) {
       console.error("Storage cleanup error (non-fatal):", storageErr);
     }
 
-    // 6. Delete other auth users (except acting super admin)
-    const { data: { users: allUsers } } = await adminClient.auth.admin.listUsers({ perPage: 1000 });
-    if (allUsers) {
-      for (const u of allUsers) {
-        if (u.id !== actingUserId) {
-          await adminClient.auth.admin.deleteUser(u.id);
+    // 9. Delete other auth users who only belong to this tenant
+    if (tenantUsers && tenantUsers.length > 0) {
+      for (const tu of tenantUsers) {
+        // Check if user belongs to other tenants
+        const { data: otherMemberships } = await adminClient
+          .from("tenant_memberships")
+          .select("id")
+          .eq("user_id", tu.user_id)
+          .neq("tenant_id", tenant_id)
+          .limit(1);
+
+        // Remove their membership from this tenant
+        await adminClient
+          .from("tenant_memberships")
+          .delete()
+          .eq("user_id", tu.user_id)
+          .eq("tenant_id", tenant_id);
+
+        // Only delete auth user if they don't belong to other tenants
+        if (!otherMemberships || otherMemberships.length === 0) {
+          await adminClient.auth.admin.deleteUser(tu.user_id);
         }
       }
     }
 
     return new Response(
-      JSON.stringify({ success: true, message: "All data has been purged successfully." }),
+      JSON.stringify({ success: true, message: "All tenant data has been purged successfully." }),
       {
         status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
