@@ -46,7 +46,7 @@ export default function Layout({ children }) {
   const [tenantDropdownOpen, setTenantDropdownOpen] = useState(false);
   const location = useLocation();
   const { signOut, profile, isAdmin, isUnitLeader, isWSFLeader, roles, leaderUnits, isTenantOwner, isTenantAdmin } = useAuth();
-  const { currentTenant, tenantId, tenantMemberships, switchTenant } = useTenant();
+  const { currentTenant, tenantId, tenantMemberships, switchTenant, tenantBasePath } = useTenant();
   const isSuperAdmin = roles.includes("super_admin");
   const { data: externalLinks } = useAppSetting("external_links", []);
   const { data: disabledFeatures } = useAppSetting("disabled_features", []);
@@ -75,7 +75,7 @@ export default function Layout({ children }) {
     return false;
   });
 
-  const currentNav = navItems.find(n => n.path === location.pathname) || allNavItems.find(n => n.path === location.pathname) || navItems[0];
+  const currentNav = navItems.find(n => location.pathname === `${tenantBasePath}${n.path}` || location.pathname === n.path) || navItems[0];
 
   // Determine role title
   const getRoleTitle = () => {
@@ -155,11 +155,12 @@ export default function Layout({ children }) {
         {/* Nav */}
         <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
           {navItems.map((item) => {
-            const isActive = location.pathname === item.path;
+            const fullPath = `${tenantBasePath}${item.path}`;
+            const isActive = location.pathname === fullPath || (!tenantBasePath && location.pathname === item.path);
             return (
               <Link
                 key={item.path}
-                to={item.path}
+                to={fullPath}
                 onClick={() => setSidebarOpen(false)}
                 title={collapsed ? item.name : undefined}
                 className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
