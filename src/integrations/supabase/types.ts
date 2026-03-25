@@ -1750,6 +1750,47 @@ export type Database = {
           },
         ]
       }
+      purged_data_archives: {
+        Row: {
+          created_at: string
+          data: Json
+          expires_at: string
+          id: string
+          purged_at: string
+          purged_by: string
+          status: string
+          tenant_id: string
+        }
+        Insert: {
+          created_at?: string
+          data: Json
+          expires_at?: string
+          id?: string
+          purged_at?: string
+          purged_by: string
+          status?: string
+          tenant_id: string
+        }
+        Update: {
+          created_at?: string
+          data?: Json
+          expires_at?: string
+          id?: string
+          purged_at?: string
+          purged_by?: string
+          status?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purged_data_archives_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sms_log: {
         Row: {
           channel: string
