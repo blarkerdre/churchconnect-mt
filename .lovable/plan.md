@@ -1,56 +1,35 @@
 
-Goal: make Test and Live unmistakably different in the app, because the backend data is already different but the current UX hides that.
 
-What I found
-- The environments are not actually sharing the same data:
-  - Test has TEST-only notifications and different tenant records.
-  - Live has a single tenant: `LFC Cardiff`.
-- The confusion comes from app behavior:
-  1. Test currently has inconsistent tenant setup (`Demo Church (TEST)` plus another tenant `LFC Cardiff_Test`)
-  2. Authenticated pages can be used without a tenant-prefixed URL, so both environments can feel visually identical at `/`
-  3. The environment badge exists, but it is subtle
-  4. Tenant switching does not update the URL, so the visible route does not clearly show which tenant/context is active
+## Plan: Seed Test Environment with Distinct Demo Data
 
-Plan
-1. Clean up the Test tenant setup
-- Keep one obvious Test tenant only
-- Rename/standardize it with a clearly different slug, e.g. `demo-test`
-- Remove or archive the extra preview tenant (`LFC Cardiff_Test`) so Test cannot resemble Live
-- Re-scope the seeded preview data so it all belongs to the single Test tenant
+### Current State
+Both Test and Live environments are identical: 13 members with no `tenant_id`, 0 tenants, 0 tenant memberships. The app is non-functional because tenant context is required.
 
-2. Make tenant URLs canonical after login
-- Add a redirect so authenticated users are always pushed to `/t/:tenantSlug/...`
-- If a user opens `/members`, they should automatically land on `/t/demo-test/members` in Test and `/t/lfc-cardiff/members` in Live
-- This makes the active environment/tenant visible in the URL immediately
+### What We'll Do
 
-3. Fix tenant switching to update the route
-- Update `switchTenant` so it navigates to the selected tenant’s URL instead of only changing in-memory state
-- Preserve the current page when switching tenants (for example, `/members` stays `/members` under the new tenant slug)
+**Step 1: Create a Test tenant**
+- Insert a tenant named **"Demo Church (TEST)"** with slug `demo-test` into the Test environment
+- This distinct name will immediately differentiate it from Live
 
-4. Add a stronger environment indicator
-- Replace the small header badge with a persistent admin-visible banner/ribbon that clearly says `TEST ENVIRONMENT` or `LIVE ENVIRONMENT`
-- Include the active tenant name in the same area
-- Use stronger styling so preview cannot be mistaken for live
+**Step 2: Link your user to the tenant**
+- Create a `tenant_memberships` record for your user (`932364f2-...`) as `owner`
+- Update your `user_roles` to include the tenant_id
+- Update your profile with the tenant_id
 
-5. Add a quick verification path
-- Ensure there is one obvious visual/data marker in Test only, such as:
-  - tenant name includes `(TEST)`
-  - a test announcement
-  - test members with clear names
-- Then verify that the same marker does not exist in Live
+**Step 3: Assign existing 13 members to the test tenant**
+- Update all members with `tenant_id IS NULL` to belong to the new tenant
 
-Technical notes
-- `TenantContext` already reads the URL slug, so canonical tenant routing fits the current architecture cleanly
-- `useNavigate` is already imported in `TenantContext`, which supports implementing route-aware tenant switching
-- `AppLayout` already has environment helpers; I would build on that rather than creating a second environment system
-- No new backend model is needed; this is mainly:
-  - preview data cleanup
-  - route behavior fixes
-  - stronger environment UI
+**Step 4: Seed additional demo data unique to Test**
+- **5 extra demo members** with obvious test names (e.g., "Test User Alpha", "Test User Beta") so you can spot them
+- **2 attendance sessions** with a few attendance records
+- **2 upcoming events** (e.g., "TEST - Youth Rally", "TEST - Prayer Meeting")
+- **1 announcement** marked "[TEST] Welcome to Demo Church"
 
-Expected result
-- Test will open under a visibly test-only tenant URL and branding
-- Live will open under its production tenant URL
-- Switching tenants will change the URL
-- The UI will clearly announce whether you are in Test or Live
-- The two environments will no longer feel identical even when the same user account is used in both
+This gives Test visibly different content from Live, making it easy to tell which environment you're in.
+
+### Technical Details
+
+All inserts will use the database insert tool targeting the Test environment. The tenant ID will be a fixed UUID (e.g., `a0000000-0000-0000-0000-000000000001`) matching the `DEFAULT_TENANT_ID` constant in `TenantContext.jsx`. All seeded records will reference this tenant.
+
+No schema changes or code changes are needed — this is purely a data seeding operation.
+
