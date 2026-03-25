@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { useChurchUnits } from "@/hooks/useChurchUnits";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Megaphone, Pin, Search, Plus, Loader2, Trash2, Pencil, MessageSquare, History, Mail } from "lucide-react";
+import { Megaphone, Pin, Search, Plus, Loader2, Trash2, Pencil, MessageSquare, Mail } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { format } from "date-fns";
 import AnnouncementForm from "@/components/comms/AnnouncementForm";
@@ -22,7 +22,7 @@ const WhatsAppIcon = ({ className }) => (
 
 import { logAudit } from "@/lib/audit";
 import SMSDialog from "@/components/sms/SMSDialog";
-import SMSHistoryDialog from "@/components/sms/SMSHistoryDialog";
+
 import { useSubFeature } from "@/hooks/useSubFeature";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
 
@@ -39,9 +39,9 @@ export default function Communications() {
   const [editing, setEditing] = useState(null);
   const [smsOpen, setSmsOpen] = useState(false);
   const [smsAnnouncement, setSmsAnnouncement] = useState(null);
-  const [historyOpen, setHistoryOpen] = useState(false);
+  
   const [waOpen, setWaOpen] = useState(false);
-  const [waHistoryOpen, setWaHistoryOpen] = useState(false);
+  
 
   const canManageComms = isAdmin || isUnitLeader || isWSFLeader;
 
@@ -316,11 +316,6 @@ export default function Communications() {
           <TabsContent value="sms">
             <div className="space-y-4">
               <div className="flex items-center gap-2">
-                {isAdmin && (
-                  <Button variant="outline" onClick={() => setHistoryOpen(true)}>
-                    <History className="h-4 w-4 mr-2" /> SMS History
-                  </Button>
-                )}
                 <Button onClick={() => { setSmsAnnouncement(null); setSmsOpen(true); }} className="bg-primary hover:bg-primary/90">
                   <MessageSquare className="h-4 w-4 mr-2" /> Send Bulk SMS
                 </Button>
@@ -337,11 +332,6 @@ export default function Communications() {
           <TabsContent value="whatsapp">
             <div className="space-y-4">
               <div className="flex items-center gap-2">
-                {isAdmin && (
-                  <Button variant="outline" onClick={() => setWaHistoryOpen(true)}>
-                    <History className="h-4 w-4 mr-2" /> WhatsApp History
-                  </Button>
-                )}
                 <Button onClick={() => setWaOpen(true)} className="bg-primary hover:bg-primary/90">
                   <WhatsAppIcon className="h-4 w-4 mr-2" /> Send Bulk WhatsApp
                 </Button>
@@ -372,8 +362,6 @@ export default function Communications() {
         title={smsAnnouncement ? "Send as SMS" : "Bulk SMS"}
       />
 
-      <SMSHistoryDialog open={historyOpen} onOpenChange={setHistoryOpen} />
-
       <SMSDialog
         open={waOpen} onOpenChange={setWaOpen}
         prefillMessage=""
@@ -384,7 +372,7 @@ export default function Communications() {
         defaultChannel="whatsapp"
       />
 
-      <SMSHistoryDialog open={waHistoryOpen} onOpenChange={setWaHistoryOpen} channelFilter="whatsapp" />
+      
     </div>
   );
 }
