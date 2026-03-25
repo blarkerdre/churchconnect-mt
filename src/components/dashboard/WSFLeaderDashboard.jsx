@@ -7,6 +7,7 @@ import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useTenant } from "@/contexts/TenantContext";
 import { format, subWeeks, startOfWeek } from "date-fns";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import SelfCheckInWidget from "@/components/attendance/SelfCheckInWidget";
@@ -14,6 +15,8 @@ import MemberFeed from "@/components/profile/MemberFeed";
 
 export default function WSFLeaderDashboard() {
   const { user, myMember, profile } = useAuth();
+  const { currentTenant, tenantRole } = useTenant();
+  const roleLabel = tenantRole ? tenantRole.charAt(0).toUpperCase() + tenantRole.slice(1) : "";
 
   // Get centres this user leads
   const { data: ledCentres = [], isLoading: centresLoading } = useQuery({
@@ -118,7 +121,10 @@ export default function WSFLeaderDashboard() {
             <h2 className="text-lg font-bold leading-tight">
               Welcome, {myMember?.first_name || profile?.full_name || "Leader"}!
             </h2>
-            <p className="text-primary-foreground/60 text-sm mt-0.5">WSF Leader Dashboard</p>
+            <p className="text-primary-foreground/60 text-sm mt-0.5 flex items-center gap-1.5">
+              {currentTenant?.name || "WSF Leader Dashboard"}
+              {roleLabel && <Badge className="bg-primary-foreground/20 text-primary-foreground text-[10px] border-0 py-0 px-1.5">{roleLabel}</Badge>}
+            </p>
             <div className="flex items-center gap-2 mt-2 flex-wrap">
               <Badge className="bg-accent/30 text-accent text-xs border-0">WSF Leader</Badge>
               {ledCentres.map(c => (
