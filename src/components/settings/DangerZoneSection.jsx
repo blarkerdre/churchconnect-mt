@@ -12,7 +12,7 @@ import {
   AlertDialogFooter,
   AlertDialogCancel,
 } from "@/components/ui/alert-dialog";
-import { AlertTriangle, Loader2, Trash2, ShieldAlert, Download, RotateCcw, Archive } from "lucide-react";
+import { AlertTriangle, Loader2, Trash2, ShieldAlert, Download, RotateCcw, Archive, Upload } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
@@ -38,6 +38,52 @@ function jsonToCsv(data) {
   return [headers.join(","), ...rows].join("\n");
 }
 
+function csvToJson(csvText) {
+  const lines = csvText.split("\n").filter((l) => l.trim());
+  if (lines.length < 2) return [];
+  const headers = lines[0].split(",").map((h) => h.trim());
+  const rows = [];
+  for (let i = 1; i < lines.length; i++) {
+    const values = [];
+    let current = "";
+    let inQuotes = false;
+    for (let c = 0; c < lines[i].length; c++) {
+      const ch = lines[i][c];
+      if (ch === '"') {
+        if (inQuotes && lines[i][c + 1] === '"') {
+          current += '"';
+          c++;
+        } else {
+          inQuotes = !inQuotes;
+        }
+      } else if (ch === "," && !inQuotes) {
+        values.push(current);
+        current = "";
+      } else {
+        current += ch;
+      }
+    }
+    values.push(current);
+    const obj = {};
+    headers.forEach((h, idx) => {
+      let val = values[idx] ?? "";
+      if (val === "") {
+        obj[h] = null;
+      } else if (val === "true") {
+        obj[h] = true;
+      } else if (val === "false") {
+        obj[h] = false;
+      } else if (/^\{.*\}$|^\[.*\]$/.test(val)) {
+        try { obj[h] = JSON.parse(val); } catch { obj[h] = val; }
+      } else {
+        obj[h] = val;
+      }
+    });
+    rows.push(obj);
+  }
+  return rows;
+}
+
 export default function DangerZoneSection() {
   const { tenantId } = useTenantQuery();
   const queryClient = useQueryClient();
@@ -50,6 +96,8 @@ export default function DangerZoneSection() {
   const [restoreDialogOpen, setRestoreDialogOpen] = useState(false);
   const [selectedArchive, setSelectedArchive] = useState(null);
   const [restoring, setRestoring] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
 
   const { data: archives, isLoading: archivesLoading } = useQuery({
     queryKey: ["purged-archives", tenantId],
@@ -193,6 +241,53 @@ export default function DangerZoneSection() {
     }
   };
 
+  const handleImportZip = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file || !tenantId) return;
+    setImporting(true);
+    try {
+      const zip = await JSZip.loadAsync(file);
+      const importData = {};
+      for (const [filename, zipEntry] of Object.entries(zip.files)) {
+        if (zipEntry.dir || !filename.endsWith(".csv")) continue;
+        const tableName = filename.replace(".csv", "").replace(/^.*\//, "");
+        const csvText = await zipEntry.async("text");
+        const rows = csvToJson(csvText);
+        if (rows.length > 0) importData[tableName] = rows;
+      }
+
+      if (Object.keys(importData).length === 0) {
+        toast({ title: "No data found", description: "The ZIP file contained no valid CSV files.", variant: "destructive" });
+        return;
+      }
+
+      const { data, error } = await supabase.functions.invoke("import-tenant-data", {
+        body: { tenant_id: tenantId, data: importData },
+      });
+
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      toast({
+        title: "Data imported successfully",
+        description: data.warnings?.length
+          ? `${data.message} With ${data.warnings.length} warning(s).`
+          : data.message,
+      });
+      setImportDialogOpen(false);
+      queryClient.invalidateQueries();
+    } catch (err) {
+      toast({
+        title: "Import failed",
+        description: err.message || "An unexpected error occurred",
+        variant: "destructive",
+      });
+    } finally {
+      setImporting(false);
+      e.target.value = "";
+    }
+  };
+
   return (
     <div className="space-y-4">
       {/* Recovery Section */}
@@ -271,6 +366,39 @@ export default function DangerZoneSection() {
               {exporting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
               {exporting ? "Exporting..." : "Export All Data"}
             </Button>
+          </div>
+
+          {/* Import */}
+          <div className="p-4 bg-muted/50 border rounded-lg space-y-3">
+            <div className="flex items-start gap-3">
+              <Upload className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-semibold text-foreground">Import Data from Backup</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Restore data from a previously exported ZIP file containing CSV files. Existing records will not be overwritten — only new records will be added.
+                </p>
+              </div>
+            </div>
+            <div>
+              <input
+                type="file"
+                accept=".zip"
+                id="import-zip-input"
+                className="hidden"
+                onChange={handleImportZip}
+                disabled={importing}
+              />
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1.5"
+                onClick={() => document.getElementById("import-zip-input")?.click()}
+                disabled={importing}
+              >
+                {importing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
+                {importing ? "Importing..." : "Import from ZIP"}
+              </Button>
+            </div>
           </div>
 
           {/* Delete */}
