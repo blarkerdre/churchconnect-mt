@@ -16,6 +16,7 @@ import MobileBottomNav from "@/components/navigation/MobileBottomNav";
 import { getEnvironmentLabel, getBackendHost, isBackendMismatch } from "@/lib/environment";
 import { useAppSetting } from "@/hooks/useAppSetting";
 import { getIconComponent } from "@/lib/icon-map";
+import EnvironmentBanner from "@/components/EnvironmentBanner";
 
 // Role requirements: null = any authenticated user, "admin" = admin/super_admin, "leader" = admin or unit_leader
 const allNavItems = [
@@ -45,7 +46,7 @@ export default function Layout({ children }) {
   const [tenantDropdownOpen, setTenantDropdownOpen] = useState(false);
   const location = useLocation();
   const { signOut, profile, isAdmin, isUnitLeader, isWSFLeader, roles, leaderUnits, isTenantOwner, isTenantAdmin } = useAuth();
-  const { currentTenant, tenantId, tenantMemberships, switchTenant } = useTenant();
+  const { currentTenant, tenantId, tenantMemberships, switchTenant, tenantBasePath } = useTenant();
   const isSuperAdmin = roles.includes("super_admin");
   const { data: externalLinks } = useAppSetting("external_links", []);
   const { data: disabledFeatures } = useAppSetting("disabled_features", []);
@@ -74,7 +75,7 @@ export default function Layout({ children }) {
     return false;
   });
 
-  const currentNav = navItems.find(n => n.path === location.pathname) || allNavItems.find(n => n.path === location.pathname) || navItems[0];
+  const currentNav = navItems.find(n => location.pathname === `${tenantBasePath}${n.path}` || location.pathname === n.path) || navItems[0];
 
   // Determine role title
   const getRoleTitle = () => {
@@ -154,11 +155,12 @@ export default function Layout({ children }) {
         {/* Nav */}
         <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
           {navItems.map((item) => {
-            const isActive = location.pathname === item.path;
+            const fullPath = `${tenantBasePath}${item.path}`;
+            const isActive = location.pathname === fullPath || (!tenantBasePath && location.pathname === item.path);
             return (
               <Link
                 key={item.path}
-                to={item.path}
+                to={fullPath}
                 onClick={() => setSidebarOpen(false)}
                 title={collapsed ? item.name : undefined}
                 className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
@@ -226,6 +228,7 @@ export default function Layout({ children }) {
 
       {/* Main content */}
       <div className="flex-1 flex flex-col min-h-screen">
+        <EnvironmentBanner />
         <header className="sticky top-0 z-30 bg-card/80 backdrop-blur-xl border-b border-border px-3 lg:px-8 py-4">
           {isBackendMismatch() && isAdmin && (
             <div className="flex items-center gap-2 mb-2 px-3 py-2 rounded-lg bg-destructive/10 text-destructive text-xs font-medium border border-destructive/20">
@@ -246,15 +249,6 @@ export default function Layout({ children }) {
               </div>
             </div>
             <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap justify-end">
-              {isAdmin && (
-                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
-                  getEnvironmentLabel() === "Test"
-                    ? "bg-amber-500/10 text-amber-600 border-amber-500/30"
-                    : "bg-emerald-500/10 text-emerald-600 border-emerald-500/30"
-                }`}>
-                  {getEnvironmentLabel()}
-                </span>
-              )}
               <span className="text-[11px] font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded-full hidden sm:inline">
                 {getRoleTitle()}
               </span>
