@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { useParams, useNavigate, useLocation } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 
 const TenantContext = createContext({
   currentTenant: null,
@@ -13,7 +13,6 @@ const TenantContext = createContext({
   isTenantOwner: false,
   loading: true,
   switchTenant: () => {},
-  tenantBasePath: "",
 });
 
 /**
@@ -28,8 +27,6 @@ export function TenantProvider({ children }) {
   const [tenantMemberships, setTenantMemberships] = useState([]);
   const [loading, setLoading] = useState(true);
   const params = useParams();
-  const navigate = useNavigate();
-  const location = useLocation();
   const tenantSlugFromUrl = params.tenantSlug;
 
   const fetchMemberships = useCallback(async (userId) => {
@@ -86,16 +83,6 @@ export function TenantProvider({ children }) {
       const selected = selectTenant(memberships, tenantSlugFromUrl);
       setCurrentTenant(selected);
       setLoading(false);
-
-      // Canonical redirect: if no tenant slug in URL but we resolved one, redirect
-      if (selected && !tenantSlugFromUrl) {
-        const slug = selected.tenants?.slug;
-        if (slug) {
-          // Get the current path (could be "/", "/members", etc.)
-          const currentPath = location.pathname === "/" ? "" : location.pathname;
-          navigate(`/t/${slug}${currentPath}`, { replace: true });
-        }
-      }
     })();
 
     return () => { cancelled = true; };
@@ -103,23 +90,14 @@ export function TenantProvider({ children }) {
 
   const switchTenant = useCallback((tenantId) => {
     const match = tenantMemberships.find(m => m.tenant_id === tenantId);
-    if (match) {
-      setCurrentTenant(match);
-      const slug = match.tenants?.slug;
-      if (slug) {
-        // Preserve current page path when switching tenants
-        const currentPagePath = location.pathname.replace(/^\/t\/[^/]+/, "") || "/";
-        navigate(`/t/${slug}${currentPagePath === "/" ? "" : currentPagePath}`);
-      }
-    }
-  }, [tenantMemberships, navigate, location.pathname]);
+    if (match) setCurrentTenant(match);
+  }, [tenantMemberships]);
 
   const tenantId = currentTenant?.tenant_id || null;
   const tenantSlug = currentTenant?.tenants?.slug || null;
   const tenantRole = currentTenant?.role || null;
   const isTenantAdmin = tenantRole === "admin" || tenantRole === "owner";
   const isTenantOwner = tenantRole === "owner";
-  const tenantBasePath = tenantSlug ? `/t/${tenantSlug}` : "";
 
   return (
     <TenantContext.Provider
@@ -133,7 +111,6 @@ export function TenantProvider({ children }) {
         isTenantOwner,
         loading,
         switchTenant,
-        tenantBasePath,
       }}
     >
       {children}
