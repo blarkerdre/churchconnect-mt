@@ -228,6 +228,7 @@ export default function Layout({ children }) {
 
       {/* Main content */}
       <div className="flex-1 flex flex-col min-h-screen">
+        <EnvironmentBanner />
         <header className="sticky top-0 z-30 bg-card/80 backdrop-blur-xl border-b border-border px-3 lg:px-8 py-4">
           {isBackendMismatch() && isAdmin && (
             <div className="flex items-center gap-2 mb-2 px-3 py-2 rounded-lg bg-destructive/10 text-destructive text-xs font-medium border border-destructive/20">
@@ -248,15 +249,6 @@ export default function Layout({ children }) {
               </div>
             </div>
             <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap justify-end">
-              {isAdmin && (
-                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
-                  getEnvironmentLabel() === "Test"
-                    ? "bg-amber-500/10 text-amber-600 border-amber-500/30"
-                    : "bg-emerald-500/10 text-emerald-600 border-emerald-500/30"
-                }`}>
-                  {getEnvironmentLabel()}
-                </span>
-              )}
               <span className="text-[11px] font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded-full hidden sm:inline">
                 {getRoleTitle()}
               </span>
