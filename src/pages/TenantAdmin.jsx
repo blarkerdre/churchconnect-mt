@@ -576,6 +576,36 @@ export default function TenantAdmin() {
                             <TableCell className="text-right">
                               <div className="flex items-center gap-1 justify-end flex-wrap">
                                 {/* View Data - always available */}
+                                <Popover>
+                                  <PopoverTrigger asChild>
+                                    <Button size="sm" variant="ghost" title="Tenant URLs">
+                                      <Link className="h-3 w-3" />
+                                    </Button>
+                                  </PopoverTrigger>
+                                  <PopoverContent className="w-80" align="end">
+                                    <div className="space-y-3">
+                                      <h4 className="font-medium text-sm">Tenant URLs</h4>
+                                      <div className="space-y-2">
+                                        <Label className="text-xs text-muted-foreground">Login URL</Label>
+                                        <div className="flex gap-1.5">
+                                          <code className="flex-1 bg-muted px-2 py-1 rounded text-[11px] break-all">{`${window.location.origin}/t/${t.slug}/auth`}</code>
+                                          <Button size="icon" variant="ghost" className="h-7 w-7 shrink-0" onClick={() => copyToClipboard(`${window.location.origin}/t/${t.slug}/auth`, "Login URL")}>
+                                            <Copy className="h-3 w-3" />
+                                          </Button>
+                                        </div>
+                                      </div>
+                                      <div className="space-y-2">
+                                        <Label className="text-xs text-muted-foreground">Registration URL</Label>
+                                        <div className="flex gap-1.5">
+                                          <code className="flex-1 bg-muted px-2 py-1 rounded text-[11px] break-all">{`${window.location.origin}/t/${t.slug}/register`}</code>
+                                          <Button size="icon" variant="ghost" className="h-7 w-7 shrink-0" onClick={() => copyToClipboard(`${window.location.origin}/t/${t.slug}/register`, "Registration URL")}>
+                                            <Copy className="h-3 w-3" />
+                                          </Button>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </PopoverContent>
+                                </Popover>
                                 <Button size="sm" variant="ghost" onClick={() => setViewDataTenant(t)} title="View data">
                                   <Eye className="h-3 w-3" />
                                 </Button>
