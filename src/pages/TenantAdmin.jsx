@@ -264,7 +264,7 @@ export default function TenantAdmin() {
     <div className="space-y-6">
       {/* Environment & Context Info */}
       <div className="flex flex-wrap items-center gap-2 text-sm">
-        <Badge variant={envLabel === "Test" ? "secondary" : "default"}>{envLabel}</Badge>
+        <Badge variant={envLabel === "Preview" ? "secondary" : "default"}>{envLabel}</Badge>
         {currentTenant && <span className="text-muted-foreground">Current: <strong>{currentTenant.name}</strong></span>}
         {tenantRole && <Badge variant="outline" className="text-xs">{tenantRole}</Badge>}
       </div>

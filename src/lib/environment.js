@@ -11,15 +11,19 @@ export function isPreviewEnvironment() {
   const host = window.location.hostname;
   return (
     host.includes("lovableproject.com") ||
-    host.includes("lovable.app") && host.includes("preview") ||
+    (host.includes("lovable.app") && host.includes("preview")) ||
     host === "localhost" ||
     host === "127.0.0.1"
   );
 }
 
-/** Returns "test" or "live" based on hostname heuristics */
+/**
+ * Returns "Preview" or "Published" based on hostname.
+ * Both environments share the same database — this label only
+ * indicates which deployment the user is viewing, NOT data isolation.
+ */
 export function getEnvironmentLabel() {
-  return isPreviewEnvironment() ? "Test" : "Live";
+  return isPreviewEnvironment() ? "Preview" : "Published";
 }
 
 /** Returns a short identifier for the connected backend */

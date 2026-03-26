@@ -13,7 +13,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useTenant } from "@/contexts/TenantContext";
 import NotificationBell from "@/components/notifications/NotificationBell";
 import MobileBottomNav from "@/components/navigation/MobileBottomNav";
-import { getEnvironmentLabel, getBackendHost, isBackendMismatch } from "@/lib/environment";
+import { getEnvironmentLabel, getBackendHost, isBackendMismatch, isPreviewEnvironment } from "@/lib/environment";
 import { useAppSetting } from "@/hooks/useAppSetting";
 import { getIconComponent } from "@/lib/icon-map";
 
@@ -248,7 +248,7 @@ export default function Layout({ children }) {
             <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap justify-end">
               {isAdmin && (
                 <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
-                  getEnvironmentLabel() === "Test"
+                  isPreviewEnvironment()
                     ? "bg-amber-500/10 text-amber-600 border-amber-500/30"
                     : "bg-emerald-500/10 text-emerald-600 border-emerald-500/30"
                 }`}>
