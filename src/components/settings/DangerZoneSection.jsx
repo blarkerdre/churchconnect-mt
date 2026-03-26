@@ -12,10 +12,12 @@ import {
   AlertDialogFooter,
   AlertDialogCancel,
 } from "@/components/ui/alert-dialog";
-import { AlertTriangle, Loader2, Trash2, ShieldAlert, Download, RotateCcw, Archive, Upload } from "lucide-react";
+import { AlertTriangle, Loader2, Trash2, ShieldAlert, Download, RotateCcw, Archive, Upload, Info } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
+import { useTenant } from "@/contexts/TenantContext";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { formatDistanceToNow } from "date-fns";
 import JSZip from "jszip";
@@ -86,6 +88,7 @@ function csvToJson(csvText) {
 
 export default function DangerZoneSection() {
   const { tenantId } = useTenantQuery();
+  const { currentTenant } = useTenant();
   const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [step, setStep] = useState(1);
@@ -345,7 +348,12 @@ export default function DangerZoneSection() {
           </p>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* Export */}
+          <Alert className="border-amber-500/50 bg-amber-50 dark:bg-amber-950/20">
+            <Info className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+            <AlertDescription className="text-sm text-amber-800 dark:text-amber-300">
+              All actions below will only affect: <strong>{currentTenant?.name || "Unknown Tenant"}</strong>
+            </AlertDescription>
+          </Alert>
           <div className="p-4 bg-muted/50 border rounded-lg space-y-3">
             <div className="flex items-start gap-3">
               <Download className="h-5 w-5 text-primary shrink-0 mt-0.5" />
