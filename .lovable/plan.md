@@ -1,53 +1,62 @@
 
 
-## Plan: Enhanced Tenant Lifecycle Management in Tenant Admin
+## Plan: Per-Tenant Email Sender Name and Twilio Numbers
 
-### What Exists
-- Archive, restore, and permanent delete already work via the `archive-tenant` edge function
-- Permanent delete is only available for archived tenants (two-step: archive first, then delete)
-- Delete requires typing "DELETE {slug}" to confirm
-- Page is restricted to `super_admin` role via `SuperAdminRoute`
+### What We're Building
 
-### What We'll Add
+1. **Custom email sender name** -- each tenant can set a display name (e.g. "LFC Cardiff") that appears in the From field of all outgoing emails instead of the hardcoded "Winners Chapel International Cardiff"
+2. **Per-tenant Twilio numbers** -- each tenant can configure their own SMS number and WhatsApp number, overriding the global defaults
 
-**1. Direct permanent delete for active tenants (with extreme friction)**
-- Add a "Delete Permanently" action for active tenants (not just archived ones)
-- Multi-step confirmation: first an alert explaining consequences, then typing "PERMANENTLY DELETE {slug}", then a final password re-authentication step
-- Red danger styling throughout
+### Storage Approach
 
-**2. Stronger warning UI for all destructive actions**
-- List what will be deleted: members, attendance, events, follow-ups, pastoral care, communications, exams, documents, storage files, user accounts
-- Show member/user counts in the warning
-- Add an explicit "This action is irreversible" banner with a skull/alert icon
+Use the existing `tenants.settings` JSONB column to store:
+```json
+{
+  "email_sender_name": "LFC Cardiff",
+  "twilio_sms_from": "+44...",
+  "twilio_whatsapp_from": "+44...",
+  "features": { ... }
+}
+```
 
-**3. Restore archived tenants with data integrity warning**
-- Already works but add a clearer confirmation dialog explaining that restoring will reactivate the tenant and make it visible to its users again
-- Show tenant stats in the restore dialog
+No database migration needed -- the column already exists.
 
-**4. Tenant data visibility panel**
-- Add a "View Data" button for each tenant that shows a summary of associated data counts (members, events, attendance sessions, follow-ups, etc.)
-- This lets the admin see what data belongs to each tenant before taking action
+### Changes
 
-**5. Access control enforcement**
-- Page is already behind `SuperAdminRoute` -- no change needed
-- Add a reminder banner at the top: "Super Admin Only — Changes here affect all tenants"
+**1. Settings UI -- new "Communications" tab** (`src/pages/Settings.jsx`)
+- Add a new tab between "Notifications" and "Units" with a Mail/Phone icon
+- Three fields:
+  - Email Sender Name (text input, placeholder: church name)
+  - SMS From Number (text input, E.164 format)
+  - WhatsApp From Number (text input, E.164 format)
+- Save button that updates `tenants.settings` JSONB, merging with existing keys
+- Show current global defaults as placeholders when tenant values are empty
+- Admin-only section
 
-### Files to Change
+**2. Edge Function: `send-email-alert`** (`supabase/functions/send-email-alert/index.ts`)
+- Fetch the tenant's settings from the `tenants` table using `tenant_id`
+- Use `settings.email_sender_name` (falling back to tenant `name`, then the hardcoded default) for the From display name and the email template header
+- Replace the hardcoded "Winners Chapel International Cardiff" in HTML/text templates
 
-**`src/pages/TenantAdmin.jsx`**
-- Add permanent delete button for active tenants with enhanced multi-step confirmation dialog
-- Add restore confirmation dialog with tenant info
-- Add "View Data" action per tenant showing data counts
-- Add admin-only visibility banner
-- Strengthen warning text and styling for all destructive dialogs
+**3. Edge Function: `send-sms`** (`supabase/functions/send-sms/index.ts`)
+- After auth check, if `tenant_id` is provided, fetch `tenants.settings` for that tenant
+- Use `settings.twilio_sms_from` as the From number for SMS (fallback: global `TWILIO_FROM_NUMBER`)
+- Use `settings.twilio_whatsapp_from` as the From number for WhatsApp (fallback: global `TWILIO_WHATSAPP_FROM`)
 
-**`supabase/functions/archive-tenant/index.ts`**
-- Add `password` field support for delete action (re-authentication like purge-all-data does)
-- Verify password before executing permanent delete
+**4. Other email-sending edge functions** -- search for other functions that hardcode the sender name and update them similarly:
+- `send-welcome-email`
+- `notify-followup-assignment`
+- `notify-pastoral-assignment`
+- `send-event-reminders`
+- `send-course-registration-email`
+
+Each will look up the tenant's `email_sender_name` from `tenants.settings` when `tenant_id` is available.
 
 ### Technical Details
-- The edge function already handles the `delete` action with full cascading cleanup across 35+ tables
-- Password re-authentication will use `supabase.auth.signInWithPassword()` (same pattern as `purge-all-data`)
-- Data counts query will reuse the existing `tenantStats` pattern, extended with more tables
-- No database migrations needed
+
+- Settings UI reads/writes to `tenants` table directly (already has RLS for admins)
+- Edge functions use service role client to read tenant settings -- single query, cached per request
+- No new secrets or environment variables needed
+- Twilio numbers are stored as plain text in settings -- they are not secrets (they're visible in SMS headers anyway)
+- Validation: SMS/WhatsApp numbers must match E.164 format before saving
 
