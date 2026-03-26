@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useTenant } from "@/contexts/TenantContext";
+import { getEnvironmentLabel } from "@/lib/environment";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -50,7 +51,7 @@ const PLAN_TIERS = [
 
 export default function TenantAdmin() {
   const { user } = useAuth();
-  const { tenantId, switchTenant, tenantMemberships } = useTenant();
+  const { tenantId, switchTenant, tenantMemberships, currentTenant, tenantRole } = useTenant();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [createOpen, setCreateOpen] = useState(false);
@@ -61,7 +62,7 @@ export default function TenantAdmin() {
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
   const [showArchived, setShowArchived] = useState(false);
 
-  const { data: tenants = [], isLoading } = useQuery({
+  const { data: queryTenants = [], isLoading, error: tenantsError } = useQuery({
     queryKey: ["tenants-admin"],
     queryFn: async () => {
       const { data, error } = await supabase.from("tenants").select("*").order("created_at", { ascending: true });
@@ -70,8 +71,28 @@ export default function TenantAdmin() {
     },
   });
 
+  // Merge: direct query + membership-backed tenants + currentTenant fallback
+  const tenants = useMemo(() => {
+    const map = new Map();
+    // 1. Query results (full rows, preferred)
+    queryTenants.forEach(t => map.set(t.id, t));
+    // 2. Membership-backed tenants (fallback if query returned empty/blocked)
+    if (tenantMemberships?.length) {
+      tenantMemberships.forEach(m => {
+        if (m.tenants && !map.has(m.tenants.id)) {
+          map.set(m.tenants.id, m.tenants);
+        }
+      });
+    }
+    // 3. Current tenant as final fallback
+    if (currentTenant && !map.has(currentTenant.id)) {
+      map.set(currentTenant.id, currentTenant);
+    }
+    return Array.from(map.values());
+  }, [queryTenants, tenantMemberships, currentTenant]);
+
   const { data: tenantStats = {} } = useQuery({
-    queryKey: ["tenant-stats"],
+    queryKey: ["tenant-stats", tenants.map(t => t.id).join(",")],
     queryFn: async () => {
       const stats = {};
       for (const t of tenants) {
@@ -88,6 +109,8 @@ export default function TenantAdmin() {
 
   const activeTenants = tenants.filter(t => !t.is_archived);
   const archivedTenants = tenants.filter(t => t.is_archived);
+  const envLabel = getEnvironmentLabel();
+  const usingFallback = queryTenants.length === 0 && tenants.length > 0;
 
   const createMutation = useMutation({
     mutationFn: async (payload) => {
@@ -239,6 +262,23 @@ export default function TenantAdmin() {
 
   return (
     <div className="space-y-6">
+      {/* Environment & Context Info */}
+      <div className="flex flex-wrap items-center gap-2 text-sm">
+        <Badge variant={envLabel === "Test" ? "secondary" : "default"}>{envLabel}</Badge>
+        {currentTenant && <span className="text-muted-foreground">Current: <strong>{currentTenant.name}</strong></span>}
+        {tenantRole && <Badge variant="outline" className="text-xs">{tenantRole}</Badge>}
+      </div>
+
+      {usingFallback && (
+        <div className="flex items-center gap-2 rounded-md border border-amber-300 bg-amber-50 dark:bg-amber-950/20 p-3 text-sm text-amber-800 dark:text-amber-200">
+          <AlertTriangle className="h-4 w-4 shrink-0" />
+          <span>Showing tenants from your memberships (direct query returned empty). </span>
+          <Button size="sm" variant="outline" className="ml-auto" onClick={() => queryClient.invalidateQueries({ queryKey: ["tenants-admin"] })}>
+            Retry
+          </Button>
+        </div>
+      )}
+
       {/* Summary Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <Card>
