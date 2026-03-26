@@ -2577,14 +2577,25 @@ export type Database = {
           slug: string
         }[]
       }
-      has_role: {
-        Args: {
-          _role: Database["public"]["Enums"]["app_role"]
-          _user_id: string
-        }
-        Returns: boolean
-      }
-      is_admin: { Args: { _user_id: string }; Returns: boolean }
+      has_role:
+        | {
+            Args: {
+              _role: Database["public"]["Enums"]["app_role"]
+              _user_id: string
+            }
+            Returns: boolean
+          }
+        | {
+            Args: {
+              _role: Database["public"]["Enums"]["app_role"]
+              _tenant_id: string
+              _user_id: string
+            }
+            Returns: boolean
+          }
+      is_admin:
+        | { Args: { _user_id: string }; Returns: boolean }
+        | { Args: { _tenant_id: string; _user_id: string }; Returns: boolean }
       is_tenant_admin: {
         Args: { _tenant_id: string; _user_id: string }
         Returns: boolean
