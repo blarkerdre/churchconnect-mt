@@ -2520,10 +2520,12 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      auto_link_member_by_email: {
-        Args: { _email: string; _user_id: string }
-        Returns: string
-      }
+      auto_link_member_by_email:
+        | { Args: { _email: string; _user_id: string }; Returns: string }
+        | {
+            Args: { _email: string; _tenant_id?: string; _user_id: string }
+            Returns: string
+          }
       claim_own_member_profile: { Args: never; Returns: string }
       delete_email: {
         Args: { message_id: number; queue_name: string }
