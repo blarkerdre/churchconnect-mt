@@ -1,28 +1,46 @@
 
 
-## Plan: Fix Conditional Hook Call in Auth.jsx
+## Plan: Show Active Tenant Indicator + Password Confirmation on Tenant Switch
 
-### Problem
-`Auth.jsx` has a **React hooks rule violation**: `useQuery` on line 69 is placed **after** an early `return` (line 60-66). When `loading` is true, the hook is skipped entirely; when loading becomes false, React sees a different number of hooks and crashes silently — producing a blank white screen.
+### What We're Building
 
-### Fix
-Move the `useQuery` hook (lines 69-82) **above** the `if (loading)` early return (line 60), so all hooks are called unconditionally on every render. The `enabled` option already guards against premature execution.
+1. **Persistent tenant indicator in the header** -- a small badge/chip showing the current tenant name visible on every page, so admins always know which tenant context they're operating in.
 
-### File: `src/pages/Auth.jsx`
+2. **Password confirmation when switching tenants** -- before completing a tenant switch, show a dialog requiring the user to re-enter their password. This prevents accidental or unauthorized context switches.
 
-**Before (simplified):**
-```jsx
-if (loading) { return <Loading />; }  // line 60
+### Implementation
 
-const { data: userMembership, isLoading: membershipLoading } = useQuery({...}); // line 69
+#### 1. Active Tenant Badge in Header (AppLayout.jsx)
+
+In the sticky header (line ~248), add a tenant name badge next to the environment label and role badge. Visible to all users (not just admins), showing `currentTenant?.name`.
+
+```text
+[Page Title]                    [ENV] [Tenant: Demo Church] [Role] [Bell] [Logout]
 ```
 
-**After:**
-```jsx
-const { data: userMembership, isLoading: membershipLoading } = useQuery({...}); // moved up
+- Small pill/chip styled similarly to the existing role badge
+- Shows tenant logo (tiny, 16px) + name
+- Always visible, even on mobile
 
-if (loading) { return <Loading />; }
-```
+#### 2. Password Confirmation Dialog on Tenant Switch (AppLayout.jsx)
 
-### No other files changed
+Replace the instant `switchTenant()` call in the tenant dropdown (line 136) with:
+- Store the selected `tenant_id` in state (`pendingTenantSwitch`)
+- Open a confirmation dialog asking for the user's password
+- On submit, call `supabase.auth.signInWithPassword({ email, password })` to verify
+- If successful, call `switchTenant(pendingTenantSwitch)` and close dialog
+- If failed, show error toast
+
+**New state variables:**
+- `pendingTenantSwitch` (uuid | null)
+- `switchPassword` (string)
+- `switchLoading` (boolean)
+
+**New dialog:** A simple `Dialog` with password input and confirm/cancel buttons, rendered at the bottom of AppLayout.
+
+### Files Changed
+
+- **`src/components/AppLayout.jsx`** -- add tenant badge in header + password confirmation dialog for tenant switching
+
+### No database or migration changes needed
 
