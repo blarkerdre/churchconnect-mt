@@ -52,7 +52,7 @@ export default function PublicRegistration() {
   }, [tenantSlug]);
 
   useEffect(() => {
-    supabase.from("wsf_centres").select("*").eq("is_active", true).order("name")
+    supabase.rpc("get_active_wsf_centre_names")
       .then(({ data }) => setWsfCentres(data || []));
   }, []);
 
