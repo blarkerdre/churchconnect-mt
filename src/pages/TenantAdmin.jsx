@@ -51,7 +51,7 @@ const PLAN_TIERS = [
 
 export default function TenantAdmin() {
   const { user } = useAuth();
-  const { tenantId, switchTenant, tenantMemberships } = useTenant();
+  const { tenantId, switchTenant, tenantMemberships, currentTenant, tenantRole } = useTenant();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [createOpen, setCreateOpen] = useState(false);
@@ -62,7 +62,7 @@ export default function TenantAdmin() {
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
   const [showArchived, setShowArchived] = useState(false);
 
-  const { data: tenants = [], isLoading } = useQuery({
+  const { data: queryTenants = [], isLoading, error: tenantsError } = useQuery({
     queryKey: ["tenants-admin"],
     queryFn: async () => {
       const { data, error } = await supabase.from("tenants").select("*").order("created_at", { ascending: true });
@@ -71,8 +71,28 @@ export default function TenantAdmin() {
     },
   });
 
+  // Merge: direct query + membership-backed tenants + currentTenant fallback
+  const tenants = useMemo(() => {
+    const map = new Map();
+    // 1. Query results (full rows, preferred)
+    queryTenants.forEach(t => map.set(t.id, t));
+    // 2. Membership-backed tenants (fallback if query returned empty/blocked)
+    if (tenantMemberships?.length) {
+      tenantMemberships.forEach(m => {
+        if (m.tenants && !map.has(m.tenants.id)) {
+          map.set(m.tenants.id, m.tenants);
+        }
+      });
+    }
+    // 3. Current tenant as final fallback
+    if (currentTenant && !map.has(currentTenant.id)) {
+      map.set(currentTenant.id, currentTenant);
+    }
+    return Array.from(map.values());
+  }, [queryTenants, tenantMemberships, currentTenant]);
+
   const { data: tenantStats = {} } = useQuery({
-    queryKey: ["tenant-stats"],
+    queryKey: ["tenant-stats", tenants.map(t => t.id).join(",")],
     queryFn: async () => {
       const stats = {};
       for (const t of tenants) {
@@ -89,6 +109,8 @@ export default function TenantAdmin() {
 
   const activeTenants = tenants.filter(t => !t.is_archived);
   const archivedTenants = tenants.filter(t => t.is_archived);
+  const envLabel = getEnvironmentLabel();
+  const usingFallback = queryTenants.length === 0 && tenants.length > 0;
 
   const createMutation = useMutation({
     mutationFn: async (payload) => {
