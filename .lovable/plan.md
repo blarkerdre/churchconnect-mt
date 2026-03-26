@@ -1,35 +1,53 @@
 
+Goal: make Tenant Admin reliably show LFC Cardiff in Live.
 
-## Plan: Fix Missing User Roles and Memberships in Test Environment
+What I found:
+- `src/pages/TenantAdmin.jsx` currently builds the table from only one query: `supabase.from("tenants").select("*")`.
+- The page already has `tenantMemberships` from `useTenant()`, and that context loads `tenant_memberships` with nested `tenants(*)`.
+- Live data already contains the tenant `LFC Cardiff` (`slug: lfc-cardiff`), and your Live account already has both `super_admin` and `owner` access to it.
+- So this is not a missing-data problem; it is a visibility/reliability problem in the Tenant Admin UI path.
 
-### Problem
-Your user (`932364f2-...`) has `super_admin` role and `owner` membership in **Live** but has **neither** in **Test**. The Tenant Admin page queries tenants through RLS, which requires `super_admin` role -- so the query returns empty.
+Plan:
+1. Harden Tenant Admin tenant sourcing
+   - Update `src/pages/TenantAdmin.jsx` to merge:
+     - the main `tenants` query result
+     - tenant records already available from `tenantMemberships`
+     - the active `currentTenant` as a final fallback
+   - Deduplicate by `tenant.id`
+   - Prefer the full row from the direct `tenants` query when available
 
-### What We'll Do
+2. Use the merged tenant list everywhere on the page
+   - Build `activeTenants`, `archivedTenants`, and tenant stats from the merged list instead of only the raw query result
+   - Keep existing archive/switch/edit actions unchanged
 
-**Database inserts (Test environment only):**
+3. Add a clearer empty/error state
+   - If the direct tenants query fails or returns empty while membership-backed tenant data exists, show the fallback tenants instead of an empty table
+   - Add a small status message explaining whether the page is using fallback membership data
+   - Add a retry action for the tenants query so stale session/RLS issues are easier to recover from
 
-1. Insert `user_roles` record: `super_admin` role for your user, scoped to the test tenant
-2. Insert `tenant_memberships` record: `owner` role for your user in the test tenant
-3. Update your `profiles` record to set `tenant_id` to the test tenant
+4. Add context visibility for admins
+   - Show a compact info row in Tenant Admin with:
+     - current tenant name
+     - current role(s)
+     - environment label
+   - This makes it obvious whether you are viewing Live vs Test and which tenant context is active
 
-No code changes needed -- this is a data fix.
+Files to update:
+- `src/pages/TenantAdmin.jsx` — main fix
+- Optionally `src/components/AppLayout.jsx` only if we want to improve tenant/environment visibility outside the page too
 
-### Technical Details
+Technical details:
+- No database migration is needed for this change
+- No new backend function is needed
+- The fix should rely on already-loaded `tenantMemberships` from `TenantProvider`, which currently fetches `tenant_memberships` with `tenants(*)`
+- This avoids hiding a tenant just because the standalone `tenants` query is temporarily empty or blocked
 
-```sql
--- 1. user_roles
-INSERT INTO user_roles (user_id, role, tenant_id)
-VALUES ('932364f2-fdf8-4738-bc9d-297edfb51c4d', 'super_admin', 'a0000000-0000-0000-0000-000000000001');
+Expected outcome:
+- In Live, Tenant Admin will show `LFC Cardiff`
+- In Test, Tenant Admin will still show the test tenant
+- The page will be more resilient to session/RLS inconsistencies instead of appearing empty
 
--- 2. tenant_memberships
-INSERT INTO tenant_memberships (tenant_id, user_id, role)
-VALUES ('a0000000-0000-0000-0000-000000000001', '932364f2-fdf8-4738-bc9d-297edfb51c4d', 'owner');
-
--- 3. profiles tenant_id
-UPDATE profiles SET tenant_id = 'a0000000-0000-0000-0000-000000000001'
-WHERE user_id = '932364f2-fdf8-4738-bc9d-297edfb51c4d';
-```
-
-After this, the Tenant Admin page will load correctly in Test, showing "Demo Church (TEST)". Live already works and shows "LFC Cardiff".
-
+Validation:
+- Open Tenant Admin in Preview and confirm the test tenant still appears
+- Open Tenant Admin on the published site and confirm `LFC Cardiff` appears
+- Verify archive filter, edit dialog, stats, and “switch tenant” still work correctly with the merged tenant list
