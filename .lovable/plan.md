@@ -1,66 +1,48 @@
 
 
-## Fix: Exam Answers Visible to All Authenticated Users
+## Plan: Send Welcome Email + Admin Notification on Tenant Onboarding
 
-### Problem
+### What We're Building
 
-The `exam_questions` table has a broad SELECT policy letting any authenticated tenant member read all columns, including `correct_answer`. A member can open browser dev tools and see every answer before or during an exam.
+After a new church completes onboarding via `register-tenant`, two emails are sent:
 
-### Current Architecture
+1. **Welcome email to the new tenant admin** -- congratulates them, provides their login URL and key next steps
+2. **Notification email to the platform super admin(s)** -- alerts them that a new tenant has been onboarded with church name, slug, and admin details
 
-- `TakeExamDialog.jsx` fetches questions with `select("*")` (includes `correct_answer`)
-- Grading happens **client-side** — the component compares `answers[q.id]` against `q.correct_answer`
-- Results are inserted into `exam_attempts` and `exam_answers` from the client
+### Approach
 
-This means the client **must** have the correct answers to function. The fix requires moving grading server-side.
+Both emails will use the existing `send-transactional-email` infrastructure. We create two new templates and invoke them from the `register-tenant` Edge Function after successful tenant creation.
 
-### Solution
+### Changes
 
-**1. Database: Restrict the SELECT policy**
+**1. New template: `tenant-welcome.tsx`**
+- Sent to the new tenant admin
+- Props: `name`, `churchName`, `slug`, `loginUrl`
+- Content: Welcome message, login URL, quick-start tips (add members, set up registration, configure settings)
 
-- Drop the existing "Authenticated can view exam questions" policy
-- Add a new policy: "Admins/leaders can view all exam questions" — full access for admins and unit leaders
-- Add a new policy: "Members can view exam questions without answers" — but since RLS can't filter columns, we use a **security definer function** instead
+**2. New template: `new-tenant-notification.tsx`**
+- Sent to platform super admins
+- Props: `churchName`, `slug`, `adminName`, `adminEmail`, `createdAt`
+- Content: Notification that a new church has been registered with summary details
 
-**2. Database: Create a safe question-fetching function**
+**3. Update `registry.ts`**
+- Import and register both new templates: `tenant-welcome` and `new-tenant-notification`
 
-```sql
-CREATE FUNCTION public.get_exam_questions_safe(...)
-RETURNS TABLE (id, question_text, option_a, option_b, option_c, option_d, 
-               question_type, answer_count, points, sort_order, subject_id, training_type)
-```
+**4. Update `register-tenant/index.ts`**
+- After successful tenant creation (after step 7), invoke `send-transactional-email` twice:
+  - Once for the welcome email to `admin_email`
+  - Once for the admin notification -- query `user_roles` for `super_admin` users (excluding the new tenant's own admin if they got that role), fetch their emails from `profiles`, and send to each
+- Both calls use idempotency keys derived from `tenant.id`
 
-This function returns all question fields **except** `correct_answer`, and validates that the caller has tenant access.
-
-**3. Edge Function: `grade-exam`**
-
-A new edge function that:
-- Receives `member_id`, `subject_id` or `training_type`, and `answers` (map of question_id → selected_answer)
-- Fetches questions server-side (with `correct_answer`) using service role
-- Grades, calculates score/percentage/pass status
-- Inserts `exam_attempts` and `exam_answers` rows
-- Triggers course completion check and certificate issuance
-- Returns the result (score, percentage, passed, per-question correctness)
-
-**4. Update `TakeExamDialog.jsx`**
-
-- Fetch questions via `supabase.rpc("get_exam_questions_safe", ...)` instead of `select("*")`
-- Remove all client-side grading logic
-- Submit answers by invoking the `grade-exam` edge function
-- Display results from the edge function response
-
-**5. Update `ExamManagement.jsx`**
-
-- Admin question management already uses the admin policy — no changes needed (admins/leaders retain full SELECT)
+**5. Deploy edge functions**
+- Redeploy `send-transactional-email` (new templates) and `register-tenant` (new trigger logic)
 
 ### Files Changed
 
-- **Migration**: Drop/create RLS policies on `exam_questions`, create `get_exam_questions_safe` function
-- **`supabase/functions/grade-exam/index.ts`** — new edge function for server-side grading
-- **`src/components/exams/TakeExamDialog.jsx`** — use safe RPC for fetching, edge function for submission
-- **`supabase/config.toml`** — add `grade-exam` function config
+- **`supabase/functions/_shared/transactional-email-templates/tenant-welcome.tsx`** -- new
+- **`supabase/functions/_shared/transactional-email-templates/new-tenant-notification.tsx`** -- new
+- **`supabase/functions/_shared/transactional-email-templates/registry.ts`** -- add 2 imports
+- **`supabase/functions/register-tenant/index.ts`** -- add email sends after step 7
 
-### What This Prevents
-
-Members can no longer read `correct_answer` from any query path. Grading is fully server-side and tamper-proof.
+### No database changes needed
 
