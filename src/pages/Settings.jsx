@@ -482,6 +482,158 @@ function ChurchBrandingSection() {
   );
 }
 
+/* ─── Favicon & OG Image section ─── */
+function FaviconOgImageSection() {
+  const qc = useQueryClient();
+  const { currentTenant, tenantId, isTenantAdmin } = useTenant();
+  const [uploadingFavicon, setUploadingFavicon] = useState(false);
+  const [uploadingOg, setUploadingOg] = useState(false);
+  const faviconInputRef = React.useRef(null);
+  const ogInputRef = React.useRef(null);
+
+  const faviconUrl = currentTenant?.settings?.favicon_url || null;
+  const ogImageUrl = currentTenant?.settings?.og_image_url || null;
+
+  const updateSettings = async (key, value) => {
+    const mergedSettings = {
+      ...(currentTenant?.settings || {}),
+      [key]: value,
+    };
+    const { error } = await supabase
+      .from("tenants")
+      .update({ settings: mergedSettings })
+      .eq("id", tenantId);
+    if (error) throw error;
+    qc.invalidateQueries({ queryKey: ["tenants"] });
+  };
+
+  const handleUpload = async (file, type) => {
+    if (!file || !tenantId) return;
+    if (!file.type.startsWith("image/")) {
+      toast({ title: "Please select an image file", variant: "destructive" });
+      return;
+    }
+    const maxSize = type === "favicon" ? 1 * 1024 * 1024 : 5 * 1024 * 1024;
+    if (file.size > maxSize) {
+      toast({ title: `Image must be under ${type === "favicon" ? "1MB" : "5MB"}`, variant: "destructive" });
+      return;
+    }
+
+    const setUploading = type === "favicon" ? setUploadingFavicon : setUploadingOg;
+    setUploading(true);
+    try {
+      const ext = file.name.split(".").pop();
+      const path = `${tenantId}/tenant-${type}.${ext}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("profile-photos")
+        .upload(path, file, { upsert: true });
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = supabase.storage
+        .from("profile-photos")
+        .getPublicUrl(path);
+      const publicUrl = urlData.publicUrl + "?t=" + Date.now();
+
+      const settingsKey = type === "favicon" ? "favicon_url" : "og_image_url";
+      await updateSettings(settingsKey, publicUrl);
+      toast({ title: `${type === "favicon" ? "Favicon" : "Social image"} updated` });
+      window.location.reload();
+    } catch (err) {
+      toast({ title: "Upload failed", description: err.message, variant: "destructive" });
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleRemove = async (type) => {
+    const label = type === "favicon" ? "favicon" : "social image";
+    if (!tenantId || !window.confirm(`Remove the ${label}?`)) return;
+    const setUploading = type === "favicon" ? setUploadingFavicon : setUploadingOg;
+    setUploading(true);
+    try {
+      const settingsKey = type === "favicon" ? "favicon_url" : "og_image_url";
+      await updateSettings(settingsKey, null);
+      toast({ title: `${label.charAt(0).toUpperCase() + label.slice(1)} removed` });
+      window.location.reload();
+    } catch (err) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  if (!isTenantAdmin) return null;
+
+  return (
+    <Card className="border-0 shadow-sm">
+      <CardHeader className="pb-3">
+        <CardTitle className="text-base font-display flex items-center gap-2">
+          <Globe className="h-4 w-4 text-accent" /> Favicon & Social Image
+        </CardTitle>
+        <p className="text-xs text-muted-foreground mt-1">
+          Custom favicon for the browser tab and social/OG image for link previews when your church URL is shared.
+        </p>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        {/* Favicon */}
+        <div className="space-y-2">
+          <Label className="text-sm font-medium">Favicon (Browser Tab Icon)</Label>
+          <div className="flex flex-col sm:flex-row items-center gap-4">
+            <div className="h-16 w-16 rounded-lg bg-muted/50 border-2 border-dashed border-border flex items-center justify-center overflow-hidden shrink-0">
+              {faviconUrl ? (
+                <img src={faviconUrl} alt="Favicon" className="h-full w-full object-contain" />
+              ) : (
+                <ImageIcon className="h-6 w-6 text-muted-foreground" />
+              )}
+            </div>
+            <div className="flex flex-col gap-2 w-full sm:w-auto">
+              <input ref={faviconInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => handleUpload(e.target.files?.[0], "favicon")} />
+              <Button size="sm" onClick={() => faviconInputRef.current?.click()} disabled={uploadingFavicon} className="gap-1.5">
+                {uploadingFavicon ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                {faviconUrl ? "Change Favicon" : "Upload Favicon"}
+              </Button>
+              {faviconUrl && (
+                <Button size="sm" variant="outline" onClick={() => handleRemove("favicon")} disabled={uploadingFavicon} className="gap-1.5 text-destructive hover:text-destructive">
+                  <X className="h-4 w-4" /> Remove
+                </Button>
+              )}
+              <p className="text-[11px] text-muted-foreground">PNG, ICO or SVG. Max 1MB. Recommended: 32×32 or 64×64 px.</p>
+            </div>
+          </div>
+        </div>
+
+        {/* OG Image */}
+        <div className="space-y-2">
+          <Label className="text-sm font-medium">Social / Link Preview Image (OG Image)</Label>
+          <div className="flex flex-col sm:flex-row items-center gap-4">
+            <div className="h-20 w-36 rounded-lg bg-muted/50 border-2 border-dashed border-border flex items-center justify-center overflow-hidden shrink-0">
+              {ogImageUrl ? (
+                <img src={ogImageUrl} alt="OG Image" className="h-full w-full object-cover" />
+              ) : (
+                <ImageIcon className="h-6 w-6 text-muted-foreground" />
+              )}
+            </div>
+            <div className="flex flex-col gap-2 w-full sm:w-auto">
+              <input ref={ogInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => handleUpload(e.target.files?.[0], "og-image")} />
+              <Button size="sm" onClick={() => ogInputRef.current?.click()} disabled={uploadingOg} className="gap-1.5">
+                {uploadingOg ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                {ogImageUrl ? "Change Image" : "Upload Image"}
+              </Button>
+              {ogImageUrl && (
+                <Button size="sm" variant="outline" onClick={() => handleRemove("og-image")} disabled={uploadingOg} className="gap-1.5 text-destructive hover:text-destructive">
+                  <X className="h-4 w-4" /> Remove
+                </Button>
+              )}
+              <p className="text-[11px] text-muted-foreground">PNG or JPG. Max 5MB. Recommended: 1200×630 px.</p>
+            </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 /* ─── Communications Settings (email sender name + Twilio numbers) ─── */
 function CommunicationsSection() {
   const qc = useQueryClient();
@@ -644,8 +796,9 @@ export default function Settings() {
           )}
         </TabsList>
 
-        <TabsContent value="branding">
+        <TabsContent value="branding" className="space-y-6">
           <ChurchBrandingSection />
+          <FaviconOgImageSection />
         </TabsContent>
 
         <TabsContent value="notifications">
