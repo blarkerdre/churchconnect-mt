@@ -1,37 +1,37 @@
 
 
-## WSF Attendance Tenant Isolation Audit
+## Fix: Missing `.env` File Causing Blank Screen
 
-### Issues Found
+### Root Cause
 
-**1. Reports query missing explicit tenant scope (line 59-63)**
-The `wsf_attendance_reports` SELECT query filters only by `centre_id` using `.in()`, not by `tenant_id`. While the centres list passed as a prop is tenant-scoped (from `WSFManagement.jsx`), the query itself has no direct tenant filter. If RLS is permissive or centre IDs overlap, this could leak cross-tenant data.
+The `.env` file is **completely missing** from the project. The browser console confirms:
 
-**Fix:** Add `tenantId` to the query key and use `scopeQuery` to add `.eq("tenant_id", tenantId)`.
+```
+Error: supabaseUrl is required.
+```
 
-**2. Reports query key missing tenantId (line 56)**
-`queryKey: ["wsf-attendance-reports", visibleCentreIds]` — no tenant in the cache key. If a user switches tenants, stale data from the previous tenant could be served from cache.
+The Supabase client at `src/integrations/supabase/client.ts` reads `VITE_SUPABASE_URL` from `import.meta.env`, which is `undefined` because there's no `.env` file to provide it. This crashes the app before React mounts — both in preview and published builds.
 
-**Fix:** Change to `["wsf-attendance-reports", tenantId, visibleCentreIds]`.
+### Why This Happened
 
-**3. Update mutation missing tenant scope (line 73)**
-`supabase.from("wsf_attendance_reports").update(payload).eq("id", editing.id)` — no tenant filter on the update. Relies solely on RLS.
+The `.env` file is supposed to be auto-generated and maintained by the Lovable Cloud integration. It appears to have been deleted or lost.
 
-**Fix:** Add `.eq("tenant_id", tenantId)` to the update query for defense-in-depth.
+### Fix
 
-**4. Delete mutation missing tenant scope (line 88-91)**
-Same issue — deletes by `id` only, no tenant filter.
+**Recreate the `.env` file** with the known Supabase project values:
 
-**Fix:** Add `.eq("tenant_id", tenantId)` to the delete query.
+```
+VITE_SUPABASE_PROJECT_ID="qfordhikmtgedfybktjg"
+VITE_SUPABASE_PUBLISHABLE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFmb3JkaGlrbXRnZWRmeWJrdGpnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0NTY3ODcsImV4cCI6MjA5MDAzMjc4N30.edOKxghMZxEq9VK3VVKAa_-WTQPZkOyVT7-pJFr31ho"
+VITE_SUPABASE_URL="https://qfordhikmtgedfybktjg.supabase.co"
+```
 
-### Changes
+### What This Fixes
 
-**File: `src/components/wsf/WSFAttendanceTab.jsx`**
+- Preview will render again immediately
+- Published builds will include the correct env vars when re-published
 
-1. Reports query (line 56-66): Add `tenantId` to query key, wrap query with `scopeQuery`
-2. Update mutation (line 73): Add `.eq("tenant_id", tenantId)` 
-3. Delete mutation (line 88): Add `.eq("tenant_id", tenantId)`
+### Files Changed
 
-### No database or migration changes needed
-RLS policies already exist on `wsf_attendance_reports` — these code changes add defense-in-depth at the application layer.
+- **`.env`** — recreate with the three required Supabase environment variables
 
