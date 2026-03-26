@@ -164,6 +164,7 @@ Deno.serve(async (req) => {
       const { data: linkedMemberId } = await supabase.rpc("auto_link_member_by_email", {
         _user_id: userId,
         _email: normalizedEmail,
+        _tenant_id: tenant_id || null,
       });
       if (linkedMemberId) {
         memberId = linkedMemberId;
