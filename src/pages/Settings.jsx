@@ -652,6 +652,10 @@ export default function Settings() {
           <NotificationPreferencesSection />
         </TabsContent>
 
+        <TabsContent value="comms">
+          <CommunicationsSection />
+        </TabsContent>
+
         <TabsContent value="units">
           <ChurchUnitsSection />
         </TabsContent>
