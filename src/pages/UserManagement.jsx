@@ -69,11 +69,23 @@ export default function UserManagement() {
   const { data: bannedUserIds = [] } = useQuery({
     queryKey: ["banned-users"],
     queryFn: async () => {
-      const { data, error } = await supabase.functions.invoke("admin-list-banned-users");
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
-      return data.banned_user_ids || [];
+      try {
+        const { data, error } = await supabase.functions.invoke("admin-list-banned-users");
+        if (error) {
+          console.warn("Failed to fetch banned users:", error.message);
+          return [];
+        }
+        if (data?.error) {
+          console.warn("Banned users API error:", data.error);
+          return [];
+        }
+        return data.banned_user_ids || [];
+      } catch (e) {
+        console.warn("Banned users fetch exception:", e);
+        return [];
+      }
     },
+    retry: false,
   });
 
   const disabledUsers = Object.fromEntries(bannedUserIds.map(id => [id, true]));
