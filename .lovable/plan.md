@@ -1,52 +1,53 @@
 
 
-## Analysis: Why Live and Test Show Identical Data
+## Plan: Enhanced Tenant Lifecycle Management in Tenant Admin
 
-### What I Found
+### What Exists
+- Archive, restore, and permanent delete already work via the `archive-tenant` edge function
+- Permanent delete is only available for archived tenants (two-step: archive first, then delete)
+- Delete requires typing "DELETE {slug}" to confirm
+- Page is restricted to `super_admin` role via `SuperAdminRoute`
 
-I queried both database environments directly:
+### What We'll Add
 
-| | Production (Live DB) | Development (Test DB) |
-|---|---|---|
-| Tenant name | **LFC Cardiff** | **Demo Church (TEST)** |
-| Tenant slug | `lfc-cardiff` | `demo-test` |
-| Tenant ID | `a0000000-...0001` | `a0000000-...0001` |
-| Your user ID | `932364f2-...` | `33c7eafc-...` |
+**1. Direct permanent delete for active tenants (with extreme friction)**
+- Add a "Delete Permanently" action for active tenants (not just archived ones)
+- Multi-step confirmation: first an alert explaining consequences, then typing "PERMANENTLY DELETE {slug}", then a final password re-authentication step
+- Red danger styling throughout
 
-The databases ARE different. **LFC Cardiff exists only in Live. Demo Church (TEST) exists only in Test.** The data is correct at the database level.
+**2. Stronger warning UI for all destructive actions**
+- List what will be deleted: members, attendance, events, follow-ups, pastoral care, communications, exams, documents, storage files, user accounts
+- Show member/user counts in the warning
+- Add an explicit "This action is irreversible" banner with a skull/alert icon
 
-### Root Cause
+**3. Restore archived tenants with data integrity warning**
+- Already works but add a clearer confirmation dialog explaining that restoring will reactivate the tenant and make it visible to its users again
+- Show tenant stats in the restore dialog
 
-Both the preview app and the published app connect to the **same Supabase instance** via `VITE_SUPABASE_URL`. This single URL points to one database -- so regardless of whether you open the preview or the published site, the app queries the same data.
+**4. Tenant data visibility panel**
+- Add a "View Data" button for each tenant that shows a summary of associated data counts (members, events, attendance sessions, follow-ups, etc.)
+- This lets the admin see what data belongs to each tenant before taking action
 
-The environment indicator (Test/Live badge) works based on **hostname detection only** -- it does not change which database the app talks to. Both environments see whichever database `VITE_SUPABASE_URL` resolves to.
-
-This is a fundamental constraint: the app has one database connection string baked in at build time.
-
-### What Needs to Happen
-
-There is no code fix that can make the preview and published app show different data -- they share one database. The correct approach is:
-
-1. **Accept single-database reality** -- both preview and published connect to the same backend. This is how Lovable Cloud works for the running app.
-
-2. **Remove the misleading environment indicator** -- or change it to only show hostname info without implying separate data. The "Test" vs "Live" badge currently gives a false impression of data isolation.
-
-3. **Use LFC Cardiff as the real tenant** -- since both environments share one database, ensure your production tenant (LFC Cardiff) is present. Right now, one database has it and the other has "Demo Church (TEST)." Whichever database the app connects to determines what you see.
-
-4. **Ensure LFC Cardiff exists in the connected database** -- I can check which database the app actually connects to, then ensure it has the correct tenant data (LFC Cardiff for your real use, plus optionally keeping Demo Church for testing purposes).
-
-### Proposed Plan
-
-**Step 1:** Determine which database the app is connected to by checking the `VITE_SUPABASE_URL` value
-
-**Step 2:** Ensure LFC Cardiff tenant exists in that database alongside Demo Church (TEST) -- both can coexist since they would have different IDs
-
-**Step 3:** Update the environment indicator to show the actual connected backend info instead of misleading "Test"/"Live" labels, or remove it entirely
-
-**Step 4:** Set up your user's membership and role for LFC Cardiff in whichever database the app is using
+**5. Access control enforcement**
+- Page is already behind `SuperAdminRoute` -- no change needed
+- Add a reminder banner at the top: "Super Admin Only — Changes here affect all tenants"
 
 ### Files to Change
-- `src/lib/environment.js` -- update or remove misleading environment labels
-- `src/pages/TenantAdmin.jsx` -- remove environment badge or make it accurate
-- Database inserts to ensure LFC Cardiff exists in the active database
+
+**`src/pages/TenantAdmin.jsx`**
+- Add permanent delete button for active tenants with enhanced multi-step confirmation dialog
+- Add restore confirmation dialog with tenant info
+- Add "View Data" action per tenant showing data counts
+- Add admin-only visibility banner
+- Strengthen warning text and styling for all destructive dialogs
+
+**`supabase/functions/archive-tenant/index.ts`**
+- Add `password` field support for delete action (re-authentication like purge-all-data does)
+- Verify password before executing permanent delete
+
+### Technical Details
+- The edge function already handles the `delete` action with full cascading cleanup across 35+ tables
+- Password re-authentication will use `supabase.auth.signInWithPassword()` (same pattern as `purge-all-data`)
+- Data counts query will reuse the existing `tenantStats` pattern, extended with more tables
+- No database migrations needed
 
