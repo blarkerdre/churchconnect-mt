@@ -22,8 +22,9 @@ import { Alert, AlertTitle, AlertDescription as AlertDesc } from "@/components/u
 import {
   Building2, Users, UserCheck, Plus, CheckCircle2, ArrowRightLeft, Clock, Pencil, Save,
   Image, Palette, Users2, Archive, ArchiveRestore, Trash2, BarChart3, AlertTriangle,
-  ShieldAlert, Eye, Skull,
+  ShieldAlert, Eye, Skull, Link, Copy, ExternalLink, Mail, Share2,
 } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useToast } from "@/components/ui/use-toast";
 import TenantUsersDialog from "@/components/tenants/TenantUsersDialog";
 import TenantAnalyticsTab from "@/components/tenants/TenantAnalyticsTab";
@@ -85,7 +86,15 @@ export default function TenantAdmin() {
   const [showArchived, setShowArchived] = useState(false);
   const [restoreTenant, setRestoreTenant] = useState(null);
   const [viewDataTenant, setViewDataTenant] = useState(null);
+  const [onboardOpen, setOnboardOpen] = useState(false);
+  const [onboardEmail, setOnboardEmail] = useState("");
 
+  const onboardUrl = `${window.location.origin}/onboard`;
+
+  const copyToClipboard = (text, label) => {
+    navigator.clipboard.writeText(text);
+    toast({ title: `${label} copied to clipboard` });
+  };
   const { data: queryTenants = [], isLoading, error: tenantsError } = useQuery({
     queryKey: ["tenants-admin"],
     queryFn: async () => {
@@ -411,6 +420,55 @@ export default function TenantAdmin() {
                     {showArchived ? "Hide" : "Show"} Archived ({archivedTenants.length})
                   </Button>
                 )}
+                <Dialog open={onboardOpen} onOpenChange={setOnboardOpen}>
+                  <DialogTrigger asChild>
+                    <Button size="sm" variant="outline"><Share2 className="h-4 w-4 mr-1" /> Invite to Onboard</Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Invite New Church to Onboard</DialogTitle>
+                      <DialogDescription>Share this link with a new church admin to start their onboarding</DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Label>Onboarding URL</Label>
+                        <div className="flex gap-2">
+                          <code className="flex-1 bg-muted px-3 py-2 rounded text-xs break-all select-all">{onboardUrl}</code>
+                          <Button size="sm" variant="outline" onClick={() => copyToClipboard(onboardUrl, "Onboarding URL")}>
+                            <Copy className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      </div>
+                      <Separator />
+                      <div className="space-y-2">
+                        <Label>Send via Email (optional)</Label>
+                        <div className="flex gap-2">
+                          <Input
+                            type="email"
+                            placeholder="admin@church.org"
+                            value={onboardEmail}
+                            onChange={(e) => setOnboardEmail(e.target.value)}
+                          />
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={!onboardEmail}
+                            asChild
+                          >
+                            <a
+                              href={`mailto:${onboardEmail}?subject=${encodeURIComponent("You're invited to set up your church on ChurchConnect")}&body=${encodeURIComponent(`Hello,\n\nYou've been invited to set up your church on ChurchConnect. Click the link below to get started:\n\n${onboardUrl}\n\nBest regards`)}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                            >
+                              <Mail className="h-3.5 w-3.5 mr-1" /> Send
+                            </a>
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+
                 <Dialog open={createOpen} onOpenChange={setCreateOpen}>
                   <DialogTrigger asChild>
                     <Button size="sm"><Plus className="h-4 w-4 mr-1" /> New Tenant</Button>
@@ -518,6 +576,36 @@ export default function TenantAdmin() {
                             <TableCell className="text-right">
                               <div className="flex items-center gap-1 justify-end flex-wrap">
                                 {/* View Data - always available */}
+                                <Popover>
+                                  <PopoverTrigger asChild>
+                                    <Button size="sm" variant="ghost" title="Tenant URLs">
+                                      <Link className="h-3 w-3" />
+                                    </Button>
+                                  </PopoverTrigger>
+                                  <PopoverContent className="w-80" align="end">
+                                    <div className="space-y-3">
+                                      <h4 className="font-medium text-sm">Tenant URLs</h4>
+                                      <div className="space-y-2">
+                                        <Label className="text-xs text-muted-foreground">Login URL</Label>
+                                        <div className="flex gap-1.5">
+                                          <code className="flex-1 bg-muted px-2 py-1 rounded text-[11px] break-all">{`${window.location.origin}/t/${t.slug}/auth`}</code>
+                                          <Button size="icon" variant="ghost" className="h-7 w-7 shrink-0" onClick={() => copyToClipboard(`${window.location.origin}/t/${t.slug}/auth`, "Login URL")}>
+                                            <Copy className="h-3 w-3" />
+                                          </Button>
+                                        </div>
+                                      </div>
+                                      <div className="space-y-2">
+                                        <Label className="text-xs text-muted-foreground">Registration URL</Label>
+                                        <div className="flex gap-1.5">
+                                          <code className="flex-1 bg-muted px-2 py-1 rounded text-[11px] break-all">{`${window.location.origin}/t/${t.slug}/register`}</code>
+                                          <Button size="icon" variant="ghost" className="h-7 w-7 shrink-0" onClick={() => copyToClipboard(`${window.location.origin}/t/${t.slug}/register`, "Registration URL")}>
+                                            <Copy className="h-3 w-3" />
+                                          </Button>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </PopoverContent>
+                                </Popover>
                                 <Button size="sm" variant="ghost" onClick={() => setViewDataTenant(t)} title="View data">
                                   <Eye className="h-3 w-3" />
                                 </Button>
