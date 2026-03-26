@@ -1,50 +1,53 @@
 
 
-## Fix: Remove Anonymous Access to Church Units Table
+## Fix: Restrict Invitation Token Visibility to Tenant-Scoped Admins
 
 ### Problem
 
-The `church_units` table has `"Public can view church units"` with `USING (true)` for `anon`, exposing all unit names and tenant IDs to unauthenticated users.
+The `tenant_invitations` SELECT policy uses `is_admin(auth.uid())` which returns TRUE for any tenant owner/admin across ALL tenants (via `tenant_memberships` check without tenant scoping). This means an admin of Tenant A can read invitation tokens for Tenant B.
 
-### Who Needs Anon Access
+### Current Policy (inferred)
 
-Only `PublicRegistration.jsx` queries church units for the registration form. It needs unit names for a multi-select picker.
+```sql
+USING (is_admin(auth.uid()) OR is_tenant_admin(auth.uid(), tenant_id))
+```
 
-### Solution
+The `is_admin()` function checks `user_roles` for admin/super_admin OR `tenant_memberships` for owner/admin — without scoping to a specific tenant. So any tenant admin passes this check for all rows.
 
-1. **Drop the anon policy** on `church_units`
-2. **Create a safe RPC** `get_active_church_unit_names(_tenant_slug text)` that returns only `id` and `name`, scoped to the tenant resolved by slug
-3. **Update `PublicRegistration.jsx`** to call the RPC instead of using `useChurchUnits()`
+### Fix
+
+Replace the SELECT policy to use only tenant-scoped checks:
+
+```sql
+DROP POLICY IF EXISTS "Admins can view tenant invitations" ON public.tenant_invitations;
+
+CREATE POLICY "Admins can view tenant invitations"
+ON public.tenant_invitations
+FOR SELECT
+TO authenticated
+USING (
+  is_tenant_admin(auth.uid(), tenant_id)
+  OR has_role(auth.uid(), 'super_admin'::app_role)
+);
+```
+
+Also review and tighten the ALL/INSERT/UPDATE/DELETE policies on this table if they use `is_admin()` similarly.
 
 ### Technical Details
 
 **Migration SQL:**
-```sql
-DROP POLICY IF EXISTS "Public can view church units" ON public.church_units;
+- Drop existing overly broad policies on `tenant_invitations`
+- Recreate with `is_tenant_admin(auth.uid(), tenant_id)` for tenant-scoped access
+- Add `has_role(auth.uid(), 'super_admin')` for legitimate global admin access
+- Apply same pattern to ALL/UPDATE/DELETE policies
 
-CREATE OR REPLACE FUNCTION public.get_active_church_unit_names(_tenant_slug text DEFAULT NULL)
-RETURNS TABLE(id uuid, name text)
-LANGUAGE sql STABLE SECURITY DEFINER
-SET search_path TO 'public'
-AS $$
-  SELECT cu.id, cu.name
-  FROM public.church_units cu
-  WHERE cu.is_active = true
-    AND (_tenant_slug IS NULL OR cu.tenant_id = (
-      SELECT t.id FROM public.tenants t
-      WHERE t.slug = _tenant_slug AND t.is_archived IS NOT TRUE
-      LIMIT 1
-    ))
-  ORDER BY cu.name;
-$$;
+### Impact
 
-GRANT EXECUTE ON FUNCTION public.get_active_church_unit_names(text) TO anon, authenticated;
-```
-
-**`PublicRegistration.jsx` change:** Replace `useChurchUnits()` with a local query calling `supabase.rpc("get_active_church_unit_names", { _tenant_slug: tenantSlug })`.
+- Tenant admins can only see invitations for their own tenant
+- Super admins retain global visibility (legitimate use case for platform management)
+- No application code changes needed — `TenantUsersDialog.jsx` already filters by `tenant_id`
 
 ### Files Changed
 
-- **One database migration** -- drop anon policy, create safe RPC
-- **`src/pages/PublicRegistration.jsx`** -- use RPC for church unit names on public form
+- **One database migration** — replace RLS policies on `tenant_invitations`
 
