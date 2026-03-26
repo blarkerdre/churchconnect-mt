@@ -310,6 +310,29 @@ export default function Layout({ children }) {
         </main>
         <MobileBottomNav />
       </div>
+      {/* Password confirmation dialog for tenant switching */}
+      <Dialog open={!!pendingTenantSwitch} onOpenChange={(open) => { if (!open) { setPendingTenantSwitch(null); setSwitchPassword(""); } }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><Lock className="h-4 w-4" /> Confirm Tenant Switch</DialogTitle>
+            <DialogDescription>Enter your password to switch to a different tenant.</DialogDescription>
+          </DialogHeader>
+          <form onSubmit={(e) => { e.preventDefault(); confirmTenantSwitch(); }}>
+            <Input
+              type="password"
+              placeholder="Enter your password"
+              value={switchPassword}
+              onChange={(e) => setSwitchPassword(e.target.value)}
+              autoFocus
+              disabled={switchLoading}
+            />
+            <DialogFooter className="mt-4">
+              <Button type="button" variant="outline" onClick={() => { setPendingTenantSwitch(null); setSwitchPassword(""); }} disabled={switchLoading}>Cancel</Button>
+              <Button type="submit" disabled={!switchPassword || switchLoading}>{switchLoading ? "Verifying..." : "Confirm"}</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
