@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Navigate, useParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -26,7 +26,7 @@ export default function Auth() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("tenants")
-        .select("id, name, slug, logo_url")
+        .select("id, name, slug, logo_url, settings")
         .eq("slug", tenantSlug)
         .maybeSingle();
       if (error) throw error;
@@ -38,6 +38,24 @@ export default function Auth() {
   const churchName = tenant?.name || "Winners Chapel";
   const churchSubtitle = tenant ? null : "International Cardiff";
   const logoUrl = tenant?.logo_url || winnersLogo;
+
+  // Set favicon and OG tags for tenant auth pages
+  useEffect(() => {
+    if (!tenant?.settings) return;
+    const { favicon_url, og_image_url } = tenant.settings;
+
+    if (favicon_url) {
+      const link = document.querySelector('link[rel="icon"]');
+      if (link) link.href = favicon_url;
+    }
+
+    if (og_image_url) {
+      const ogMeta = document.querySelector('meta[property="og:image"]');
+      if (ogMeta) ogMeta.setAttribute("content", og_image_url);
+      const twMeta = document.querySelector('meta[name="twitter:image"]');
+      if (twMeta) twMeta.setAttribute("content", og_image_url);
+    }
+  }, [tenant?.settings]);
 
   if (loading) {
     return (
