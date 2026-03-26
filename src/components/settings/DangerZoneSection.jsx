@@ -12,10 +12,12 @@ import {
   AlertDialogFooter,
   AlertDialogCancel,
 } from "@/components/ui/alert-dialog";
-import { AlertTriangle, Loader2, Trash2, ShieldAlert, Download, RotateCcw, Archive, Upload } from "lucide-react";
+import { AlertTriangle, Loader2, Trash2, ShieldAlert, Download, RotateCcw, Archive, Upload, Info } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
+import { useTenant } from "@/contexts/TenantContext";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { formatDistanceToNow } from "date-fns";
 import JSZip from "jszip";
