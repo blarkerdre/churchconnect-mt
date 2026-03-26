@@ -110,14 +110,20 @@ export default function Layout({ children }) {
     if (!switchPassword || !pendingTenantSwitch) return;
     setSwitchLoading(true);
     try {
-      const email = profile?.email;
+      const email = user?.email;
       if (!email) throw new Error("No email found");
       const { error } = await supabase.auth.signInWithPassword({ email, password: switchPassword });
       if (error) throw error;
+      // Find the target tenant's slug and navigate
+      const targetMembership = tenantMemberships.find(m => m.tenant_id === pendingTenantSwitch);
+      const targetSlug = targetMembership?.tenants?.slug;
       switchTenant(pendingTenantSwitch);
       setPendingTenantSwitch(null);
       setSwitchPassword("");
       toast.success("Tenant switched successfully");
+      if (targetSlug) {
+        navigate(`/t/${targetSlug}`, { replace: true });
+      }
     } catch (err) {
       toast.error("Incorrect password. Please try again.");
     } finally {
