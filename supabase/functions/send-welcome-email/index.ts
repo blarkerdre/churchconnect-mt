@@ -74,7 +74,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { email, first_name, last_name } = await req.json();
+    const { email, first_name, last_name, tenant_id } = await req.json();
 
     if (!email || typeof email !== "string") {
       return new Response(JSON.stringify({ error: "Email is required" }), {
@@ -89,6 +89,20 @@ Deno.serve(async (req) => {
       serviceRoleKey,
       { auth: { autoRefreshToken: false, persistSession: false } }
     );
+
+    // Fetch tenant sender name if available
+    let senderName = SITE_NAME;
+    if (tenant_id) {
+      const { data: tenantRow } = await supabase
+        .from("tenants")
+        .select("name, settings")
+        .eq("id", tenant_id)
+        .single();
+      if (tenantRow) {
+        const s = tenantRow.settings as Record<string, unknown> | null;
+        senderName = (s?.email_sender_name as string) || tenantRow.name || senderName;
+      }
+    }
 
     const templateProps = {
       firstName: first_name || "Friend",
@@ -132,7 +146,7 @@ Deno.serve(async (req) => {
       await sendLovableEmail(
         {
           to: normalizedEmail,
-          from: `${SITE_NAME} <noreply@${FROM_DOMAIN}>`,
+          from: `${senderName} <noreply@${FROM_DOMAIN}>`,
           sender_domain: SENDER_DOMAIN,
           subject: "Welcome to Winners Chapel International Cardiff",
           html,
