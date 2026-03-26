@@ -53,9 +53,11 @@ export default function PublicRegistration() {
   }, [tenantSlug]);
 
   useEffect(() => {
-    supabase.rpc("get_active_wsf_centre_names")
-      .then(({ data }) => setWsfCentres(data || []));
-  }, []);
+    supabase.rpc("get_active_church_unit_names", { _tenant_slug: tenantSlug || null })
+      .then(({ data }) => setChurchUnits((data || []).map(u => u.name)));
+  }, [tenantSlug]);
+
+  useEffect(() => {
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
