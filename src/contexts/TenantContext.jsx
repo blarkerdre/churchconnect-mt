@@ -19,7 +19,7 @@ const TenantContext = createContext({
  * Default tenant ID used during the migration period.
  * All existing data has been backfilled to this tenant.
  */
-const DEFAULT_TENANT_ID = "a0000000-0000-0000-0000-000000000001";
+const DEFAULT_TENANT_ID = "d8bbbdae-d9b3-4999-912d-3aa5999884b0";
 
 export function TenantProvider({ children }) {
   const { user, loading: authLoading } = useAuth();
