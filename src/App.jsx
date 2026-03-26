@@ -32,6 +32,7 @@ import PublicWoFBIRegistration from "@/pages/PublicWoFBIRegistration";
 import Onboard from "@/pages/Onboard";
 import TenantAdmin from "@/pages/TenantAdmin";
 import Presentation from "@/pages/Presentation";
+import Unsubscribe from "@/pages/Unsubscribe";
 
 
 function ProtectedRoute({ children }) {
@@ -176,6 +177,7 @@ function AppRoutes() {
       <Route path="/wofbi-register" element={<PublicWoFBIRegistration />} />
       <Route path="/presentation" element={<Presentation />} />
       <Route path="/onboard" element={<Onboard />} />
+      <Route path="/unsubscribe" element={<Unsubscribe />} />
 
       {/* Tenant-prefixed public routes */}
       <Route path="/t/:tenantSlug/auth" element={<Auth />} />
