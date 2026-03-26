@@ -88,6 +88,7 @@ function csvToJson(csvText) {
 
 export default function DangerZoneSection() {
   const { tenantId } = useTenantQuery();
+  const { currentTenant } = useTenant();
   const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [step, setStep] = useState(1);
