@@ -1,30 +1,31 @@
 
 
-## Issue: Live Environment Not Rendering
+## Root Cause Found: Missing Environment Variables in Published Build
 
-### Diagnosis
+### The Error
 
-The **preview** environment is working correctly -- network requests show successful data loading, and the console has no crash errors. The **published/live** environment (`churchconnect-mt.lovable.app`) is still running an older build that contains the bugs we've since fixed (the conditional hook violation in Auth.jsx, the unhardened AppLayout tenant switch code).
+The live site at `app.churchmanagementsuite.org` crashes immediately with:
 
-### Root Cause
+```
+Error: supabaseUrl is required.
+```
 
-The live site hasn't been re-published since the recent fixes. The published build still has the old broken code.
+This means `VITE_SUPABASE_URL` is **undefined** in the published build. The Supabase client (`src/integrations/supabase/client.ts`) calls `createClient(undefined, undefined)` which throws before React even mounts -- hence the blank white screen.
+
+### Why Preview Works But Published Doesn't
+
+- **Preview**: Vite dev server injects `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` from the auto-managed `.env` file at runtime
+- **Published**: These values are baked into the JS bundle at build time. If the build ran without the env vars present, the published bundle has `undefined` for both values
+
+### This Is Not a Code Bug
+
+The `.env` file and `client.ts` are auto-generated and cannot be edited. The env vars exist in the dev environment (preview works). The published build simply doesn't have them baked in.
 
 ### Fix
 
-**Publish the project** to deploy the latest code to the live environment. No code changes are needed -- just a publish action.
+**Re-publish the project** -- click Publish, then Update. This will trigger a fresh build that should pick up the current `.env` values and bake them into the production bundle.
 
-### Secondary Issue: Missing Profile Row
+If re-publishing still produces a blank screen with the same error, this is a platform-level issue with env var injection during the publish build process, and would need to be escalated.
 
-The network requests show a recurring 406 error on the `profiles` table query. The user (`6483c76f-...`) has no row in the `profiles` table, causing `.single()` to fail. While this is handled gracefully (the app continues), it should be fixed by either:
-
-1. Inserting a profile row for this user via the database
-2. Changing `.single()` to `.maybeSingle()` in `useAuth.jsx` line 55 to prevent the 406 error entirely
-
-I recommend doing **both**: change to `.maybeSingle()` for resilience, then publish.
-
-### Steps
-
-1. Change `useAuth.jsx` line 55: `.single()` → `.maybeSingle()` to handle missing profiles gracefully
-2. Publish the project to deploy all recent fixes to the live environment
+### No code changes needed
 
