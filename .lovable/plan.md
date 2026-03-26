@@ -1,46 +1,37 @@
 
+Fix the blank preview by hardening the recent shell changes in `src/components/AppLayout.jsx` and aligning tenant switching with the route-based tenant system.
 
-## Plan: Show Active Tenant Indicator + Password Confirmation on Tenant Switch
+### What I found
+- `Auth.jsx` no longer has the earlier conditional-hook problem.
+- The riskiest recent change is now in `AppLayout.jsx`, where tenant switching was changed to re-authenticate inside the layout.
+- The current tenant switch flow only updates context with `switchTenant(...)` but does not navigate to the matching `/t/{tenantSlug}` URL, so app state and URL can drift apart.
+- The password check also uses `profile?.email`, which is less reliable than the authenticated user’s email.
 
-### What We're Building
+### Plan
+1. **Stabilize `AppLayout.jsx`**
+   - Make the layout safe even when tenant/profile data is still loading.
+   - Add defensive fallbacks for header/title/tenant badge rendering so the shell never crashes on missing data.
 
-1. **Persistent tenant indicator in the header** -- a small badge/chip showing the current tenant name visible on every page, so admins always know which tenant context they're operating in.
+2. **Refactor tenant switch confirmation**
+   - Keep the password dialog UI, but make it use the authenticated user email from auth state instead of the profile record.
+   - Ensure cancel/close fully resets pending switch state.
 
-2. **Password confirmation when switching tenants** -- before completing a tenant switch, show a dialog requiring the user to re-enter their password. This prevents accidental or unauthorized context switches.
+3. **Switch tenants by navigating, not only mutating context**
+   - After successful password confirmation, redirect to the selected tenant’s prefixed route (for example `/t/lfc-cardiff` or `/t/demo-church-test`) so URL, branding, and tenant context stay in sync.
+   - Keep the current path where possible, or safely fall back to that tenant’s dashboard.
 
-### Implementation
+4. **Guard against preview-only auth noise**
+   - Avoid any auth re-check running outside the explicit confirmation action.
+   - Keep initial page render independent from the tenant-switch dialog logic.
 
-#### 1. Active Tenant Badge in Header (AppLayout.jsx)
+### Files to update
+- `src/components/AppLayout.jsx`
+- Possibly `src/contexts/TenantContext.jsx` only if a tiny helper is needed to resolve tenant slugs cleanly
 
-In the sticky header (line ~248), add a tenant name badge next to the environment label and role badge. Visible to all users (not just admins), showing `currentTenant?.name`.
+### Expected result
+- The preview should render again instead of showing a white screen.
+- Tenant name remains visible across the app.
+- Switching tenants still requires password confirmation, but now lands users on the correct tenant-prefixed URL without destabilizing the app.
 
-```text
-[Page Title]                    [ENV] [Tenant: Demo Church] [Role] [Bell] [Logout]
-```
-
-- Small pill/chip styled similarly to the existing role badge
-- Shows tenant logo (tiny, 16px) + name
-- Always visible, even on mobile
-
-#### 2. Password Confirmation Dialog on Tenant Switch (AppLayout.jsx)
-
-Replace the instant `switchTenant()` call in the tenant dropdown (line 136) with:
-- Store the selected `tenant_id` in state (`pendingTenantSwitch`)
-- Open a confirmation dialog asking for the user's password
-- On submit, call `supabase.auth.signInWithPassword({ email, password })` to verify
-- If successful, call `switchTenant(pendingTenantSwitch)` and close dialog
-- If failed, show error toast
-
-**New state variables:**
-- `pendingTenantSwitch` (uuid | null)
-- `switchPassword` (string)
-- `switchLoading` (boolean)
-
-**New dialog:** A simple `Dialog` with password input and confirm/cancel buttons, rendered at the bottom of AppLayout.
-
-### Files Changed
-
-- **`src/components/AppLayout.jsx`** -- add tenant badge in header + password confirmation dialog for tenant switching
-
-### No database or migration changes needed
-
+### Technical note
+The app is built around URL-scoped tenancy (`/t/:tenantSlug/*`). Any tenant switch implementation should follow that routing model, otherwise the selected tenant in state and the tenant in the URL can diverge and cause unstable behavior.
