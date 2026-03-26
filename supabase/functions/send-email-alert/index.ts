@@ -95,6 +95,20 @@ Deno.serve(async (req) => {
     })
   }
 
+  // Fetch tenant settings for sender name
+  let tenantSenderName = 'Winners Chapel International Cardiff'
+  if (tenant_id) {
+    const { data: tenantRow } = await serviceClient
+      .from('tenants')
+      .select('name, settings')
+      .eq('id', tenant_id)
+      .single()
+    if (tenantRow) {
+      const s = tenantRow.settings as Record<string, unknown> | null
+      tenantSenderName = (s?.email_sender_name as string) || tenantRow.name || tenantSenderName
+    }
+  }
+
   // Look up member emails based on audience
   let query = serviceClient.from('members').select('email, first_name, last_name')
     .not('email', 'is', null)
@@ -133,7 +147,7 @@ Deno.serve(async (req) => {
 
   // Build and enqueue emails
   const senderDomain = 'notify.churchmanagementsuite.org'
-  const fromAddress = `Winners Chapel Cardiff <noreply@${senderDomain}>`
+  const fromAddress = `${tenantSenderName} <noreply@${senderDomain}>`
   let enqueued = 0
   let skipped = 0
 
@@ -147,7 +161,7 @@ Deno.serve(async (req) => {
     <tr><td align="center">
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;background-color:#ffffff;border-radius:8px;overflow:hidden;">
         <tr><td style="background-color:#1a2d4d;padding:24px 32px;text-align:center;">
-          <h1 style="margin:0;color:#ffffff;font-size:20px;font-weight:700;">Winners Chapel International Cardiff</h1>
+          <h1 style="margin:0;color:#ffffff;font-size:20px;font-weight:700;">${escHtml(tenantSenderName)}</h1>
         </td></tr>
         <tr><td style="padding:32px;">
           <p style="margin:0 0 16px;color:#333333;font-size:16px;">Dear ${escHtml(firstName)},</p>
@@ -187,7 +201,7 @@ Deno.serve(async (req) => {
       sender_domain: senderDomain,
       subject: subject,
       html: htmlTemplate(firstName),
-      text: `Dear ${firstName},\n\n${subject}\n\n${body}\n\nThis email was sent to ${audience} members.\n\nWinners Chapel International Cardiff`,
+      text: `Dear ${firstName},\n\n${subject}\n\n${body}\n\nThis email was sent to ${audience} members.\n\n${tenantSenderName}`,
       purpose: 'transactional',
       label: 'email-alert',
       message_id: messageId,
