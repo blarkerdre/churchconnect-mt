@@ -594,6 +594,7 @@ export default function MyProfile() {
 }
 
 function CreateMemberProfile({ user, onCreated, wsfCentres, churchUnits }) {
+  const { tenantId } = useTenantQuery();
   const nameParts = (user?.user_metadata?.full_name || "").trim().split(/\s+/);
   const defaultFirst = nameParts[0] || "";
   const defaultLast = nameParts.slice(1).join(" ") || "";
