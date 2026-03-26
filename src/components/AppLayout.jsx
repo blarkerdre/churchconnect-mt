@@ -5,7 +5,7 @@ import {
   LayoutDashboard, Users, CalendarDays, HeartHandshake,
   Heart, Megaphone, Menu, LogOut,
   ClipboardList, Car, BarChart2, ChevronLeft, Globe, Shield, FileText, TrendingUp, Settings, Mail, AlertTriangle,
-  BookOpen, ChevronsUpDown, Check
+  BookOpen, ChevronsUpDown, Check, Lock
 } from "lucide-react";
 import winnersLogo from "@/assets/winners-chapel-logo.png";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,10 @@ import MobileBottomNav from "@/components/navigation/MobileBottomNav";
 import { getEnvironmentLabel, getBackendHost, isBackendMismatch, isPreviewEnvironment } from "@/lib/environment";
 import { useAppSetting } from "@/hooks/useAppSetting";
 import { getIconComponent } from "@/lib/icon-map";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 // Role requirements: null = any authenticated user, "admin" = admin/super_admin, "leader" = admin or unit_leader
 const allNavItems = [
@@ -43,6 +47,9 @@ export default function Layout({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [tenantDropdownOpen, setTenantDropdownOpen] = useState(false);
+  const [pendingTenantSwitch, setPendingTenantSwitch] = useState(null);
+  const [switchPassword, setSwitchPassword] = useState("");
+  const [switchLoading, setSwitchLoading] = useState(false);
   const location = useLocation();
   const { signOut, profile, isAdmin, isUnitLeader, isWSFLeader, roles, leaderUnits, isTenantOwner, isTenantAdmin } = useAuth();
   const { currentTenant, tenantId, tenantMemberships, switchTenant } = useTenant();
@@ -86,6 +93,35 @@ export default function Layout({ children }) {
     if (isUnitLeader) return "Unit Leader";
     if (isWSFLeader) return "WSF Leader";
     return "Member";
+  };
+
+  const handleTenantSwitchRequest = (targetTenantId) => {
+    if (targetTenantId === tenantId) {
+      setTenantDropdownOpen(false);
+      return;
+    }
+    setPendingTenantSwitch(targetTenantId);
+    setSwitchPassword("");
+    setTenantDropdownOpen(false);
+  };
+
+  const confirmTenantSwitch = async () => {
+    if (!switchPassword || !pendingTenantSwitch) return;
+    setSwitchLoading(true);
+    try {
+      const email = profile?.email;
+      if (!email) throw new Error("No email found");
+      const { error } = await supabase.auth.signInWithPassword({ email, password: switchPassword });
+      if (error) throw error;
+      switchTenant(pendingTenantSwitch);
+      setPendingTenantSwitch(null);
+      setSwitchPassword("");
+      toast.success("Tenant switched successfully");
+    } catch (err) {
+      toast.error("Incorrect password. Please try again.");
+    } finally {
+      setSwitchLoading(false);
+    }
   };
 
   return (
@@ -132,10 +168,7 @@ export default function Layout({ children }) {
                       return (
                         <button
                           key={m.id}
-                          onClick={() => {
-                            switchTenant(m.tenant_id);
-                            setTenantDropdownOpen(false);
-                          }}
+                          onClick={() => handleTenantSwitchRequest(m.tenant_id)}
                           className={`w-full flex items-center gap-2 px-3 py-2 text-xs text-left hover:bg-accent transition-colors ${isSelected ? "bg-accent/50 font-medium" : ""}`}
                         >
                           {t?.logo_url && <img src={t.logo_url} alt="" className="h-4 w-4 rounded object-contain shrink-0" />}
@@ -255,6 +288,12 @@ export default function Layout({ children }) {
                   {getEnvironmentLabel()}
                 </span>
               )}
+              {currentTenant && (
+                <span className="text-[10px] font-medium text-primary bg-primary/10 border border-primary/20 px-2 py-0.5 rounded-full flex items-center gap-1 max-w-[160px]">
+                  {currentTenant.logo_url && <img src={currentTenant.logo_url} alt="" className="h-3.5 w-3.5 rounded object-contain shrink-0" />}
+                  <span className="truncate">{currentTenant.name}</span>
+                </span>
+              )}
               <span className="text-[11px] font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded-full hidden sm:inline">
                 {getRoleTitle()}
               </span>
@@ -271,6 +310,29 @@ export default function Layout({ children }) {
         </main>
         <MobileBottomNav />
       </div>
+      {/* Password confirmation dialog for tenant switching */}
+      <Dialog open={!!pendingTenantSwitch} onOpenChange={(open) => { if (!open) { setPendingTenantSwitch(null); setSwitchPassword(""); } }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><Lock className="h-4 w-4" /> Confirm Tenant Switch</DialogTitle>
+            <DialogDescription>Enter your password to switch to a different tenant.</DialogDescription>
+          </DialogHeader>
+          <form onSubmit={(e) => { e.preventDefault(); confirmTenantSwitch(); }}>
+            <Input
+              type="password"
+              placeholder="Enter your password"
+              value={switchPassword}
+              onChange={(e) => setSwitchPassword(e.target.value)}
+              autoFocus
+              disabled={switchLoading}
+            />
+            <DialogFooter className="mt-4">
+              <Button type="button" variant="outline" onClick={() => { setPendingTenantSwitch(null); setSwitchPassword(""); }} disabled={switchLoading}>Cancel</Button>
+              <Button type="submit" disabled={!switchPassword || switchLoading}>{switchLoading ? "Verifying..." : "Confirm"}</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
