@@ -1,48 +1,52 @@
 
 
-## Plan: Fix Backend Connection to Correct Project
+## Plan: Per-Tenant Favicon and Public Image (OG Image)
 
-### Root Cause
+### What We're Building
 
-`vite.config.js` has **hardcoded fallback values** from the original project (`komqiadgeaapeuuzbovn`). The `define` block then force-overrides `import.meta.env` variables at build time, baking in the old project's URL and anon key even though the `.env` file has the correct values for the remixed project (`qfordhikmtgedfybktjg`).
+Each tenant will be able to upload and configure:
+1. **Custom favicon** -- displayed in the browser tab when users are in that tenant's context
+2. **Public/social image (OG image)** -- used for link previews when the tenant's URL is shared on social media or messaging apps
 
-This is why:
-- You can sign in with old credentials (hitting old auth)
-- Direct DB queries to this project show zero users
-- Both "test" and "live" show identical data (it's all from the old project)
+### How It Works
 
-### Fix
+**Storage**: Both images are stored in the existing `profile-photos` bucket under `{tenantId}/tenant-favicon` and `{tenantId}/tenant-og-image` paths (same pattern as tenant logos).
 
-**Remove the `define` block and hardcoded fallbacks from `vite.config.js`**. Vite natively handles `VITE_*` env vars from the `.env` file -- no manual override is needed.
+**Database**: The URLs are saved in `tenants.settings` JSON alongside existing fields like `primary_color`, `email_sender_name`, etc. New keys: `favicon_url` and `og_image_url`.
 
-The updated `vite.config.js` will be:
+**Dynamic favicon**: The `TenantThemeProvider` component (already watches tenant changes) will be extended to dynamically update the `<link rel="icon">` element in the document head when the tenant context changes.
 
-```js
-import react from '@vitejs/plugin-react'
-import { defineConfig } from 'vite'
-import path from 'path'
+**Dynamic OG meta tags**: A similar effect in `TenantThemeProvider` will update `<meta property="og:image">` and `<meta name="twitter:image">` tags dynamically based on the tenant's configured OG image. For the Auth page (pre-login), the tenant branding query already fetches tenant data -- we'll include the settings to set OG tags there too.
 
-export default defineConfig({
-  plugins: [react()],
-  resolve: {
-    alias: {
-      '@': path.resolve(__dirname, './src'),
-    },
-  },
-  server: {
-    host: '::',
-  },
-})
-```
+### Changes
 
-This aligns with the existing memory note about avoiding manual `define` blocks.
+**1. Settings page -- new "Branding" fields** (`src/pages/Settings.jsx`)
+- Add favicon upload and OG image upload fields in the existing Branding tab
+- Upload to `profile-photos` bucket with tenant-prefixed paths
+- Save URLs to `tenants.settings.favicon_url` and `tenants.settings.og_image_url`
+- Show preview of current favicon and OG image with remove option
 
-### After the Fix
+**2. TenantThemeProvider** (`src/components/tenants/TenantThemeProvider.jsx`)
+- Read `favicon_url` and `og_image_url` from `currentTenant.settings`
+- Dynamically set/restore `<link rel="icon">` in document head
+- Dynamically set/restore OG meta tags
+- On cleanup/tenant switch, restore defaults from `index.html`
 
-- The app will connect to `qfordhikmtgedfybktjg` (this project's backend)
-- The database will be empty (fresh remix) -- no users exist yet
-- You will need to create your first admin account (via signup or the admin edge function)
+**3. Auth page** (`src/pages/Auth.jsx`)
+- The tenant branding query already fetches tenant data including settings
+- Use `tenant.settings.favicon_url` to set favicon on the login page before auth
+- Use `tenant.settings.og_image_url` for OG meta tags on tenant login pages
 
-### Files Changed
-- `vite.config.js` -- remove `define` block and old fallback values
+**4. PWA manifest** (`public/manifest.json`)
+- Keep the default manifest as-is (PWA icons are app-level, not tenant-level)
+- Tenant favicons apply to browser tabs only
+
+### No database migration needed
+The `tenants.settings` JSONB column already exists and is flexible enough to store these new keys.
+
+### Technical Details
+- Favicon is swapped by finding/creating `link[rel="icon"]` in `document.head` and updating its `href`
+- OG tags are swapped similarly via `document.querySelector('meta[property="og:image"]')`
+- Default favicon (`/favicon.jpg`) is restored when no tenant favicon is set
+- Image uploads reuse the existing tenant logo upload pattern from Settings
 
