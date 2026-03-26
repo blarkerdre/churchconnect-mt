@@ -1,30 +1,32 @@
+## Plan: Create Demo Church (TEST) Tenant
 
+### What We'll Do
 
-## Plan: Auto-redirect to Tenant URL After Default Login
+Use the existing `register-tenant` edge function to create a test tenant with a super admin account. This function handles everything atomically: tenant record, auth user, tenant membership, user role, and profile.
 
-### Problem
-When users sign in via `/auth` (no tenant slug), they redirect to `/` which works but lacks tenant-prefixed URL, breaking consistent branding and bookmarkable URLs.
+### Steps
 
-### Solution
-In `Auth.jsx`, when `user` is detected and there's no `tenantSlug` in the URL, query the user's `tenant_memberships` to find their tenant slug, then redirect to `/t/{slug}` instead of `/`.
+1. **Invoke the `register-tenant` edge function** with:
+  - `church_name`: "Demo Church (TEST)"
+  - `slug`: "demo-test"
+  - `admin_email`: your email ([kugbiyiadeniyi@gmail.com](mailto:kugbiyiadeniyi@gmail.com))
+  - `admin_password`: a password you choose
+  - `admin_full_name`: "Adeniyi Kugbiyi"
+  - `timezone`: "Europe/London"
+2. **Verify** the tenant, membership, and roles were created correctly
 
-### Changes
+### What You'll Get
 
-**`src/pages/Auth.jsx`**
-- Add a query for the user's tenant membership when `user` is set and no `tenantSlug` is present
-- Query `tenant_memberships` joined with `tenants` to get the slug
-- Redirect to `/t/{slug}` if a membership is found, fall back to `/` if none exists
-- Show loading state while the membership query resolves
+- A tenant at `/t/demo-test/` for safe testing
+- A super admin account linked to it
+- Full isolation from any future production tenants
 
-The redirect block (lines 68-71) changes from:
-```js
-if (user) {
-  const redirectTo = tenantSlug ? `/t/${tenantSlug}` : "/";
-  return <Navigate to={redirectTo} replace />;
-}
-```
-To: query `tenant_memberships` for the logged-in user, pick the first (or default) membership's tenant slug, and redirect to `/t/{slug}`. While the query loads, show the existing loading spinner. If the user has no memberships, fall back to `/`.
+### Technical Details
 
-### No other files need changes
-The rest of the routing (TenantProvider, AppPages, navigation) already handles tenant-prefixed URLs correctly.
+- No code changes or migrations needed
+- The edge function creates: tenant row, auth user (or reuses existing), `tenant_memberships` (owner), `user_roles` (super_admin), and updates the profile with `tenant_id`
+- The `DEFAULT_TENANT_ID` in `TenantContext.jsx` references `a0000000-0000-0000-0000-000000000001` — after creation, we may want to update this to match the new tenant's actual UUID
 
+### One Question
+
+I need a password for the admin account. What password would you like to use for [kugbiyiadeniyi@gmail.com](mailto:kugbiyiadeniyi@gmail.com)?
