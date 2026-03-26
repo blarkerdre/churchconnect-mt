@@ -180,7 +180,7 @@ function AppRoutes() {
       <Route path="/unsubscribe" element={<Unsubscribe />} />
 
       {/* Tenant-prefixed public routes */}
-      <Route path="/t/:tenantSlug/auth" element={<Auth />} />
+      <Route path="/t/:tenantSlug/auth" element={<AuthProvider><Auth /></AuthProvider>} />
       <Route path="/t/:tenantSlug/register" element={<PublicRegistration />} />
       <Route path="/t/:tenantSlug/wofbi-register" element={<PublicWoFBIRegistration />} />
 
