@@ -14,7 +14,6 @@ import { toast } from "@/components/ui/use-toast";
 import { Toaster } from "@/components/ui/toaster";
 import { suggestClosestWSFCentre } from "@/lib/wsf-suggest";
 import { normalizePhone } from "@/lib/phone-utils";
-import { useChurchUnits } from "@/hooks/useChurchUnits";
 const STATUSES = ["First Timer", "New Convert", "Visitor", "Active"];
 const GENDERS = ["Male", "Female"];
 
