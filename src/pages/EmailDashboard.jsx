@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useTenantQuery } from "@/hooks/useTenantQuery";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -28,6 +29,7 @@ const statusConfig = {
 const PAGE_SIZE = 50;
 
 export default function EmailDashboard() {
+  const { tenantId, scopeQuery } = useTenantQuery();
   const [timeRange, setTimeRange] = useState("7d");
   const [templateFilter, setTemplateFilter] = useState("All");
   const [statusFilter, setStatusFilter] = useState("All");
@@ -40,14 +42,16 @@ export default function EmailDashboard() {
 
   // Fetch all logs for the time range (deduplicate client-side by message_id)
   const { data: rawLogs = [], isLoading } = useQuery({
-    queryKey: ["email-logs", startDate],
+    queryKey: ["email-logs", startDate, tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from("email_send_log")
         .select("*")
         .gte("created_at", startDate)
         .order("created_at", { ascending: false })
         .limit(1000);
+      query = scopeQuery(query);
+      const { data, error } = await query;
       if (error) throw error;
       return data || [];
     },

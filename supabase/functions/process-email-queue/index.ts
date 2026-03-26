@@ -246,12 +246,9 @@ Deno.serve(async (req) => {
       }
 
       try {
-        // Build the email request.
-        // run_id is ONLY forwarded for auth_emails (set by the auth-email-hook).
-        // For transactional_emails it must NEVER be included — the API creates
-        // a run inline from the idempotency_key. Stripping it here protects
-        // against stale payloads that may still carry a legacy run_id.
-        const emailRequest: Record<string, unknown> = {
+        await sendLovableEmail(
+          {
+            run_id: payload.run_id,
             to: payload.to,
             from: payload.from,
             sender_domain: payload.sender_domain,
@@ -263,13 +260,10 @@ Deno.serve(async (req) => {
             idempotency_key: payload.idempotency_key,
             unsubscribe_token: payload.unsubscribe_token,
             message_id: payload.message_id,
-        }
-        if (queue === 'auth_emails' && payload.run_id) {
-          emailRequest.run_id = payload.run_id
-        }
-
-        await sendLovableEmail(
-          emailRequest as any,
+          },
+          // sendUrl is optional — when LOVABLE_SEND_URL is not set, the library
+          // falls back to the default Lovable API endpoint (https://api.lovable.dev).
+          // Set LOVABLE_SEND_URL as a Supabase secret to override (e.g. for local dev).
           { apiKey, sendUrl: Deno.env.get('LOVABLE_SEND_URL') }
         )
 
