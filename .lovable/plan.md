@@ -1,31 +1,37 @@
 
 
-## Root Cause Found: Missing Environment Variables in Published Build
+## WSF Attendance Tenant Isolation Audit
 
-### The Error
+### Issues Found
 
-The live site at `app.churchmanagementsuite.org` crashes immediately with:
+**1. Reports query missing explicit tenant scope (line 59-63)**
+The `wsf_attendance_reports` SELECT query filters only by `centre_id` using `.in()`, not by `tenant_id`. While the centres list passed as a prop is tenant-scoped (from `WSFManagement.jsx`), the query itself has no direct tenant filter. If RLS is permissive or centre IDs overlap, this could leak cross-tenant data.
 
-```
-Error: supabaseUrl is required.
-```
+**Fix:** Add `tenantId` to the query key and use `scopeQuery` to add `.eq("tenant_id", tenantId)`.
 
-This means `VITE_SUPABASE_URL` is **undefined** in the published build. The Supabase client (`src/integrations/supabase/client.ts`) calls `createClient(undefined, undefined)` which throws before React even mounts -- hence the blank white screen.
+**2. Reports query key missing tenantId (line 56)**
+`queryKey: ["wsf-attendance-reports", visibleCentreIds]` — no tenant in the cache key. If a user switches tenants, stale data from the previous tenant could be served from cache.
 
-### Why Preview Works But Published Doesn't
+**Fix:** Change to `["wsf-attendance-reports", tenantId, visibleCentreIds]`.
 
-- **Preview**: Vite dev server injects `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` from the auto-managed `.env` file at runtime
-- **Published**: These values are baked into the JS bundle at build time. If the build ran without the env vars present, the published bundle has `undefined` for both values
+**3. Update mutation missing tenant scope (line 73)**
+`supabase.from("wsf_attendance_reports").update(payload).eq("id", editing.id)` — no tenant filter on the update. Relies solely on RLS.
 
-### This Is Not a Code Bug
+**Fix:** Add `.eq("tenant_id", tenantId)` to the update query for defense-in-depth.
 
-The `.env` file and `client.ts` are auto-generated and cannot be edited. The env vars exist in the dev environment (preview works). The published build simply doesn't have them baked in.
+**4. Delete mutation missing tenant scope (line 88-91)**
+Same issue — deletes by `id` only, no tenant filter.
 
-### Fix
+**Fix:** Add `.eq("tenant_id", tenantId)` to the delete query.
 
-**Re-publish the project** -- click Publish, then Update. This will trigger a fresh build that should pick up the current `.env` values and bake them into the production bundle.
+### Changes
 
-If re-publishing still produces a blank screen with the same error, this is a platform-level issue with env var injection during the publish build process, and would need to be escalated.
+**File: `src/components/wsf/WSFAttendanceTab.jsx`**
 
-### No code changes needed
+1. Reports query (line 56-66): Add `tenantId` to query key, wrap query with `scopeQuery`
+2. Update mutation (line 73): Add `.eq("tenant_id", tenantId)` 
+3. Delete mutation (line 88): Add `.eq("tenant_id", tenantId)`
+
+### No database or migration changes needed
+RLS policies already exist on `wsf_attendance_reports` — these code changes add defense-in-depth at the application layer.
 
