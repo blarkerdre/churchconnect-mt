@@ -68,6 +68,22 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Fetch tenant settings for sender name
+    let churchName = "Winners Chapel International Cardiff";
+    let churchShortName = "Winners Chapel Cardiff";
+    if (tenant_id) {
+      const { data: tenantRow } = await supabase
+        .from("tenants")
+        .select("name, settings")
+        .eq("id", tenant_id)
+        .single();
+      if (tenantRow) {
+        const s = tenantRow.settings as Record<string, unknown> | null;
+        churchName = (s?.email_sender_name as string) || tenantRow.name || churchName;
+        churchShortName = churchName;
+      }
+    }
+
     // Look up the assigned user's profile and member record for email/phone
     const { data: profile } = await supabase
       .from("profiles")
@@ -86,12 +102,12 @@ Deno.serve(async (req) => {
     const recipientName = profile?.full_name || memberRecord?.first_name || "Team Member";
 
     const subject = `New Follow-up Task Assigned: ${member_name}`;
-    const bodyText = `Hi ${recipientName},\n\nYou have been assigned a new ${followup_type || "follow-up"} task for ${member_name}.\n\n${description || ""}\n\nPlease log in to the Church Management System to view and manage this task.\n\nGod bless,\nWinners Chapel International Cardiff`;
+    const bodyText = `Hi ${recipientName},\n\nYou have been assigned a new ${followup_type || "follow-up"} task for ${member_name}.\n\n${description || ""}\n\nPlease log in to the Church Management System to view and manage this task.\n\nGod bless,\n${churchName}`;
 
     // Send email notification via queue
     if (recipientEmail) {
       const senderDomain = "notify.churchmanagementsuite.org";
-      const fromAddress = `Winners Chapel Cardiff <noreply@${senderDomain}>`;
+      const fromAddress = `${churchShortName} <noreply@${senderDomain}>`;
       const messageId = `followup-assign-${crypto.randomUUID()}`;
 
       const htmlContent = `
@@ -103,7 +119,7 @@ Deno.serve(async (req) => {
     <tr><td align="center">
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;background-color:#ffffff;border-radius:8px;overflow:hidden;">
         <tr><td style="background-color:#1a2d4d;padding:24px 32px;text-align:center;">
-          <h1 style="margin:0;color:#ffffff;font-size:20px;font-weight:700;">Winners Chapel International Cardiff</h1>
+          <h1 style="margin:0;color:#ffffff;font-size:20px;font-weight:700;">${escHtml(churchName)}</h1>
         </td></tr>
         <tr><td style="padding:32px;">
           <p style="margin:0 0 16px;color:#333333;font-size:16px;">Dear ${escHtml(recipientName)},</p>
@@ -179,7 +195,7 @@ Deno.serve(async (req) => {
         if (!cleaned.startsWith("+")) cleaned = "+" + cleaned;
 
         if (/^\+[1-9]\d{6,14}$/.test(cleaned)) {
-          const smsBody = `Hi ${recipientName}, you've been assigned a new follow-up task for ${member_name}. Please check the Church Management System. - Winners Chapel Cardiff`;
+          const smsBody = `Hi ${recipientName}, you've been assigned a new follow-up task for ${member_name}. Please check the Church Management System. - ${churchShortName}`;
 
           try {
             const webhookUrl = `${supabaseUrl}/functions/v1/twilio-webhook`;

@@ -70,10 +70,29 @@ Deno.serve(async (req) => {
     const { recipients, message, sms_type, reference_id, channel, tenant_id } = body;
     const msgChannel = channel === "whatsapp" ? "whatsapp" : "sms";
 
-    // Resolve the From number based on channel
+    // Resolve per-tenant Twilio numbers if tenant_id provided
     let fromNumber = TWILIO_FROM;
+    let tenantWhatsappFrom: string | null = null;
+    if (tenant_id) {
+      const serviceClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+      const { data: tenantRow } = await serviceClient
+        .from("tenants")
+        .select("settings")
+        .eq("id", tenant_id)
+        .single();
+      if (tenantRow?.settings) {
+        const s = tenantRow.settings as Record<string, unknown>;
+        if (msgChannel === "sms" && s.twilio_sms_from) {
+          fromNumber = s.twilio_sms_from as string;
+        }
+        if (s.twilio_whatsapp_from) {
+          tenantWhatsappFrom = s.twilio_whatsapp_from as string;
+        }
+      }
+    }
+
     if (msgChannel === "whatsapp") {
-      const waFromRaw = Deno.env.get("TWILIO_WHATSAPP_FROM");
+      const waFromRaw = tenantWhatsappFrom || Deno.env.get("TWILIO_WHATSAPP_FROM");
       if (!waFromRaw) throw new Error("TWILIO_WHATSAPP_FROM is not configured");
       const waFrom = waFromRaw.replace(/\s/g, "");
       fromNumber = waFrom.startsWith("whatsapp:") ? waFrom : `whatsapp:${waFrom}`;
