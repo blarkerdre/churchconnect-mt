@@ -2533,6 +2533,13 @@ export type Database = {
         Args: { payload: Json; queue_name: string }
         Returns: number
       }
+      get_active_wsf_centre_names: {
+        Args: never
+        Returns: {
+          id: string
+          name: string
+        }[]
+      }
       get_exam_questions_safe: {
         Args: { _subject_id?: string; _training_type?: string }
         Returns: {
