@@ -2558,6 +2558,16 @@ export type Database = {
           training_type: string
         }[]
       }
+      get_tenant_by_slug: {
+        Args: { _slug: string }
+        Returns: {
+          id: string
+          logo_url: string
+          name: string
+          settings: Json
+          slug: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
