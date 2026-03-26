@@ -5,6 +5,40 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+function jsonResponse(body: Record<string, unknown>, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
+async function getOrCreateAuthUser(supabase: ReturnType<typeof createClient>, email: string, password: string, fullName: string) {
+  const { data: newUser, error: createError } = await supabase.auth.admin.createUser({
+    email,
+    password,
+    email_confirm: true,
+    user_metadata: { full_name: fullName },
+  });
+
+  if (!createError) {
+    return { userId: newUser.user.id, reusedExisting: false };
+  }
+
+  if (!createError.message?.toLowerCase().includes("already been registered")) {
+    throw createError;
+  }
+
+  const { data, error: listError } = await supabase.auth.admin.listUsers();
+  if (listError) throw listError;
+
+  const existingUser = data.users.find((user) => user.email?.toLowerCase() === email.toLowerCase());
+  if (!existingUser) {
+    throw new Error("User exists in authentication but could not be resolved.");
+  }
+
+  return { userId: existingUser.id, reusedExisting: true };
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
@@ -14,48 +48,72 @@ Deno.serve(async (req) => {
     const supabase = createClient(supabaseUrl, serviceKey);
 
     // Verify caller is admin
-    const authHeader = req.headers.get("Authorization")!;
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return jsonResponse({ error: "Unauthorized" }, 401);
+    }
+
     const token = authHeader.replace("Bearer ", "");
     const { data: { user: caller } } = await supabase.auth.getUser(token);
-    if (!caller) return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    if (!caller) return jsonResponse({ error: "Unauthorized" }, 401);
 
     const { data: isAdmin } = await supabase.rpc("is_admin", { _user_id: caller.id });
-    if (!isAdmin) return new Response(JSON.stringify({ error: "Admin access required" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    if (!isAdmin) return jsonResponse({ error: "Admin access required" }, 403);
 
     const { email, password, full_name, role, member_data, tenant_id } = await req.json();
-    if (!email || !password) return new Response(JSON.stringify({ error: "Email and password required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    if (!email || !password) return jsonResponse({ error: "Email and password required" }, 400);
+
+    const normalizedEmail = String(email).trim().toLowerCase();
+    const normalizedFullName = String(full_name || email).trim();
 
     // Only super_admin can assign elevated roles
     if (role && ['admin', 'super_admin'].includes(role)) {
       const { data: isSuperAdmin } = await supabase.rpc("has_role", { _user_id: caller.id, _role: "super_admin" });
-      if (!isSuperAdmin) return new Response(JSON.stringify({ error: "Super-admin access required to assign elevated roles" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      if (!isSuperAdmin) return jsonResponse({ error: "Super-admin access required to assign elevated roles" }, 403);
     }
 
-    // Create user via admin API
-    const { data: newUser, error: createError } = await supabase.auth.admin.createUser({
-      email,
+    const { userId, reusedExisting } = await getOrCreateAuthUser(
+      supabase,
+      normalizedEmail,
       password,
-      email_confirm: true,
-      user_metadata: { full_name: full_name || email },
+      normalizedFullName,
+    );
+
+    await supabase.from("profiles").upsert({
+      user_id: userId,
+      email: normalizedEmail,
+      full_name: normalizedFullName,
+      ...(tenant_id ? { tenant_id } : {}),
+    }, {
+      onConflict: "user_id",
     });
-
-    if (createError) return new Response(JSON.stringify({ error: createError.message }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-
-    const userId = newUser?.user?.id;
 
     // Assign role (with tenant_id)
     if (role && userId) {
-      await supabase.from("user_roles").insert({ user_id: userId, role, ...(tenant_id ? { tenant_id } : {}) });
+      await supabase.from("user_roles").upsert(
+        { user_id: userId, role, ...(tenant_id ? { tenant_id } : {}) },
+        { onConflict: "user_id,role" },
+      );
     }
 
     // Add tenant membership if tenant_id provided
     if (tenant_id && userId) {
-      await supabase.from("tenant_memberships").insert({ user_id: userId, tenant_id, role: "member" });
-    }
+      const { data: existingMembership } = await supabase
+        .from("tenant_memberships")
+        .select("id")
+        .eq("tenant_id", tenant_id)
+        .eq("user_id", userId)
+        .maybeSingle();
 
-    // Update profile with tenant_id if available
-    if (tenant_id && userId) {
-      await supabase.from("profiles").update({ tenant_id }).eq("user_id", userId);
+      if (!existingMembership) {
+        const { error: membershipError } = await supabase
+          .from("tenant_memberships")
+          .insert({ user_id: userId, tenant_id, role: "member" });
+
+        if (membershipError) {
+          return jsonResponse({ error: membershipError.message }, 400);
+        }
+      }
     }
 
     // Create linked member record if member_data provided
@@ -64,7 +122,7 @@ Deno.serve(async (req) => {
       const memberPayload = {
         first_name: member_data.first_name,
         last_name: member_data.last_name,
-        email: member_data.email || email,
+        email: member_data.email || normalizedEmail,
         phone: member_data.phone || null,
         address: member_data.address || null,
         city: member_data.city || null,
@@ -98,25 +156,37 @@ Deno.serve(async (req) => {
         .single();
 
       if (memberError) {
-        return new Response(JSON.stringify({ error: `User created but member creation failed: ${memberError.message}`, user_id: userId }), {
-          status: 207,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return jsonResponse({ error: `User created but member creation failed: ${memberError.message}`, user_id: userId }, 207);
       }
       memberId = memberRow?.id;
     } else if (userId) {
       // No member_data provided — try to auto-link existing unlinked member by email
       const { data: linkedMemberId } = await supabase.rpc("auto_link_member_by_email", {
         _user_id: userId,
-        _email: email,
+        _email: normalizedEmail,
       });
-      if (linkedMemberId) memberId = linkedMemberId;
+      if (linkedMemberId) {
+        memberId = linkedMemberId;
+
+        if (tenant_id) {
+          const { data: linkedMember } = await supabase
+            .from("members")
+            .select("tenant_id")
+            .eq("id", linkedMemberId)
+            .maybeSingle();
+
+          if (linkedMember && !linkedMember.tenant_id) {
+            await supabase
+              .from("members")
+              .update({ tenant_id })
+              .eq("id", linkedMemberId);
+          }
+        }
+      }
     }
 
-    return new Response(JSON.stringify({ success: true, user_id: userId, member_id: memberId }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return jsonResponse({ success: true, user_id: userId, member_id: memberId, reused_existing_user: reusedExisting });
   } catch (err) {
-    return new Response(JSON.stringify({ error: err.message }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    return jsonResponse({ error: err.message }, 500);
   }
 });
