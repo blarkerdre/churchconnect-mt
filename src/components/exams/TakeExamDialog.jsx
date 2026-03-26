@@ -69,19 +69,16 @@ export default function TakeExamDialog({ open, onOpenChange, trainingType, membe
   const timeLimitMinutes = subjectData?.time_limit_minutes ?? null;
   const shouldRandomize = subjectData?.randomize_questions ?? false;
 
-  // Fetch questions
+  // Fetch questions via safe RPC (no correct_answer exposed)
   const { data: questions = [], isLoading } = useQuery({
     queryKey: ["exam-questions-take", subjectId, trainingType],
     queryFn: async () => {
-      let query = supabase.from("exam_questions").select("*");
-      if (subjectId) {
-        query = query.eq("subject_id", subjectId);
-      } else {
-        query = query.eq("training_type", trainingType);
-      }
-      const { data, error } = await query.order("sort_order").order("created_at");
+      const { data, error } = await supabase.rpc("get_exam_questions_safe", {
+        _subject_id: subjectId || null,
+        _training_type: subjectId ? null : trainingType,
+      });
       if (error) throw error;
-      return data;
+      return data || [];
     },
     enabled: open && !!(subjectId || trainingType),
   });
@@ -117,7 +114,7 @@ export default function TakeExamDialog({ open, onOpenChange, trainingType, membe
     return () => clearInterval(timerRef.current);
   }, [timeLeft !== null, submitted]);
 
-  // Auto-submit on timer expiry (not in preview mode)
+  // Auto-submit on timer expiry
   const doSubmit = useCallback(() => {
     if (!submitted && shuffledQuestions.length > 0 && !previewMode) {
       submitMutation.mutate();
@@ -136,51 +133,21 @@ export default function TakeExamDialog({ open, onOpenChange, trainingType, membe
     }
   }, [timeLeft, submitted, doSubmit, previewMode]);
 
+  // Submit via edge function (server-side grading)
   const submitMutation = useMutation({
     mutationFn: async () => {
-      const qs = shuffledQuestions;
-      const totalPoints = qs.reduce((s, q) => s + q.points, 0);
-      let score = 0;
-      const answerRows = qs.map(q => {
-        const qType = q.question_type || "multiple_choice";
-        const selected = answers[q.id] || null;
-        let isCorrect = false;
-        if (qType === "multiple_choice") isCorrect = selected === q.correct_answer;
-        else if (qType === "fill_in_gap") isCorrect = selected && q.correct_answer && selected.trim().toLowerCase() === q.correct_answer.trim().toLowerCase();
-        else if (qType === "drag_and_drop") isCorrect = selected === q.correct_answer;
-        if (isCorrect) score += q.points;
-        return { question_id: q.id, selected_answer: selected, is_correct: isCorrect };
-      });
-
-      const percentage = totalPoints > 0 ? (score / totalPoints) * 100 : 0;
-      const passed = percentage >= passThreshold;
-
-      const { data: attempt, error: attemptErr } = await supabase
-        .from("exam_attempts")
-        .insert({
+      const { data, error } = await supabase.functions.invoke("grade-exam", {
+        body: {
           member_id: memberId,
-          training_type: trainingType,
           subject_id: subjectId || null,
-          completed_at: new Date().toISOString(),
-          score,
-          total_points: totalPoints,
-          passed,
-        })
-        .select("id")
-        .single();
-      if (attemptErr) throw attemptErr;
-
-      const answersPayload = answerRows.map(a => ({ ...a, attempt_id: attempt.id }));
-      const { error: ansErr } = await supabase.from("exam_answers").insert(answersPayload);
-      if (ansErr) throw ansErr;
-
-      if (subjectId) {
-        await checkCourseCompletion(memberId, trainingType);
-      } else if (passed) {
-        await issueCertificate(memberId, trainingType, attempt.id);
-      }
-
-      return { score, totalPoints, percentage, passed, answerRows };
+          training_type: trainingType,
+          answers,
+          tenant_id: tenantId,
+        },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      return data;
     },
     onSuccess: (data) => {
       setResult(data);
@@ -194,51 +161,6 @@ export default function TakeExamDialog({ open, onOpenChange, trainingType, membe
     },
     onError: (err) => toast({ title: "Error submitting exam", description: err.message, variant: "destructive" }),
   });
-
-  const checkCourseCompletion = async (memberId, courseName) => {
-    try {
-      const { data: course } = await supabase.from("exam_titles").select("id, pass_mark_percentage").eq("name", courseName).maybeSingle();
-      if (!course) return;
-      const { data: subjects } = await supabase.from("exam_subjects").select("id").eq("course_id", course.id).eq("is_active", true);
-      if (!subjects || subjects.length === 0) return;
-      const subjectIds = subjects.map(s => s.id);
-      const { data: attempts } = await supabase.from("exam_attempts").select("subject_id, score, total_points").eq("member_id", memberId).in("subject_id", subjectIds);
-      if (!attempts) return;
-      const bestBySubject = {};
-      attempts.forEach(a => {
-        if (!a.subject_id) return;
-        const pct = a.total_points > 0 ? a.score / a.total_points : 0;
-        if (!bestBySubject[a.subject_id] || pct > (bestBySubject[a.subject_id].score / bestBySubject[a.subject_id].total_points)) {
-          bestBySubject[a.subject_id] = a;
-        }
-      });
-      if (Object.keys(bestBySubject).length < subjectIds.length) return;
-      const totalScore = Object.values(bestBySubject).reduce((s, a) => s + (a.score || 0), 0);
-      const totalPoints = Object.values(bestBySubject).reduce((s, a) => s + (a.total_points || 0), 0);
-      const aggregatePct = totalPoints > 0 ? (totalScore / totalPoints) * 100 : 0;
-      if (aggregatePct >= course.pass_mark_percentage) {
-        try {
-          const { data: certData, error: certErr } = await supabase.functions.invoke("issue-certificate", {
-            body: { member_id: memberId, training_type: courseName, tenant_id: tenantId },
-          });
-          if (!certErr && certData?.success) {
-            toast({ title: "🎉 Certificate issued!", description: `You passed ${courseName} with ${Math.round(aggregatePct)}% aggregate.` });
-          }
-        } catch (e) { console.error("Certificate generation failed:", e); }
-      }
-    } catch (e) { console.error("Course completion check failed:", e); }
-  };
-
-  const issueCertificate = async (memberId, trainingType, attemptId) => {
-    try {
-      const { data: certData, error: certErr } = await supabase.functions.invoke("issue-certificate", {
-        body: { member_id: memberId, training_type: trainingType, tenant_id: tenantId },
-      });
-      if (!certErr && certData?.success) {
-        await supabase.from("exam_attempts").update({ certificate_issued: true }).eq("id", attemptId);
-      }
-    } catch (e) { console.error("Certificate generation failed:", e); }
-  };
 
   const handleSubmit = () => {
     const unanswered = shuffledQuestions.filter(q => !answers[q.id]);
@@ -315,7 +237,7 @@ export default function TakeExamDialog({ open, onOpenChange, trainingType, membe
         ) : shuffledQuestions.length === 0 && !submitted ? (
           <p className="text-sm text-muted-foreground text-center py-8">No exam questions available yet.</p>
         ) : submitted && result ? (
-          <ExamResult result={result} passThreshold={passThreshold} questions={shuffledQuestions} onClose={handleClose} />
+          <ExamResult result={result} questions={shuffledQuestions} onClose={handleClose} />
         ) : (
           <div className="space-y-4 py-2">
             <div className="flex items-center justify-between text-xs text-muted-foreground">
@@ -392,26 +314,28 @@ function DragDropInput({ question, items, onMove, onInit }) {
   );
 }
 
-function ExamResult({ result, passThreshold, questions, onClose }) {
+function ExamResult({ result, questions, onClose }) {
+  const correctAnswers = result.correctAnswers || {};
   return (
     <div className="space-y-6 py-4">
       <div className={`text-center p-6 rounded-xl border-2 ${result.passed ? "border-emerald-500/30 bg-emerald-500/5" : "border-destructive/30 bg-destructive/5"}`}>
         {result.passed ? <Award className="h-12 w-12 text-emerald-500 mx-auto mb-3" /> : <XCircle className="h-12 w-12 text-destructive mx-auto mb-3" />}
         <h3 className="text-lg font-display font-bold text-foreground">{result.passed ? "Congratulations! You Passed! 🎉" : "Not Quite There Yet"}</h3>
         <p className="text-2xl font-bold mt-2">{result.score}/{result.totalPoints}<span className="text-sm font-normal text-muted-foreground ml-2">({Math.round(result.percentage)}%)</span></p>
-        <p className="text-sm text-muted-foreground mt-1">Pass mark: {passThreshold}%</p>
+        <p className="text-sm text-muted-foreground mt-1">Pass mark: {result.passThreshold}%</p>
       </div>
       <div className="space-y-3">
         <h4 className="text-sm font-semibold text-foreground">Answer Review</h4>
         {questions.map((q, idx) => {
           const ansRow = result.answerRows.find(a => a.question_id === q.id);
+          const correctAnswer = correctAnswers[q.id];
           return (
             <div key={q.id} className={`p-3 rounded-lg border ${ansRow?.is_correct ? "border-emerald-500/30 bg-emerald-500/5" : "border-destructive/30 bg-destructive/5"}`}>
               <p className="text-sm font-medium"><span className="text-muted-foreground mr-1">{idx + 1}.</span>{q.question_text}</p>
               <div className="flex items-center gap-2 mt-1 text-xs">
                 {ansRow?.is_correct ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" /> : <XCircle className="h-3.5 w-3.5 text-destructive" />}
                 <span>Your answer: <strong>{ansRow?.selected_answer || "—"}</strong></span>
-                {!ansRow?.is_correct && <span className="text-emerald-600">Correct: <strong>{q.correct_answer}</strong></span>}
+                {!ansRow?.is_correct && correctAnswer && <span className="text-emerald-600">Correct: <strong>{correctAnswer}</strong></span>}
               </div>
             </div>
           );
