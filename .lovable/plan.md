@@ -1,19 +1,28 @@
 
 
-## Plan: Add Tenant Scope Banner to Danger Zone
+## Plan: Fix Conditional Hook Call in Auth.jsx
 
-### Change
+### Problem
+`Auth.jsx` has a **React hooks rule violation**: `useQuery` on line 69 is placed **after** an early `return` (line 60-66). When `loading` is true, the hook is skipped entirely; when loading becomes false, React sees a different number of hooks and crashes silently — producing a blank white screen.
 
-Add an alert banner at the top of the Danger Zone card showing which tenant's data will be affected. It will display something like: **"⚠ All actions below will only affect: Demo Church (TEST)"**
+### Fix
+Move the `useQuery` hook (lines 69-82) **above** the `if (loading)` early return (line 60), so all hooks are called unconditionally on every render. The `enabled` option already guards against premature execution.
 
-### Implementation
+### File: `src/pages/Auth.jsx`
 
-**File: `src/components/settings/DangerZoneSection.jsx`**
+**Before (simplified):**
+```jsx
+if (loading) { return <Loading />; }  // line 60
 
-1. Import `useTenant` from `@/contexts/TenantContext` and `Alert`/`AlertDescription` from `@/components/ui/alert`
-2. Get `currentTenant` from `useTenant()`
-3. Add an `Alert` banner inside the Danger Zone card, just before the Export section, displaying the tenant name: `currentTenant?.name || "Unknown Tenant"`
-4. Style it with a warning/info appearance so it's clearly visible
+const { data: userMembership, isLoading: membershipLoading } = useQuery({...}); // line 69
+```
 
-### No other files or migrations needed
+**After:**
+```jsx
+const { data: userMembership, isLoading: membershipLoading } = useQuery({...}); // moved up
+
+if (loading) { return <Loading />; }
+```
+
+### No other files changed
 
