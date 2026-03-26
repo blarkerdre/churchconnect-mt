@@ -103,5 +103,57 @@ export default function TenantThemeProvider({ children }) {
     };
   }, [currentTenant?.settings?.primary_color]);
 
+  // Dynamic favicon
+  useEffect(() => {
+    const faviconUrl = currentTenant?.settings?.favicon_url;
+    const link = document.querySelector('link[rel="icon"]') || (() => {
+      const el = document.createElement("link");
+      el.rel = "icon";
+      document.head.appendChild(el);
+      return el;
+    })();
+
+    if (faviconUrl) {
+      link.href = faviconUrl;
+      link.type = faviconUrl.endsWith(".png") ? "image/png" : faviconUrl.endsWith(".svg") ? "image/svg+xml" : "image/jpeg";
+    } else {
+      link.href = "/favicon.jpg";
+      link.type = "image/jpeg";
+    }
+
+    return () => {
+      link.href = "/favicon.jpg";
+      link.type = "image/jpeg";
+    };
+  }, [currentTenant?.settings?.favicon_url]);
+
+  // Dynamic OG image meta tags
+  useEffect(() => {
+    const ogImageUrl = currentTenant?.settings?.og_image_url;
+
+    const setMeta = (selector, attr, value) => {
+      let el = document.querySelector(selector);
+      if (!el && value) {
+        el = document.createElement("meta");
+        const [attrName, attrVal] = Object.entries(attr)[0];
+        el.setAttribute(attrName, attrVal);
+        document.head.appendChild(el);
+      }
+      if (el) el.setAttribute("content", value || "");
+    };
+
+    if (ogImageUrl) {
+      setMeta('meta[property="og:image"]', { property: "og:image" }, ogImageUrl);
+      setMeta('meta[name="twitter:image"]', { name: "twitter:image" }, ogImageUrl);
+    }
+
+    return () => {
+      // Restore defaults
+      const defaultOg = "https://storage.googleapis.com/gpt-engineer-file-uploads/dSCGfUp63RcMNJCUiPXsrrXGnlr2/social-images/social-1773439127872-1000559797.webp";
+      setMeta('meta[property="og:image"]', { property: "og:image" }, defaultOg);
+      setMeta('meta[name="twitter:image"]', { name: "twitter:image" }, defaultOg);
+    };
+  }, [currentTenant?.settings?.og_image_url]);
+
   return children;
 }
