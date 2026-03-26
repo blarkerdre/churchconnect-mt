@@ -30,7 +30,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { tenant_id, action } = await req.json();
+    const { tenant_id, action, password } = await req.json();
     if (!tenant_id || !["archive", "restore", "delete"].includes(action)) {
       return new Response(JSON.stringify({ error: "tenant_id and action (archive|restore|delete) required" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -62,6 +62,24 @@ Deno.serve(async (req) => {
     }
 
     if (action === "delete") {
+      // Require password re-authentication for permanent delete
+      if (!password) {
+        return new Response(JSON.stringify({ error: "Password required for permanent deletion" }), {
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // Verify password by signing in
+      const { error: authError } = await supabase.auth.signInWithPassword({
+        email: caller.email!,
+        password,
+      });
+      if (authError) {
+        return new Response(JSON.stringify({ error: "Invalid password. Deletion aborted." }), {
+          status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
       // Delete all tenant data in order (respecting FK constraints)
       const tables = [
         "tenant_invitations", "notifications", "messages", "audit_log",

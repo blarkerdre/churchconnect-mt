@@ -13,14 +13,16 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Separator } from "@/components/ui/separator";
 import { Progress } from "@/components/ui/progress";
+import { Alert, AlertTitle, AlertDescription as AlertDesc } from "@/components/ui/alert";
 import {
   Building2, Users, UserCheck, Plus, CheckCircle2, ArrowRightLeft, Clock, Pencil, Save,
   Image, Palette, Users2, Archive, ArchiveRestore, Trash2, BarChart3, AlertTriangle,
+  ShieldAlert, Eye, Skull,
 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import TenantUsersDialog from "@/components/tenants/TenantUsersDialog";
@@ -49,6 +51,23 @@ const PLAN_TIERS = [
   { value: "enterprise", label: "Enterprise", memberLimit: 10000, storageLimit: 20000 },
 ];
 
+const DATA_TABLES_FOR_COUNTS = [
+  { table: "members", label: "Members" },
+  { table: "attendance_sessions", label: "Attendance Sessions" },
+  { table: "attendance_records", label: "Attendance Records" },
+  { table: "events", label: "Events" },
+  { table: "event_registrations", label: "Event Registrations" },
+  { table: "followups", label: "Follow-ups" },
+  { table: "first_timers", label: "First Timers" },
+  { table: "pastoral_care", label: "Pastoral Care Cases" },
+  { table: "announcements", label: "Announcements" },
+  { table: "messages", label: "Messages" },
+  { table: "notifications", label: "Notifications" },
+  { table: "exam_attempts", label: "Exam Attempts" },
+  { table: "documents", label: "Documents" },
+  { table: "church_attendance_reports", label: "Church Reports" },
+];
+
 export default function TenantAdmin() {
   const { user } = useAuth();
   const { tenantId, switchTenant, tenantMemberships, currentTenant, tenantRole } = useTenant();
@@ -60,7 +79,12 @@ export default function TenantAdmin() {
   const [editForm, setEditForm] = useState({});
   const [newTenant, setNewTenant] = useState({ name: "", slug: "", timezone: "Europe/London" });
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
+  const [deletePassword, setDeletePassword] = useState("");
+  const [deleteStep, setDeleteStep] = useState(1); // 1=warning, 2=confirm text, 3=password
+  const [deleteTenant, setDeleteTenant] = useState(null);
   const [showArchived, setShowArchived] = useState(false);
+  const [restoreTenant, setRestoreTenant] = useState(null);
+  const [viewDataTenant, setViewDataTenant] = useState(null);
 
   const { data: queryTenants = [], isLoading, error: tenantsError } = useQuery({
     queryKey: ["tenants-admin"],
@@ -74,9 +98,7 @@ export default function TenantAdmin() {
   // Merge: direct query + membership-backed tenants + currentTenant fallback
   const tenants = useMemo(() => {
     const map = new Map();
-    // 1. Query results (full rows, preferred)
     queryTenants.forEach(t => map.set(t.id, t));
-    // 2. Membership-backed tenants (fallback if query returned empty/blocked)
     if (tenantMemberships?.length) {
       tenantMemberships.forEach(m => {
         if (m.tenants && !map.has(m.tenants.id)) {
@@ -84,7 +106,6 @@ export default function TenantAdmin() {
         }
       });
     }
-    // 3. Current tenant as final fallback
     if (currentTenant && !map.has(currentTenant.id)) {
       map.set(currentTenant.id, currentTenant);
     }
@@ -105,6 +126,22 @@ export default function TenantAdmin() {
       return stats;
     },
     enabled: tenants.length > 0,
+  });
+
+  // Detailed data counts for a specific tenant
+  const { data: detailedCounts, isLoading: countsLoading } = useQuery({
+    queryKey: ["tenant-data-counts", viewDataTenant?.id],
+    queryFn: async () => {
+      if (!viewDataTenant) return null;
+      const results = {};
+      const promises = DATA_TABLES_FOR_COUNTS.map(async ({ table, label }) => {
+        const { count } = await supabase.from(table).select("*", { count: "exact", head: true }).eq("tenant_id", viewDataTenant.id);
+        results[table] = { label, count: count || 0 };
+      });
+      await Promise.all(promises);
+      return results;
+    },
+    enabled: !!viewDataTenant,
   });
 
   const activeTenants = tenants.filter(t => !t.is_archived);
@@ -157,8 +194,10 @@ export default function TenantAdmin() {
   });
 
   const archiveMutation = useMutation({
-    mutationFn: async ({ tenantId: tid, action }) => {
+    mutationFn: async ({ tenantId: tid, action, password: pwd }) => {
       const { data: { session } } = await supabase.auth.getSession();
+      const body = { tenant_id: tid, action };
+      if (pwd) body.password = pwd;
       const res = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/archive-tenant`,
         {
@@ -167,7 +206,7 @@ export default function TenantAdmin() {
             "Content-Type": "application/json",
             Authorization: `Bearer ${session.access_token}`,
           },
-          body: JSON.stringify({ tenant_id: tid, action }),
+          body: JSON.stringify(body),
         }
       );
       const result = await res.json();
@@ -175,8 +214,10 @@ export default function TenantAdmin() {
       return result;
     },
     onSuccess: (_, vars) => {
-      toast({ title: `Tenant ${vars.action === "archive" ? "archived" : vars.action === "restore" ? "restored" : "deleted"} successfully` });
-      setDeleteConfirmText("");
+      const actionLabel = vars.action === "archive" ? "archived" : vars.action === "restore" ? "restored" : "permanently deleted";
+      toast({ title: `Tenant ${actionLabel} successfully` });
+      resetDeleteState();
+      setRestoreTenant(null);
       queryClient.invalidateQueries({ queryKey: ["tenants-admin"] });
       queryClient.invalidateQueries({ queryKey: ["tenant-stats"] });
     },
@@ -184,6 +225,13 @@ export default function TenantAdmin() {
       toast({ title: "Error", description: err.message, variant: "destructive" });
     },
   });
+
+  const resetDeleteState = () => {
+    setDeleteTenant(null);
+    setDeleteConfirmText("");
+    setDeletePassword("");
+    setDeleteStep(1);
+  };
 
   const handleCreate = (e) => {
     e.preventDefault();
@@ -260,8 +308,19 @@ export default function TenantAdmin() {
 
   const autoSlug = (name) => name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 
+  const deleteConfirmPhrase = deleteTenant ? `PERMANENTLY DELETE ${deleteTenant.slug}` : "";
+
   return (
     <div className="space-y-6">
+      {/* Super Admin Banner */}
+      <Alert className="border-amber-300 bg-amber-50 dark:bg-amber-950/20">
+        <ShieldAlert className="h-4 w-4 text-amber-600" />
+        <AlertTitle className="text-amber-800 dark:text-amber-200">Super Admin Only</AlertTitle>
+        <AlertDesc className="text-amber-700 dark:text-amber-300 text-xs">
+          Changes here affect all tenants and their data. Proceed with caution.
+        </AlertDesc>
+      </Alert>
+
       {/* Environment & Context Info */}
       <div className="flex flex-wrap items-center gap-2 text-sm">
         <Badge variant={envLabel === "Preview" ? "secondary" : "default"}>{envLabel}</Badge>
@@ -359,6 +418,7 @@ export default function TenantAdmin() {
                   <DialogContent>
                     <DialogHeader>
                       <DialogTitle>Create New Tenant</DialogTitle>
+                      <DialogDescription>Add a new church tenant to the platform</DialogDescription>
                     </DialogHeader>
                     <form onSubmit={handleCreate} className="space-y-4">
                       <div className="space-y-2">
@@ -456,48 +516,26 @@ export default function TenantAdmin() {
                               )}
                             </TableCell>
                             <TableCell className="text-right">
-                              <div className="flex items-center gap-1 justify-end">
+                              <div className="flex items-center gap-1 justify-end flex-wrap">
+                                {/* View Data - always available */}
+                                <Button size="sm" variant="ghost" onClick={() => setViewDataTenant(t)} title="View data">
+                                  <Eye className="h-3 w-3" />
+                                </Button>
+
                                 {t.is_archived ? (
                                   <>
-                                    <Button size="sm" variant="ghost" onClick={() => archiveMutation.mutate({ tenantId: t.id, action: "restore" })} title="Restore">
+                                    <Button size="sm" variant="ghost" onClick={() => setRestoreTenant(t)} title="Restore">
                                       <ArchiveRestore className="h-3 w-3" />
                                     </Button>
-                                    <AlertDialog>
-                                      <AlertDialogTrigger asChild>
-                                        <Button size="sm" variant="ghost" className="text-destructive" title="Permanently delete">
-                                          <Trash2 className="h-3 w-3" />
-                                        </Button>
-                                      </AlertDialogTrigger>
-                                      <AlertDialogContent>
-                                        <AlertDialogHeader>
-                                          <AlertDialogTitle className="flex items-center gap-2">
-                                            <AlertTriangle className="h-5 w-5 text-destructive" />
-                                            Permanently Delete Tenant
-                                          </AlertDialogTitle>
-                                          <AlertDialogDescription>
-                                            This will permanently delete <strong>{t.name}</strong> and ALL its data (members, events, attendance, etc.). This action cannot be undone.
-                                          </AlertDialogDescription>
-                                        </AlertDialogHeader>
-                                        <div className="space-y-2">
-                                          <Label>Type <strong>DELETE {t.slug}</strong> to confirm:</Label>
-                                          <Input
-                                            value={deleteConfirmText}
-                                            onChange={(e) => setDeleteConfirmText(e.target.value)}
-                                            placeholder={`DELETE ${t.slug}`}
-                                          />
-                                        </div>
-                                        <AlertDialogFooter>
-                                          <AlertDialogCancel onClick={() => setDeleteConfirmText("")}>Cancel</AlertDialogCancel>
-                                          <AlertDialogAction
-                                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                            disabled={deleteConfirmText !== `DELETE ${t.slug}` || archiveMutation.isPending}
-                                            onClick={() => archiveMutation.mutate({ tenantId: t.id, action: "delete" })}
-                                          >
-                                            {archiveMutation.isPending ? "Deleting..." : "Delete Forever"}
-                                          </AlertDialogAction>
-                                        </AlertDialogFooter>
-                                      </AlertDialogContent>
-                                    </AlertDialog>
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      className="text-destructive"
+                                      onClick={() => { setDeleteTenant(t); setDeleteStep(1); }}
+                                      title="Permanently delete"
+                                    >
+                                      <Trash2 className="h-3 w-3" />
+                                    </Button>
                                   </>
                                 ) : (
                                   <>
@@ -509,6 +547,15 @@ export default function TenantAdmin() {
                                     </Button>
                                     <Button size="sm" variant="ghost" onClick={() => archiveMutation.mutate({ tenantId: t.id, action: "archive" })} title="Archive">
                                       <Archive className="h-3 w-3" />
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      className="text-destructive"
+                                      onClick={() => { setDeleteTenant(t); setDeleteStep(1); }}
+                                      title="Permanently delete"
+                                    >
+                                      <Trash2 className="h-3 w-3" />
                                     </Button>
                                     {isMember && !isActive && (
                                       <Button size="sm" variant="outline" onClick={() => handleSwitch(t.id)}>
@@ -535,11 +582,212 @@ export default function TenantAdmin() {
         </TabsContent>
       </Tabs>
 
+      {/* ============ PERMANENT DELETE DIALOG (multi-step) ============ */}
+      <Dialog open={!!deleteTenant} onOpenChange={(open) => { if (!open) resetDeleteState(); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <Skull className="h-5 w-5" />
+              Permanently Delete Tenant
+            </DialogTitle>
+            <DialogDescription>
+              You are about to permanently destroy <strong>{deleteTenant?.name}</strong>.
+            </DialogDescription>
+          </DialogHeader>
+
+          {deleteStep === 1 && (
+            <div className="space-y-4">
+              <Alert variant="destructive">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertTitle>This action is irreversible!</AlertTitle>
+                <AlertDesc>
+                  All of the following data will be permanently destroyed and cannot be recovered:
+                </AlertDesc>
+              </Alert>
+              <div className="grid grid-cols-2 gap-1 text-xs text-muted-foreground bg-muted/50 rounded-lg p-3">
+                <span>• Members & profiles</span>
+                <span>• Attendance records</span>
+                <span>• Events & registrations</span>
+                <span>• Follow-ups & first timers</span>
+                <span>• Pastoral care cases</span>
+                <span>• Announcements & messages</span>
+                <span>• Exam data & certificates</span>
+                <span>• Documents & storage files</span>
+                <span>• SMS/WhatsApp logs</span>
+                <span>• Email send logs</span>
+                <span>• Church reports</span>
+                <span>• All user memberships</span>
+              </div>
+              {deleteTenant && tenantStats[deleteTenant.id] && (
+                <div className="flex gap-4 text-sm p-3 bg-destructive/5 rounded-lg border border-destructive/20">
+                  <div className="text-center">
+                    <p className="text-lg font-bold text-destructive">{tenantStats[deleteTenant.id].members}</p>
+                    <p className="text-xs text-muted-foreground">Members</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-lg font-bold text-destructive">{tenantStats[deleteTenant.id].users}</p>
+                    <p className="text-xs text-muted-foreground">Users</p>
+                  </div>
+                </div>
+              )}
+              <div className="flex gap-2 justify-end">
+                <Button variant="outline" onClick={resetDeleteState}>Cancel</Button>
+                <Button variant="destructive" onClick={() => setDeleteStep(2)}>
+                  I understand, continue
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {deleteStep === 2 && (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label className="text-sm">
+                  Type <code className="bg-destructive/10 text-destructive px-1.5 py-0.5 rounded font-mono text-xs">{deleteConfirmPhrase}</code> to confirm:
+                </Label>
+                <Input
+                  value={deleteConfirmText}
+                  onChange={(e) => setDeleteConfirmText(e.target.value)}
+                  placeholder={deleteConfirmPhrase}
+                  className="font-mono text-sm"
+                  autoFocus
+                />
+              </div>
+              <div className="flex gap-2 justify-end">
+                <Button variant="outline" onClick={() => { setDeleteStep(1); setDeleteConfirmText(""); }}>Back</Button>
+                <Button
+                  variant="destructive"
+                  disabled={deleteConfirmText !== deleteConfirmPhrase}
+                  onClick={() => setDeleteStep(3)}
+                >
+                  Next: Verify Identity
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {deleteStep === 3 && (
+            <div className="space-y-4">
+              <Alert variant="destructive">
+                <ShieldAlert className="h-4 w-4" />
+                <AlertTitle>Final verification</AlertTitle>
+                <AlertDesc>Enter your account password to confirm this destructive action.</AlertDesc>
+              </Alert>
+              <div className="space-y-2">
+                <Label>Your Password</Label>
+                <Input
+                  type="password"
+                  value={deletePassword}
+                  onChange={(e) => setDeletePassword(e.target.value)}
+                  placeholder="Enter your password"
+                  autoFocus
+                />
+              </div>
+              <div className="flex gap-2 justify-end">
+                <Button variant="outline" onClick={() => { setDeleteStep(2); setDeletePassword(""); }}>Back</Button>
+                <Button
+                  variant="destructive"
+                  disabled={!deletePassword || archiveMutation.isPending}
+                  onClick={() => archiveMutation.mutate({
+                    tenantId: deleteTenant.id,
+                    action: "delete",
+                    password: deletePassword,
+                  })}
+                >
+                  {archiveMutation.isPending ? "Deleting..." : (
+                    <><Skull className="h-4 w-4 mr-1" /> Delete Forever</>
+                  )}
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* ============ RESTORE CONFIRMATION DIALOG ============ */}
+      <Dialog open={!!restoreTenant} onOpenChange={(open) => { if (!open) setRestoreTenant(null); }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ArchiveRestore className="h-5 w-5 text-emerald-600" />
+              Restore Tenant
+            </DialogTitle>
+            <DialogDescription>
+              Restore <strong>{restoreTenant?.name}</strong> from archive.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              This will reactivate the tenant and make it visible to all its users again. All existing data will be accessible.
+            </p>
+            {restoreTenant && tenantStats[restoreTenant.id] && (
+              <div className="flex gap-4 text-sm p-3 bg-emerald-50 dark:bg-emerald-950/20 rounded-lg border border-emerald-200 dark:border-emerald-800">
+                <div className="text-center">
+                  <p className="text-lg font-bold text-emerald-700">{tenantStats[restoreTenant.id].members}</p>
+                  <p className="text-xs text-muted-foreground">Members</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-lg font-bold text-emerald-700">{tenantStats[restoreTenant.id].users}</p>
+                  <p className="text-xs text-muted-foreground">Users</p>
+                </div>
+              </div>
+            )}
+            <div className="flex gap-2 justify-end">
+              <Button variant="outline" onClick={() => setRestoreTenant(null)}>Cancel</Button>
+              <Button
+                className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                disabled={archiveMutation.isPending}
+                onClick={() => archiveMutation.mutate({ tenantId: restoreTenant.id, action: "restore" })}
+              >
+                {archiveMutation.isPending ? "Restoring..." : "Restore Tenant"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* ============ VIEW DATA DIALOG ============ */}
+      <Dialog open={!!viewDataTenant} onOpenChange={(open) => { if (!open) setViewDataTenant(null); }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Eye className="h-5 w-5" />
+              Tenant Data: {viewDataTenant?.name}
+            </DialogTitle>
+            <DialogDescription>
+              Overview of all data associated with this tenant.
+            </DialogDescription>
+          </DialogHeader>
+          {countsLoading ? (
+            <p className="text-sm text-muted-foreground py-4">Loading data counts...</p>
+          ) : detailedCounts ? (
+            <div className="space-y-1 max-h-[50vh] overflow-y-auto">
+              {Object.entries(detailedCounts).map(([key, { label, count }]) => (
+                <div key={key} className="flex items-center justify-between py-1.5 px-2 rounded hover:bg-muted/50">
+                  <span className="text-sm">{label}</span>
+                  <Badge variant={count > 0 ? "secondary" : "outline"} className="text-xs">
+                    {count}
+                  </Badge>
+                </div>
+              ))}
+              <Separator className="my-2" />
+              <div className="flex items-center justify-between py-1.5 px-2 font-medium">
+                <span className="text-sm">Total Records</span>
+                <Badge className="text-xs">
+                  {Object.values(detailedCounts).reduce((s, { count }) => s + count, 0)}
+                </Badge>
+              </div>
+            </div>
+          ) : null}
+        </DialogContent>
+      </Dialog>
+
       {/* Edit Tenant Dialog */}
       <Dialog open={!!editTenant} onOpenChange={(open) => !open && setEditTenant(null)}>
         <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit Tenant: {editTenant?.name}</DialogTitle>
+            <DialogDescription>Modify tenant settings, branding, plan, and features</DialogDescription>
           </DialogHeader>
           <Tabs defaultValue="general" className="w-full">
             <TabsList className="w-full grid grid-cols-4">
