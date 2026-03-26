@@ -22,8 +22,9 @@ import { Alert, AlertTitle, AlertDescription as AlertDesc } from "@/components/u
 import {
   Building2, Users, UserCheck, Plus, CheckCircle2, ArrowRightLeft, Clock, Pencil, Save,
   Image, Palette, Users2, Archive, ArchiveRestore, Trash2, BarChart3, AlertTriangle,
-  ShieldAlert, Eye, Skull,
+  ShieldAlert, Eye, Skull, Link, Copy, ExternalLink, Mail, Share2,
 } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useToast } from "@/components/ui/use-toast";
 import TenantUsersDialog from "@/components/tenants/TenantUsersDialog";
 import TenantAnalyticsTab from "@/components/tenants/TenantAnalyticsTab";
