@@ -420,6 +420,55 @@ export default function TenantAdmin() {
                     {showArchived ? "Hide" : "Show"} Archived ({archivedTenants.length})
                   </Button>
                 )}
+                <Dialog open={onboardOpen} onOpenChange={setOnboardOpen}>
+                  <DialogTrigger asChild>
+                    <Button size="sm" variant="outline"><Share2 className="h-4 w-4 mr-1" /> Invite to Onboard</Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Invite New Church to Onboard</DialogTitle>
+                      <DialogDescription>Share this link with a new church admin to start their onboarding</DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Label>Onboarding URL</Label>
+                        <div className="flex gap-2">
+                          <code className="flex-1 bg-muted px-3 py-2 rounded text-xs break-all select-all">{onboardUrl}</code>
+                          <Button size="sm" variant="outline" onClick={() => copyToClipboard(onboardUrl, "Onboarding URL")}>
+                            <Copy className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      </div>
+                      <Separator />
+                      <div className="space-y-2">
+                        <Label>Send via Email (optional)</Label>
+                        <div className="flex gap-2">
+                          <Input
+                            type="email"
+                            placeholder="admin@church.org"
+                            value={onboardEmail}
+                            onChange={(e) => setOnboardEmail(e.target.value)}
+                          />
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={!onboardEmail}
+                            asChild
+                          >
+                            <a
+                              href={`mailto:${onboardEmail}?subject=${encodeURIComponent("You're invited to set up your church on ChurchConnect")}&body=${encodeURIComponent(`Hello,\n\nYou've been invited to set up your church on ChurchConnect. Click the link below to get started:\n\n${onboardUrl}\n\nBest regards`)}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                            >
+                              <Mail className="h-3.5 w-3.5 mr-1" /> Send
+                            </a>
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+
                 <Dialog open={createOpen} onOpenChange={setCreateOpen}>
                   <DialogTrigger asChild>
                     <Button size="sm"><Plus className="h-4 w-4 mr-1" /> New Tenant</Button>
