@@ -262,6 +262,23 @@ export default function TenantAdmin() {
 
   return (
     <div className="space-y-6">
+      {/* Environment & Context Info */}
+      <div className="flex flex-wrap items-center gap-2 text-sm">
+        <Badge variant={envLabel === "Test" ? "secondary" : "default"}>{envLabel}</Badge>
+        {currentTenant && <span className="text-muted-foreground">Current: <strong>{currentTenant.name}</strong></span>}
+        {tenantRole && <Badge variant="outline" className="text-xs">{tenantRole}</Badge>}
+      </div>
+
+      {usingFallback && (
+        <div className="flex items-center gap-2 rounded-md border border-amber-300 bg-amber-50 dark:bg-amber-950/20 p-3 text-sm text-amber-800 dark:text-amber-200">
+          <AlertTriangle className="h-4 w-4 shrink-0" />
+          <span>Showing tenants from your memberships (direct query returned empty). </span>
+          <Button size="sm" variant="outline" className="ml-auto" onClick={() => queryClient.invalidateQueries({ queryKey: ["tenants-admin"] })}>
+            Retry
+          </Button>
+        </div>
+      )}
+
       {/* Summary Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <Card>
