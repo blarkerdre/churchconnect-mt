@@ -46,8 +46,11 @@ export default function PublicRegistration() {
 
   useEffect(() => {
     if (tenantSlug) {
-      supabase.from("tenants").select("id").eq("slug", tenantSlug).maybeSingle()
-        .then(({ data }) => { if (data?.id) setResolvedTenantId(data.id); });
+      supabase.rpc("get_tenant_by_slug", { _slug: tenantSlug })
+        .then(({ data }) => {
+          const row = Array.isArray(data) ? data[0] : data;
+          if (row?.id) setResolvedTenantId(row.id);
+        });
     }
   }, [tenantSlug]);
 
