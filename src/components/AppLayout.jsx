@@ -51,7 +51,8 @@ export default function Layout({ children }) {
   const [switchPassword, setSwitchPassword] = useState("");
   const [switchLoading, setSwitchLoading] = useState(false);
   const location = useLocation();
-  const { signOut, profile, isAdmin, isUnitLeader, isWSFLeader, roles, leaderUnits, isTenantOwner, isTenantAdmin } = useAuth();
+  const navigate = useNavigate();
+  const { signOut, user, profile, isAdmin, isUnitLeader, isWSFLeader, roles, leaderUnits, isTenantOwner, isTenantAdmin } = useAuth();
   const { currentTenant, tenantId, tenantMemberships, switchTenant } = useTenant();
   const isSuperAdmin = roles.includes("super_admin");
   const { data: externalLinks } = useAppSetting("external_links", []);
