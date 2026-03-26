@@ -53,14 +53,14 @@ export default function WSFAttendanceTab({ centres }) {
   const visibleCentreIds = isAdmin ? centres.map(c => c.id) : ledCentres.map(c => c.id);
 
   const { data: reports = [], isLoading } = useQuery({
-    queryKey: ["wsf-attendance-reports", visibleCentreIds],
+    queryKey: ["wsf-attendance-reports", tenantId, visibleCentreIds],
     queryFn: async () => {
       if (visibleCentreIds.length === 0) return [];
-      const { data, error } = await supabase
+      const { data, error } = await scopeQuery(supabase
         .from("wsf_attendance_reports")
         .select("*, wsf_centres(name)")
         .in("centre_id", visibleCentreIds)
-        .order("meeting_date", { ascending: false });
+        .order("meeting_date", { ascending: false }));
       if (error) throw error;
       return data;
     },
@@ -70,7 +70,7 @@ export default function WSFAttendanceTab({ centres }) {
   const saveMutation = useMutation({
     mutationFn: async (payload) => {
       if (editing) {
-        const { error } = await supabase.from("wsf_attendance_reports").update(payload).eq("id", editing.id);
+        const { error } = await supabase.from("wsf_attendance_reports").update(payload).eq("id", editing.id).eq("tenant_id", tenantId);
         if (error) throw error;
       } else {
         const { error } = await supabase.from("wsf_attendance_reports").insert(withTenant({ ...payload, reported_by: user?.id }));
@@ -86,7 +86,7 @@ export default function WSFAttendanceTab({ centres }) {
 
   const deleteMutation = useMutation({
     mutationFn: async (id) => {
-      const { error } = await supabase.from("wsf_attendance_reports").delete().eq("id", id);
+      const { error } = await supabase.from("wsf_attendance_reports").delete().eq("id", id).eq("tenant_id", tenantId);
       if (error) throw error;
     },
     onSuccess: () => {
