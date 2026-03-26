@@ -86,7 +86,15 @@ export default function TenantAdmin() {
   const [showArchived, setShowArchived] = useState(false);
   const [restoreTenant, setRestoreTenant] = useState(null);
   const [viewDataTenant, setViewDataTenant] = useState(null);
+  const [onboardOpen, setOnboardOpen] = useState(false);
+  const [onboardEmail, setOnboardEmail] = useState("");
 
+  const onboardUrl = `${window.location.origin}/onboard`;
+
+  const copyToClipboard = (text, label) => {
+    navigator.clipboard.writeText(text);
+    toast({ title: `${label} copied to clipboard` });
+  };
   const { data: queryTenants = [], isLoading, error: tenantsError } = useQuery({
     queryKey: ["tenants-admin"],
     queryFn: async () => {
