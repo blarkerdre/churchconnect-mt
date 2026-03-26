@@ -14,7 +14,6 @@ import { toast } from "@/components/ui/use-toast";
 import { Toaster } from "@/components/ui/toaster";
 import { suggestClosestWSFCentre } from "@/lib/wsf-suggest";
 import { normalizePhone } from "@/lib/phone-utils";
-import { useChurchUnits } from "@/hooks/useChurchUnits";
 const STATUSES = ["First Timer", "New Convert", "Visitor", "Active"];
 const GENDERS = ["Male", "Female"];
 
@@ -36,8 +35,7 @@ const SHOW_BAPTISM_STATUSES = ["First Timer", "New Convert"];
 
 export default function PublicRegistration() {
   const { tenantSlug } = useParams();
-  const { data: churchUnitsData = [] } = useChurchUnits();
-  const CHURCH_UNITS = churchUnitsData.map(u => u.name);
+  const [CHURCH_UNITS, setChurchUnits] = useState([]);
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -55,10 +53,14 @@ export default function PublicRegistration() {
   }, [tenantSlug]);
 
   useEffect(() => {
+    supabase.rpc("get_active_church_unit_names", { _tenant_slug: tenantSlug || null })
+      .then(({ data }) => setChurchUnits((data || []).map(u => u.name)));
+  }, [tenantSlug]);
+
+  useEffect(() => {
     supabase.rpc("get_active_wsf_centre_names")
       .then(({ data }) => setWsfCentres(data || []));
   }, []);
-
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
   const showChurchUnits = !HIDE_SPIRITUAL_STATUSES.includes(form.membership_status);

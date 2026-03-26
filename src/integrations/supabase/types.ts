@@ -2535,6 +2535,13 @@ export type Database = {
         Args: { payload: Json; queue_name: string }
         Returns: number
       }
+      get_active_church_unit_names: {
+        Args: { _tenant_slug?: string }
+        Returns: {
+          id: string
+          name: string
+        }[]
+      }
       get_active_wsf_centre_names: {
         Args: never
         Returns: {
