@@ -58,7 +58,9 @@ export default function PublicRegistration() {
   }, [tenantSlug]);
 
   useEffect(() => {
-
+    supabase.rpc("get_active_wsf_centre_names")
+      .then(({ data }) => setWsfCentres(data || []));
+  }, []);
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
   const showChurchUnits = !HIDE_SPIRITUAL_STATUSES.includes(form.membership_status);
