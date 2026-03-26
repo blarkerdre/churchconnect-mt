@@ -47,12 +47,12 @@ async function getAuthenticatedUser(req: Request, supabaseUrl: string, anonKey: 
     auth: { autoRefreshToken: false, persistSession: false },
   });
 
-  const { data, error } = await authClient.auth.getClaims(token);
-  if (error || !data?.claims?.sub) return null;
+  const { data: { user }, error } = await authClient.auth.getUser(token);
+  if (error || !user) return null;
 
   return {
-    userId: data.claims.sub,
-    email: typeof data.claims.email === "string" ? data.claims.email.toLowerCase() : null,
+    userId: user.id,
+    email: typeof user.email === "string" ? user.email.toLowerCase() : null,
   };
 }
 
