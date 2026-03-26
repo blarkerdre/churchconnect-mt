@@ -57,14 +57,6 @@ export default function Auth() {
     }
   }, [tenant?.settings]);
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="animate-pulse text-muted-foreground">Loading...</div>
-      </div>
-    );
-  }
-
   // Query tenant membership for redirect when no slug in URL
   const { data: userMembership, isLoading: membershipLoading } = useQuery({
     queryKey: ["auth-redirect-membership", user?.id],
@@ -80,6 +72,14 @@ export default function Auth() {
     },
     enabled: !!user && !tenantSlug,
   });
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="animate-pulse text-muted-foreground">Loading...</div>
+      </div>
+    );
+  }
 
   if (user) {
     if (tenantSlug) {
