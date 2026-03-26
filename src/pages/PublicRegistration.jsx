@@ -35,8 +35,7 @@ const SHOW_BAPTISM_STATUSES = ["First Timer", "New Convert"];
 
 export default function PublicRegistration() {
   const { tenantSlug } = useParams();
-  const { data: churchUnitsData = [] } = useChurchUnits();
-  const CHURCH_UNITS = churchUnitsData.map(u => u.name);
+  const [CHURCH_UNITS, setChurchUnits] = useState([]);
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
   const [submitted, setSubmitted] = useState(false);
