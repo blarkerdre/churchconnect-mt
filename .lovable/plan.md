@@ -1,24 +1,21 @@
 
 
-## Fix: Missing `.env` File Causing Blank Screen
+## Fix: Recreate Missing `.env` File
 
-### Root Cause
+### Root Cause (Confirmed via Browser)
 
-The `.env` file is **completely missing** from the project. The browser console confirms:
-
+The browser console shows:
 ```
 Error: supabaseUrl is required.
 ```
 
-The Supabase client at `src/integrations/supabase/client.ts` reads `VITE_SUPABASE_URL` from `import.meta.env`, which is `undefined` because there's no `.env` file to provide it. This crashes the app before React mounts — both in preview and published builds.
+The `.env` file is **completely absent** from the project directory. Without it, `import.meta.env.VITE_SUPABASE_URL` is `undefined`, and the Supabase client crashes at initialization -- before React mounts anything.
 
-### Why This Happened
-
-The `.env` file is supposed to be auto-generated and maintained by the Lovable Cloud integration. It appears to have been deleted or lost.
+The `.env` file was likely deleted during a previous edit session. Although it's supposed to be auto-generated, the platform hasn't restored it.
 
 ### Fix
 
-**Recreate the `.env` file** with the known Supabase project values:
+Recreate `.env` with the three required variables (all values are already known from the project configuration):
 
 ```
 VITE_SUPABASE_PROJECT_ID="qfordhikmtgedfybktjg"
@@ -26,12 +23,11 @@ VITE_SUPABASE_PUBLISHABLE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJz
 VITE_SUPABASE_URL="https://qfordhikmtgedfybktjg.supabase.co"
 ```
 
-### What This Fixes
-
-- Preview will render again immediately
-- Published builds will include the correct env vars when re-published
-
 ### Files Changed
 
-- **`.env`** — recreate with the three required Supabase environment variables
+- **`.env`** -- recreate with the three Supabase environment variables
+
+### Result
+
+The Supabase client will initialize successfully, React will mount, and the app will render again.
 
