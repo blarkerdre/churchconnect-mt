@@ -1,35 +1,35 @@
 
 
-## Plan: Seed Test Environment with Distinct Demo Data
+## Plan: Fix Missing User Roles and Memberships in Test Environment
 
-### Current State
-Both Test and Live environments are identical: 13 members with no `tenant_id`, 0 tenants, 0 tenant memberships. The app is non-functional because tenant context is required.
+### Problem
+Your user (`932364f2-...`) has `super_admin` role and `owner` membership in **Live** but has **neither** in **Test**. The Tenant Admin page queries tenants through RLS, which requires `super_admin` role -- so the query returns empty.
 
 ### What We'll Do
 
-**Step 1: Create a Test tenant**
-- Insert a tenant named **"Demo Church (TEST)"** with slug `demo-test` into the Test environment
-- This distinct name will immediately differentiate it from Live
+**Database inserts (Test environment only):**
 
-**Step 2: Link your user to the tenant**
-- Create a `tenant_memberships` record for your user (`932364f2-...`) as `owner`
-- Update your `user_roles` to include the tenant_id
-- Update your profile with the tenant_id
+1. Insert `user_roles` record: `super_admin` role for your user, scoped to the test tenant
+2. Insert `tenant_memberships` record: `owner` role for your user in the test tenant
+3. Update your `profiles` record to set `tenant_id` to the test tenant
 
-**Step 3: Assign existing 13 members to the test tenant**
-- Update all members with `tenant_id IS NULL` to belong to the new tenant
-
-**Step 4: Seed additional demo data unique to Test**
-- **5 extra demo members** with obvious test names (e.g., "Test User Alpha", "Test User Beta") so you can spot them
-- **2 attendance sessions** with a few attendance records
-- **2 upcoming events** (e.g., "TEST - Youth Rally", "TEST - Prayer Meeting")
-- **1 announcement** marked "[TEST] Welcome to Demo Church"
-
-This gives Test visibly different content from Live, making it easy to tell which environment you're in.
+No code changes needed -- this is a data fix.
 
 ### Technical Details
 
-All inserts will use the database insert tool targeting the Test environment. The tenant ID will be a fixed UUID (e.g., `a0000000-0000-0000-0000-000000000001`) matching the `DEFAULT_TENANT_ID` constant in `TenantContext.jsx`. All seeded records will reference this tenant.
+```sql
+-- 1. user_roles
+INSERT INTO user_roles (user_id, role, tenant_id)
+VALUES ('932364f2-fdf8-4738-bc9d-297edfb51c4d', 'super_admin', 'a0000000-0000-0000-0000-000000000001');
 
-No schema changes or code changes are needed — this is purely a data seeding operation.
+-- 2. tenant_memberships
+INSERT INTO tenant_memberships (tenant_id, user_id, role)
+VALUES ('a0000000-0000-0000-0000-000000000001', '932364f2-fdf8-4738-bc9d-297edfb51c4d', 'owner');
+
+-- 3. profiles tenant_id
+UPDATE profiles SET tenant_id = 'a0000000-0000-0000-0000-000000000001'
+WHERE user_id = '932364f2-fdf8-4738-bc9d-297edfb51c4d';
+```
+
+After this, the Tenant Admin page will load correctly in Test, showing "Demo Church (TEST)". Live already works and shows "LFC Cardiff".
 
