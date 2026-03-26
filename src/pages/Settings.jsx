@@ -12,8 +12,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 import {
   Settings as SettingsIcon, Plus, Pencil, Trash2, Loader2,
-  Users, Church, CalendarDays, TrendingUp, Heart, Globe, Bell, Award, Link2, ShieldAlert, BookOpen, Upload, X, ImageIcon
+  Users, Church, CalendarDays, TrendingUp, Heart, Globe, Bell, Award, Link2, ShieldAlert, BookOpen, Upload, X, ImageIcon, Mail, Phone
 } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/hooks/useAuth";
 import { useTenant } from "@/contexts/TenantContext";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
@@ -481,6 +482,131 @@ function ChurchBrandingSection() {
   );
 }
 
+/* ─── Communications Settings (email sender name + Twilio numbers) ─── */
+function CommunicationsSection() {
+  const qc = useQueryClient();
+  const { currentTenant, tenantId } = useTenant();
+  const [saving, setSaving] = useState(false);
+  const [emailSenderName, setEmailSenderName] = useState("");
+  const [smsFrom, setSmsFrom] = useState("");
+  const [whatsappFrom, setWhatsappFrom] = useState("");
+
+  const settings = currentTenant?.settings || {};
+
+  // Initialize from tenant settings
+  React.useEffect(() => {
+    if (currentTenant?.settings) {
+      const s = currentTenant.settings;
+      setEmailSenderName(s.email_sender_name || "");
+      setSmsFrom(s.twilio_sms_from || "");
+      setWhatsappFrom(s.twilio_whatsapp_from || "");
+    }
+  }, [currentTenant?.settings]);
+
+  const e164Regex = /^\+[1-9]\d{6,14}$/;
+
+  const handleSave = async () => {
+    if (smsFrom && !e164Regex.test(smsFrom.trim())) {
+      toast({ title: "Invalid SMS number", description: "Must be E.164 format (e.g. +447123456789)", variant: "destructive" });
+      return;
+    }
+    if (whatsappFrom && !e164Regex.test(whatsappFrom.trim())) {
+      toast({ title: "Invalid WhatsApp number", description: "Must be E.164 format (e.g. +447123456789)", variant: "destructive" });
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const mergedSettings = {
+        ...(currentTenant?.settings || {}),
+        email_sender_name: emailSenderName.trim() || null,
+        twilio_sms_from: smsFrom.trim() || null,
+        twilio_whatsapp_from: whatsappFrom.trim() || null,
+      };
+
+      const { error } = await supabase
+        .from("tenants")
+        .update({ settings: mergedSettings })
+        .eq("id", tenantId);
+      if (error) throw error;
+
+      qc.invalidateQueries({ queryKey: ["tenants"] });
+      toast({ title: "Communications settings saved" });
+    } catch (err) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (!tenantId) return null;
+
+  return (
+    <Card className="border-0 shadow-sm">
+      <CardHeader className="pb-3">
+        <CardTitle className="text-base font-display flex items-center gap-2">
+          <Mail className="h-4 w-4 text-accent" /> Communications Settings
+        </CardTitle>
+        <p className="text-xs text-muted-foreground mt-1">
+          Configure the sender name for emails and phone numbers for SMS/WhatsApp. Leave blank to use system defaults.
+        </p>
+      </CardHeader>
+      <CardContent className="space-y-5">
+        {/* Email Sender Name */}
+        <div className="space-y-2">
+          <Label className="text-sm font-medium">Email Sender Name</Label>
+          <Input
+            value={emailSenderName}
+            onChange={(e) => setEmailSenderName(e.target.value)}
+            placeholder={currentTenant?.name || "Your Church Name"}
+            maxLength={100}
+          />
+          <p className="text-xs text-muted-foreground">
+            Appears as the "From" name in outgoing emails (e.g. "LFC Cardiff &lt;noreply@...&gt;")
+          </p>
+        </div>
+
+        {/* SMS From Number */}
+        <div className="space-y-2">
+          <Label className="text-sm font-medium flex items-center gap-1.5">
+            <Phone className="h-3.5 w-3.5" /> SMS From Number
+          </Label>
+          <Input
+            value={smsFrom}
+            onChange={(e) => setSmsFrom(e.target.value)}
+            placeholder="+44... (uses system default if empty)"
+            maxLength={20}
+          />
+          <p className="text-xs text-muted-foreground">
+            Your Twilio phone number for SMS. Must be in E.164 format (e.g. +447123456789)
+          </p>
+        </div>
+
+        {/* WhatsApp From Number */}
+        <div className="space-y-2">
+          <Label className="text-sm font-medium flex items-center gap-1.5">
+            <Phone className="h-3.5 w-3.5" /> WhatsApp From Number
+          </Label>
+          <Input
+            value={whatsappFrom}
+            onChange={(e) => setWhatsappFrom(e.target.value)}
+            placeholder="+44... (uses system default if empty)"
+            maxLength={20}
+          />
+          <p className="text-xs text-muted-foreground">
+            Your Twilio WhatsApp-enabled number. Must be in E.164 format
+          </p>
+        </div>
+
+        <Button onClick={handleSave} disabled={saving} className="w-full sm:w-auto">
+          {saving && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+          Save Communications Settings
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
 /* ─── Main Settings page ─── */
 export default function Settings() {
   const { roles } = useAuth();
@@ -499,6 +625,7 @@ export default function Settings() {
         <TabsList className="flex flex-nowrap h-auto gap-1 overflow-x-auto w-full justify-start [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
           <TabsTrigger value="branding" className="gap-1.5 text-xs"><ImageIcon className="h-3.5 w-3.5" /><span className="hidden sm:inline"> Branding</span></TabsTrigger>
           <TabsTrigger value="notifications" className="gap-1.5 text-xs"><Bell className="h-3.5 w-3.5" /><span className="hidden sm:inline"> Notifications</span></TabsTrigger>
+          <TabsTrigger value="comms" className="gap-1.5 text-xs"><Mail className="h-3.5 w-3.5" /><span className="hidden sm:inline"> Comms</span></TabsTrigger>
           <TabsTrigger value="units" className="gap-1.5 text-xs"><Users className="h-3.5 w-3.5" /><span className="hidden sm:inline"> Units</span></TabsTrigger>
           <TabsTrigger value="wsf" className="gap-1.5 text-xs"><Globe className="h-3.5 w-3.5" /><span className="hidden sm:inline"> WSF</span></TabsTrigger>
           <TabsTrigger value="services" className="gap-1.5 text-xs"><Church className="h-3.5 w-3.5" /><span className="hidden sm:inline"> Services</span></TabsTrigger>
@@ -523,6 +650,10 @@ export default function Settings() {
 
         <TabsContent value="notifications">
           <NotificationPreferencesSection />
+        </TabsContent>
+
+        <TabsContent value="comms">
+          <CommunicationsSection />
         </TabsContent>
 
         <TabsContent value="units">
