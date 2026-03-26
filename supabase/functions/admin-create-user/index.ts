@@ -165,7 +165,24 @@ Deno.serve(async (req) => {
         _user_id: userId,
         _email: normalizedEmail,
       });
-      if (linkedMemberId) memberId = linkedMemberId;
+      if (linkedMemberId) {
+        memberId = linkedMemberId;
+
+        if (tenant_id) {
+          const { data: linkedMember } = await supabase
+            .from("members")
+            .select("tenant_id")
+            .eq("id", linkedMemberId)
+            .maybeSingle();
+
+          if (linkedMember && !linkedMember.tenant_id) {
+            await supabase
+              .from("members")
+              .update({ tenant_id })
+              .eq("id", linkedMemberId);
+          }
+        }
+      }
     }
 
     return jsonResponse({ success: true, user_id: userId, member_id: memberId, reused_existing_user: reusedExisting });
