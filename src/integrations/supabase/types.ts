@@ -2533,6 +2533,24 @@ export type Database = {
         Args: { payload: Json; queue_name: string }
         Returns: number
       }
+      get_exam_questions_safe: {
+        Args: { _subject_id?: string; _training_type?: string }
+        Returns: {
+          answer_count: number
+          id: string
+          option_a: string
+          option_b: string
+          option_c: string
+          option_d: string
+          points: number
+          question_text: string
+          question_type: string
+          sort_order: number
+          subject_id: string
+          tenant_id: string
+          training_type: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
