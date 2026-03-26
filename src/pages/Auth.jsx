@@ -36,7 +36,7 @@ export default function Auth() {
   });
 
   const churchName = tenant?.name || "Winners Chapel";
-  const churchSubtitle = tenant ? null : "International Cardiff";
+  const churchSubtitle = tenant ? null : "International";
   const logoUrl = tenant?.logo_url || winnersLogo;
 
   // Set favicon and OG tags for tenant auth pages
