@@ -25,12 +25,10 @@ export default function Auth() {
     queryKey: ["tenant-branding", tenantSlug],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("tenants")
-        .select("id, name, slug, logo_url, settings")
-        .eq("slug", tenantSlug)
-        .maybeSingle();
+        .rpc("get_tenant_by_slug", { _slug: tenantSlug });
       if (error) throw error;
-      return data;
+      // RPC returns an array; take the first row
+      return Array.isArray(data) ? data[0] ?? null : data;
     },
     enabled: !!tenantSlug,
   });
