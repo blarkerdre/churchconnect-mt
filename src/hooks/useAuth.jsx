@@ -52,7 +52,7 @@ export function AuthProvider({ children }) {
   async function fetchUserData(userId, userEmail) {
     try {
       const [profileRes, rolesRes, unitsRes, memberRes, tmRes] = await Promise.all([
-        supabase.from("profiles").select("*").eq("user_id", userId).single(),
+        supabase.from("profiles").select("*").eq("user_id", userId).maybeSingle(),
         supabase.from("user_roles").select("role").eq("user_id", userId),
         supabase.from("unit_leader_assignments").select("unit_name").eq("user_id", userId),
         supabase.from("members").select("*, wsf_centres!fk_members_wsf_centre(name)").eq("user_id", userId).maybeSingle(),
