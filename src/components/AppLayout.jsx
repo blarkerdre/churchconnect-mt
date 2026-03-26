@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useUnitMembership } from "@/hooks/useUnitMembership";
 import {
   LayoutDashboard, Users, CalendarDays, HeartHandshake,
@@ -51,7 +51,8 @@ export default function Layout({ children }) {
   const [switchPassword, setSwitchPassword] = useState("");
   const [switchLoading, setSwitchLoading] = useState(false);
   const location = useLocation();
-  const { signOut, profile, isAdmin, isUnitLeader, isWSFLeader, roles, leaderUnits, isTenantOwner, isTenantAdmin } = useAuth();
+  const navigate = useNavigate();
+  const { signOut, user, profile, isAdmin, isUnitLeader, isWSFLeader, roles, leaderUnits, isTenantOwner, isTenantAdmin } = useAuth();
   const { currentTenant, tenantId, tenantMemberships, switchTenant } = useTenant();
   const isSuperAdmin = roles.includes("super_admin");
   const { data: externalLinks } = useAppSetting("external_links", []);
@@ -109,14 +110,20 @@ export default function Layout({ children }) {
     if (!switchPassword || !pendingTenantSwitch) return;
     setSwitchLoading(true);
     try {
-      const email = profile?.email;
+      const email = user?.email;
       if (!email) throw new Error("No email found");
       const { error } = await supabase.auth.signInWithPassword({ email, password: switchPassword });
       if (error) throw error;
+      // Find the target tenant's slug and navigate
+      const targetMembership = tenantMemberships.find(m => m.tenant_id === pendingTenantSwitch);
+      const targetSlug = targetMembership?.tenants?.slug;
       switchTenant(pendingTenantSwitch);
       setPendingTenantSwitch(null);
       setSwitchPassword("");
       toast.success("Tenant switched successfully");
+      if (targetSlug) {
+        navigate(`/t/${targetSlug}`, { replace: true });
+      }
     } catch (err) {
       toast.error("Incorrect password. Please try again.");
     } finally {
