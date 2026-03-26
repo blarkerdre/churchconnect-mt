@@ -183,6 +183,73 @@ Deno.serve(async (req) => {
       });
     }
 
+    // 8. Send welcome email to the new tenant admin
+    const loginUrl = `https://app.churchmanagementsuite.org/t/${slug}/auth`;
+    try {
+      await admin.functions.invoke("send-transactional-email", {
+        body: {
+          templateName: "tenant-welcome",
+          recipientEmail: admin_email,
+          idempotencyKey: `tenant-welcome-${tenant.id}`,
+          templateData: {
+            name: admin_full_name || admin_email,
+            churchName: church_name,
+            slug,
+            loginUrl,
+          },
+        },
+      });
+    } catch (e) {
+      console.error("Failed to send welcome email:", e);
+    }
+
+    // 9. Notify platform super admins about the new tenant
+    try {
+      const { data: superAdminRoles } = await admin
+        .from("user_roles")
+        .select("user_id")
+        .eq("role", "super_admin")
+        .is("tenant_id", null);
+
+      if (superAdminRoles && superAdminRoles.length > 0) {
+        const superAdminUserIds = superAdminRoles
+          .map((r: any) => r.user_id)
+          .filter((uid: string) => uid !== userId);
+
+        if (superAdminUserIds.length > 0) {
+          const { data: adminProfiles } = await admin
+            .from("profiles")
+            .select("email")
+            .in("user_id", superAdminUserIds);
+
+          const createdAt = new Date().toISOString();
+          for (const profile of adminProfiles || []) {
+            if (!profile.email) continue;
+            try {
+              await admin.functions.invoke("send-transactional-email", {
+                body: {
+                  templateName: "new-tenant-notification",
+                  recipientEmail: profile.email,
+                  idempotencyKey: `new-tenant-notify-${tenant.id}-${profile.email}`,
+                  templateData: {
+                    churchName: church_name,
+                    slug,
+                    adminName: admin_full_name || admin_email,
+                    adminEmail: admin_email,
+                    createdAt,
+                  },
+                },
+              });
+            } catch (e) {
+              console.error("Failed to notify super admin:", profile.email, e);
+            }
+          }
+        }
+      }
+    } catch (e) {
+      console.error("Failed to query super admins for notification:", e);
+    }
+
     return new Response(
       JSON.stringify({
         success: true,
