@@ -95,6 +95,35 @@ export default function Layout({ children }) {
     return "Member";
   };
 
+  const handleTenantSwitchRequest = (targetTenantId) => {
+    if (targetTenantId === tenantId) {
+      setTenantDropdownOpen(false);
+      return;
+    }
+    setPendingTenantSwitch(targetTenantId);
+    setSwitchPassword("");
+    setTenantDropdownOpen(false);
+  };
+
+  const confirmTenantSwitch = async () => {
+    if (!switchPassword || !pendingTenantSwitch) return;
+    setSwitchLoading(true);
+    try {
+      const email = profile?.email;
+      if (!email) throw new Error("No email found");
+      const { error } = await supabase.auth.signInWithPassword({ email, password: switchPassword });
+      if (error) throw error;
+      switchTenant(pendingTenantSwitch);
+      setPendingTenantSwitch(null);
+      setSwitchPassword("");
+      toast.success("Tenant switched successfully");
+    } catch (err) {
+      toast.error("Incorrect password. Please try again.");
+    } finally {
+      setSwitchLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background flex">
       {/* Mobile overlay */}
@@ -139,10 +168,7 @@ export default function Layout({ children }) {
                       return (
                         <button
                           key={m.id}
-                          onClick={() => {
-                            switchTenant(m.tenant_id);
-                            setTenantDropdownOpen(false);
-                          }}
+                          onClick={() => handleTenantSwitchRequest(m.tenant_id)}
                           className={`w-full flex items-center gap-2 px-3 py-2 text-xs text-left hover:bg-accent transition-colors ${isSelected ? "bg-accent/50 font-medium" : ""}`}
                         >
                           {t?.logo_url && <img src={t.logo_url} alt="" className="h-4 w-4 rounded object-contain shrink-0" />}
@@ -260,6 +286,12 @@ export default function Layout({ children }) {
                     : "bg-emerald-500/10 text-emerald-600 border-emerald-500/30"
                 }`}>
                   {getEnvironmentLabel()}
+                </span>
+              )}
+              {currentTenant && (
+                <span className="text-[10px] font-medium text-primary bg-primary/10 border border-primary/20 px-2 py-0.5 rounded-full flex items-center gap-1 max-w-[160px]">
+                  {currentTenant.logo_url && <img src={currentTenant.logo_url} alt="" className="h-3.5 w-3.5 rounded object-contain shrink-0" />}
+                  <span className="truncate">{currentTenant.name}</span>
                 </span>
               )}
               <span className="text-[11px] font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded-full hidden sm:inline">
