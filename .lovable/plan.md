@@ -1,32 +1,37 @@
-## Plan: Create Demo Church (TEST) Tenant
+
+
+## Plan: Seed Test Data for Demo Church (TEST)
 
 ### What We'll Do
 
-Use the existing `register-tenant` edge function to create a test tenant with a super admin account. This function handles everything atomically: tenant record, auth user, tenant membership, user role, and profile.
+Insert realistic test data into the Demo Church (TEST) tenant (`d8bbbdae-d9b3-4999-912d-3aa5999884b0`) across core tables to make the app functional for testing.
 
-### Steps
+### Data to Seed
 
-1. **Invoke the `register-tenant` edge function** with:
-  - `church_name`: "Demo Church (TEST)"
-  - `slug`: "demo-test"
-  - `admin_email`: your email ([kugbiyiadeniyi@gmail.com](mailto:kugbiyiadeniyi@gmail.com))
-  - `admin_password`: a password you choose
-  - `admin_full_name`: "Adeniyi Kugbiyi"
-  - `timezone`: "Europe/London"
-2. **Verify** the tenant, membership, and roles were created correctly
+1. **Church Units** (8 records) -- Follow-up, Pastoral Care, Ushering, Media, Choir, Protocol, Children, Hospitality
 
-### What You'll Get
+2. **WSF Centres** (3 records) -- Canton, Cathays, Splott with meeting days, postcodes, locations
 
-- A tenant at `/t/demo-test/` for safe testing
-- A super admin account linked to it
-- Full isolation from any future production tenants
+3. **Members** (15 records) -- Mix of Active, First Timer, New Convert, Inactive statuses; varied genders, church units, WSF membership, training completions; one linked to the admin user_id
 
-### Technical Details
+4. **Attendance Sessions** (3 records) -- One open Sunday Service, two closed Unit Meetings with dates in last 4 weeks
 
-- No code changes or migrations needed
-- The edge function creates: tenant row, auth user (or reuses existing), `tenant_memberships` (owner), `user_roles` (super_admin), and updates the profile with `tenant_id`
-- The `DEFAULT_TENANT_ID` in `TenantContext.jsx` references `a0000000-0000-0000-0000-000000000001` — after creation, we may want to update this to match the new tenant's actual UUID
+5. **Attendance Records** (20+ records) -- Spread across the 3 sessions linking to seeded members
 
-### One Question
+6. **Events** (3 records) -- Upcoming Bible Study, past Youth Fellowship, future Sunday Service
 
-I need a password for the admin account. What password would you like to use for [kugbiyiadeniyi@gmail.com](mailto:kugbiyiadeniyi@gmail.com)?
+7. **Announcements** (2 records) -- One published, one draft
+
+8. **Followups** (3 records) -- Pending, In Progress, Completed statuses linked to first-timer/new-convert members
+
+### How
+
+- Use the database insert tool for all data operations (no migrations needed)
+- Insert in FK-safe order: church_units → wsf_centres → members → attendance_sessions → attendance_records → events → announcements → followups
+- All records tagged with `tenant_id = 'd8bbbdae-d9b3-4999-912d-3aa5999884b0'`
+- Admin user (`6483c76f-3ce3-4f14-b0af-0c8a98ebb484`) linked to one member record and used as `created_by` where applicable
+
+### No Code Changes Needed
+
+This is purely a data seeding operation using the insert tool.
+
