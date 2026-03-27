@@ -64,6 +64,44 @@ export function TenantProvider({ children }) {
     return defaultMatch || memberships[0];
   }, []);
 
+  const acceptPendingInvitations = useCallback(async (userId, email) => {
+    if (!email) return;
+    try {
+      const { data: invitations } = await supabase
+        .from("tenant_invitations")
+        .select("id, tenant_id, role")
+        .eq("email", email.toLowerCase())
+        .eq("status", "pending");
+
+      if (!invitations || invitations.length === 0) return;
+
+      for (const inv of invitations) {
+        // Check if already a member
+        const { data: existing } = await supabase
+          .from("tenant_memberships")
+          .select("id")
+          .eq("tenant_id", inv.tenant_id)
+          .eq("user_id", userId)
+          .maybeSingle();
+
+        if (!existing) {
+          await supabase.from("tenant_memberships").insert({
+            tenant_id: inv.tenant_id,
+            user_id: userId,
+            role: inv.role || "member",
+          });
+        }
+
+        await supabase
+          .from("tenant_invitations")
+          .update({ status: "accepted" })
+          .eq("id", inv.id);
+      }
+    } catch (err) {
+      console.error("Error accepting pending invitations:", err);
+    }
+  }, []);
+
   useEffect(() => {
     if (authLoading) return;
     if (!user) {
@@ -76,6 +114,9 @@ export function TenantProvider({ children }) {
     let cancelled = false;
 
     (async () => {
+      // Auto-accept any pending invitations first
+      await acceptPendingInvitations(user.id, user.email);
+
       const memberships = await fetchMemberships(user.id);
       if (cancelled) return;
 
@@ -86,7 +127,7 @@ export function TenantProvider({ children }) {
     })();
 
     return () => { cancelled = true; };
-  }, [user, authLoading, tenantSlugFromUrl, fetchMemberships, selectTenant]);
+  }, [user, authLoading, tenantSlugFromUrl, fetchMemberships, selectTenant, acceptPendingInvitations]);
 
   const switchTenant = useCallback((tenantId) => {
     const match = tenantMemberships.find(m => m.tenant_id === tenantId);
