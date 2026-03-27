@@ -1,51 +1,57 @@
 
 
-## Fix: Users Not Appearing in User Management
+## Fix: Verification Link Returns 404 on Custom Domain
+
+### Problem
+
+When a user clicks a verification/password-reset link from an auth email, they land on `app.churchmanagementsuite.org` but get a 404. This happens because:
+
+1. **Supabase Auth's Site URL** is likely still set to the default (`churchconnect-mt.lovable.app`) rather than the custom domain `app.churchmanagementsuite.org`
+2. When Auth generates confirmation URLs, it redirects the user to the Site URL with tokens in the URL fragment (`#access_token=...&type=recovery`)
+3. The SPA at `app.churchmanagementsuite.org` receives this, but if the redirect URL config doesn't include the custom domain, Supabase Auth may reject or misroute the callback
 
 ### Root Cause
 
-Two issues found:
-
-1. **The `handle_new_user` trigger on `auth.users` is missing.** This trigger is supposed to automatically create a `profiles` row when a new auth user is created. Without it, neither self-signup nor `admin-create-user` (via `auth.admin.createUser`) generates profile rows via the trigger path.
-
-2. **The `profiles` table has 0 rows** despite 3 `auth.users` existing and 4 `tenant_memberships`. The User Management page queries `profiles` with `scopeQuery` — no profiles means no users displayed.
-
-The `admin-create-user` edge function does manually upsert into profiles, but without the trigger, users created through normal signup (or the auth email flow) get no profile row at all.
+Supabase Auth controls where verification links redirect. The **Site URL** and **Redirect URLs** must match the domain where the app is hosted. Currently the custom domain is `app.churchmanagementsuite.org`, but Auth is likely configured with the `.lovable.app` URL.
 
 ### Fix
 
-#### 1. Database migration — recreate trigger + backfill profiles
+#### 1. Update Supabase Auth URL configuration
 
-```sql
--- Recreate the trigger
-CREATE OR REPLACE TRIGGER on_auth_user_created
-  AFTER INSERT ON auth.users
-  FOR EACH ROW
-  EXECUTE FUNCTION public.handle_new_user();
+This needs to be done via Cloud settings:
+- **Site URL** → `https://app.churchmanagementsuite.org`
+- **Redirect URLs** → add `https://app.churchmanagementsuite.org/**`
 
--- Backfill missing profiles for existing auth users
-INSERT INTO public.profiles (user_id, full_name, email)
-SELECT u.id, COALESCE(u.raw_user_meta_data->>'full_name', u.email), u.email
-FROM auth.users u
-WHERE NOT EXISTS (
-  SELECT 1 FROM public.profiles p WHERE p.user_id = u.id
-)
-ON CONFLICT (user_id) DO NOTHING;
+This ensures verification links redirect users to the correct domain where the SPA is running.
 
--- Set tenant_id on backfilled profiles from tenant_memberships
-UPDATE public.profiles p
-SET tenant_id = (
-  SELECT tm.tenant_id FROM public.tenant_memberships tm
-  WHERE tm.user_id = p.user_id LIMIT 1
-)
-WHERE p.tenant_id IS NULL
-  AND EXISTS (SELECT 1 FROM public.tenant_memberships tm WHERE tm.user_id = p.user_id);
+#### 2. Update auth-email-hook template URLs
+
+In `supabase/functions/auth-email-hook/index.ts`, update the sample/preview URLs:
+- `SAMPLE_PROJECT_URL` → `https://app.churchmanagementsuite.org`
+- `siteUrl` in `templateProps` → `https://app.churchmanagementsuite.org`
+
+#### 3. Verify SPA handles auth callback
+
+The app already has a `/reset-password` route and `useAuth` handles `onAuthStateChange`. The SPA router uses a catch-all `/*` route, so hash-based auth tokens should work. No routing changes needed.
+
+### Technical details
+
+```text
+Current flow (broken):
+1. User clicks "Reset Password" link in email
+2. Link points to Supabase Auth server with redirect_to param
+3. Supabase Auth redirects to Site URL (churchconnect-mt.lovable.app)
+4. But browser is at app.churchmanagementsuite.org → 404
+
+Fixed flow:
+1. User clicks "Reset Password" link in email
+2. Supabase Auth redirects to app.churchmanagementsuite.org
+3. SPA loads, picks up tokens from URL hash
+4. Auth state updates, user can reset password
 ```
 
-#### 2. No code changes needed
-- `admin-create-user` already upserts profiles with `tenant_id` — that's fine as a belt-and-suspenders approach
-- User Management page already queries profiles with `scopeQuery` — once profiles exist with correct `tenant_id`, users will appear
+### Files to change
 
-### Files changed
-- **One database migration** — recreate trigger + backfill profiles
+- **Auth URL config** — update Site URL + Redirect URLs via Cloud settings
+- **`supabase/functions/auth-email-hook/index.ts`** — update `SAMPLE_PROJECT_URL` and `siteUrl` references
 
