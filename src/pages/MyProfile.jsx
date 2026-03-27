@@ -131,14 +131,18 @@ export default function MyProfile() {
   };
 
   const { data: member, isLoading } = useQuery({
-    queryKey: ["my-member-profile", user?.id],
+    queryKey: ["my-member-profile", user?.id, tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from("members")
         .select("*, wsf_centres!fk_members_wsf_centre(name)")
-        .eq("user_id", user.id)
-        .maybeSingle();
+        .eq("user_id", user.id);
 
+      if (tenantId) {
+        query = query.eq("tenant_id", tenantId);
+      }
+
+      const { data, error } = await query.maybeSingle();
       if (error) throw error;
       return data;
     },
