@@ -141,7 +141,7 @@ export default function ExamManagement() {
         const { error } = await supabase.from("exam_questions").update(payload).eq("id", editingQuestion.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("exam_questions").insert(payload);
+        const { error } = await supabase.from("exam_questions").insert(withTenant(payload));
         if (error) throw error;
       }
     },
