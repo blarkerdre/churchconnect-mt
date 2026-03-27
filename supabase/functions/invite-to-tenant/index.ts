@@ -125,7 +125,7 @@ Deno.serve(async (req) => {
       const siteUrl = "https://churchconnect-mt.lovable.app";
       const signupUrl = `${siteUrl}/t/${tenant.slug}/auth`;
 
-      await supabase.functions.invoke("send-transactional-email", {
+      const emailResult = await supabase.functions.invoke("send-transactional-email", {
         body: {
           templateName: "tenant-invitation",
           recipientEmail: normalizedEmail,
@@ -137,6 +137,31 @@ Deno.serve(async (req) => {
           },
         },
       });
+
+      if (emailResult.error) {
+        console.error("Invitation email failed", { error: emailResult.error, email: normalizedEmail });
+        return new Response(JSON.stringify({
+          success: true,
+          invitation_id: invitation.id,
+          auto_added: false,
+          email_warning: "Invitation created but email failed to send. Please try resending.",
+        }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const emailData = emailResult.data;
+      if (emailData && (emailData.error || emailData.reason === "email_suppressed")) {
+        console.warn("Invitation email issue", { data: emailData, email: normalizedEmail });
+        return new Response(JSON.stringify({
+          success: true,
+          invitation_id: invitation.id,
+          auto_added: false,
+          email_warning: emailData.error || "Recipient email is suppressed.",
+        }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
     }
 
     return new Response(JSON.stringify({ success: true, invitation_id: invitation.id, auto_added: false }), {
