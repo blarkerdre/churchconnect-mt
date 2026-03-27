@@ -1,48 +1,20 @@
 
 
-## Fix: Edge Function Error on Signup from Tenant Auth Page
+## Fix: Redeploy `public-register` Edge Function
 
 ### Problem
 
-When a new user signs up via `https://app.churchmanagementsuite.org/t/wci-cardiff/auth` and lands on MyProfile, the `CreateMemberProfile` component calls `public-register` with `tenant_id` from `useTenantQuery()`. But since the user has no `tenant_memberships` row yet, `tenantId` resolves to `null`, and the edge function rejects the request with "Tenant context is required".
+The `public-register` edge function is returning a non-2xx status when a user signs up from `/t/wci-cardiff/auth` and tries to create their profile. The edge function logs show only "booted" messages with **no request-level logs at all** — no "Registration error", no "Welcome email triggered", nothing. This indicates the currently deployed version of the function does not include the recent `tenant_slug` fallback fix.
+
+### Root Cause
+
+The code changes made in the previous round (adding `tenant_slug` resolution on lines 210-221) were saved to the file but the edge function was likely not redeployed. The live function is still running the old code that rejects requests without a `tenant_id`.
 
 ### Fix
 
-Two changes are needed:
+**Redeploy the `public-register` edge function.** No code changes needed — the file already contains the correct logic.
 
-#### 1. Frontend — pass `tenantSlug` as fallback (MyProfile.jsx)
+### Files changed
 
-In `CreateMemberProfile`, read the tenant slug from the URL params and pass it to the edge function body so the function can resolve the tenant even when `tenantId` is null.
-
-```js
-// Add tenantSlug from URL params
-const { tenantSlug: urlSlug } = useParams();
-
-// In the invoke body, add:
-tenant_slug: urlSlug || null,
-```
-
-#### 2. Edge function — resolve tenant from slug (public-register/index.ts)
-
-After line 207 where `tenantId` is extracted, add a fallback: if `tenantId` is null but `tenant_slug` is provided, look up the tenant by slug and use that ID. This way the authenticated user's profile creation succeeds even before they have a `tenant_memberships` row.
-
-```ts
-let resolvedTenantId = tenantId;
-if (!resolvedTenantId && body.tenant_slug) {
-  const { data: t } = await supabase
-    .from("tenants")
-    .select("id")
-    .eq("slug", sanitize(body.tenant_slug, 100))
-    .eq("is_archived", false)
-    .maybeSingle();
-  if (t) resolvedTenantId = t.id;
-}
-```
-
-Then use `resolvedTenantId` instead of `tenantId` in the guard check on line 210 and throughout the rest of the function.
-
-### Files to change
-
-- `src/pages/MyProfile.jsx` — add `useParams` import and pass `tenant_slug` in the edge function body
-- `supabase/functions/public-register/index.ts` — add slug-based tenant resolution fallback
+None — deployment only.
 
