@@ -170,7 +170,7 @@ async function ensureTenantAccess(supabase: any, userId: string | null | undefin
     );
     await supabase.from("user_roles").upsert(
       { user_id: userId, role: "member", tenant_id: tenantId },
-      { onConflict: "user_id,role" }
+      { onConflict: "user_id,role,tenant_id" }
     );
   } catch (err) {
     console.error("Failed to ensure tenant access:", err);
