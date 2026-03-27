@@ -60,20 +60,21 @@ export default function PastoralCare() {
   });
 
   const { data: pastoralUnitMembers = [] } = useQuery({
-    queryKey: ["pastoral-unit-members"],
+    queryKey: ["pastoral-unit-members", tenantId],
     enabled: isPastoralLeader,
     queryFn: async () => {
-      const { data: assignments, error: aErr } = await supabase
-        .from("unit_leader_assignments")
-        .select("user_id")
-        .in("unit_name", ["Pastoral Care", "pastoral care", "Pastoral care"]);
+      const { data: assignments, error: aErr } = await scopeQuery(
+        supabase
+          .from("unit_leader_assignments")
+          .select("user_id")
+          .in("unit_name", ["Pastoral Care", "pastoral care", "Pastoral care"])
+      );
       if (aErr) throw aErr;
       const userIds = (assignments || []).map(a => a.user_id);
       if (userIds.length === 0) return [];
-      const { data: profiles, error: pErr } = await supabase
-        .from("profiles")
-        .select("user_id, full_name, email")
-        .in("user_id", userIds);
+      const { data: profiles, error: pErr } = await scopeQuery(
+        supabase.from("profiles").select("user_id, full_name, email").in("user_id", userIds)
+      );
       if (pErr) throw pErr;
       return profiles || [];
     },

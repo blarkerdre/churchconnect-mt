@@ -54,12 +54,14 @@ export default function Followups() {
 
   // Fetch follow-up unit members for reassignment
   const { data: followupUnitMembers = [] } = useQuery({
-    queryKey: ["followup-unit-members"],
+    queryKey: ["followup-unit-members", tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("unit_leader_assignments")
-        .select("user_id")
-        .in("unit_name", ["Follow-up", "Follow-Up", "follow-up"]);
+      const { data, error } = await scopeQuery(
+        supabase
+          .from("unit_leader_assignments")
+          .select("user_id")
+          .in("unit_name", ["Follow-up", "Follow-Up", "follow-up"])
+      );
       if (error) throw error;
       return data.map(d => d.user_id);
     },
