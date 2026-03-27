@@ -15,9 +15,11 @@ import {
   Music, Video, FileText, Phone, Mail, Heart
 } from "lucide-react";
 import { ICON_OPTIONS, getIconComponent } from "@/lib/icon-map";
+import { useTenantQuery } from "@/hooks/useTenantQuery";
 
 export default function ExternalLinksSection() {
   const qc = useQueryClient();
+  const { tenantId } = useTenantQuery();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingIdx, setEditingIdx] = useState(null);
   const [form, setForm] = useState({ title: "", url: "", description: "", icon: "Globe" });
@@ -39,7 +41,7 @@ export default function ExternalLinksSection() {
     mutationFn: async (newLinks) => {
       const { error } = await supabase
         .from("app_settings")
-        .upsert({ key: "external_links", value: newLinks }, { onConflict: "key,tenant_id" });
+        .upsert({ key: "external_links", value: newLinks, tenant_id: tenantId }, { onConflict: "key,tenant_id" });
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["app-settings", "external_links"] }),
