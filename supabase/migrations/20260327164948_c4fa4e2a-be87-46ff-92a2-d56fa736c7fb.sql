@@ -1,0 +1,1 @@
+UPDATE app_settings SET tenant_id = (SELECT id FROM tenants LIMIT 1) WHERE key = 'wofbi_about' AND tenant_id IS NULL;

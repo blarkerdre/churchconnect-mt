@@ -776,13 +776,16 @@ function CourseRegistrationsView({ course }) {
 
 function WofbiAboutEditor() {
   const qc = useQueryClient();
+  const { tenantId, withTenant } = useTenantQuery();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState("");
 
   const { data: aboutText = WOFBI_DEFAULT_ABOUT } = useQuery({
-    queryKey: ["app-settings", "wofbi_about"],
+    queryKey: ["app-settings", "wofbi_about", tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("app_settings").select("value").eq("key", "wofbi_about").maybeSingle();
+      let q = supabase.from("app_settings").select("value").eq("key", "wofbi_about");
+      if (tenantId) q = q.eq("tenant_id", tenantId);
+      const { data, error } = await q.maybeSingle();
       if (error) throw error;
       return typeof data?.value === "string" ? data.value : WOFBI_DEFAULT_ABOUT;
     },
@@ -790,11 +793,11 @@ function WofbiAboutEditor() {
 
   const saveMutation = useMutation({
     mutationFn: async (text) => {
-      const { error } = await supabase.from("app_settings").upsert({ key: "wofbi_about", value: text }, { onConflict: "key,tenant_id" });
+      const { error } = await supabase.from("app_settings").upsert(withTenant({ key: "wofbi_about", value: text }), { onConflict: "key,tenant_id" });
       if (error) throw error;
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["app-settings", "wofbi_about"] });
+      qc.invalidateQueries({ queryKey: ["app-settings", "wofbi_about", tenantId] });
       toast({ title: "WoFBI description updated" });
       setEditing(false);
     },
@@ -836,10 +839,13 @@ function WofbiAboutEditor() {
 }
 
 function WofbiAboutDisplay() {
+  const { tenantId } = useTenantQuery();
   const { data: aboutText = WOFBI_DEFAULT_ABOUT } = useQuery({
-    queryKey: ["app-settings", "wofbi_about"],
+    queryKey: ["app-settings", "wofbi_about", tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("app_settings").select("value").eq("key", "wofbi_about").maybeSingle();
+      let q = supabase.from("app_settings").select("value").eq("key", "wofbi_about");
+      if (tenantId) q = q.eq("tenant_id", tenantId);
+      const { data, error } = await q.maybeSingle();
       if (error) throw error;
       return typeof data?.value === "string" ? data.value : WOFBI_DEFAULT_ABOUT;
     },
