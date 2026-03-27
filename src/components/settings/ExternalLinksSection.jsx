@@ -19,6 +19,7 @@ import { useTenantQuery } from "@/hooks/useTenantQuery";
 
 export default function ExternalLinksSection() {
   const qc = useQueryClient();
+  const { tenantId } = useTenantQuery();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingIdx, setEditingIdx] = useState(null);
   const [form, setForm] = useState({ title: "", url: "", description: "", icon: "Globe" });
