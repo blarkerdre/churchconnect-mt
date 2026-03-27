@@ -1,29 +1,23 @@
 
 
-## Add PWA Icon Management to Branding Settings
+## Remove `claim_own_member_profile` RPC
 
-### What changes
+### Why
 
-Add a **PWA App Icon** upload/remove section to the existing `FaviconOgImageSection` in Settings → Branding. This lets tenant admins upload a custom icon that will be used when members install the app to their home screen.
+This function auto-links authenticated users to unlinked member records by email. It was already replaced by the tenant-scoped `auto_link_member_by_email` RPC for admin flows. The self-claim path is a security risk — it allows any authenticated user to silently claim any unlinked member record matching their email across tenants (even with the tenant-scoped fix, it relies on the caller's tenant context which may not be reliable).
 
-### How it works
+### Changes
 
-1. **Settings UI (`src/pages/Settings.jsx`)** — Add a third upload slot in `FaviconOgImageSection` for "App Icon (PWA)":
-   - Upload stores image to `profile-photos` bucket as `{tenantId}/tenant-pwa-icon.png`
-   - Saves the public URL to `tenants.settings.pwa_icon_url`
-   - Shows preview, upload, and remove buttons (same pattern as favicon/OG image)
-   - Helper text: "Icon shown when members install the app to their home screen (recommended: 512×512 PNG)"
+**Database migration:**
+- `DROP FUNCTION IF EXISTS public.claim_own_member_profile();`
 
-2. **Dynamic manifest (`TenantThemeProvider.jsx`)** — Add a `useEffect` that updates the PWA manifest dynamically:
-   - Create a blob-based `manifest.json` with the tenant's `pwa_icon_url` (or defaults) and `name` set to the tenant name
-   - Update `<link rel="manifest">` href to point to the blob URL
-   - Also update `<link rel="apple-touch-icon">` to use the custom icon
-   - Clean up blob URL on unmount
+**`src/hooks/useAuth.jsx` (~lines 68-85):** Remove the `claim_own_member_profile` call block. If no member is found by `user_id`, just set `myMember` to `null` — don't attempt auto-claiming.
 
-3. **No database migration needed** — `pwa_icon_url` is stored in the existing JSON `settings` column on `tenants`.
+**`src/pages/MyProfile.jsx` (~lines 145-156):** Remove the `claim_own_member_profile` fallback. If no member found by `user_id`, return `null`.
 
 ### Files changed
 
-- **`src/pages/Settings.jsx`** — add PWA icon upload/remove in `FaviconOgImageSection`
-- **`src/components/tenants/TenantThemeProvider.jsx`** — dynamically update manifest and apple-touch-icon
+- **One database migration** — drop the function
+- **`src/hooks/useAuth.jsx`** — remove claim block
+- **`src/pages/MyProfile.jsx`** — remove claim fallback
 
