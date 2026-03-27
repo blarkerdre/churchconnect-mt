@@ -155,11 +155,11 @@ export default function Communications() {
       if (editing) {
         const { error } = await supabase.from("announcements").update(payload).eq("id", editing.id);
         if (error) throw error;
-        await logAudit("announcement_update", "announcements", editing.id, { title: form.title });
+        await logAudit("announcement_update", "announcements", editing.id, { title: form.title }, tenantId);
       } else {
         const { error } = await supabase.from("announcements").insert(withTenant(payload));
         if (error) throw error;
-        await logAudit("announcement_create", "announcements", null, { title: form.title, audience: form.audience });
+        await logAudit("announcement_create", "announcements", null, { title: form.title, audience: form.audience }, tenantId);
       }
     },
     onSuccess: () => {
@@ -174,7 +174,7 @@ export default function Communications() {
     mutationFn: async (id) => {
       const { error } = await supabase.from("announcements").delete().eq("id", id);
       if (error) throw error;
-      await logAudit("announcement_delete", "announcements", id);
+      await logAudit("announcement_delete", "announcements", id, null, tenantId);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["announcements"] });
