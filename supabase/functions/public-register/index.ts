@@ -170,7 +170,7 @@ async function ensureTenantAccess(supabase: any, userId: string | null | undefin
     );
     await supabase.from("user_roles").upsert(
       { user_id: userId, role: "member", tenant_id: tenantId },
-      { onConflict: "user_id,role,tenant_id" }
+      { onConflict: "user_id,role" }
     );
   } catch (err) {
     console.error("Failed to ensure tenant access:", err);
@@ -203,6 +203,17 @@ Deno.serve(async (req) => {
 
     const authenticatedUser = await getAuthenticatedUser(req, supabaseUrl, anonKey);
 
+    const body = await req.json();
+    const tenantId = sanitize(body.tenant_id, 36);
+
+    // Authenticated users MUST have a tenant context to prevent orphaned records
+    if (authenticatedUser?.userId && !tenantId) {
+      return new Response(JSON.stringify({ error: "Tenant context is required. Please access your profile through your church portal." }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     // Rate limiting by IP
     const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
       req.headers.get("cf-connecting-ip") || "unknown";
@@ -213,7 +224,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    const body = await req.json();
+    // body already parsed above
 
     // Honeypot check — if filled, silently succeed (bot trap)
     if (body.website) {
@@ -294,7 +305,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    const tenantId = sanitize(body.tenant_id, 36);
+    // tenantId already parsed above
 
     const memberPayload = {
       first_name: firstName,
