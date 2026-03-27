@@ -71,26 +71,47 @@ Deno.serve(async (req) => {
     })
   }
 
-  // Check role with service client
   const serviceClient = createClient(supabaseUrl, supabaseServiceKey)
-  const { data: isAdmin } = await serviceClient.rpc('is_admin', { _user_id: user.id })
-  const { data: isLeader } = await serviceClient.rpc('has_role', {
-    _user_id: user.id,
-    _role: 'unit_leader',
-  })
-
-  if (!isAdmin && !isLeader) {
-    return new Response(JSON.stringify({ error: 'Forbidden: admin or unit leader required' }), {
-      status: 403,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    })
-  }
 
   const { subject, body, audience, tenant_id } = await req.json()
 
   if (!subject?.trim() || !body?.trim() || !audience?.trim()) {
     return new Response(JSON.stringify({ error: 'subject, body, and audience are required' }), {
       status: 400,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    })
+  }
+
+  if (!tenant_id) {
+    return new Response(JSON.stringify({ error: 'tenant_id is required' }), {
+      status: 400,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    })
+  }
+
+  // Verify user belongs to this tenant
+  const { data: belongsToTenant } = await serviceClient.rpc('user_belongs_to_tenant', {
+    _user_id: user.id,
+    _tenant_id: tenant_id,
+  })
+  if (!belongsToTenant) {
+    return new Response(JSON.stringify({ error: 'Forbidden: not a member of this tenant' }), {
+      status: 403,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    })
+  }
+
+  // Check tenant-scoped role
+  const { data: isAdmin } = await serviceClient.rpc('is_admin', { _user_id: user.id, _tenant_id: tenant_id })
+  const { data: isLeader } = await serviceClient.rpc('has_role', {
+    _user_id: user.id,
+    _role: 'unit_leader',
+    _tenant_id: tenant_id,
+  })
+
+  if (!isAdmin && !isLeader) {
+    return new Response(JSON.stringify({ error: 'Forbidden: admin or unit leader required' }), {
+      status: 403,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
   }
