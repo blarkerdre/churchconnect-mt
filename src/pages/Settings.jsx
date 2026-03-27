@@ -488,11 +488,14 @@ function FaviconOgImageSection() {
   const { currentTenant, tenantId, isTenantAdmin } = useTenant();
   const [uploadingFavicon, setUploadingFavicon] = useState(false);
   const [uploadingOg, setUploadingOg] = useState(false);
+  const [uploadingPwa, setUploadingPwa] = useState(false);
   const faviconInputRef = React.useRef(null);
   const ogInputRef = React.useRef(null);
+  const pwaInputRef = React.useRef(null);
 
   const faviconUrl = currentTenant?.settings?.favicon_url || null;
   const ogImageUrl = currentTenant?.settings?.og_image_url || null;
+  const pwaIconUrl = currentTenant?.settings?.pwa_icon_url || null;
 
   const updateSettings = async (key, value) => {
     const mergedSettings = {
@@ -513,13 +516,13 @@ function FaviconOgImageSection() {
       toast({ title: "Please select an image file", variant: "destructive" });
       return;
     }
-    const maxSize = type === "favicon" ? 1 * 1024 * 1024 : 5 * 1024 * 1024;
+    const maxSize = type === "favicon" ? 1 * 1024 * 1024 : type === "pwa-icon" ? 2 * 1024 * 1024 : 5 * 1024 * 1024;
     if (file.size > maxSize) {
-      toast({ title: `Image must be under ${type === "favicon" ? "1MB" : "5MB"}`, variant: "destructive" });
+      toast({ title: `Image must be under ${type === "favicon" ? "1MB" : type === "pwa-icon" ? "2MB" : "5MB"}`, variant: "destructive" });
       return;
     }
 
-    const setUploading = type === "favicon" ? setUploadingFavicon : setUploadingOg;
+    const setUploading = type === "favicon" ? setUploadingFavicon : type === "pwa-icon" ? setUploadingPwa : setUploadingOg;
     setUploading(true);
     try {
       const ext = file.name.split(".").pop();
@@ -535,9 +538,10 @@ function FaviconOgImageSection() {
         .getPublicUrl(path);
       const publicUrl = urlData.publicUrl + "?t=" + Date.now();
 
-      const settingsKey = type === "favicon" ? "favicon_url" : "og_image_url";
+      const settingsKey = type === "favicon" ? "favicon_url" : type === "pwa-icon" ? "pwa_icon_url" : "og_image_url";
       await updateSettings(settingsKey, publicUrl);
-      toast({ title: `${type === "favicon" ? "Favicon" : "Social image"} updated` });
+      const label = type === "favicon" ? "Favicon" : type === "pwa-icon" ? "App icon" : "Social image";
+      toast({ title: `${label} updated` });
       window.location.reload();
     } catch (err) {
       toast({ title: "Upload failed", description: err.message, variant: "destructive" });
@@ -547,12 +551,12 @@ function FaviconOgImageSection() {
   };
 
   const handleRemove = async (type) => {
-    const label = type === "favicon" ? "favicon" : "social image";
+    const label = type === "favicon" ? "favicon" : type === "pwa-icon" ? "app icon" : "social image";
     if (!tenantId || !window.confirm(`Remove the ${label}?`)) return;
-    const setUploading = type === "favicon" ? setUploadingFavicon : setUploadingOg;
+    const setUploading = type === "favicon" ? setUploadingFavicon : type === "pwa-icon" ? setUploadingPwa : setUploadingOg;
     setUploading(true);
     try {
-      const settingsKey = type === "favicon" ? "favicon_url" : "og_image_url";
+      const settingsKey = type === "favicon" ? "favicon_url" : type === "pwa-icon" ? "pwa_icon_url" : "og_image_url";
       await updateSettings(settingsKey, null);
       toast({ title: `${label.charAt(0).toUpperCase() + label.slice(1)} removed` });
       window.location.reload();
@@ -626,6 +630,33 @@ function FaviconOgImageSection() {
                 </Button>
               )}
               <p className="text-[11px] text-muted-foreground">PNG or JPG. Max 5MB. Recommended: 1200×630 px.</p>
+            </div>
+          </div>
+        </div>
+
+        {/* PWA App Icon */}
+        <div className="space-y-2">
+          <Label className="text-sm font-medium">App Icon (PWA)</Label>
+          <div className="flex flex-col sm:flex-row items-center gap-4">
+            <div className="h-16 w-16 rounded-lg bg-muted/50 border-2 border-dashed border-border flex items-center justify-center overflow-hidden shrink-0">
+              {pwaIconUrl ? (
+                <img src={pwaIconUrl} alt="PWA Icon" className="h-full w-full object-contain" />
+              ) : (
+                <ImageIcon className="h-6 w-6 text-muted-foreground" />
+              )}
+            </div>
+            <div className="flex flex-col gap-2 w-full sm:w-auto">
+              <input ref={pwaInputRef} type="file" accept="image/png" className="hidden" onChange={(e) => handleUpload(e.target.files?.[0], "pwa-icon")} />
+              <Button size="sm" onClick={() => pwaInputRef.current?.click()} disabled={uploadingPwa} className="gap-1.5">
+                {uploadingPwa ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                {pwaIconUrl ? "Change App Icon" : "Upload App Icon"}
+              </Button>
+              {pwaIconUrl && (
+                <Button size="sm" variant="outline" onClick={() => handleRemove("pwa-icon")} disabled={uploadingPwa} className="gap-1.5 text-destructive hover:text-destructive">
+                  <X className="h-4 w-4" /> Remove
+                </Button>
+              )}
+              <p className="text-[11px] text-muted-foreground">Icon shown when members install the app to their home screen. PNG only, max 2MB. Recommended: 512×512 px.</p>
             </div>
           </div>
         </div>
