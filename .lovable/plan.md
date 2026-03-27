@@ -1,57 +1,61 @@
 
 
-## Fix: Verification Link Returns 404 on Custom Domain
-
-### Problem
-
-When a user clicks a verification/password-reset link from an auth email, they land on `app.churchmanagementsuite.org` but get a 404. This happens because:
-
-1. **Supabase Auth's Site URL** is likely still set to the default (`churchconnect-mt.lovable.app`) rather than the custom domain `app.churchmanagementsuite.org`
-2. When Auth generates confirmation URLs, it redirects the user to the Site URL with tokens in the URL fragment (`#access_token=...&type=recovery`)
-3. The SPA at `app.churchmanagementsuite.org` receives this, but if the redirect URL config doesn't include the custom domain, Supabase Auth may reject or misroute the callback
+## Fix: Profile Update Fails Due to Missing Tenant Context
 
 ### Root Cause
 
-Supabase Auth controls where verification links redirect. The **Site URL** and **Redirect URLs** must match the domain where the app is hosted. Currently the custom domain is `app.churchmanagementsuite.org`, but Auth is likely configured with the `.lovable.app` URL.
+The user `blarkerdre@yahoo.com` (user ID `600ee600-be0f-469e-837c-6978ab850065`) signed up but was never added to a tenant:
+
+- **No `tenant_memberships` row** — so `tenantId` resolves to `null` in the app
+- **No `user_roles` row** — no role assigned
+- **No `members` row** — profile page shows the "Create Profile" form
+- **Profile row exists** but with `tenant_id = NULL`
+
+When they submit the profile form, it calls the `public-register` edge function, which correctly rejects the request with *"Tenant context is required"* (line 210-215), returning a non-2xx status — hence the "Edge Function returned a non-2xx status code" error.
+
+The user was invited to `wci-cardiff` as `owner`, but the invitation is still `pending` — auto-add didn't complete.
 
 ### Fix
 
-#### 1. Update Supabase Auth URL configuration
+#### 1. Data repair — provision tenant access (insert tool)
 
-This needs to be done via Cloud settings:
-- **Site URL** → `https://app.churchmanagementsuite.org`
-- **Redirect URLs** → add `https://app.churchmanagementsuite.org/**`
+```sql
+-- Add tenant membership
+INSERT INTO public.tenant_memberships (user_id, tenant_id, role)
+VALUES (
+  '600ee600-be0f-469e-837c-6978ab850065',
+  (SELECT id FROM public.tenants WHERE slug = 'wci-cardiff'),
+  'owner'
+)
+ON CONFLICT DO NOTHING;
 
-This ensures verification links redirect users to the correct domain where the SPA is running.
+-- Add user role
+INSERT INTO public.user_roles (user_id, role, tenant_id)
+VALUES (
+  '600ee600-be0f-469e-837c-6978ab850065',
+  'member',
+  (SELECT id FROM public.tenants WHERE slug = 'wci-cardiff')
+)
+ON CONFLICT (user_id, role) DO NOTHING;
 
-#### 2. Update auth-email-hook template URLs
+-- Update profile tenant_id
+UPDATE public.profiles
+SET tenant_id = (SELECT id FROM public.tenants WHERE slug = 'wci-cardiff')
+WHERE user_id = '600ee600-be0f-469e-837c-6978ab850065' AND tenant_id IS NULL;
 
-In `supabase/functions/auth-email-hook/index.ts`, update the sample/preview URLs:
-- `SAMPLE_PROJECT_URL` → `https://app.churchmanagementsuite.org`
-- `siteUrl` in `templateProps` → `https://app.churchmanagementsuite.org`
-
-#### 3. Verify SPA handles auth callback
-
-The app already has a `/reset-password` route and `useAuth` handles `onAuthStateChange`. The SPA router uses a catch-all `/*` route, so hash-based auth tokens should work. No routing changes needed.
-
-### Technical details
-
-```text
-Current flow (broken):
-1. User clicks "Reset Password" link in email
-2. Link points to Supabase Auth server with redirect_to param
-3. Supabase Auth redirects to Site URL (churchconnect-mt.lovable.app)
-4. But browser is at app.churchmanagementsuite.org → 404
-
-Fixed flow:
-1. User clicks "Reset Password" link in email
-2. Supabase Auth redirects to app.churchmanagementsuite.org
-3. SPA loads, picks up tokens from URL hash
-4. Auth state updates, user can reset password
+-- Mark invitation as accepted
+UPDATE public.tenant_invitations
+SET status = 'accepted'
+WHERE email = 'blarkerdre@yahoo.com'
+  AND tenant_id = (SELECT id FROM public.tenants WHERE slug = 'wci-cardiff')
+  AND status = 'pending';
 ```
 
-### Files to change
+#### 2. No code changes needed
 
-- **Auth URL config** — update Site URL + Redirect URLs via Cloud settings
-- **`supabase/functions/auth-email-hook/index.ts`** — update `SAMPLE_PROJECT_URL` and `siteUrl` references
+Once the tenant membership exists, `tenantId` will resolve correctly, the `public-register` function will accept the request, and the profile will be created successfully.
+
+### Files changed
+
+None — data-only operations via insert tool.
 
