@@ -1,61 +1,48 @@
 
 
-## Fix: Profile Update Fails Due to Missing Tenant Context
+## Fix: Edge Function Error on Signup from Tenant Auth Page
 
-### Root Cause
+### Problem
 
-The user `blarkerdre@yahoo.com` (user ID `600ee600-be0f-469e-837c-6978ab850065`) signed up but was never added to a tenant:
-
-- **No `tenant_memberships` row** — so `tenantId` resolves to `null` in the app
-- **No `user_roles` row** — no role assigned
-- **No `members` row** — profile page shows the "Create Profile" form
-- **Profile row exists** but with `tenant_id = NULL`
-
-When they submit the profile form, it calls the `public-register` edge function, which correctly rejects the request with *"Tenant context is required"* (line 210-215), returning a non-2xx status — hence the "Edge Function returned a non-2xx status code" error.
-
-The user was invited to `wci-cardiff` as `owner`, but the invitation is still `pending` — auto-add didn't complete.
+When a new user signs up via `https://app.churchmanagementsuite.org/t/wci-cardiff/auth` and lands on MyProfile, the `CreateMemberProfile` component calls `public-register` with `tenant_id` from `useTenantQuery()`. But since the user has no `tenant_memberships` row yet, `tenantId` resolves to `null`, and the edge function rejects the request with "Tenant context is required".
 
 ### Fix
 
-#### 1. Data repair — provision tenant access (insert tool)
+Two changes are needed:
 
-```sql
--- Add tenant membership
-INSERT INTO public.tenant_memberships (user_id, tenant_id, role)
-VALUES (
-  '600ee600-be0f-469e-837c-6978ab850065',
-  (SELECT id FROM public.tenants WHERE slug = 'wci-cardiff'),
-  'owner'
-)
-ON CONFLICT DO NOTHING;
+#### 1. Frontend — pass `tenantSlug` as fallback (MyProfile.jsx)
 
--- Add user role
-INSERT INTO public.user_roles (user_id, role, tenant_id)
-VALUES (
-  '600ee600-be0f-469e-837c-6978ab850065',
-  'member',
-  (SELECT id FROM public.tenants WHERE slug = 'wci-cardiff')
-)
-ON CONFLICT (user_id, role) DO NOTHING;
+In `CreateMemberProfile`, read the tenant slug from the URL params and pass it to the edge function body so the function can resolve the tenant even when `tenantId` is null.
 
--- Update profile tenant_id
-UPDATE public.profiles
-SET tenant_id = (SELECT id FROM public.tenants WHERE slug = 'wci-cardiff')
-WHERE user_id = '600ee600-be0f-469e-837c-6978ab850065' AND tenant_id IS NULL;
+```js
+// Add tenantSlug from URL params
+const { tenantSlug: urlSlug } = useParams();
 
--- Mark invitation as accepted
-UPDATE public.tenant_invitations
-SET status = 'accepted'
-WHERE email = 'blarkerdre@yahoo.com'
-  AND tenant_id = (SELECT id FROM public.tenants WHERE slug = 'wci-cardiff')
-  AND status = 'pending';
+// In the invoke body, add:
+tenant_slug: urlSlug || null,
 ```
 
-#### 2. No code changes needed
+#### 2. Edge function — resolve tenant from slug (public-register/index.ts)
 
-Once the tenant membership exists, `tenantId` will resolve correctly, the `public-register` function will accept the request, and the profile will be created successfully.
+After line 207 where `tenantId` is extracted, add a fallback: if `tenantId` is null but `tenant_slug` is provided, look up the tenant by slug and use that ID. This way the authenticated user's profile creation succeeds even before they have a `tenant_memberships` row.
 
-### Files changed
+```ts
+let resolvedTenantId = tenantId;
+if (!resolvedTenantId && body.tenant_slug) {
+  const { data: t } = await supabase
+    .from("tenants")
+    .select("id")
+    .eq("slug", sanitize(body.tenant_slug, 100))
+    .eq("is_archived", false)
+    .maybeSingle();
+  if (t) resolvedTenantId = t.id;
+}
+```
 
-None — data-only operations via insert tool.
+Then use `resolvedTenantId` instead of `tenantId` in the guard check on line 210 and throughout the rest of the function.
+
+### Files to change
+
+- `src/pages/MyProfile.jsx` — add `useParams` import and pass `tenant_slug` in the edge function body
+- `supabase/functions/public-register/index.ts` — add slug-based tenant resolution fallback
 
