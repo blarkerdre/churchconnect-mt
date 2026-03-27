@@ -94,7 +94,6 @@ Deno.serve(async (req) => {
     let tenantWhatsappFrom: string | null = null;
     {
       const { data: tenantRow } = await serviceClient
-      const { data: tenantRow } = await serviceClient
         .from("tenants")
         .select("settings")
         .eq("id", tenant_id)
