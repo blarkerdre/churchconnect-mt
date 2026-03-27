@@ -10,6 +10,7 @@ import { Loader2, Search } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
+import { useTenantQuery } from "@/hooks/useTenantQuery";
 
 const ALL_UNITS = [
   "Ushering", "Choir", "Media", "Children's Ministry", "Protocol",
@@ -20,38 +21,45 @@ const ALL_UNITS = [
 
 export default function BulkUnitAssignDialog({ open, onOpenChange }) {
   const queryClient = useQueryClient();
+  const { tenantId, scopeQuery, withTenant } = useTenantQuery();
   const [selectedUnit, setSelectedUnit] = useState("");
   const [selectedUsers, setSelectedUsers] = useState([]);
   const [search, setSearch] = useState("");
 
-  // Get all unit leaders
+  // Get all unit leaders scoped to tenant
   const { data: unitLeaders = [] } = useQuery({
-    queryKey: ["unit-leader-profiles"],
+    queryKey: ["unit-leader-profiles", tenantId],
     queryFn: async () => {
-      const { data: roles } = await supabase
+      let rolesQuery = supabase
         .from("user_roles")
         .select("user_id")
         .eq("role", "unit_leader");
+      if (tenantId) rolesQuery = rolesQuery.eq("tenant_id", tenantId);
+      const { data: roles } = await rolesQuery;
       if (!roles?.length) return [];
       const userIds = roles.map(r => r.user_id);
-      const { data: profiles } = await supabase
-        .from("profiles")
-        .select("*")
-        .in("user_id", userIds)
-        .order("full_name");
+      const { data: profiles } = await scopeQuery(
+        supabase
+          .from("profiles")
+          .select("*")
+          .in("user_id", userIds)
+          .order("full_name")
+      );
       return profiles || [];
     },
     enabled: open,
   });
 
-  // Get existing assignments for selected unit
+  // Get existing assignments for selected unit scoped to tenant
   const { data: existingAssignments = [] } = useQuery({
-    queryKey: ["unit-assignments-for", selectedUnit],
+    queryKey: ["unit-assignments-for", selectedUnit, tenantId],
     queryFn: async () => {
-      const { data } = await supabase
-        .from("unit_leader_assignments")
-        .select("user_id")
-        .eq("unit_name", selectedUnit);
+      const { data } = await scopeQuery(
+        supabase
+          .from("unit_leader_assignments")
+          .select("user_id")
+          .eq("unit_name", selectedUnit)
+      );
       return data?.map(a => a.user_id) || [];
     },
     enabled: !!selectedUnit && open,
@@ -59,10 +67,9 @@ export default function BulkUnitAssignDialog({ open, onOpenChange }) {
 
   const assignMutation = useMutation({
     mutationFn: async () => {
-      // Filter out users who are already assigned
       const newAssignments = selectedUsers
         .filter(uid => !existingAssignments.includes(uid))
-        .map(uid => ({ user_id: uid, unit_name: selectedUnit }));
+        .map(uid => withTenant({ user_id: uid, unit_name: selectedUnit }));
       if (!newAssignments.length) return;
       const { error } = await supabase
         .from("unit_leader_assignments")
