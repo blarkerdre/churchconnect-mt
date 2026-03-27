@@ -15,6 +15,7 @@ import {
   Music, Video, FileText, Phone, Mail, Heart
 } from "lucide-react";
 import { ICON_OPTIONS, getIconComponent } from "@/lib/icon-map";
+import { useTenantQuery } from "@/hooks/useTenantQuery";
 
 export default function ExternalLinksSection() {
   const qc = useQueryClient();
