@@ -113,6 +113,32 @@ Deno.serve(async (req) => {
 
     if (invError) throw invError;
 
+    // Fetch tenant details for the email
+    const { data: tenant } = await supabase
+      .from("tenants")
+      .select("name, slug")
+      .eq("id", tenant_id)
+      .single();
+
+    // Send invitation email via transactional email system
+    if (tenant) {
+      const siteUrl = "https://churchconnect-mt.lovable.app";
+      const signupUrl = `${siteUrl}/t/${tenant.slug}/auth`;
+
+      await supabase.functions.invoke("send-transactional-email", {
+        body: {
+          templateName: "tenant-invitation",
+          recipientEmail: normalizedEmail,
+          idempotencyKey: `tenant-invite-${invitation.id}`,
+          templateData: {
+            churchName: tenant.name,
+            signupUrl,
+            role,
+          },
+        },
+      });
+    }
+
     return new Response(JSON.stringify({ success: true, invitation_id: invitation.id, auto_added: false }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
