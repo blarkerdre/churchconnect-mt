@@ -1,29 +1,29 @@
 
 
-## Add Church Logo to QR Codes + Labels
+## Add PWA Icon Management to Branding Settings
 
 ### What changes
 
-Both `RegistrationQRCode.jsx` and `WoFBIRegistrationQRCode.jsx` will be updated to:
+Add a **PWA App Icon** upload/remove section to the existing `FaviconOgImageSection` in Settings → Branding. This lets tenant admins upload a custom icon that will be used when members install the app to their home screen.
 
-1. **Embed the church logo in the center of the QR code** using `qrcode.react`'s built-in `imageSettings` prop on `QRCodeSVG`. This overlays the tenant's logo (or the default Winners Chapel logo) in the middle of the QR pattern. The high error correction level (`H`) already in use supports up to 30% coverage, so the logo won't break scanning.
+### How it works
 
-2. **Add a visible label above the QR code** — the church/tenant name displayed prominently so printed QR codes are clearly branded. Labels:
-   - Member Registration: **"{Church Name} — Member Registration"**
-   - WoFBI: **"{Church Name} — WoFBI Registration"**
+1. **Settings UI (`src/pages/Settings.jsx`)** — Add a third upload slot in `FaviconOgImageSection` for "App Icon (PWA)":
+   - Upload stores image to `profile-photos` bucket as `{tenantId}/tenant-pwa-icon.png`
+   - Saves the public URL to `tenants.settings.pwa_icon_url`
+   - Shows preview, upload, and remove buttons (same pattern as favicon/OG image)
+   - Helper text: "Icon shown when members install the app to their home screen (recommended: 512×512 PNG)"
 
-3. **Include the label in the downloaded PNG** so printed copies also show the branding text beneath/above the QR.
+2. **Dynamic manifest (`TenantThemeProvider.jsx`)** — Add a `useEffect` that updates the PWA manifest dynamically:
+   - Create a blob-based `manifest.json` with the tenant's `pwa_icon_url` (or defaults) and `name` set to the tenant name
+   - Update `<link rel="manifest">` href to point to the blob URL
+   - Also update `<link rel="apple-touch-icon">` to use the custom icon
+   - Clean up blob URL on unmount
 
-### Technical approach
-
-- Get `currentTenant` from `useTenant()` context (already available — provides `currentTenant.logo_url` and `currentTenant.name`)
-- Use `QRCodeSVG`'s `imageSettings={{ src, height: 48, width: 48, excavate: true }}` to embed the logo
-- Fall back to `/winners-logo.png` (the default logo already used elsewhere) when no tenant logo exists
-- Update the download function to draw the label text on the canvas above/below the QR code
-- Update download filename to include tenant slug (e.g., `mega-church-registration-qr.png`)
+3. **No database migration needed** — `pwa_icon_url` is stored in the existing JSON `settings` column on `tenants`.
 
 ### Files changed
 
-- **`src/components/members/RegistrationQRCode.jsx`** — add logo overlay + church name label
-- **`src/components/exams/WoFBIRegistrationQRCode.jsx`** — add logo overlay + church name label
+- **`src/pages/Settings.jsx`** — add PWA icon upload/remove in `FaviconOgImageSection`
+- **`src/components/tenants/TenantThemeProvider.jsx`** — dynamically update manifest and apple-touch-icon
 
