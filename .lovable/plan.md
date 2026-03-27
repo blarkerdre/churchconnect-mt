@@ -1,23 +1,41 @@
 
 
-## Remove `claim_own_member_profile` RPC
+## Fix: Exam Questions Not Visible After Adding
 
-### Why
+### Problem
 
-This function auto-links authenticated users to unlinked member records by email. It was already replaced by the tenant-scoped `auto_link_member_by_email` RPC for admin flows. The self-claim path is a security risk — it allows any authenticated user to silently claim any unlinked member record matching their email across tenants (even with the tenant-scoped fix, it relies on the caller's tenant context which may not be reliable).
+When adding questions to a subject, they are inserted **without `tenant_id`** (line 189-203 in `ExamManagement.jsx`). The `withTenant()` helper is available but not used on the insert payload. The SELECT query uses `scopeQuery()` which filters by `tenant_id`, so questions with `NULL` tenant_id never appear.
 
-### Changes
+### Fix
 
-**Database migration:**
-- `DROP FUNCTION IF EXISTS public.claim_own_member_profile();`
+**`src/pages/ExamManagement.jsx`** — wrap the insert payload with `withTenant()`:
 
-**`src/hooks/useAuth.jsx` (~lines 68-85):** Remove the `claim_own_member_profile` call block. If no member is found by `user_id`, just set `myMember` to `null` — don't attempt auto-claiming.
+Line 144: Change from:
+```js
+const { error } = await supabase.from("exam_questions").insert(payload);
+```
+to:
+```js
+const { error } = await supabase.from("exam_questions").insert(withTenant(payload));
+```
 
-**`src/pages/MyProfile.jsx` (~lines 145-156):** Remove the `claim_own_member_profile` fallback. If no member found by `user_id`, return `null`.
+This ensures every new question gets the current `tenant_id`, matching the SELECT filter.
+
+### Bonus: Fix existing NULL-tenant questions
+
+Run a data update to backfill any questions that were inserted without a tenant_id, by inheriting it from their linked subject:
+
+```sql
+UPDATE exam_questions eq
+SET tenant_id = es.tenant_id
+FROM exam_subjects es
+WHERE eq.subject_id = es.id
+  AND eq.tenant_id IS NULL
+  AND es.tenant_id IS NOT NULL;
+```
 
 ### Files changed
 
-- **One database migration** — drop the function
-- **`src/hooks/useAuth.jsx`** — remove claim block
-- **`src/pages/MyProfile.jsx`** — remove claim fallback
+- **`src/pages/ExamManagement.jsx`** — add `withTenant()` to insert call
+- **One data backfill** — fix existing orphaned questions
 
