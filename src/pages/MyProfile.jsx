@@ -140,20 +140,7 @@ export default function MyProfile() {
         .maybeSingle();
 
       if (error) throw error;
-      if (data) return data;
-
-      const { data: claimedMemberId, error: claimError } = await supabase.rpc("claim_own_member_profile");
-      if (claimError) throw claimError;
-      if (!claimedMemberId) return null;
-
-      const { data: claimedMember, error: claimedMemberError } = await supabase
-        .from("members")
-        .select("*, wsf_centres!fk_members_wsf_centre(name)")
-        .eq("id", claimedMemberId)
-        .maybeSingle();
-
-      if (claimedMemberError) throw claimedMemberError;
-      return claimedMember;
+      return data;
     },
     enabled: !!user?.id,
   });
