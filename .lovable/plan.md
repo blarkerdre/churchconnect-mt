@@ -1,36 +1,86 @@
 
+## Fix: Invitation Email Not Actually Sending
 
-## Fix: Invitation Emails + Auto-Accept on Signup
+### What I found
 
-### Problem
+The invitation record for `blarkerdre@yahoo.com` is still `pending`, and the last app email attempt for that recipient ended in:
 
-When you invite a new user (like `blarkerdre@yahoo.com`) to a tenant, the system only creates a `tenant_invitations` record — it **never sends an email**. The recipient has no idea they were invited, so the invitation stays "pending" forever.
+- `pending` → `dlq`
+- error: **"Emails disabled for this project"**
 
-### Solution
+The sender domain is now verified, but there is still a likely configuration mismatch in the app email sender:
 
-Three changes to make the invitation flow work end-to-end:
+- verified domain: `notify.churchmanagementsuite.org`
+- current sender code uses: `notify.app.churchmanagementsuite.org`
 
-#### 1. Send invitation email from `invite-to-tenant` Edge Function
+That means even after re-sending, future invitation emails may still fail unless the sender config is corrected.
 
-After creating the invitation record, call `send-transactional-email` with a new `tenant-invitation` template. The email includes a signup link pointing to the tenant's auth page (e.g., `https://app.churchmanagementsuite.org/t/{slug}/auth`).
+Also, `invite-to-tenant` currently creates the invitation row and calls the app email sender, but it does **not** check whether that send succeeded. So invites can remain pending with no clear feedback.
 
-#### 2. Create `tenant-invitation` transactional email template
+### Plan
 
-A new React Email template in `_shared/transactional-email-templates/tenant-invitation.tsx` that says "You've been invited to join {churchName}" with a button linking to the tenant's signup page. Register it in `registry.ts`.
+#### 1. Fix the app email sender domain configuration
+Update the shared app email sender so it uses the verified sender domain for this project.
 
-#### 3. Auto-accept pending invitations on login
+**File:**
+- `supabase/functions/send-transactional-email/index.ts`
 
-Update `TenantContext.jsx` to check for pending invitations matching the logged-in user's email after authentication. If found, automatically create the `tenant_membership`, mark the invitation as `accepted`, and refresh memberships. This handles both new signups and existing users who log in.
+**Change:**
+- Replace the hardcoded sender domain with `notify.churchmanagementsuite.org`
+- Align the visible From-domain branding if needed
 
-### Immediate fix for the current invite
+#### 2. Make invitation sending fail loudly instead of silently
+Harden the invitation function so it validates the response from the app email sender.
 
-As part of implementation, resend the invitation email to `blarkerdre@yahoo.com` by re-invoking the updated edge function (or manually triggering the transactional email).
+**File:**
+- `supabase/functions/invite-to-tenant/index.ts`
 
-### Files changed
+**Change:**
+- Check the result of the `send-transactional-email` invocation
+- If enqueue/send setup fails, return a clear error or warning instead of pretending the invite completed normally
+- This prevents “pending forever with no email sent” situations
 
-- **`supabase/functions/invite-to-tenant/index.ts`** — fetch tenant slug/name, call `send-transactional-email` after creating invitation
-- **`supabase/functions/_shared/transactional-email-templates/tenant-invitation.tsx`** — new invitation email template
-- **`supabase/functions/_shared/transactional-email-templates/registry.ts`** — register new template
-- **`src/contexts/TenantContext.jsx`** — add post-login invitation acceptance logic
-- **Deploy**: `send-transactional-email`, `invite-to-tenant`
+#### 3. Redeploy the email-related backend functions
+After the code updates, redeploy the functions that actually handle invites and email sending.
 
+**Functions:**
+- `send-transactional-email`
+- `invite-to-tenant`
+
+#### 4. Re-send the current pending invitation
+After deployment, re-trigger the invite for `blarkerdre@yahoo.com` so a fresh app email is queued with the corrected sender configuration.
+
+#### 5. Verify end to end
+Confirm the fix by checking:
+- `email_send_log` shows a new record for `tenant-invitation`
+- status progresses successfully instead of going to `dlq`
+- the invitation remains `pending` only until the recipient signs up or logs in, which is expected behavior
+
+### Expected outcome
+
+After this fix:
+- invitation emails should actually send
+- failed email delivery won’t be silently hidden
+- the current owner invite can be re-sent successfully
+- the invitation row will remain `pending` only until the recipient accepts it by signing in
+
+### Technical notes
+
+```text
+Current root cause chain:
+invite created
+  -> app email sender invoked
+  -> previous send failed because project emails were disabled
+  -> no resend completed successfully
+  -> invitation status stayed pending
+
+Additional risk:
+verified domain = notify.churchmanagementsuite.org
+current sender code = notify.app.churchmanagementsuite.org
+=> likely delivery failure on next resend unless corrected
+```
+
+### Files to change
+
+- `supabase/functions/send-transactional-email/index.ts`
+- `supabase/functions/invite-to-tenant/index.ts`
