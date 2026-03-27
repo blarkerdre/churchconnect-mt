@@ -25,13 +25,14 @@ export default function ExternalLinksSection() {
   const [form, setForm] = useState({ title: "", url: "", description: "", icon: "Globe" });
 
   const { data: links = [], isLoading } = useQuery({
-    queryKey: ["app-settings", "external_links"],
+    queryKey: ["app-settings", "external_links", tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let q = supabase
         .from("app_settings")
         .select("value")
-        .eq("key", "external_links")
-        .maybeSingle();
+        .eq("key", "external_links");
+      if (tenantId) q = q.eq("tenant_id", tenantId);
+      const { data, error } = await q.maybeSingle();
       if (error) throw error;
       return Array.isArray(data?.value) ? data.value : [];
     },
