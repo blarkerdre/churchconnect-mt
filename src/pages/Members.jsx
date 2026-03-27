@@ -115,7 +115,7 @@ export default function Members() {
       logAudit("member_delete", "members", member.id, {
         member_name: `${member.first_name} ${member.last_name}`,
         auth_account_deleted: hasAccount,
-      });
+      }, tenantId);
     }
   };
 

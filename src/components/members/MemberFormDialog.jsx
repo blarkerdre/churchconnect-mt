@@ -73,11 +73,11 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
       if (add) {
         const { error } = await supabase.from("user_roles").insert(withTenant({ user_id: userId, role }));
         if (error) throw error;
-        await logAudit("role_add", "user_roles", userId, { role, target_name: `${member?.first_name} ${member?.last_name}` });
+        await logAudit("role_add", "user_roles", userId, { role, target_name: `${member?.first_name} ${member?.last_name}` }, tenantId);
       } else {
         const { error } = await supabase.from("user_roles").delete().eq("user_id", userId).eq("role", role);
         if (error) throw error;
-        await logAudit("role_remove", "user_roles", userId, { role, target_name: `${member?.first_name} ${member?.last_name}` });
+        await logAudit("role_remove", "user_roles", userId, { role, target_name: `${member?.first_name} ${member?.last_name}` }, tenantId);
       }
     },
     onSuccess: () => {
@@ -105,7 +105,7 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
       await logAudit("member_link_account", "members", memberId, {
         member_name: `${member?.first_name} ${member?.last_name}`,
         linked_user_id: userId,
-      });
+      }, tenantId);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["members"] });
@@ -124,7 +124,7 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
       await logAudit("member_unlink_account", "members", memberId, {
         member_name: `${member?.first_name} ${member?.last_name}`,
         unlinked_user_id: member?.user_id,
-      });
+      }, tenantId);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["members"] });

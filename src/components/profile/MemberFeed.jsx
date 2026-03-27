@@ -45,6 +45,7 @@ function AnnouncementItem({ a }) {
 function EventItem({ event, member }) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const { withTenant } = useTenantQuery();
 
   const { data: registration } = useQuery({
     queryKey: ["event-reg", event.id, user?.id],
@@ -62,12 +63,12 @@ function EventItem({ event, member }) {
 
   const registerMutation = useMutation({
     mutationFn: async () => {
-      const payload = {
+      const payload = withTenant({
         event_id: event.id,
         user_id: user.id,
         member_id: member?.id || null,
         status: "registered",
-      };
+      });
       const { error } = await supabase.from("event_registrations").insert(payload);
       if (error) throw error;
     },
