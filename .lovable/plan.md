@@ -1,41 +1,38 @@
 
 
-## Fix: Exam Questions Not Visible After Adding
+## Fix: External Links Not Showing in Sidebar
 
-### Problem
+### Root Cause
 
-When adding questions to a subject, they are inserted **without `tenant_id`** (line 189-203 in `ExamManagement.jsx`). The `withTenant()` helper is available but not used on the insert payload. The SELECT query uses `scopeQuery()` which filters by `tenant_id`, so questions with `NULL` tenant_id never appear.
+`ExternalLinksSection.jsx` upserts to `app_settings` without including `tenant_id` in the payload:
+
+```js
+.upsert({ key: "external_links", value: newLinks }, { onConflict: "key,tenant_id" })
+```
+
+This saves the row with `tenant_id = NULL`. The sidebar uses `useAppSetting("external_links")` which filters by `.eq("tenant_id", tenantId)`, so it never finds the NULL-tenant row.
 
 ### Fix
 
-**`src/pages/ExamManagement.jsx`** — wrap the insert payload with `withTenant()`:
+**`src/components/settings/ExternalLinksSection.jsx`** — import `useTenantQuery` and include `tenant_id` in the upsert payload:
 
-Line 144: Change from:
 ```js
-const { error } = await supabase.from("exam_questions").insert(payload);
-```
-to:
-```js
-const { error } = await supabase.from("exam_questions").insert(withTenant(payload));
+const { tenantId } = useTenantQuery();
+
+// In saveMutation:
+.upsert({ key: "external_links", value: newLinks, tenant_id: tenantId }, { onConflict: "key,tenant_id" })
 ```
 
-This ensures every new question gets the current `tenant_id`, matching the SELECT filter.
-
-### Bonus: Fix existing NULL-tenant questions
-
-Run a data update to backfill any questions that were inserted without a tenant_id, by inheriting it from their linked subject:
+**Backfill existing rows** — one migration to assign orphaned `app_settings` rows to the correct tenant (same pattern as the exam questions fix):
 
 ```sql
-UPDATE exam_questions eq
-SET tenant_id = es.tenant_id
-FROM exam_subjects es
-WHERE eq.subject_id = es.id
-  AND eq.tenant_id IS NULL
-  AND es.tenant_id IS NOT NULL;
+UPDATE app_settings
+SET tenant_id = (SELECT id FROM tenants LIMIT 1)
+WHERE key = 'external_links' AND tenant_id IS NULL;
 ```
 
 ### Files changed
 
-- **`src/pages/ExamManagement.jsx`** — add `withTenant()` to insert call
-- **One data backfill** — fix existing orphaned questions
+- **`src/components/settings/ExternalLinksSection.jsx`** — add `tenant_id` to upsert
+- **One data backfill migration** — fix existing NULL-tenant rows
 
