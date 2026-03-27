@@ -90,6 +90,13 @@ export function TenantProvider({ children }) {
             user_id: userId,
             role: inv.role || "member",
           });
+
+          // Also create user_roles entry for tenant access
+          await supabase.from("user_roles").insert({
+            user_id: userId,
+            role: "member",
+            tenant_id: inv.tenant_id,
+          });
         }
 
         await supabase
