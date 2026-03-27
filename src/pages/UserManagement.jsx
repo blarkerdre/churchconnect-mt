@@ -93,13 +93,13 @@ export default function UserManagement() {
   const toggleRoleMutation = useMutation({
     mutationFn: async ({ userId, role, add, targetName }) => {
       if (add) {
-        const { error } = await supabase.from("user_roles").insert({ user_id: userId, role });
+        const { error } = await supabase.from("user_roles").insert(withTenant({ user_id: userId, role }));
         if (error) throw error;
-        await logAudit("role_add", "user_roles", userId, { role, target_name: targetName });
+        await logAudit("role_add", "user_roles", userId, { role, target_name: targetName }, tenantId);
       } else {
         const { error } = await supabase.from("user_roles").delete().eq("user_id", userId).eq("role", role);
         if (error) throw error;
-        await logAudit("role_remove", "user_roles", userId, { role, target_name: targetName });
+        await logAudit("role_remove", "user_roles", userId, { role, target_name: targetName }, tenantId);
       }
     },
     onSuccess: () => {
@@ -116,7 +116,7 @@ export default function UserManagement() {
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
-      await logAudit("user_create", "profiles", null, { email: formData.email, full_name: formData.full_name, role: formData.role });
+      await logAudit("user_create", "profiles", null, { email: formData.email, full_name: formData.full_name, role: formData.role }, tenantId);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["all-profiles"] });
@@ -134,7 +134,7 @@ export default function UserManagement() {
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
-      await logAudit("user_delete", "profiles", userId, { target_name: targetName });
+      await logAudit("user_delete", "profiles", userId, { target_name: targetName }, tenantId);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["all-profiles"] });
@@ -151,7 +151,7 @@ export default function UserManagement() {
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
-      await logAudit(disabled ? "user_disable" : "user_enable", "profiles", userId, { target_name: targetName });
+      await logAudit(disabled ? "user_disable" : "user_enable", "profiles", userId, { target_name: targetName }, tenantId);
       return { userId, disabled };
     },
     onSuccess: ({ userId, disabled }) => {

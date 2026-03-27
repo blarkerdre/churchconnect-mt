@@ -188,11 +188,11 @@ export default function Events() {
       if (editing) {
         const { error } = await supabase.from("events").update(payload).eq("id", editing.id);
         if (error) throw error;
-        await logAudit("event_update", "events", editing.id, { title: formData.title });
+        await logAudit("event_update", "events", editing.id, { title: formData.title }, tenantId);
       } else {
         const { data: inserted, error } = await supabase.from("events").insert(withTenant(payload)).select().single();
         if (error) throw error;
-        await logAudit("event_create", "events", inserted.id, { title: formData.title });
+        await logAudit("event_create", "events", inserted.id, { title: formData.title }, tenantId);
 
         // Generate child occurrences for recurring events
         if (formData.is_recurring && formData.recurrence_end_date) {
@@ -220,7 +220,7 @@ export default function Events() {
       // If parent recurring event, children cascade via FK
       const { error } = await supabase.from("events").delete().eq("id", event.id);
       if (error) throw error;
-      await logAudit("event_delete", "events", event.id, { title: event.title });
+      await logAudit("event_delete", "events", event.id, { title: event.title }, tenantId);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["events"] });
