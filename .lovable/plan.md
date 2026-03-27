@@ -1,22 +1,21 @@
 
 
-## Fix: Cross-Tenant Admin Escalation on 3 Tables
+## Fix: Replace Global Unique Constraint on `church_units.name` with Tenant-Scoped
 
 ### Problem
 
-`wsf_zones`, `exam_subjects`, and `user_roles` RLS policies use `is_admin(auth.uid())` (single-arg) which returns true for admins of **any** tenant. Combined with `user_has_tenant_access(tenant_id)`, an admin in Tenant A who is a regular member in Tenant B can manage data in Tenant B.
+`church_units` has a unique constraint `church_units_name_key` on `(name)` alone. In a multi-tenant system, different tenants need to use the same unit names (e.g. "Choir", "Ushering"). The constraint must be scoped to `(tenant_id, name)`.
 
 ### Fix
 
-One migration to drop and recreate the affected policies using `is_admin(auth.uid(), tenant_id)`:
+One database migration:
 
-**`wsf_zones`** — replace `is_admin(auth.uid())` with `is_admin(auth.uid(), tenant_id)` in the admin management policy
-
-**`exam_subjects`** — replace `is_admin(auth.uid())` with `is_admin(auth.uid(), tenant_id)` in the admin management policy, remove redundant `user_has_tenant_access(tenant_id)` (already implied by tenant-scoped `is_admin`)
-
-**`user_roles`** — replace `is_admin(auth.uid())` with `is_admin(auth.uid(), tenant_id)` in the SELECT policy
+```sql
+ALTER TABLE public.church_units DROP CONSTRAINT IF EXISTS church_units_name_key;
+CREATE UNIQUE INDEX IF NOT EXISTS church_units_tenant_id_name_key ON public.church_units (tenant_id, name);
+```
 
 ### Files changed
 
-- **One database migration** — drop and recreate 3 RLS policies with tenant-scoped admin checks
+- **One database migration** — replace global unique constraint with tenant-scoped unique index
 
