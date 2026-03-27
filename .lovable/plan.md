@@ -1,29 +1,24 @@
 
 
-## Fix: Tenant-Scope Pickup Locations RLS Policy
+## Fix Linter Warnings: Mutable Function Search Paths
 
-### Problem
+### What changes
 
-The `pickup_locations` table has a duplicate policy `"Admins/leaders can manage pickup locations"` that uses the **single-argument** `is_admin(auth.uid())` and `has_role(auth.uid(), 'unit_leader')` — no tenant filter. Any admin/leader from any tenant can manage all pickup locations.
+Add `SET search_path = public` to the 4 email queue functions that are missing it:
 
-There's already a correct tenant-scoped policy `"Admins can manage pickup locations"` using `is_admin(auth.uid(), tenant_id)`.
+1. `delete_email(text, bigint)`
+2. `enqueue_email(text, jsonb)`
+3. `move_to_dlq(text, text, bigint, jsonb)`
+4. `read_email_batch(text, integer, integer)`
 
-### Fix
+These functions reference `pgmq.*` internally, so the search path needs to include both `public` and `pgmq` (or use fully qualified calls). Since they already use `pgmq.delete(...)`, `pgmq.send(...)`, etc. with explicit schema prefixes, setting `search_path = public` is safe.
 
-Drop the insecure duplicate policy and replace it with a tenant-scoped version that also includes unit leaders:
+### What cannot be fixed via migration
 
-```sql
-DROP POLICY IF EXISTS "Admins/leaders can manage pickup locations" ON public.pickup_locations;
-
-CREATE POLICY "Admins/leaders can manage pickup locations"
-ON public.pickup_locations
-FOR ALL
-TO authenticated
-USING (is_admin(auth.uid(), tenant_id) OR has_role(auth.uid(), 'unit_leader'::app_role, tenant_id))
-WITH CHECK (is_admin(auth.uid(), tenant_id) OR has_role(auth.uid(), 'unit_leader'::app_role, tenant_id));
-```
+- **Extension in public schema** — `pg_net` is not relocatable; this warning is expected and harmless.
+- **Leaked password protection** — must be enabled manually in the authentication settings (Cloud → Backend).
 
 ### Files changed
 
-- **One database migration** — drop and recreate the policy with tenant-scoped functions
+- **One database migration** — `ALTER FUNCTION ... SET search_path = public` for all 4 functions
 
