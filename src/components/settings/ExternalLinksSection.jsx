@@ -41,7 +41,7 @@ export default function ExternalLinksSection() {
     mutationFn: async (newLinks) => {
       const { error } = await supabase
         .from("app_settings")
-        .upsert({ key: "external_links", value: newLinks }, { onConflict: "key,tenant_id" });
+        .upsert({ key: "external_links", value: newLinks, tenant_id: tenantId }, { onConflict: "key,tenant_id" });
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["app-settings", "external_links"] }),
