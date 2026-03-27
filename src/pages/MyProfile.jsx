@@ -1,4 +1,5 @@
 import React, { useState, useRef } from "react";
+import { useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -586,6 +587,7 @@ export default function MyProfile() {
 
 function CreateMemberProfile({ user, onCreated, wsfCentres, churchUnits }) {
   const { tenantId } = useTenantQuery();
+  const { tenantSlug: urlSlug } = useParams();
   const nameParts = (user?.user_metadata?.full_name || "").trim().split(/\s+/);
   const defaultFirst = nameParts[0] || "";
   const defaultLast = nameParts.slice(1).join(" ") || "";
@@ -644,6 +646,7 @@ function CreateMemberProfile({ user, onCreated, wsfCentres, churchUnits }) {
           gdpr_consent: form.gdpr_consent,
            notes: form.notes || null,
           ...(tenantId ? { tenant_id: tenantId } : {}),
+          tenant_slug: urlSlug || null,
         },
       });
       if (error) throw error;
