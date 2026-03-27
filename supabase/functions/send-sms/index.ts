@@ -87,15 +87,13 @@ Deno.serve(async (req) => {
       });
     }
 
-    const body = await req.json();
-    const { recipients, message, sms_type, reference_id, channel, tenant_id } = body;
     const msgChannel = channel === "whatsapp" ? "whatsapp" : "sms";
 
-    // Resolve per-tenant Twilio numbers if tenant_id provided
+    // Resolve per-tenant Twilio numbers
     let fromNumber = TWILIO_FROM;
     let tenantWhatsappFrom: string | null = null;
-    if (tenant_id) {
-      const serviceClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+    {
+      const { data: tenantRow } = await serviceClient
       const { data: tenantRow } = await serviceClient
         .from("tenants")
         .select("settings")
