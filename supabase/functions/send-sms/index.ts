@@ -47,34 +47,52 @@ Deno.serve(async (req) => {
     }
     const userId = user.id;
 
-    // Check admin or unit_leader role
-    const { data: roles } = await supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", userId);
+    const body = await req.json();
+    const { recipients, message, sms_type, reference_id, channel, tenant_id } = body;
 
-    const userRoles = (roles || []).map((r: any) => r.role);
-    const canSend =
-      userRoles.includes("admin") ||
-      userRoles.includes("super_admin") ||
-      userRoles.includes("unit_leader");
+    if (!tenant_id) {
+      return new Response(JSON.stringify({ error: "tenant_id is required" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
-    if (!canSend) {
+    // Use service client for tenant-scoped auth checks
+    const serviceClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+
+    // Verify user belongs to this tenant
+    const { data: belongsToTenant } = await serviceClient.rpc("user_belongs_to_tenant", {
+      _user_id: userId,
+      _tenant_id: tenant_id,
+    });
+    if (!belongsToTenant) {
+      return new Response(JSON.stringify({ error: "Forbidden: not a member of this tenant" }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Check tenant-scoped admin or unit_leader role
+    const { data: isAdmin } = await serviceClient.rpc("is_admin", { _user_id: userId, _tenant_id: tenant_id });
+    const { data: isLeader } = await serviceClient.rpc("has_role", {
+      _user_id: userId,
+      _role: "unit_leader",
+      _tenant_id: tenant_id,
+    });
+
+    if (!isAdmin && !isLeader) {
       return new Response(JSON.stringify({ error: "Forbidden" }), {
         status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const body = await req.json();
-    const { recipients, message, sms_type, reference_id, channel, tenant_id } = body;
     const msgChannel = channel === "whatsapp" ? "whatsapp" : "sms";
 
-    // Resolve per-tenant Twilio numbers if tenant_id provided
+    // Resolve per-tenant Twilio numbers
     let fromNumber = TWILIO_FROM;
     let tenantWhatsappFrom: string | null = null;
-    if (tenant_id) {
-      const serviceClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+    {
       const { data: tenantRow } = await serviceClient
         .from("tenants")
         .select("settings")
@@ -226,10 +244,6 @@ Deno.serve(async (req) => {
 
     // Log all SMS using service role to bypass RLS
     if (logs.length > 0) {
-      const serviceClient = createClient(
-        supabaseUrl,
-        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-      );
       await serviceClient.from("sms_log").insert(logs);
     }
 
