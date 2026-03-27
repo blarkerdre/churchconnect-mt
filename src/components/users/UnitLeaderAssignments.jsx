@@ -6,6 +6,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
+import { useTenantQuery } from "@/hooks/useTenantQuery";
 
 const ALL_UNITS = [
   "Ushering", "Choir", "Media", "Children's Ministry", "Protocol",
@@ -16,14 +17,17 @@ const ALL_UNITS = [
 
 export default function UnitLeaderAssignments({ userId }) {
   const queryClient = useQueryClient();
+  const { tenantId, scopeQuery, withTenant } = useTenantQuery();
 
   const { data: assignments = [] } = useQuery({
-    queryKey: ["unit-leader-assignments", userId],
+    queryKey: ["unit-leader-assignments", userId, tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("unit_leader_assignments")
-        .select("*")
-        .eq("user_id", userId);
+      const { data, error } = await scopeQuery(
+        supabase
+          .from("unit_leader_assignments")
+          .select("*")
+          .eq("user_id", userId)
+      );
       if (error) throw error;
       return data;
     },
@@ -37,11 +41,11 @@ export default function UnitLeaderAssignments({ userId }) {
     mutationFn: async (unitName) => {
       const { error } = await supabase
         .from("unit_leader_assignments")
-        .insert({ user_id: userId, unit_name: unitName });
+        .insert(withTenant({ user_id: userId, unit_name: unitName }));
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["unit-leader-assignments", userId] });
+      queryClient.invalidateQueries({ queryKey: ["unit-leader-assignments", userId, tenantId] });
       toast({ title: "Unit assigned" });
     },
     onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
@@ -49,15 +53,17 @@ export default function UnitLeaderAssignments({ userId }) {
 
   const removeMutation = useMutation({
     mutationFn: async (unitName) => {
-      const { error } = await supabase
+      let q = supabase
         .from("unit_leader_assignments")
         .delete()
         .eq("user_id", userId)
         .eq("unit_name", unitName);
+      if (tenantId) q = q.eq("tenant_id", tenantId);
+      const { error } = await q;
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["unit-leader-assignments", userId] });
+      queryClient.invalidateQueries({ queryKey: ["unit-leader-assignments", userId, tenantId] });
       toast({ title: "Unit removed" });
     },
     onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
