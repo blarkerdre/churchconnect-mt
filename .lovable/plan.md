@@ -1,44 +1,85 @@
 
+## Fix plan: restore self-service profile updates
 
-## Fix: Members Can't Complete Profile (RLS Blocking)
+### What I found
+There are two issues behind “profile can not update”:
 
-### Root Cause
+1. **Orphaned linked member records**
+   - At least one linked member row still has `tenant_id = NULL`:
+     - `members.id = 9991841c-e4d1-4098-bd83-a4c9863b21ed`
+     - email `blarkerdre@yahoo.com`
+   - The profile RPC can update that row, but the page then re-fetches via:
+     ```js
+     supabase.from("members").select(...).eq("user_id", user.id).maybeSingle()
+     ```
+   - RLS blocks the refetch because `user_has_tenant_access(NULL)` returns `false`.
+   - Result: the save may succeed, but the UI falls back to “create/update profile” again, so it looks like nothing saved.
 
-When a user completes their profile via `CreateMemberProfile`, the `public-register` edge function creates/updates the member record using the service role key (bypasses RLS). However, **it never creates `tenant_memberships` or `user_roles` rows** for the authenticated user. 
+2. **Future orphan creation is still possible**
+   - `CreateMemberProfile` only sends `tenant_id` if `tenantId` exists.
+   - `public-register` still accepts authenticated profile creation with no resolved tenant, which can create more `members.tenant_id = NULL` rows.
 
-After creation, when the page tries to read back the member record via the client-side query (line 133), RLS blocks it because `user_has_tenant_access(tenant_id)` returns `false` — the user has no `tenant_memberships` row. So the profile appears to never have been saved.
+### Implementation plan
 
-There is currently 1 orphaned member in this state.
+#### 1. Repair existing bad data
+Use a **data operation** (not a schema migration) to:
+- find linked members where `user_id IS NOT NULL` and `tenant_id IS NULL`
+- assign each one to the correct tenant
+- create any missing `tenant_memberships`
+- create any missing tenant-scoped `user_roles`
 
-### Fix
-
-**1. `supabase/functions/public-register/index.ts`** — After creating/linking a member record for an authenticated user with a `tenant_id`, insert `tenant_memberships` and `user_roles` rows (with `ON CONFLICT DO NOTHING`):
-
+For the currently identified orphan, the repair will be:
 ```sql
-INSERT INTO tenant_memberships (user_id, tenant_id, role) VALUES (..., ..., 'member') ON CONFLICT DO NOTHING;
-INSERT INTO user_roles (user_id, role, tenant_id) VALUES (..., 'member', ...) ON CONFLICT DO NOTHING;
-```
+UPDATE public.members
+SET tenant_id = <correct-tenant-id>, updated_at = now()
+WHERE id = '9991841c-e4d1-4098-bd83-a4c9863b21ed';
 
-This needs to happen in all three code paths: update existing linked member, claim by email, and fresh insert.
-
-**2. Database migration** — Backfill the 1 existing orphaned record:
-
-```sql
 INSERT INTO public.tenant_memberships (user_id, tenant_id, role)
-SELECT m.user_id, m.tenant_id, 'member' FROM public.members m
-WHERE m.user_id IS NOT NULL AND m.tenant_id IS NOT NULL
-  AND NOT EXISTS (SELECT 1 FROM public.tenant_memberships tm WHERE tm.user_id = m.user_id AND tm.tenant_id = m.tenant_id)
-ON CONFLICT DO NOTHING;
+VALUES (<user_id>, <correct-tenant-id>, 'member')
+ON CONFLICT (user_id, tenant_id) DO NOTHING;
 
 INSERT INTO public.user_roles (user_id, role, tenant_id)
-SELECT m.user_id, 'member', m.tenant_id FROM public.members m
-WHERE m.user_id IS NOT NULL AND m.tenant_id IS NOT NULL
-  AND NOT EXISTS (SELECT 1 FROM public.user_roles ur WHERE ur.user_id = m.user_id AND ur.role = 'member' AND ur.tenant_id = m.tenant_id)
-ON CONFLICT DO NOTHING;
+VALUES (<user_id>, 'member', <correct-tenant-id>)
+ON CONFLICT (user_id, role, tenant_id) DO NOTHING;
 ```
 
-### Files changed
+#### 2. Harden `public-register`
+Update `supabase/functions/public-register/index.ts` so authenticated self-service profile creation:
+- **requires a tenant context**
+- refuses to create/update a linked member with `tenant_id = NULL`
+- returns a clear error if tenant resolution is missing
 
-- **`supabase/functions/public-register/index.ts`** — add tenant_memberships + user_roles inserts after member create/update/claim
-- **One database migration** — backfill existing orphaned records
+That prevents new orphaned member records.
 
+#### 3. Harden `MyProfile`
+Update `src/pages/MyProfile.jsx` so:
+- the member lookup is **tenant-aware** when `tenantId` exists
+- if no visible member exists but the user is authenticated, the page shows a clear tenant-assignment/setup error instead of silently behaving like a first-time profile
+- successful save invalidates/refetches the tenant-scoped member query only
+
+#### 4. Verify the full flow
+After the fix, verify:
+- existing orphaned account can edit and save profile
+- profile stays visible after refresh
+- new self-service profile creation always gets a tenant
+- users cannot create/update records across tenants
+
+## Technical details
+```text
+Current failure path:
+linked member exists
+-> tenant_id is NULL
+-> RPC update may succeed
+-> MyProfile re-fetch runs through RLS
+-> user_has_tenant_access(NULL) = false
+-> query returns null
+-> UI shows CreateMemberProfile again
+```
+
+### Files to change
+- `supabase/functions/public-register/index.ts`
+- `src/pages/MyProfile.jsx`
+
+### Data changes
+- one targeted **data repair** for existing orphaned linked member rows
+- no schema migration required unless you want an additional database-level validation later
