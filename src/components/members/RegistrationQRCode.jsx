@@ -9,10 +9,14 @@ import { useTenant } from "@/contexts/TenantContext";
 
 export default function RegistrationQRCode({ open, onOpenChange }) {
   const qrRef = useRef();
-  const { tenantSlug } = useTenant();
+  const { tenantSlug, currentTenant } = useTenant();
   const registrationUrl = tenantSlug
     ? `${window.location.origin}/t/${tenantSlug}/register`
     : `${window.location.origin}/register`;
+
+  const churchName = currentTenant?.name || "Church";
+  const logoUrl = currentTenant?.logo_url || "/winners-logo.png";
+  const label = `${churchName} — Member Registration`;
 
   const handleCopy = () => {
     navigator.clipboard.writeText(registrationUrl);
@@ -27,13 +31,21 @@ export default function RegistrationQRCode({ open, onOpenChange }) {
     const data = new XMLSerializer().serializeToString(svg);
     const img = new Image();
     img.onload = () => {
+      const padding = 40;
+      const labelHeight = 36;
       canvas.width = 512;
-      canvas.height = 512;
+      canvas.height = 512 + labelHeight + padding;
       ctx.fillStyle = "#ffffff";
-      ctx.fillRect(0, 0, 512, 512);
-      ctx.drawImage(img, 0, 0, 512, 512);
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      // Draw label
+      ctx.fillStyle = "#1e3a5f";
+      ctx.font = "bold 18px Arial, sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText(label, canvas.width / 2, labelHeight);
+      // Draw QR
+      ctx.drawImage(img, 0, labelHeight + padding / 2, 512, 512);
       const a = document.createElement("a");
-      a.download = "registration-qr-code.png";
+      a.download = `${tenantSlug || "church"}-registration-qr.png`;
       a.href = canvas.toDataURL("image/png");
       a.click();
     };
@@ -49,8 +61,20 @@ export default function RegistrationQRCode({ open, onOpenChange }) {
           </DialogTitle>
         </DialogHeader>
         <div className="space-y-4 py-2">
+          <p className="text-sm font-semibold text-center text-primary">{label}</p>
           <div ref={qrRef} className="flex justify-center p-6 bg-white rounded-xl border border-border">
-            <QRCodeSVG value={registrationUrl} size={220} level="H" includeMargin />
+            <QRCodeSVG
+              value={registrationUrl}
+              size={220}
+              level="H"
+              includeMargin
+              imageSettings={{
+                src: logoUrl,
+                height: 48,
+                width: 48,
+                excavate: true,
+              }}
+            />
           </div>
           <p className="text-xs text-muted-foreground text-center">
             Scan this code to open the member registration form
