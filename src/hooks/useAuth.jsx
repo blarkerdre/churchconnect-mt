@@ -64,29 +64,7 @@ export function AuthProvider({ children }) {
       setLeaderUnits(unitsRes.data?.map((u) => u.unit_name) || []);
       setTenantMemberships(tmRes.data || []);
 
-      let member = memberRes.data;
-
-      if (!member && userEmail) {
-        const { data: claimedMemberId, error: claimError } = await supabase.rpc("claim_own_member_profile");
-
-        if (claimError) {
-          console.error("Error claiming member profile:", claimError);
-        } else if (claimedMemberId) {
-          const { data: linkedMember, error: linkedMemberError } = await supabase
-            .from("members")
-            .select("*, wsf_centres!fk_members_wsf_centre(name)")
-            .eq("id", claimedMemberId)
-            .maybeSingle();
-
-          if (linkedMemberError) {
-            console.error("Error loading claimed member profile:", linkedMemberError);
-          } else {
-            member = linkedMember;
-          }
-        }
-      }
-
-      setMyMember(member);
+      setMyMember(memberRes.data);
     } catch (err) {
       console.error("Error fetching user data:", err);
     } finally {
