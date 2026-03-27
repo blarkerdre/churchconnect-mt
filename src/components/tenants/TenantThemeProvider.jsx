@@ -127,6 +127,59 @@ export default function TenantThemeProvider({ children }) {
     };
   }, [currentTenant?.settings?.favicon_url]);
 
+  // Dynamic PWA manifest & apple-touch-icon
+  useEffect(() => {
+    const pwaIconUrl = currentTenant?.settings?.pwa_icon_url;
+    const tenantName = currentTenant?.name || "Winners Chapel Cardiff";
+
+    // Build manifest JSON
+    const manifest = {
+      name: tenantName,
+      short_name: tenantName.length > 12 ? tenantName.slice(0, 12).trim() : tenantName,
+      description: `Church Management Suite for ${tenantName}`,
+      start_url: "/",
+      display: "standalone",
+      background_color: "#ffffff",
+      theme_color: "#1e3a5f",
+      icons: pwaIconUrl
+        ? [
+            { src: pwaIconUrl, sizes: "192x192", type: "image/png" },
+            { src: pwaIconUrl, sizes: "512x512", type: "image/png" },
+          ]
+        : [
+            { src: "/icon-192.png", sizes: "192x192", type: "image/png" },
+            { src: "/icon-512.png", sizes: "512x512", type: "image/png" },
+          ],
+    };
+
+    const blob = new Blob([JSON.stringify(manifest)], { type: "application/json" });
+    const blobUrl = URL.createObjectURL(blob);
+
+    // Update or create <link rel="manifest">
+    let manifestLink = document.querySelector('link[rel="manifest"]');
+    if (!manifestLink) {
+      manifestLink = document.createElement("link");
+      manifestLink.rel = "manifest";
+      document.head.appendChild(manifestLink);
+    }
+    manifestLink.href = blobUrl;
+
+    // Update or create <link rel="apple-touch-icon">
+    let appleIcon = document.querySelector('link[rel="apple-touch-icon"]');
+    if (!appleIcon) {
+      appleIcon = document.createElement("link");
+      appleIcon.rel = "apple-touch-icon";
+      document.head.appendChild(appleIcon);
+    }
+    appleIcon.href = pwaIconUrl || "/icon-192.png";
+
+    return () => {
+      URL.revokeObjectURL(blobUrl);
+      manifestLink.href = "/manifest.json";
+      appleIcon.href = "/icon-192.png";
+    };
+  }, [currentTenant?.settings?.pwa_icon_url, currentTenant?.name]);
+
   // Dynamic OG image meta tags
   useEffect(() => {
     const ogImageUrl = currentTenant?.settings?.og_image_url;
