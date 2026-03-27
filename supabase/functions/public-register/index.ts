@@ -161,6 +161,22 @@ async function notifyWSFLeader(supabase: any, wsfCentreId: string, firstName: st
   }
 }
 
+async function ensureTenantAccess(supabase: any, userId: string | null | undefined, tenantId: string | null | undefined) {
+  if (!userId || !tenantId) return;
+  try {
+    await supabase.from("tenant_memberships").upsert(
+      { user_id: userId, tenant_id: tenantId, role: "member" },
+      { onConflict: "user_id,tenant_id" }
+    );
+    await supabase.from("user_roles").upsert(
+      { user_id: userId, role: "member", tenant_id: tenantId },
+      { onConflict: "user_id,role,tenant_id" }
+    );
+  } catch (err) {
+    console.error("Failed to ensure tenant access:", err);
+  }
+}
+
 const VALID_STATUSES = ["First Timer", "New Convert", "Active", "Inactive", "Visitor"];
 const VALID_GENDERS = ["Male", "Female"];
 
