@@ -1,85 +1,51 @@
 
-## Fix plan: restore self-service profile updates
 
-### What I found
-There are two issues behind “profile can not update”:
+## Fix: Users Not Appearing in User Management
 
-1. **Orphaned linked member records**
-   - At least one linked member row still has `tenant_id = NULL`:
-     - `members.id = 9991841c-e4d1-4098-bd83-a4c9863b21ed`
-     - email `blarkerdre@yahoo.com`
-   - The profile RPC can update that row, but the page then re-fetches via:
-     ```js
-     supabase.from("members").select(...).eq("user_id", user.id).maybeSingle()
-     ```
-   - RLS blocks the refetch because `user_has_tenant_access(NULL)` returns `false`.
-   - Result: the save may succeed, but the UI falls back to “create/update profile” again, so it looks like nothing saved.
+### Root Cause
 
-2. **Future orphan creation is still possible**
-   - `CreateMemberProfile` only sends `tenant_id` if `tenantId` exists.
-   - `public-register` still accepts authenticated profile creation with no resolved tenant, which can create more `members.tenant_id = NULL` rows.
+Two issues found:
 
-### Implementation plan
+1. **The `handle_new_user` trigger on `auth.users` is missing.** This trigger is supposed to automatically create a `profiles` row when a new auth user is created. Without it, neither self-signup nor `admin-create-user` (via `auth.admin.createUser`) generates profile rows via the trigger path.
 
-#### 1. Repair existing bad data
-Use a **data operation** (not a schema migration) to:
-- find linked members where `user_id IS NOT NULL` and `tenant_id IS NULL`
-- assign each one to the correct tenant
-- create any missing `tenant_memberships`
-- create any missing tenant-scoped `user_roles`
+2. **The `profiles` table has 0 rows** despite 3 `auth.users` existing and 4 `tenant_memberships`. The User Management page queries `profiles` with `scopeQuery` — no profiles means no users displayed.
 
-For the currently identified orphan, the repair will be:
+The `admin-create-user` edge function does manually upsert into profiles, but without the trigger, users created through normal signup (or the auth email flow) get no profile row at all.
+
+### Fix
+
+#### 1. Database migration — recreate trigger + backfill profiles
+
 ```sql
-UPDATE public.members
-SET tenant_id = <correct-tenant-id>, updated_at = now()
-WHERE id = '9991841c-e4d1-4098-bd83-a4c9863b21ed';
+-- Recreate the trigger
+CREATE OR REPLACE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW
+  EXECUTE FUNCTION public.handle_new_user();
 
-INSERT INTO public.tenant_memberships (user_id, tenant_id, role)
-VALUES (<user_id>, <correct-tenant-id>, 'member')
-ON CONFLICT (user_id, tenant_id) DO NOTHING;
+-- Backfill missing profiles for existing auth users
+INSERT INTO public.profiles (user_id, full_name, email)
+SELECT u.id, COALESCE(u.raw_user_meta_data->>'full_name', u.email), u.email
+FROM auth.users u
+WHERE NOT EXISTS (
+  SELECT 1 FROM public.profiles p WHERE p.user_id = u.id
+)
+ON CONFLICT (user_id) DO NOTHING;
 
-INSERT INTO public.user_roles (user_id, role, tenant_id)
-VALUES (<user_id>, 'member', <correct-tenant-id>)
-ON CONFLICT (user_id, role, tenant_id) DO NOTHING;
+-- Set tenant_id on backfilled profiles from tenant_memberships
+UPDATE public.profiles p
+SET tenant_id = (
+  SELECT tm.tenant_id FROM public.tenant_memberships tm
+  WHERE tm.user_id = p.user_id LIMIT 1
+)
+WHERE p.tenant_id IS NULL
+  AND EXISTS (SELECT 1 FROM public.tenant_memberships tm WHERE tm.user_id = p.user_id);
 ```
 
-#### 2. Harden `public-register`
-Update `supabase/functions/public-register/index.ts` so authenticated self-service profile creation:
-- **requires a tenant context**
-- refuses to create/update a linked member with `tenant_id = NULL`
-- returns a clear error if tenant resolution is missing
+#### 2. No code changes needed
+- `admin-create-user` already upserts profiles with `tenant_id` — that's fine as a belt-and-suspenders approach
+- User Management page already queries profiles with `scopeQuery` — once profiles exist with correct `tenant_id`, users will appear
 
-That prevents new orphaned member records.
+### Files changed
+- **One database migration** — recreate trigger + backfill profiles
 
-#### 3. Harden `MyProfile`
-Update `src/pages/MyProfile.jsx` so:
-- the member lookup is **tenant-aware** when `tenantId` exists
-- if no visible member exists but the user is authenticated, the page shows a clear tenant-assignment/setup error instead of silently behaving like a first-time profile
-- successful save invalidates/refetches the tenant-scoped member query only
-
-#### 4. Verify the full flow
-After the fix, verify:
-- existing orphaned account can edit and save profile
-- profile stays visible after refresh
-- new self-service profile creation always gets a tenant
-- users cannot create/update records across tenants
-
-## Technical details
-```text
-Current failure path:
-linked member exists
--> tenant_id is NULL
--> RPC update may succeed
--> MyProfile re-fetch runs through RLS
--> user_has_tenant_access(NULL) = false
--> query returns null
--> UI shows CreateMemberProfile again
-```
-
-### Files to change
-- `supabase/functions/public-register/index.ts`
-- `src/pages/MyProfile.jsx`
-
-### Data changes
-- one targeted **data repair** for existing orphaned linked member rows
-- no schema migration required unless you want an additional database-level validation later
