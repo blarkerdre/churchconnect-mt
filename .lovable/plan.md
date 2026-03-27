@@ -1,42 +1,64 @@
 
 
-## Tenant-Isolate Settings Queries
+## Tenant-Isolate All Remaining App Features
 
-### Problem
+### Gaps Found
 
-Several `app_settings` queries are missing tenant scoping on **reads**, and one upsert is missing `tenant_id`:
+After auditing the full codebase, these components query the database **without tenant scoping**:
 
-1. **`ExternalLinksSection.jsx`** — SELECT query has no `tenant_id` filter (line 27-37). Also missing `tenantId` in query key.
-2. **`ExamManagement.jsx`** — Two `wofbi_about` SELECT queries (lines 782-788, 839-845) have no `tenant_id` filter. The upsert (line 793) is missing `tenant_id` in the payload.
-3. **`ExamManagement.jsx`** — `wofbi_about` query keys don't include `tenantId`.
+#### 1. `src/components/users/UnitLeaderAssignments.jsx`
+- **SELECT** `unit_leader_assignments` by `user_id` only — no tenant filter, no tenant in query key
+- **INSERT** missing `tenant_id`
+- **DELETE** no tenant filter
 
-The `Settings.jsx` sections (`SettingsListSection`, `NotificationPreferencesSection`) are already correctly tenant-scoped on both reads and writes.
+#### 2. `src/components/users/BulkUnitAssignDialog.jsx`
+- **SELECT** `user_roles` with no tenant filter (gets leaders from all tenants)
+- **SELECT** `profiles` with no tenant filter
+- **SELECT** `unit_leader_assignments` by unit name only — no tenant filter
+- **INSERT** `unit_leader_assignments` missing `tenant_id`
+
+#### 3. `src/components/certificates/IssueCertificateDialog.jsx`
+- **SELECT** `app_settings` for `training_types` — no tenant filter, no `tenantId` in query key
+- **SELECT** `exam_titles` — no tenant filter, no `tenantId` in query key
+
+#### 4. `src/components/certificates/MyCertificates.jsx`
+- Queries `training_completions` by `member_id` only — acceptable (member_id is already scoped), but query key should include `tenantId` for cache isolation
+
+#### 5. `src/pages/PastoralCare.jsx` (~line 63)
+- **SELECT** `unit_leader_assignments` for pastoral unit members — no tenant filter, no `tenantId` in query key
+
+#### 6. `src/pages/Followups.jsx` (~line 57)
+- **SELECT** `unit_leader_assignments` for follow-up unit members — no tenant filter, no `tenantId` in query key
+
+### Already Scoped (No Changes Needed)
+- `ExternalLinksSection.jsx` — already fixed
+- `BookOfTheMonth.jsx`, `BookOfTheMonthSettings.jsx` — already use `scopeQuery`
+- `CertificateTemplateSettings.jsx` — already uses `scopeQuery`/`withTenant`
+- `NotificationBell.jsx` — user-scoped (intentional exception)
+- `useAuth.jsx` — bootstraps before tenant context (intentional exception)
+- `RecentActivity.jsx`, `GrowthIndices.jsx` — receive data as props, don't query directly
 
 ### Fix
 
-**`src/components/settings/ExternalLinksSection.jsx`:**
-- Add `tenantId` to the SELECT query: `.eq("tenant_id", tenantId)` (when set)
-- Add `tenantId` to the query key: `["app-settings", "external_links", tenantId]`
+**`src/components/users/UnitLeaderAssignments.jsx`:**
+- Import `useTenantQuery`, use `scopeQuery` on SELECT, `withTenant` on INSERT, add tenant filter to DELETE, add `tenantId` to query keys
 
-**`src/pages/ExamManagement.jsx`** (two components using `wofbi_about`):
-- Import and use `useTenantQuery` in both `WofbiAboutEditor` and `WofbiAboutDisplay`
-- Add `.eq("tenant_id", tenantId)` to SELECT queries
-- Add `tenantId` to query keys
-- Use `withTenant()` on the upsert payload
+**`src/components/users/BulkUnitAssignDialog.jsx`:**
+- Import `useTenantQuery`, scope all three queries by tenant, use `withTenant` on INSERT, add `tenantId` to query keys
 
-### Backfill
+**`src/components/certificates/IssueCertificateDialog.jsx`:**
+- Scope the `training_types` app_settings query and `exam_titles` query with tenant filter, add `tenantId` to query keys
 
-One migration to assign orphaned `wofbi_about` rows to the correct tenant:
+**`src/pages/PastoralCare.jsx`:**
+- Scope the `pastoral-unit-members` query (unit_leader_assignments) with tenant filter, add `tenantId` to query key
 
-```sql
-UPDATE app_settings
-SET tenant_id = (SELECT id FROM tenants LIMIT 1)
-WHERE key = 'wofbi_about' AND tenant_id IS NULL;
-```
+**`src/pages/Followups.jsx`:**
+- Scope the `followup-unit-members` query (unit_leader_assignments) with tenant filter, add `tenantId` to query key
 
 ### Files changed
-
-- **`src/components/settings/ExternalLinksSection.jsx`** — add tenant filter to SELECT query + query key
-- **`src/pages/ExamManagement.jsx`** — tenant-scope both `wofbi_about` queries + upsert
-- **One data backfill migration** — fix orphaned `wofbi_about` rows
+- `src/components/users/UnitLeaderAssignments.jsx`
+- `src/components/users/BulkUnitAssignDialog.jsx`
+- `src/components/certificates/IssueCertificateDialog.jsx`
+- `src/pages/PastoralCare.jsx`
+- `src/pages/Followups.jsx`
 
