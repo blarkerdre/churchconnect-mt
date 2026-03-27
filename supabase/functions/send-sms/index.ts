@@ -244,10 +244,6 @@ Deno.serve(async (req) => {
 
     // Log all SMS using service role to bypass RLS
     if (logs.length > 0) {
-      const serviceClient = createClient(
-        supabaseUrl,
-        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-      );
       await serviceClient.from("sms_log").insert(logs);
     }
 
