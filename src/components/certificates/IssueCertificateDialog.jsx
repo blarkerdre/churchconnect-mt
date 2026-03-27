@@ -46,13 +46,11 @@ export default function IssueCertificateDialog({ open, onOpenChange, member }) {
 
   // Fetch custom training types from app_settings
   const { data: customTypes = [] } = useQuery({
-    queryKey: ["app-settings", "training_types"],
+    queryKey: ["app-settings", "training_types", tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("app_settings")
-        .select("value")
-        .eq("key", "training_types")
-        .maybeSingle();
+      let q = supabase.from("app_settings").select("value").eq("key", "training_types");
+      if (tenantId) q = q.eq("tenant_id", tenantId);
+      const { data, error } = await q.maybeSingle();
       if (error) throw error;
       return Array.isArray(data?.value) ? data.value : [];
     },
@@ -60,13 +58,11 @@ export default function IssueCertificateDialog({ open, onOpenChange, member }) {
 
   // Fetch active courses from exam_titles
   const { data: examTitles = [] } = useQuery({
-    queryKey: ["exam-titles-active"],
+    queryKey: ["exam-titles-active", tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("exam_titles")
-        .select("name")
-        .eq("is_active", true)
-        .order("name");
+      let q = supabase.from("exam_titles").select("name").eq("is_active", true).order("name");
+      if (tenantId) q = q.eq("tenant_id", tenantId);
+      const { data, error } = await q;
       if (error) throw error;
       return data.map((t) => t.name);
     },
