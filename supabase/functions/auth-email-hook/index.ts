@@ -46,7 +46,7 @@ const FROM_DOMAIN = "churchmanagementsuite.org" // Domain shown in From address 
 // The sample email uses a fixed placeholder (RFC 6761 .test TLD) so the Go backend
 // can always find-and-replace it with the actual recipient when sending test emails,
 // even if the project's domain has changed since the template was scaffolded.
-const SAMPLE_PROJECT_URL = "https://mychurchconnect.lovable.app"
+const SAMPLE_PROJECT_URL = "https://app.churchmanagementsuite.org"
 const SAMPLE_EMAIL = "user@example.test"
 const SAMPLE_DATA: Record<string, object> = {
   signup: {
@@ -220,7 +220,7 @@ async function handleWebhook(req: Request): Promise<Response> {
   // Build template props from payload.data (HookData structure)
   const templateProps = {
     siteName: SITE_NAME,
-    siteUrl: `https://${ROOT_DOMAIN}`,
+    siteUrl: `https://app.${ROOT_DOMAIN}`,
     recipient: payload.data.email,
     confirmationUrl: payload.data.url,
     token: payload.data.token,
