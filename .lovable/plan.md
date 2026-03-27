@@ -1,38 +1,21 @@
 
 
-## Fix: External Links Not Showing in Sidebar
+## Fix: Add Missing Unique Constraint on `app_settings`
 
-### Root Cause
+### Problem
 
-`ExternalLinksSection.jsx` upserts to `app_settings` without including `tenant_id` in the payload:
-
-```js
-.upsert({ key: "external_links", value: newLinks }, { onConflict: "key,tenant_id" })
-```
-
-This saves the row with `tenant_id = NULL`. The sidebar uses `useAppSetting("external_links")` which filters by `.eq("tenant_id", tenantId)`, so it never finds the NULL-tenant row.
+The upsert in `ExternalLinksSection.jsx` uses `onConflict: "key,tenant_id"` but the `app_settings` table has no unique constraint on `(key, tenant_id)`, so Postgres rejects it.
 
 ### Fix
 
-**`src/components/settings/ExternalLinksSection.jsx`** — import `useTenantQuery` and include `tenant_id` in the upsert payload:
-
-```js
-const { tenantId } = useTenantQuery();
-
-// In saveMutation:
-.upsert({ key: "external_links", value: newLinks, tenant_id: tenantId }, { onConflict: "key,tenant_id" })
-```
-
-**Backfill existing rows** — one migration to assign orphaned `app_settings` rows to the correct tenant (same pattern as the exam questions fix):
+One database migration:
 
 ```sql
-UPDATE app_settings
-SET tenant_id = (SELECT id FROM tenants LIMIT 1)
-WHERE key = 'external_links' AND tenant_id IS NULL;
+ALTER TABLE public.app_settings
+ADD CONSTRAINT app_settings_key_tenant_id_key UNIQUE (key, tenant_id);
 ```
 
 ### Files changed
 
-- **`src/components/settings/ExternalLinksSection.jsx`** — add `tenant_id` to upsert
-- **One data backfill migration** — fix existing NULL-tenant rows
+- **One database migration** — add the unique constraint
 
