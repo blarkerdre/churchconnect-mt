@@ -204,15 +204,31 @@ Deno.serve(async (req) => {
     const authenticatedUser = await getAuthenticatedUser(req, supabaseUrl, anonKey);
 
     const body = await req.json();
-    const tenantId = sanitize(body.tenant_id, 36);
+    let resolvedTenantId = sanitize(body.tenant_id, 36);
+
+    // Fallback: resolve tenant from slug if tenant_id is missing
+    if (!resolvedTenantId && body.tenant_slug) {
+      const slug = sanitize(body.tenant_slug, 100);
+      if (slug) {
+        const { data: tenantBySlug } = await supabase
+          .from("tenants")
+          .select("id")
+          .eq("slug", slug)
+          .eq("is_archived", false)
+          .maybeSingle();
+        if (tenantBySlug) resolvedTenantId = tenantBySlug.id;
+      }
+    }
 
     // Authenticated users MUST have a tenant context to prevent orphaned records
-    if (authenticatedUser?.userId && !tenantId) {
+    if (authenticatedUser?.userId && !resolvedTenantId) {
       return new Response(JSON.stringify({ error: "Tenant context is required. Please access your profile through your church portal." }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    const tenantId = resolvedTenantId;
 
     // Rate limiting by IP
     const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
