@@ -1,66 +1,36 @@
 
 
-## Full Audit: Missing `withTenant()` on INSERT/UPDATE Operations
+## Fix: Invitation Emails + Auto-Accept on Signup
 
-After scanning all `src/` files for `.insert()`, `.upsert()`, and `.update()` calls, here are the gaps found:
+### Problem
 
-### Gaps Requiring Fix
+When you invite a new user (like `blarkerdre@yahoo.com`) to a tenant, the system only creates a `tenant_invitations` record — it **never sends an email**. The recipient has no idea they were invited, so the invitation stays "pending" forever.
 
-#### 1. `src/components/profile/MemberFeed.jsx` (line 71)
-- **Table**: `event_registrations`
-- **Issue**: INSERT missing `withTenant()` — `tenant_id` not included
-- **Fix**: Wrap payload with `withTenant(payload)`
+### Solution
 
-#### 2. `src/pages/UserManagement.jsx` (line 96)
-- **Table**: `user_roles`
-- **Issue**: INSERT `{ user_id: userId, role }` — missing `tenant_id`
-- **Fix**: Wrap with `withTenant({ user_id: userId, role })`
+Three changes to make the invitation flow work end-to-end:
 
-#### 3. `src/pages/ExamManagement.jsx` (line 903)
-- **Table**: `course_registrations`
-- **Issue**: INSERT `{ member_id: memberId, course_id: courseId }` — missing `tenant_id`
-- **Fix**: Wrap with `withTenant({ member_id: memberId, course_id: courseId })`
+#### 1. Send invitation email from `invite-to-tenant` Edge Function
 
-#### 4. `src/lib/audit.js` (line 26)
-- **Table**: `audit_log`
-- **Issue**: Most callers never pass `tenantId` (5th arg). The function only sets `tenant_id` if explicitly provided, so most audit log entries are orphaned (NULL tenant_id).
-- **Fix**: Accept `tenantId` as a required-like parameter, OR better: refactor callers to pass it. However, since `logAudit` is a standalone utility without hook access, the cleanest fix is to make all call sites pass the tenant ID. This is a larger change affecting ~15 call sites across 6 files.
-- **Pragmatic alternative**: Since audit_log is read-only by admins and scoped by `is_admin(uid, tenant_id)`, the impact is that audit entries with NULL tenant_id are invisible to tenant admins (only super_admins see them). This is a data visibility issue, not a security issue.
+After creating the invitation record, call `send-transactional-email` with a new `tenant-invitation` template. The email includes a signup link pointing to the tenant's auth page (e.g., `https://app.churchmanagementsuite.org/t/{slug}/auth`).
 
-### Already Correct (No Change Needed)
+#### 2. Create `tenant-invitation` transactional email template
 
-These are intentionally tenant-free or correctly scoped:
+A new React Email template in `_shared/transactional-email-templates/tenant-invitation.tsx` that says "You've been invited to join {churchName}" with a button linking to the tenant's signup page. Register it in `registry.ts`.
 
-- **`TenantAdmin.jsx`** — `tenants.insert()` and `tenant_memberships.insert()` — these are super-admin operations creating new tenants; tenant_id is the newly created `data.id`
-- **`MemberFormDialog.jsx`** — uses `withTenant()` for user_roles and members inserts ✓
-- **All other pages** (Attendance, Communications, Events, Followups, PastoralCare, Transportation, Settings, TrainingReports, ChurchAttendance, ExamManagement questions/titles/sessions) — all use `withTenant()` ✓
-- **Component inserts** (MessagingPane, SelfCheckIn, CheckInPanel, RegistrationsDialog, BulkImportDialog, CertificateTemplateSettings, PastoralCareRequestDialog, WSFAttendanceTab, WSFCentresSection, BookOfTheMonthSettings, SubjectManager, ExamSessionManager) — all use `withTenant()` ✓
-- **NotificationBell** — user-scoped, intentionally tenant-free ✓
+#### 3. Auto-accept pending invitations on login
 
-### Summary of Changes
+Update `TenantContext.jsx` to check for pending invitations matching the logged-in user's email after authentication. If found, automatically create the `tenant_membership`, mark the invitation as `accepted`, and refresh memberships. This handles both new signups and existing users who log in.
 
-| File | Table | Issue |
-|------|-------|-------|
-| `MemberFeed.jsx` | `event_registrations` | Missing `withTenant()` on insert |
-| `UserManagement.jsx` | `user_roles` | Missing `withTenant()` on insert |
-| `ExamManagement.jsx` | `course_registrations` | Missing `withTenant()` on insert |
-| `audit.js` + 6 caller files | `audit_log` | Most calls don't pass `tenantId` |
+### Immediate fix for the current invite
 
-### Implementation
-
-For the first 3 fixes, import `useTenantQuery` (if not already imported) and wrap the insert payload with `withTenant()`.
-
-For `audit.js`, the cleanest approach is to **not change the function signature** but instead update all ~15 call sites to pass `tenantId` as the 5th argument. Each caller already has access to `tenantId` via `useTenantQuery()`.
+As part of implementation, resend the invitation email to `blarkerdre@yahoo.com` by re-invoking the updated edge function (or manually triggering the transactional email).
 
 ### Files changed
 
-- **`src/components/profile/MemberFeed.jsx`** — add `withTenant()` to event registration insert
-- **`src/pages/UserManagement.jsx`** — add `withTenant()` to user_roles insert
-- **`src/pages/ExamManagement.jsx`** — add `withTenant()` to course_registrations insert
-- **`src/lib/audit.js`** — no change needed (signature already supports it)
-- **`src/pages/UserManagement.jsx`** — pass `tenantId` to all `logAudit` calls
-- **`src/pages/Events.jsx`** — pass `tenantId` to all `logAudit` calls
-- **`src/pages/Communications.jsx`** — pass `tenantId` to all `logAudit` calls
-- **`src/pages/Members.jsx`** — pass `tenantId` to `logAudit` calls
-- **`src/components/members/MemberFormDialog.jsx`** — pass `tenantId` to `logAudit` calls
+- **`supabase/functions/invite-to-tenant/index.ts`** — fetch tenant slug/name, call `send-transactional-email` after creating invitation
+- **`supabase/functions/_shared/transactional-email-templates/tenant-invitation.tsx`** — new invitation email template
+- **`supabase/functions/_shared/transactional-email-templates/registry.ts`** — register new template
+- **`src/contexts/TenantContext.jsx`** — add post-login invitation acceptance logic
+- **Deploy**: `send-transactional-email`, `invite-to-tenant`
 
