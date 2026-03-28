@@ -186,7 +186,7 @@ export default function Events() {
         reminder_sent: false,
       };
       if (editing) {
-        const { error } = await supabase.from("events").update(payload).eq("id", editing.id);
+        const { error } = await supabase.from("events").update(payload).eq("id", editing.id).eq("tenant_id", tenantId);
         if (error) throw error;
         await logAudit("event_update", "events", editing.id, { title: formData.title }, tenantId);
       } else {
@@ -218,7 +218,7 @@ export default function Events() {
   const deleteMutation = useMutation({
     mutationFn: async (event) => {
       // If parent recurring event, children cascade via FK
-      const { error } = await supabase.from("events").delete().eq("id", event.id);
+      const { error } = await supabase.from("events").delete().eq("id", event.id).eq("tenant_id", tenantId);
       if (error) throw error;
       await logAudit("event_delete", "events", event.id, { title: event.title }, tenantId);
     },

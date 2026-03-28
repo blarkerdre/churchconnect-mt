@@ -86,7 +86,7 @@ export default function WSFCentresSection() {
   const saveMutation = useMutation({
     mutationFn: async (payload) => {
       if (editing) {
-        const { error } = await supabase.from("wsf_centres").update(payload).eq("id", editing.id);
+        const { error } = await supabase.from("wsf_centres").update(payload).eq("id", editing.id).eq("tenant_id", tenantId);
         if (error) throw error;
       } else {
         const { error } = await supabase.from("wsf_centres").insert(withTenant(payload));
@@ -104,7 +104,7 @@ export default function WSFCentresSection() {
 
   const deleteMutation = useMutation({
     mutationFn: async (id) => {
-      const { error } = await supabase.from("wsf_centres").delete().eq("id", id);
+      const { error } = await supabase.from("wsf_centres").delete().eq("id", id).eq("tenant_id", tenantId);
       if (error) throw error;
     },
     onSuccess: () => {

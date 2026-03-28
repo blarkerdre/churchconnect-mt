@@ -114,7 +114,7 @@ export default function Followups() {
       };
 
       if (form.id) {
-        const { error } = await supabase.from("followups").update(payload).eq("id", form.id);
+        const { error } = await supabase.from("followups").update(payload).eq("id", form.id).eq("tenant_id", tenantId);
         if (error) throw error;
       } else {
         const { error } = await supabase.from("followups").insert(withTenant(payload));
@@ -130,7 +130,7 @@ export default function Followups() {
 
   // Update followup fields (from detail panel)
   const handleUpdateFollowup = async (id, patch) => {
-    const { error } = await supabase.from("followups").update(patch).eq("id", id);
+    const { error } = await supabase.from("followups").update(patch).eq("id", id).eq("tenant_id", tenantId);
     if (error) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
       return;
@@ -147,7 +147,8 @@ export default function Followups() {
       const { error: memberErr } = await supabase
         .from("members")
         .update({ membership_status: "Active" })
-        .eq("id", memberId);
+        .eq("id", memberId)
+        .eq("tenant_id", tenantId);
       if (memberErr) throw memberErr;
 
       const { error: fuErr } = await supabase
@@ -157,7 +158,8 @@ export default function Followups() {
           completed_date: new Date().toISOString().split("T")[0],
           notes: `${personName} has been converted to Active Member.`,
         })
-        .eq("id", followupId);
+        .eq("id", followupId)
+        .eq("tenant_id", tenantId);
       if (fuErr) throw fuErr;
     },
     onSuccess: () => {

@@ -70,8 +70,8 @@ export default function Members() {
   const deleteMutation = useMutation({
     mutationFn: async (member) => {
       // Unlink from any WSF centre leadership before deleting
-      await supabase.from("wsf_centres").update({ leader_id: null }).eq("leader_id", member.id);
-      const { error } = await supabase.from("members").delete().eq("id", member.id);
+      await supabase.from("wsf_centres").update({ leader_id: null }).eq("leader_id", member.id).eq("tenant_id", tenantId);
+      const { error } = await supabase.from("members").delete().eq("id", member.id).eq("tenant_id", tenantId);
       if (error) throw error;
 
       // If member had a linked auth account, delete that too
