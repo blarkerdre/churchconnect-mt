@@ -72,12 +72,12 @@ export function AuthProvider({ children }) {
     }
   }
 
-  const signUp = async (email, password, fullName) => {
+  const signUp = async (email, password, fullName, tenantSlug) => {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        data: { full_name: fullName },
+        data: { full_name: fullName, ...(tenantSlug ? { tenant_slug: tenantSlug } : {}) },
         emailRedirectTo: window.location.origin,
       },
     });
