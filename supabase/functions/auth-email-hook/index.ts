@@ -242,12 +242,25 @@ async function handleWebhook(req: Request): Promise<Response> {
 
   const messageId = crypto.randomUUID()
 
+  // Resolve tenant_id from user's tenant membership for log isolation
+  let resolvedTenantId: string | null = null
+  try {
+    const { data: membership } = await supabase
+      .from('tenant_memberships')
+      .select('tenant_id')
+      .eq('user_id', payload.data.user_id || '')
+      .limit(1)
+      .maybeSingle()
+    if (membership?.tenant_id) resolvedTenantId = membership.tenant_id
+  } catch (_) { /* best-effort */ }
+
   // Log pending BEFORE enqueue so we have a record even if enqueue crashes
   await supabase.from('email_send_log').insert({
     message_id: messageId,
     template_name: emailType,
     recipient_email: payload.data.email,
     status: 'pending',
+    ...(resolvedTenantId ? { tenant_id: resolvedTenantId } : {}),
   })
 
   const { error: enqueueError } = await supabase.rpc('enqueue_email', {
@@ -275,6 +288,7 @@ async function handleWebhook(req: Request): Promise<Response> {
       recipient_email: payload.data.email,
       status: 'failed',
       error_message: 'Failed to enqueue email',
+      ...(resolvedTenantId ? { tenant_id: resolvedTenantId } : {}),
     })
     return new Response(JSON.stringify({ error: 'Failed to enqueue email' }), {
       status: 500,

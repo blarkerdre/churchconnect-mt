@@ -125,6 +125,7 @@ Deno.serve(async (req) => {
       template_name: "welcome-registration",
       recipient_email: normalizedEmail,
       status: "pending",
+      ...(tenant_id ? { tenant_id } : {}),
     });
 
     if (!apiKey) {
@@ -135,6 +136,7 @@ Deno.serve(async (req) => {
         recipient_email: normalizedEmail,
         status: "failed",
         error_message: "Missing LOVABLE_API_KEY",
+        ...(tenant_id ? { tenant_id } : {}),
       });
       return new Response(JSON.stringify({ error: "Server configuration error" }), {
         status: 500,
@@ -165,6 +167,7 @@ Deno.serve(async (req) => {
         template_name: "welcome-registration",
         recipient_email: normalizedEmail,
         status: "sent",
+        ...(tenant_id ? { tenant_id } : {}),
       });
 
       console.log("Welcome email sent directly", { email: normalizedEmail, messageId });
@@ -182,6 +185,7 @@ Deno.serve(async (req) => {
         recipient_email: normalizedEmail,
         status: "failed",
         error_message: errMsg.slice(0, 1000),
+        ...(tenant_id ? { tenant_id } : {}),
       });
       return new Response(JSON.stringify({ error: "Failed to send email" }), {
         status: 500,
