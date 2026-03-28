@@ -72,14 +72,49 @@ Deno.serve(async (req) => {
       });
       if (membershipError) throw membershipError;
 
-      // Notify them
+      // Fetch tenant details for notification
+      const { data: tenantInfo } = await supabase
+        .from("tenants")
+        .select("name, slug")
+        .eq("id", tenant_id)
+        .single();
+
+      const churchName = tenantInfo?.name || "a church";
+
+      // Notify them in-app
       await supabase.from("notifications").insert({
         user_id: existingProfile.user_id,
-        title: "You've been added to a new church",
-        message: `An admin has added you to a church. Switch to it using the tenant switcher.`,
+        title: `You've been added to ${churchName}`,
+        message: `An admin has added you to ${churchName}. Switch to it using the tenant switcher.`,
         type: "general",
         tenant_id,
       });
+
+      // Send notification email
+      if (tenantInfo) {
+        const siteUrl = "https://app.churchmanagementsuite.org";
+        const loginUrl = `${siteUrl}/t/${tenantInfo.slug}/auth`;
+
+        console.log("Sending auto-add notification email", { email: normalizedEmail, tenant: churchName });
+
+        const emailResult = await supabase.functions.invoke("send-transactional-email", {
+          body: {
+            templateName: "tenant-invitation",
+            recipientEmail: normalizedEmail,
+            idempotencyKey: `tenant-autoadd-${existingProfile.user_id}-${tenant_id}`,
+            tenant_id,
+            templateData: {
+              churchName,
+              signupUrl: loginUrl,
+              role,
+            },
+          },
+        });
+
+        if (emailResult.error) {
+          console.error("Auto-add notification email failed", { error: emailResult.error, email: normalizedEmail });
+        }
+      }
 
       return new Response(JSON.stringify({ success: true, auto_added: true }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
