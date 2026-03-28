@@ -1,145 +1,61 @@
 
+Fix the real cause of the non-2xx error for `mayodare@gmail.com` and harden tenant isolation in the onboarding/profile flows.
 
-## Fix: Signup, Login & Tenant Isolation — Comprehensive Audit
+What I found:
+- `mayodare@gmail.com` already has a `profile` and a `tenant_membership`, but has no `members` row yet.
+- In `src/pages/MyProfile.jsx`, when no member is found, the page renders `CreateMemberProfile`.
+- That create form still calls `supabase.functions.invoke("public-register")`.
+- `public-register` is the public registration pipeline, not the authenticated self-service profile pipeline. It includes rate limiting, welcome email, follow-up side effects, and stricter validation. That is why “update my profile” can still fail with a non-2xx response.
+- This is not just one user’s issue. Any tenant user with a profile + membership but no member row can hit the same path.
+- There is also a tenant-isolation weakness in `public-register`: its “find linked member” and “claim by email” lookups are not tenant-scoped, which can misbehave once a user belongs to multiple tenants.
 
-### Issues Found
+Implementation plan:
+1. Add a dedicated authenticated member upsert path
+   - Create a backend RPC/function such as `upsert_own_member_profile(...)`.
+   - It should:
+     - require `auth.uid()`
+     - require a valid tenant context
+     - only act inside that tenant
+     - update the caller’s member row if it exists for that tenant
+     - otherwise claim one unlinked same-tenant member by email, or create a new same-tenant member row
+   - Keep it `SECURITY DEFINER` so it can safely bypass RLS while enforcing tenant/user checks in code.
 
-#### 1. **CRITICAL: `user_roles` unique constraint breaks tenant isolation**
-The `user_roles` table has `UNIQUE (user_id, role)` — missing `tenant_id`. This means:
-- A user can only have one `member` role across ALL tenants
-- The `ensureTenantAccess` upsert `onConflict: "user_id,role"` silently overwrites the tenant_id of an existing role when joining a second tenant
-- This is a tenant isolation violation
+2. Rewire My Profile to use the new authenticated path
+   - In `src/pages/MyProfile.jsx`, replace the `public-register` call inside `CreateMemberProfile`.
+   - Use the new authenticated upsert for first-time profile completion.
+   - Keep normal edits on the existing self-update RPC, or unify both create/update flows onto the new RPC for consistency.
 
-**Fix**: Drop the existing constraint and create `UNIQUE (user_id, role, tenant_id)`. Update the `onConflict` in `ensureTenantAccess` accordingly.
+3. Harden tenant isolation in `public-register`
+   - Keep `public-register` for public registration only.
+   - Scope all member lookups by `tenant_id`:
+     - linked member lookup
+     - email claim lookup
+   - Prevent cross-tenant claim/update behavior.
 
-#### 2. **`acceptPendingInvitations` fails silently due to RLS**
-In `TenantContext.jsx`, the `acceptPendingInvitations` function inserts into `tenant_memberships` using the **anon/user client**. But RLS only allows super_admins and tenant_admins to insert — a new user has neither role, so the insert silently fails. The user never gets added to the tenant.
+4. Improve error visibility
+   - Return clearer backend error messages from the new authenticated profile path.
+   - Add minimal request-level logging so future failures show the actual branch and reason instead of only “booted”.
 
-**Fix**: Add an RLS policy allowing authenticated users to insert their own `tenant_memberships` row when a matching pending invitation exists. Alternatively, move invitation acceptance to a server-side function.
+5. Do a focused auth/profile flow audit
+   - Verify tenant slug propagation on tenant auth routes.
+   - Verify profile creation works for:
+     - invited signup
+     - tenant-route signup
+     - existing authenticated user completing profile
+     - existing member editing profile
+   - Ensure all React Query keys remain tenant-scoped.
 
-#### 3. **`handle_new_user` trigger doesn't set `tenant_id` on profiles**
-The trigger creates a profile with only `user_id`, `full_name`, and `email` — no `tenant_id`. This means profiles created via the trigger are invisible in tenant-scoped queries.
+6. Clean up the obvious UI warning found during review
+   - Fix the `Badge` nested inside `<p>` issue in `MemberDashboard` to remove the DOM nesting warning.
 
-**Fix**: Update the trigger to attempt tenant resolution from pending invitations or pass through metadata.
+Files likely to change:
+- `src/pages/MyProfile.jsx`
+- `supabase/functions/public-register/index.ts`
+- one new database migration for the authenticated upsert function
+- `src/components/dashboard/MemberDashboard.jsx`
 
-#### 4. **Edge function `public-register` may still be running stale code**
-Logs show only boot/shutdown — no request-level logs. The function needs redeployment to ensure the `tenant_slug` fallback is live.
-
----
-
-### Plan
-
-#### Migration 1: Fix `user_roles` unique constraint for multi-tenancy
-
-```sql
--- Drop the old constraint that doesn't include tenant_id
-ALTER TABLE public.user_roles DROP CONSTRAINT IF EXISTS user_roles_user_id_role_key;
-
--- Add tenant-aware unique constraint
-ALTER TABLE public.user_roles ADD CONSTRAINT user_roles_user_id_role_tenant_key 
-  UNIQUE (user_id, role, tenant_id);
-```
-
-#### Migration 2: Allow invitation-based self-insert into `tenant_memberships`
-
-```sql
--- Allow users to accept their own invitations by inserting into tenant_memberships
-CREATE POLICY "Users can accept invitations for themselves"
-ON public.tenant_memberships
-FOR INSERT
-TO authenticated
-WITH CHECK (
-  user_id = auth.uid()
-  AND EXISTS (
-    SELECT 1 FROM public.tenant_invitations ti
-    WHERE ti.email = (SELECT email FROM auth.users WHERE id = auth.uid())
-    AND ti.tenant_id = tenant_memberships.tenant_id
-    AND ti.status = 'pending'
-  )
-);
-```
-
-Also allow users to update invitation status for their own email:
-```sql
-CREATE POLICY "Users can accept their own invitations"
-ON public.tenant_invitations
-FOR UPDATE
-TO authenticated
-USING (lower(email) = lower((SELECT email FROM auth.users WHERE id = auth.uid())))
-WITH CHECK (lower(email) = lower((SELECT email FROM auth.users WHERE id = auth.uid())) AND status = 'accepted');
-```
-
-#### Migration 3: Update `handle_new_user` trigger to resolve tenant
-
-```sql
-CREATE OR REPLACE FUNCTION public.handle_new_user()
-RETURNS trigger
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path TO 'public'
-AS $$
-DECLARE
-  _tenant_id uuid;
-BEGIN
-  -- Try to resolve tenant from a pending invitation
-  SELECT tenant_id INTO _tenant_id
-  FROM public.tenant_invitations
-  WHERE lower(email) = lower(NEW.email)
-    AND status = 'pending'
-  LIMIT 1;
-
-  INSERT INTO public.profiles (user_id, full_name, email, tenant_id)
-  VALUES (
-    NEW.id,
-    COALESCE(NEW.raw_user_meta_data->>'full_name', NEW.email),
-    NEW.email,
-    _tenant_id
-  );
-  RETURN NEW;
-END;
-$$;
-```
-
-#### Code change 1: Fix `ensureTenantAccess` in `public-register/index.ts`
-
-Update the `onConflict` for `user_roles` to include `tenant_id`:
-```ts
-await supabase.from("user_roles").upsert(
-  { user_id: userId, role: "member", tenant_id: tenantId },
-  { onConflict: "user_id,role,tenant_id" }
-);
-```
-
-#### Code change 2: Add `user_roles` insert to `acceptPendingInvitations` in `TenantContext.jsx`
-
-After inserting `tenant_memberships`, also insert a `user_roles` row with role `member`:
-```js
-await supabase.from("user_roles").insert({
-  user_id: userId,
-  role: "member",
-  tenant_id: inv.tenant_id,
-});
-```
-
-#### Deployment: Redeploy `public-register` edge function
-
-Ensure the latest code (tenant_slug fallback + fixed onConflict) is live.
-
-#### Data repair: Fix orphaned profile
-
-```sql
-UPDATE public.profiles
-SET tenant_id = (SELECT tenant_id FROM public.tenant_memberships WHERE user_id = profiles.user_id LIMIT 1)
-WHERE tenant_id IS NULL
-AND EXISTS (SELECT 1 FROM public.tenant_memberships WHERE user_id = profiles.user_id);
-```
-
----
-
-### Files to change
-- `supabase/functions/public-register/index.ts` — fix `onConflict` in `ensureTenantAccess`
-- `src/contexts/TenantContext.jsx` — add `user_roles` insert in `acceptPendingInvitations`
-- **3 database migrations** — constraint fix, RLS policies, trigger update
-- **1 data repair** — fix orphaned profiles
-- **Redeploy** `public-register` edge function
-
+Expected result:
+- `mayodare@gmail.com` can complete profile creation without hitting the public edge function path.
+- Existing users update their profile without non-2xx edge-function errors.
+- Public registration still works.
+- Member linking/updating remains isolated per tenant, avoiding cross-tenant collisions.
