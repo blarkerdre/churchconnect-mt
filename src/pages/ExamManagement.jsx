@@ -88,7 +88,7 @@ export default function ExamManagement() {
   const saveTitleMutation = useMutation({
     mutationFn: async (payload) => {
       if (editingTitle) {
-        const { error } = await supabase.from("exam_titles").update(payload).eq("id", editingTitle.id);
+        const { error } = await supabase.from("exam_titles").update(payload).eq("id", editingTitle.id).eq("tenant_id", tenantId);
         if (error) throw error;
       } else {
         const { error } = await supabase.from("exam_titles").insert(withTenant({ ...payload, created_by: user?.id }));
@@ -107,7 +107,7 @@ export default function ExamManagement() {
 
   const deleteTitleMutation = useMutation({
     mutationFn: async (id) => {
-      const { error } = await supabase.from("exam_titles").delete().eq("id", id);
+      const { error } = await supabase.from("exam_titles").delete().eq("id", id).eq("tenant_id", tenantId);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -138,7 +138,7 @@ export default function ExamManagement() {
   const saveMutation = useMutation({
     mutationFn: async (payload) => {
       if (editingQuestion) {
-        const { error } = await supabase.from("exam_questions").update(payload).eq("id", editingQuestion.id);
+        const { error } = await supabase.from("exam_questions").update(payload).eq("id", editingQuestion.id).eq("tenant_id", tenantId);
         if (error) throw error;
       } else {
         const { error } = await supabase.from("exam_questions").insert(withTenant(payload));
@@ -157,7 +157,7 @@ export default function ExamManagement() {
 
   const deleteMutation = useMutation({
     mutationFn: async (id) => {
-      const { error } = await supabase.from("exam_questions").delete().eq("id", id);
+      const { error } = await supabase.from("exam_questions").delete().eq("id", id).eq("tenant_id", tenantId);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -633,7 +633,7 @@ function CourseRegistrationsView({ course }) {
 
   const deleteMutation = useMutation({
     mutationFn: async (id) => {
-      const { error } = await supabase.from("course_registrations").delete().eq("id", id);
+      const { error } = await supabase.from("course_registrations").delete().eq("id", id).eq("tenant_id", tenantId);
       if (error) throw error;
     },
     onSuccess: () => {

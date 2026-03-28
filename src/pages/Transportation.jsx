@@ -103,7 +103,7 @@ export default function Transportation() {
 
   const manageMutation = useMutation({
     mutationFn: async ({ id, updates }) => {
-      const { error } = await supabase.from("transportation").update(updates).eq("id", id);
+      const { error } = await supabase.from("transportation").update(updates).eq("id", id).eq("tenant_id", tenantId);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -116,7 +116,7 @@ export default function Transportation() {
 
   const deleteBookingMutation = useMutation({
     mutationFn: async (id) => {
-      const { error } = await supabase.from("transportation").delete().eq("id", id);
+      const { error } = await supabase.from("transportation").delete().eq("id", id).eq("tenant_id", tenantId);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -129,7 +129,7 @@ export default function Transportation() {
   const saveLocationMutation = useMutation({
     mutationFn: async (formData) => {
       if (editingLocation) {
-        const { error } = await supabase.from("pickup_locations").update({ name: formData.name, address: formData.address, notes: formData.notes || null }).eq("id", editingLocation.id);
+        const { error } = await supabase.from("pickup_locations").update({ name: formData.name, address: formData.address, notes: formData.notes || null }).eq("id", editingLocation.id).eq("tenant_id", tenantId);
         if (error) throw error;
       } else {
         const { error } = await supabase.from("pickup_locations").insert(withTenant({ name: formData.name, address: formData.address, notes: formData.notes || null, created_by: user.id }));
@@ -147,7 +147,7 @@ export default function Transportation() {
 
   const deleteLocationMutation = useMutation({
     mutationFn: async (id) => {
-      const { error } = await supabase.from("pickup_locations").update({ is_active: false }).eq("id", id);
+      const { error } = await supabase.from("pickup_locations").update({ is_active: false }).eq("id", id).eq("tenant_id", tenantId);
       if (error) throw error;
     },
     onSuccess: () => {

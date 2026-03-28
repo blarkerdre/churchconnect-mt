@@ -64,11 +64,11 @@ export default function ExamSessionManager() {
     mutationFn: async ({ sessionData, courses }) => {
       let sessionId;
       if (editingSession) {
-        const { error } = await supabase.from("exam_sessions").update(sessionData).eq("id", editingSession.id);
+        const { error } = await supabase.from("exam_sessions").update(sessionData).eq("id", editingSession.id).eq("tenant_id", tenantId);
         if (error) throw error;
         sessionId = editingSession.id;
         // Delete existing courses and re-insert
-        await supabase.from("exam_session_courses").delete().eq("session_id", sessionId);
+        await supabase.from("exam_session_courses").delete().eq("session_id", sessionId).eq("tenant_id", tenantId);
       } else {
         const { data, error } = await supabase.from("exam_sessions").insert(withTenant(sessionData)).select("id").single();
         if (error) throw error;
@@ -91,7 +91,7 @@ export default function ExamSessionManager() {
 
   const deleteMutation = useMutation({
     mutationFn: async (id) => {
-      const { error } = await supabase.from("exam_sessions").delete().eq("id", id);
+      const { error } = await supabase.from("exam_sessions").delete().eq("id", id).eq("tenant_id", tenantId);
       if (error) throw error;
     },
     onSuccess: () => {

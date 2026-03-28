@@ -88,7 +88,7 @@ export default function CertificateTemplateSettings() {
 
   const deleteMutation = useMutation({
     mutationFn: async (id) => {
-      const { error } = await supabase.from("certificate_templates").delete().eq("id", id);
+      const { error } = await supabase.from("certificate_templates").delete().eq("id", id).eq("tenant_id", tenantId);
       if (error) throw error;
     },
     onSuccess: () => {

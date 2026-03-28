@@ -114,7 +114,7 @@ export default function Followups() {
       };
 
       if (form.id) {
-        const { error } = await supabase.from("followups").update(payload).eq("id", form.id);
+        const { error } = await supabase.from("followups").update(payload).eq("id", form.id).eq("tenant_id", tenantId);
         if (error) throw error;
       } else {
         const { error } = await supabase.from("followups").insert(withTenant(payload));
@@ -130,7 +130,7 @@ export default function Followups() {
 
   // Update followup fields (from detail panel)
   const handleUpdateFollowup = async (id, patch) => {
-    const { error } = await supabase.from("followups").update(patch).eq("id", id);
+    const { error } = await supabase.from("followups").update(patch).eq("id", id).eq("tenant_id", tenantId);
     if (error) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
       return;

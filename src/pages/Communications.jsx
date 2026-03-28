@@ -153,7 +153,7 @@ export default function Communications() {
         is_published: true, created_by: user.id,
       };
       if (editing) {
-        const { error } = await supabase.from("announcements").update(payload).eq("id", editing.id);
+        const { error } = await supabase.from("announcements").update(payload).eq("id", editing.id).eq("tenant_id", tenantId);
         if (error) throw error;
         await logAudit("announcement_update", "announcements", editing.id, { title: form.title }, tenantId);
       } else {
@@ -172,7 +172,7 @@ export default function Communications() {
 
   const deleteMutation = useMutation({
     mutationFn: async (id) => {
-      const { error } = await supabase.from("announcements").delete().eq("id", id);
+      const { error } = await supabase.from("announcements").delete().eq("id", id).eq("tenant_id", tenantId);
       if (error) throw error;
       await logAudit("announcement_delete", "announcements", id, null, tenantId);
     },
