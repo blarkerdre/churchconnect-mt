@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Info, Shield, ShieldCheck, UserCog, Globe, User, Link2, Unlink2, Search } from "lucide-react";
+import { Loader2, Info, Shield, ShieldCheck, UserCog, Globe, User, Link2, Unlink2 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -88,15 +88,31 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
     onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
 
-  const { data: allProfiles = [] } = useQuery({
-    queryKey: ["all-profiles-for-linking", tenantId],
-    queryFn: async () => {
-      const { data, error } = await scopeQuery(supabase.from("profiles").select("*").order("full_name"));
+  const [linkingByEmail, setLinkingByEmail] = useState(false);
+
+  const handleLinkByEmail = async () => {
+    const email = linkSearch.trim().toLowerCase();
+    if (!email) {
+      toast({ title: "Please enter an email address", variant: "destructive" });
+      return;
+    }
+    setLinkingByEmail(true);
+    try {
+      const { data, error } = await scopeQuery(
+        supabase.from("profiles").select("user_id, full_name, email").eq("email", email)
+      );
       if (error) throw error;
-      return data;
-    },
-    enabled: isAdmin && !!member && !member?.user_id && showLinkSearch,
-  });
+      if (!data || data.length === 0) {
+        toast({ title: "No user account found with this email", description: "The user must sign up first before you can link their account.", variant: "destructive" });
+        return;
+      }
+      linkAccountMutation.mutate({ memberId: member.id, userId: data[0].user_id });
+    } catch (err) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    } finally {
+      setLinkingByEmail(false);
+    }
+  };
 
   const linkAccountMutation = useMutation({
     mutationFn: async ({ memberId, userId }) => {
@@ -134,11 +150,6 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
     onError: (err) => toast({ title: "Error unlinking account", description: err.message, variant: "destructive" }),
   });
 
-  const filteredProfiles = allProfiles.filter(p => {
-    if (!linkSearch) return true;
-    const q = linkSearch.toLowerCase();
-    return (p.full_name || "").toLowerCase().includes(q) || (p.email || "").toLowerCase().includes(q);
-  });
 
   const { data: wsfCentres = [] } = useQuery({
     queryKey: ["wsf-centres", tenantId],
@@ -500,38 +511,25 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
                   </div>
                   {showLinkSearch && (
                     <div className="space-y-2 p-3 rounded-xl border border-border bg-muted/30">
-                      <div className="relative">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <p className="text-xs text-muted-foreground">Enter the email address of the user account to link:</p>
+                      <div className="flex gap-2">
                         <Input
-                          placeholder="Search users by name or email..."
+                          type="email"
+                          placeholder="user@example.com"
                           value={linkSearch}
                           onChange={(e) => setLinkSearch(e.target.value)}
-                          className="pl-9"
                           autoFocus
+                          onKeyDown={(e) => e.key === "Enter" && handleLinkByEmail()}
                         />
-                      </div>
-                      <div className="max-h-40 overflow-y-auto space-y-1">
-                        {filteredProfiles.length === 0 ? (
-                          <p className="text-xs text-muted-foreground text-center py-2">No users found</p>
-                        ) : filteredProfiles.slice(0, 10).map(p => (
-                          <button
-                            key={p.id}
-                            type="button"
-                            className="w-full flex items-center justify-between p-2 rounded-lg hover:bg-muted text-left text-sm transition-colors"
-                            onClick={() => {
-                              if (window.confirm(`Link this member to ${p.full_name || p.email}?`)) {
-                                linkAccountMutation.mutate({ memberId: member.id, userId: p.user_id });
-                              }
-                            }}
-                            disabled={linkAccountMutation.isPending}
-                          >
-                            <div>
-                              <p className="font-medium text-foreground">{p.full_name || "—"}</p>
-                              <p className="text-xs text-muted-foreground">{p.email}</p>
-                            </div>
-                            <Link2 className="h-4 w-4 text-primary shrink-0" />
-                          </button>
-                        ))}
+                        <Button
+                          size="sm"
+                          onClick={handleLinkByEmail}
+                          disabled={linkingByEmail || linkAccountMutation.isPending}
+                          className="shrink-0"
+                        >
+                          {linkingByEmail ? <Loader2 className="h-4 w-4 animate-spin" /> : <Link2 className="h-4 w-4 mr-1" />}
+                          Link
+                        </Button>
                       </div>
                     </div>
                   )}
