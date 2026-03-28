@@ -618,39 +618,39 @@ function CreateMemberProfile({ user, onCreated, wsfCentres, churchUnits }) {
       toast({ title: "GDPR consent is required", variant: "destructive" });
       return;
     }
+    if (!tenantId) {
+      toast({ title: "Error", description: "No church context found. Please access this page through your church portal.", variant: "destructive" });
+      return;
+    }
     setSaving(true);
     try {
-      const { data, error } = await supabase.functions.invoke("public-register", {
-        body: {
-          first_name: form.first_name,
-          last_name: form.last_name,
-          email: form.email || null,
-          phone: form.phone || null,
-          address: form.address || null,
-          city: form.city || null,
-          postcode: form.postcode || null,
-          date_of_birth: form.date_of_birth || null,
-          gender: form.gender || null,
-          membership_status: form.membership_status || "First Timer",
-          church_unit: showChurchUnits ? (form.church_unit || null) : null,
-          emergency_contact_name: form.emergency_contact_name || null,
-          emergency_contact_phone: form.emergency_contact_phone || null,
-          water_baptism: form.water_baptism,
-          holy_spirit_baptism: form.holy_spirit_baptism,
-          winners_satellite: form.winners_satellite,
-          wsf_centre_id: form.wsf_centre_id || null,
-          bfc_completed: form.bfc_completed,
-          bcc_completed: form.bcc_completed,
-          lcc_completed: form.lcc_completed,
-          ldc_completed: form.ldc_completed,
-          gdpr_consent: form.gdpr_consent,
-           notes: form.notes || null,
-          ...(tenantId ? { tenant_id: tenantId } : {}),
-          tenant_slug: urlSlug || null,
-        },
+      const { error } = await supabase.rpc("upsert_own_member_profile", {
+        p_tenant_id: tenantId,
+        p_first_name: form.first_name,
+        p_last_name: form.last_name,
+        p_email: form.email || null,
+        p_phone: form.phone || null,
+        p_address: form.address || null,
+        p_city: form.city || null,
+        p_postcode: form.postcode || null,
+        p_date_of_birth: form.date_of_birth || null,
+        p_gender: form.gender || null,
+        p_membership_status: form.membership_status || "First Timer",
+        p_church_unit: showChurchUnits ? (form.church_unit || null) : null,
+        p_emergency_contact_name: form.emergency_contact_name || null,
+        p_emergency_contact_phone: form.emergency_contact_phone || null,
+        p_notes: form.notes || null,
+        p_water_baptism: form.water_baptism,
+        p_holy_spirit_baptism: form.holy_spirit_baptism,
+        p_winners_satellite: form.winners_satellite,
+        p_wsf_centre_id: form.wsf_centre_id || null,
+        p_bfc_completed: form.bfc_completed,
+        p_bcc_completed: form.bcc_completed,
+        p_lcc_completed: form.lcc_completed,
+        p_ldc_completed: form.ldc_completed,
+        p_gdpr_consent: form.gdpr_consent,
       });
       if (error) throw error;
-      if (data?.error) throw new Error(data.error);
       toast({ title: "Profile updated successfully!" });
       onCreated();
     } catch (err) {
