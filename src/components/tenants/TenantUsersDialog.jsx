@@ -91,7 +91,8 @@ export default function TenantUsersDialog({ tenant, open, onOpenChange }) {
       const { error } = await supabase
         .from("tenant_memberships")
         .update({ role })
-        .eq("id", membershipId);
+        .eq("id", membershipId)
+        .eq("tenant_id", tenant.id);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -108,7 +109,8 @@ export default function TenantUsersDialog({ tenant, open, onOpenChange }) {
       const { error } = await supabase
         .from("tenant_memberships")
         .delete()
-        .eq("id", membershipId);
+        .eq("id", membershipId)
+        .eq("tenant_id", tenant.id);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -126,7 +128,8 @@ export default function TenantUsersDialog({ tenant, open, onOpenChange }) {
       const { error } = await supabase
         .from("tenant_invitations")
         .update({ status: "cancelled" })
-        .eq("id", invitationId);
+        .eq("id", invitationId)
+        .eq("tenant_id", tenant.id);
       if (error) throw error;
     },
     onSuccess: () => {
