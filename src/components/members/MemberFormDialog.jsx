@@ -100,7 +100,7 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
 
   const linkAccountMutation = useMutation({
     mutationFn: async ({ memberId, userId }) => {
-      const { error } = await supabase.from("members").update({ user_id: userId }).eq("id", memberId);
+      const { error } = await supabase.from("members").update({ user_id: userId }).eq("id", memberId).eq("tenant_id", tenantId);
       if (error) throw error;
       await logAudit("member_link_account", "members", memberId, {
         member_name: `${member?.first_name} ${member?.last_name}`,
@@ -119,7 +119,7 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
 
   const unlinkAccountMutation = useMutation({
     mutationFn: async ({ memberId }) => {
-      const { error } = await supabase.from("members").update({ user_id: null }).eq("id", memberId);
+      const { error } = await supabase.from("members").update({ user_id: null }).eq("id", memberId).eq("tenant_id", tenantId);
       if (error) throw error;
       await logAudit("member_unlink_account", "members", memberId, {
         member_name: `${member?.first_name} ${member?.last_name}`,
@@ -210,7 +210,7 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
       };
 
       if (member) {
-        const { error } = await supabase.from("members").update(payload).eq("id", member.id);
+        const { error } = await supabase.from("members").update(payload).eq("id", member.id).eq("tenant_id", tenantId);
         if (error) throw error;
         toast({ title: "Member updated" });
       } else if (createAccount) {

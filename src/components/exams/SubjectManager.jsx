@@ -36,7 +36,7 @@ export default function SubjectManager({ course, onSelectSubject, selectedSubjec
   const saveMutation = useMutation({
     mutationFn: async (payload) => {
       if (editing) {
-        const { error } = await supabase.from("exam_subjects").update(payload).eq("id", editing.id);
+        const { error } = await supabase.from("exam_subjects").update(payload).eq("id", editing.id).eq("tenant_id", tenantId);
         if (error) throw error;
       } else {
         const { error } = await supabase.from("exam_subjects").insert(withTenant({ ...payload, course_id: course.id, sort_order: subjects.length }));
@@ -54,7 +54,7 @@ export default function SubjectManager({ course, onSelectSubject, selectedSubjec
 
   const deleteMutation = useMutation({
     mutationFn: async (id) => {
-      const { error } = await supabase.from("exam_subjects").delete().eq("id", id);
+      const { error } = await supabase.from("exam_subjects").delete().eq("id", id).eq("tenant_id", tenantId);
       if (error) throw error;
     },
     onSuccess: () => {

@@ -12,7 +12,7 @@ import { useTenantQuery } from "@/hooks/useTenantQuery";
 
 export default function RegistrationsDialog({ open, onOpenChange, event }) {
   const { user } = useAuth();
-  const { withTenant } = useTenantQuery();
+  const { tenantId, withTenant } = useTenantQuery();
   const [newName, setNewName] = useState("");
   const [newEmail, setNewEmail] = useState("");
   const [adding, setAdding] = useState(false);
@@ -45,7 +45,7 @@ export default function RegistrationsDialog({ open, onOpenChange, event }) {
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, data }) => {
-      const { error } = await supabase.from("event_registrations").update(data).eq("id", id);
+      const { error } = await supabase.from("event_registrations").update(data).eq("id", id).eq("tenant_id", tenantId);
       if (error) throw error;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["registrations", event?.id] }),
@@ -53,7 +53,7 @@ export default function RegistrationsDialog({ open, onOpenChange, event }) {
 
   const deleteMutation = useMutation({
     mutationFn: async (id) => {
-      const { error } = await supabase.from("event_registrations").delete().eq("id", id);
+      const { error } = await supabase.from("event_registrations").delete().eq("id", id).eq("tenant_id", tenantId);
       if (error) throw error;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["registrations", event?.id] }),
