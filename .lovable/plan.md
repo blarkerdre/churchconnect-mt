@@ -1,106 +1,47 @@
 
 
-## Fix: Tenant Isolation Gaps Across All App Features
-
-### Audit Summary
-
-I reviewed all 49+ files with database queries. Most SELECT queries correctly use `scopeQuery()` and most INSERTs use `withTenant()`. However, many UPDATE and DELETE mutations only filter by `.eq("id", id)` without adding `.eq("tenant_id", tenantId)`. While RLS policies provide server-side protection, adding client-side tenant scoping is defense-in-depth and prevents accidental cross-tenant operations if RLS has gaps.
+## Fix: Tenant Admin Invite Flow — Issues & Email Not Working
 
 ### Issues Found
 
-#### Category 1: UPDATE mutations missing `.eq("tenant_id", tenantId)`
+#### 1. CRITICAL: `invite-to-tenant` site URL hardcoded to old domain
+**Line 125** of `supabase/functions/invite-to-tenant/index.ts`:
+```
+const siteUrl = "https://churchconnect-mt.lovable.app";
+```
+Should be `https://app.churchmanagementsuite.org`. The invitation email contains a signup link pointing to the old Lovable preview domain, which may not resolve correctly or confuse users.
 
-| File | Table | Line |
-|---|---|---|
-| `src/pages/Transportation.jsx` | `transportation` | 106 |
-| `src/pages/Transportation.jsx` | `pickup_locations` | 132, 150 |
-| `src/pages/Followups.jsx` | `followups` | 117, 133 |
-| `src/pages/Followups.jsx` | `members` | 149 |
-| `src/pages/PastoralCare.jsx` | `pastoral_care` | 122 |
-| `src/pages/Attendance.jsx` | `attendance_sessions` | 95, 107 |
-| `src/pages/Communications.jsx` | `announcements` | 156 |
-| `src/pages/Events.jsx` | `events` | 189 |
-| `src/pages/Settings.jsx` | `church_units` | 242 |
-| `src/pages/ExamManagement.jsx` | `exam_titles` | 91 |
-| `src/pages/ExamManagement.jsx` | `exam_questions` | 141 |
-| `src/pages/ExamManagement.jsx` | `exam_sessions` | 67, 110 |
-| `src/components/settings/WSFCentresSection.jsx` | `wsf_centres` | 89 |
-| `src/components/settings/WSFZonesSection.jsx` | `wsf_zones` | 46 |
-| `src/components/settings/BookOfTheMonthSettings.jsx` | `books_of_the_month` | 50 |
-| `src/components/events/RegistrationsDialog.jsx` | `event_registrations` | 48 |
-| `src/components/members/MemberFormDialog.jsx` | `members` | 103, 122, 213 |
-| `src/components/attendance/CheckInPanel.jsx` | `attendance_sessions` | 86 |
-| `src/components/notifications/NotificationBell.jsx` | `notifications` | 60, 67 |
+#### 2. CRITICAL: `invite-to-tenant` not in `config.toml`
+The function is not listed in `supabase/config.toml`, meaning it deploys with default settings (`verify_jwt = true`). However, the function manually validates the JWT via `supabase.auth.getUser(token)`, so the gateway's JWT check may reject service-role calls. This is fine for user-initiated calls but worth noting. The bigger issue is that the function may not have been **redeployed** after recent changes — edge function logs show **zero logs**, meaning either it was never called or never deployed.
 
-#### Category 2: DELETE mutations missing `.eq("tenant_id", tenantId)`
+#### 3. `is_admin` call is not tenant-scoped
+**Line 33**: `supabase.rpc("is_admin", { _user_id: caller.id })` uses the single-arg overload which checks if the user is admin in **any** tenant. A church admin in Tenant A could invite users to Tenant B. Should use the two-arg overload with `_tenant_id: tenant_id`.
 
-| File | Table | Line |
-|---|---|---|
-| `src/pages/Transportation.jsx` | `transportation` | 119 |
-| `src/pages/Communications.jsx` | `announcements` | 175 |
-| `src/pages/Events.jsx` | `events` | 221 |
-| `src/pages/Members.jsx` | `members` | 74 |
-| `src/pages/Settings.jsx` | `church_units` | 259 |
-| `src/pages/ExamManagement.jsx` | `exam_titles` | 110 |
-| `src/pages/ExamManagement.jsx` | `exam_questions` | 160 |
-| `src/pages/ExamManagement.jsx` | `exam_sessions` | 94 |
-| `src/pages/ExamManagement.jsx` | `course_registrations` | 636 |
-| `src/components/settings/WSFCentresSection.jsx` | `wsf_centres` | 107 |
-| `src/components/settings/WSFZonesSection.jsx` | `wsf_zones` | 64 |
-| `src/components/events/RegistrationsDialog.jsx` | `event_registrations` | 56 |
-| `src/components/exams/SubjectManager.jsx` | `exam_subjects` | 57 |
-| `src/components/exams/ExamSessionManager.jsx` | `exam_sessions` | 94 |
-| `src/components/exams/ExamSessionManager.jsx` | `exam_session_courses` | 71 |
-| `src/components/certificates/CertificateTemplateSettings.jsx` | `certificate_templates` | 91 |
-| `src/components/attendance/CheckInPanel.jsx` | `attendance_records` | 70 |
-| `src/components/reports/ReportAttachments.jsx` | `documents` | 38 |
-| `src/components/notifications/NotificationBell.jsx` | `notifications` | 74 |
+#### 4. `invite-to-tenant` doesn't pass `tenant_id` to email
+The `send-transactional-email` invocation on line 128 doesn't include `tenant_id` in the body, so the email log will have `tenant_id = NULL` — the same issue we just fixed in all other email functions.
 
-#### Category 3: Missing tenantId in React Query cache keys
+#### 5. `TenantUsersDialog` — missing tenant isolation on mutations
+- **Line 93-94**: `updateRoleMutation` updates by `membershipId` only, no `.eq("tenant_id", tenant.id)`
+- **Line 108-111**: `removeMutation` deletes by `membershipId` only, no `.eq("tenant_id", tenant.id)`
+- **Line 128-129**: `cancelInviteMutation` updates by `invitationId` only, no `.eq("tenant_id", tenant.id)`
 
-Some `invalidateQueries` calls use generic keys without `tenantId`, which could serve stale cross-tenant data:
-- `src/pages/Transportation.jsx` — `queryKey: ["transportation"]` on invalidation (line 97, 110, 123)
-- `src/pages/Followups.jsx` — `queryKey: ["followups"]` on invalidation (line 125, 138, 164)
-- Various `queryClient.invalidateQueries` calls throughout the app
+#### 6. Pending invitation exists but email never arrived
+`odunsi.temitayo16@gmail.com` has a pending invitation for wci-cardiff created 2026-03-27. The email likely failed because the function wasn't redeployed after recent changes or the old domain URL was used.
 
-#### Category 4: Notifications — user-scoped but missing tenant filter
+### Plan
 
-`NotificationBell.jsx` queries by `user_id` only. This is intentional (user-scoped exception per architecture), but the realtime subscription also lacks tenant filtering. Notifications already have `tenant_id` in the table, so this is acceptable.
+#### 1. Fix `invite-to-tenant` edge function
+- Change `siteUrl` to `https://app.churchmanagementsuite.org`
+- Change `is_admin` RPC call to use 2-arg overload: `{ _user_id: caller.id, _tenant_id: tenant_id }`
+- Add `tenant_id` to the `send-transactional-email` invocation body
+- Add request-level logging for debugging
 
-### Approach
+#### 2. Harden `TenantUsersDialog` mutations
+- Add `.eq("tenant_id", tenant.id)` to `updateRoleMutation`, `removeMutation`, and `cancelInviteMutation`
 
-The fix pattern for every mutation is simple — append `.eq("tenant_id", tenantId)` to UPDATE/DELETE queries. This is defense-in-depth on top of RLS.
-
-For notifications: leave as user-scoped (documented exception).
-
-For cache keys on invalidation: add `tenantId` to ensure tenant-partitioned cache.
+#### 3. Redeploy `invite-to-tenant`
 
 ### Files to change
-
-All 19 files listed above. The changes are mechanical — add `.eq("tenant_id", tenantId)` to each UPDATE/DELETE call and ensure invalidation query keys include `tenantId`.
-
-Specifically:
-1. `src/pages/Transportation.jsx`
-2. `src/pages/Followups.jsx`
-3. `src/pages/PastoralCare.jsx`
-4. `src/pages/Attendance.jsx`
-5. `src/pages/Communications.jsx`
-6. `src/pages/Events.jsx`
-7. `src/pages/Settings.jsx`
-8. `src/pages/ExamManagement.jsx`
-9. `src/pages/Members.jsx`
-10. `src/components/settings/WSFCentresSection.jsx`
-11. `src/components/settings/WSFZonesSection.jsx`
-12. `src/components/settings/BookOfTheMonthSettings.jsx`
-13. `src/components/events/RegistrationsDialog.jsx`
-14. `src/components/members/MemberFormDialog.jsx`
-15. `src/components/attendance/CheckInPanel.jsx`
-16. `src/components/exams/SubjectManager.jsx`
-17. `src/components/exams/ExamSessionManager.jsx`
-18. `src/components/certificates/CertificateTemplateSettings.jsx`
-19. `src/components/reports/ReportAttachments.jsx`
-
-### No database changes needed
-
-RLS already protects at the server level. These client-side additions are defense-in-depth.
+- `supabase/functions/invite-to-tenant/index.ts`
+- `src/components/tenants/TenantUsersDialog.jsx`
 
