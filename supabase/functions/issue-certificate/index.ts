@@ -317,7 +317,7 @@ Deno.serve(async (req) => {
           });
         }
 
-        const senderDomain = "notify.churchmanagementsuite.org";
+        const senderDomain = "notify.app.churchmanagementsuite.org";
         const messageId = `cert-${crypto.randomUUID()}`;
         const plainText = `Congratulations, ${member.first_name}!\n\nYou have successfully completed ${training_type} at ${churchName}.\n\nYour certificate number is: ${certificateNumber}\n\n${signedUrl?.signedUrl ? `Download your certificate: ${signedUrl.signedUrl}\n\n` : ""}You can also download your certificate anytime from your profile page.`;
 

@@ -167,7 +167,7 @@ Deno.serve(async (req) => {
   const suppressedSet = new Set((suppressed || []).map(s => s.email.toLowerCase()))
 
   // Build and enqueue emails
-  const senderDomain = 'notify.churchmanagementsuite.org'
+  const senderDomain = 'notify.app.churchmanagementsuite.org'
   const fromAddress = `${tenantSenderName} <noreply@${senderDomain}>`
   let enqueued = 0
   let skipped = 0
