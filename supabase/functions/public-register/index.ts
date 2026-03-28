@@ -355,10 +355,12 @@ Deno.serve(async (req) => {
     let resultMode = "created";
 
     if (authenticatedUser?.userId) {
-      const { data: linkedMember, error: linkedMemberError } = await supabase
+      let linkedMemberQuery = supabase
         .from("members")
         .select("id")
-        .eq("user_id", authenticatedUser.userId)
+        .eq("user_id", authenticatedUser.userId);
+      if (tenantId) linkedMemberQuery = linkedMemberQuery.eq("tenant_id", tenantId);
+      const { data: linkedMember, error: linkedMemberError } = await linkedMemberQuery
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle();
@@ -398,10 +400,12 @@ Deno.serve(async (req) => {
 
       const candidateEmails = [...new Set([email, authenticatedUser.email].filter(Boolean))];
       for (const candidateEmail of candidateEmails) {
-        const { data: emailMatches, error: emailMatchError } = await supabase
+        let emailQuery = supabase
           .from("members")
           .select("id, user_id")
-          .eq("email", candidateEmail)
+          .eq("email", candidateEmail);
+        if (tenantId) emailQuery = emailQuery.eq("tenant_id", tenantId);
+        const { data: emailMatches, error: emailMatchError } = await emailQuery
           .order("created_at", { ascending: false })
           .limit(2);
 
