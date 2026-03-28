@@ -1,36 +1,57 @@
 
 
-## Fix: Incorrect User Count & Missing Invite Email
+## Fix: "Database error saving user" on Signup
 
-### Issue 1: User count is wrong in Tenant Admin
+### Root Cause
 
-**Root cause**: The `tenant_memberships` table's RLS policies only allow SELECT for users who are admin/owner of that specific tenant (`is_tenant_admin(auth.uid(), tenant_id)`). A super_admin viewing the Tenant Admin dashboard gets filtered counts — they can only see membership rows for tenants where they personally are admin/owner.
+The `handle_new_user()` trigger function declares `_inv_role` as `text`, then inserts `COALESCE(_inv_role, 'member')` into `tenant_memberships.role`, which is a `tenant_role` enum column. Postgres rejects the implicit `text → tenant_role` cast, causing a 500 error on every signup where a tenant is resolved.
 
-**Fix**: Add a SELECT policy on `tenant_memberships` allowing super_admins to view all rows:
+### Fix
+
+One database migration to replace the function, casting the value explicitly:
 
 ```sql
-CREATE POLICY "Super admins can view all tenant memberships"
-ON public.tenant_memberships
-FOR SELECT
-TO authenticated
-USING (has_role(auth.uid(), 'super_admin'::app_role));
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  _tenant_id uuid;
+  _inv_id uuid;
+  _inv_role text;
+  _slug text;
+BEGIN
+  -- (existing invitation + slug resolution — unchanged)
+  ...
+
+  -- Create profile (unchanged)
+  ...
+
+  IF _tenant_id IS NOT NULL THEN
+    INSERT INTO public.tenant_memberships (user_id, tenant_id, role)
+    VALUES (NEW.id, _tenant_id, COALESCE(_inv_role, 'member')::tenant_role)   -- ← cast added
+    ON CONFLICT (user_id, tenant_id) DO NOTHING;
+
+    INSERT INTO public.user_roles (user_id, role, tenant_id)
+    VALUES (NEW.id, 'member', _tenant_id)
+    ON CONFLICT (user_id, role, tenant_id) DO NOTHING;
+
+    IF _inv_id IS NOT NULL THEN
+      UPDATE public.tenant_invitations
+      SET status = 'accepted'
+      WHERE id = _inv_id;
+    END IF;
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
 ```
 
-### Issue 2: No email sent for blarkerdre@yahoo.com invite
+The only change is adding `::tenant_role` to the `COALESCE(_inv_role, 'member')` expression on the `tenant_memberships` insert.
 
-**Root cause**: `blarkerdre@yahoo.com` already has a `profiles` row, so `invite-to-tenant` takes the **auto-add** path (lines 52-86) — it creates a `tenant_memberships` row and a notification, but **never sends an email**. This is by design, but the admin expects a notification email.
-
-**Fix**: In `supabase/functions/invite-to-tenant/index.ts`, after auto-adding an existing user, send a notification email via `send-transactional-email` using a new template or the existing `tenant-invitation` template with adjusted messaging. The simplest approach: send the same invitation email but with a different message indicating they've been added (not invited to sign up).
-
-Alternatively, use a simpler approach — invoke `send-transactional-email` with the `tenant-invitation` template in the auto-add path too, since the email already has the tenant name and a link. The user just clicks through to their existing account.
-
-**Changes to `invite-to-tenant/index.ts`** (auto-add path, after line 82):
-- Fetch tenant details (name, slug)
-- Send notification email via `send-transactional-email` with `tenant-invitation` template
-- Log the email send result
-
-### Files to change
-1. **1 database migration** — add super_admin SELECT policy on `tenant_memberships`
-2. **`supabase/functions/invite-to-tenant/index.ts`** — send email in auto-add path
-3. **Redeploy** `invite-to-tenant`
+### Files changed
+- 1 database migration (no code file changes)
 
