@@ -147,7 +147,8 @@ export default function Followups() {
       const { error: memberErr } = await supabase
         .from("members")
         .update({ membership_status: "Active" })
-        .eq("id", memberId);
+        .eq("id", memberId)
+        .eq("tenant_id", tenantId);
       if (memberErr) throw memberErr;
 
       const { error: fuErr } = await supabase
@@ -157,7 +158,8 @@ export default function Followups() {
           completed_date: new Date().toISOString().split("T")[0],
           notes: `${personName} has been converted to Active Member.`,
         })
-        .eq("id", followupId);
+        .eq("id", followupId)
+        .eq("tenant_id", tenantId);
       if (fuErr) throw fuErr;
     },
     onSuccess: () => {
