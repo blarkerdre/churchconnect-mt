@@ -12,7 +12,7 @@ import { useTenantQuery } from "@/hooks/useTenantQuery";
 
 export default function RegistrationsDialog({ open, onOpenChange, event }) {
   const { user } = useAuth();
-  const { withTenant } = useTenantQuery();
+  const { tenantId, withTenant } = useTenantQuery();
   const [newName, setNewName] = useState("");
   const [newEmail, setNewEmail] = useState("");
   const [adding, setAdding] = useState(false);
