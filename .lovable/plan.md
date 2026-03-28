@@ -1,85 +1,106 @@
 
 
-## Fix: System Log Isolation and Missing Logs
+## Fix: Tenant Isolation Gaps Across All App Features
 
-### Problems Found
+### Audit Summary
 
-**1. `email_send_log` has no `tenant_id` — all 38 rows are NULL**
-Edge functions that insert into `email_send_log` never include `tenant_id`:
-- `send-welcome-email` — receives `tenant_id` in body but doesn't pass it to log inserts
-- `send-transactional-email` — doesn't receive or log `tenant_id` at all
-- `auth-email-hook` — no tenant context available
-- `notify-pastoral-assignment`, `send-email-alert`, `issue-certificate` — same pattern
+I reviewed all 49+ files with database queries. Most SELECT queries correctly use `scopeQuery()` and most INSERTs use `withTenant()`. However, many UPDATE and DELETE mutations only filter by `.eq("id", id)` without adding `.eq("tenant_id", tenantId)`. While RLS policies provide server-side protection, adding client-side tenant scoping is defense-in-depth and prevents accidental cross-tenant operations if RLS has gaps.
 
-Because the SELECT RLS policy on `email_send_log` uses `is_admin(auth.uid(), tenant_id)`, and `is_admin(uid, NULL)` returns false, **tenant admins see zero email logs**. Only service_role reads bypass this.
+### Issues Found
 
-**2. `audit_log` has 2 orphaned rows with NULL `tenant_id`**
-These are invisible to tenant admins due to `user_has_tenant_access(NULL) = false`. Only super_admins can see them via the `has_role` bypass.
+#### Category 1: UPDATE mutations missing `.eq("tenant_id", tenantId)`
 
-**3. `send-transactional-email` doesn't accept `tenant_id`**
-It's the main email pipeline but has no way to associate logs with a tenant.
+| File | Table | Line |
+|---|---|---|
+| `src/pages/Transportation.jsx` | `transportation` | 106 |
+| `src/pages/Transportation.jsx` | `pickup_locations` | 132, 150 |
+| `src/pages/Followups.jsx` | `followups` | 117, 133 |
+| `src/pages/Followups.jsx` | `members` | 149 |
+| `src/pages/PastoralCare.jsx` | `pastoral_care` | 122 |
+| `src/pages/Attendance.jsx` | `attendance_sessions` | 95, 107 |
+| `src/pages/Communications.jsx` | `announcements` | 156 |
+| `src/pages/Events.jsx` | `events` | 189 |
+| `src/pages/Settings.jsx` | `church_units` | 242 |
+| `src/pages/ExamManagement.jsx` | `exam_titles` | 91 |
+| `src/pages/ExamManagement.jsx` | `exam_questions` | 141 |
+| `src/pages/ExamManagement.jsx` | `exam_sessions` | 67, 110 |
+| `src/components/settings/WSFCentresSection.jsx` | `wsf_centres` | 89 |
+| `src/components/settings/WSFZonesSection.jsx` | `wsf_zones` | 46 |
+| `src/components/settings/BookOfTheMonthSettings.jsx` | `books_of_the_month` | 50 |
+| `src/components/events/RegistrationsDialog.jsx` | `event_registrations` | 48 |
+| `src/components/members/MemberFormDialog.jsx` | `members` | 103, 122, 213 |
+| `src/components/attendance/CheckInPanel.jsx` | `attendance_sessions` | 86 |
+| `src/components/notifications/NotificationBell.jsx` | `notifications` | 60, 67 |
 
-### Plan
+#### Category 2: DELETE mutations missing `.eq("tenant_id", tenantId)`
 
-#### 1. Fix `send-welcome-email` — pass `tenant_id` to all `email_send_log` inserts
-The function already receives `tenant_id` from the request body. Add `tenant_id` to every `.insert()` call on `email_send_log` (5 insert sites).
+| File | Table | Line |
+|---|---|---|
+| `src/pages/Transportation.jsx` | `transportation` | 119 |
+| `src/pages/Communications.jsx` | `announcements` | 175 |
+| `src/pages/Events.jsx` | `events` | 221 |
+| `src/pages/Members.jsx` | `members` | 74 |
+| `src/pages/Settings.jsx` | `church_units` | 259 |
+| `src/pages/ExamManagement.jsx` | `exam_titles` | 110 |
+| `src/pages/ExamManagement.jsx` | `exam_questions` | 160 |
+| `src/pages/ExamManagement.jsx` | `exam_sessions` | 94 |
+| `src/pages/ExamManagement.jsx` | `course_registrations` | 636 |
+| `src/components/settings/WSFCentresSection.jsx` | `wsf_centres` | 107 |
+| `src/components/settings/WSFZonesSection.jsx` | `wsf_zones` | 64 |
+| `src/components/events/RegistrationsDialog.jsx` | `event_registrations` | 56 |
+| `src/components/exams/SubjectManager.jsx` | `exam_subjects` | 57 |
+| `src/components/exams/ExamSessionManager.jsx` | `exam_sessions` | 94 |
+| `src/components/exams/ExamSessionManager.jsx` | `exam_session_courses` | 71 |
+| `src/components/certificates/CertificateTemplateSettings.jsx` | `certificate_templates` | 91 |
+| `src/components/attendance/CheckInPanel.jsx` | `attendance_records` | 70 |
+| `src/components/reports/ReportAttachments.jsx` | `documents` | 38 |
+| `src/components/notifications/NotificationBell.jsx` | `notifications` | 74 |
 
-#### 2. Fix `send-transactional-email` — accept and log `tenant_id`
-- Parse optional `tenant_id` from the request body
-- Pass it to all `email_send_log` insert calls (7+ insert sites)
+#### Category 3: Missing tenantId in React Query cache keys
 
-#### 3. Fix `auth-email-hook` — resolve `tenant_id` from user metadata or invitation
-- After identifying the user email, look up their `tenant_memberships` to get a tenant_id
-- Pass it to `email_send_log` inserts
+Some `invalidateQueries` calls use generic keys without `tenantId`, which could serve stale cross-tenant data:
+- `src/pages/Transportation.jsx` — `queryKey: ["transportation"]` on invalidation (line 97, 110, 123)
+- `src/pages/Followups.jsx` — `queryKey: ["followups"]` on invalidation (line 125, 138, 164)
+- Various `queryClient.invalidateQueries` calls throughout the app
 
-#### 4. Fix `notify-pastoral-assignment` — include `tenant_id` in log
-- The function likely has access to the pastoral care record's `tenant_id`
-- Pass it through to the email log insert
+#### Category 4: Notifications — user-scoped but missing tenant filter
 
-#### 5. Fix `send-email-alert` — include `tenant_id` in log
-- Already has tenant context from the alert payload
-- Pass it to the log insert
+`NotificationBell.jsx` queries by `user_id` only. This is intentional (user-scoped exception per architecture), but the realtime subscription also lacks tenant filtering. Notifications already have `tenant_id` in the table, so this is acceptable.
 
-#### 6. Fix `issue-certificate` — include `tenant_id` in log
-- Has tenant context from the certificate record
-- Pass it to the log insert
+### Approach
 
-#### 7. Data repair — backfill existing `email_send_log` rows
-Attempt to resolve `tenant_id` for existing NULL rows by matching `recipient_email` to member/profile records:
-```sql
-UPDATE email_send_log esl
-SET tenant_id = sub.tenant_id
-FROM (
-  SELECT DISTINCT ON (lower(m.email)) lower(m.email) as email, m.tenant_id
-  FROM members m WHERE m.tenant_id IS NOT NULL
-) sub
-WHERE esl.tenant_id IS NULL AND lower(esl.recipient_email) = sub.email;
-```
+The fix pattern for every mutation is simple — append `.eq("tenant_id", tenantId)` to UPDATE/DELETE queries. This is defense-in-depth on top of RLS.
 
-#### 8. Data repair — backfill audit_log NULL rows
-```sql
-UPDATE audit_log al
-SET tenant_id = (
-  SELECT tm.tenant_id FROM tenant_memberships tm 
-  WHERE tm.user_id = al.user_id LIMIT 1
-)
-WHERE al.tenant_id IS NULL;
-```
+For notifications: leave as user-scoped (documented exception).
 
-#### 9. Redeploy all affected edge functions
+For cache keys on invalidation: add `tenantId` to ensure tenant-partitioned cache.
 
 ### Files to change
-- `supabase/functions/send-welcome-email/index.ts`
-- `supabase/functions/send-transactional-email/index.ts`
-- `supabase/functions/auth-email-hook/index.ts`
-- `supabase/functions/notify-pastoral-assignment/index.ts`
-- `supabase/functions/send-email-alert/index.ts`
-- `supabase/functions/issue-certificate/index.ts`
-- 1 database migration for data repair
 
-### Result
-- Tenant admins will see email logs scoped to their church
-- Existing logs will be backfilled with correct tenant_id
-- Future logs will always include tenant_id
-- Audit logs with NULL tenant_id will be fixed
+All 19 files listed above. The changes are mechanical — add `.eq("tenant_id", tenantId)` to each UPDATE/DELETE call and ensure invalidation query keys include `tenantId`.
+
+Specifically:
+1. `src/pages/Transportation.jsx`
+2. `src/pages/Followups.jsx`
+3. `src/pages/PastoralCare.jsx`
+4. `src/pages/Attendance.jsx`
+5. `src/pages/Communications.jsx`
+6. `src/pages/Events.jsx`
+7. `src/pages/Settings.jsx`
+8. `src/pages/ExamManagement.jsx`
+9. `src/pages/Members.jsx`
+10. `src/components/settings/WSFCentresSection.jsx`
+11. `src/components/settings/WSFZonesSection.jsx`
+12. `src/components/settings/BookOfTheMonthSettings.jsx`
+13. `src/components/events/RegistrationsDialog.jsx`
+14. `src/components/members/MemberFormDialog.jsx`
+15. `src/components/attendance/CheckInPanel.jsx`
+16. `src/components/exams/SubjectManager.jsx`
+17. `src/components/exams/ExamSessionManager.jsx`
+18. `src/components/certificates/CertificateTemplateSettings.jsx`
+19. `src/components/reports/ReportAttachments.jsx`
+
+### No database changes needed
+
+RLS already protects at the server level. These client-side additions are defense-in-depth.
 
