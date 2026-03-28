@@ -1,61 +1,85 @@
 
-Fix the real cause of the non-2xx error for `mayodare@gmail.com` and harden tenant isolation in the onboarding/profile flows.
 
-What I found:
-- `mayodare@gmail.com` already has a `profile` and a `tenant_membership`, but has no `members` row yet.
-- In `src/pages/MyProfile.jsx`, when no member is found, the page renders `CreateMemberProfile`.
-- That create form still calls `supabase.functions.invoke("public-register")`.
-- `public-register` is the public registration pipeline, not the authenticated self-service profile pipeline. It includes rate limiting, welcome email, follow-up side effects, and stricter validation. That is why “update my profile” can still fail with a non-2xx response.
-- This is not just one user’s issue. Any tenant user with a profile + membership but no member row can hit the same path.
-- There is also a tenant-isolation weakness in `public-register`: its “find linked member” and “claim by email” lookups are not tenant-scoped, which can misbehave once a user belongs to multiple tenants.
+## Fix: System Log Isolation and Missing Logs
 
-Implementation plan:
-1. Add a dedicated authenticated member upsert path
-   - Create a backend RPC/function such as `upsert_own_member_profile(...)`.
-   - It should:
-     - require `auth.uid()`
-     - require a valid tenant context
-     - only act inside that tenant
-     - update the caller’s member row if it exists for that tenant
-     - otherwise claim one unlinked same-tenant member by email, or create a new same-tenant member row
-   - Keep it `SECURITY DEFINER` so it can safely bypass RLS while enforcing tenant/user checks in code.
+### Problems Found
 
-2. Rewire My Profile to use the new authenticated path
-   - In `src/pages/MyProfile.jsx`, replace the `public-register` call inside `CreateMemberProfile`.
-   - Use the new authenticated upsert for first-time profile completion.
-   - Keep normal edits on the existing self-update RPC, or unify both create/update flows onto the new RPC for consistency.
+**1. `email_send_log` has no `tenant_id` — all 38 rows are NULL**
+Edge functions that insert into `email_send_log` never include `tenant_id`:
+- `send-welcome-email` — receives `tenant_id` in body but doesn't pass it to log inserts
+- `send-transactional-email` — doesn't receive or log `tenant_id` at all
+- `auth-email-hook` — no tenant context available
+- `notify-pastoral-assignment`, `send-email-alert`, `issue-certificate` — same pattern
 
-3. Harden tenant isolation in `public-register`
-   - Keep `public-register` for public registration only.
-   - Scope all member lookups by `tenant_id`:
-     - linked member lookup
-     - email claim lookup
-   - Prevent cross-tenant claim/update behavior.
+Because the SELECT RLS policy on `email_send_log` uses `is_admin(auth.uid(), tenant_id)`, and `is_admin(uid, NULL)` returns false, **tenant admins see zero email logs**. Only service_role reads bypass this.
 
-4. Improve error visibility
-   - Return clearer backend error messages from the new authenticated profile path.
-   - Add minimal request-level logging so future failures show the actual branch and reason instead of only “booted”.
+**2. `audit_log` has 2 orphaned rows with NULL `tenant_id`**
+These are invisible to tenant admins due to `user_has_tenant_access(NULL) = false`. Only super_admins can see them via the `has_role` bypass.
 
-5. Do a focused auth/profile flow audit
-   - Verify tenant slug propagation on tenant auth routes.
-   - Verify profile creation works for:
-     - invited signup
-     - tenant-route signup
-     - existing authenticated user completing profile
-     - existing member editing profile
-   - Ensure all React Query keys remain tenant-scoped.
+**3. `send-transactional-email` doesn't accept `tenant_id`**
+It's the main email pipeline but has no way to associate logs with a tenant.
 
-6. Clean up the obvious UI warning found during review
-   - Fix the `Badge` nested inside `<p>` issue in `MemberDashboard` to remove the DOM nesting warning.
+### Plan
 
-Files likely to change:
-- `src/pages/MyProfile.jsx`
-- `supabase/functions/public-register/index.ts`
-- one new database migration for the authenticated upsert function
-- `src/components/dashboard/MemberDashboard.jsx`
+#### 1. Fix `send-welcome-email` — pass `tenant_id` to all `email_send_log` inserts
+The function already receives `tenant_id` from the request body. Add `tenant_id` to every `.insert()` call on `email_send_log` (5 insert sites).
 
-Expected result:
-- `mayodare@gmail.com` can complete profile creation without hitting the public edge function path.
-- Existing users update their profile without non-2xx edge-function errors.
-- Public registration still works.
-- Member linking/updating remains isolated per tenant, avoiding cross-tenant collisions.
+#### 2. Fix `send-transactional-email` — accept and log `tenant_id`
+- Parse optional `tenant_id` from the request body
+- Pass it to all `email_send_log` insert calls (7+ insert sites)
+
+#### 3. Fix `auth-email-hook` — resolve `tenant_id` from user metadata or invitation
+- After identifying the user email, look up their `tenant_memberships` to get a tenant_id
+- Pass it to `email_send_log` inserts
+
+#### 4. Fix `notify-pastoral-assignment` — include `tenant_id` in log
+- The function likely has access to the pastoral care record's `tenant_id`
+- Pass it through to the email log insert
+
+#### 5. Fix `send-email-alert` — include `tenant_id` in log
+- Already has tenant context from the alert payload
+- Pass it to the log insert
+
+#### 6. Fix `issue-certificate` — include `tenant_id` in log
+- Has tenant context from the certificate record
+- Pass it to the log insert
+
+#### 7. Data repair — backfill existing `email_send_log` rows
+Attempt to resolve `tenant_id` for existing NULL rows by matching `recipient_email` to member/profile records:
+```sql
+UPDATE email_send_log esl
+SET tenant_id = sub.tenant_id
+FROM (
+  SELECT DISTINCT ON (lower(m.email)) lower(m.email) as email, m.tenant_id
+  FROM members m WHERE m.tenant_id IS NOT NULL
+) sub
+WHERE esl.tenant_id IS NULL AND lower(esl.recipient_email) = sub.email;
+```
+
+#### 8. Data repair — backfill audit_log NULL rows
+```sql
+UPDATE audit_log al
+SET tenant_id = (
+  SELECT tm.tenant_id FROM tenant_memberships tm 
+  WHERE tm.user_id = al.user_id LIMIT 1
+)
+WHERE al.tenant_id IS NULL;
+```
+
+#### 9. Redeploy all affected edge functions
+
+### Files to change
+- `supabase/functions/send-welcome-email/index.ts`
+- `supabase/functions/send-transactional-email/index.ts`
+- `supabase/functions/auth-email-hook/index.ts`
+- `supabase/functions/notify-pastoral-assignment/index.ts`
+- `supabase/functions/send-email-alert/index.ts`
+- `supabase/functions/issue-certificate/index.ts`
+- 1 database migration for data repair
+
+### Result
+- Tenant admins will see email logs scoped to their church
+- Existing logs will be backfilled with correct tenant_id
+- Future logs will always include tenant_id
+- Audit logs with NULL tenant_id will be fixed
+
