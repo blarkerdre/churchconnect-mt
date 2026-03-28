@@ -23,14 +23,16 @@ Deno.serve(async (req) => {
     }
 
     const { tenant_id, email, role = "member" } = await req.json();
+    console.log("invite-to-tenant called", { caller: caller.id, tenant_id, email, role });
+
     if (!tenant_id || !email) {
       return new Response(JSON.stringify({ error: "tenant_id and email required" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Verify caller is admin or tenant admin
-    const { data: isAdmin } = await supabase.rpc("is_admin", { _user_id: caller.id });
+    // Verify caller is admin or tenant admin (tenant-scoped)
+    const { data: isAdmin } = await supabase.rpc("is_admin", { _user_id: caller.id, _tenant_id: tenant_id });
     const { data: isTenantAdmin } = await supabase.rpc("is_tenant_admin", { _user_id: caller.id, _tenant_id: tenant_id });
     if (!isAdmin && !isTenantAdmin) {
       return new Response(JSON.stringify({ error: "Admin access required" }), {
@@ -122,14 +124,17 @@ Deno.serve(async (req) => {
 
     // Send invitation email via transactional email system
     if (tenant) {
-      const siteUrl = "https://churchconnect-mt.lovable.app";
+      const siteUrl = "https://app.churchmanagementsuite.org";
       const signupUrl = `${siteUrl}/t/${tenant.slug}/auth`;
+
+      console.log("Sending invitation email", { email: normalizedEmail, signupUrl, tenant: tenant.name });
 
       const emailResult = await supabase.functions.invoke("send-transactional-email", {
         body: {
           templateName: "tenant-invitation",
           recipientEmail: normalizedEmail,
           idempotencyKey: `tenant-invite-${invitation.id}`,
+          tenant_id,
           templateData: {
             churchName: tenant.name,
             signupUrl,
