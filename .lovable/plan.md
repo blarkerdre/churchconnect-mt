@@ -1,34 +1,36 @@
 
 
-## Change: Link/Unlink Members by Email Only
+## Fix: Incorrect User Count & Missing Invite Email
 
-### Current behavior
-- **Link**: Admin clicks "Link Account", searches profiles list by name/email, clicks to link
-- **Unlink**: Works fine (just clears `user_id`)
+### Issue 1: User count is wrong in Tenant Admin
 
-### Requested change
-Replace the profile-list-based linking with a simple **email input** approach:
-- Admin types an email address
-- System looks up the auth user by email (via `profiles` table)
-- If found, links the member to that user
-- If not found, shows a clear error message
+**Root cause**: The `tenant_memberships` table's RLS policies only allow SELECT for users who are admin/owner of that specific tenant (`is_tenant_admin(auth.uid(), tenant_id)`). A super_admin viewing the Tenant Admin dashboard gets filtered counts — they can only see membership rows for tenants where they personally are admin/owner.
 
-### Plan
+**Fix**: Add a SELECT policy on `tenant_memberships` allowing super_admins to view all rows:
 
-#### 1. Update `src/components/members/MemberFormDialog.jsx`
+```sql
+CREATE POLICY "Super admins can view all tenant memberships"
+ON public.tenant_memberships
+FOR SELECT
+TO authenticated
+USING (has_role(auth.uid(), 'super_admin'::app_role));
+```
 
-Replace the current link flow (lines 491-537) which queries all profiles and shows a searchable list:
+### Issue 2: No email sent for blarkerdre@yahoo.com invite
 
-**Remove**: The `allProfiles` query (lines 91-99), `filteredProfiles` filter (lines 137-141)
+**Root cause**: `blarkerdre@yahoo.com` already has a `profiles` row, so `invite-to-tenant` takes the **auto-add** path (lines 52-86) — it creates a `tenant_memberships` row and a notification, but **never sends an email**. This is by design, but the admin expects a notification email.
 
-**Replace with**:
-- A simple email input field + "Link" button
-- On click, query `profiles` table for exact email match within the tenant
-- If found, call `linkAccountMutation` with that user's `user_id`
-- If not found, show toast error: "No user account found with this email"
+**Fix**: In `supabase/functions/invite-to-tenant/index.ts`, after auto-adding an existing user, send a notification email via `send-transactional-email` using a new template or the existing `tenant-invitation` template with adjusted messaging. The simplest approach: send the same invitation email but with a different message indicating they've been added (not invited to sign up).
 
-The unlink flow stays unchanged — it already works correctly.
+Alternatively, use a simpler approach — invoke `send-transactional-email` with the `tenant-invitation` template in the auto-add path too, since the email already has the tenant name and a link. The user just clicks through to their existing account.
+
+**Changes to `invite-to-tenant/index.ts`** (auto-add path, after line 82):
+- Fetch tenant details (name, slug)
+- Send notification email via `send-transactional-email` with `tenant-invitation` template
+- Log the email send result
 
 ### Files to change
-- `src/components/members/MemberFormDialog.jsx` — replace profile list search with email-based lookup and link
+1. **1 database migration** — add super_admin SELECT policy on `tenant_memberships`
+2. **`supabase/functions/invite-to-tenant/index.ts`** — send email in auto-add path
+3. **Redeploy** `invite-to-tenant`
 
