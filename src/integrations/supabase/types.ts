@@ -2741,6 +2741,35 @@ export type Database = {
             }
             Returns: undefined
           }
+      upsert_own_member_profile: {
+        Args: {
+          p_address?: string
+          p_bcc_completed?: boolean
+          p_bfc_completed?: boolean
+          p_church_unit?: string
+          p_city?: string
+          p_date_of_birth?: string
+          p_email?: string
+          p_emergency_contact_name?: string
+          p_emergency_contact_phone?: string
+          p_first_name: string
+          p_gdpr_consent?: boolean
+          p_gender?: string
+          p_holy_spirit_baptism?: boolean
+          p_last_name: string
+          p_lcc_completed?: boolean
+          p_ldc_completed?: boolean
+          p_membership_status?: string
+          p_notes?: string
+          p_phone?: string
+          p_postcode?: string
+          p_tenant_id: string
+          p_water_baptism?: boolean
+          p_winners_satellite?: boolean
+          p_wsf_centre_id?: string
+        }
+        Returns: string
+      }
       user_belongs_to_tenant: {
         Args: { _tenant_id: string; _user_id: string }
         Returns: boolean
