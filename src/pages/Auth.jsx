@@ -104,7 +104,7 @@ export default function Auth() {
         const { error } = await signIn(form.email, form.password);
         if (error) throw error;
       } else if (mode === "signup") {
-        const { data, error } = await signUp(form.email, form.password, form.fullName);
+        const { data, error } = await signUp(form.email, form.password, form.fullName, tenantSlug);
         if (error) throw error;
         if (data?.user?.identities?.length === 0) {
           toast({
