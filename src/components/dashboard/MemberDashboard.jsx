@@ -47,10 +47,10 @@ export default function MemberDashboard({ currentUser, myMember }) {
             <h2 className="text-lg font-bold leading-tight">
               Welcome, {myMember?.first_name || currentUser?.full_name || "Member"}!
             </h2>
-            <p className="text-primary-foreground/60 text-sm mt-0.5 flex items-center gap-1.5">
+            <div className="text-primary-foreground/60 text-sm mt-0.5 flex items-center gap-1.5">
               {currentTenant?.name || "My Church"}
               {roleLabel && <Badge className="bg-primary-foreground/20 text-primary-foreground text-[10px] border-0 py-0 px-1.5">{roleLabel}</Badge>}
-            </p>
+            </div>
             {myMember && (
               <div className="flex items-center gap-2 mt-2 flex-wrap">
                 <Badge className={`${statusColors[myMember.membership_status] || "bg-primary-foreground/20 text-primary-foreground"} text-xs border-0`}>
