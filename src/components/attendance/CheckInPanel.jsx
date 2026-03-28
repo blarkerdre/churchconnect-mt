@@ -67,7 +67,7 @@ export default function CheckInPanel({ session, onClose }) {
       const existing = records.find(r => r.member_id === member.id);
       if (existing) {
         // Toggle off - delete the record
-        const { error } = await supabase.from("attendance_records").delete().eq("id", existing.id);
+        const { error } = await supabase.from("attendance_records").delete().eq("id", existing.id).eq("tenant_id", tenantId);
         if (error) throw error;
       } else {
         const { error } = await supabase.from("attendance_records").insert(withTenant({
@@ -83,7 +83,7 @@ export default function CheckInPanel({ session, onClose }) {
 
   const closeMutation = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase.from("attendance_sessions").update({ status: "Closed" }).eq("id", session.id);
+      const { error } = await supabase.from("attendance_sessions").update({ status: "Closed" }).eq("id", session.id).eq("tenant_id", tenantId);
       if (error) throw error;
     },
     onSuccess: () => {

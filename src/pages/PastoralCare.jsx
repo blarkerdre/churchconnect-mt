@@ -119,7 +119,7 @@ export default function PastoralCare() {
       const payload = { status: updates.status, resolution_notes: updates.resolution_notes };
       const isNewAssignment = updates.assigned_to && updates.assigned_to !== caseData?.assigned_to;
       if (updates.assigned_to) payload.assigned_to = updates.assigned_to;
-      const { error } = await supabase.from("pastoral_care").update(payload).eq("id", id);
+      const { error } = await supabase.from("pastoral_care").update(payload).eq("id", id).eq("tenant_id", tenantId);
       if (error) throw error;
       if (isNewAssignment) {
         try {

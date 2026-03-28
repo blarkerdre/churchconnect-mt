@@ -239,7 +239,7 @@ function ChurchUnitsSection() {
   const saveMutation = useMutation({
     mutationFn: async ({ id, name, is_active }) => {
       if (id) {
-        const { error } = await supabase.from("church_units").update({ name, is_active }).eq("id", id);
+        const { error } = await supabase.from("church_units").update({ name, is_active }).eq("id", id).eq("tenant_id", tenantId);
         if (error) throw error;
       } else {
         const { error } = await supabase.from("church_units").insert(withTenant({ name, is_active }));
@@ -256,7 +256,7 @@ function ChurchUnitsSection() {
 
   const deleteMutation = useMutation({
     mutationFn: async (id) => {
-      const { error } = await supabase.from("church_units").delete().eq("id", id);
+      const { error } = await supabase.from("church_units").delete().eq("id", id).eq("tenant_id", tenantId);
       if (error) throw error;
     },
     onSuccess: () => {
