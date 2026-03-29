@@ -84,22 +84,27 @@ async function createPastoralCareForPrayerRequest(
   firstName: string,
   lastName: string,
   notes: string,
+  tenantId: string | null,
 ) {
   try {
-    // Find a Pastoral Care unit member using round-robin
-    const { data: pcMembers } = await supabase
+    // Find Pastoral Care unit leaders using round-robin (tenant-scoped)
+    let leadersQuery = supabase
       .from("unit_leader_assignments")
       .select("user_id")
       .in("unit_name", ["Pastoral Care", "Pastoral care", "pastoral care"]);
+    if (tenantId) leadersQuery = leadersQuery.eq("tenant_id", tenantId);
+    const { data: pcMembers } = await leadersQuery;
 
     let assignedTo: string | null = null;
     if (pcMembers && pcMembers.length > 0) {
       // Least-busy assignment
-      const { data: counts } = await supabase
+      let countsQuery = supabase
         .from("pastoral_care")
         .select("assigned_to")
         .in("status", ["Open", "In Progress"])
         .in("assigned_to", pcMembers.map((m: any) => m.user_id));
+      if (tenantId) countsQuery = countsQuery.eq("tenant_id", tenantId);
+      const { data: counts } = await countsQuery;
 
       const countMap: Record<string, number> = {};
       pcMembers.forEach((m: any) => { countMap[m.user_id] = 0; });
@@ -119,6 +124,7 @@ async function createPastoralCareForPrayerRequest(
       status: "Open",
       assigned_to: assignedTo,
       confidential: false,
+      ...(tenantId ? { tenant_id: tenantId } : {}),
     });
 
     console.log("Pastoral care record created for prayer request from", firstName, lastName);
