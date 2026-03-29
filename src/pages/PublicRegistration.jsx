@@ -46,6 +46,7 @@ export default function PublicRegistration() {
   const [submitted, setSubmitted] = useState(false);
   const [wsfCentres, setWsfCentres] = useState([]);
   const [resolvedTenantId, setResolvedTenantId] = useState(null);
+  const [tenantName, setTenantName] = useState("");
 
   useEffect(() => {
     if (tenantSlug) {
@@ -53,6 +54,7 @@ export default function PublicRegistration() {
         .then(({ data }) => {
           const row = Array.isArray(data) ? data[0] : data;
           if (row?.id) setResolvedTenantId(row.id);
+          if (row?.name) setTenantName(row.name);
         });
     }
   }, [tenantSlug]);
