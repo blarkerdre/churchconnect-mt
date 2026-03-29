@@ -63,6 +63,7 @@ export default function PastoralCare() {
     queryKey: ["pastoral-unit-members", tenantId],
     enabled: isPastoralLeader,
     queryFn: async () => {
+      // 1. Get unit leaders
       const { data: assignments, error: aErr } = await scopeQuery(
         supabase
           .from("unit_leader_assignments")
@@ -70,8 +71,24 @@ export default function PastoralCare() {
           .in("unit_name", ["Pastoral Care", "pastoral care", "Pastoral care"])
       );
       if (aErr) throw aErr;
-      const userIds = (assignments || []).map(a => a.user_id);
+      const leaderIds = new Set((assignments || []).map(a => a.user_id));
+
+      // 2. Get regular unit members whose church_unit contains "Pastoral Care"
+      const { data: unitMembers, error: mErr } = await scopeQuery(
+        supabase
+          .from("members")
+          .select("user_id")
+          .ilike("church_unit", "%Pastoral Care%")
+          .not("user_id", "is", null)
+      );
+      if (mErr) throw mErr;
+
+      // 3. Combine and deduplicate
+      const allIds = new Set([...leaderIds]);
+      (unitMembers || []).forEach(m => { if (m.user_id) allIds.add(m.user_id); });
+      const userIds = [...allIds];
       if (userIds.length === 0) return [];
+
       const { data: profiles, error: pErr } = await scopeQuery(
         supabase.from("profiles").select("user_id, full_name, email").in("user_id", userIds)
       );
