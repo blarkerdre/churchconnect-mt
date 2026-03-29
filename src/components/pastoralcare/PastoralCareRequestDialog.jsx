@@ -18,7 +18,7 @@ const CATEGORIES = [
 
 export default function PastoralCareRequestDialog({ open, onOpenChange, currentUser, myMember }) {
   const { user } = useAuth();
-  const { withTenant } = useTenantQuery();
+  const { withTenant, tenantId } = useTenantQuery();
   const queryClient = useQueryClient();
   const [form, setForm] = useState({ category: "", title: "", description: "" });
   const [submitted, setSubmitted] = useState(false);
@@ -27,7 +27,41 @@ export default function PastoralCareRequestDialog({ open, onOpenChange, currentU
 
   const mutation = useMutation({
     mutationFn: async (data) => {
-      const { error } = await supabase.from("pastoral_care").insert(withTenant(data));
+      // Auto-assign to least-busy Pastoral Care unit leader
+      let assignedTo = null;
+      try {
+        let leadersQuery = supabase
+          .from("unit_leader_assignments")
+          .select("user_id")
+          .in("unit_name", ["Pastoral Care", "Pastoral care", "pastoral care"]);
+        if (tenantId) leadersQuery = leadersQuery.eq("tenant_id", tenantId);
+        const { data: pcLeaders } = await leadersQuery;
+
+        if (pcLeaders && pcLeaders.length > 0) {
+          const leaderIds = pcLeaders.map(l => l.user_id);
+          const { data: counts } = await supabase
+            .from("pastoral_care")
+            .select("assigned_to")
+            .in("status", ["Open", "In Progress"])
+            .in("assigned_to", leaderIds);
+
+          const countMap = {};
+          leaderIds.forEach(id => { countMap[id] = 0; });
+          (counts || []).forEach(c => {
+            if (c.assigned_to) countMap[c.assigned_to] = (countMap[c.assigned_to] || 0) + 1;
+          });
+
+          const sorted = Object.entries(countMap).sort((a, b) => a[1] - b[1]);
+          assignedTo = sorted[0]?.[0] || null;
+        }
+      } catch (err) {
+        console.error("Failed to auto-assign pastoral care leader:", err);
+      }
+
+      const { error } = await supabase.from("pastoral_care").insert(withTenant({
+        ...data,
+        assigned_to: assignedTo,
+      }));
       if (error) throw error;
     },
     onSuccess: () => {
