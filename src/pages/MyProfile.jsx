@@ -20,6 +20,8 @@ import MyCertificates from "@/components/certificates/MyCertificates";
 import MemberJourneyTimeline from "@/components/members/MemberJourneyTimeline";
 import TakeExamDialog from "@/components/exams/TakeExamDialog";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
+import WelcomeQuestions from "@/components/members/WelcomeQuestions";
+import { useTenant } from "@/contexts/TenantContext";
 
 const GENDERS = ["Male", "Female"];
 const MEMBERSHIP_STATUSES = ["Active", "First Timer", "New Convert", "Visitor"];
@@ -114,6 +116,7 @@ function ProfilePhotoUpload({ member, user, onUpdated }) {
 export default function MyProfile() {
   const { user, roles, isAdmin, isUnitLeader, isWSFLeader } = useAuth();
   const { tenantId } = useTenantQuery();
+  const { currentTenant } = useTenant();
   const { data: churchUnitsData = [] } = useChurchUnits();
   const CHURCH_UNITS = churchUnitsData.map(u => u.name);
   const queryClient = useQueryClient();
@@ -218,6 +221,15 @@ export default function MyProfile() {
       bcc_completed: member.bcc_completed || false,
       lcc_completed: member.lcc_completed || false,
       ldc_completed: member.ldc_completed || false,
+      worshipped_before: member.worshipped_before || false,
+      worshipped_when_where: member.worshipped_when_where || "",
+      would_like_to_join: member.would_like_to_join || false,
+      live_work_in_city: member.live_work_in_city || false,
+      how_did_you_hear: member.how_did_you_hear || "",
+      attended_foundation_school: member.attended_foundation_school || false,
+      wofbi_highest_level: member.wofbi_highest_level || "None",
+      baptized_by_immersion: member.baptized_by_immersion || false,
+      preferred_contact_modes: member.preferred_contact_modes || "",
     });
     setEditing(true);
   };
@@ -228,6 +240,7 @@ export default function MyProfile() {
       return;
     }
     const showUnits = !HIDE_SPIRITUAL_STATUSES.includes(form.membership_status);
+    const isFTNC = ["First Timer", "New Convert"].includes(form.membership_status);
     updateMutation.mutate({
       first_name: form.first_name,
       last_name: form.last_name,
@@ -239,8 +252,8 @@ export default function MyProfile() {
       date_of_birth: form.date_of_birth || null,
       gender: form.gender || null,
       membership_status: form.membership_status || null,
-      emergency_contact_name: form.emergency_contact_name || null,
-      emergency_contact_phone: form.emergency_contact_phone || null,
+      emergency_contact_name: isFTNC ? null : (form.emergency_contact_name || null),
+      emergency_contact_phone: isFTNC ? null : (form.emergency_contact_phone || null),
       notes: form.notes || null,
       photo_url: member.photo_url || null,
       church_unit: showUnits ? (form.church_unit || null) : null,
@@ -252,6 +265,15 @@ export default function MyProfile() {
       bcc_completed: form.bcc_completed,
       lcc_completed: form.lcc_completed,
       ldc_completed: form.ldc_completed,
+      worshipped_before: isFTNC ? form.worshipped_before : null,
+      worshipped_when_where: isFTNC ? (form.worshipped_when_where || null) : null,
+      would_like_to_join: isFTNC ? form.would_like_to_join : null,
+      live_work_in_city: isFTNC ? form.live_work_in_city : null,
+      how_did_you_hear: isFTNC ? (form.how_did_you_hear || null) : null,
+      attended_foundation_school: isFTNC ? form.attended_foundation_school : null,
+      wofbi_highest_level: isFTNC ? (form.wofbi_highest_level || null) : null,
+      baptized_by_immersion: isFTNC ? form.baptized_by_immersion : null,
+      preferred_contact_modes: isFTNC ? (form.preferred_contact_modes || null) : null,
     });
   };
 
@@ -283,6 +305,7 @@ export default function MyProfile() {
   const showChurchUnits = !HIDE_SPIRITUAL_STATUSES.includes(form.membership_status);
   const showSpiritualDev = !HIDE_SPIRITUAL_STATUSES.includes(form.membership_status);
   const showBaptism = SHOW_BAPTISM_STATUSES.includes(form.membership_status);
+  const isFirstTimerOrNewConvert = ["First Timer", "New Convert"].includes(form.membership_status);
 
   const BoolBadge = ({ value, label }) => (
     <div className="flex items-center gap-2 text-sm">
@@ -433,14 +456,21 @@ export default function MyProfile() {
                       </div>
                     )}
 
-                    {/* Emergency Contact */}
-                    <div>
-                      <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Emergency Contact</h3>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                         <div className="space-y-1"><Label>Contact Name (Optional)</Label><Input value={form.emergency_contact_name} onChange={e => set("emergency_contact_name", e.target.value)} /></div>
-                        <div className="space-y-1"><Label>Contact Phone (Optional)</Label><Input value={form.emergency_contact_phone} onChange={e => set("emergency_contact_phone", e.target.value)} /></div>
+                    {/* Welcome Questions — First Timer / New Convert only */}
+                    {isFirstTimerOrNewConvert && (
+                      <WelcomeQuestions form={form} set={set} tenantName={currentTenant?.name} />
+                    )}
+
+                    {/* Emergency Contact — hidden for First Timer / New Convert */}
+                    {!isFirstTimerOrNewConvert && (
+                      <div>
+                        <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Emergency Contact</h3>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                           <div className="space-y-1"><Label>Contact Name (Optional)</Label><Input value={form.emergency_contact_name} onChange={e => set("emergency_contact_name", e.target.value)} /></div>
+                          <div className="space-y-1"><Label>Contact Phone (Optional)</Label><Input value={form.emergency_contact_phone} onChange={e => set("emergency_contact_phone", e.target.value)} /></div>
+                        </div>
                       </div>
-                    </div>
+                    )}
 
                     {/* Notes */}
                     <div className="space-y-1.5">
@@ -587,6 +617,7 @@ export default function MyProfile() {
 
 function CreateMemberProfile({ user, onCreated, wsfCentres, churchUnits }) {
   const { tenantId } = useTenantQuery();
+  const { currentTenant } = useTenant();
   const { tenantSlug: urlSlug } = useParams();
   const nameParts = (user?.user_metadata?.full_name || "").trim().split(/\s+/);
   const defaultFirst = nameParts[0] || "";
@@ -601,6 +632,10 @@ function CreateMemberProfile({ user, onCreated, wsfCentres, churchUnits }) {
     water_baptism: false, holy_spirit_baptism: false, winners_satellite: false,
     wsf_centre_id: "", bfc_completed: false, bcc_completed: false, lcc_completed: false, ldc_completed: false,
     gdpr_consent: false,
+    // Welcome questions
+    worshipped_before: false, worshipped_when_where: "", would_like_to_join: false,
+    live_work_in_city: false, how_did_you_hear: "", attended_foundation_school: false,
+    wofbi_highest_level: "None", baptized_by_immersion: false, preferred_contact_modes: "",
   });
   const [saving, setSaving] = useState(false);
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
@@ -608,6 +643,7 @@ function CreateMemberProfile({ user, onCreated, wsfCentres, churchUnits }) {
   const showChurchUnits = !HIDE_SPIRITUAL_STATUSES.includes(form.membership_status);
   const showSpiritualDev = !HIDE_SPIRITUAL_STATUSES.includes(form.membership_status);
   const showBaptism = SHOW_BAPTISM_STATUSES.includes(form.membership_status);
+  const isFirstTimerOrNewConvert = ["First Timer", "New Convert"].includes(form.membership_status);
 
   const handleCreate = async () => {
     if (!form.first_name || !form.last_name) {
@@ -637,8 +673,8 @@ function CreateMemberProfile({ user, onCreated, wsfCentres, churchUnits }) {
         p_gender: form.gender || null,
         p_membership_status: form.membership_status || "First Timer",
         p_church_unit: showChurchUnits ? (form.church_unit || null) : null,
-        p_emergency_contact_name: form.emergency_contact_name || null,
-        p_emergency_contact_phone: form.emergency_contact_phone || null,
+        p_emergency_contact_name: isFirstTimerOrNewConvert ? null : (form.emergency_contact_name || null),
+        p_emergency_contact_phone: isFirstTimerOrNewConvert ? null : (form.emergency_contact_phone || null),
         p_notes: form.notes || null,
         p_water_baptism: form.water_baptism,
         p_holy_spirit_baptism: form.holy_spirit_baptism,
@@ -649,6 +685,15 @@ function CreateMemberProfile({ user, onCreated, wsfCentres, churchUnits }) {
         p_lcc_completed: form.lcc_completed,
         p_ldc_completed: form.ldc_completed,
         p_gdpr_consent: form.gdpr_consent,
+        p_worshipped_before: isFirstTimerOrNewConvert ? form.worshipped_before : null,
+        p_worshipped_when_where: isFirstTimerOrNewConvert ? (form.worshipped_when_where || null) : null,
+        p_would_like_to_join: isFirstTimerOrNewConvert ? form.would_like_to_join : null,
+        p_live_work_in_city: isFirstTimerOrNewConvert ? form.live_work_in_city : null,
+        p_how_did_you_hear: isFirstTimerOrNewConvert ? (form.how_did_you_hear || null) : null,
+        p_attended_foundation_school: isFirstTimerOrNewConvert ? form.attended_foundation_school : null,
+        p_wofbi_highest_level: isFirstTimerOrNewConvert ? (form.wofbi_highest_level || null) : null,
+        p_baptized_by_immersion: isFirstTimerOrNewConvert ? form.baptized_by_immersion : null,
+        p_preferred_contact_modes: isFirstTimerOrNewConvert ? (form.preferred_contact_modes || null) : null,
       });
       if (error) throw error;
       toast({ title: "Profile updated successfully!" });
@@ -778,14 +823,21 @@ function CreateMemberProfile({ user, onCreated, wsfCentres, churchUnits }) {
           </div>
         )}
 
-        {/* Emergency Contact */}
-        <div>
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Emergency Contact</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="space-y-1"><Label>Contact Name (Optional)</Label><Input value={form.emergency_contact_name} onChange={e => set("emergency_contact_name", e.target.value)} /></div>
-            <div className="space-y-1"><Label>Contact Phone (Optional)</Label><Input value={form.emergency_contact_phone} onChange={e => set("emergency_contact_phone", e.target.value)} /></div>
+        {/* Welcome Questions — First Timer / New Convert only */}
+        {isFirstTimerOrNewConvert && (
+          <WelcomeQuestions form={form} set={set} tenantName={currentTenant?.name} />
+        )}
+
+        {/* Emergency Contact — hidden for First Timer / New Convert */}
+        {!isFirstTimerOrNewConvert && (
+          <div>
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Emergency Contact</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="space-y-1"><Label>Contact Name (Optional)</Label><Input value={form.emergency_contact_name} onChange={e => set("emergency_contact_name", e.target.value)} /></div>
+              <div className="space-y-1"><Label>Contact Phone (Optional)</Label><Input value={form.emergency_contact_phone} onChange={e => set("emergency_contact_phone", e.target.value)} /></div>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* GDPR */}
         <div className={`rounded-xl border p-4 space-y-2 transition-colors ${form.gdpr_consent ? "border-chart-3/30 bg-chart-3/5" : "border-accent/30 bg-accent/5"}`}>
