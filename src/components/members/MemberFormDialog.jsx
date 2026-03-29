@@ -158,6 +158,10 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
     onError: (err) => toast({ title: "Error unlinking account", description: err.message, variant: "destructive" }),
   });
 
+          {/* Welcome Questions — First Timer / New Convert only */}
+          {isFirstTimerOrNewConvert && (
+            <WelcomeQuestions form={form} set={set} tenantName={currentTenant?.name} />
+          )}
 
   const { data: wsfCentres = [] } = useQuery({
     queryKey: ["wsf-centres", tenantId],
@@ -214,8 +218,8 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
         membership_status: form.membership_status,
         church_unit: showChurchUnits ? (form.church_unit || null) : null,
         notes: form.notes || null,
-        emergency_contact_name: form.emergency_contact_name || null,
-        emergency_contact_phone: form.emergency_contact_phone || null,
+        emergency_contact_name: isFirstTimerOrNewConvert ? null : (form.emergency_contact_name || null),
+        emergency_contact_phone: isFirstTimerOrNewConvert ? null : (form.emergency_contact_phone || null),
         water_baptism: form.water_baptism,
         holy_spirit_baptism: form.holy_spirit_baptism,
         winners_satellite: form.winners_satellite,
@@ -226,6 +230,16 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
         ldc_completed: form.ldc_completed,
         gdpr_consent: form.gdpr_consent,
         gdpr_consent_date: !member && form.gdpr_consent ? new Date().toISOString() : (member?.gdpr_consent_date || null),
+        // Welcome question fields
+        worshipped_before: isFirstTimerOrNewConvert ? form.worshipped_before : null,
+        worshipped_when_where: isFirstTimerOrNewConvert ? (form.worshipped_when_where || null) : null,
+        would_like_to_join: isFirstTimerOrNewConvert ? form.would_like_to_join : null,
+        live_work_in_city: isFirstTimerOrNewConvert ? form.live_work_in_city : null,
+        how_did_you_hear: isFirstTimerOrNewConvert ? (form.how_did_you_hear || null) : null,
+        attended_foundation_school: isFirstTimerOrNewConvert ? form.attended_foundation_school : null,
+        wofbi_highest_level: isFirstTimerOrNewConvert ? (form.wofbi_highest_level || null) : null,
+        baptized_by_immersion: isFirstTimerOrNewConvert ? form.baptized_by_immersion : null,
+        preferred_contact_modes: isFirstTimerOrNewConvert ? (form.preferred_contact_modes || null) : null,
       };
 
       if (member) {
