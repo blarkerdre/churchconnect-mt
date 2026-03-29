@@ -1,107 +1,50 @@
 
 
-## Deep Audit: Components Missing Tenant Scoping
+## Extend Follow-up Auto-Assignment to Include Unit Members
 
-### Findings
+### What
+1. **Extend the DB trigger** (`auto_create_followup`) to include regular Follow-up unit members (from `members.church_unit`) in the auto-assignment pool, alongside unit leaders
+2. **Extend the reassignment dropdown** to include both unit leaders AND regular Follow-up unit members
+3. **Allow unit leaders to reassign** (currently only admins can)
 
-After reviewing all 48+ files with Supabase queries, here are the components/features that are **NOT properly tenant-scoped**:
+### Database Migration
 
----
+Update the `auto_create_followup()` trigger function to build a combined assignment pool:
 
-### 1. WSFLeaderDashboard — 3 unscoped queries
-**File:** `src/components/dashboard/WSFLeaderDashboard.jsx`
-- `wsf_centres` query (line 25) — no `scopeQuery` or `tenantId` filter
-- `members` query (line 42) — no tenant filter, only filters by `wsf_centre_id`
-- `wsf_attendance_reports` query (line 58) — no tenant filter
-- **Query keys** also missing `tenantId`
+```sql
+-- Current: only queries unit_leader_assignments
+-- New: UNION with members whose church_unit contains 'Follow-up' and who have a user_id
+SELECT user_id FROM (
+  -- Unit leaders
+  SELECT ula.user_id FROM unit_leader_assignments ula
+  WHERE ula.unit_name IN ('Follow-up','Follow-Up','follow-up')
+    AND (NEW.tenant_id IS NULL OR ula.tenant_id = NEW.tenant_id)
+  UNION
+  -- Regular unit members
+  SELECT m.user_id FROM members m
+  WHERE m.user_id IS NOT NULL
+    AND m.tenant_id = NEW.tenant_id
+    AND (lower(m.church_unit) LIKE '%follow-up%' OR lower(m.church_unit) LIKE '%follow up%')
+) pool
+ORDER BY (SELECT COUNT(*) FROM followups f WHERE f.assigned_to = pool.user_id AND f.status IN ('Pending','In Progress')) ASC, random()
+LIMIT 1;
+```
 
-**Fix:** Import `useTenantQuery`, add `scopeQuery` to all three queries, add `tenantId` to query keys.
+Also update the notification loop to notify both leaders AND unit members.
 
----
+### Code Changes
 
-### 2. BulkImportDialog — unscoped email lookup
-**File:** `src/components/members/BulkImportDialog.jsx`
-- Line 117: `supabase.from("members").select("id, email").in("email", emails)` — no tenant scope
-- This could match members from **other tenants** with the same email, causing cross-tenant updates
+#### 1. `src/pages/Followups.jsx` — expand `followupUnitMembers` query
+- Current: only fetches from `unit_leader_assignments`
+- New: also fetch members whose `church_unit` contains "Follow-up" and have a `user_id`, merge both sets into a deduplicated list
+- Pass `isUnitLeader` to `FollowupDetailPanel`
 
-**Fix:** Add `scopeQuery` wrapper or `.eq("tenant_id", tenantId)` to the email lookup query.
+#### 2. `src/components/followups/FollowupDetailPanel.jsx` — allow unit leaders to reassign
+- Line 201: change `{isAdmin && ...}` to `{(isAdmin || isUnitLeader) && ...}`
+- Accept `isUnitLeader` prop
 
----
-
-### 3. SelfCheckInWidget — unscoped member lookup
-**File:** `src/components/attendance/SelfCheckInWidget.jsx`
-- Line 23: `supabase.from("members").select(...).eq("user_id", user.id).maybeSingle()` — no tenant scope
-- Could return a member from a different tenant if user belongs to multiple tenants
-- **Query key** missing `tenantId`
-
-**Fix:** Add `.eq("tenant_id", tenantId)` and include `tenantId` in query key.
-
----
-
-### 4. MemberJourneyTimeline — no tenant scoping
-**File:** `src/components/members/MemberJourneyTimeline.jsx`
-- Line 20: `supabase.from("member_status_history").select("*").eq("member_id", memberId)` — no tenant filter
-- Low risk since `member_id` is already specific, but not following the pattern
-
-**Fix:** Import `useTenantQuery`, add `tenantId` to query key for cache isolation.
-
----
-
-### 5. MyCertificates — no tenant scoping
-**File:** `src/components/certificates/MyCertificates.jsx`
-- Line 15: `supabase.from("training_completions").select("*").eq("member_id", memberId)` — no tenant filter
-- Similar low risk but missing cache isolation
-
-**Fix:** Import `useTenantQuery`, add `tenantId` to query key.
-
----
-
-### 6. NotificationBell — missing cache isolation
-**File:** `src/components/notifications/NotificationBell.jsx`
-- Intentionally user-scoped (per architecture docs), but query key `["notifications", user?.id]` lacks `tenantId`
-- Could show stale notifications from another tenant after switching
-
-**Fix:** Add `tenantId` to query key for cache isolation: `["notifications", user?.id, tenantId]`
-
----
-
-### 7. MessagingPane — missing tenant filter on read
-**File:** `src/components/comms/MessagingPane.jsx`
-- Line 24: Messages query only filters by `sender_id`/`recipient_id`, no tenant scope
-- Insert uses `withTenant` (good), but reads could show messages from other tenant contexts
-- **Query key** missing `tenantId`
-
-**Fix:** Add `scopeQuery` to the messages read query and `tenantId` to query key.
-
----
-
-### 8. useAuth hook — member lookup not tenant-scoped
-**File:** `src/hooks/useAuth.jsx`
-- Line 57: `supabase.from("members").select(...).eq("user_id", userId).maybeSingle()` — no tenant filter
-- Could return member from wrong tenant for multi-tenant users
-- This is an intentional bootstrap exception per architecture docs, but worth noting
-
-**Risk:** Medium — affects `myMember` which is used across the app.
-
----
-
-### Summary of Changes
-
-| # | File | Issue | Risk |
-|---|------|-------|------|
-| 1 | WSFLeaderDashboard | 3 queries missing scopeQuery + tenantId in keys | **High** |
-| 2 | BulkImportDialog | Email lookup crosses tenants | **High** |
-| 3 | SelfCheckInWidget | Member lookup missing tenant filter | **Medium** |
-| 4 | MemberJourneyTimeline | Missing tenantId in query key | **Low** |
-| 5 | MyCertificates | Missing tenantId in query key | **Low** |
-| 6 | NotificationBell | Missing tenantId in query key | **Low** |
-| 7 | MessagingPane | Read query not tenant-scoped | **Medium** |
-| 8 | useAuth | myMember not tenant-scoped (bootstrap exception) | **Medium** |
-
-### Implementation
-- Fix all 8 files in a single pass
-- No database migrations needed — these are all client-side query fixes
-- Add `useTenantQuery` import where missing
-- Add `scopeQuery` wrapper to unscoped queries
-- Add `tenantId` to all query keys for cache isolation
+### Files changed
+1. **1 database migration** — update `auto_create_followup()` function
+2. **`src/pages/Followups.jsx`** — expand followup unit members query + pass `isUnitLeader`
+3. **`src/components/followups/FollowupDetailPanel.jsx`** — allow unit leaders to reassign
 
