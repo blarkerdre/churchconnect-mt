@@ -19,6 +19,23 @@ export default function Auth() {
   const [form, setForm] = useState({ email: "", password: "", fullName: "" });
   const [submitting, setSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [signupCooldown, setSignupCooldown] = useState(false);
+  const [cooldownSeconds, setCooldownSeconds] = useState(0);
+
+  useEffect(() => {
+    if (!signupCooldown) return;
+    const interval = setInterval(() => {
+      setCooldownSeconds((s) => {
+        if (s <= 1) {
+          clearInterval(interval);
+          setSignupCooldown(false);
+          return 0;
+        }
+        return s - 1;
+      });
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [signupCooldown]);
 
   // Fetch tenant branding when a slug is present
   const { data: tenant } = useQuery({
