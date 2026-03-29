@@ -63,6 +63,7 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
   const showChurchUnits = !HIDE_SPIRITUAL_STATUSES.includes(form.membership_status);
   const showSpiritualDev = !HIDE_SPIRITUAL_STATUSES.includes(form.membership_status);
   const showBaptism = SHOW_BAPTISM_STATUSES.includes(form.membership_status);
+  const isFirstTimerOrNewConvert = ["First Timer", "New Convert"].includes(form.membership_status);
 
   const memberUserId = member?.user_id;
   const { data: memberRoles = [] } = useQuery({
