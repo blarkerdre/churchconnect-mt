@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useTenantQuery } from "@/hooks/useTenantQuery";
 import { Bell, Check, Trash2, Heart, Megaphone, CalendarDays, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -17,11 +18,12 @@ const typeIcons = {
 
 export default function NotificationBell() {
   const { user } = useAuth();
+  const { tenantId } = useTenantQuery();
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
 
   const { data: notifications = [] } = useQuery({
-    queryKey: ["notifications", user?.id],
+    queryKey: ["notifications", user?.id, tenantId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("notifications")

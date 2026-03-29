@@ -8,6 +8,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useTenant } from "@/contexts/TenantContext";
+import { useTenantQuery } from "@/hooks/useTenantQuery";
 import { format, subWeeks, startOfWeek } from "date-fns";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import SelfCheckInWidget from "@/components/attendance/SelfCheckInWidget";
@@ -16,16 +17,19 @@ import MemberFeed from "@/components/profile/MemberFeed";
 export default function WSFLeaderDashboard() {
   const { user, myMember, profile } = useAuth();
   const { currentTenant, tenantRole } = useTenant();
+  const { tenantId, scopeQuery } = useTenantQuery();
   const roleLabel = tenantRole ? tenantRole.charAt(0).toUpperCase() + tenantRole.slice(1) : "";
 
   // Get centres this user leads
   const { data: ledCentres = [], isLoading: centresLoading } = useQuery({
-    queryKey: ["wsf-led-centres", myMember?.id],
+    queryKey: ["wsf-led-centres", myMember?.id, tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("wsf_centres")
-        .select("*")
-        .eq("leader_id", myMember.id);
+      const { data, error } = await scopeQuery(
+        supabase
+          .from("wsf_centres")
+          .select("*")
+          .eq("leader_id", myMember.id)
+      );
       if (error) throw error;
       return data;
     },
@@ -36,14 +40,16 @@ export default function WSFLeaderDashboard() {
 
   // Get members in these centres
   const { data: centreMembers = [] } = useQuery({
-    queryKey: ["wsf-leader-members", centreIds],
+    queryKey: ["wsf-leader-members", centreIds, tenantId],
     queryFn: async () => {
       if (!centreIds.length) return [];
-      const { data, error } = await supabase
-        .from("members")
-        .select("id, first_name, last_name, membership_status, created_at, wsf_centre_id")
-        .in("wsf_centre_id", centreIds)
-        .order("first_name");
+      const { data, error } = await scopeQuery(
+        supabase
+          .from("members")
+          .select("id, first_name, last_name, membership_status, created_at, wsf_centre_id")
+          .in("wsf_centre_id", centreIds)
+          .order("first_name")
+      );
       if (error) throw error;
       return data;
     },
@@ -52,15 +58,17 @@ export default function WSFLeaderDashboard() {
 
   // Get recent attendance reports for these centres
   const { data: recentReports = [] } = useQuery({
-    queryKey: ["wsf-leader-reports", centreIds],
+    queryKey: ["wsf-leader-reports", centreIds, tenantId],
     queryFn: async () => {
       if (!centreIds.length) return [];
-      const { data, error } = await supabase
-        .from("wsf_attendance_reports")
-        .select("*, wsf_centres(name)")
-        .in("centre_id", centreIds)
-        .order("meeting_date", { ascending: false })
-        .limit(12);
+      const { data, error } = await scopeQuery(
+        supabase
+          .from("wsf_attendance_reports")
+          .select("*, wsf_centres(name)")
+          .in("centre_id", centreIds)
+          .order("meeting_date", { ascending: false })
+          .limit(12)
+      );
       if (error) throw error;
       return data;
     },
