@@ -155,7 +155,14 @@ export default function TenantUsersDialog({ tenant, open, onOpenChange }) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Users — {tenant.name}</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            Users — {tenant.name}
+            {isSuperAdmin && (
+              <Badge variant="outline" className="text-xs text-violet-600 border-violet-200 bg-violet-50 ml-2">
+                <ShieldCheck className="h-3 w-3 mr-1" />Super Admin Mode
+              </Badge>
+            )}
+          </DialogTitle>
         </DialogHeader>
 
         {/* Invite User Form */}
