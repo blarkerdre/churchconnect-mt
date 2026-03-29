@@ -456,14 +456,21 @@ export default function MyProfile() {
                       </div>
                     )}
 
-                    {/* Emergency Contact */}
-                    <div>
-                      <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Emergency Contact</h3>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                         <div className="space-y-1"><Label>Contact Name (Optional)</Label><Input value={form.emergency_contact_name} onChange={e => set("emergency_contact_name", e.target.value)} /></div>
-                        <div className="space-y-1"><Label>Contact Phone (Optional)</Label><Input value={form.emergency_contact_phone} onChange={e => set("emergency_contact_phone", e.target.value)} /></div>
+                    {/* Welcome Questions — First Timer / New Convert only */}
+                    {isFirstTimerOrNewConvert && (
+                      <WelcomeQuestions form={form} set={set} tenantName={currentTenant?.name} />
+                    )}
+
+                    {/* Emergency Contact — hidden for First Timer / New Convert */}
+                    {!isFirstTimerOrNewConvert && (
+                      <div>
+                        <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Emergency Contact</h3>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                           <div className="space-y-1"><Label>Contact Name (Optional)</Label><Input value={form.emergency_contact_name} onChange={e => set("emergency_contact_name", e.target.value)} /></div>
+                          <div className="space-y-1"><Label>Contact Phone (Optional)</Label><Input value={form.emergency_contact_phone} onChange={e => set("emergency_contact_phone", e.target.value)} /></div>
+                        </div>
                       </div>
-                    </div>
+                    )}
 
                     {/* Notes */}
                     <div className="space-y-1.5">
@@ -610,6 +617,7 @@ export default function MyProfile() {
 
 function CreateMemberProfile({ user, onCreated, wsfCentres, churchUnits }) {
   const { tenantId } = useTenantQuery();
+  const { currentTenant } = useTenant();
   const { tenantSlug: urlSlug } = useParams();
   const nameParts = (user?.user_metadata?.full_name || "").trim().split(/\s+/);
   const defaultFirst = nameParts[0] || "";
@@ -624,6 +632,10 @@ function CreateMemberProfile({ user, onCreated, wsfCentres, churchUnits }) {
     water_baptism: false, holy_spirit_baptism: false, winners_satellite: false,
     wsf_centre_id: "", bfc_completed: false, bcc_completed: false, lcc_completed: false, ldc_completed: false,
     gdpr_consent: false,
+    // Welcome questions
+    worshipped_before: false, worshipped_when_where: "", would_like_to_join: false,
+    live_work_in_city: false, how_did_you_hear: "", attended_foundation_school: false,
+    wofbi_highest_level: "None", baptized_by_immersion: false, preferred_contact_modes: "",
   });
   const [saving, setSaving] = useState(false);
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
@@ -631,6 +643,7 @@ function CreateMemberProfile({ user, onCreated, wsfCentres, churchUnits }) {
   const showChurchUnits = !HIDE_SPIRITUAL_STATUSES.includes(form.membership_status);
   const showSpiritualDev = !HIDE_SPIRITUAL_STATUSES.includes(form.membership_status);
   const showBaptism = SHOW_BAPTISM_STATUSES.includes(form.membership_status);
+  const isFirstTimerOrNewConvert = ["First Timer", "New Convert"].includes(form.membership_status);
 
   const handleCreate = async () => {
     if (!form.first_name || !form.last_name) {
@@ -660,8 +673,8 @@ function CreateMemberProfile({ user, onCreated, wsfCentres, churchUnits }) {
         p_gender: form.gender || null,
         p_membership_status: form.membership_status || "First Timer",
         p_church_unit: showChurchUnits ? (form.church_unit || null) : null,
-        p_emergency_contact_name: form.emergency_contact_name || null,
-        p_emergency_contact_phone: form.emergency_contact_phone || null,
+        p_emergency_contact_name: isFirstTimerOrNewConvert ? null : (form.emergency_contact_name || null),
+        p_emergency_contact_phone: isFirstTimerOrNewConvert ? null : (form.emergency_contact_phone || null),
         p_notes: form.notes || null,
         p_water_baptism: form.water_baptism,
         p_holy_spirit_baptism: form.holy_spirit_baptism,
@@ -672,6 +685,15 @@ function CreateMemberProfile({ user, onCreated, wsfCentres, churchUnits }) {
         p_lcc_completed: form.lcc_completed,
         p_ldc_completed: form.ldc_completed,
         p_gdpr_consent: form.gdpr_consent,
+        p_worshipped_before: isFirstTimerOrNewConvert ? form.worshipped_before : null,
+        p_worshipped_when_where: isFirstTimerOrNewConvert ? (form.worshipped_when_where || null) : null,
+        p_would_like_to_join: isFirstTimerOrNewConvert ? form.would_like_to_join : null,
+        p_live_work_in_city: isFirstTimerOrNewConvert ? form.live_work_in_city : null,
+        p_how_did_you_hear: isFirstTimerOrNewConvert ? (form.how_did_you_hear || null) : null,
+        p_attended_foundation_school: isFirstTimerOrNewConvert ? form.attended_foundation_school : null,
+        p_wofbi_highest_level: isFirstTimerOrNewConvert ? (form.wofbi_highest_level || null) : null,
+        p_baptized_by_immersion: isFirstTimerOrNewConvert ? form.baptized_by_immersion : null,
+        p_preferred_contact_modes: isFirstTimerOrNewConvert ? (form.preferred_contact_modes || null) : null,
       });
       if (error) throw error;
       toast({ title: "Profile updated successfully!" });
