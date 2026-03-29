@@ -14,6 +14,7 @@ import { toast } from "@/components/ui/use-toast";
 import { Toaster } from "@/components/ui/toaster";
 import { suggestClosestWSFCentre } from "@/lib/wsf-suggest";
 import { normalizePhone } from "@/lib/phone-utils";
+import WelcomeQuestions from "@/components/members/WelcomeQuestions";
 const STATUSES = ["First Timer", "New Convert", "Visitor", "Active"];
 const GENDERS = ["Male", "Female"];
 
@@ -28,6 +29,10 @@ const emptyForm = {
   bfc_completed: false, bcc_completed: false, lcc_completed: false, ldc_completed: false,
   gdpr_consent: false,
   website: "", // honeypot
+  // Welcome questions (First Timer / New Convert)
+  worshipped_before: false, worshipped_when_where: "", would_like_to_join: false,
+  live_work_in_city: false, how_did_you_hear: "", attended_foundation_school: false,
+  wofbi_highest_level: "None", baptized_by_immersion: false, preferred_contact_modes: "",
 };
 
 const HIDE_SPIRITUAL_STATUSES = ["First Timer", "New Convert", "Visitor"];
