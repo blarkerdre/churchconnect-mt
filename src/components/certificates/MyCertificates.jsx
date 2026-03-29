@@ -5,12 +5,14 @@ import { Badge } from "@/components/ui/badge";
 import { Loader2, Award, Download } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useTenantQuery } from "@/hooks/useTenantQuery";
 import { toast } from "@/components/ui/use-toast";
 import { format } from "date-fns";
 
 export default function MyCertificates({ memberId }) {
+  const { tenantId } = useTenantQuery();
   const { data: completions = [], isLoading } = useQuery({
-    queryKey: ["training-completions", memberId],
+    queryKey: ["training-completions", memberId, tenantId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("training_completions")

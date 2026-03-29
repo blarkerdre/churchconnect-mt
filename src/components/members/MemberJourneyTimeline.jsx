@@ -1,6 +1,7 @@
 import React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useTenantQuery } from "@/hooks/useTenantQuery";
 import { format } from "date-fns";
 import { ArrowRight, Clock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -14,8 +15,9 @@ const statusColors = {
 };
 
 export default function MemberJourneyTimeline({ memberId }) {
+  const { tenantId } = useTenantQuery();
   const { data: history = [], isLoading } = useQuery({
-    queryKey: ["member-status-history", memberId],
+    queryKey: ["member-status-history", memberId, tenantId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("member_status_history")

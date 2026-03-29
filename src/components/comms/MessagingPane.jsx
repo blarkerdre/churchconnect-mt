@@ -12,21 +12,23 @@ import { useTenantQuery } from "@/hooks/useTenantQuery";
 
 export default function MessagingPane({ currentUser, allUsers }) {
   const { user } = useAuth();
-  const { withTenant } = useTenantQuery();
+  const { tenantId, withTenant, scopeQuery } = useTenantQuery();
   const [selectedUser, setSelectedUser] = useState(null);
   const [draft, setDraft] = useState("");
   const queryClient = useQueryClient();
   const bottomRef = useRef(null);
 
   const { data: messages = [] } = useQuery({
-    queryKey: ["messages", user?.id],
+    queryKey: ["messages", user?.id, tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("messages")
-        .select("*")
-        .or(`sender_id.eq.${user.id},recipient_id.eq.${user.id}`)
-        .order("created_at", { ascending: false })
-        .limit(500);
+      const { data, error } = await scopeQuery(
+        supabase
+          .from("messages")
+          .select("*")
+          .or(`sender_id.eq.${user.id},recipient_id.eq.${user.id}`)
+          .order("created_at", { ascending: false })
+          .limit(500)
+      );
       if (error) throw error;
       return data;
     },

@@ -76,7 +76,7 @@ export default function BulkImportDialog({ open, onOpenChange, onComplete }) {
   const [rowErrors, setRowErrors] = useState([]);
   const [results, setResults] = useState({ created: 0, updated: 0, skipped: 0 });
   const fileRef = useRef(null);
-  const { withTenant } = useTenantQuery();
+  const { withTenant, scopeQuery } = useTenantQuery();
 
   const reset = () => {
     setStep("upload");
@@ -114,7 +114,7 @@ export default function BulkImportDialog({ open, onOpenChange, onComplete }) {
     const emails = validRows.map(r => r.email?.toLowerCase().trim()).filter(Boolean);
     let existingMap = {};
     if (emails.length > 0) {
-      const { data } = await supabase.from("members").select("id, email").in("email", emails);
+      const { data } = await scopeQuery(supabase.from("members").select("id, email").in("email", emails));
       if (data) data.forEach(m => { existingMap[m.email.toLowerCase()] = m.id; });
     }
 
