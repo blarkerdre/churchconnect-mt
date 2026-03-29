@@ -1,57 +1,21 @@
 
 
-## Fix: "Database error saving user" on Signup
+## Update: Form Consent Text Across All Registration Forms
 
-### Root Cause
+### Change
 
-The `handle_new_user()` trigger function declares `_inv_role` as `text`, then inserts `COALESCE(_inv_role, 'member')` into `tenant_memberships.role`, which is a `tenant_role` enum column. Postgres rejects the implicit `text → tenant_role` cast, causing a 500 error on every signup where a tenant is resolved.
+Replace all GDPR consent checkbox text with the new wording and link in 3 files:
 
-### Fix
+**New text:**
+> By completing this form, you agree that WMA-WCI will use, process and retain your personal data in accordance with our [Privacy Policy](https://winners-chapel.org.uk/wp-content/uploads/2024/11/WMA_PrivacyPolicy2024.pdf). You have the right to withdraw this consent at any time.
 
-One database migration to replace the function, casting the value explicitly:
+### Files to change
 
-```sql
-CREATE OR REPLACE FUNCTION public.handle_new_user()
-RETURNS trigger
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public
-AS $$
-DECLARE
-  _tenant_id uuid;
-  _inv_id uuid;
-  _inv_role text;
-  _slug text;
-BEGIN
-  -- (existing invitation + slug resolution — unchanged)
-  ...
+1. **`src/pages/PublicRegistration.jsx`** (line 328-331) — replace consent label text
+2. **`src/pages/PublicWoFBIRegistration.jsx`** (line 221-231) — replace consent label text and update link
+3. **`src/pages/MyProfile.jsx`** (line 794-797) — replace consent label text
 
-  -- Create profile (unchanged)
-  ...
+All three currently have different wording. They will all be unified to the same new text with the same privacy policy link.
 
-  IF _tenant_id IS NOT NULL THEN
-    INSERT INTO public.tenant_memberships (user_id, tenant_id, role)
-    VALUES (NEW.id, _tenant_id, COALESCE(_inv_role, 'member')::tenant_role)   -- ← cast added
-    ON CONFLICT (user_id, tenant_id) DO NOTHING;
-
-    INSERT INTO public.user_roles (user_id, role, tenant_id)
-    VALUES (NEW.id, 'member', _tenant_id)
-    ON CONFLICT (user_id, role, tenant_id) DO NOTHING;
-
-    IF _inv_id IS NOT NULL THEN
-      UPDATE public.tenant_invitations
-      SET status = 'accepted'
-      WHERE id = _inv_id;
-    END IF;
-  END IF;
-
-  RETURN NEW;
-END;
-$$;
-```
-
-The only change is adding `::tenant_role` to the `COALESCE(_inv_role, 'member')` expression on the `tenant_memberships` insert.
-
-### Files changed
-- 1 database migration (no code file changes)
+No backend or database changes needed.
 
