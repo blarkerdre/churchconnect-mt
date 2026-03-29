@@ -359,6 +359,16 @@ Deno.serve(async (req) => {
       ldc_completed: ldcCompleted,
       gdpr_consent: true,
       gdpr_consent_date: new Date().toISOString(),
+      // Welcome question fields
+      worshipped_before: worshippedBefore,
+      worshipped_when_where: worshippedWhenWhere,
+      would_like_to_join: wouldLikeToJoin,
+      live_work_in_city: liveWorkInCity,
+      how_did_you_hear: howDidYouHear,
+      attended_foundation_school: attendedFoundationSchool,
+      wofbi_highest_level: wofbiHighestLevel,
+      baptized_by_immersion: baptizedByImmersion,
+      preferred_contact_modes: preferredContactModes,
       ...(tenantId ? { tenant_id: tenantId } : {}),
     };
 
