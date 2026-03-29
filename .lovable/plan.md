@@ -1,39 +1,22 @@
 
 
-## Update: Make First Timer / New Convert Questions Tenant-Specific
+## Add "Worshipped at any other Winners Chapel International" Question
 
 ### Change
 
-Instead of hardcoding "Winners Chapel International, Cardiff" in the welcome questions, dynamically use the current tenant's name from context.
+Add a new boolean question after the existing "Have you worshipped with us at {tenantName}?" question:
 
-**Affected questions:**
-- "Have you worshipped with us at **{tenantName}**?"
-- "Would you like to join **{tenantName}**?"
-- "Do you live or work in this city or its environ?"
-- All other first-timer questions remain generic (no church name needed)
+> "Have you worshipped with us at any other Winners Chapel International?"
 
-### How
-
-In each form file, access the tenant name:
-- **`src/pages/PublicRegistration.jsx`** — already has tenant data from the slug-based fetch; use `tenantName` from that state
-- **`src/components/members/MemberFormDialog.jsx`** — use `useTenant()` → `currentTenant?.name`
-- **`src/pages/MyProfile.jsx`** — use `useTenant()` → `currentTenant?.name`
-
-For the `public-register` edge function, the tenant name isn't needed server-side (these are just UI labels).
-
-### Implementation note
-
-This is part of the previously approved but not-yet-implemented first-timer/new-convert fields feature. The full implementation includes:
-1. **Database migration** — add 9 new columns to `members` table
-2. **3 form files** — add conditional welcome questions section with tenant-scoped labels
-3. **Edge function** — accept and persist the new fields
-
-The tenant-scoping of question labels will be built into step 2 naturally.
+This is a Yes/No switch, same pattern as the other questions. It needs a new DB column and updates to all form flows.
 
 ### Files to change
-1. **1 database migration** — add 9 nullable columns to `members`
-2. **`src/pages/PublicRegistration.jsx`** — add welcome questions with `tenantName` interpolation
-3. **`src/components/members/MemberFormDialog.jsx`** — same, using `currentTenant?.name`
-4. **`src/pages/MyProfile.jsx`** — same, using `currentTenant?.name`
-5. **`supabase/functions/public-register/index.ts`** — sanitize and persist new fields
+
+1. **1 database migration** — add `worshipped_at_other_wci boolean` nullable column to `members`
+2. **`src/components/members/WelcomeQuestions.jsx`** — add new SwitchRow after the `worshipped_before` block (after line 57)
+3. **`src/pages/PublicRegistration.jsx`** — add `worshipped_at_other_wci` to form state defaults
+4. **`src/pages/MyProfile.jsx`** — add to form state defaults and RPC params
+5. **`src/components/members/MemberFormDialog.jsx`** — add to form state defaults
+6. **`supabase/functions/public-register/index.ts`** — include `worshipped_at_other_wci` in sanitized payload
+7. **Update RPCs** (`update_own_member_profile`, `upsert_own_member_profile`) via migration to accept the new param
 
