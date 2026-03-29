@@ -245,6 +245,7 @@ async function handleWebhook(req: Request): Promise<Response> {
   // Resolve tenant_id from user's tenant membership for log isolation
   let resolvedTenantId: string | null = null
   try {
+    // 1. Try tenant_memberships (works for recovery, magic link, etc.)
     const { data: membership } = await supabase
       .from('tenant_memberships')
       .select('tenant_id')
@@ -252,6 +253,39 @@ async function handleWebhook(req: Request): Promise<Response> {
       .limit(1)
       .maybeSingle()
     if (membership?.tenant_id) resolvedTenantId = membership.tenant_id
+
+    // 2. Fallback: resolve from user_meta_data.tenant_slug (signup case)
+    if (!resolvedTenantId) {
+      const tenantSlug = payload.data.user_meta_data?.tenant_slug
+      if (tenantSlug) {
+        const { data: tenant } = await supabase
+          .from('tenants')
+          .select('id')
+          .eq('slug', tenantSlug)
+          .limit(1)
+          .maybeSingle()
+        if (tenant?.id) resolvedTenantId = tenant.id
+      }
+    }
+
+    // 3. Fallback: resolve via profiles.email → tenant_memberships
+    if (!resolvedTenantId && payload.data.email) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('user_id')
+        .ilike('email', payload.data.email)
+        .limit(1)
+        .maybeSingle()
+      if (profile?.user_id) {
+        const { data: mem } = await supabase
+          .from('tenant_memberships')
+          .select('tenant_id')
+          .eq('user_id', profile.user_id)
+          .limit(1)
+          .maybeSingle()
+        if (mem?.tenant_id) resolvedTenantId = mem.tenant_id
+      }
+    }
   } catch (_) { /* best-effort */ }
 
   // Log pending BEFORE enqueue so we have a record even if enqueue crashes
