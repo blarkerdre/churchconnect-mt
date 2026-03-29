@@ -14,6 +14,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 import { suggestClosestWSFCentre } from "@/lib/wsf-suggest";
+import WelcomeQuestions from "@/components/members/WelcomeQuestions";
+import { useTenant } from "@/contexts/TenantContext";
 import { normalizePhone } from "@/lib/phone-utils";
 import { useChurchUnits } from "@/hooks/useChurchUnits";
 import { useAuth } from "@/hooks/useAuth";
@@ -36,6 +38,10 @@ const emptyMember = {
   winners_satellite: false, wsf_centre_id: "",
   bfc_completed: false, bcc_completed: false, lcc_completed: false, ldc_completed: false,
   gdpr_consent: false,
+  // Welcome questions
+  worshipped_before: false, worshipped_when_where: "", would_like_to_join: false,
+  live_work_in_city: false, how_did_you_hear: "", attended_foundation_school: false,
+  wofbi_highest_level: "None", baptized_by_immersion: false, preferred_contact_modes: "",
 };
 
 export default function MemberFormDialog({ open, onOpenChange, member, onSaved }) {
