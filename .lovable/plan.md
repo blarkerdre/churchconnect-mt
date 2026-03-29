@@ -1,44 +1,20 @@
 
 
-## Fix: Backfill Orphaned Email Logs + Improve Auth-Email-Hook Tenant Resolution
+## Add Signup Cooldown/Debounce
 
-### Problem
-1. **8 signup email logs have NULL tenant_id** — the auth-email-hook resolves tenant from `tenant_memberships`, but at signup time the user doesn't have a membership row yet (it's created by the `handle_new_user` trigger after the auth hook fires)
-2. **Future signup emails will have the same problem** — the hook needs a fallback resolution strategy
-3. **SystemLogs tenant scoping** — already uses `scopeQuery` on all panels, but the AuditLogsPanel's profiles query uses `scopeQuery` on profiles which may filter out profiles from other contexts; also need to verify all components are properly tenant-scoped
+### What
+After a successful signup submission, disable the signup button for 60 seconds to prevent duplicate confirmation emails from rapid re-submissions.
 
-### Fix
+### How
+In `src/pages/Auth.jsx`:
 
-#### 1. Database migration — backfill + improve future resolution
-
-**Backfill:** Update the 8 orphaned `email_send_log` rows by joining to `tenant_memberships` via the recipient email → profiles → user_id → tenant_memberships chain:
-
-```sql
-UPDATE public.email_send_log el
-SET tenant_id = tm.tenant_id
-FROM public.profiles p
-JOIN public.tenant_memberships tm ON tm.user_id = p.user_id
-WHERE el.tenant_id IS NULL
-  AND el.template_name = 'signup'
-  AND lower(el.recipient_email) = lower(p.email)
-  AND tm.tenant_id IS NOT NULL;
-```
-
-#### 2. Update auth-email-hook — resolve tenant from user metadata
-
-When `tenant_memberships` lookup fails (signup case), fall back to resolving tenant from the user's `tenant_slug` metadata (passed during signup via `raw_user_meta_data`). The hook can:
-1. Try `tenant_memberships` first (existing logic — works for recovery, magic link, etc.)
-2. If NULL, check `payload.data.user_meta_data?.tenant_slug` and look up the tenant by slug
-3. If still NULL, try matching via `profiles.email`
-
-This ensures signup emails get the correct tenant_id even before the membership row exists.
-
-#### 3. Redeploy auth-email-hook
-
-Required for changes to take effect.
+1. Add a `signupCooldown` state (boolean) and a `cooldownSeconds` state (number)
+2. After a successful signup (lines 107-117), set `signupCooldown = true` and `cooldownSeconds = 60`
+3. Start a `setInterval` that counts down `cooldownSeconds` every second, clearing when it hits 0
+4. Disable the submit button when `signupCooldown` is true (in addition to existing `submitting` check)
+5. Show countdown text on the button: "Resend in 45s" instead of "Sign Up"
+6. Clear cooldown timer on unmount via cleanup in useEffect
 
 ### Files changed
-1. **1 database migration** — backfill 8 orphaned rows
-2. **`supabase/functions/auth-email-hook/index.ts`** — add fallback tenant resolution from user metadata
-3. **Redeploy** auth-email-hook edge function
+- **`src/pages/Auth.jsx`** — add cooldown state + timer logic + button disabled state
 
