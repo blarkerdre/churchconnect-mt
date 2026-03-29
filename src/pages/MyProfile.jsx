@@ -221,6 +221,15 @@ export default function MyProfile() {
       bcc_completed: member.bcc_completed || false,
       lcc_completed: member.lcc_completed || false,
       ldc_completed: member.ldc_completed || false,
+      worshipped_before: member.worshipped_before || false,
+      worshipped_when_where: member.worshipped_when_where || "",
+      would_like_to_join: member.would_like_to_join || false,
+      live_work_in_city: member.live_work_in_city || false,
+      how_did_you_hear: member.how_did_you_hear || "",
+      attended_foundation_school: member.attended_foundation_school || false,
+      wofbi_highest_level: member.wofbi_highest_level || "None",
+      baptized_by_immersion: member.baptized_by_immersion || false,
+      preferred_contact_modes: member.preferred_contact_modes || "",
     });
     setEditing(true);
   };
@@ -231,6 +240,7 @@ export default function MyProfile() {
       return;
     }
     const showUnits = !HIDE_SPIRITUAL_STATUSES.includes(form.membership_status);
+    const isFTNC = ["First Timer", "New Convert"].includes(form.membership_status);
     updateMutation.mutate({
       first_name: form.first_name,
       last_name: form.last_name,
@@ -242,8 +252,8 @@ export default function MyProfile() {
       date_of_birth: form.date_of_birth || null,
       gender: form.gender || null,
       membership_status: form.membership_status || null,
-      emergency_contact_name: form.emergency_contact_name || null,
-      emergency_contact_phone: form.emergency_contact_phone || null,
+      emergency_contact_name: isFTNC ? null : (form.emergency_contact_name || null),
+      emergency_contact_phone: isFTNC ? null : (form.emergency_contact_phone || null),
       notes: form.notes || null,
       photo_url: member.photo_url || null,
       church_unit: showUnits ? (form.church_unit || null) : null,
@@ -255,6 +265,15 @@ export default function MyProfile() {
       bcc_completed: form.bcc_completed,
       lcc_completed: form.lcc_completed,
       ldc_completed: form.ldc_completed,
+      worshipped_before: isFTNC ? form.worshipped_before : null,
+      worshipped_when_where: isFTNC ? (form.worshipped_when_where || null) : null,
+      would_like_to_join: isFTNC ? form.would_like_to_join : null,
+      live_work_in_city: isFTNC ? form.live_work_in_city : null,
+      how_did_you_hear: isFTNC ? (form.how_did_you_hear || null) : null,
+      attended_foundation_school: isFTNC ? form.attended_foundation_school : null,
+      wofbi_highest_level: isFTNC ? (form.wofbi_highest_level || null) : null,
+      baptized_by_immersion: isFTNC ? form.baptized_by_immersion : null,
+      preferred_contact_modes: isFTNC ? (form.preferred_contact_modes || null) : null,
     });
   };
 
