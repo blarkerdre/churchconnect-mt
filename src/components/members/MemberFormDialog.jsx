@@ -612,8 +612,8 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
               <label className="flex items-start gap-3 cursor-pointer">
                 <input type="checkbox" checked={form.gdpr_consent} onChange={e => set("gdpr_consent", e.target.checked)} className="mt-0.5 rounded h-4 w-4 shrink-0" />
                 <span className="text-sm text-foreground leading-relaxed">
-                  I consent to processing my personal data including attendance records in accordance with <strong>UK GDPR</strong>.{" "}
-                  <a href="https://winners-chapel.org.uk/wp-content/uploads/2024/11/WMA_PrivacyPolicy2024.pdf" target="_blank" rel="noopener noreferrer" className="text-primary underline hover:text-primary/80">View our Privacy Policy</a>.
+                  By completing this form, you agree that WMA-WCI will use, process and retain your personal data in accordance with our{" "}
+                  <a href="https://winners-chapel.org.uk/wp-content/uploads/2024/11/WMA_PrivacyPolicy2024.pdf" target="_blank" rel="noopener noreferrer" className="text-primary underline hover:text-primary/80">Privacy Policy</a>. You have the right to withdraw this consent at any time.
                 </span>
               </label>
               {!form.gdpr_consent && <p className="text-xs text-accent pl-7">⚠️ Consent is required to complete registration.</p>}
