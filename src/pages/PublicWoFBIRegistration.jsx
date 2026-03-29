@@ -219,16 +219,16 @@ export default function PublicWoFBIRegistration() {
                 onCheckedChange={(v) => set("gdpr_consent", !!v)}
               />
               <Label htmlFor="gdpr" className="text-sm leading-snug cursor-pointer">
-                I consent to my data being stored and used for course registration and communication purposes in accordance with the{" "}
+                By completing this form, you agree that WMA-WCI will use, process and retain your personal data in accordance with our{" "}
                 <a
-                  href="https://www.gov.uk/data-protection"
+                  href="https://winners-chapel.org.uk/wp-content/uploads/2024/11/WMA_PrivacyPolicy2024.pdf"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-primary underline"
                 >
-                  data privacy policy
+                  Privacy Policy
                 </a>
-                . *
+                . You have the right to withdraw this consent at any time. *
               </Label>
             </div>
 
