@@ -73,6 +73,7 @@ export default function PublicRegistration() {
   const showChurchUnits = !HIDE_SPIRITUAL_STATUSES.includes(form.membership_status);
   const showSpiritualDev = !HIDE_SPIRITUAL_STATUSES.includes(form.membership_status);
   const showBaptism = SHOW_BAPTISM_STATUSES.includes(form.membership_status);
+  const isFirstTimerOrNewConvert = ["First Timer", "New Convert"].includes(form.membership_status);
 
   const SwitchRow = ({ id, label, description, checked, onChange }) => (
     <div className="flex items-center justify-between p-3 rounded-xl bg-muted/50 border border-border">
