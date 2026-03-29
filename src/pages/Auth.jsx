@@ -131,6 +131,8 @@ export default function Auth() {
           });
         } else {
           toast({ title: "Account created!", description: "Please check your email to verify your account." });
+          setSignupCooldown(true);
+          setCooldownSeconds(60);
         }
         setMode("login");
       } else if (mode === "forgot") {
@@ -229,8 +231,10 @@ export default function Auth() {
                   </div>
                 </div>
               )}
-              <Button type="submit" className="w-full" disabled={submitting}>
-                {submitting ? "Please wait..." : (
+              <Button type="submit" className="w-full" disabled={submitting || (mode === "signup" && signupCooldown)}>
+                {submitting ? "Please wait..." : signupCooldown && mode === "signup" ? (
+                  `Resend in ${cooldownSeconds}s`
+                ) : (
                   <>
                     {mode === "login" ? "Sign In" : mode === "signup" ? "Create Account" : "Send Reset Link"}
                     <ArrowRight className="ml-2 h-4 w-4" />
