@@ -40,7 +40,7 @@ const priorityColors = {
   Urgent: "bg-destructive/10 text-destructive",
 };
 
-export default function FollowupDetailPanel({ followup, onClose, onUpdate, currentUser, onConverted, isAdmin, profileMap = {}, followupUnitMembers = [] }) {
+export default function FollowupDetailPanel({ followup, onClose, onUpdate, currentUser, onConverted, isAdmin, isUnitLeader, profileMap = {}, followupUnitMembers = [] }) {
   const [progressNote, setProgressNote] = useState("");
   const [saving, setSaving] = useState(false);
   const [converting, setConverting] = useState(false);
@@ -198,7 +198,7 @@ export default function FollowupDetailPanel({ followup, onClose, onUpdate, curre
               <p className="text-xs font-semibold text-muted-foreground flex items-center gap-1">
                 <User className="h-3 w-3" /> Assigned To
               </p>
-              {isAdmin && followup.status !== "Completed" && (
+              {(isAdmin || isUnitLeader) && followup.status !== "Completed" && (
                 <Button variant="ghost" size="sm" className="h-6 text-xs px-2" onClick={() => setShowReassign(!showReassign)}>
                   <RefreshCw className="h-3 w-3 mr-1" /> Reassign
                 </Button>

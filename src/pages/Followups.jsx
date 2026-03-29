@@ -52,18 +52,35 @@ export default function Followups() {
     return map;
   }, [profiles]);
 
-  // Fetch follow-up unit members for reassignment
+  // Fetch follow-up unit members for reassignment (leaders + regular members)
   const { data: followupUnitMembers = [] } = useQuery({
     queryKey: ["followup-unit-members", tenantId],
     queryFn: async () => {
-      const { data, error } = await scopeQuery(
+      // Get unit leaders assigned to Follow-up
+      const { data: leaders = [], error: leadersErr } = await scopeQuery(
         supabase
           .from("unit_leader_assignments")
           .select("user_id")
           .in("unit_name", ["Follow-up", "Follow-Up", "follow-up"])
       );
-      if (error) throw error;
-      return data.map(d => d.user_id);
+      if (leadersErr) throw leadersErr;
+
+      // Get regular members whose church_unit contains Follow-up
+      const { data: unitMembers = [], error: membersErr } = await scopeQuery(
+        supabase
+          .from("members")
+          .select("user_id")
+          .not("user_id", "is", null)
+          .or("church_unit.ilike.%follow-up%,church_unit.ilike.%follow up%")
+      );
+      if (membersErr) throw membersErr;
+
+      // Deduplicate
+      const allIds = new Set([
+        ...leaders.map(d => d.user_id),
+        ...unitMembers.map(d => d.user_id),
+      ]);
+      return [...allIds];
     },
   });
 
@@ -396,6 +413,7 @@ export default function Followups() {
           onUpdate={handleUpdateFollowup}
           currentUser={profile}
           isAdmin={isAdmin}
+          isUnitLeader={isUnitLeader}
           profileMap={profileMap}
           followupUnitMembers={followupUnitMembers}
           onConverted={() => {
