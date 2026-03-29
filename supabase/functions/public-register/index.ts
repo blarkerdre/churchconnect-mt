@@ -370,6 +370,7 @@ Deno.serve(async (req) => {
       wofbi_highest_level: wofbiHighestLevel,
       baptized_by_immersion: baptizedByImmersion,
       preferred_contact_modes: preferredContactModes,
+      worshipped_at_other_wci: worshippedAtOtherWci,
       ...(tenantId ? { tenant_id: tenantId } : {}),
     };
 
