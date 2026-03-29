@@ -823,14 +823,21 @@ function CreateMemberProfile({ user, onCreated, wsfCentres, churchUnits }) {
           </div>
         )}
 
-        {/* Emergency Contact */}
-        <div>
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Emergency Contact</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="space-y-1"><Label>Contact Name (Optional)</Label><Input value={form.emergency_contact_name} onChange={e => set("emergency_contact_name", e.target.value)} /></div>
-            <div className="space-y-1"><Label>Contact Phone (Optional)</Label><Input value={form.emergency_contact_phone} onChange={e => set("emergency_contact_phone", e.target.value)} /></div>
+        {/* Welcome Questions — First Timer / New Convert only */}
+        {isFirstTimerOrNewConvert && (
+          <WelcomeQuestions form={form} set={set} tenantName={currentTenant?.name} />
+        )}
+
+        {/* Emergency Contact — hidden for First Timer / New Convert */}
+        {!isFirstTimerOrNewConvert && (
+          <div>
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Emergency Contact</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="space-y-1"><Label>Contact Name (Optional)</Label><Input value={form.emergency_contact_name} onChange={e => set("emergency_contact_name", e.target.value)} /></div>
+              <div className="space-y-1"><Label>Contact Phone (Optional)</Label><Input value={form.emergency_contact_phone} onChange={e => set("emergency_contact_phone", e.target.value)} /></div>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* GDPR */}
         <div className={`rounded-xl border p-4 space-y-2 transition-colors ${form.gdpr_consent ? "border-chart-3/30 bg-chart-3/5" : "border-accent/30 bg-accent/5"}`}>
