@@ -10,9 +10,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
-import { UserPlus, Trash2, Shield, Crown, User, Mail, Clock, CheckCircle2, XCircle } from "lucide-react";
+import { UserPlus, Trash2, Shield, Crown, User, Mail, Clock, CheckCircle2, XCircle, ShieldCheck } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 const ROLE_CONFIG = {
   owner: { label: "Owner", icon: Crown, color: "text-amber-600 bg-amber-50 border-amber-200" },
@@ -22,7 +23,8 @@ const ROLE_CONFIG = {
 
 export default function TenantUsersDialog({ tenant, open, onOpenChange }) {
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user, roles: userRoles } = useAuth();
+  const isSuperAdmin = userRoles.includes("super_admin");
   const queryClient = useQueryClient();
   const [addEmail, setAddEmail] = useState("");
   const [addRole, setAddRole] = useState("member");
@@ -153,7 +155,14 @@ export default function TenantUsersDialog({ tenant, open, onOpenChange }) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Users — {tenant.name}</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            Users — {tenant.name}
+            {isSuperAdmin && (
+              <Badge variant="outline" className="text-xs text-violet-600 border-violet-200 bg-violet-50 ml-2">
+                <ShieldCheck className="h-3 w-3 mr-1" />Super Admin Mode
+              </Badge>
+            )}
+          </DialogTitle>
         </DialogHeader>
 
         {/* Invite User Form */}
@@ -233,12 +242,48 @@ export default function TenantUsersDialog({ tenant, open, onOpenChange }) {
                               </SelectContent>
                             </Select>
                           </TableCell>
-                          <TableCell className="text-right">
+                          <TableCell className="text-right space-x-1">
+                            {isSuperAdmin && m.role !== "owner" && (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="text-amber-600 hover:text-amber-700 hover:bg-amber-50"
+                                    onClick={() => {
+                                      updateRoleMutation.mutate({ membershipId: m.id, role: "owner" });
+                                      toast({ title: `${profile?.full_name || "User"} promoted to Owner` });
+                                    }}
+                                  >
+                                    <Crown className="h-3.5 w-3.5" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Promote to Owner</TooltipContent>
+                              </Tooltip>
+                            )}
+                            {isSuperAdmin && m.role === "member" && (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                    onClick={() => {
+                                      updateRoleMutation.mutate({ membershipId: m.id, role: "admin" });
+                                      toast({ title: `${profile?.full_name || "User"} promoted to Admin` });
+                                    }}
+                                  >
+                                    <Shield className="h-3.5 w-3.5" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Promote to Admin</TooltipContent>
+                              </Tooltip>
+                            )}
                             <Button
                               size="sm"
                               variant="ghost"
                               className="text-destructive hover:text-destructive"
-                              disabled={isOnlyOwner || removeMutation.isPending}
+                              disabled={isOnlyOwner || (isSuperAdmin && m.profiles?.user_id === user?.id) || removeMutation.isPending}
                               onClick={() => removeMutation.mutate(m.id)}
                               title={isOnlyOwner ? "Cannot remove the only owner" : "Remove from tenant"}
                             >
