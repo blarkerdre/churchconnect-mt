@@ -14,6 +14,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 import { suggestClosestWSFCentre } from "@/lib/wsf-suggest";
+import WelcomeQuestions from "@/components/members/WelcomeQuestions";
+import { useTenant } from "@/contexts/TenantContext";
 import { normalizePhone } from "@/lib/phone-utils";
 import { useChurchUnits } from "@/hooks/useChurchUnits";
 import { useAuth } from "@/hooks/useAuth";
@@ -36,6 +38,10 @@ const emptyMember = {
   winners_satellite: false, wsf_centre_id: "",
   bfc_completed: false, bcc_completed: false, lcc_completed: false, ldc_completed: false,
   gdpr_consent: false,
+  // Welcome questions
+  worshipped_before: false, worshipped_when_where: "", would_like_to_join: false,
+  live_work_in_city: false, how_did_you_hear: "", attended_foundation_school: false,
+  wofbi_highest_level: "None", baptized_by_immersion: false, preferred_contact_modes: "",
 };
 
 export default function MemberFormDialog({ open, onOpenChange, member, onSaved }) {
@@ -43,6 +49,7 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
   const CHURCH_UNITS = churchUnits.map(u => u.name);
   const { isAdmin, roles: currentUserRoles, user: currentUser } = useAuth();
   const { tenantId, withTenant, scopeQuery } = useTenantQuery();
+  const { currentTenant } = useTenant();
   const isSuperAdmin = currentUserRoles.includes("super_admin");
   const queryClient = useQueryClient();
   const [form, setForm] = useState(emptyMember);
@@ -56,6 +63,7 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
   const showChurchUnits = !HIDE_SPIRITUAL_STATUSES.includes(form.membership_status);
   const showSpiritualDev = !HIDE_SPIRITUAL_STATUSES.includes(form.membership_status);
   const showBaptism = SHOW_BAPTISM_STATUSES.includes(form.membership_status);
+  const isFirstTimerOrNewConvert = ["First Timer", "New Convert"].includes(form.membership_status);
 
   const memberUserId = member?.user_id;
   const { data: memberRoles = [] } = useQuery({
@@ -150,6 +158,10 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
     onError: (err) => toast({ title: "Error unlinking account", description: err.message, variant: "destructive" }),
   });
 
+          {/* Welcome Questions — First Timer / New Convert only */}
+          {isFirstTimerOrNewConvert && (
+            <WelcomeQuestions form={form} set={set} tenantName={currentTenant?.name} />
+          )}
 
   const { data: wsfCentres = [] } = useQuery({
     queryKey: ["wsf-centres", tenantId],
@@ -206,8 +218,8 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
         membership_status: form.membership_status,
         church_unit: showChurchUnits ? (form.church_unit || null) : null,
         notes: form.notes || null,
-        emergency_contact_name: form.emergency_contact_name || null,
-        emergency_contact_phone: form.emergency_contact_phone || null,
+        emergency_contact_name: isFirstTimerOrNewConvert ? null : (form.emergency_contact_name || null),
+        emergency_contact_phone: isFirstTimerOrNewConvert ? null : (form.emergency_contact_phone || null),
         water_baptism: form.water_baptism,
         holy_spirit_baptism: form.holy_spirit_baptism,
         winners_satellite: form.winners_satellite,
@@ -218,6 +230,16 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
         ldc_completed: form.ldc_completed,
         gdpr_consent: form.gdpr_consent,
         gdpr_consent_date: !member && form.gdpr_consent ? new Date().toISOString() : (member?.gdpr_consent_date || null),
+        // Welcome question fields
+        worshipped_before: isFirstTimerOrNewConvert ? form.worshipped_before : null,
+        worshipped_when_where: isFirstTimerOrNewConvert ? (form.worshipped_when_where || null) : null,
+        would_like_to_join: isFirstTimerOrNewConvert ? form.would_like_to_join : null,
+        live_work_in_city: isFirstTimerOrNewConvert ? form.live_work_in_city : null,
+        how_did_you_hear: isFirstTimerOrNewConvert ? (form.how_did_you_hear || null) : null,
+        attended_foundation_school: isFirstTimerOrNewConvert ? form.attended_foundation_school : null,
+        wofbi_highest_level: isFirstTimerOrNewConvert ? (form.wofbi_highest_level || null) : null,
+        baptized_by_immersion: isFirstTimerOrNewConvert ? form.baptized_by_immersion : null,
+        preferred_contact_modes: isFirstTimerOrNewConvert ? (form.preferred_contact_modes || null) : null,
       };
 
       if (member) {
@@ -591,14 +613,16 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
             </div>
           )}
 
-          {/* Emergency Contact */}
-          <div>
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Emergency Contact</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-1.5"><Label>Contact Name (Optional)</Label><Input value={form.emergency_contact_name} onChange={(e) => set("emergency_contact_name", e.target.value)} /></div>
-              <div className="space-y-1.5"><Label>Contact Phone (Optional)</Label><Input value={form.emergency_contact_phone} onChange={(e) => set("emergency_contact_phone", e.target.value)} /></div>
+          {/* Emergency Contact — hidden for First Timer / New Convert */}
+          {!isFirstTimerOrNewConvert && (
+            <div>
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Emergency Contact</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1.5"><Label>Contact Name (Optional)</Label><Input value={form.emergency_contact_name} onChange={(e) => set("emergency_contact_name", e.target.value)} /></div>
+                <div className="space-y-1.5"><Label>Contact Phone (Optional)</Label><Input value={form.emergency_contact_phone} onChange={(e) => set("emergency_contact_phone", e.target.value)} /></div>
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Notes */}
           <div className="space-y-1.5">

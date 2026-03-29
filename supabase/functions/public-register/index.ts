@@ -305,6 +305,17 @@ Deno.serve(async (req) => {
     const lccCompleted = body.lcc_completed === true;
     const ldcCompleted = body.ldc_completed === true;
 
+    // Welcome question fields (First Timer / New Convert)
+    const worshippedBefore = body.worshipped_before === true ? true : (body.worshipped_before === false ? false : null);
+    const worshippedWhenWhere = sanitize(body.worshipped_when_where, 500);
+    const wouldLikeToJoin = body.would_like_to_join === true ? true : (body.would_like_to_join === false ? false : null);
+    const liveWorkInCity = body.live_work_in_city === true ? true : (body.live_work_in_city === false ? false : null);
+    const howDidYouHear = sanitize(body.how_did_you_hear, 300);
+    const attendedFoundationSchool = body.attended_foundation_school === true ? true : (body.attended_foundation_school === false ? false : null);
+    const wofbiHighestLevel = sanitize(body.wofbi_highest_level, 50);
+    const baptizedByImmersion = body.baptized_by_immersion === true ? true : (body.baptized_by_immersion === false ? false : null);
+    const preferredContactModes = sanitize(body.preferred_contact_modes, 200);
+
     if (wsfCentreId) {
       const { data: centre } = await supabase
         .from("wsf_centres")
@@ -348,6 +359,16 @@ Deno.serve(async (req) => {
       ldc_completed: ldcCompleted,
       gdpr_consent: true,
       gdpr_consent_date: new Date().toISOString(),
+      // Welcome question fields
+      worshipped_before: worshippedBefore,
+      worshipped_when_where: worshippedWhenWhere,
+      would_like_to_join: wouldLikeToJoin,
+      live_work_in_city: liveWorkInCity,
+      how_did_you_hear: howDidYouHear,
+      attended_foundation_school: attendedFoundationSchool,
+      wofbi_highest_level: wofbiHighestLevel,
+      baptized_by_immersion: baptizedByImmersion,
+      preferred_contact_modes: preferredContactModes,
       ...(tenantId ? { tenant_id: tenantId } : {}),
     };
 
