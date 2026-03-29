@@ -1,15 +1,39 @@
 
 
-## Update: Add Consent Text to Register New Member Form
+## Update: Make First Timer / New Convert Questions Tenant-Specific
 
 ### Change
 
-Replace the current GDPR consent text in `src/components/members/MemberFormDialog.jsx` (lines 614-617) with the same unified consent wording used across the other forms:
+Instead of hardcoding "Winners Chapel International, Cardiff" in the welcome questions, dynamically use the current tenant's name from context.
 
-> By completing this form, you agree that WMA-WCI will use, process and retain your personal data in accordance with our [Privacy Policy](https://winners-chapel.org.uk/wp-content/uploads/2024/11/WMA_PrivacyPolicy2024.pdf). You have the right to withdraw this consent at any time.
+**Affected questions:**
+- "Have you worshipped with us at **{tenantName}**?"
+- "Would you like to join **{tenantName}**?"
+- "Do you live or work in this city or its environ?"
+- All other first-timer questions remain generic (no church name needed)
 
-### File to change
-- `src/components/members/MemberFormDialog.jsx` — replace consent label text (lines 614-617)
+### How
 
-No backend changes needed.
+In each form file, access the tenant name:
+- **`src/pages/PublicRegistration.jsx`** — already has tenant data from the slug-based fetch; use `tenantName` from that state
+- **`src/components/members/MemberFormDialog.jsx`** — use `useTenant()` → `currentTenant?.name`
+- **`src/pages/MyProfile.jsx`** — use `useTenant()` → `currentTenant?.name`
+
+For the `public-register` edge function, the tenant name isn't needed server-side (these are just UI labels).
+
+### Implementation note
+
+This is part of the previously approved but not-yet-implemented first-timer/new-convert fields feature. The full implementation includes:
+1. **Database migration** — add 9 new columns to `members` table
+2. **3 form files** — add conditional welcome questions section with tenant-scoped labels
+3. **Edge function** — accept and persist the new fields
+
+The tenant-scoping of question labels will be built into step 2 naturally.
+
+### Files to change
+1. **1 database migration** — add 9 nullable columns to `members`
+2. **`src/pages/PublicRegistration.jsx`** — add welcome questions with `tenantName` interpolation
+3. **`src/components/members/MemberFormDialog.jsx`** — same, using `currentTenant?.name`
+4. **`src/pages/MyProfile.jsx`** — same, using `currentTenant?.name`
+5. **`supabase/functions/public-register/index.ts`** — sanitize and persist new fields
 
