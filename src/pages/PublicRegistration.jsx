@@ -111,8 +111,8 @@ export default function PublicRegistration() {
           membership_status: form.membership_status,
           church_unit: showChurchUnits ? (form.church_unit || null) : null,
           notes: form.notes || null,
-          emergency_contact_name: form.emergency_contact_name || null,
-          emergency_contact_phone: form.emergency_contact_phone || null,
+          emergency_contact_name: isFirstTimerOrNewConvert ? null : (form.emergency_contact_name || null),
+          emergency_contact_phone: isFirstTimerOrNewConvert ? null : (form.emergency_contact_phone || null),
           water_baptism: form.water_baptism,
           holy_spirit_baptism: form.holy_spirit_baptism,
           winners_satellite: form.winners_satellite,
@@ -123,6 +123,18 @@ export default function PublicRegistration() {
           ldc_completed: form.ldc_completed,
           gdpr_consent: form.gdpr_consent,
           website: form.website, // honeypot
+          // Welcome question fields
+          ...(isFirstTimerOrNewConvert ? {
+            worshipped_before: form.worshipped_before,
+            worshipped_when_where: form.worshipped_when_where || null,
+            would_like_to_join: form.would_like_to_join,
+            live_work_in_city: form.live_work_in_city,
+            how_did_you_hear: form.how_did_you_hear || null,
+            attended_foundation_school: form.attended_foundation_school,
+            wofbi_highest_level: form.wofbi_highest_level || null,
+            baptized_by_immersion: form.baptized_by_immersion,
+            preferred_contact_modes: form.preferred_contact_modes || null,
+          } : {}),
           ...(resolvedTenantId ? { tenant_id: resolvedTenantId } : {}),
         },
       });
@@ -314,14 +326,21 @@ export default function PublicRegistration() {
               </div>
             )}
 
-            {/* Emergency Contact — shown for ALL statuses */}
-            <div>
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Emergency Contact (Optional)</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-1.5"><Label>Contact Name (Optional)</Label><Input value={form.emergency_contact_name} onChange={e => set("emergency_contact_name", e.target.value)} maxLength={100} /></div>
-                <div className="space-y-1.5"><Label>Contact Phone (Optional)</Label><Input value={form.emergency_contact_phone} onChange={e => set("emergency_contact_phone", e.target.value)} maxLength={20} /></div>
+            {/* Welcome Questions — First Timer / New Convert only */}
+            {isFirstTimerOrNewConvert && (
+              <WelcomeQuestions form={form} set={set} tenantName={tenantName} />
+            )}
+
+            {/* Emergency Contact — hidden for First Timer / New Convert */}
+            {!isFirstTimerOrNewConvert && (
+              <div>
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Emergency Contact (Optional)</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-1.5"><Label>Contact Name (Optional)</Label><Input value={form.emergency_contact_name} onChange={e => set("emergency_contact_name", e.target.value)} maxLength={100} /></div>
+                  <div className="space-y-1.5"><Label>Contact Phone (Optional)</Label><Input value={form.emergency_contact_phone} onChange={e => set("emergency_contact_phone", e.target.value)} maxLength={20} /></div>
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Prayer Request */}
             <div className="space-y-1.5">
