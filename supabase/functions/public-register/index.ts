@@ -315,6 +315,7 @@ Deno.serve(async (req) => {
     const wofbiHighestLevel = sanitize(body.wofbi_highest_level, 50);
     const baptizedByImmersion = body.baptized_by_immersion === true ? true : (body.baptized_by_immersion === false ? false : null);
     const preferredContactModes = sanitize(body.preferred_contact_modes, 200);
+    const worshippedAtOtherWci = body.worshipped_at_other_wci === true ? true : (body.worshipped_at_other_wci === false ? false : null);
 
     if (wsfCentreId) {
       const { data: centre } = await supabase
