@@ -1,0 +1,1 @@
+DELETE FROM public.followups WHERE member_id IS NULL;
