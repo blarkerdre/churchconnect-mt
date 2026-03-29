@@ -57,6 +57,13 @@ export default function WelcomeQuestions({ form, set, tenantName }) {
         )}
 
         <SwitchRow
+          id="worshipped_at_other_wci"
+          label="Have you worshipped with us at any other Winners Chapel International?"
+          checked={form.worshipped_at_other_wci}
+          onChange={v => set("worshipped_at_other_wci", v)}
+        />
+
+        <SwitchRow
           id="would_like_to_join"
           label={`Would you like to join ${churchName}?`}
           checked={form.would_like_to_join}

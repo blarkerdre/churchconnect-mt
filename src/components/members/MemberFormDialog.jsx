@@ -39,7 +39,7 @@ const emptyMember = {
   bfc_completed: false, bcc_completed: false, lcc_completed: false, ldc_completed: false,
   gdpr_consent: false,
   // Welcome questions
-  worshipped_before: false, worshipped_when_where: "", would_like_to_join: false,
+  worshipped_before: false, worshipped_when_where: "", worshipped_at_other_wci: false, would_like_to_join: false,
   live_work_in_city: false, how_did_you_hear: "", attended_foundation_school: false,
   wofbi_highest_level: "None", baptized_by_immersion: false, preferred_contact_modes: "",
 };

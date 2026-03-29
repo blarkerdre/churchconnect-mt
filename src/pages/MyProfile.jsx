@@ -223,6 +223,7 @@ export default function MyProfile() {
       ldc_completed: member.ldc_completed || false,
       worshipped_before: member.worshipped_before || false,
       worshipped_when_where: member.worshipped_when_where || "",
+      worshipped_at_other_wci: member.worshipped_at_other_wci || false,
       would_like_to_join: member.would_like_to_join || false,
       live_work_in_city: member.live_work_in_city || false,
       how_did_you_hear: member.how_did_you_hear || "",
@@ -267,6 +268,7 @@ export default function MyProfile() {
       ldc_completed: form.ldc_completed,
       worshipped_before: isFTNC ? form.worshipped_before : null,
       worshipped_when_where: isFTNC ? (form.worshipped_when_where || null) : null,
+      worshipped_at_other_wci: isFTNC ? form.worshipped_at_other_wci : null,
       would_like_to_join: isFTNC ? form.would_like_to_join : null,
       live_work_in_city: isFTNC ? form.live_work_in_city : null,
       how_did_you_hear: isFTNC ? (form.how_did_you_hear || null) : null,
@@ -633,7 +635,7 @@ function CreateMemberProfile({ user, onCreated, wsfCentres, churchUnits }) {
     wsf_centre_id: "", bfc_completed: false, bcc_completed: false, lcc_completed: false, ldc_completed: false,
     gdpr_consent: false,
     // Welcome questions
-    worshipped_before: false, worshipped_when_where: "", would_like_to_join: false,
+    worshipped_before: false, worshipped_when_where: "", worshipped_at_other_wci: false, would_like_to_join: false,
     live_work_in_city: false, how_did_you_hear: "", attended_foundation_school: false,
     wofbi_highest_level: "None", baptized_by_immersion: false, preferred_contact_modes: "",
   });
@@ -687,6 +689,7 @@ function CreateMemberProfile({ user, onCreated, wsfCentres, churchUnits }) {
         p_gdpr_consent: form.gdpr_consent,
         p_worshipped_before: isFirstTimerOrNewConvert ? form.worshipped_before : null,
         p_worshipped_when_where: isFirstTimerOrNewConvert ? (form.worshipped_when_where || null) : null,
+        p_worshipped_at_other_wci: isFirstTimerOrNewConvert ? form.worshipped_at_other_wci : null,
         p_would_like_to_join: isFirstTimerOrNewConvert ? form.would_like_to_join : null,
         p_live_work_in_city: isFirstTimerOrNewConvert ? form.live_work_in_city : null,
         p_how_did_you_hear: isFirstTimerOrNewConvert ? (form.how_did_you_hear || null) : null,
