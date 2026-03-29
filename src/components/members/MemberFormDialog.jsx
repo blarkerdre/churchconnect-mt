@@ -158,11 +158,6 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
     onError: (err) => toast({ title: "Error unlinking account", description: err.message, variant: "destructive" }),
   });
 
-          {/* Welcome Questions — First Timer / New Convert only */}
-          {isFirstTimerOrNewConvert && (
-            <WelcomeQuestions form={form} set={set} tenantName={currentTenant?.name} />
-          )}
-
   const { data: wsfCentres = [] } = useQuery({
     queryKey: ["wsf-centres", tenantId],
     queryFn: async () => {
@@ -611,6 +606,11 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
                 );
               })()}
             </div>
+          )}
+
+          {/* Welcome Questions — First Timer / New Convert only */}
+          {isFirstTimerOrNewConvert && (
+            <WelcomeQuestions form={form} set={set} tenantName={currentTenant?.name} />
           )}
 
           {/* Emergency Contact — hidden for First Timer / New Convert */}
