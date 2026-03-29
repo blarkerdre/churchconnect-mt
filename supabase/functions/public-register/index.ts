@@ -413,7 +413,7 @@ Deno.serve(async (req) => {
 
         // Prayer request routing
         if (notes && notes.trim()) {
-          createPastoralCareForPrayerRequest(supabase, linkedMember.id, firstName, lastName, notes);
+          createPastoralCareForPrayerRequest(supabase, linkedMember.id, firstName, lastName, notes, tenantId);
         }
 
         // WSF leader notification
@@ -456,7 +456,7 @@ Deno.serve(async (req) => {
 
           // Prayer request routing
           if (notes && notes.trim()) {
-            createPastoralCareForPrayerRequest(supabase, emailMatches[0].id, firstName, lastName, notes);
+            createPastoralCareForPrayerRequest(supabase, emailMatches[0].id, firstName, lastName, notes, tenantId);
           }
 
           // WSF leader notification
@@ -494,7 +494,7 @@ Deno.serve(async (req) => {
 
     // Prayer request → pastoral care
     if (notes && notes.trim() && resultMemberId) {
-      createPastoralCareForPrayerRequest(supabase, resultMemberId, firstName, lastName, notes);
+      createPastoralCareForPrayerRequest(supabase, resultMemberId, firstName, lastName, notes, tenantId);
     }
 
     // WSF leader notification
