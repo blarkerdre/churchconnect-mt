@@ -23,7 +23,8 @@ const ROLE_CONFIG = {
 
 export default function TenantUsersDialog({ tenant, open, onOpenChange }) {
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user, roles: userRoles } = useAuth();
+  const isSuperAdmin = userRoles.includes("super_admin");
   const queryClient = useQueryClient();
   const [addEmail, setAddEmail] = useState("");
   const [addRole, setAddRole] = useState("member");
