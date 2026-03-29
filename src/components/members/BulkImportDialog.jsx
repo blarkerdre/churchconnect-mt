@@ -114,7 +114,7 @@ export default function BulkImportDialog({ open, onOpenChange, onComplete }) {
     const emails = validRows.map(r => r.email?.toLowerCase().trim()).filter(Boolean);
     let existingMap = {};
     if (emails.length > 0) {
-      const { data } = await supabase.from("members").select("id, email").in("email", emails);
+      const { data } = await scopeQuery(supabase.from("members").select("id, email").in("email", emails));
       if (data) data.forEach(m => { existingMap[m.email.toLowerCase()] = m.id; });
     }
 

@@ -14,8 +14,9 @@ const statusColors = {
 };
 
 export default function MemberJourneyTimeline({ memberId }) {
+  const { tenantId } = useTenantQuery();
   const { data: history = [], isLoading } = useQuery({
-    queryKey: ["member-status-history", memberId],
+    queryKey: ["member-status-history", memberId, tenantId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("member_status_history")
