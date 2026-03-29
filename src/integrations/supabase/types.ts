@@ -1394,6 +1394,8 @@ export type Database = {
       members: {
         Row: {
           address: string | null
+          attended_foundation_school: boolean | null
+          baptized_by_immersion: boolean | null
           bcc_completed: boolean | null
           bfc_completed: boolean | null
           church_unit: string | null
@@ -1409,26 +1411,35 @@ export type Database = {
           gdpr_consent_date: string | null
           gender: Database["public"]["Enums"]["gender_type"] | null
           holy_spirit_baptism: boolean | null
+          how_did_you_hear: string | null
           id: string
           last_name: string
           lcc_completed: boolean | null
           ldc_completed: boolean | null
+          live_work_in_city: boolean | null
           membership_date: string | null
           membership_status: Database["public"]["Enums"]["membership_status"]
           notes: string | null
           phone: string | null
           photo_url: string | null
           postcode: string | null
+          preferred_contact_modes: string | null
           tenant_id: string | null
           updated_at: string
           user_id: string | null
           water_baptism: boolean | null
           winners_satellite: boolean | null
+          wofbi_highest_level: string | null
           workers_in_training: boolean | null
+          worshipped_before: boolean | null
+          worshipped_when_where: string | null
+          would_like_to_join: boolean | null
           wsf_centre_id: string | null
         }
         Insert: {
           address?: string | null
+          attended_foundation_school?: boolean | null
+          baptized_by_immersion?: boolean | null
           bcc_completed?: boolean | null
           bfc_completed?: boolean | null
           church_unit?: string | null
@@ -1444,26 +1455,35 @@ export type Database = {
           gdpr_consent_date?: string | null
           gender?: Database["public"]["Enums"]["gender_type"] | null
           holy_spirit_baptism?: boolean | null
+          how_did_you_hear?: string | null
           id?: string
           last_name: string
           lcc_completed?: boolean | null
           ldc_completed?: boolean | null
+          live_work_in_city?: boolean | null
           membership_date?: string | null
           membership_status?: Database["public"]["Enums"]["membership_status"]
           notes?: string | null
           phone?: string | null
           photo_url?: string | null
           postcode?: string | null
+          preferred_contact_modes?: string | null
           tenant_id?: string | null
           updated_at?: string
           user_id?: string | null
           water_baptism?: boolean | null
           winners_satellite?: boolean | null
+          wofbi_highest_level?: string | null
           workers_in_training?: boolean | null
+          worshipped_before?: boolean | null
+          worshipped_when_where?: string | null
+          would_like_to_join?: boolean | null
           wsf_centre_id?: string | null
         }
         Update: {
           address?: string | null
+          attended_foundation_school?: boolean | null
+          baptized_by_immersion?: boolean | null
           bcc_completed?: boolean | null
           bfc_completed?: boolean | null
           church_unit?: string | null
@@ -1479,22 +1499,29 @@ export type Database = {
           gdpr_consent_date?: string | null
           gender?: Database["public"]["Enums"]["gender_type"] | null
           holy_spirit_baptism?: boolean | null
+          how_did_you_hear?: string | null
           id?: string
           last_name?: string
           lcc_completed?: boolean | null
           ldc_completed?: boolean | null
+          live_work_in_city?: boolean | null
           membership_date?: string | null
           membership_status?: Database["public"]["Enums"]["membership_status"]
           notes?: string | null
           phone?: string | null
           photo_url?: string | null
           postcode?: string | null
+          preferred_contact_modes?: string | null
           tenant_id?: string | null
           updated_at?: string
           user_id?: string | null
           water_baptism?: boolean | null
           winners_satellite?: boolean | null
+          wofbi_highest_level?: string | null
           workers_in_training?: boolean | null
+          worshipped_before?: boolean | null
+          worshipped_when_where?: string | null
+          would_like_to_join?: boolean | null
           wsf_centre_id?: string | null
         }
         Relationships: [
@@ -2646,6 +2673,45 @@ export type Database = {
         | {
             Args: {
               _address?: string
+              _attended_foundation_school?: boolean
+              _baptized_by_immersion?: boolean
+              _bcc_completed?: boolean
+              _bfc_completed?: boolean
+              _church_unit?: string
+              _city?: string
+              _date_of_birth?: string
+              _email?: string
+              _emergency_contact_name?: string
+              _emergency_contact_phone?: string
+              _first_name?: string
+              _gender?: Database["public"]["Enums"]["gender_type"]
+              _holy_spirit_baptism?: boolean
+              _how_did_you_hear?: string
+              _last_name?: string
+              _lcc_completed?: boolean
+              _ldc_completed?: boolean
+              _live_work_in_city?: boolean
+              _member_id: string
+              _membership_status?: Database["public"]["Enums"]["membership_status"]
+              _notes?: string
+              _phone?: string
+              _photo_url?: string
+              _postcode?: string
+              _preferred_contact_modes?: string
+              _water_baptism?: boolean
+              _winners_satellite?: boolean
+              _wofbi_highest_level?: string
+              _workers_in_training?: boolean
+              _worshipped_before?: boolean
+              _worshipped_when_where?: string
+              _would_like_to_join?: boolean
+              _wsf_centre_id?: string
+            }
+            Returns: undefined
+          }
+        | {
+            Args: {
+              _address?: string
               _city?: string
               _date_of_birth?: string
               _email?: string
@@ -2741,35 +2807,74 @@ export type Database = {
             }
             Returns: undefined
           }
-      upsert_own_member_profile: {
-        Args: {
-          p_address?: string
-          p_bcc_completed?: boolean
-          p_bfc_completed?: boolean
-          p_church_unit?: string
-          p_city?: string
-          p_date_of_birth?: string
-          p_email?: string
-          p_emergency_contact_name?: string
-          p_emergency_contact_phone?: string
-          p_first_name: string
-          p_gdpr_consent?: boolean
-          p_gender?: string
-          p_holy_spirit_baptism?: boolean
-          p_last_name: string
-          p_lcc_completed?: boolean
-          p_ldc_completed?: boolean
-          p_membership_status?: string
-          p_notes?: string
-          p_phone?: string
-          p_postcode?: string
-          p_tenant_id: string
-          p_water_baptism?: boolean
-          p_winners_satellite?: boolean
-          p_wsf_centre_id?: string
-        }
-        Returns: string
-      }
+      upsert_own_member_profile:
+        | {
+            Args: {
+              p_address?: string
+              p_attended_foundation_school?: boolean
+              p_baptized_by_immersion?: boolean
+              p_bcc_completed?: boolean
+              p_bfc_completed?: boolean
+              p_church_unit?: string
+              p_city?: string
+              p_date_of_birth?: string
+              p_email?: string
+              p_emergency_contact_name?: string
+              p_emergency_contact_phone?: string
+              p_first_name: string
+              p_gdpr_consent?: boolean
+              p_gender?: Database["public"]["Enums"]["gender_type"]
+              p_holy_spirit_baptism?: boolean
+              p_how_did_you_hear?: string
+              p_last_name: string
+              p_lcc_completed?: boolean
+              p_ldc_completed?: boolean
+              p_live_work_in_city?: boolean
+              p_membership_status?: Database["public"]["Enums"]["membership_status"]
+              p_notes?: string
+              p_phone?: string
+              p_postcode?: string
+              p_preferred_contact_modes?: string
+              p_tenant_id: string
+              p_water_baptism?: boolean
+              p_winners_satellite?: boolean
+              p_wofbi_highest_level?: string
+              p_worshipped_before?: boolean
+              p_worshipped_when_where?: string
+              p_would_like_to_join?: boolean
+              p_wsf_centre_id?: string
+            }
+            Returns: undefined
+          }
+        | {
+            Args: {
+              p_address?: string
+              p_bcc_completed?: boolean
+              p_bfc_completed?: boolean
+              p_church_unit?: string
+              p_city?: string
+              p_date_of_birth?: string
+              p_email?: string
+              p_emergency_contact_name?: string
+              p_emergency_contact_phone?: string
+              p_first_name: string
+              p_gdpr_consent?: boolean
+              p_gender?: string
+              p_holy_spirit_baptism?: boolean
+              p_last_name: string
+              p_lcc_completed?: boolean
+              p_ldc_completed?: boolean
+              p_membership_status?: string
+              p_notes?: string
+              p_phone?: string
+              p_postcode?: string
+              p_tenant_id: string
+              p_water_baptism?: boolean
+              p_winners_satellite?: boolean
+              p_wsf_centre_id?: string
+            }
+            Returns: string
+          }
       user_belongs_to_tenant: {
         Args: { _tenant_id: string; _user_id: string }
         Returns: boolean
