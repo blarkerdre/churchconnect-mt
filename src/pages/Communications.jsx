@@ -379,6 +379,7 @@ export default function Communications() {
         referenceId={null}
         title="Send Bulk WhatsApp"
         defaultChannel="whatsapp"
+        unitAudiences={AUDIENCES}
       />
 
       
