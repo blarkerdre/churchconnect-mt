@@ -1,37 +1,29 @@
 
 
-## Fix: Follow-up Assignment Notifications Not Reaching Assignee
+## Fix: Assigned Follow-up Member Not Receiving Email/SMS
+
+### Problem
+The `auto_create_followup` trigger correctly targets only the assigned user for email/SMS (which is what you want). However, the edge function `notify-followup-assignment` is **never being called** — there are zero logs for it. This means the vault secret `supabase_url` is missing, causing the `IF _supabase_url IS NOT NULL` check to fail silently.
+
+### Current behavior (correct logic, broken delivery)
+- Follow-up task is created and assigned to one user via round-robin
+- All follow-up unit members get **in-app notifications** (working)
+- Only the **assigned user** should get email/SMS via `notify-followup-assignment` (correct intent, but the call never fires)
 
 ### Root cause
-The `notify-followup-assignment` edge function resolves the assignee's email and phone by querying `profiles` and `members` using `user_id`. If either:
-- The assignee's `profiles` row has no `email`
-- The `members` query by `user_id` returns no match (e.g., user_id not linked, or wrong tenant)
-
-...then `recipientEmail` and `recipientPhone` are both `undefined`, and the function silently skips sending — no error is logged.
+The trigger reads `supabase_url` from `vault.decrypted_secrets`. This secret was never inserted, so `_supabase_url` is NULL and the `http_post` call is skipped entirely.
 
 ### Fix
-Update `supabase/functions/notify-followup-assignment/index.ts` to:
+**1 database migration** — Insert the `supabase_url` vault secret so the trigger can resolve the edge function URL:
 
-1. **Add a fallback lookup**: If the `user_id`-based lookup yields no email/phone, also try looking up the assignee via `auth.users` email (using admin API) as a last resort
-2. **Log a warning** when no contact channel is found, so the issue is visible in logs
-3. **Also check `profiles.email` from the auth user's email** — the profile `email` field may be null even though auth has it
-
-### Specific changes
-
-**`supabase/functions/notify-followup-assignment/index.ts`**:
-- After the existing profile + member lookups, add a fallback: if no email found, use `supabase.auth.admin.getUserById(assigned_to)` to get the auth user's email
-- Add explicit warning log: `console.warn("No contact channel found for assignee", assigned_to)` when both email and phone are missing
-- This ensures even if the `profiles` table email is empty, the auth email is used
-
-### Technical detail
-```text
-Current flow:
-  profiles.email → memberRecord.email → (nothing if both null)
-
-Fixed flow:
-  profiles.email → memberRecord.email → auth.users.email → warn if still null
+```sql
+INSERT INTO vault.secrets (name, secret)
+VALUES ('supabase_url', 'https://qfordhikmtgedfybktjg.supabase.co')
+ON CONFLICT (name) DO NOTHING;
 ```
 
+No changes to the trigger function or edge function — the current logic already sends email/SMS only to the assigned user.
+
 ### Files changed
-- `supabase/functions/notify-followup-assignment/index.ts` — add auth fallback + warning log
+- 1 migration — insert `supabase_url` vault secret
 
