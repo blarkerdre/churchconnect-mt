@@ -1,28 +1,33 @@
 
 
-## Fix: SMS Stuck at "Queued" — Twilio Webhook Blocked by JWT Verification
+## Fix: Twilio Webhook Signature Validation Uses Wrong URL
 
 ### Root cause
 
-The `twilio-webhook` edge function is not listed in `supabase/config.toml`, so it defaults to `verify_jwt = true`. Twilio sends status callback requests without a JWT bearer token, meaning every webhook is rejected with 401 before the function code executes. The function already has its own HMAC-SHA1 signature validation, so JWT verification is unnecessary and harmful.
+The edge function logs confirm:
+```
+Invalid Twilio signature — rejecting webhook
+Expected URL used for signing: https://edge-runtime.supabase.com/twilio-webhook
+```
 
-This is why:
-- SMS is received by the recipient (Twilio accepted and delivered it)
-- Status stays "queued" in the app (no webhook ever updates `sms_log`)
-- There are zero logs for the `twilio-webhook` function
+Twilio signs its callbacks against the **public** URL (`https://qfordhikmtgedfybktjg.supabase.co/functions/v1/twilio-webhook`), but the function reconstructs the URL using `req.headers.get("host")` which returns the **internal** hostname `edge-runtime.supabase.com`. This mismatch causes every signature check to fail, so `sms_log` never updates from "queued".
 
 ### Fix
 
-1. **Add `twilio-webhook` to `supabase/config.toml`** with `verify_jwt = false`
-   - The function already validates authenticity via Twilio HMAC-SHA1 signature checking
-   
-2. **Redeploy `twilio-webhook`** so the config takes effect
+Update `supabase/functions/twilio-webhook/index.ts` to construct the webhook URL using the known public Supabase URL instead of relying on the `host` header:
 
-3. **No code changes needed** — the webhook handler logic is correct
+```typescript
+// Replace lines 31-35 with:
+const supabaseUrl = Deno.env.get("SUPABASE_URL")!; // e.g. https://qfordhikmtgedfybktjg.supabase.co
+const webhookUrl = `${supabaseUrl}/functions/v1/twilio-webhook`;
+```
+
+This guarantees the URL used for HMAC verification matches what Twilio signed against, regardless of internal routing headers.
 
 ### Files changed
-- `supabase/config.toml` — add `[functions.twilio-webhook]` with `verify_jwt = false`
+- `supabase/functions/twilio-webhook/index.ts` — fix URL reconstruction for signature validation
+- Redeploy `twilio-webhook`
 
 ### Expected result
-After this fix, Twilio status callbacks will reach the function, and `sms_log` rows will update from "queued" to "delivered" (or "failed"/"undelivered") in real time.
+Twilio status callbacks will pass signature validation and `sms_log` rows will update from "queued" to "delivered"/"failed" in real time.
 
