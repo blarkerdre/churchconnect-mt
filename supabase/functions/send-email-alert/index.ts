@@ -139,7 +139,10 @@ Deno.serve(async (req) => {
     query = query.eq('tenant_id', tenant_id)
   }
 
-  if (audience !== 'All Members') {
+  if (audience.startsWith('status:')) {
+    const statusValue = audience.replace('status:', '')
+    query = query.eq('membership_status', statusValue)
+  } else if (audience !== 'All Members') {
     query = query.ilike('church_unit', `%${audience}%`)
   }
 
