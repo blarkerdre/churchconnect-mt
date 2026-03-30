@@ -158,7 +158,7 @@ async function sendEmail(
   supabase: any,
   supabaseUrl: string
 ) {
-  // Resolve church name from tenant
+    // Resolve church name from tenant
   let churchName = "ChurchConnect";
   if (msg.tenant_id) {
     const { data: tenant } = await supabase
@@ -168,6 +168,11 @@ async function sendEmail(
       .single();
     if (tenant?.name) churchName = tenant.name;
   }
+
+  // Replace placeholders in message
+  let finalMessage = msg.message;
+  finalMessage = finalMessage.replace(/\{name\}/gi, msg.recipient_name || "there");
+  finalMessage = finalMessage.replace(/\{church\}/gi, churchName);
 
   // Resolve followup type
   let followupType = "";
