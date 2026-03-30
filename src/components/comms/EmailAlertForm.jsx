@@ -2,36 +2,38 @@ import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card } from "@/components/ui/card";
-import { Send, Mail, Users, Loader2, CheckCircle2 } from "lucide-react";
+import { Send, Mail, Loader2, CheckCircle2 } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
+import AudienceFilter from "./AudienceFilter";
 
-const STATUS_AUDIENCES = [
-  { value: "status:Active", label: "Active Members" },
-  { value: "status:First Timer", label: "First Timers" },
-  { value: "status:Inactive", label: "Inactive Members" },
-  { value: "status:New Convert", label: "New Converts" },
-];
-
-export default function EmailAlertForm({ currentUser, myUnits = [], isAdmin, availableAudiences = [] }) {
+export default function EmailAlertForm({ currentUser, myUnits = [], isAdmin }) {
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
-  const [audience, setAudience] = useState(isAdmin ? "All Members" : (availableAudiences[0] || "All Members"));
+  const [filters, setFilters] = useState({ status: "all", unit: "all", dateFrom: null, dateTo: null });
   const [sending, setSending] = useState(false);
   const { tenantId } = useTenantQuery();
-
-  const effectiveAudiences = isAdmin ? availableAudiences : availableAudiences.filter(a => myUnits.includes(a) || a === "All Members");
 
   const handleSend = async () => {
     if (!subject.trim() || !body.trim()) return;
     setSending(true);
     try {
-      const { data, error } = await supabase.functions.invoke("send-email-alert", {
-        body: { subject: subject.trim(), body: body.trim(), audience, tenant_id: tenantId },
-      });
+      const payload = {
+        subject: subject.trim(),
+        body: body.trim(),
+        tenant_id: tenantId,
+        filters: {
+          status: filters.status !== "all" ? filters.status : null,
+          unit: filters.unit !== "all" ? filters.unit : null,
+          dateFrom: filters.dateFrom ? filters.dateFrom.toISOString() : null,
+          dateTo: filters.dateTo ? new Date(filters.dateTo.getFullYear(), filters.dateTo.getMonth(), filters.dateTo.getDate(), 23, 59, 59, 999).toISOString() : null,
+        },
+        audience: "All Members", // backward compat fallback
+      };
+
+      const { data, error } = await supabase.functions.invoke("send-email-alert", { body: payload });
 
       if (error) throw error;
 
@@ -65,23 +67,7 @@ export default function EmailAlertForm({ currentUser, myUnits = [], isAdmin, ava
           </div>
         </div>
 
-        <div className="space-y-1.5">
-          <label className="text-sm font-medium text-foreground flex items-center gap-1.5">
-            <Users className="h-3.5 w-3.5" /> Audience
-          </label>
-          <Select value={audience} onValueChange={setAudience}>
-            <SelectTrigger><SelectValue placeholder="Select audience" /></SelectTrigger>
-            <SelectContent>
-              {effectiveAudiences.map(a => (
-                <SelectItem key={a} value={a}>{a}</SelectItem>
-              ))}
-              <SelectItem disabled value="__status_sep__" className="text-xs font-semibold text-muted-foreground opacity-100 pointer-events-none">— By Membership Status —</SelectItem>
-              {STATUS_AUDIENCES.map(s => (
-                <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        <AudienceFilter filters={filters} onChange={setFilters} />
 
         <div className="space-y-1.5">
           <label className="text-sm font-medium text-foreground">Subject</label>
