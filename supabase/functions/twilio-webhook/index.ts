@@ -12,21 +12,39 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const authToken = Deno.env.get("TWILIO_AUTH_TOKEN");
-    if (!authToken) {
-      console.error("TWILIO_AUTH_TOKEN not configured");
-      return new Response("<Response></Response>", {
-        status: 500,
-        headers: { "Content-Type": "text/xml" },
-      });
-    }
-
     // Twilio sends webhooks as application/x-www-form-urlencoded
     const rawBody = await req.text();
     const params: Record<string, string> = {};
     for (const [key, value] of new URLSearchParams(rawBody)) {
       params[key] = value;
     }
+
+    const accountSid = params["AccountSid"] ?? "";
+    console.log(`Twilio webhook received: AccountSid=${accountSid}`);
+
+    // Choose the correct auth token based on AccountSid
+    const subAccountSid = Deno.env.get("TWILIO_SUBACCOUNT_SID");
+    const subAccountToken = Deno.env.get("TWILIO_SUBACCOUNT_AUTH_TOKEN");
+    const primaryToken = Deno.env.get("TWILIO_AUTH_TOKEN");
+
+    let authToken: string | undefined;
+    let tokenSource: string;
+
+    if (subAccountSid && accountSid === subAccountSid && subAccountToken) {
+      authToken = subAccountToken;
+      tokenSource = "subaccount";
+    } else if (primaryToken) {
+      authToken = primaryToken;
+      tokenSource = "primary";
+    } else {
+      console.error("No matching TWILIO auth token configured for AccountSid:", accountSid);
+      return new Response("<Response></Response>", {
+        status: 500,
+        headers: { "Content-Type": "text/xml" },
+      });
+    }
+
+    console.log(`Using ${tokenSource} auth token for signature validation`);
 
     // Use the known public Supabase URL for signature validation
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -55,6 +73,8 @@ Deno.serve(async (req) => {
 
     if (twilioSignature !== expectedSignature) {
       console.warn("Invalid Twilio signature — rejecting webhook");
+      console.warn("Token source used:", tokenSource);
+      console.warn("AccountSid from callback:", accountSid);
       console.warn("Expected URL used for signing:", webhookUrl);
       return new Response("Forbidden", {
         status: 403,
@@ -67,7 +87,7 @@ Deno.serve(async (req) => {
     const errorCode = params["ErrorCode"];
     const errorMessage = params["ErrorMessage"];
 
-    console.log(`Twilio webhook: SID=${messageSid}, Status=${messageStatus}`);
+    console.log(`Twilio webhook validated: SID=${messageSid}, Status=${messageStatus}`);
 
     if (!messageSid || !messageStatus) {
       return new Response(JSON.stringify({ error: "Missing MessageSid or MessageStatus" }), {
@@ -108,6 +128,8 @@ Deno.serve(async (req) => {
         headers: { "Content-Type": "text/xml" },
       });
     }
+
+    console.log(`sms_log updated for SID=${messageSid} to status=${messageStatus}`);
 
     // Twilio expects 200 with empty body or TwiML
     return new Response("<Response></Response>", {
