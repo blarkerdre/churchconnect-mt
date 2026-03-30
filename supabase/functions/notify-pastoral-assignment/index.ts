@@ -197,7 +197,8 @@ Deno.serve(async (req) => {
         if (!cleaned.startsWith("+")) cleaned = "+" + cleaned;
 
         if (/^\+[1-9]\d{6,14}$/.test(cleaned)) {
-          const smsBody = `Hi ${recipientName}, you've been assigned a pastoral care case: "${subject}". Please check the Church Management System. - ${churchShortName}`;
+          const smsAction = is_new_request ? "been assigned a new" : "been reassigned a";
+          const smsBody = `Hi ${recipientName}, you've ${smsAction} pastoral care case: "${subject}". Please check the Church Management System. - ${churchShortName}`;
 
           try {
             const webhookUrl = `${supabaseUrl}/functions/v1/twilio-webhook`;
