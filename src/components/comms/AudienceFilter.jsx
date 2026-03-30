@@ -18,6 +18,7 @@ const STATUS_OPTIONS = [
   { value: "First Timer", label: "First Timer" },
   { value: "Inactive", label: "Inactive" },
   { value: "New Convert", label: "New Convert" },
+  { value: "Visitor", label: "Visitor" },
 ];
 
 export default function AudienceFilter({ filters, onChange, className }) {

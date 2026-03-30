@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { useChurchUnits } from "@/hooks/useChurchUnits";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Megaphone, Pin, Search, Plus, Loader2, Trash2, Pencil, MessageSquare, Mail } from "lucide-react";
+import { Megaphone, Pin, Search, Plus, Loader2, Trash2, Pencil, MessageSquare, Mail, Clock, XCircle } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { format } from "date-fns";
 import AnnouncementForm from "@/components/comms/AnnouncementForm";
@@ -34,6 +34,89 @@ const STATUS_AUDIENCES = [
   { value: "status:Inactive", label: "Inactive Members" },
   { value: "status:New Convert", label: "New Converts" },
 ];
+
+function ScheduledList({ channel, tenantId }) {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  const { data: scheduled = [], isLoading } = useQuery({
+    queryKey: ["scheduled-communications", channel, tenantId],
+    queryFn: async () => {
+      let query = supabase
+        .from("scheduled_communications")
+        .select("*")
+        .eq("tenant_id", tenantId)
+        .in("status", ["scheduled", "processing"])
+        .order("scheduled_at", { ascending: true });
+
+      if (channel === "all") {
+        // no channel filter
+      } else {
+        query = query.eq("channel", channel);
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!tenantId,
+  });
+
+  const cancelMutation = useMutation({
+    mutationFn: async (id) => {
+      const { error } = await supabase
+        .from("scheduled_communications")
+        .update({ status: "cancelled" })
+        .eq("id", id)
+        .eq("tenant_id", tenantId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["scheduled-communications"] });
+      toast({ title: "Scheduled message cancelled" });
+    },
+  });
+
+  if (isLoading || scheduled.length === 0) return null;
+
+  const channelIcon = (ch) => {
+    if (ch === "email") return <Mail className="h-3.5 w-3.5" />;
+    if (ch === "whatsapp") return <WhatsAppIcon className="h-3.5 w-3.5" />;
+    return <MessageSquare className="h-3.5 w-3.5" />;
+  };
+
+  return (
+    <div className="space-y-2">
+      <h4 className="text-sm font-semibold text-muted-foreground flex items-center gap-1.5">
+        <Clock className="h-3.5 w-3.5" /> Scheduled ({scheduled.length})
+      </h4>
+      {scheduled.map((item) => (
+        <Card key={item.id} className="border-0 shadow-sm">
+          <CardContent className="p-3 flex items-center gap-3">
+            <div className="text-muted-foreground">{channelIcon(item.channel)}</div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-foreground truncate">
+                {item.subject || item.message?.slice(0, 60)}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {format(new Date(item.scheduled_at), "dd MMM yyyy, HH:mm")}
+              </p>
+            </div>
+            <Badge variant="outline" className="text-xs capitalize">{item.channel}</Badge>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              onClick={() => { if (confirm("Cancel this scheduled message?")) cancelMutation.mutate(item.id); }}
+            >
+              <XCircle className="h-3.5 w-3.5 text-destructive" />
+            </Button>
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  );
+}
 
 export default function Communications() {
   const { user, isAdmin, isUnitLeader, isWSFLeader, leaderUnits } = useAuth();
@@ -136,7 +219,6 @@ export default function Communications() {
     if (a.audience === "All Members") return true;
     if (effectiveScopes.includes(a.audience)) return true;
     if (a.created_by === user?.id) return true;
-    // Regular members: check their church_unit
     if (myMember?.church_unit) {
       const units = myMember.church_unit.split(",").map(u => u.trim());
       if (units.includes(a.audience)) return true;
@@ -311,11 +393,14 @@ export default function Communications() {
 
         {canManageComms && emailEnabled && (
           <TabsContent value="email">
-            <EmailAlertForm
-              currentUser={user}
-              myUnits={leaderUnits}
-              isAdmin={isAdmin}
-            />
+            <div className="space-y-4">
+              <EmailAlertForm
+                currentUser={user}
+                myUnits={leaderUnits}
+                isAdmin={isAdmin}
+              />
+              <ScheduledList channel="email" tenantId={tenantId} />
+            </div>
           </TabsContent>
         )}
 
@@ -327,6 +412,7 @@ export default function Communications() {
                   <MessageSquare className="h-4 w-4 mr-2" /> Send Bulk SMS
                 </Button>
               </div>
+              <ScheduledList channel="sms" tenantId={tenantId} />
               <Card className="border-0 shadow-sm p-8 text-center text-muted-foreground">
                 <MessageSquare className="h-10 w-10 mx-auto mb-3 opacity-20" />
                 <p className="text-sm">Use the button above to compose and send SMS messages to members.</p>
@@ -343,6 +429,7 @@ export default function Communications() {
                   <WhatsAppIcon className="h-4 w-4 mr-2" /> Send Bulk WhatsApp
                 </Button>
               </div>
+              <ScheduledList channel="whatsapp" tenantId={tenantId} />
               <Card className="border-0 shadow-sm p-8 text-center text-muted-foreground">
                 <WhatsAppIcon className="h-10 w-10 mx-auto mb-3 opacity-20" />
                 <p className="text-sm">Use the button above to compose and send WhatsApp messages to members.</p>
@@ -380,8 +467,6 @@ export default function Communications() {
         defaultChannel="whatsapp"
         unitAudiences={AUDIENCES}
       />
-
-      
     </div>
   );
 }

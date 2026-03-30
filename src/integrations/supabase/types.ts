@@ -1903,6 +1903,59 @@ export type Database = {
           },
         ]
       }
+      scheduled_communications: {
+        Row: {
+          channel: string
+          created_at: string | null
+          created_by: string | null
+          error_message: string | null
+          filters: Json | null
+          id: string
+          message: string
+          scheduled_at: string
+          sent_at: string | null
+          status: string
+          subject: string | null
+          tenant_id: string
+        }
+        Insert: {
+          channel: string
+          created_at?: string | null
+          created_by?: string | null
+          error_message?: string | null
+          filters?: Json | null
+          id?: string
+          message: string
+          scheduled_at: string
+          sent_at?: string | null
+          status?: string
+          subject?: string | null
+          tenant_id: string
+        }
+        Update: {
+          channel?: string
+          created_at?: string | null
+          created_by?: string | null
+          error_message?: string | null
+          filters?: Json | null
+          id?: string
+          message?: string
+          scheduled_at?: string
+          sent_at?: string | null
+          status?: string
+          subject?: string | null
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scheduled_communications_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sms_log: {
         Row: {
           channel: string
