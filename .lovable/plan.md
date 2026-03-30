@@ -1,24 +1,61 @@
 
 
-## Change Follow-up Template Delay from Days to Hours
+## Scope All Queries to Tenant
 
-### What changes
-Rename and convert the `delay_days` column to `delay_hours` across the database, trigger, and UI so admins can schedule automated follow-up messages in hours instead of days.
+### Unscoped queries found
 
-### Database migration
-- Rename column `delay_days` → `delay_hours` on `followup_message_templates`
-- Convert existing values: `UPDATE followup_message_templates SET delay_hours = delay_hours * 24` (since old value of 1 day = 24 hours)
-- Update the `auto_create_followup` trigger function to use `_tmpl.delay_hours * interval '1 hour'` instead of `_tmpl.delay_days * interval '1 day'`
+These are queries that access tenant-scoped tables but are missing `.eq("tenant_id", tenantId)` or `scopeQuery()`:
 
-### Frontend: `src/components/settings/FollowupTemplatesSection.jsx`
-- Rename all `delay_days` references to `delay_hours`
-- Update DEFAULT_TEMPLATES: change `delay_days: 1` to `delay_hours: 24` (24 hours = 1 day)
-- Badge display: change `Day {t.delay_days}` to `{t.delay_hours}h`
-- Edit form label: "Delay (hours after registration)"
-- Input max: change from 365 to 8760 (365 days in hours)
-- New item default: `delay_hours: 24`
+#### 1. Member lookups by `user_id` (missing tenant scope)
+These all query `members` by `user_id` without tenant filtering. In a multi-tenant system, a user could have member records in multiple tenants.
+
+| File | Line | Fix |
+|------|------|-----|
+| `src/pages/WSFManagement.jsx` | 17 | Add `.eq("tenant_id", tenantId)` and include `tenantId` in query key |
+| `src/pages/PastoralCare.jsx` | 115 | Add `.eq("tenant_id", tenantId)` |
+| `src/pages/Transportation.jsx` | 107 | Add `.eq("tenant_id", tenantId)` |
+| `src/components/wsf/WSFAttendanceTab.jsx` | 33 | Add `.eq("tenant_id", tenantId)` and include `tenantId` in query key |
+
+**Note:** `src/hooks/useAuth.jsx` (line 58) intentionally fetches cross-tenant — it resolves the current user's identity before a tenant context is available. No change needed there.
+
+#### 2. `user_roles` delete missing tenant scope
+Both locations delete roles without `.eq("tenant_id", tenantId)`, which could affect the same user's role in a different tenant.
+
+| File | Line | Fix |
+|------|------|-----|
+| `src/components/members/MemberFormDialog.jsx` | 86 | Add `.eq("tenant_id", tenantId)` |
+| `src/pages/UserManagement.jsx` | 100 | Add `.eq("tenant_id", tenantId)` |
+
+#### 3. `followup_message_templates` delete missing tenant scope
+
+| File | Line | Fix |
+|------|------|-----|
+| `src/components/settings/FollowupTemplatesSection.jsx` | 85 | Add `.eq("tenant_id", tenantId)` |
+
+#### 4. `followup_message_templates` update missing tenant scope
+
+| File | Line | Fix |
+|------|------|-----|
+| `src/components/settings/FollowupTemplatesSection.jsx` | 69-70 | Add `.eq("tenant_id", tenantId)` to update |
+
+#### 5. `followup_message_templates` toggle missing tenant scope
+
+| File | Line | Fix |
+|------|------|-----|
+| `src/components/settings/FollowupTemplatesSection.jsx` | 97-98 | Add `.eq("tenant_id", tenantId)` to toggle update |
 
 ### Files changed
-- 1 migration — rename column + update trigger
-- `src/components/settings/FollowupTemplatesSection.jsx` — hours UI
+- `src/pages/WSFManagement.jsx` — scope member lookup
+- `src/pages/PastoralCare.jsx` — scope member lookup
+- `src/pages/Transportation.jsx` — scope member lookup
+- `src/pages/UserManagement.jsx` — scope role delete
+- `src/components/wsf/WSFAttendanceTab.jsx` — scope member lookup
+- `src/components/members/MemberFormDialog.jsx` — scope role delete
+- `src/components/settings/FollowupTemplatesSection.jsx` — scope delete, update, and toggle mutations
+
+### What stays unscoped (by design)
+- `useAuth.jsx` — fetches user identity before tenant context exists
+- `TenantContext.jsx` — manages tenant resolution itself
+- `TenantAdmin.jsx` / `TenantBillingTab.jsx` — super-admin cross-tenant management
+- `SystemLogs` / `AuditLog` — super-admin views (already documented as exceptions)
 
