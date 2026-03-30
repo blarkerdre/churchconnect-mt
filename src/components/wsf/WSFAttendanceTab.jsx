@@ -28,9 +28,9 @@ export default function WSFAttendanceTab({ centres }) {
 
   // Find centres this user leads (by matching user_id to leader's member record)
   const { data: userMember } = useQuery({
-    queryKey: ["my-member-record", user?.id],
+    queryKey: ["my-member-record", user?.id, tenantId],
     queryFn: async () => {
-      const { data } = await supabase.from("members").select("id").eq("user_id", user.id).maybeSingle();
+      const { data } = await supabase.from("members").select("id").eq("user_id", user.id).eq("tenant_id", tenantId).maybeSingle();
       return data;
     },
     enabled: !!user,
