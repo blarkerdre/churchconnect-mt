@@ -145,6 +145,7 @@ Deno.serve(async (req) => {
           message_id: messageId,
           idempotency_key: messageId,
           queued_at: new Date().toISOString(),
+          ...(tenant_id ? { tenant_id } : {}),
         };
 
         const { error: enqueueError } = await supabase.rpc("enqueue_email", {
