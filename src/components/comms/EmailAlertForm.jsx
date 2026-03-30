@@ -9,14 +9,14 @@ import { toast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
 
-const AUDIENCES = [
-  "All Members", "Ushering", "Choir", "Media", "Children's Ministry", "Protocol",
-  "Sanctuary Keepers", "Prayer & Intercession", "Evangelism", "Follow-up",
-  "Youth Ministry", "Men's Ministry", "Women's Ministry", "Drama & Creative Arts",
-  "Altar Ministers", "Pastoral Care", "Welfare", "CSR", "Transportation"
+const STATUS_AUDIENCES = [
+  { value: "status:Active", label: "Active Members" },
+  { value: "status:First Timer", label: "First Timers" },
+  { value: "status:Inactive", label: "Inactive Members" },
+  { value: "status:New Convert", label: "New Converts" },
 ];
 
-export default function EmailAlertForm({ currentUser, myUnits = [], isAdmin }) {
+export default function EmailAlertForm({ currentUser, myUnits = [], isAdmin, availableAudiences = [] }) {
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
   const [audience, setAudience] = useState(isAdmin ? "All Members" : (myUnits[0] || "All Members"));

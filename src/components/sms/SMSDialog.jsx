@@ -13,11 +13,11 @@ import { normalizePhone } from "@/lib/phone-utils";
 import InvalidRecipientsPreview from "./InvalidRecipientsPreview";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
 
-const AUDIENCES = [
-  "All Members", "Ushering", "Choir", "Media", "Children's Ministry", "Protocol",
-  "Sanctuary Keepers", "Prayer & Intercession", "Evangelism", "Follow-up",
-  "Youth Ministry", "Men's Ministry", "Women's Ministry", "Drama & Creative Arts",
-  "Altar Ministers", "Pastoral Care", "Welfare", "CSR", "Transportation", "Leaders Only"
+const STATUS_AUDIENCES = [
+  { value: "status:Active", label: "Active Members" },
+  { value: "status:First Timer", label: "First Timers" },
+  { value: "status:Inactive", label: "Inactive Members" },
+  { value: "status:New Convert", label: "New Converts" },
 ];
 
 export default function SMSDialog({
