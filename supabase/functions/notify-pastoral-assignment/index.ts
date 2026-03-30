@@ -59,7 +59,7 @@ Deno.serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, serviceKey);
 
-    const { assigned_to, subject, care_type, description, case_id, tenant_id } = await req.json();
+    const { assigned_to, subject, care_type, description, case_id, tenant_id, is_new_request } = await req.json();
 
     if (!assigned_to) {
       return new Response(JSON.stringify({ message: "No assignee" }), {
@@ -99,8 +99,12 @@ Deno.serve(async (req) => {
     const recipientPhone = memberRecord?.phone;
     const recipientName = profile?.full_name || memberRecord?.first_name || "Team Member";
 
-    const emailSubject = `Pastoral Care Case Assigned: ${subject}`;
-    const bodyText = `Hi ${recipientName},\n\nYou have been assigned a pastoral care case.\n\nSubject: ${subject}\nType: ${care_type || "General"}\n${description ? `Details: ${description}\n` : ""}\nPlease log in to the Church Management System to view and manage this case.\n\nGod bless,\n${churchName}`;
+    const actionLabel = is_new_request ? "New Pastoral Care Case Assigned" : "Pastoral Care Case Reassigned";
+    const emailSubject = `${actionLabel}: ${subject}`;
+    const introLine = is_new_request
+      ? "A new pastoral care case has been assigned to you."
+      : "A pastoral care case has been reassigned to you.";
+    const bodyText = `Hi ${recipientName},\n\n${introLine}\n\nSubject: ${subject}\nType: ${care_type || "General"}\n${description ? `Details: ${description}\n` : ""}\nPlease log in to the Church Management System to view and manage this case.\n\nGod bless,\n${churchName}`;
 
     // Send email notification via queue
     if (recipientEmail) {
@@ -121,7 +125,7 @@ Deno.serve(async (req) => {
         </td></tr>
         <tr><td style="padding:32px;">
           <p style="margin:0 0 16px;color:#333333;font-size:16px;">Dear ${escHtml(recipientName)},</p>
-          <h2 style="margin:0 0 16px;color:#1a2d4d;font-size:18px;">Pastoral Care Case Assigned</h2>
+          <h2 style="margin:0 0 16px;color:#1a2d4d;font-size:18px;">${escHtml(actionLabel)}</h2>
           <div style="background-color:#f0f4f8;border-radius:8px;padding:16px;margin:0 0 24px;">
             <p style="margin:0 0 8px;color:#555;font-size:14px;"><strong>Subject:</strong> ${escHtml(subject)}</p>
             <p style="margin:0 0 8px;color:#555;font-size:14px;"><strong>Type:</strong> ${escHtml(care_type || "General")}</p>
@@ -193,7 +197,8 @@ Deno.serve(async (req) => {
         if (!cleaned.startsWith("+")) cleaned = "+" + cleaned;
 
         if (/^\+[1-9]\d{6,14}$/.test(cleaned)) {
-          const smsBody = `Hi ${recipientName}, you've been assigned a pastoral care case: "${subject}". Please check the Church Management System. - ${churchShortName}`;
+          const smsAction = is_new_request ? "been assigned a new" : "been reassigned a";
+          const smsBody = `Hi ${recipientName}, you've ${smsAction} pastoral care case: "${subject}". Please check the Church Management System. - ${churchShortName}`;
 
           try {
             const webhookUrl = `${supabaseUrl}/functions/v1/twilio-webhook`;
