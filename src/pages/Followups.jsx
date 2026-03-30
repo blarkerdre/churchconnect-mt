@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { HeartHandshake, Search, Phone, MessageSquare, CalendarCheck, Plus, AlertCircle, Loader2, UserCheck, User, Download, Mail } from "lucide-react";
+import { HeartHandshake, Search, Phone, MessageSquare, CalendarCheck, Plus, AlertCircle, Loader2, UserCheck, User, Download } from "lucide-react";
 import PrintReportButton from "@/components/PrintReportButton";
 import SMSDialog from "@/components/sms/SMSDialog";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -14,7 +14,6 @@ import { useAuth } from "@/hooks/useAuth";
 import FollowupFormDialog from "@/components/followups/FollowupFormDialog";
 import FollowupDetailPanel from "@/components/followups/FollowupDetailPanel";
 import OverdueReminder from "@/components/followups/OverdueReminder";
-import FollowupMessageDialog from "@/components/followups/FollowupMessageDialog";
 import { useSubFeature } from "@/hooks/useSubFeature";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
 
@@ -33,8 +32,6 @@ export default function Followups() {
   const [editingFollowup, setEditingFollowup] = useState(null);
   const [selectedFollowup, setSelectedFollowup] = useState(null);
   const [smsFollowup, setSmsFollowup] = useState(null);
-  const [messageDialogOpen, setMessageDialogOpen] = useState(false);
-  const [messageFollowup, setMessageFollowup] = useState(null);
   const queryClient = useQueryClient();
   const { enabled: canCreateFollowup } = useSubFeature("followups.create");
   const { enabled: canSmsFollowup } = useSubFeature("followups.sms");
@@ -423,22 +420,8 @@ export default function Followups() {
             queryClient.invalidateQueries({ queryKey: ["followups"] });
             queryClient.invalidateQueries({ queryKey: ["members"] });
           }}
-          onOpenMessageDialog={(channel) => {
-            setMessageFollowup({ ...selectedFollowup, defaultChannel: channel });
-            setMessageDialogOpen(true);
-          }}
         />
       )}
-
-      {/* Follow-up Message Dialog */}
-      <FollowupMessageDialog
-        open={messageDialogOpen}
-        onOpenChange={setMessageDialogOpen}
-        followup={messageFollowup}
-        onSaved={() => {
-          queryClient.invalidateQueries({ queryKey: ["followup-messages"] });
-        }}
-      />
 
       {smsFollowup && (
         <SMSDialog
