@@ -1,42 +1,52 @@
 
 
-## Fix: "permission denied for table users" on tenant_invitations
+## Fix Tenant Delete in archive-tenant Edge Function
 
-### Root cause
-Two RLS policies reference `auth.users` directly via subquery, which the `authenticated` Postgres role cannot SELECT from:
+### Root Cause
+The `archive-tenant` edge function's delete action is missing ~9 tables that have `tenant_id` columns. When it tries to delete `tenant_memberships`, `members`, or the tenant itself, foreign key constraints from these undeleted tables block the operation — causing a silent 500 error.
 
-1. **"Users can view own pending invitations"** on `tenant_invitations` — line: `SELECT email FROM auth.users WHERE id = auth.uid()`
-2. **"Users can self-insert role via invitation"** on `user_roles` — same subquery pattern
+### Missing tables (not deleted before tenant removal)
+- `user_roles`
+- `training_completions`
+- `training_reports`
+- `transportation`
+- `wsf_attendance`
+- `wsf_attendance_reports`
+- `unit_leader_assignments`
+- `suppressed_emails`
+- `purged_data_archives`
 
 ### Fix
-One database migration that drops and recreates both policies using `auth.email()` (a built-in function that doesn't require table access):
+Update `supabase/functions/archive-tenant/index.ts`:
 
-```sql
--- Fix tenant_invitations SELECT policy
-DROP POLICY IF EXISTS "Users can view own pending invitations" ON public.tenant_invitations;
-CREATE POLICY "Users can view own pending invitations"
-ON public.tenant_invitations
-FOR SELECT TO authenticated
-USING (lower(email) = lower(auth.email()));
+1. Add all missing tables to the deletion list, in correct FK-safe order
+2. Update CORS headers to include the full set (matching other edge functions)
+3. Add error logging per-table so failures are visible in logs
 
--- Fix user_roles INSERT policy
-DROP POLICY IF EXISTS "Users can self-insert role via invitation" ON public.user_roles;
-CREATE POLICY "Users can self-insert role via invitation"
-ON public.user_roles
-FOR INSERT TO authenticated
-WITH CHECK (
-  user_id = auth.uid()
-  AND EXISTS (
-    SELECT 1 FROM public.tenant_invitations ti
-    WHERE lower(ti.email) = lower(auth.email())
-    AND ti.tenant_id = user_roles.tenant_id
-    AND ti.status = 'pending'
-  )
-);
+Updated table list (FK-safe order):
+```text
+tenant_invitations, notifications, messages, audit_log,
+exam_answers, exam_attempts, exam_questions, exam_session_courses,
+exam_sessions, exam_subjects, exam_titles, course_registrations,
+training_completions, training_reports,
+attendance_records, attendance_sessions,
+wsf_attendance, wsf_attendance_reports,
+event_registrations, events,
+followups, first_timers, pastoral_care, member_status_history,
+documents, sms_log, email_send_log, suppressed_emails,
+church_attendance_reports, transportation,
+pickup_locations, certificate_templates, books_of_the_month,
+announcements, app_settings,
+unit_leader_assignments, user_roles,
+members, church_units, wsf_centres, wsf_zones,
+purged_data_archives, tenant_memberships, profiles
 ```
 
-### Files changed
-- One new database migration (SQL above)
+Then delete the tenant row last.
 
-No frontend changes needed.
+### Files changed
+- `supabase/functions/archive-tenant/index.ts` — add missing tables, fix CORS headers, add per-table error logging
+- Redeploy `archive-tenant`
+
+No database migration needed.
 
