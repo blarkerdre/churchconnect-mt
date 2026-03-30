@@ -176,6 +176,12 @@ export default function Members() {
         </div>
       </div>
 
+      {/* Filters */}
+      {(isAdmin || viewOnly) && (
+        <AudienceFilter filters={filters} onChange={setFilters} />
+      )}
+
+
       {/* Stats row - admins and leaders */}
       {(isAdmin || viewOnly) && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
