@@ -28,6 +28,13 @@ import { useTenantQuery } from "@/hooks/useTenantQuery";
 
 const STATIC_AUDIENCES = ["All Members", "Leaders Only"];
 
+const STATUS_AUDIENCES = [
+  { value: "status:Active", label: "Active Members" },
+  { value: "status:First Timer", label: "First Timers" },
+  { value: "status:Inactive", label: "Inactive Members" },
+  { value: "status:New Convert", label: "New Converts" },
+];
+
 export default function Communications() {
   const { user, isAdmin, isUnitLeader, isWSFLeader, leaderUnits } = useAuth();
   const { tenantId, scopeQuery, withTenant } = useTenantQuery();
