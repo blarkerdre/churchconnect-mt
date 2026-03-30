@@ -2,7 +2,6 @@ import React, { useState, useMemo } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, MessageSquare, Send, CheckCircle, XCircle } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
@@ -12,13 +11,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { normalizePhone } from "@/lib/phone-utils";
 import InvalidRecipientsPreview from "./InvalidRecipientsPreview";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
-
-const STATUS_AUDIENCES = [
-  { value: "status:Active", label: "Active Members" },
-  { value: "status:First Timer", label: "First Timers" },
-  { value: "status:Inactive", label: "Inactive Members" },
-  { value: "status:New Convert", label: "New Converts" },
-];
+import AudienceFilter from "@/components/comms/AudienceFilter";
 
 export default function SMSDialog({
   open,
@@ -36,7 +29,7 @@ export default function SMSDialog({
   const { tenantId, scopeQuery } = useTenantQuery();
   const { toast } = useToast();
   const [message, setMessage] = useState(prefillMessage);
-  const [audience, setAudience] = useState(prefillAudience || "All Members");
+  const [filters, setFilters] = useState({ status: "all", unit: "all", dateFrom: null, dateTo: null });
   const [sending, setSending] = useState(false);
   const [result, setResult] = useState(null);
   const [channel, setChannel] = useState(defaultChannel);
@@ -44,29 +37,24 @@ export default function SMSDialog({
   React.useEffect(() => {
     if (open) {
       setMessage(prefillMessage);
-      setAudience(prefillAudience || "All Members");
+      setFilters({ status: "all", unit: "all", dateFrom: null, dateTo: null });
       setResult(null);
       setChannel(defaultChannel);
     }
-  }, [open, prefillMessage, prefillAudience]);
-
-  const baseAudiences = unitAudiences.length > 0 ? unitAudiences : ["All Members"];
-  const availableAudiences = isAdmin
-    ? baseAudiences
-    : leaderUnits?.length
-      ? baseAudiences.filter(a => leaderUnits.includes(a) || a === "All Members")
-      : [];
+  }, [open, prefillMessage, defaultChannel]);
 
   const { data: members = [] } = useQuery({
-    queryKey: ["sms-recipients", audience, directRecipients ? "direct" : "audience", tenantId],
+    queryKey: ["sms-recipients", filters.status, filters.unit, filters.dateFrom?.toISOString(), filters.dateTo?.toISOString(), directRecipients ? "direct" : "audience", tenantId],
     queryFn: async () => {
       if (directRecipients) return [];
       let query = supabase.from("members").select("id, first_name, last_name, phone, church_unit, membership_status");
-      if (audience.startsWith("status:")) {
-        const statusValue = audience.replace("status:", "");
-        query = query.eq("membership_status", statusValue);
-      } else if (audience !== "All Members") {
-        query = query.ilike("church_unit", `%${audience}%`);
+      if (filters.status !== "all") query = query.eq("membership_status", filters.status);
+      if (filters.unit !== "all") query = query.ilike("church_unit", `%${filters.unit}%`);
+      if (filters.dateFrom) query = query.gte("created_at", filters.dateFrom.toISOString());
+      if (filters.dateTo) {
+        const end = new Date(filters.dateTo);
+        end.setHours(23, 59, 59, 999);
+        query = query.lte("created_at", end.toISOString());
       }
       const { data } = await scopeQuery(query);
       return (data || []).filter(m => m.phone && m.phone.trim());
@@ -152,7 +140,7 @@ export default function SMSDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="font-display flex items-center gap-2">
             <MessageSquare className="h-5 w-5 text-primary" />
@@ -182,21 +170,7 @@ export default function SMSDialog({
           <div className="space-y-4 mt-2">
 
             {!directRecipients && (
-              <div>
-                <label className="text-sm font-medium">Audience</label>
-                <Select value={audience} onValueChange={setAudience}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {(isAdmin ? baseAudiences : availableAudiences).map(a => (
-                      <SelectItem key={a} value={a}>{a}</SelectItem>
-                    ))}
-                    <SelectItem disabled value="__status_sep__" className="text-xs font-semibold text-muted-foreground opacity-100 pointer-events-none">— By Membership Status —</SelectItem>
-                    {STATUS_AUDIENCES.map(s => (
-                      <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              <AudienceFilter filters={filters} onChange={setFilters} />
             )}
 
             <div>
