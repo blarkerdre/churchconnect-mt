@@ -61,8 +61,11 @@ export default function SMSDialog({
     queryKey: ["sms-recipients", audience, directRecipients ? "direct" : "audience", tenantId],
     queryFn: async () => {
       if (directRecipients) return [];
-      let query = supabase.from("members").select("id, first_name, last_name, phone, church_unit");
-      if (audience !== "All Members") {
+      let query = supabase.from("members").select("id, first_name, last_name, phone, church_unit, membership_status");
+      if (audience.startsWith("status:")) {
+        const statusValue = audience.replace("status:", "");
+        query = query.eq("membership_status", statusValue);
+      } else if (audience !== "All Members") {
         query = query.ilike("church_unit", `%${audience}%`);
       }
       const { data } = await scopeQuery(query);
