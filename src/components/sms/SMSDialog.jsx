@@ -187,8 +187,12 @@ export default function SMSDialog({
                 <Select value={audience} onValueChange={setAudience}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {(isAdmin ? AUDIENCES : availableAudiences).map(a => (
+                    {(isAdmin ? baseAudiences : availableAudiences).map(a => (
                       <SelectItem key={a} value={a}>{a}</SelectItem>
+                    ))}
+                    <SelectItem disabled value="__status_sep__" className="text-xs font-semibold text-muted-foreground opacity-100 pointer-events-none">— By Membership Status —</SelectItem>
+                    {STATUS_AUDIENCES.map(s => (
+                      <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
