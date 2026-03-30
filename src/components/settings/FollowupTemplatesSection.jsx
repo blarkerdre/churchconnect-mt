@@ -96,7 +96,8 @@ export default function FollowupTemplatesSection() {
     mutationFn: async ({ id, is_active }) => {
       const { error } = await supabase.from("followup_message_templates")
         .update({ is_active, updated_at: new Date().toISOString() })
-        .eq("id", id);
+        .eq("id", id)
+        .eq("tenant_id", tenantId);
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["followup-message-templates"] }),
