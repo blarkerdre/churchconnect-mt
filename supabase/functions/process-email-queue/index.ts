@@ -270,11 +270,13 @@ Deno.serve(async (req) => {
         )
 
         // Log success
+        const tenantCols = payload.tenant_id ? { tenant_id: payload.tenant_id as string } : {}
         await supabase.from('email_send_log').insert({
           message_id: payload.message_id,
           template_name: payload.label || queue,
           recipient_email: payload.to,
           status: 'sent',
+          ...tenantCols,
         })
 
         // Delete from queue
