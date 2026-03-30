@@ -3,10 +3,12 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { X, Clock, User, Calendar, Flag, Send, CheckCircle2, AlertCircle, TimerReset, Loader2, Phone, Mail, Lightbulb, UserCheck, RefreshCw } from "lucide-react";
+import { X, Clock, User, Calendar, Flag, Send, CheckCircle2, AlertCircle, TimerReset, Loader2, Phone, Mail, Lightbulb, UserCheck, RefreshCw, MessageSquare } from "lucide-react";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useTenantQuery } from "@/hooks/useTenantQuery";
 
 const NEXT_STEPS = {
   "First Timer": [
@@ -40,12 +42,30 @@ const priorityColors = {
   Urgent: "bg-destructive/10 text-destructive",
 };
 
-export default function FollowupDetailPanel({ followup, onClose, onUpdate, currentUser, onConverted, isAdmin, isUnitLeader, profileMap = {}, followupUnitMembers = [] }) {
+export default function FollowupDetailPanel({ followup, onClose, onUpdate, currentUser, onConverted, isAdmin, isUnitLeader, profileMap = {}, followupUnitMembers = [], onOpenMessageDialog }) {
   const [progressNote, setProgressNote] = useState("");
   const [saving, setSaving] = useState(false);
   const [converting, setConverting] = useState(false);
   const [reassigning, setReassigning] = useState(false);
   const [showReassign, setShowReassign] = useState(false);
+  const { tenantId, scopeQuery } = useTenantQuery();
+  const queryClient = useQueryClient();
+
+  // Fetch scheduled messages for this followup
+  const { data: scheduledMessages = [] } = useQuery({
+    queryKey: ["followup-messages", followup.id, tenantId],
+    queryFn: async () => {
+      const { data, error } = await scopeQuery(
+        supabase.from("followup_scheduled_messages")
+          .select("*")
+          .eq("followup_id", followup.id)
+          .order("created_at", { ascending: false })
+      );
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!followup.id,
+  });
 
   const isConvertible = ["First Timer", "New Convert"].includes(followup.category) &&
     followup.member_id &&
