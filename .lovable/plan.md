@@ -1,52 +1,45 @@
 
 
-## Fix Tenant Delete in archive-tenant Edge Function
+## Fix: Archive Tab Still Shows 1 After Delete
 
 ### Root Cause
-The `archive-tenant` edge function's delete action is missing ~9 tables that have `tenant_id` columns. When it tries to delete `tenant_memberships`, `members`, or the tenant itself, foreign key constraints from these undeleted tables block the operation — causing a silent 500 error.
+The `tenants` list in `TenantAdmin.jsx` merges data from three sources (lines 108-122):
+1. `queryTenants` — direct DB query (invalidated correctly after delete)
+2. `tenantMemberships` — from TenantContext (NOT invalidated after delete)
+3. `currentTenant` — from TenantContext (NOT invalidated after delete)
 
-### Missing tables (not deleted before tenant removal)
-- `user_roles`
-- `training_completions`
-- `training_reports`
-- `transportation`
-- `wsf_attendance`
-- `wsf_attendance_reports`
-- `unit_leader_assignments`
-- `suppressed_emails`
-- `purged_data_archives`
+After a permanent delete, the DB query returns the correct list, but the deleted tenant still appears via `tenantMemberships` or `currentTenant` cached in TenantContext. The merged list re-adds the deleted tenant, so the Archive tab count stays at 1.
 
 ### Fix
-Update `supabase/functions/archive-tenant/index.ts`:
+In `src/pages/TenantAdmin.jsx`, update the `archiveMutation.onSuccess` handler to also invalidate the tenant memberships query and force a TenantContext refresh:
 
-1. Add all missing tables to the deletion list, in correct FK-safe order
-2. Update CORS headers to include the full set (matching other edge functions)
-3. Add error logging per-table so failures are visible in logs
+1. Add `queryClient.invalidateQueries({ queryKey: ["tenant-analytics"] })` to clear analytics cache
+2. For the **delete** action specifically, also invalidate memberships so the merge logic doesn't re-add the deleted tenant:
+   - `queryClient.invalidateQueries({ queryKey: ["tenant-memberships"] })` (if used)
+   - Or filter out the deleted tenant from the merge in `useMemo` by checking if it still exists in `queryTenants`
 
-Updated table list (FK-safe order):
-```text
-tenant_invitations, notifications, messages, audit_log,
-exam_answers, exam_attempts, exam_questions, exam_session_courses,
-exam_sessions, exam_subjects, exam_titles, course_registrations,
-training_completions, training_reports,
-attendance_records, attendance_sessions,
-wsf_attendance, wsf_attendance_reports,
-event_registrations, events,
-followups, first_timers, pastoral_care, member_status_history,
-documents, sms_log, email_send_log, suppressed_emails,
-church_attendance_reports, transportation,
-pickup_locations, certificate_templates, books_of_the_month,
-announcements, app_settings,
-unit_leader_assignments, user_roles,
-members, church_units, wsf_centres, wsf_zones,
-purged_data_archives, tenant_memberships, profiles
-```
-
-Then delete the tenant row last.
+The cleanest fix: change the merge logic to only add from `tenantMemberships`/`currentTenant` if the tenant ID exists in `queryTenants`, OR if `queryTenants` is empty (the fallback case). This way, once the DB query confirms the tenant is gone, it won't be re-added.
 
 ### Files changed
-- `supabase/functions/archive-tenant/index.ts` — add missing tables, fix CORS headers, add per-table error logging
-- Redeploy `archive-tenant`
+- **`src/pages/TenantAdmin.jsx`** — update the `useMemo` merge logic to not re-add tenants that are absent from the DB query result (when the query has returned data), and add `tenant-analytics` to the invalidation list in `onSuccess`
 
-No database migration needed.
+### Technical detail
+```js
+// Current (broken): always merges from all 3 sources
+// Fixed: only merge fallback sources when queryTenants is empty
+const tenants = useMemo(() => {
+  const map = new Map();
+  queryTenants.forEach(t => map.set(t.id, t));
+  // Only use fallback sources when direct query returned empty
+  if (queryTenants.length === 0) {
+    tenantMemberships?.forEach(m => {
+      if (m.tenants && !map.has(m.tenants.id)) map.set(m.tenants.id, m.tenants);
+    });
+    if (currentTenant && !map.has(currentTenant.id)) map.set(currentTenant.id, currentTenant);
+  }
+  return Array.from(map.values());
+}, [queryTenants, tenantMemberships, currentTenant]);
+```
+
+No database changes needed.
 
