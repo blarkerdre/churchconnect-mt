@@ -149,7 +149,7 @@ export default function FollowupTemplatesSection() {
                       <div className="flex items-center gap-1.5 flex-wrap">
                         {t.channel === "email" ? <Mail className="h-3.5 w-3.5 text-muted-foreground" /> : <MessageSquare className="h-3.5 w-3.5 text-muted-foreground" />}
                         <Badge variant="secondary" className="text-[10px]">{t.channel.toUpperCase()}</Badge>
-                        <Badge variant="outline" className="text-[10px]"><Clock className="h-2.5 w-2.5 mr-0.5" /> Day {t.delay_days}</Badge>
+                        <Badge variant="outline" className="text-[10px]"><Clock className="h-2.5 w-2.5 mr-0.5" /> {t.delay_hours}h</Badge>
                         {!t.is_active && <Badge variant="destructive" className="text-[10px]">Disabled</Badge>}
                       </div>
                       {t.subject && <p className="text-xs font-medium text-foreground">Subject: {t.subject}</p>}
