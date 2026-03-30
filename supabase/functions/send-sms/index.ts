@@ -23,6 +23,15 @@ Deno.serve(async (req) => {
     const TWILIO_FROM = Deno.env.get("TWILIO_FROM_NUMBER");
     if (!TWILIO_FROM) throw new Error("TWILIO_FROM_NUMBER is not configured");
 
+    // Validate sender number is E.164
+    function validateE164(num: string, label: string): void {
+      const cleaned = num.replace(/[\s\-\(\)\.]/g, "");
+      if (!/^\+[1-9]\d{6,14}$/.test(cleaned)) {
+        throw new Error(`${label} "${num}" is not a valid E.164 phone number. Expected format: +1234567890`);
+      }
+    }
+    validateE164(TWILIO_FROM, "TWILIO_FROM_NUMBER");
+
     // Auth check
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
