@@ -1,35 +1,10 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { timingSafeEqual } from "https://deno.land/std@0.224.0/crypto/timing_safe_equal.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
-
-async function computeTwilioSignature(
-  authToken: string,
-  url: string,
-  params: Record<string, string>,
-): Promise<string> {
-  // Sort params alphabetically and concatenate key+value
-  const data =
-    url +
-    Object.keys(params)
-      .sort()
-      .reduce((acc, key) => acc + key + params[key], "");
-
-  const encoder = new TextEncoder();
-  const key = await crypto.subtle.importKey(
-    "raw",
-    encoder.encode(authToken),
-    { name: "HMAC", hash: "SHA-1" },
-    false,
-    ["sign"],
-  );
-  const signature = await crypto.subtle.sign("HMAC", key, encoder.encode(data));
-  return btoa(String.fromCharCode(...new Uint8Array(signature)));
-}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -47,23 +22,42 @@ Deno.serve(async (req) => {
     }
 
     // Twilio sends webhooks as application/x-www-form-urlencoded
-    const formData = await req.formData();
+    const rawBody = await req.text();
     const params: Record<string, string> = {};
-    formData.forEach((value, key) => {
-      params[key] = value.toString();
-    });
+    for (const [key, value] of new URLSearchParams(rawBody)) {
+      params[key] = value;
+    }
 
-    // Validate Twilio signature
+    // Reconstruct the URL as Twilio sees it using forwarded headers
+    const proto = req.headers.get("x-forwarded-proto") || "https";
+    const host = req.headers.get("host") || "";
+    const urlObj = new URL(req.url);
+    const webhookUrl = `${proto}://${host}${urlObj.pathname}${urlObj.search}`;
+
+    // Validate Twilio signature using HMAC-SHA1
     const twilioSignature = req.headers.get("X-Twilio-Signature") ?? "";
-    const webhookUrl = `${Deno.env.get("SUPABASE_URL")}/functions/v1/twilio-webhook`;
-    const expectedSignature = await computeTwilioSignature(authToken, webhookUrl, params);
+
+    // Build the data string: URL + sorted params key+value
+    const data =
+      webhookUrl +
+      Object.keys(params)
+        .sort()
+        .reduce((acc, key) => acc + key + params[key], "");
 
     const encoder = new TextEncoder();
-    const sigA = encoder.encode(twilioSignature);
-    const sigB = encoder.encode(expectedSignature);
+    const key = await crypto.subtle.importKey(
+      "raw",
+      encoder.encode(authToken),
+      { name: "HMAC", hash: "SHA-1" },
+      false,
+      ["sign"],
+    );
+    const signature = await crypto.subtle.sign("HMAC", key, encoder.encode(data));
+    const expectedSignature = btoa(String.fromCharCode(...new Uint8Array(signature)));
 
-    if (sigA.length !== sigB.length || !timingSafeEqual(sigA, sigB)) {
+    if (twilioSignature !== expectedSignature) {
       console.warn("Invalid Twilio signature — rejecting webhook");
+      console.warn("Expected URL used for signing:", webhookUrl);
       return new Response("Forbidden", {
         status: 403,
         headers: { "Content-Type": "text/plain" },
