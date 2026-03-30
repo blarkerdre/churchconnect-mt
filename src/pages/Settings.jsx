@@ -150,14 +150,12 @@ function BillingSection() {
   const handlePayNow = async () => {
     setPayLoading(true);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const res = await supabase.functions.invoke("create-tenant-checkout", {
+      const { data, error } = await supabase.functions.invoke("create-tenant-checkout", {
         body: { tenant_id: tenantId },
-        headers: { Authorization: `Bearer ${session?.access_token}` },
       });
-      if (res.error) throw new Error(res.error.message || "Payment failed");
-      const { url } = res.data;
-      if (url) window.location.href = url;
+      if (error) throw new Error(error.message || "Payment failed");
+      if (!data?.url) throw new Error("Missing checkout URL");
+      window.open(data.url, "_blank", "noopener,noreferrer");
     } catch (err) {
       toast({ title: "Payment Error", description: err.message, variant: "destructive" });
     } finally {
