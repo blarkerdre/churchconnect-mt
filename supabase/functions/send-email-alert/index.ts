@@ -41,6 +41,19 @@ async function getOrCreateUnsubscribeToken(
   return token;
 }
 
+function buildAudienceLabel(filters: Record<string, unknown> | null, audience: string): string {
+  if (!filters) return audience || 'All Members';
+  const parts: string[] = [];
+  if (filters.status) parts.push(String(filters.status));
+  if (filters.unit) parts.push(String(filters.unit));
+  if (filters.dateFrom || filters.dateTo) {
+    const from = filters.dateFrom ? new Date(filters.dateFrom as string).toLocaleDateString() : '...';
+    const to = filters.dateTo ? new Date(filters.dateTo as string).toLocaleDateString() : '...';
+    parts.push(`registered ${from} – ${to}`);
+  }
+  return parts.length > 0 ? parts.join(', ') : 'All Members';
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
@@ -50,7 +63,6 @@ Deno.serve(async (req) => {
   const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
   const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!
 
-  // Verify the caller is authenticated
   const authHeader = req.headers.get('Authorization')
   if (!authHeader?.startsWith('Bearer ')) {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), {
@@ -59,7 +71,6 @@ Deno.serve(async (req) => {
     })
   }
 
-  // Verify user is admin or unit_leader using anon client
   const anonClient = createClient(supabaseUrl, supabaseAnonKey, {
     global: { headers: { Authorization: authHeader } },
   })
@@ -73,10 +84,10 @@ Deno.serve(async (req) => {
 
   const serviceClient = createClient(supabaseUrl, supabaseServiceKey)
 
-  const { subject, body, audience, tenant_id } = await req.json()
+  const { subject, body, audience, filters, tenant_id } = await req.json()
 
-  if (!subject?.trim() || !body?.trim() || !audience?.trim()) {
-    return new Response(JSON.stringify({ error: 'subject, body, and audience are required' }), {
+  if (!subject?.trim() || !body?.trim()) {
+    return new Response(JSON.stringify({ error: 'subject and body are required' }), {
       status: 400,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
@@ -101,7 +112,6 @@ Deno.serve(async (req) => {
     })
   }
 
-  // Check tenant-scoped role
   const { data: isAdmin } = await serviceClient.rpc('is_admin', { _user_id: user.id, _tenant_id: tenant_id })
   const { data: isLeader } = await serviceClient.rpc('has_role', {
     _user_id: user.id,
@@ -130,20 +140,34 @@ Deno.serve(async (req) => {
     }
   }
 
-  // Look up member emails based on audience
+  // Build member query based on filters or legacy audience
   let query = serviceClient.from('members').select('email, first_name, last_name')
     .not('email', 'is', null)
     .neq('email', '')
+    .eq('tenant_id', tenant_id)
 
-  if (tenant_id) {
-    query = query.eq('tenant_id', tenant_id)
-  }
-
-  if (audience.startsWith('status:')) {
-    const statusValue = audience.replace('status:', '')
-    query = query.eq('membership_status', statusValue)
-  } else if (audience !== 'All Members') {
-    query = query.ilike('church_unit', `%${audience}%`)
+  if (filters && (filters.status || filters.unit || filters.dateFrom || filters.dateTo)) {
+    // New filters-based approach
+    if (filters.status) {
+      query = query.eq('membership_status', filters.status)
+    }
+    if (filters.unit) {
+      query = query.ilike('church_unit', `%${filters.unit}%`)
+    }
+    if (filters.dateFrom) {
+      query = query.gte('created_at', filters.dateFrom)
+    }
+    if (filters.dateTo) {
+      query = query.lte('created_at', filters.dateTo)
+    }
+  } else if (audience) {
+    // Legacy audience-based approach
+    if (audience.startsWith('status:')) {
+      const statusValue = audience.replace('status:', '')
+      query = query.eq('membership_status', statusValue)
+    } else if (audience !== 'All Members') {
+      query = query.ilike('church_unit', `%${audience}%`)
+    }
   }
 
   const { data: members, error: membersError } = await query
@@ -169,14 +193,16 @@ Deno.serve(async (req) => {
 
   const suppressedSet = new Set((suppressed || []).map(s => s.email.toLowerCase()))
 
+  const audienceLabel = buildAudienceLabel(filters, audience)
+
   // Build and enqueue emails
   const senderDomain = 'notify.app.churchmanagementsuite.org'
   const fromDomain = 'app.churchmanagementsuite.org'
-  const fromAddress = `"${tenantSenderName.replace(/"/g, '\\"')}" <noreply@${fromDomain}>`
+  const safeName = tenantSenderName.replace(/[",\\]/g, '')
+  const fromAddress = `"${safeName}" <noreply@${fromDomain}>`
   let enqueued = 0
   let skipped = 0
 
-  // Build HTML template
   const htmlTemplate = (firstName: string) => `
 <!DOCTYPE html>
 <html>
@@ -193,7 +219,7 @@ Deno.serve(async (req) => {
           <h2 style="margin:0 0 16px;color:#1a2d4d;font-size:18px;">${escHtml(subject)}</h2>
           <div style="margin:0 0 24px;color:#555555;font-size:15px;line-height:1.6;white-space:pre-wrap;">${escHtml(body)}</div>
           <hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0;">
-          <p style="margin:0;color:#999999;font-size:12px;text-align:center;">This email was sent to ${escHtml(audience)} members.</p>
+          <p style="margin:0;color:#999999;font-size:12px;text-align:center;">This email was sent to ${escHtml(audienceLabel)} members.</p>
         </td></tr>
       </table>
     </td></tr>
@@ -226,7 +252,7 @@ Deno.serve(async (req) => {
       sender_domain: senderDomain,
       subject: subject,
       html: htmlTemplate(firstName),
-      text: `Dear ${firstName},\n\n${subject}\n\n${body}\n\nThis email was sent to ${audience} members.\n\n${tenantSenderName}`,
+      text: `Dear ${firstName},\n\n${subject}\n\n${body}\n\nThis email was sent to ${audienceLabel} members.\n\n${tenantSenderName}`,
       purpose: 'transactional',
       label: 'email-alert',
       message_id: messageId,
@@ -236,7 +262,6 @@ Deno.serve(async (req) => {
       ...(tenant_id ? { tenant_id } : {}),
     }
 
-    // Enqueue to transactional queue
     const { error: enqueueError } = await serviceClient.rpc('enqueue_email', {
       queue_name: 'transactional_emails',
       payload,
@@ -247,7 +272,6 @@ Deno.serve(async (req) => {
       continue
     }
 
-    // Log as pending
     await serviceClient.from('email_send_log').insert({
       message_id: messageId,
       template_name: 'email-alert',
