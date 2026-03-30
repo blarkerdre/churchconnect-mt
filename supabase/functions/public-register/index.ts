@@ -383,11 +383,6 @@ Deno.serve(async (req) => {
           createPastoralCareForPrayerRequest(supabase, linkedMember.id, firstName, lastName, notes, tenantId);
         }
 
-        // WSF leader notification
-        const effectiveWsfCentreId = winnersSatellite ? (wsfCentreId || null) : null;
-        if (effectiveWsfCentreId) {
-          notifyWSFLeader(supabase, effectiveWsfCentreId, firstName, lastName);
-        }
 
         return new Response(JSON.stringify({ success: true, mode: resultMode }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -426,11 +421,6 @@ Deno.serve(async (req) => {
             createPastoralCareForPrayerRequest(supabase, emailMatches[0].id, firstName, lastName, notes, tenantId);
           }
 
-          // WSF leader notification
-          const effectiveWsfCentreId = winnersSatellite ? (wsfCentreId || null) : null;
-          if (effectiveWsfCentreId) {
-            notifyWSFLeader(supabase, effectiveWsfCentreId, firstName, lastName);
-          }
 
           return new Response(JSON.stringify({ success: true, mode: "claimed" }), {
             headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -464,11 +454,6 @@ Deno.serve(async (req) => {
       createPastoralCareForPrayerRequest(supabase, resultMemberId, firstName, lastName, notes, tenantId);
     }
 
-    // WSF leader notification
-    const effectiveWsfCentreId = winnersSatellite ? (wsfCentreId || null) : null;
-    if (effectiveWsfCentreId) {
-      notifyWSFLeader(supabase, effectiveWsfCentreId, firstName, lastName);
-    }
 
     return new Response(JSON.stringify({ success: true, mode: "created" }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
