@@ -168,7 +168,8 @@ Deno.serve(async (req) => {
 
   // Build and enqueue emails
   const senderDomain = 'notify.app.churchmanagementsuite.org'
-  const fromAddress = `${tenantSenderName} <noreply@${senderDomain}>`
+  const fromDomain = 'app.churchmanagementsuite.org'
+  const fromAddress = `${tenantSenderName} <noreply@${fromDomain}>`
   let enqueued = 0
   let skipped = 0
 
