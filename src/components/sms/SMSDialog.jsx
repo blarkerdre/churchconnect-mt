@@ -50,10 +50,11 @@ export default function SMSDialog({
     }
   }, [open, prefillMessage, prefillAudience]);
 
+  const baseAudiences = unitAudiences.length > 0 ? unitAudiences : ["All Members"];
   const availableAudiences = isAdmin
-    ? AUDIENCES
+    ? baseAudiences
     : leaderUnits?.length
-      ? AUDIENCES.filter(a => leaderUnits.includes(a))
+      ? baseAudiences.filter(a => leaderUnits.includes(a) || a === "All Members")
       : [];
 
   const { data: members = [] } = useQuery({
