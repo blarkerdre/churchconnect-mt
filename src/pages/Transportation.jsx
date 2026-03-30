@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Car, MapPin, Clock, User, Plus, Loader2, CheckCircle, XCircle, Trash2, Edit, Settings, Search, Download } from "lucide-react";
+import { Car, MapPin, Clock, User, Plus, Loader2, CheckCircle, XCircle, Trash2, Edit, Settings, Search, Download, UserCheck } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
@@ -37,6 +37,7 @@ export default function Transportation() {
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [filterStatus, setFilterStatus] = useState("All");
+  const [filterAssignee, setFilterAssignee] = useState("All");
   const [bookDialogOpen, setBookDialogOpen] = useState(false);
   const [manageDialogOpen, setManageDialogOpen] = useState(false);
   const [locationDialogOpen, setLocationDialogOpen] = useState(false);
@@ -44,7 +45,7 @@ export default function Transportation() {
   const [selectedBooking, setSelectedBooking] = useState(null);
   const [editingLocation, setEditingLocation] = useState(null);
   const [form, setForm] = useState({ pickup_address: "", destination: "Church", request_date: "", pickup_time: "", notes: "", passengers: 1 });
-  const [manageForm, setManageForm] = useState({ status: "", assigned_driver: "", driver_phone: "" });
+  const [manageForm, setManageForm] = useState({ status: "", assigned_driver: "", driver_phone: "", assigned_to: "" });
   const [locationForm, setLocationForm] = useState({ name: "", address: "", notes: "" });
 
   const { data: bookings = [], isLoading } = useQuery({
@@ -68,6 +69,28 @@ export default function Transportation() {
     },
   });
 
+  // Fetch Transportation unit members for assign-to dropdown
+  const { data: transportMembers = [] } = useQuery({
+    queryKey: ["transport-unit-members", tenantId],
+    enabled: canManage,
+    queryFn: async () => {
+      // Get members who are in the Transportation unit
+      const { data, error } = await scopeQuery(
+        supabase.from("members")
+          .select("id, user_id, first_name, last_name")
+          .ilike("church_unit", "%Transportation%")
+      );
+      if (error) throw error;
+      return (data || []).filter(m => m.user_id);
+    },
+  });
+
+  // Build a map of user_id -> name for display
+  const assigneeMap = {};
+  transportMembers.forEach(m => {
+    if (m.user_id) assigneeMap[m.user_id] = `${m.first_name} ${m.last_name}`;
+  });
+
   const visibleBookings = canManage ? bookings : bookings.filter(b => b.user_id === user?.id);
 
   const filtered = visibleBookings.filter(b => {
@@ -75,7 +98,8 @@ export default function Transportation() {
     const matchSearch = `${name} ${b.pickup_address} ${b.destination || ""}`.toLowerCase().includes(search.toLowerCase());
     const matchStatus = filterStatus === "All" || b.status === filterStatus;
     const matchDate = (!dateFrom || b.request_date >= dateFrom) && (!dateTo || b.request_date <= dateTo);
-    return matchSearch && matchStatus && matchDate;
+    const matchAssignee = filterAssignee === "All" || (filterAssignee === "Unassigned" ? !b.assigned_to : b.assigned_to === filterAssignee);
+    return matchSearch && matchStatus && matchDate && matchAssignee;
   });
 
   const bookMutation = useMutation({
@@ -158,7 +182,7 @@ export default function Transportation() {
 
   const openManage = (b) => {
     setSelectedBooking(b);
-    setManageForm({ status: b.status, assigned_driver: b.assigned_driver || "", driver_phone: b.driver_phone || "" });
+    setManageForm({ status: b.status, assigned_driver: b.assigned_driver || "", driver_phone: b.driver_phone || "", assigned_to: b.assigned_to || "" });
     setManageDialogOpen(true);
   };
 
@@ -175,7 +199,7 @@ export default function Transportation() {
   };
 
   const downloadCSV = () => {
-    const headers = ["Member", "Pickup", "Destination", "Date", "Time", "Passengers", "Status", "Driver", "Driver Phone", "Notes"];
+    const headers = ["Member", "Pickup", "Destination", "Date", "Time", "Passengers", "Status", "Assigned To", "Driver", "Driver Phone", "Notes"];
     const rows = filtered.map(b => [
       b.members ? `${b.members.first_name} ${b.members.last_name}` : "",
       b.pickup_address,
@@ -184,6 +208,7 @@ export default function Transportation() {
       b.pickup_time || "",
       b.passengers || 1,
       b.status,
+      b.assigned_to ? (assigneeMap[b.assigned_to] || "Assigned") : "",
       b.assigned_driver || "",
       b.driver_phone || "",
       b.notes || "",
@@ -198,11 +223,12 @@ export default function Transportation() {
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
         <Card className="border-0 shadow-sm"><CardContent className="p-3 sm:p-4 text-center"><p className="text-xl sm:text-2xl font-display font-bold text-foreground">{filtered.length}</p><p className="text-xs text-muted-foreground">Total</p></CardContent></Card>
         <Card className="border-0 shadow-sm"><CardContent className="p-3 sm:p-4 text-center"><p className="text-xl sm:text-2xl font-display font-bold text-accent">{filtered.filter(b => b.status === "Pending").length}</p><p className="text-xs text-muted-foreground">Pending</p></CardContent></Card>
         <Card className="border-0 shadow-sm"><CardContent className="p-3 sm:p-4 text-center"><p className="text-xl sm:text-2xl font-display font-bold text-chart-3">{filtered.filter(b => b.status === "Confirmed").length}</p><p className="text-xs text-muted-foreground">Confirmed</p></CardContent></Card>
         <Card className="border-0 shadow-sm"><CardContent className="p-3 sm:p-4 text-center"><p className="text-xl sm:text-2xl font-display font-bold text-muted-foreground">{filtered.filter(b => b.status === "Completed").length}</p><p className="text-xs text-muted-foreground">Completed</p></CardContent></Card>
+        <Card className="border-0 shadow-sm"><CardContent className="p-3 sm:p-4 text-center"><p className="text-xl sm:text-2xl font-display font-bold text-primary">{filtered.filter(b => b.assigned_to).length}</p><p className="text-xs text-muted-foreground">Assigned</p></CardContent></Card>
       </div>
 
       <div className="flex flex-col gap-3">
@@ -243,12 +269,27 @@ export default function Transportation() {
               </SelectContent>
             </Select>
           </div>
+          {canManage && (
+            <div className="w-full sm:w-auto">
+              <Label className="text-xs text-muted-foreground">Assigned To</Label>
+              <Select value={filterAssignee} onValueChange={setFilterAssignee}>
+                <SelectTrigger className="w-full sm:w-44"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="All">All</SelectItem>
+                  <SelectItem value="Unassigned">Unassigned</SelectItem>
+                  {transportMembers.map(m => (
+                    <SelectItem key={m.user_id} value={m.user_id}>{m.first_name} {m.last_name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
           <Button variant="outline" onClick={downloadCSV} disabled={filtered.length === 0}>
             <Download className="h-4 w-4 mr-2" /> CSV
           </Button>
           <PrintReportButton label="Print" buildRows={() => ({
             title: "Transportation Report",
-            headers: ["Member", "Pickup", "Destination", "Date", "Time", "Passengers", "Status", "Driver", "Driver Phone", "Notes"],
+            headers: ["Member", "Pickup", "Destination", "Date", "Time", "Passengers", "Status", "Assigned To", "Driver", "Notes"],
             rows: filtered.map(b => [
               b.members ? `${b.members.first_name} ${b.members.last_name}` : "",
               b.pickup_address,
@@ -257,8 +298,8 @@ export default function Transportation() {
               b.pickup_time || "",
               b.passengers || 1,
               b.status,
+              b.assigned_to ? (assigneeMap[b.assigned_to] || "Assigned") : "",
               b.assigned_driver || "",
-              b.driver_phone || "",
               b.notes || "",
             ]),
           })} />
@@ -291,6 +332,9 @@ export default function Transportation() {
                     <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
                       <span className="flex items-center gap-1"><MapPin className="h-3.5 w-3.5" /> {b.pickup_address} → {b.destination || "Church"}</span>
                       <span className="flex items-center gap-1"><Clock className="h-3.5 w-3.5" /> {b.request_date}{b.pickup_time ? ` · ${b.pickup_time}` : ""}</span>
+                      {b.assigned_to && assigneeMap[b.assigned_to] && (
+                        <span className="flex items-center gap-1"><UserCheck className="h-3.5 w-3.5 text-primary" /> {assigneeMap[b.assigned_to]}</span>
+                      )}
                       {b.assigned_driver && <span className="flex items-center gap-1"><User className="h-3.5 w-3.5" /> {b.assigned_driver}</span>}
                     </div>
                   </div>
@@ -355,17 +399,29 @@ export default function Transportation() {
                 </SelectContent>
               </Select>
             </div>
+            <div>
+              <Label>Assign To</Label>
+              <Select value={manageForm.assigned_to || "none"} onValueChange={v => setManageForm(f => ({ ...f, assigned_to: v === "none" ? "" : v }))}>
+                <SelectTrigger><SelectValue placeholder="Select team member" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Unassigned</SelectItem>
+                  {transportMembers.map(m => (
+                    <SelectItem key={m.user_id} value={m.user_id}>{m.first_name} {m.last_name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             <div><Label>Assigned Driver</Label><Input value={manageForm.assigned_driver} onChange={e => setManageForm(f => ({ ...f, assigned_driver: e.target.value }))} placeholder="Driver name" /></div>
             <div><Label>Driver Phone</Label><Input value={manageForm.driver_phone} onChange={e => setManageForm(f => ({ ...f, driver_phone: e.target.value }))} placeholder="Phone number" /></div>
             <div className="flex gap-2">
-              <Button onClick={() => manageMutation.mutate({ id: selectedBooking.id, updates: { status: "Confirmed", assigned_driver: manageForm.assigned_driver, driver_phone: manageForm.driver_phone } })} className="flex-1 bg-chart-3 hover:bg-chart-3/90">
+              <Button onClick={() => manageMutation.mutate({ id: selectedBooking.id, updates: { status: "Confirmed", assigned_driver: manageForm.assigned_driver, driver_phone: manageForm.driver_phone, assigned_to: manageForm.assigned_to || null } })} className="flex-1 bg-chart-3 hover:bg-chart-3/90">
                 <CheckCircle className="h-4 w-4 mr-2" /> Approve
               </Button>
               <Button variant="destructive" onClick={() => manageMutation.mutate({ id: selectedBooking.id, updates: { status: "Cancelled" } })} className="flex-1">
                 <XCircle className="h-4 w-4 mr-2" /> Reject
               </Button>
             </div>
-            <Button variant="outline" onClick={() => manageMutation.mutate({ id: selectedBooking.id, updates: manageForm })} disabled={manageMutation.isPending} className="w-full">
+            <Button variant="outline" onClick={() => manageMutation.mutate({ id: selectedBooking.id, updates: { ...manageForm, assigned_to: manageForm.assigned_to || null } })} disabled={manageMutation.isPending} className="w-full">
               {manageMutation.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
               Save Changes
             </Button>
