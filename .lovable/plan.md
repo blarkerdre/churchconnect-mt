@@ -1,31 +1,32 @@
 
 
-## Add Explicit User Promotion for Super Admins in Tenant Admin
+## Fix: Invitation Emails Failing with 401
 
-### Current State
-The `TenantUsersDialog` already has a role dropdown (member/admin/owner) and the database RLS allows super admins to manage all tenant memberships. So **the capability technically exists** — a super admin can open Users on any tenant and change roles via the dropdown.
+### Root Cause
+The `invite-to-tenant` edge function calls `send-transactional-email` via `supabase.functions.invoke()`. However, `send-transactional-email` has `verify_jwt = true` in `supabase/config.toml`. The service-role client used by `invite-to-tenant` passes the service_role key as a Bearer token, but Supabase's gateway JWT verification rejects it because it's not a standard user JWT — resulting in a **401 Unauthorized**.
 
-### What This Plan Adds
-Make promotion more explicit and visible for super admins:
+This means:
+- No email is sent (invitation or auto-add notification)
+- No pending invitation appears in the Invitations tab (for new users, the invitation record IS created but the email fails silently)
+- For existing users being auto-added, the email notification silently fails
 
-1. **Add a "Promote to Owner" quick action** in the `TenantUsersDialog` — a dedicated button with a Crown icon next to the role dropdown, visible only to super admins, that promotes a user to `owner` with one click (with confirmation).
+### Fix
+**File: `supabase/config.toml`** — Set `verify_jwt = false` for `send-transactional-email` so it can be called from other edge functions using the service role client.
 
-2. **Add a "Promote to Admin" quick action** — similar button with Shield icon for promoting to `admin`.
+The function already has internal authorization via the Supabase gateway (anon key required) and the service role client is trusted. This is consistent with how other inter-function calls work in the project.
 
-3. **Super admin badge** — show a visual indicator in the dialog header when the current user is operating as a super admin (so it's clear they have elevated privileges).
+```toml
+[functions.send-transactional-email]
+verify_jwt = false
+```
 
-4. **Guard against self-demotion** — prevent super admins from accidentally demoting themselves if they're also a tenant member.
-
-### Technical Details
-
-**File: `src/components/tenants/TenantUsersDialog.jsx`**
-- Import `roles` from `useAuth()` and derive `isSuperAdmin`
-- Add promote-to-owner and promote-to-admin icon buttons next to the role dropdown, with confirmation toast
-- Show a `Badge` in the dialog header: "Super Admin Mode" when `isSuperAdmin` is true
-- Reuse existing `updateRoleMutation` for the promotion action
+Then **redeploy** `send-transactional-email` and `invite-to-tenant` to pick up the config change.
 
 ### Files changed
-- **`src/components/tenants/TenantUsersDialog.jsx`** — add explicit promote buttons and super admin indicator
+1. **`supabase/config.toml`** — change `verify_jwt` to `false` for `send-transactional-email`
+2. Redeploy both `send-transactional-email` and `invite-to-tenant`
 
-No database changes needed — RLS already supports this.
+### After the fix
+- Test by inviting a new email from Tenant Admin
+- Verify the invitation email arrives and a pending invitation appears in the Invitations tab
 
