@@ -26,6 +26,7 @@ const DEFAULT_TEMPLATES = [
   { followup_type: "New Convert", channel: "sms", subject: null, message_template: "Hi {name}, congratulations on your new journey of faith at {church}! We'd love to help you get connected. Have you considered joining our Believers Foundation Class?", delay_hours: 24, sort_order: 0 },
   { followup_type: "New Convert", channel: "email", subject: "Welcome to the family - {church}", message_template: "Hi {name},\n\nCongratulations on your decision! We are thrilled to welcome you to the {church} family.\n\nWe'd love to help you grow in your faith. Please consider enrolling in our Believers Foundation Class.\n\nGod bless,\nThe {church} Team", delay_hours: 24, sort_order: 1 },
   { followup_type: "Visitor", channel: "sms", subject: null, message_template: "Hi {name}, thank you for worshipping with us at {church}! We hope you felt at home. We'd love to see you again.", delay_hours: 24, sort_order: 0 },
+  { followup_type: "Visitor", channel: "email", subject: "Thank you for visiting {church}", message_template: "Hi {name},\n\nThank you for worshipping with us at {church}! We hope you felt at home and would love to see you again.\n\nWarm regards,\nThe {church} Team", delay_hours: 24, sort_order: 1 },
 ];
 
 export default function FollowupTemplatesSection() {
