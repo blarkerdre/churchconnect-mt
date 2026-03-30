@@ -1019,6 +1019,11 @@ export default function TenantAdmin() {
               </div>
             </TabsContent>
 
+            {/* Billing Tab */}
+            <TabsContent value="billing" className="space-y-4 mt-4">
+              <TenantBillingTab tenant={editTenant} />
+            </TabsContent>
+
             {/* Features Tab */}
             <TabsContent value="features" className="space-y-1 mt-4">
               <p className="text-xs text-muted-foreground mb-3">Toggle modules on/off for this tenant. Disabled modules won't appear in navigation.</p>
