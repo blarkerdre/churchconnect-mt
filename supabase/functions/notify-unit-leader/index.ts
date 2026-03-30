@@ -63,12 +63,12 @@ Deno.serve(async (req) => {
     }
 
     // Get leader contact info
-    let leaderQuery = supabase
+    const { data: leaderMember } = await supabase
       .from("members")
       .select("phone, email, first_name")
-      .eq("user_id", leader_user_id);
-    if (tenant_id) leaderQuery = leaderQuery.eq("tenant_id", tenant_id);
-    const { data: leaderMember } = await leaderQuery.maybeSingle();
+      .eq("user_id", leader_user_id)
+      .eq("tenant_id", tenant_id)
+      .maybeSingle();
 
     const { data: profile } = await supabase
       .from("profiles")
@@ -144,19 +144,19 @@ Deno.serve(async (req) => {
           template_name: "unit-leader-notification",
           recipient_email: recipientEmail,
           status: "pending",
-          ...(tenant_id ? { tenant_id } : {}),
+          tenant_id,
         });
         console.log("Unit leader email enqueued for", recipientEmail);
       }
     }
 
     // Check SMS enabled
-    let smsQuery = supabase
+    const { data: smsSetting } = await supabase
       .from("app_settings")
       .select("value")
-      .eq("key", "sms_notifications_enabled");
-    if (tenant_id) smsQuery = smsQuery.eq("tenant_id", tenant_id);
-    const { data: smsSetting } = await smsQuery.maybeSingle();
+      .eq("key", "sms_notifications_enabled")
+      .eq("tenant_id", tenant_id)
+      .maybeSingle();
     const smsEnabled = smsSetting?.value === true || smsSetting === null;
 
     // Send SMS
@@ -203,7 +203,7 @@ Deno.serve(async (req) => {
               message_sid: data.sid || null,
               error_message: response.ok ? null : (data.message || JSON.stringify(data)),
               delivery_status: response.ok ? "queued" : null,
-              ...(tenant_id ? { tenant_id } : {}),
+              tenant_id,
             });
 
             if (response.ok) {
