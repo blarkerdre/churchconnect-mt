@@ -1280,6 +1280,56 @@ export type Database = {
           },
         ]
       }
+      followup_message_templates: {
+        Row: {
+          channel: string
+          created_at: string
+          delay_days: number
+          followup_type: string
+          id: string
+          is_active: boolean
+          message_template: string
+          sort_order: number
+          subject: string | null
+          tenant_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          channel?: string
+          created_at?: string
+          delay_days?: number
+          followup_type: string
+          id?: string
+          is_active?: boolean
+          message_template: string
+          sort_order?: number
+          subject?: string | null
+          tenant_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          channel?: string
+          created_at?: string
+          delay_days?: number
+          followup_type?: string
+          id?: string
+          is_active?: boolean
+          message_template?: string
+          sort_order?: number
+          subject?: string | null
+          tenant_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "followup_message_templates_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       followup_scheduled_messages: {
         Row: {
           channel: Database["public"]["Enums"]["followup_message_channel"]
@@ -3240,6 +3290,7 @@ export type Database = {
         | "Absentee"
         | "General"
         | "Pastoral"
+        | "Visitor"
       gender_type: "Male" | "Female"
       membership_status:
         | "Active"
@@ -3409,6 +3460,7 @@ export const Constants = {
         "Absentee",
         "General",
         "Pastoral",
+        "Visitor",
       ],
       gender_type: ["Male", "Female"],
       membership_status: [
