@@ -107,6 +107,21 @@ export default function AudienceFilter({ filters, onChange, className }) {
                 <SelectItem key={u.id} value={u.name}>{u.name}</SelectItem>
               ))}
             </SelectContent>
+        </Select>
+        </div>
+
+        {/* Account */}
+        <div className="space-y-1">
+          <label className="text-xs text-muted-foreground">Account</label>
+          <Select value={account} onValueChange={(v) => update({ account: v })}>
+            <SelectTrigger className="h-9">
+              <SelectValue placeholder="All Accounts" />
+            </SelectTrigger>
+            <SelectContent>
+              {ACCOUNT_OPTIONS.map((a) => (
+                <SelectItem key={a.value} value={a.value}>{a.label}</SelectItem>
+              ))}
+            </SelectContent>
           </Select>
         </div>
 
