@@ -99,8 +99,12 @@ Deno.serve(async (req) => {
     const recipientPhone = memberRecord?.phone;
     const recipientName = profile?.full_name || memberRecord?.first_name || "Team Member";
 
-    const emailSubject = `Pastoral Care Case Assigned: ${subject}`;
-    const bodyText = `Hi ${recipientName},\n\nYou have been assigned a pastoral care case.\n\nSubject: ${subject}\nType: ${care_type || "General"}\n${description ? `Details: ${description}\n` : ""}\nPlease log in to the Church Management System to view and manage this case.\n\nGod bless,\n${churchName}`;
+    const actionLabel = is_new_request ? "New Pastoral Care Case Assigned" : "Pastoral Care Case Reassigned";
+    const emailSubject = `${actionLabel}: ${subject}`;
+    const introLine = is_new_request
+      ? "A new pastoral care case has been assigned to you."
+      : "A pastoral care case has been reassigned to you.";
+    const bodyText = `Hi ${recipientName},\n\n${introLine}\n\nSubject: ${subject}\nType: ${care_type || "General"}\n${description ? `Details: ${description}\n` : ""}\nPlease log in to the Church Management System to view and manage this case.\n\nGod bless,\n${churchName}`;
 
     // Send email notification via queue
     if (recipientEmail) {
