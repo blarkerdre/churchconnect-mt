@@ -1,62 +1,69 @@
 
 
-## Add Membership Status Audiences to Email, SMS & WhatsApp
+## Add Advanced Recipient Filtering to Communications (Date, Status, Unit)
 
 ### What changes
-Add 5 new status-based audience options — **All Members**, **Active Members**, **First Timers**, **Inactive Members**, **New Converts** — to all communication channels (Email, SMS, WhatsApp). These filter by `membership_status` instead of `church_unit`.
+Replace the simple audience dropdown in Email, SMS, and WhatsApp with an advanced filtering system that lets users combine:
+- **Registration date range** (from/to)
+- **Membership status** (Active, First Timer, Inactive, New Convert)
+- **Church unit** (from church_units table)
 
-### Audience categories
+These filters work together (AND logic) to build a precise recipient list before sending.
 
-Currently audiences are unit-based (Choir, Ushering, etc.) filtering via `church_unit`. The new audiences filter by `membership_status`:
+### Current state
+- Audience selection is a single dropdown choosing one unit, one status, or "All Members"
+- No date-based filtering exists
+- Filters cannot be combined (e.g., "Active members in Choir registered after Jan 2025")
 
-| Audience Label | Filter |
-|---|---|
-| All Members | No status filter (existing) |
-| Active Members | `membership_status = 'Active'` |
-| First Timers | `membership_status = 'First Timer'` |
-| Inactive Members | `membership_status = 'Inactive'` |
-| New Converts | `membership_status = 'New Convert'` |
+### Design approach
+Create a reusable `AudienceFilter` component used by both `EmailAlertForm` and `SMSDialog`. It replaces the single audience dropdown with a filter panel containing:
+- Status multi-select or single-select
+- Unit dropdown
+- Date range (from/to) using Shadcn Calendar+Popover
+- Live recipient count preview
 
-These will appear as a separate "By Status" group in the audience dropdown, visually separated from unit-based audiences.
+The component outputs a filter object `{ status, unit, dateFrom, dateTo }` that the parent uses to query members.
 
 ### Files to change
 
-1. **`src/pages/Communications.jsx`** (~lines 29, 75-80)
-   - Add status-based audiences to the `AUDIENCES` array with a prefix convention (e.g., `status:Active`, `status:First Timer`) to distinguish from unit-based
-   - Display them with friendly labels in the dropdown, grouped under a separator
+#### 1. `src/components/comms/AudienceFilter.jsx` (new)
+- Reusable filter panel with:
+  - Status `<Select>` (All / Active / First Timer / Inactive / New Convert)
+  - Unit `<Select>` populated from `useChurchUnits()`
+  - From/To date pickers (Shadcn Calendar + Popover with `pointer-events-auto`)
+  - Live recipient count badge queried from members table
+- Accepts `onChange(filters)` callback
+- Returns filter object: `{ status: string|null, unit: string|null, dateFrom: Date|null, dateTo: Date|null }`
 
-2. **`src/components/comms/EmailAlertForm.jsx`** (lines 12-17)
-   - Remove the hardcoded `AUDIENCES` array; accept audiences as a prop from Communications page
-   - Or add the status audiences inline
+#### 2. `src/components/comms/EmailAlertForm.jsx`
+- Replace the audience `<Select>` with `<AudienceFilter>`
+- Pass filter object to `send-email-alert` edge function instead of a single `audience` string
+- New payload shape: `{ subject, body, filters: { status, unit, dateFrom, dateTo }, tenant_id }`
 
-3. **`src/components/sms/SMSDialog.jsx`** (lines 22-27)
-   - Add status-based audiences to the `AUDIENCES` array
-   - Update the member query (line 70) to handle status-based filtering: when audience starts with `status:`, filter by `membership_status` instead of `church_unit`
+#### 3. `src/components/sms/SMSDialog.jsx`
+- Replace the audience `<Select>` with `<AudienceFilter>`
+- Update member query to use combined filters (status + unit + date range)
+- All three filters applied with AND logic
 
-4. **`supabase/functions/send-email-alert/index.ts`** (lines 142-144)
-   - Add logic to detect status-based audiences and filter by `membership_status` instead of `church_unit`
-   - Redeploy function
+#### 4. `supabase/functions/send-email-alert/index.ts`
+- Accept new `filters` object alongside existing `audience` (backward compatible)
+- When `filters` is present, build query with:
+  - `.eq('membership_status', filters.status)` if set
+  - `.ilike('church_unit', '%unit%')` if set
+  - `.gte('created_at', filters.dateFrom)` if set
+  - `.lte('created_at', filters.dateTo)` if set
+- Fall back to existing `audience` logic when `filters` is not provided
 
-5. **`src/components/followups/FollowupMessageDialog.jsx`**
-   - No changes needed (sends to individual recipients, not audiences)
-
-### Implementation detail
-
-**Audience value convention:** Use a `status:` prefix to distinguish status audiences from unit audiences:
-- `status:Active` → filter `membership_status = 'Active'`
-- `status:First Timer` → filter `membership_status = 'First Timer'`
-- `status:Inactive` → filter `membership_status = 'Inactive'`  
-- `status:New Convert` → filter `membership_status = 'New Convert'`
-
-**Frontend:** Group audiences in the Select dropdown with labels — "By Status" and "By Unit" — using disabled separator items.
-
-**Backend (`send-email-alert`):** Before the existing `church_unit` filter, check if audience starts with `status:` and apply `.eq('membership_status', statusValue)` instead.
-
-**SMS Dialog:** Same pattern — the member query already filters by `church_unit`; add a branch for `status:` audiences to filter by `membership_status`.
+### Technical notes
+- Date pickers use `pointer-events-auto` on Calendar
+- All member queries remain tenant-scoped
+- Filters use AND logic (all conditions must match)
+- The `AudienceFilter` also keeps "All Members" as a quick preset that clears all filters
+- Backward compatible: old `audience` field still works if `filters` is absent
 
 ### Files changed
-- `src/pages/Communications.jsx`
-- `src/components/comms/EmailAlertForm.jsx`
-- `src/components/sms/SMSDialog.jsx`
-- `supabase/functions/send-email-alert/index.ts`
+- `src/components/comms/AudienceFilter.jsx` — new shared filter component
+- `src/components/comms/EmailAlertForm.jsx` — use AudienceFilter
+- `src/components/sms/SMSDialog.jsx` — use AudienceFilter
+- `supabase/functions/send-email-alert/index.ts` — support filters object
 
