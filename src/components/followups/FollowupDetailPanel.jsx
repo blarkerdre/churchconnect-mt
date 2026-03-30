@@ -288,6 +288,85 @@ export default function FollowupDetailPanel({ followup, onClose, onUpdate, curre
                   </Button>
                 )}
               </div>
+              {/* Send Message buttons */}
+              <div className="flex gap-2 flex-wrap mt-2">
+                {followup.person_email && (
+                  <Button size="sm" variant="outline" className="text-primary border-primary/20 hover:bg-primary/10"
+                    onClick={() => onOpenMessageDialog?.("email")}>
+                    <Mail className="h-3.5 w-3.5 mr-1" /> Send Email
+                  </Button>
+                )}
+                {followup.person_phone && (
+                  <Button size="sm" variant="outline" className="text-primary border-primary/20 hover:bg-primary/10"
+                    onClick={() => onOpenMessageDialog?.("sms")}>
+                    <MessageSquare className="h-3.5 w-3.5 mr-1" /> Send SMS
+                  </Button>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Send Message (when completed too) */}
+          {followup.status === "Completed" && (followup.person_email || followup.person_phone) && (
+            <div className="space-y-2">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Send Message</p>
+              <div className="flex gap-2 flex-wrap">
+                {followup.person_email && (
+                  <Button size="sm" variant="outline" className="text-primary border-primary/20 hover:bg-primary/10"
+                    onClick={() => onOpenMessageDialog?.("email")}>
+                    <Mail className="h-3.5 w-3.5 mr-1" /> Send Email
+                  </Button>
+                )}
+                {followup.person_phone && (
+                  <Button size="sm" variant="outline" className="text-primary border-primary/20 hover:bg-primary/10"
+                    onClick={() => onOpenMessageDialog?.("sms")}>
+                    <MessageSquare className="h-3.5 w-3.5 mr-1" /> Send SMS
+                  </Button>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Scheduled Messages */}
+          {scheduledMessages.length > 0 && (
+            <div className="space-y-2">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Messages</p>
+              <div className="space-y-2">
+                {scheduledMessages.map(sm => (
+                  <div key={sm.id} className="bg-muted/50 rounded-lg p-2.5 space-y-1">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      {sm.channel === "email" ? <Mail className="h-3 w-3 text-muted-foreground" /> : <MessageSquare className="h-3 w-3 text-muted-foreground" />}
+                      <Badge variant="secondary" className="text-[10px]">{sm.channel.toUpperCase()}</Badge>
+                      <Badge className={`text-[10px] ${
+                        sm.status === "sent" ? "bg-chart-3/10 text-chart-3" :
+                        sm.status === "failed" ? "bg-destructive/10 text-destructive" :
+                        sm.status === "cancelled" ? "bg-muted text-muted-foreground" :
+                        "bg-primary/10 text-primary"
+                      }`}>{sm.status}</Badge>
+                      {sm.scheduled_at && (
+                        <span className="text-[10px] text-muted-foreground ml-auto">
+                          {format(new Date(sm.scheduled_at), "dd MMM, HH:mm")}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-foreground/80 line-clamp-2">{sm.message}</p>
+                    {sm.status === "scheduled" && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-6 text-xs text-destructive px-2"
+                        onClick={async () => {
+                          await supabase.from("followup_scheduled_messages").update({ status: "cancelled", updated_at: new Date().toISOString() }).eq("id", sm.id);
+                          queryClient.invalidateQueries({ queryKey: ["followup-messages", followup.id] });
+                          toast({ title: "Message cancelled" });
+                        }}
+                      >
+                        Cancel
+                      </Button>
+                    )}
+                  </div>
+                ))}
+              </div>
             </div>
           )}
         </div>
