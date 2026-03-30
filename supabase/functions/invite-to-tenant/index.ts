@@ -53,7 +53,7 @@ Deno.serve(async (req) => {
       // Check if already a member of this tenant
       const { data: existingMembership } = await supabase
         .from("tenant_memberships")
-        .select("id")
+        .select("id, role")
         .eq("tenant_id", tenant_id)
         .eq("user_id", existingProfile.user_id)
         .maybeSingle();
@@ -65,7 +65,7 @@ Deno.serve(async (req) => {
             .update({ role })
             .eq("id", existingMembership.id);
         }
-        return new Response(JSON.stringify({ success: true, already_member: true, membership: existingMembership }), {
+        return new Response(JSON.stringify({ success: true, already_member: true, auto_added: true }), {
           status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
@@ -137,8 +137,50 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     if (existingInvite) {
-      return new Response(JSON.stringify({ error: "An invitation is already pending for this email" }), {
-        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      // Reuse existing pending invitation: update role/timestamp and resend email
+      await supabase.from("tenant_invitations")
+        .update({ role, updated_at: new Date().toISOString() })
+        .eq("id", existingInvite.id);
+
+      // Fetch tenant details and resend email
+      const { data: tenant } = await supabase
+        .from("tenants")
+        .select("name, slug")
+        .eq("id", tenant_id)
+        .single();
+
+      let email_warning: string | undefined;
+      if (tenant) {
+        const siteUrl = "https://app.churchmanagementsuite.org";
+        const signupUrl = `${siteUrl}/t/${tenant.slug}/auth`;
+
+        const emailResult = await supabase.functions.invoke("send-transactional-email", {
+          body: {
+            templateName: "tenant-invitation",
+            recipientEmail: normalizedEmail,
+            idempotencyKey: `tenant-invite-resend-${existingInvite.id}-${Date.now()}`,
+            tenant_id,
+            templateData: {
+              churchName: tenant.name,
+              signupUrl,
+              role,
+            },
+          },
+        });
+
+        if (emailResult.error) {
+          console.error("Resend invitation email failed", { error: emailResult.error });
+          email_warning = "Invitation updated but email failed to send.";
+        }
+      }
+
+      return new Response(JSON.stringify({
+        success: true,
+        invitation_id: existingInvite.id,
+        reused_pending_invitation: true,
+        email_warning,
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
