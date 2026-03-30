@@ -3,12 +3,10 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { X, Clock, User, Calendar, Flag, Send, CheckCircle2, AlertCircle, TimerReset, Loader2, Phone, Mail, Lightbulb, UserCheck, RefreshCw, MessageSquare } from "lucide-react";
+import { X, Clock, User, Calendar, Flag, Send, CheckCircle2, AlertCircle, TimerReset, Loader2, Phone, Mail, Lightbulb, UserCheck, RefreshCw } from "lucide-react";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useTenantQuery } from "@/hooks/useTenantQuery";
 
 const NEXT_STEPS = {
   "First Timer": [
@@ -42,30 +40,12 @@ const priorityColors = {
   Urgent: "bg-destructive/10 text-destructive",
 };
 
-export default function FollowupDetailPanel({ followup, onClose, onUpdate, currentUser, onConverted, isAdmin, isUnitLeader, profileMap = {}, followupUnitMembers = [], onOpenMessageDialog }) {
+export default function FollowupDetailPanel({ followup, onClose, onUpdate, currentUser, onConverted, isAdmin, isUnitLeader, profileMap = {}, followupUnitMembers = [] }) {
   const [progressNote, setProgressNote] = useState("");
   const [saving, setSaving] = useState(false);
   const [converting, setConverting] = useState(false);
   const [reassigning, setReassigning] = useState(false);
   const [showReassign, setShowReassign] = useState(false);
-  const { tenantId, scopeQuery } = useTenantQuery();
-  const queryClient = useQueryClient();
-
-  // Fetch scheduled messages for this followup
-  const { data: scheduledMessages = [] } = useQuery({
-    queryKey: ["followup-messages", followup.id, tenantId],
-    queryFn: async () => {
-      const { data, error } = await scopeQuery(
-        supabase.from("followup_scheduled_messages")
-          .select("*")
-          .eq("followup_id", followup.id)
-          .order("created_at", { ascending: false })
-      );
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!followup.id,
-  });
 
   const isConvertible = ["First Timer", "New Convert"].includes(followup.category) &&
     followup.member_id &&
@@ -287,85 +267,6 @@ export default function FollowupDetailPanel({ followup, onClose, onUpdate, curre
                     Convert to Active Member
                   </Button>
                 )}
-              </div>
-              {/* Send Message buttons */}
-              <div className="flex gap-2 flex-wrap mt-2">
-                {followup.person_email && (
-                  <Button size="sm" variant="outline" className="text-primary border-primary/20 hover:bg-primary/10"
-                    onClick={() => onOpenMessageDialog?.("email")}>
-                    <Mail className="h-3.5 w-3.5 mr-1" /> Send Email
-                  </Button>
-                )}
-                {followup.person_phone && (
-                  <Button size="sm" variant="outline" className="text-primary border-primary/20 hover:bg-primary/10"
-                    onClick={() => onOpenMessageDialog?.("sms")}>
-                    <MessageSquare className="h-3.5 w-3.5 mr-1" /> Send SMS
-                  </Button>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Send Message (when completed too) */}
-          {followup.status === "Completed" && (followup.person_email || followup.person_phone) && (
-            <div className="space-y-2">
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Send Message</p>
-              <div className="flex gap-2 flex-wrap">
-                {followup.person_email && (
-                  <Button size="sm" variant="outline" className="text-primary border-primary/20 hover:bg-primary/10"
-                    onClick={() => onOpenMessageDialog?.("email")}>
-                    <Mail className="h-3.5 w-3.5 mr-1" /> Send Email
-                  </Button>
-                )}
-                {followup.person_phone && (
-                  <Button size="sm" variant="outline" className="text-primary border-primary/20 hover:bg-primary/10"
-                    onClick={() => onOpenMessageDialog?.("sms")}>
-                    <MessageSquare className="h-3.5 w-3.5 mr-1" /> Send SMS
-                  </Button>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Scheduled Messages */}
-          {scheduledMessages.length > 0 && (
-            <div className="space-y-2">
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Messages</p>
-              <div className="space-y-2">
-                {scheduledMessages.map(sm => (
-                  <div key={sm.id} className="bg-muted/50 rounded-lg p-2.5 space-y-1">
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      {sm.channel === "email" ? <Mail className="h-3 w-3 text-muted-foreground" /> : <MessageSquare className="h-3 w-3 text-muted-foreground" />}
-                      <Badge variant="secondary" className="text-[10px]">{sm.channel.toUpperCase()}</Badge>
-                      <Badge className={`text-[10px] ${
-                        sm.status === "sent" ? "bg-chart-3/10 text-chart-3" :
-                        sm.status === "failed" ? "bg-destructive/10 text-destructive" :
-                        sm.status === "cancelled" ? "bg-muted text-muted-foreground" :
-                        "bg-primary/10 text-primary"
-                      }`}>{sm.status}</Badge>
-                      {sm.scheduled_at && (
-                        <span className="text-[10px] text-muted-foreground ml-auto">
-                          {format(new Date(sm.scheduled_at), "dd MMM, HH:mm")}
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-xs text-foreground/80 line-clamp-2">{sm.message}</p>
-                    {sm.status === "scheduled" && (
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="h-6 text-xs text-destructive px-2"
-                        onClick={async () => {
-                          await supabase.from("followup_scheduled_messages").update({ status: "cancelled", updated_at: new Date().toISOString() }).eq("id", sm.id);
-                          queryClient.invalidateQueries({ queryKey: ["followup-messages", followup.id] });
-                          toast({ title: "Message cancelled" });
-                        }}
-                      >
-                        Cancel
-                      </Button>
-                    )}
-                  </div>
-                ))}
               </div>
             </div>
           )}

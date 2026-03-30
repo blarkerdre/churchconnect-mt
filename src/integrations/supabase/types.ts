@@ -1280,88 +1280,6 @@ export type Database = {
           },
         ]
       }
-      followup_scheduled_messages: {
-        Row: {
-          channel: Database["public"]["Enums"]["followup_message_channel"]
-          created_at: string
-          created_by: string | null
-          error_message: string | null
-          followup_id: string
-          id: string
-          member_id: string | null
-          message: string
-          recipient_email: string | null
-          recipient_name: string | null
-          recipient_phone: string | null
-          scheduled_at: string | null
-          sent_at: string | null
-          status: Database["public"]["Enums"]["followup_message_status"]
-          subject: string | null
-          tenant_id: string | null
-          updated_at: string
-        }
-        Insert: {
-          channel: Database["public"]["Enums"]["followup_message_channel"]
-          created_at?: string
-          created_by?: string | null
-          error_message?: string | null
-          followup_id: string
-          id?: string
-          member_id?: string | null
-          message: string
-          recipient_email?: string | null
-          recipient_name?: string | null
-          recipient_phone?: string | null
-          scheduled_at?: string | null
-          sent_at?: string | null
-          status?: Database["public"]["Enums"]["followup_message_status"]
-          subject?: string | null
-          tenant_id?: string | null
-          updated_at?: string
-        }
-        Update: {
-          channel?: Database["public"]["Enums"]["followup_message_channel"]
-          created_at?: string
-          created_by?: string | null
-          error_message?: string | null
-          followup_id?: string
-          id?: string
-          member_id?: string | null
-          message?: string
-          recipient_email?: string | null
-          recipient_name?: string | null
-          recipient_phone?: string | null
-          scheduled_at?: string | null
-          sent_at?: string | null
-          status?: Database["public"]["Enums"]["followup_message_status"]
-          subject?: string | null
-          tenant_id?: string | null
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "followup_scheduled_messages_followup_id_fkey"
-            columns: ["followup_id"]
-            isOneToOne: false
-            referencedRelation: "followups"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "followup_scheduled_messages_member_id_fkey"
-            columns: ["member_id"]
-            isOneToOne: false
-            referencedRelation: "members"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "followup_scheduled_messages_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       followups: {
         Row: {
           assigned_to: string | null
@@ -3051,13 +2969,6 @@ export type Database = {
         | "unit_leader"
         | "member"
         | "wsf_leader"
-      followup_message_channel: "sms" | "email"
-      followup_message_status:
-        | "draft"
-        | "scheduled"
-        | "sent"
-        | "failed"
-        | "cancelled"
       followup_status: "Pending" | "In Progress" | "Completed" | "Overdue"
       followup_type:
         | "First Timer"
@@ -3219,14 +3130,6 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["super_admin", "admin", "unit_leader", "member", "wsf_leader"],
-      followup_message_channel: ["sms", "email"],
-      followup_message_status: [
-        "draft",
-        "scheduled",
-        "sent",
-        "failed",
-        "cancelled",
-      ],
       followup_status: ["Pending", "In Progress", "Completed", "Overdue"],
       followup_type: [
         "First Timer",
