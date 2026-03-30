@@ -40,7 +40,7 @@ export default function AudienceFilter({ filters, onChange, className }) {
 
   // Live recipient count
   const { data: recipientCount = null, isFetching } = useQuery({
-    queryKey: ["audience-count", status, unit, dateFrom?.toISOString(), dateTo?.toISOString(), tenantId],
+    queryKey: ["audience-count", status, unit, dateFrom?.toISOString(), dateTo?.toISOString(), account, tenantId],
     queryFn: async () => {
       let q = supabase.from("members").select("id", { count: "exact", head: true });
       if (status !== "all") q = q.eq("membership_status", status);
@@ -51,6 +51,8 @@ export default function AudienceFilter({ filters, onChange, className }) {
         end.setHours(23, 59, 59, 999);
         q = q.lte("created_at", end.toISOString());
       }
+      if (account === "linked") q = q.not("user_id", "is", null);
+      if (account === "unlinked") q = q.is("user_id", null);
       const { count, error } = await scopeQuery(q);
       if (error) throw error;
       return count;
