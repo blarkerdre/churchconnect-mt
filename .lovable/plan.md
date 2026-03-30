@@ -1,67 +1,38 @@
 
 
-## Add "Visitor" Status + Schedule Send to All Communication Channels
+## Add Member Filters: Registration Date, Status, Unit, and Account
 
-### Changes
+### What changes
+Add four filters to the Members page so admins/leaders can filter the member list by:
+1. **Status** — expand existing dropdown to include Inactive and Visitor
+2. **Church Unit** — new dropdown populated from `church_units` table
+3. **Registration Date** — from/to date pickers filtering by `created_at`
+4. **Account** — Linked (has `user_id`) / Unlinked (no `user_id`)
 
-#### 1. Add "Visitor" to AudienceFilter status options
-**`src/components/comms/AudienceFilter.jsx`** — Add `{ value: "Visitor", label: "Visitor" }` to `STATUS_OPTIONS`.
+### Approach
+Replace the current single status `<Select>` (lines 146-158) with the reusable `<AudienceFilter>` component that already exists, extended with an **Account** filter. This keeps the Members page consistent with Communications filtering.
 
-#### 2. Add scheduling UI to EmailAlertForm
-**`src/components/comms/EmailAlertForm.jsx`**:
-- Add a "Send Now / Schedule" toggle (radio group or switch)
-- When "Schedule" is selected, show a date picker + time input for choosing when to send
-- On schedule: insert into a new `scheduled_communications` table instead of calling `send-email-alert` immediately
-- Button label changes to "Schedule Email" with scheduled date/time shown
+### Files to change
 
-#### 3. Add scheduling UI to SMSDialog
-**`src/components/sms/SMSDialog.jsx`**:
-- Same "Send Now / Schedule" toggle below the message textarea
-- Date + time picker when scheduling
-- On schedule: insert into `scheduled_communications` with `channel: 'sms'` or `'whatsapp'`
-- Button label: "Schedule for [date]" vs "Send Now"
+#### 1. `src/components/comms/AudienceFilter.jsx`
+- Add `account` to filter state: `"all"`, `"linked"`, `"unlinked"`
+- Add Account `<Select>` dropdown (All / Linked / Unlinked)
+- Update `hasFilters`, `clearAll`, and live count query to include account filter
+- Count query: `linked` → `.not("user_id", "is", null)`, `unlinked` → `.is("user_id", null)`
 
-#### 4. Create `scheduled_communications` table
-**Database migration**:
-```sql
-CREATE TABLE public.scheduled_communications (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id uuid REFERENCES tenants(id) NOT NULL,
-  channel text NOT NULL,        -- 'email', 'sms', 'whatsapp'
-  filters jsonb DEFAULT '{}',   -- {status, unit, dateFrom, dateTo}
-  subject text,                 -- email only
-  message text NOT NULL,
-  scheduled_at timestamptz NOT NULL,
-  status text NOT NULL DEFAULT 'scheduled',
-  sent_at timestamptz,
-  error_message text,
-  created_by uuid REFERENCES auth.users(id),
-  created_at timestamptz DEFAULT now()
-);
-ALTER TABLE public.scheduled_communications ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Tenant access" ON public.scheduled_communications
-  FOR ALL TO authenticated
-  USING (tenant_id IN (SELECT tenant_id FROM tenant_memberships WHERE user_id = auth.uid()));
-```
+#### 2. `src/pages/Members.jsx`
+- Import `AudienceFilter` and replace the status `<Select>` with `<AudienceFilter>`
+- Add state: `filters = { status: "all", unit: "all", dateFrom: null, dateTo: null, account: "all" }`
+- Remove the old `statusFilter` state
+- Update `filtered` logic (line 92-96) to also check:
+  - `unit`: member's `church_unit` contains selected unit
+  - `dateFrom`/`dateTo`: `created_at` falls within range
+  - `account`: `user_id` is set or null
+- All filtering remains client-side (members already fetched)
 
-#### 5. Create cron edge function to process scheduled messages
-**`supabase/functions/process-scheduled-communications/index.ts`**:
-- Query `scheduled_communications` where `status = 'scheduled'` and `scheduled_at <= now()`
-- For email: invoke `send-email-alert` with stored filters/subject/body
-- For SMS/WhatsApp: query members with filters, then invoke `send-sms`
-- Update status to `sent` or `failed`
-- Set up pg_cron job to run every 5 minutes
-
-#### 6. Add scheduled communications list to Communications page
-**`src/pages/Communications.jsx`**:
-- Show a small "Scheduled" section in each tab listing upcoming scheduled messages with cancel option
-
-### Files changed
-- `src/components/comms/AudienceFilter.jsx` — add Visitor
-- `src/components/comms/EmailAlertForm.jsx` — add schedule toggle + date/time picker
-- `src/components/sms/SMSDialog.jsx` — add schedule toggle + date/time picker
-- `src/pages/Communications.jsx` — show scheduled items list
-- 1 migration — `scheduled_communications` table + RLS
-- `supabase/functions/process-scheduled-communications/index.ts` — new cron processor
-- pg_cron job insert
+### Technical notes
+- Reuses existing `AudienceFilter` component and `useChurchUnits` hook
+- No database changes needed
+- The recipient count badge in `AudienceFilter` will show filtered count on Members page too
+- Date pickers use `pointer-events-auto` (already implemented)
 
