@@ -82,7 +82,7 @@ export default function FollowupTemplatesSection() {
 
   const deleteMutation = useMutation({
     mutationFn: async (id) => {
-      const { error } = await supabase.from("followup_message_templates").delete().eq("id", id);
+      const { error } = await supabase.from("followup_message_templates").delete().eq("id", id).eq("tenant_id", tenantId);
       if (error) throw error;
     },
     onSuccess: () => {
