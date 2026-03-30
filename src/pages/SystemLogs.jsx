@@ -403,7 +403,7 @@ function AuditLogsPanel() {
   const { data: profiles = [] } = useQuery({
     queryKey: ["all-profiles", tenantId],
     queryFn: async () => {
-      const { data, error } = await scopeQuery(supabase.from("profiles").select("user_id, full_name, email"));
+      const { data, error } = await supabase.from("profiles").select("user_id, full_name, email");
       if (error) throw error;
       return data;
     },
