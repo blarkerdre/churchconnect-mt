@@ -17,3 +17,9 @@ verify_jwt = false
 
 [functions.grade-exam]
 verify_jwt = false
+
+[functions.stripe-subscription-webhook]
+verify_jwt = false
+
+[functions.check-tenant-payments]
+verify_jwt = false

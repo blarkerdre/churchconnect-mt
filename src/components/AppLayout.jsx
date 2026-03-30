@@ -13,6 +13,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { useTenant } from "@/contexts/TenantContext";
 import NotificationBell from "@/components/notifications/NotificationBell";
 import MobileBottomNav from "@/components/navigation/MobileBottomNav";
+import PaymentRequiredScreen from "@/components/tenants/PaymentRequiredScreen";
+import PaymentWarningBanner from "@/components/tenants/PaymentWarningBanner";
 import { getEnvironmentLabel, getBackendHost, isBackendMismatch, isPreviewEnvironment } from "@/lib/environment";
 import { useAppSetting } from "@/hooks/useAppSetting";
 import { getIconComponent } from "@/lib/icon-map";
@@ -55,6 +57,7 @@ export default function Layout({ children }) {
   const { signOut, user, profile, isAdmin, isUnitLeader, isWSFLeader, roles, leaderUnits, isTenantOwner, isTenantAdmin } = useAuth();
   const { currentTenant, tenantId, tenantMemberships, switchTenant } = useTenant();
   const isSuperAdmin = roles.includes("super_admin");
+  const subscriptionStatus = currentTenant?.subscription_status;
   const { data: externalLinks } = useAppSetting("external_links", []);
   const { data: disabledFeatures } = useAppSetting("disabled_features", []);
   const isFollowupUnit = leaderUnits.includes("Follow-up") || leaderUnits.includes("Follow-Up");
@@ -130,6 +133,11 @@ export default function Layout({ children }) {
       setSwitchLoading(false);
     }
   };
+
+  // Payment gate: suspended tenants are blocked (super admins bypass)
+  if (subscriptionStatus === "suspended" && !isSuperAdmin) {
+    return <PaymentRequiredScreen />;
+  }
 
   return (
     <div className="min-h-screen bg-background flex">
@@ -312,6 +320,9 @@ export default function Layout({ children }) {
           </div>
         </header>
 
+        {subscriptionStatus === "past_due" && !isSuperAdmin && (
+          <PaymentWarningBanner />
+        )}
         <main className="flex-1 p-3 lg:p-8 pb-20 lg:pb-8">
           {children}
         </main>
