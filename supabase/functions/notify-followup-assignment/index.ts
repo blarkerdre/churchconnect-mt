@@ -91,11 +91,12 @@ Deno.serve(async (req) => {
       .eq("user_id", assigned_to)
       .single();
 
-    const { data: memberRecord } = await supabase
+    let memberQuery = supabase
       .from("members")
       .select("phone, email, first_name")
-      .eq("user_id", assigned_to)
-      .single();
+      .eq("user_id", assigned_to);
+    if (tenant_id) memberQuery = memberQuery.eq("tenant_id", tenant_id);
+    const { data: memberRecord } = await memberQuery.single();
 
     const recipientEmail = profile?.email || memberRecord?.email;
     const recipientPhone = memberRecord?.phone;
@@ -173,11 +174,12 @@ Deno.serve(async (req) => {
     }
 
     // Check if SMS notifications are enabled
-    const { data: smsSetting } = await supabase
+    let smsQuery = supabase
       .from("app_settings")
       .select("value")
-      .eq("key", "sms_notifications_enabled")
-      .maybeSingle();
+      .eq("key", "sms_notifications_enabled");
+    if (tenant_id) smsQuery = smsQuery.eq("tenant_id", tenant_id);
+    const { data: smsSetting } = await smsQuery.maybeSingle();
     
     const smsEnabled = smsSetting?.value === true || smsSetting === null;
 
