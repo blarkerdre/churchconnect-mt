@@ -2086,6 +2086,122 @@ export type Database = {
           },
         ]
       }
+      tenant_payments: {
+        Row: {
+          amount: number
+          created_at: string
+          currency: string
+          id: string
+          notes: string | null
+          payment_date: string
+          payment_method: string | null
+          recorded_by: string | null
+          reference: string | null
+          status: string
+          stripe_payment_intent_id: string | null
+          subscription_id: string | null
+          tenant_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          currency?: string
+          id?: string
+          notes?: string | null
+          payment_date?: string
+          payment_method?: string | null
+          recorded_by?: string | null
+          reference?: string | null
+          status?: string
+          stripe_payment_intent_id?: string | null
+          subscription_id?: string | null
+          tenant_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          currency?: string
+          id?: string
+          notes?: string | null
+          payment_date?: string
+          payment_method?: string | null
+          recorded_by?: string | null
+          reference?: string | null
+          status?: string
+          stripe_payment_intent_id?: string | null
+          subscription_id?: string | null
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_payments_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "tenant_subscriptions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenant_payments_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tenant_subscriptions: {
+        Row: {
+          amount: number
+          billing_cycle: string
+          created_at: string
+          currency: string
+          grace_period_days: number
+          id: string
+          is_active: boolean
+          next_due_date: string
+          stripe_customer_id: string | null
+          stripe_subscription_id: string | null
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          billing_cycle?: string
+          created_at?: string
+          currency?: string
+          grace_period_days?: number
+          id?: string
+          is_active?: boolean
+          next_due_date: string
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          billing_cycle?: string
+          created_at?: string
+          currency?: string
+          grace_period_days?: number
+          id?: string
+          is_active?: boolean
+          next_due_date?: string
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_subscriptions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tenants: {
         Row: {
           archived_at: string | null
@@ -2102,6 +2218,7 @@ export type Database = {
           setup_complete: boolean
           slug: string
           storage_limit_mb: number
+          subscription_status: string
           timezone: string
           updated_at: string
         }
@@ -2120,6 +2237,7 @@ export type Database = {
           setup_complete?: boolean
           slug: string
           storage_limit_mb?: number
+          subscription_status?: string
           timezone?: string
           updated_at?: string
         }
@@ -2138,6 +2256,7 @@ export type Database = {
           setup_complete?: boolean
           slug?: string
           storage_limit_mb?: number
+          subscription_status?: string
           timezone?: string
           updated_at?: string
         }
