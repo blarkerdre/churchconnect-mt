@@ -98,9 +98,22 @@ Deno.serve(async (req) => {
     if (tenant_id) memberQuery = memberQuery.eq("tenant_id", tenant_id);
     const { data: memberRecord } = await memberQuery.single();
 
-    const recipientEmail = profile?.email || memberRecord?.email;
+    let recipientEmail = profile?.email || memberRecord?.email;
     const recipientPhone = memberRecord?.phone;
-    const recipientName = profile?.full_name || memberRecord?.first_name || "Team Member";
+    let recipientName = profile?.full_name || memberRecord?.first_name || "Team Member";
+
+    // Fallback: if no email found, try auth.users
+    if (!recipientEmail) {
+      const { data: authUser } = await supabase.auth.admin.getUserById(assigned_to);
+      if (authUser?.user?.email) {
+        recipientEmail = authUser.user.email;
+        console.log("Used auth fallback email for assignee", assigned_to);
+      }
+    }
+
+    if (!recipientEmail && !recipientPhone) {
+      console.warn("No contact channel found for assignee", assigned_to);
+    }
 
     const subject = `New Follow-up Task Assigned: ${member_name}`;
     const bodyText = `Hi ${recipientName},\n\nYou have been assigned a new ${followup_type || "follow-up"} task for ${member_name}.\n\n${description || ""}\n\nPlease log in to the Church Management System to view and manage this task.\n\nGod bless,\n${churchName}`;
