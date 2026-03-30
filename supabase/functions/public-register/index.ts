@@ -133,39 +133,6 @@ async function createPastoralCareForPrayerRequest(
   }
 }
 
-async function notifyWSFLeader(supabase: any, wsfCentreId: string, firstName: string, lastName: string) {
-  try {
-    const { data: centre } = await supabase
-      .from("wsf_centres")
-      .select("leader_id, name")
-      .eq("id", wsfCentreId)
-      .maybeSingle();
-
-    if (!centre?.leader_id) return;
-
-    // Get the leader's user_id from members table
-    const { data: leaderMember } = await supabase
-      .from("members")
-      .select("user_id")
-      .eq("id", centre.leader_id)
-      .maybeSingle();
-
-    if (!leaderMember?.user_id) return;
-
-    await supabase.from("notifications").insert({
-      user_id: leaderMember.user_id,
-      title: "New Member Registration",
-      message: `${firstName} ${lastName} registered near your WSF centre: ${centre.name}`,
-      type: "general",
-      reference_type: "wsf_centre",
-      reference_id: wsfCentreId,
-    });
-
-    console.log("WSF leader notified for new registration near", centre.name);
-  } catch (err) {
-    console.error("Failed to notify WSF leader:", err);
-  }
-}
 
 async function ensureTenantAccess(supabase: any, userId: string | null | undefined, tenantId: string | null | undefined) {
   if (!userId || !tenantId) return;
