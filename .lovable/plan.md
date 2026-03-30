@@ -1,65 +1,57 @@
 
 
-## Notify Unit Leaders When a Member Joins Their Unit (In-App + Email + SMS)
+## Tighten Tenant Scoping on All Notification Triggers and Edge Functions
 
-### Current state
-- `church_unit` on `members` is a comma-separated text field (e.g. `"Choir, Ushering"`)
-- `unit_leader_assignments` maps `user_id` + `unit_name` to identify unit leaders
-- Currently, NO notification is sent to unit leaders when a member joins or leaves their unit
-- The WSF leader notification trigger (`trg_wsf_leader_centre_selection`) already exists as a pattern to follow
+### What's already correct
+- All three DB triggers pass `NEW.tenant_id` to edge functions and to notification inserts.
+- The unit leader trigger scopes `unit_leader_assignments` by tenant.
+- The pastoral care trigger scopes `unit_leader_assignments` by tenant.
 
-### Implementation
+### What needs fixing
 
-#### 1. Database trigger on `members.church_unit` changes
-Create `notify_unit_leaders_on_unit_change()` trigger function:
-- Fires `AFTER INSERT OR UPDATE OF church_unit`
-- Compares old vs new comma-separated unit list to find **newly added** units
-- For each new unit, looks up leaders from `unit_leader_assignments` matching that unit name and tenant
-- Inserts an **in-app notification** for each leader
-- Calls the existing `notify-wsf-leader` edge function (repurposed/extended) OR a new `notify-unit-leader` edge function for email + SMS
+#### 1. WSF Centre Selection Trigger — scope lookups by tenant
+The `wsf_centres` and `members` lookups in `notify_wsf_leader_on_centre_selection()` don't filter by `NEW.tenant_id`. While `wsf_centre_id` is a UUID (practically unique), for strict multi-tenant isolation:
 
-#### 2. New edge function: `notify-unit-leader/index.ts`
-Accepts: `leader_user_id`, `member_name`, `unit_name`, `tenant_id`
-- Looks up leader's email and phone
-- Sends email: "New Member Joined Your Unit: {unit_name}"
-- Sends SMS: "{member_name} has joined your unit: {unit_name}"
-- Respects tenant SMS toggle
-- Logs to `email_send_log` and `sms_log`
-
-Same structure as `notify-wsf-leader` with adjusted copy.
-
-#### 3. Trigger SQL shape
 ```sql
-CREATE OR REPLACE FUNCTION public.notify_unit_leaders_on_unit_change()
-RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path = public
-AS $$
-DECLARE
-  _old_units text[];
-  _new_units text[];
-  _added_unit text;
-  _leader record;
-  _member_name text;
-  _supabase_url text;
-  _service_key text;
-BEGIN
-  -- Parse comma-separated units into arrays
-  _old_units := string_to_array(COALESCE(NULLIF(TRIM(OLD.church_unit), ''), ''), ',');
-  _new_units := string_to_array(COALESCE(NULLIF(TRIM(NEW.church_unit), ''), ''), ',');
-  -- Trim whitespace from each element
-  -- Find newly added units and notify leaders for each
+-- Line 20: add tenant filter
+SELECT leader_id, name INTO _centre FROM wsf_centres
+WHERE id = NEW.wsf_centre_id AND tenant_id = NEW.tenant_id;
 
-  FOR each newly added unit:
-    - Query unit_leader_assignments for matching unit_name + tenant
-    - Insert in-app notification for each leader
-    - Call notify-unit-leader edge function for email+SMS
-END;
-$$;
+-- Line 23: add tenant filter
+SELECT user_id INTO _leader_user_id FROM members
+WHERE id = _centre.leader_id AND tenant_id = NEW.tenant_id;
 ```
 
+#### 2. Edge functions — always require tenant_id scoping (not conditional)
+In `notify-wsf-leader`, `notify-unit-leader`, and `notify-pastoral-assignment`, member and settings queries use `if (tenant_id) query = query.eq(...)` which means if `tenant_id` is somehow null, queries are unscoped. Change to always scope:
+
+**notify-wsf-leader/index.ts:**
+- Line 71: Change `if (tenant_id) leaderQuery = leaderQuery.eq(...)` to always apply `.eq("tenant_id", tenant_id)`
+- Line 159: Same for SMS settings query
+
+**notify-unit-leader/index.ts:**
+- Same pattern — always scope member + SMS settings queries by `tenant_id`
+
+**notify-pastoral-assignment/index.ts:**
+- Same pattern for member lookups and SMS settings queries
+
+#### 3. Email/SMS log inserts — always include tenant_id
+Currently uses `...(tenant_id ? { tenant_id } : {})` spread pattern. Change to always include `tenant_id` (the column is nullable, so null is fine).
+
+### Migration
+One new migration to recreate the WSF trigger function with tenant-scoped lookups.
+
+### Edge function edits
+- `supabase/functions/notify-wsf-leader/index.ts` — unconditional tenant scoping
+- `supabase/functions/notify-unit-leader/index.ts` — unconditional tenant scoping
+- `supabase/functions/notify-pastoral-assignment/index.ts` — unconditional tenant scoping
+
 ### Files changed
-1. **New migration** — trigger function + trigger on `members` for `church_unit` changes
-2. **New edge function** — `supabase/functions/notify-unit-leader/index.ts`
+1. **New migration** — recreate `notify_wsf_leader_on_centre_selection()` with tenant-scoped lookups
+2. **Edit** `notify-wsf-leader/index.ts` — always scope by tenant_id
+3. **Edit** `notify-unit-leader/index.ts` — always scope by tenant_id
+4. **Edit** `notify-pastoral-assignment/index.ts` — always scope by tenant_id
 
 ### Expected result
-Whenever a member joins a unit (from any path — admin edit, profile, onboarding), all leaders of that unit receive in-app + email + SMS notifications.
+All notification triggers and edge functions enforce strict tenant isolation — no cross-tenant data leakage even if `tenant_id` is somehow null or mismatched.
 
