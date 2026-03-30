@@ -42,7 +42,7 @@ Deno.serve(async (req) => {
     // Fetch tenant branding
     let churchName = "Church";
     let churchShortName = "Church";
-    if (tenant_id) {
+    {
       const { data: tenantRow } = await supabase
         .from("tenants").select("name, settings").eq("id", tenant_id).single();
       if (tenantRow) {
@@ -91,7 +91,7 @@ Deno.serve(async (req) => {
         .eq("user_id", userId).eq("tenant_id", tenant_id).maybeSingle();
       const { data: profile } = await supabase
         .from("profiles").select("full_name, email")
-        .eq("user_id", userId).single();
+        .eq("user_id", userId).eq("tenant_id", tenant_id).maybeSingle();
 
       const recipientEmail = profile?.email || memberRow?.email;
       const recipientPhone = memberRow?.phone;
