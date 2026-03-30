@@ -1,39 +1,54 @@
 
 
-## Fix: Tenant Delete Not Actually Deleting (Root Cause Found)
+## Fix: Follow-up SMS notification not sending — missing `tenant_id`
 
 ### Root Cause
-The `archive-tenant` edge function creates a single Supabase client with the service_role key (line 34). Then in the delete path, it calls `signInWithPassword()` (line 90) to verify the user's password. This **corrupts the client's auth state** — after sign-in, the client's `Authorization` header switches from the service_role key to the user's JWT. All subsequent `.delete()` calls then run as the `authenticated` Postgres role instead of `service_role`, meaning RLS policies apply. Since the user doesn't have DELETE permission on most tables, the deletes silently return 0 affected rows (not errors), and the tenant row survives.
+The `auto_create_followup` database trigger calls `notify-followup-assignment` via `http_post` but does **not include `tenant_id`** in the JSON body. The edge function receives `tenant_id = undefined`, so:
 
-This is why the function returns `{"success":true,"action":"deleted"}` but the tenant is still in the database.
+1. Tenant settings (custom Twilio numbers, sender name) are never loaded
+2. The `app_settings` SMS-enabled check is not tenant-scoped (minor, but contributes to incorrect behavior)
+3. The `sms_log` entry has no `tenant_id`, so it won't appear in tenant-scoped System Logs
+
+Additionally, the member record lookup (`eq("user_id", assigned_to)`) may return a member from the wrong tenant if the user exists in multiple tenants. It should also be scoped by `tenant_id`.
 
 ### Fix
-In `supabase/functions/archive-tenant/index.ts`:
 
-1. **Use a separate client for password verification** — create a second Supabase client (with the anon key) solely for the `signInWithPassword` call, so the service-role client's auth state is never contaminated.
+**1. Database migration** — Update `auto_create_followup` to include `tenant_id` in the `http_post` body:
 
-2. **Keep the service-role client untouched** for all table deletions, ensuring RLS is bypassed.
+```sql
+body := jsonb_build_object(
+  'assigned_to', _assigned_user,
+  'member_name', NEW.first_name || ' ' || NEW.last_name,
+  'description', _desc,
+  'followup_id', _followup_id::text,
+  'followup_type', _type,
+  'tenant_id', NEW.tenant_id    -- ADD THIS
+)::text,
+```
 
-```text
-// Pseudocode of the fix:
-const supabase = createClient(url, serviceKey);         // service-role, for deletes
-const anonClient = createClient(url, anonKey);          // anon, for password check only
+**2. Edge function** — In `notify-followup-assignment/index.ts`, scope the member record lookup by `tenant_id` when available:
 
-// Verify password with the anon client
-const { error: authError } = await anonClient.auth.signInWithPassword({ email, password });
+```ts
+// Current (may match wrong tenant):
+.eq("user_id", assigned_to).single();
 
-// All deletes continue using the service-role client (unchanged)
-for (const table of DELETE_TABLES) {
-  await supabase.from(table).delete().eq("tenant_id", tenant_id);
-}
-await supabase.from("tenants").delete().eq("id", tenant_id);
+// Fixed:
+let memberQuery = supabase.from("members").select("phone, email, first_name").eq("user_id", assigned_to);
+if (tenant_id) memberQuery = memberQuery.eq("tenant_id", tenant_id);
+const { data: memberRecord } = await memberQuery.single();
+```
+
+Also scope the SMS-enabled check:
+```ts
+let smsQuery = supabase.from("app_settings").select("value").eq("key", "sms_notifications_enabled");
+if (tenant_id) smsQuery = smsQuery.eq("tenant_id", tenant_id);
+const { data: smsSetting } = await smsQuery.maybeSingle();
 ```
 
 ### Files changed
-- **`supabase/functions/archive-tenant/index.ts`** — create a separate anon client for password verification; keep service-role client for all data operations
-
-### No database changes needed
+1. **New database migration** — recreate `auto_create_followup` with `tenant_id` in the HTTP body
+2. **`supabase/functions/notify-followup-assignment/index.ts`** — scope member + SMS setting queries by `tenant_id`
 
 ### Expected result
-After this fix, the delete path will actually delete all tenant data and the tenant row itself, because the service-role client (which bypasses RLS) will be used for all delete operations.
+When a First Timer or New Convert triggers a follow-up, the assigned member receives an SMS (if enabled and their phone is valid), and the log entry is correctly tagged with the tenant.
 
