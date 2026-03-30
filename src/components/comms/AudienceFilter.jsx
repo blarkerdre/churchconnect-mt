@@ -21,16 +21,22 @@ const STATUS_OPTIONS = [
   { value: "Visitor", label: "Visitor" },
 ];
 
+const ACCOUNT_OPTIONS = [
+  { value: "all", label: "All Accounts" },
+  { value: "linked", label: "Linked" },
+  { value: "unlinked", label: "Unlinked" },
+];
+
 export default function AudienceFilter({ filters, onChange, className }) {
-  const { status = "all", unit = "all", dateFrom = null, dateTo = null } = filters || {};
+  const { status = "all", unit = "all", dateFrom = null, dateTo = null, account = "all" } = filters || {};
   const { data: churchUnits = [] } = useChurchUnits();
   const { tenantId, scopeQuery } = useTenantQuery();
 
-  const update = (patch) => onChange({ status, unit, dateFrom, dateTo, ...patch });
+  const update = (patch) => onChange({ status, unit, dateFrom, dateTo, account, ...patch });
 
-  const hasFilters = status !== "all" || unit !== "all" || dateFrom || dateTo;
+  const hasFilters = status !== "all" || unit !== "all" || dateFrom || dateTo || account !== "all";
 
-  const clearAll = () => onChange({ status: "all", unit: "all", dateFrom: null, dateTo: null });
+  const clearAll = () => onChange({ status: "all", unit: "all", dateFrom: null, dateTo: null, account: "all" });
 
   // Live recipient count
   const { data: recipientCount = null, isFetching } = useQuery({
