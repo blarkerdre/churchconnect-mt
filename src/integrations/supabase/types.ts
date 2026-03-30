@@ -1284,7 +1284,7 @@ export type Database = {
         Row: {
           channel: string
           created_at: string
-          delay_days: number
+          delay_hours: number
           followup_type: string
           id: string
           is_active: boolean
@@ -1297,7 +1297,7 @@ export type Database = {
         Insert: {
           channel?: string
           created_at?: string
-          delay_days?: number
+          delay_hours?: number
           followup_type: string
           id?: string
           is_active?: boolean
@@ -1310,7 +1310,7 @@ export type Database = {
         Update: {
           channel?: string
           created_at?: string
-          delay_days?: number
+          delay_hours?: number
           followup_type?: string
           id?: string
           is_active?: boolean

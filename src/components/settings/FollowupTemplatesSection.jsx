@@ -21,11 +21,11 @@ const CHANNELS = [
 ];
 
 const DEFAULT_TEMPLATES = [
-  { followup_type: "First Timer", channel: "sms", subject: null, message_template: "Hi {name}, thank you for visiting {church}! We'd love to see you again this Sunday.", delay_days: 1, sort_order: 0 },
-  { followup_type: "First Timer", channel: "email", subject: "Welcome to {church}!", message_template: "Hi {name},\n\nThank you for visiting {church}! We are so glad you joined us. We'd love to see you again this Sunday.\n\nWarm regards,\nThe {church} Team", delay_days: 1, sort_order: 1 },
-  { followup_type: "New Convert", channel: "sms", subject: null, message_template: "Hi {name}, congratulations on your new journey of faith at {church}! We'd love to help you get connected. Have you considered joining our Believers Foundation Class?", delay_days: 1, sort_order: 0 },
-  { followup_type: "New Convert", channel: "email", subject: "Welcome to the family - {church}", message_template: "Hi {name},\n\nCongratulations on your decision! We are thrilled to welcome you to the {church} family.\n\nWe'd love to help you grow in your faith. Please consider enrolling in our Believers Foundation Class.\n\nGod bless,\nThe {church} Team", delay_days: 1, sort_order: 1 },
-  { followup_type: "Visitor", channel: "sms", subject: null, message_template: "Hi {name}, thank you for worshipping with us at {church}! We hope you felt at home. We'd love to see you again.", delay_days: 1, sort_order: 0 },
+  { followup_type: "First Timer", channel: "sms", subject: null, message_template: "Hi {name}, thank you for visiting {church}! We'd love to see you again this Sunday.", delay_hours: 24, sort_order: 0 },
+  { followup_type: "First Timer", channel: "email", subject: "Welcome to {church}!", message_template: "Hi {name},\n\nThank you for visiting {church}! We are so glad you joined us. We'd love to see you again this Sunday.\n\nWarm regards,\nThe {church} Team", delay_hours: 24, sort_order: 1 },
+  { followup_type: "New Convert", channel: "sms", subject: null, message_template: "Hi {name}, congratulations on your new journey of faith at {church}! We'd love to help you get connected. Have you considered joining our Believers Foundation Class?", delay_hours: 24, sort_order: 0 },
+  { followup_type: "New Convert", channel: "email", subject: "Welcome to the family - {church}", message_template: "Hi {name},\n\nCongratulations on your decision! We are thrilled to welcome you to the {church} family.\n\nWe'd love to help you grow in your faith. Please consider enrolling in our Believers Foundation Class.\n\nGod bless,\nThe {church} Team", delay_hours: 24, sort_order: 1 },
+  { followup_type: "Visitor", channel: "sms", subject: null, message_template: "Hi {name}, thank you for worshipping with us at {church}! We hope you felt at home. We'd love to see you again.", delay_hours: 24, sort_order: 0 },
 ];
 
 export default function FollowupTemplatesSection() {
@@ -102,7 +102,7 @@ export default function FollowupTemplatesSection() {
   });
 
   const openNew = () => {
-    setEditItem({ followup_type: "First Timer", channel: "sms", subject: "", message_template: "", delay_days: 1, sort_order: 0 });
+    setEditItem({ followup_type: "First Timer", channel: "sms", subject: "", message_template: "", delay_hours: 24, sort_order: 0 });
     setEditDialog(true);
   };
 
@@ -149,7 +149,7 @@ export default function FollowupTemplatesSection() {
                       <div className="flex items-center gap-1.5 flex-wrap">
                         {t.channel === "email" ? <Mail className="h-3.5 w-3.5 text-muted-foreground" /> : <MessageSquare className="h-3.5 w-3.5 text-muted-foreground" />}
                         <Badge variant="secondary" className="text-[10px]">{t.channel.toUpperCase()}</Badge>
-                        <Badge variant="outline" className="text-[10px]"><Clock className="h-2.5 w-2.5 mr-0.5" /> Day {t.delay_days}</Badge>
+                        <Badge variant="outline" className="text-[10px]"><Clock className="h-2.5 w-2.5 mr-0.5" /> {t.delay_hours}h</Badge>
                         {!t.is_active && <Badge variant="destructive" className="text-[10px]">Disabled</Badge>}
                       </div>
                       {t.subject && <p className="text-xs font-medium text-foreground">Subject: {t.subject}</p>}
@@ -210,9 +210,9 @@ export default function FollowupTemplatesSection() {
                 </div>
               </div>
               <div className="space-y-1.5">
-                <Label className="text-sm">Delay (days after registration)</Label>
-                <Input type="number" min={0} max={365} value={editItem.delay_days}
-                  onChange={e => setEditItem(p => ({ ...p, delay_days: parseInt(e.target.value) || 0 }))}
+                <Label className="text-sm">Delay (hours after registration)</Label>
+                <Input type="number" min={0} max={8760} value={editItem.delay_hours}
+                  onChange={e => setEditItem(p => ({ ...p, delay_hours: parseInt(e.target.value) || 0 }))}
                   className="h-9 text-sm" />
               </div>
               {editItem.channel === "email" && (
