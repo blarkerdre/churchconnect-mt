@@ -87,7 +87,11 @@ Deno.serve(async (req) => {
         });
       }
 
-      const { error: authError } = await supabase.auth.signInWithPassword({
+      // Use a separate anon client for password verification so the
+      // service-role client's auth state is never contaminated.
+      const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+      const anonClient = createClient(supabaseUrl, anonKey);
+      const { error: authError } = await anonClient.auth.signInWithPassword({
         email: caller.email!,
         password,
       });
