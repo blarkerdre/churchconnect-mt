@@ -2,8 +2,28 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
+
+// FK-safe deletion order: children first, parents last
+const DELETE_TABLES = [
+  "tenant_invitations", "notifications", "messages", "audit_log",
+  "exam_answers", "exam_attempts", "exam_questions", "exam_session_courses",
+  "exam_sessions", "exam_subjects", "exam_titles", "course_registrations",
+  "training_completions", "training_reports",
+  "attendance_records", "attendance_sessions",
+  "wsf_attendance", "wsf_attendance_reports",
+  "event_registrations", "events",
+  "followups", "first_timers", "pastoral_care", "member_status_history",
+  "documents", "sms_log", "email_send_log", "suppressed_emails",
+  "church_attendance_reports", "transportation",
+  "pickup_locations", "certificate_templates", "books_of_the_month",
+  "announcements", "app_settings",
+  "unit_leader_assignments", "user_roles",
+  "members", "church_units", "wsf_centres", "wsf_zones",
+  "purged_data_archives", "tenant_memberships", "profiles",
+];
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
@@ -22,7 +42,6 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Only super_admins can archive/delete tenants
     const { data: isSuperAdmin } = await supabase.rpc("has_role", { _user_id: caller.id, _role: "super_admin" });
     if (!isSuperAdmin) {
       return new Response(JSON.stringify({ error: "Super admin access required" }), {
@@ -62,14 +81,12 @@ Deno.serve(async (req) => {
     }
 
     if (action === "delete") {
-      // Require password re-authentication for permanent delete
       if (!password) {
         return new Response(JSON.stringify({ error: "Password required for permanent deletion" }), {
           status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
 
-      // Verify password by signing in
       const { error: authError } = await supabase.auth.signInWithPassword({
         email: caller.email!,
         password,
@@ -80,32 +97,28 @@ Deno.serve(async (req) => {
         });
       }
 
-      // Delete all tenant data in order (respecting FK constraints)
-      const tables = [
-        "tenant_invitations", "notifications", "messages", "audit_log",
-        "exam_answers", "exam_attempts", "exam_questions", "exam_session_courses",
-        "exam_sessions", "exam_subjects", "exam_titles", "course_registrations",
-        "attendance_records", "attendance_sessions", "event_registrations", "events",
-        "followups", "first_timers", "pastoral_care", "member_status_history",
-        "documents", "sms_log", "email_send_log", "church_attendance_reports",
-        "pickup_locations", "certificate_templates", "books_of_the_month",
-        "announcements", "app_settings", "members", "church_units",
-        "wsf_centres", "wsf_zones", "tenant_memberships", "profiles",
-      ];
-
-      for (const table of tables) {
-        await supabase.from(table).delete().eq("tenant_id", tenant_id);
+      // Delete all tenant data in FK-safe order
+      for (const table of DELETE_TABLES) {
+        const { error } = await supabase.from(table).delete().eq("tenant_id", tenant_id);
+        if (error) {
+          console.error(`archive-tenant: failed to delete from ${table}:`, error.message);
+          // Continue — some tables may not have tenant_id or may be empty
+        }
       }
 
       // Finally delete the tenant itself
       const { error } = await supabase.from("tenants").delete().eq("id", tenant_id);
-      if (error) throw error;
+      if (error) {
+        console.error("archive-tenant: failed to delete tenant row:", error.message);
+        throw error;
+      }
 
       return new Response(JSON.stringify({ success: true, action: "deleted" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
   } catch (err) {
+    console.error("archive-tenant error:", err);
     return new Response(JSON.stringify({ error: err.message }), {
       status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
