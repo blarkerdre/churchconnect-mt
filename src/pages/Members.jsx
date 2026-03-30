@@ -146,20 +146,7 @@ export default function Members() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input placeholder="Search members..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-10" />
           </div>
-          {(isAdmin || viewOnly) && (
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-full sm:w-40">
-                <SelectValue placeholder="All Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="Active">Active Member</SelectItem>
-                
-                <SelectItem value="New Convert">New Convert</SelectItem>
-                <SelectItem value="First Timer">First Timer</SelectItem>
-              </SelectContent>
-            </Select>
-          )}
+          
         </div>
         <div className="grid grid-cols-4 sm:flex sm:flex-wrap items-center gap-2">
           {(isAdmin || isUnitLeader) && (
