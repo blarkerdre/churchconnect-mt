@@ -1,82 +1,57 @@
 
 
-## Transportation: Leader Notifications, Task Assignment & Tracking
+## In-App Notifications for Events, Announcements, Meetings & Attendance
 
 ### Current state
-- `transportation` table has `assigned_driver` (text) and `driver_phone` (text) — free-text fields, not linked to actual unit members
-- No notifications are sent when a booking is created
-- No ability to reassign a booking to a specific unit member
-- Manage dialog only has status, driver name, and driver phone fields
+- **Announcements** (`trg_new_announcement`): notifies ALL tenant users when published — not scoped by `target_audience`
+- **Events** (`trg_new_event`): notifies ALL tenant users on insert — not scoped by `audience`
+- **Meetings** (attendance sessions): NO notification trigger exists
+- **Attendance**: NO notification when a meeting is closed or report saved
 
 ### What needs to change
 
-#### 1. Database migration — add `assigned_to` column + trigger
+#### 1. Scope announcement notifications by `target_audience`
+Update `notify_new_announcement()` to check `NEW.target_audience`:
+- `"All Members"` → notify all tenant users (current behavior)
+- Specific unit/centre name → notify only members whose `church_unit` contains that value, or whose `wsf_centre_id` matches a centre with that name
+- `"Leaders Only"` → notify only users with `unit_leader` or `wsf_leader` roles in the tenant
 
-Add `assigned_to UUID` column to `transportation` table (references a user_id for assignment tracking).
+#### 2. Scope event notifications by `audience`
+Update `notify_new_event()` to check `NEW.audience`:
+- `"All Members"` → notify all tenant users
+- Specific unit name → notify members in that unit
+- `"WSF"` → notify all members with a `wsf_centre_id`
+- `"WSF Leaders"` → notify WSF leaders only
+- `"Leaders Only"` → notify unit + WSF leaders
+- Specific centre name → notify members in that centre
 
-Create two triggers:
-- **`trg_transport_new_booking`** — `AFTER INSERT` on `transportation`: notifies all Transportation unit leaders (via in-app notification + edge function for email/SMS)
-- **`trg_transport_assignment`** — `AFTER UPDATE OF assigned_to` on `transportation`: when `assigned_to` changes, notifies the assigned unit member (in-app + edge function for email/SMS)
+#### 3. New trigger: notify unit members on new meeting
+Create `notify_new_meeting()` trigger on `attendance_sessions` `AFTER INSERT`:
+- If `session_type = 'Unit Meeting'` and `unit` is set → notify members whose `church_unit` contains that unit name + unit leaders for that unit
+- If `session_type` is a general meeting (Sunday Service, etc.) → notify all tenant users
 
-Both triggers look up leaders/members from `unit_leader_assignments` and `members` scoped by `tenant_id`.
+#### 4. New trigger: notify on meeting closed
+Create `notify_meeting_closed()` trigger on `attendance_sessions` `AFTER UPDATE OF status`:
+- When status changes to `'Closed'` → notify unit leaders (for unit meetings) or admins (for general meetings) that the meeting has been closed with attendance count
 
-#### 2. New edge function: `notify-transport-booking/index.ts`
+### Migration SQL
+One new migration that:
+1. Replaces `notify_new_announcement()` with audience-scoped logic
+2. Replaces `notify_new_event()` with audience-scoped logic
+3. Creates `notify_new_meeting()` + trigger on `attendance_sessions` INSERT
+4. Creates `notify_meeting_closed()` + trigger on `attendance_sessions` UPDATE
 
-Accepts: `booking_id`, `member_name`, `pickup`, `destination`, `request_date`, `tenant_id`, plus either `leader_user_ids` (array) for new booking notifications or `assigned_user_id` for assignment notifications, and a `notification_type` flag.
+All functions use `SECURITY DEFINER` with `search_path = public` and scope all lookups by `NEW.tenant_id`.
 
-- Looks up contact info from `members`/`profiles`
-- Sends email + SMS to the relevant recipients
-- Respects tenant SMS toggle
-- Logs to `email_send_log` and `sms_log`
-
-#### 3. Frontend changes — `Transportation.jsx`
-
-**Manage dialog enhancements:**
-- Add "Assign To" dropdown populated from Transportation unit members (query `unit_leader_assignments` where `unit_name = 'Transportation'` + members in the Transportation unit via `church_unit ILIKE '%Transportation%'`)
-- When saving, set `assigned_to` on the booking (triggers the assignment notification)
-- Show assigned member name on booking cards
-
-**Reporting tab/section:**
-- The existing date filters, search, CSV export, and print already cover reporting needs
-- Add an "Assigned To" filter dropdown alongside the existing status filter
-- Summary stats: add an "Assigned" count card
-
-#### 4. Migration SQL shape
-
-```sql
-ALTER TABLE public.transportation ADD COLUMN IF NOT EXISTS assigned_to UUID;
-
--- Trigger: notify leaders on new booking
-CREATE OR REPLACE FUNCTION public.notify_transport_leaders_on_new_booking()
-RETURNS trigger ...
--- Looks up Transportation unit leaders from unit_leader_assignments
--- Inserts in-app notification for each leader
--- Calls notify-transport-booking edge function
-
-CREATE TRIGGER trg_transport_new_booking
-AFTER INSERT ON public.transportation
-FOR EACH ROW EXECUTE FUNCTION notify_transport_leaders_on_new_booking();
-
--- Trigger: notify assigned member
-CREATE OR REPLACE FUNCTION public.notify_transport_assignment()
-RETURNS trigger ...
--- Fires when assigned_to changes
--- Inserts in-app notification for the assigned member
--- Calls notify-transport-booking edge function
-
-CREATE TRIGGER trg_transport_assignment
-AFTER UPDATE OF assigned_to ON public.transportation
-FOR EACH ROW EXECUTE FUNCTION notify_transport_assignment();
-```
+### Technical approach
+Instead of `notify_all_users()`, the scoped functions will directly insert into `notifications` by joining against:
+- `members` (for unit/centre matching) → get `user_id`
+- `unit_leader_assignments` (for leader-only targeting)
+- `wsf_centres` (for centre name matching)
+- `tenant_memberships` (for "all members" fallback)
 
 ### Files changed
-1. **New migration** — `assigned_to` column + two trigger functions + two triggers
-2. **New edge function** — `supabase/functions/notify-transport-booking/index.ts`
-3. **Edit** — `src/pages/Transportation.jsx` — assign-to dropdown in manage dialog, assigned member display on cards, assigned-to filter
+1. **New migration** — recreate announcement + event trigger functions with audience scoping; add two new meeting/attendance trigger functions + triggers
 
-### Expected result
-- When a member books transport, all Transportation unit leaders get in-app + email + SMS notification
-- Leader can reassign the booking to a unit member via the Manage dialog
-- Assigned member gets in-app + email + SMS notification
-- Leader can track, filter by assignee and date, and export reports
+No frontend or edge function changes needed — notifications already display via the existing `NotificationBell` component with realtime subscription.
 
