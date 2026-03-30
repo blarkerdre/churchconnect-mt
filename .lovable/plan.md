@@ -1,45 +1,82 @@
 
+## Fix tenant delete so the UI reflects the real backend state
 
-## Fix: Archive Tab Still Shows 1 After Delete
+### What I confirmed
+- The backend delete is succeeding: the latest `archive-tenant` request returned `200` with `{"success":true,"action":"deleted"}`.
+- So the remaining problem is now **frontend state**, not the delete function itself.
 
-### Root Cause
-The `tenants` list in `TenantAdmin.jsx` merges data from three sources (lines 108-122):
-1. `queryTenants` — direct DB query (invalidated correctly after delete)
-2. `tenantMemberships` — from TenantContext (NOT invalidated after delete)
-3. `currentTenant` — from TenantContext (NOT invalidated after delete)
+### Root cause
+`TenantAdmin.jsx` still falls back to `tenantMemberships/currentTenant` when `queryTenants` is empty.
 
-After a permanent delete, the DB query returns the correct list, but the deleted tenant still appears via `tenantMemberships` or `currentTenant` cached in TenantContext. The merged list re-adds the deleted tenant, so the Archive tab count stays at 1.
+That works as a rescue path when the tenants query has not loaded yet, but it breaks after deleting the **last matching tenant**:
+- delete succeeds in the backend
+- `["tenants-admin"]` refetches and correctly returns `[]`
+- the fallback runs because `queryTenants.length === 0`
+- stale tenant context data gets re-added
+- Archive tab still shows `1`
 
-### Fix
-In `src/pages/TenantAdmin.jsx`, update the `archiveMutation.onSuccess` handler to also invalidate the tenant memberships query and force a TenantContext refresh:
+Also, invalidating `["tenant-memberships"]` does not currently refresh `TenantContext`, because that state is not powered by React Query.
 
-1. Add `queryClient.invalidateQueries({ queryKey: ["tenant-analytics"] })` to clear analytics cache
-2. For the **delete** action specifically, also invalidate memberships so the merge logic doesn't re-add the deleted tenant:
-   - `queryClient.invalidateQueries({ queryKey: ["tenant-memberships"] })` (if used)
-   - Or filter out the deleted tenant from the merge in `useMemo` by checking if it still exists in `queryTenants`
+### Implementation plan
 
-The cleanest fix: change the merge logic to only add from `tenantMemberships`/`currentTenant` if the tenant ID exists in `queryTenants`, OR if `queryTenants` is empty (the fallback case). This way, once the DB query confirms the tenant is gone, it won't be re-added.
+1. **Make `TenantAdmin` trust an empty tenants query once it has finished loading**
+   - In `src/pages/TenantAdmin.jsx`, change the `tenants` `useMemo` logic:
+     - if the tenants query has loaded successfully, use `queryTenants` as the source of truth even when it is empty
+     - only use fallback tenants while the query is still loading, or possibly when the query errors
+   - This prevents deleted tenants from being resurrected in the UI.
 
-### Files changed
-- **`src/pages/TenantAdmin.jsx`** — update the `useMemo` merge logic to not re-add tenants that are absent from the DB query result (when the query has returned data), and add `tenant-analytics` to the invalidation list in `onSuccess`
+2. **Tighten post-delete refresh behavior**
+   - Keep invalidating:
+     - `["tenants-admin"]`
+     - `["tenant-stats"]`
+     - `["tenant-analytics"]`
+   - Remove reliance on `["tenant-memberships"]` unless a real query is added for it, because right now it does not refresh the context-backed memberships.
 
-### Technical detail
+3. **Add an explicit tenant-context refresh path**
+   - In `src/contexts/TenantContext.jsx`, add a small `refreshTenantContext()` helper that re-fetches memberships and re-selects the current tenant.
+   - Expose it from `useTenant()`.
+   - Call it after successful delete/archive/restore in `TenantAdmin.jsx`.
+   - If the deleted tenant was the currently selected tenant, clear it or switch to the next valid tenant.
+
+4. **Guard against stale current tenant after deletion**
+   - In `TenantContext.jsx`, when memberships are refreshed, ensure `currentTenant` is reset if its tenant no longer exists in the refreshed memberships.
+   - This avoids stale tenant state leaking into other parts of the app after lifecycle actions.
+
+### Files to update
+- `src/pages/TenantAdmin.jsx`
+  - trust loaded `queryTenants` even when empty
+  - call tenant-context refresh after lifecycle mutations
+  - keep only meaningful query invalidations
+- `src/contexts/TenantContext.jsx`
+  - add `refreshTenantContext()`
+  - clear/reselect `currentTenant` when a tenant disappears
+
+### Expected result
+After permanent delete:
+- the backend deletes the tenant
+- the tenants query refetches
+- an empty result stays empty
+- stale fallback data is not re-added
+- Archive tab count drops correctly
+- tenant context no longer points at a deleted tenant
+
+### Technical note
+Use logic like this in `TenantAdmin.jsx`:
+
 ```js
-// Current (broken): always merges from all 3 sources
-// Fixed: only merge fallback sources when queryTenants is empty
 const tenants = useMemo(() => {
+  if (!isLoading && !tenantsError) return queryTenants;
+
   const map = new Map();
-  queryTenants.forEach(t => map.set(t.id, t));
-  // Only use fallback sources when direct query returned empty
-  if (queryTenants.length === 0) {
-    tenantMemberships?.forEach(m => {
-      if (m.tenants && !map.has(m.tenants.id)) map.set(m.tenants.id, m.tenants);
-    });
-    if (currentTenant && !map.has(currentTenant.id)) map.set(currentTenant.id, currentTenant);
-  }
-  return Array.from(map.values());
-}, [queryTenants, tenantMemberships, currentTenant]);
+  tenantMemberships?.forEach(m => {
+    if (m.tenants) map.set(m.tenants.id, m.tenants);
+  });
+  if (currentTenant) map.set(currentTenant.id, currentTenant);
+
+  return [...map.values()];
+}, [isLoading, tenantsError, queryTenants, tenantMemberships, currentTenant]);
 ```
 
-No database changes needed.
+That is the key fix: fallback only while the main query is unresolved, not after it has successfully returned zero rows.
 
+No database changes are needed.
