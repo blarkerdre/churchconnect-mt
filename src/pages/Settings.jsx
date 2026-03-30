@@ -833,6 +833,10 @@ export default function Settings() {
           <FaviconOgImageSection />
         </TabsContent>
 
+        <TabsContent value="billing">
+          <BillingSection />
+        </TabsContent>
+
         <TabsContent value="notifications">
           <NotificationPreferencesSection />
         </TabsContent>
