@@ -59,8 +59,14 @@ Deno.serve(async (req) => {
         .maybeSingle();
 
       if (existingMembership) {
-        return new Response(JSON.stringify({ error: "User is already a member of this tenant" }), {
-          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        // Idempotent: if already a member, update role if different and return success
+        if (existingMembership.role !== role) {
+          await supabase.from("tenant_memberships")
+            .update({ role })
+            .eq("id", existingMembership.id);
+        }
+        return new Response(JSON.stringify({ success: true, already_member: true, membership: existingMembership }), {
+          status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
 
