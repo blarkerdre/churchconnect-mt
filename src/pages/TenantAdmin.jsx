@@ -876,10 +876,11 @@ export default function TenantAdmin() {
             <DialogDescription>Modify tenant settings, branding, plan, and features</DialogDescription>
           </DialogHeader>
           <Tabs defaultValue="general" className="w-full">
-            <TabsList className="w-full grid grid-cols-4">
+            <TabsList className="w-full grid grid-cols-5">
               <TabsTrigger value="general">General</TabsTrigger>
               <TabsTrigger value="branding">Branding</TabsTrigger>
               <TabsTrigger value="plan">Plan</TabsTrigger>
+              <TabsTrigger value="billing">Billing</TabsTrigger>
               <TabsTrigger value="features">Features</TabsTrigger>
             </TabsList>
 
