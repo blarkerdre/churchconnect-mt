@@ -57,6 +57,7 @@ export default function Layout({ children }) {
   const { signOut, user, profile, isAdmin, isUnitLeader, isWSFLeader, roles, leaderUnits, isTenantOwner, isTenantAdmin } = useAuth();
   const { currentTenant, tenantId, tenantMemberships, switchTenant } = useTenant();
   const isSuperAdmin = roles.includes("super_admin");
+  const subscriptionStatus = currentTenant?.subscription_status;
   const { data: externalLinks } = useAppSetting("external_links", []);
   const { data: disabledFeatures } = useAppSetting("disabled_features", []);
   const isFollowupUnit = leaderUnits.includes("Follow-up") || leaderUnits.includes("Follow-Up");
