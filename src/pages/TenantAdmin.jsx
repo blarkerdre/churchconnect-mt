@@ -71,7 +71,7 @@ const DATA_TABLES_FOR_COUNTS = [
 
 export default function TenantAdmin() {
   const { user } = useAuth();
-  const { tenantId, switchTenant, tenantMemberships, currentTenant, tenantRole } = useTenant();
+  const { tenantId, switchTenant, tenantMemberships, currentTenant, tenantRole, refreshTenantContext } = useTenant();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [createOpen, setCreateOpen] = useState(false);
@@ -104,18 +104,16 @@ export default function TenantAdmin() {
     },
   });
 
-  // Merge: direct query + membership-backed tenants + currentTenant fallback
+  // Merge: direct query is source of truth once loaded; fallback only while loading/errored
   const tenants = useMemo(() => {
-    const map = new Map(queryTenants.map(t => [t.id, t]));
-    // Only use fallback sources when direct query returned empty
-    if (queryTenants.length === 0) {
-      tenantMemberships?.forEach(m => {
-        if (m.tenants && !map.has(m.tenants.id)) map.set(m.tenants.id, m.tenants);
-      });
-      if (currentTenant && !map.has(currentTenant.id)) map.set(currentTenant.id, currentTenant);
-    }
+    if (!isLoading && !tenantsError) return queryTenants;
+    const map = new Map();
+    tenantMemberships?.forEach(m => {
+      if (m.tenants && !map.has(m.tenants.id)) map.set(m.tenants.id, m.tenants);
+    });
+    if (currentTenant && !map.has(currentTenant.id)) map.set(currentTenant.id, currentTenant);
     return [...map.values()];
-  }, [queryTenants, tenantMemberships, currentTenant]);
+  }, [isLoading, tenantsError, queryTenants, tenantMemberships, currentTenant]);
 
   const { data: tenantStats = {} } = useQuery({
     queryKey: ["tenant-stats", tenants.map(t => t.id).join(",")],
@@ -218,15 +216,17 @@ export default function TenantAdmin() {
       if (!res.ok) throw new Error(result.error);
       return result;
     },
-    onSuccess: (_, vars) => {
+    onSuccess: async (_, vars) => {
       const actionLabel = vars.action === "archive" ? "archived" : vars.action === "restore" ? "restored" : "permanently deleted";
       toast({ title: `Tenant ${actionLabel} successfully` });
       resetDeleteState();
       setRestoreTenant(null);
-      queryClient.invalidateQueries({ queryKey: ["tenants-admin"] });
-      queryClient.invalidateQueries({ queryKey: ["tenant-stats"] });
-      queryClient.invalidateQueries({ queryKey: ["tenant-analytics"] });
-      queryClient.invalidateQueries({ queryKey: ["tenant-memberships"] });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["tenants-admin"] }),
+        queryClient.invalidateQueries({ queryKey: ["tenant-stats"] }),
+        queryClient.invalidateQueries({ queryKey: ["tenant-analytics"] }),
+        refreshTenantContext(),
+      ]);
     },
     onError: (err) => {
       toast({ title: "Error", description: err.message, variant: "destructive" });
