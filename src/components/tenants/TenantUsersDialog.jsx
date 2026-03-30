@@ -43,7 +43,7 @@ export default function TenantUsersDialog({ tenant, open, onOpenChange }) {
     enabled: !!tenant?.id && open,
   });
 
-  const { data: invitations = [] } = useQuery({
+  const { data: invitations = [], isLoading: invLoading, isError: invError, error: invQueryError } = useQuery({
     queryKey: ["tenant-invitations", tenant?.id],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -76,7 +76,18 @@ export default function TenantUsersDialog({ tenant, open, onOpenChange }) {
       return result;
     },
     onSuccess: (result) => {
-      toast({ title: result.auto_added ? "User added to tenant" : "Invitation sent" });
+      const title = result.already_member
+        ? "User already belongs to this tenant"
+        : result.reused_pending_invitation
+        ? "Invitation resent"
+        : result.auto_added
+        ? "User added to tenant"
+        : "Invitation sent";
+      toast({
+        title,
+        description: result.email_warning || undefined,
+        variant: result.email_warning ? "destructive" : undefined,
+      });
       setAddEmail("");
       setAddRole("member");
       queryClient.invalidateQueries({ queryKey: ["tenant-users", tenant?.id] });
@@ -300,7 +311,11 @@ export default function TenantUsersDialog({ tenant, open, onOpenChange }) {
           </TabsContent>
 
           <TabsContent value="invitations">
-            {invitations.length === 0 ? (
+            {invLoading ? (
+              <p className="text-sm text-muted-foreground py-4">Loading invitations...</p>
+            ) : invError ? (
+              <p className="text-sm text-destructive py-4">Failed to load invitations: {invQueryError?.message || "Unknown error"}</p>
+            ) : invitations.length === 0 ? (
               <p className="text-sm text-muted-foreground py-4">No invitations sent yet.</p>
             ) : (
               <div className="overflow-x-auto">
