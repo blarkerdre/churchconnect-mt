@@ -21,11 +21,11 @@ const CHANNELS = [
 ];
 
 const DEFAULT_TEMPLATES = [
-  { followup_type: "First Timer", channel: "sms", subject: null, message_template: "Hi {name}, thank you for visiting {church}! We'd love to see you again this Sunday.", delay_days: 1, sort_order: 0 },
-  { followup_type: "First Timer", channel: "email", subject: "Welcome to {church}!", message_template: "Hi {name},\n\nThank you for visiting {church}! We are so glad you joined us. We'd love to see you again this Sunday.\n\nWarm regards,\nThe {church} Team", delay_days: 1, sort_order: 1 },
-  { followup_type: "New Convert", channel: "sms", subject: null, message_template: "Hi {name}, congratulations on your new journey of faith at {church}! We'd love to help you get connected. Have you considered joining our Believers Foundation Class?", delay_days: 1, sort_order: 0 },
-  { followup_type: "New Convert", channel: "email", subject: "Welcome to the family - {church}", message_template: "Hi {name},\n\nCongratulations on your decision! We are thrilled to welcome you to the {church} family.\n\nWe'd love to help you grow in your faith. Please consider enrolling in our Believers Foundation Class.\n\nGod bless,\nThe {church} Team", delay_days: 1, sort_order: 1 },
-  { followup_type: "Visitor", channel: "sms", subject: null, message_template: "Hi {name}, thank you for worshipping with us at {church}! We hope you felt at home. We'd love to see you again.", delay_days: 1, sort_order: 0 },
+  { followup_type: "First Timer", channel: "sms", subject: null, message_template: "Hi {name}, thank you for visiting {church}! We'd love to see you again this Sunday.", delay_hours: 24, sort_order: 0 },
+  { followup_type: "First Timer", channel: "email", subject: "Welcome to {church}!", message_template: "Hi {name},\n\nThank you for visiting {church}! We are so glad you joined us. We'd love to see you again this Sunday.\n\nWarm regards,\nThe {church} Team", delay_hours: 24, sort_order: 1 },
+  { followup_type: "New Convert", channel: "sms", subject: null, message_template: "Hi {name}, congratulations on your new journey of faith at {church}! We'd love to help you get connected. Have you considered joining our Believers Foundation Class?", delay_hours: 24, sort_order: 0 },
+  { followup_type: "New Convert", channel: "email", subject: "Welcome to the family - {church}", message_template: "Hi {name},\n\nCongratulations on your decision! We are thrilled to welcome you to the {church} family.\n\nWe'd love to help you grow in your faith. Please consider enrolling in our Believers Foundation Class.\n\nGod bless,\nThe {church} Team", delay_hours: 24, sort_order: 1 },
+  { followup_type: "Visitor", channel: "sms", subject: null, message_template: "Hi {name}, thank you for worshipping with us at {church}! We hope you felt at home. We'd love to see you again.", delay_hours: 24, sort_order: 0 },
 ];
 
 export default function FollowupTemplatesSection() {
