@@ -28,6 +28,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { useToast } from "@/components/ui/use-toast";
 import TenantUsersDialog from "@/components/tenants/TenantUsersDialog";
 import TenantAnalyticsTab from "@/components/tenants/TenantAnalyticsTab";
+import TenantBillingTab from "@/components/tenants/TenantBillingTab";
 
 const FEATURE_MODULES = [
   { key: "members", label: "Members", description: "Member directory and management" },
