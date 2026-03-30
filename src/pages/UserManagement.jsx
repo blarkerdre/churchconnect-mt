@@ -97,7 +97,7 @@ export default function UserManagement() {
         if (error) throw error;
         await logAudit("role_add", "user_roles", userId, { role, target_name: targetName }, tenantId);
       } else {
-        const { error } = await supabase.from("user_roles").delete().eq("user_id", userId).eq("role", role);
+        const { error } = await supabase.from("user_roles").delete().eq("user_id", userId).eq("role", role).eq("tenant_id", tenantId);
         if (error) throw error;
         await logAudit("role_remove", "user_roles", userId, { role, target_name: targetName }, tenantId);
       }

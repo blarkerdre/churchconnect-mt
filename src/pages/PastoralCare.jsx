@@ -112,7 +112,7 @@ export default function PastoralCare() {
 
   const requestMutation = useMutation({
     mutationFn: async (formData) => {
-      const { data: member } = await supabase.from("members").select("id").eq("user_id", user.id).single();
+      const { data: member } = await supabase.from("members").select("id").eq("user_id", user.id).eq("tenant_id", tenantId).single();
       const { error } = await supabase.from("pastoral_care").insert(withTenant({
         subject: formData.subject,
         care_type: formData.care_type,
