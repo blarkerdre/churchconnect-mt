@@ -104,7 +104,7 @@ export default function Transportation() {
 
   const bookMutation = useMutation({
     mutationFn: async (formData) => {
-      const { data: member } = await supabase.from("members").select("id").eq("user_id", user.id).single();
+      const { data: member } = await supabase.from("members").select("id").eq("user_id", user.id).eq("tenant_id", tenantId).single();
       const { error } = await supabase.from("transportation").insert(withTenant({
         pickup_address: formData.pickup_address,
         destination: formData.destination || "Church",
