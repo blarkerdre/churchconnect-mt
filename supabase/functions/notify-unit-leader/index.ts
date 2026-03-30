@@ -49,7 +49,7 @@ Deno.serve(async (req) => {
     // Fetch tenant settings for branding
     let churchName = "Winners Chapel International Cardiff";
     let churchShortName = "Winners Chapel Cardiff";
-    if (tenant_id) {
+    {
       const { data: tenantRow } = await supabase
         .from("tenants")
         .select("name, settings")
@@ -74,7 +74,8 @@ Deno.serve(async (req) => {
       .from("profiles")
       .select("full_name, email")
       .eq("user_id", leader_user_id)
-      .single();
+      .eq("tenant_id", tenant_id)
+      .maybeSingle();
 
     const recipientEmail = profile?.email || leaderMember?.email;
     const recipientPhone = leaderMember?.phone;
