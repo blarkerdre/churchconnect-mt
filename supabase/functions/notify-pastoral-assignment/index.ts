@@ -125,7 +125,7 @@ Deno.serve(async (req) => {
         </td></tr>
         <tr><td style="padding:32px;">
           <p style="margin:0 0 16px;color:#333333;font-size:16px;">Dear ${escHtml(recipientName)},</p>
-          <h2 style="margin:0 0 16px;color:#1a2d4d;font-size:18px;">Pastoral Care Case Assigned</h2>
+          <h2 style="margin:0 0 16px;color:#1a2d4d;font-size:18px;">${escHtml(actionLabel)}</h2>
           <div style="background-color:#f0f4f8;border-radius:8px;padding:16px;margin:0 0 24px;">
             <p style="margin:0 0 8px;color:#555;font-size:14px;"><strong>Subject:</strong> ${escHtml(subject)}</p>
             <p style="margin:0 0 8px;color:#555;font-size:14px;"><strong>Type:</strong> ${escHtml(care_type || "General")}</p>
