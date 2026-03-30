@@ -1,0 +1,1 @@
+UPDATE public.tenant_invitations SET status = 'cancelled' WHERE status = 'pending' AND id IN ('a4537785-2a93-4db1-a72a-f13ad738a4c4', '9236d317-1fba-49df-aed9-266f0cbf78f3');
