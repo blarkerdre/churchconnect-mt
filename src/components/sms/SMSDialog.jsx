@@ -13,11 +13,11 @@ import { normalizePhone } from "@/lib/phone-utils";
 import InvalidRecipientsPreview from "./InvalidRecipientsPreview";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
 
-const AUDIENCES = [
-  "All Members", "Ushering", "Choir", "Media", "Children's Ministry", "Protocol",
-  "Sanctuary Keepers", "Prayer & Intercession", "Evangelism", "Follow-up",
-  "Youth Ministry", "Men's Ministry", "Women's Ministry", "Drama & Creative Arts",
-  "Altar Ministers", "Pastoral Care", "Welfare", "CSR", "Transportation", "Leaders Only"
+const STATUS_AUDIENCES = [
+  { value: "status:Active", label: "Active Members" },
+  { value: "status:First Timer", label: "First Timers" },
+  { value: "status:Inactive", label: "Inactive Members" },
+  { value: "status:New Convert", label: "New Converts" },
 ];
 
 export default function SMSDialog({
@@ -30,6 +30,7 @@ export default function SMSDialog({
   directRecipients = null,
   title = "Send Message",
   defaultChannel = "sms",
+  unitAudiences = [],
 }) {
   const { isAdmin, leaderUnits } = useAuth();
   const { tenantId, scopeQuery } = useTenantQuery();
@@ -49,18 +50,22 @@ export default function SMSDialog({
     }
   }, [open, prefillMessage, prefillAudience]);
 
+  const baseAudiences = unitAudiences.length > 0 ? unitAudiences : ["All Members"];
   const availableAudiences = isAdmin
-    ? AUDIENCES
+    ? baseAudiences
     : leaderUnits?.length
-      ? AUDIENCES.filter(a => leaderUnits.includes(a))
+      ? baseAudiences.filter(a => leaderUnits.includes(a) || a === "All Members")
       : [];
 
   const { data: members = [] } = useQuery({
     queryKey: ["sms-recipients", audience, directRecipients ? "direct" : "audience", tenantId],
     queryFn: async () => {
       if (directRecipients) return [];
-      let query = supabase.from("members").select("id, first_name, last_name, phone, church_unit");
-      if (audience !== "All Members") {
+      let query = supabase.from("members").select("id, first_name, last_name, phone, church_unit, membership_status");
+      if (audience.startsWith("status:")) {
+        const statusValue = audience.replace("status:", "");
+        query = query.eq("membership_status", statusValue);
+      } else if (audience !== "All Members") {
         query = query.ilike("church_unit", `%${audience}%`);
       }
       const { data } = await scopeQuery(query);
@@ -182,8 +187,12 @@ export default function SMSDialog({
                 <Select value={audience} onValueChange={setAudience}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {(isAdmin ? AUDIENCES : availableAudiences).map(a => (
+                    {(isAdmin ? baseAudiences : availableAudiences).map(a => (
                       <SelectItem key={a} value={a}>{a}</SelectItem>
+                    ))}
+                    <SelectItem disabled value="__status_sep__" className="text-xs font-semibold text-muted-foreground opacity-100 pointer-events-none">— By Membership Status —</SelectItem>
+                    {STATUS_AUDIENCES.map(s => (
+                      <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>

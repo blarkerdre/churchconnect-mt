@@ -9,21 +9,21 @@ import { toast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
 
-const AUDIENCES = [
-  "All Members", "Ushering", "Choir", "Media", "Children's Ministry", "Protocol",
-  "Sanctuary Keepers", "Prayer & Intercession", "Evangelism", "Follow-up",
-  "Youth Ministry", "Men's Ministry", "Women's Ministry", "Drama & Creative Arts",
-  "Altar Ministers", "Pastoral Care", "Welfare", "CSR", "Transportation"
+const STATUS_AUDIENCES = [
+  { value: "status:Active", label: "Active Members" },
+  { value: "status:First Timer", label: "First Timers" },
+  { value: "status:Inactive", label: "Inactive Members" },
+  { value: "status:New Convert", label: "New Converts" },
 ];
 
-export default function EmailAlertForm({ currentUser, myUnits = [], isAdmin }) {
+export default function EmailAlertForm({ currentUser, myUnits = [], isAdmin, availableAudiences = [] }) {
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
-  const [audience, setAudience] = useState(isAdmin ? "All Members" : (myUnits[0] || "All Members"));
+  const [audience, setAudience] = useState(isAdmin ? "All Members" : (availableAudiences[0] || "All Members"));
   const [sending, setSending] = useState(false);
   const { tenantId } = useTenantQuery();
 
-  const availableAudiences = isAdmin ? AUDIENCES : AUDIENCES.filter(a => myUnits.includes(a));
+  const effectiveAudiences = isAdmin ? availableAudiences : availableAudiences.filter(a => myUnits.includes(a) || a === "All Members");
 
   const handleSend = async () => {
     if (!subject.trim() || !body.trim()) return;
@@ -72,8 +72,12 @@ export default function EmailAlertForm({ currentUser, myUnits = [], isAdmin }) {
           <Select value={audience} onValueChange={setAudience}>
             <SelectTrigger><SelectValue placeholder="Select audience" /></SelectTrigger>
             <SelectContent>
-              {availableAudiences.map(a => (
+              {effectiveAudiences.map(a => (
                 <SelectItem key={a} value={a}>{a}</SelectItem>
+              ))}
+              <SelectItem disabled value="__status_sep__" className="text-xs font-semibold text-muted-foreground opacity-100 pointer-events-none">— By Membership Status —</SelectItem>
+              {STATUS_AUDIENCES.map(s => (
+                <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
               ))}
             </SelectContent>
           </Select>
