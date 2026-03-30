@@ -1012,6 +1012,10 @@ export default function Settings() {
           />
         </TabsContent>
 
+        <TabsContent value="followup-templates">
+          <FollowupTemplatesSection />
+        </TabsContent>
+
         {isSuperAdmin && (
           <TabsContent value="certificates">
             <CertificateTemplateSettings />
