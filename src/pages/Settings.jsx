@@ -12,7 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 import {
   Settings as SettingsIcon, Plus, Pencil, Trash2, Loader2,
-  Users, Church, CalendarDays, TrendingUp, Heart, Globe, Bell, Award, Link2, ShieldAlert, BookOpen, Upload, X, ImageIcon, Mail, Phone
+  Users, Church, CalendarDays, TrendingUp, Heart, Globe, Bell, Award, Link2, ShieldAlert, BookOpen, Upload, X, ImageIcon, Mail, Phone, CreditCard
 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/hooks/useAuth";
@@ -92,6 +92,128 @@ function NotificationPreferencesSection() {
           )}
         </div>
 
+      </CardContent>
+    </Card>
+  );
+}
+
+/* ─── Billing section for tenant owners/admins ─── */
+function BillingSection() {
+  const { tenantId } = useTenantQuery();
+  const { isTenantOwner, isTenantAdmin: isTAdmin } = useTenant();
+  const [payLoading, setPayLoading] = useState(false);
+
+  const { data: subscription, isLoading: subLoading } = useQuery({
+    queryKey: ["tenant-subscription", tenantId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("tenant_subscriptions")
+        .select("*")
+        .eq("tenant_id", tenantId)
+        .eq("is_active", true)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!tenantId,
+  });
+
+  const { data: payments = [] } = useQuery({
+    queryKey: ["tenant-payments", tenantId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("tenant_payments")
+        .select("*")
+        .eq("tenant_id", tenantId)
+        .order("payment_date", { ascending: false })
+        .limit(10);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!tenantId,
+  });
+
+  const { data: tenantData } = useQuery({
+    queryKey: ["tenant-status", tenantId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("tenants")
+        .select("subscription_status")
+        .eq("id", tenantId)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!tenantId,
+  });
+
+  const handlePayNow = async () => {
+    setPayLoading(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await supabase.functions.invoke("create-tenant-checkout", {
+        body: { tenant_id: tenantId },
+        headers: { Authorization: `Bearer ${session?.access_token}` },
+      });
+      if (res.error) throw new Error(res.error.message || "Payment failed");
+      const { url } = res.data;
+      if (url) window.location.href = url;
+    } catch (err) {
+      toast({ title: "Payment Error", description: err.message, variant: "destructive" });
+    } finally {
+      setPayLoading(false);
+    }
+  };
+
+  const statusColor = tenantData?.subscription_status === "active" ? "text-emerald-600 bg-emerald-50" : tenantData?.subscription_status === "past_due" ? "text-amber-600 bg-amber-50" : "text-destructive bg-destructive/10";
+
+  return (
+    <Card className="border-0 shadow-sm">
+      <CardHeader className="pb-3">
+        <CardTitle className="text-base font-display flex items-center gap-2">
+          <CreditCard className="h-4 w-4 text-accent" /> Billing & Subscription
+        </CardTitle>
+        <p className="text-xs text-muted-foreground mt-1">View your subscription status and make payments</p>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {subLoading ? (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Loading...</div>
+        ) : !subscription ? (
+          <p className="text-sm text-muted-foreground">No active subscription configured for this church. Contact your administrator.</p>
+        ) : (
+          <>
+            <div className="p-4 bg-muted/50 rounded-lg space-y-2 text-sm">
+              <div className="flex justify-between items-center">
+                <span className="text-muted-foreground">Status</span>
+                <span className={`text-xs font-bold px-2 py-0.5 rounded-full capitalize ${statusColor}`}>{tenantData?.subscription_status || "active"}</span>
+              </div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Amount</span><span className="font-semibold">{subscription.currency} {Number(subscription.amount).toFixed(2)}</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Billing Cycle</span><span className="capitalize">{subscription.billing_cycle}</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Next Due Date</span><span className={tenantData?.subscription_status !== "active" ? "text-destructive font-medium" : ""}>{subscription.next_due_date}</span></div>
+            </div>
+
+            {(isTenantOwner || isTAdmin) && (
+              <Button onClick={handlePayNow} disabled={payLoading} className="w-full">
+                {payLoading ? <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Redirecting...</> : <><CreditCard className="h-4 w-4 mr-2" /> Pay Now via Stripe</>}
+              </Button>
+            )}
+
+            {payments.length > 0 && (
+              <div className="space-y-2">
+                <h4 className="text-sm font-medium">Recent Payments</h4>
+                <div className="space-y-1.5">
+                  {payments.map((p) => (
+                    <div key={p.id} className="flex items-center justify-between py-1.5 px-2 rounded hover:bg-muted/50 text-xs">
+                      <span>{p.payment_date}</span>
+                      <span className="font-medium">{p.currency} {Number(p.amount).toFixed(2)}</span>
+                      <span className="text-muted-foreground">{p.payment_method || "Stripe"}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </>
+        )}
       </CardContent>
     </Card>
   );
@@ -807,6 +929,7 @@ export default function Settings() {
       <Tabs defaultValue="branding" className="space-y-4">
         <TabsList className="flex flex-nowrap h-auto gap-1 overflow-x-auto w-full justify-start [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
           <TabsTrigger value="branding" className="gap-1.5 text-xs"><ImageIcon className="h-3.5 w-3.5" /><span className="hidden sm:inline"> Branding</span></TabsTrigger>
+          <TabsTrigger value="billing" className="gap-1.5 text-xs"><CreditCard className="h-3.5 w-3.5" /><span className="hidden sm:inline"> Billing</span></TabsTrigger>
           <TabsTrigger value="notifications" className="gap-1.5 text-xs"><Bell className="h-3.5 w-3.5" /><span className="hidden sm:inline"> Notifications</span></TabsTrigger>
           <TabsTrigger value="comms" className="gap-1.5 text-xs"><Mail className="h-3.5 w-3.5" /><span className="hidden sm:inline"> Comms</span></TabsTrigger>
           <TabsTrigger value="units" className="gap-1.5 text-xs"><Users className="h-3.5 w-3.5" /><span className="hidden sm:inline"> Units</span></TabsTrigger>
@@ -830,6 +953,10 @@ export default function Settings() {
         <TabsContent value="branding" className="space-y-6">
           <ChurchBrandingSection />
           <FaviconOgImageSection />
+        </TabsContent>
+
+        <TabsContent value="billing">
+          <BillingSection />
         </TabsContent>
 
         <TabsContent value="notifications">

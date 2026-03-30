@@ -28,6 +28,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { useToast } from "@/components/ui/use-toast";
 import TenantUsersDialog from "@/components/tenants/TenantUsersDialog";
 import TenantAnalyticsTab from "@/components/tenants/TenantAnalyticsTab";
+import TenantBillingTab from "@/components/tenants/TenantBillingTab";
 
 const FEATURE_MODULES = [
   { key: "members", label: "Members", description: "Member directory and management" },
@@ -876,10 +877,11 @@ export default function TenantAdmin() {
             <DialogDescription>Modify tenant settings, branding, plan, and features</DialogDescription>
           </DialogHeader>
           <Tabs defaultValue="general" className="w-full">
-            <TabsList className="w-full grid grid-cols-4">
+            <TabsList className="w-full grid grid-cols-5">
               <TabsTrigger value="general">General</TabsTrigger>
               <TabsTrigger value="branding">Branding</TabsTrigger>
               <TabsTrigger value="plan">Plan</TabsTrigger>
+              <TabsTrigger value="billing">Billing</TabsTrigger>
               <TabsTrigger value="features">Features</TabsTrigger>
             </TabsList>
 
@@ -1016,6 +1018,11 @@ export default function TenantAdmin() {
                   <p key={p.value}>• <strong>{p.label}</strong>: {p.memberLimit} members, {p.storageLimit}MB storage</p>
                 ))}
               </div>
+            </TabsContent>
+
+            {/* Billing Tab */}
+            <TabsContent value="billing" className="space-y-4 mt-4">
+              <TenantBillingTab tenant={editTenant} />
             </TabsContent>
 
             {/* Features Tab */}
