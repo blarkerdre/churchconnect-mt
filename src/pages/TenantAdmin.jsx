@@ -106,19 +106,15 @@ export default function TenantAdmin() {
 
   // Merge: direct query + membership-backed tenants + currentTenant fallback
   const tenants = useMemo(() => {
-    const map = new Map();
-    queryTenants.forEach(t => map.set(t.id, t));
-    if (tenantMemberships?.length) {
-      tenantMemberships.forEach(m => {
-        if (m.tenants && !map.has(m.tenants.id)) {
-          map.set(m.tenants.id, m.tenants);
-        }
+    const map = new Map(queryTenants.map(t => [t.id, t]));
+    // Only use fallback sources when direct query returned empty
+    if (queryTenants.length === 0) {
+      tenantMemberships?.forEach(m => {
+        if (m.tenants && !map.has(m.tenants.id)) map.set(m.tenants.id, m.tenants);
       });
+      if (currentTenant && !map.has(currentTenant.id)) map.set(currentTenant.id, currentTenant);
     }
-    if (currentTenant && !map.has(currentTenant.id)) {
-      map.set(currentTenant.id, currentTenant);
-    }
-    return Array.from(map.values());
+    return [...map.values()];
   }, [queryTenants, tenantMemberships, currentTenant]);
 
   const { data: tenantStats = {} } = useQuery({
@@ -229,6 +225,8 @@ export default function TenantAdmin() {
       setRestoreTenant(null);
       queryClient.invalidateQueries({ queryKey: ["tenants-admin"] });
       queryClient.invalidateQueries({ queryKey: ["tenant-stats"] });
+      queryClient.invalidateQueries({ queryKey: ["tenant-analytics"] });
+      queryClient.invalidateQueries({ queryKey: ["tenant-memberships"] });
     },
     onError: (err) => {
       toast({ title: "Error", description: err.message, variant: "destructive" });
