@@ -141,6 +141,14 @@ export function TenantProvider({ children }) {
     if (match) setCurrentTenant(match);
   }, [tenantMemberships]);
 
+  const refreshTenantContext = useCallback(async () => {
+    if (!user) return;
+    const memberships = await fetchMemberships(user.id);
+    setTenantMemberships(memberships);
+    const selected = selectTenant(memberships, tenantSlugFromUrl);
+    setCurrentTenant(selected);
+  }, [user, fetchMemberships, selectTenant, tenantSlugFromUrl]);
+
   const tenantId = currentTenant?.tenant_id || null;
   const tenantSlug = currentTenant?.tenants?.slug || null;
   const tenantRole = currentTenant?.role || null;
@@ -159,6 +167,7 @@ export function TenantProvider({ children }) {
         isTenantOwner,
         loading,
         switchTenant,
+        refreshTenantContext,
       }}
     >
       {children}
