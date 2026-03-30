@@ -315,6 +315,7 @@ export default function Communications() {
               currentUser={user}
               myUnits={leaderUnits}
               isAdmin={isAdmin}
+              availableAudiences={AUDIENCES}
             />
           </TabsContent>
         )}
