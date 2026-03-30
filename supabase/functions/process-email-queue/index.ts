@@ -299,12 +299,14 @@ Deno.serve(async (req) => {
         })
 
         if (isRateLimited(error)) {
+          const rlTenantCols = payload.tenant_id ? { tenant_id: payload.tenant_id as string } : {}
           await supabase.from('email_send_log').insert({
             message_id: payload.message_id,
             template_name: payload.label || queue,
             recipient_email: payload.to,
             status: 'rate_limited',
             error_message: errorMsg.slice(0, 1000),
+            ...rlTenantCols,
           })
 
           const retryAfterSecs = getRetryAfterSeconds(error)
