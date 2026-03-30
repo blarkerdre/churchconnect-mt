@@ -60,12 +60,14 @@ async function moveToDlq(
   reason: string
 ): Promise<void> {
   const payload = msg.message
+  const tenantCols = payload.tenant_id ? { tenant_id: payload.tenant_id as string } : {}
   await supabase.from('email_send_log').insert({
     message_id: payload.message_id,
     template_name: (payload.label || queue) as string,
     recipient_email: payload.to,
     status: 'dlq',
     error_message: reason,
+    ...tenantCols,
   })
   const { error } = await supabase.rpc('move_to_dlq', {
     source_queue: queue,
@@ -268,11 +270,13 @@ Deno.serve(async (req) => {
         )
 
         // Log success
+        const tenantCols = payload.tenant_id ? { tenant_id: payload.tenant_id as string } : {}
         await supabase.from('email_send_log').insert({
           message_id: payload.message_id,
           template_name: payload.label || queue,
           recipient_email: payload.to,
           status: 'sent',
+          ...tenantCols,
         })
 
         // Delete from queue
@@ -295,12 +299,14 @@ Deno.serve(async (req) => {
         })
 
         if (isRateLimited(error)) {
+          const rlTenantCols = payload.tenant_id ? { tenant_id: payload.tenant_id as string } : {}
           await supabase.from('email_send_log').insert({
             message_id: payload.message_id,
             template_name: payload.label || queue,
             recipient_email: payload.to,
             status: 'rate_limited',
             error_message: errorMsg.slice(0, 1000),
+            ...rlTenantCols,
           })
 
           const retryAfterSecs = getRetryAfterSeconds(error)
@@ -332,12 +338,14 @@ Deno.serve(async (req) => {
         }
 
         // Log non-429 failures to track real retry attempts.
+        const failTenantCols = payload.tenant_id ? { tenant_id: payload.tenant_id as string } : {}
         await supabase.from('email_send_log').insert({
           message_id: payload.message_id,
           template_name: payload.label || queue,
           recipient_email: payload.to,
           status: 'failed',
           error_message: errorMsg.slice(0, 1000),
+          ...failTenantCols,
         })
         if (payload?.message_id && typeof payload.message_id === 'string') {
           failedAttemptsByMessageId.set(payload.message_id, failedAttempts + 1)

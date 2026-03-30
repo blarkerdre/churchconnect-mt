@@ -230,6 +230,7 @@ Deno.serve(async (req) => {
       idempotency_key: messageId,
       unsubscribe_token: unsubscribeToken,
       queued_at: new Date().toISOString(),
+      ...(tenant_id ? { tenant_id } : {}),
     }
 
     // Enqueue to transactional queue
