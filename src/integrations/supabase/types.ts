@@ -2259,6 +2259,7 @@ export type Database = {
       transportation: {
         Row: {
           assigned_driver: string | null
+          assigned_to: string | null
           created_at: string
           destination: string | null
           driver_phone: string | null
@@ -2276,6 +2277,7 @@ export type Database = {
         }
         Insert: {
           assigned_driver?: string | null
+          assigned_to?: string | null
           created_at?: string
           destination?: string | null
           driver_phone?: string | null
@@ -2293,6 +2295,7 @@ export type Database = {
         }
         Update: {
           assigned_driver?: string | null
+          assigned_to?: string | null
           created_at?: string
           destination?: string | null
           driver_phone?: string | null
