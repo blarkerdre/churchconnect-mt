@@ -31,7 +31,7 @@ export default function Members() {
   const isLeader = isUnitLeader || isWSFLeader;
   const viewOnly = isLeader && !isAdmin;
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
+  const [filters, setFilters] = useState({ status: "all", unit: "all", dateFrom: null, dateTo: null, account: "all" });
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingMember, setEditingMember] = useState(null);
   const [qrOpen, setQrOpen] = useState(false);
