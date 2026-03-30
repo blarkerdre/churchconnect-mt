@@ -19,11 +19,11 @@ const STATUS_AUDIENCES = [
 export default function EmailAlertForm({ currentUser, myUnits = [], isAdmin, availableAudiences = [] }) {
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
-  const [audience, setAudience] = useState(isAdmin ? "All Members" : (myUnits[0] || "All Members"));
+  const [audience, setAudience] = useState(isAdmin ? "All Members" : (availableAudiences[0] || "All Members"));
   const [sending, setSending] = useState(false);
   const { tenantId } = useTenantQuery();
 
-  const availableAudiences = isAdmin ? AUDIENCES : AUDIENCES.filter(a => myUnits.includes(a));
+  const effectiveAudiences = isAdmin ? availableAudiences : availableAudiences.filter(a => myUnits.includes(a) || a === "All Members");
 
   const handleSend = async () => {
     if (!subject.trim() || !body.trim()) return;
