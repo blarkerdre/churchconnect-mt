@@ -91,8 +91,12 @@ export default function Members() {
 
   const filtered = members.filter((m) => {
     const matchSearch = `${m.first_name} ${m.last_name} ${m.email || ""} ${m.phone || ""}`.toLowerCase().includes(search.toLowerCase());
-    const matchStatus = statusFilter === "all" || m.membership_status === statusFilter;
-    return matchSearch && matchStatus;
+    const matchStatus = filters.status === "all" || m.membership_status === filters.status;
+    const matchUnit = filters.unit === "all" || (m.church_unit || "").toLowerCase().includes(filters.unit.toLowerCase());
+    const matchDateFrom = !filters.dateFrom || new Date(m.created_at) >= filters.dateFrom;
+    const matchDateTo = !filters.dateTo || new Date(m.created_at) <= new Date(new Date(filters.dateTo).setHours(23, 59, 59, 999));
+    const matchAccount = filters.account === "all" || (filters.account === "linked" ? !!m.user_id : !m.user_id);
+    return matchSearch && matchStatus && matchUnit && matchDateFrom && matchDateTo && matchAccount;
   });
 
   const openNew = () => {
