@@ -23,3 +23,6 @@ verify_jwt = false
 
 [functions.check-tenant-payments]
 verify_jwt = false
+
+[functions.twilio-webhook]
+verify_jwt = false
