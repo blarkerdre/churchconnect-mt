@@ -14,7 +14,7 @@ export default function WSFManagement() {
     queryKey: ["my-member-record", user?.id],
     queryFn: async () => {
       if (!user?.id) return null;
-      const { data } = await supabase.from("members").select("id").eq("user_id", user.id).single();
+      const { data } = await supabase.from("members").select("id").eq("user_id", user.id).eq("tenant_id", tenantId).single();
       return data;
     },
     enabled: !!user?.id && isWSFLeader && !isAdmin,
