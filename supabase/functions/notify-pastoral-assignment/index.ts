@@ -89,11 +89,12 @@ Deno.serve(async (req) => {
       .eq("user_id", assigned_to)
       .single();
 
-    const { data: memberRecord } = await supabase
+    let memberQuery = supabase
       .from("members")
       .select("phone, email, first_name")
-      .eq("user_id", assigned_to)
-      .single();
+      .eq("user_id", assigned_to);
+    if (tenant_id) memberQuery = memberQuery.eq("tenant_id", tenant_id);
+    const { data: memberRecord } = await memberQuery.maybeSingle();
 
     const recipientEmail = profile?.email || memberRecord?.email;
     const recipientPhone = memberRecord?.phone;
@@ -168,18 +169,19 @@ Deno.serve(async (req) => {
           template_name: "pastoral-assignment",
           recipient_email: recipientEmail,
           status: "pending",
-          ...(tenant_id ? { tenant_id } : {}),
+          tenant_id,
         });
         console.log("Pastoral care assignment email enqueued for", recipientEmail);
       }
     }
 
     // Check if SMS notifications are enabled
-    const { data: smsSetting } = await supabase
+    let smsSettingQuery = supabase
       .from("app_settings")
       .select("value")
-      .eq("key", "sms_notifications_enabled")
-      .maybeSingle();
+      .eq("key", "sms_notifications_enabled");
+    if (tenant_id) smsSettingQuery = smsSettingQuery.eq("tenant_id", tenant_id);
+    const { data: smsSetting } = await smsSettingQuery.maybeSingle();
     
     const smsEnabled = smsSetting?.value === true || smsSetting === null;
 
@@ -228,7 +230,7 @@ Deno.serve(async (req) => {
               message_sid: data.sid || null,
               error_message: response.ok ? null : (data.message || JSON.stringify(data)),
               delivery_status: response.ok ? "queued" : null,
-              ...(tenant_id ? { tenant_id } : {}),
+              tenant_id,
             });
 
             if (response.ok) {
