@@ -64,7 +64,8 @@ export default function FollowupTemplatesSection() {
       if (item.id) {
         const { error } = await supabase.from("followup_message_templates")
           .update({ ...item, updated_at: new Date().toISOString() })
-          .eq("id", item.id);
+          .eq("id", item.id)
+          .eq("tenant_id", tenantId);
         if (error) throw error;
       } else {
         const { error } = await supabase.from("followup_message_templates")
