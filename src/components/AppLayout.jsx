@@ -134,6 +134,11 @@ export default function Layout({ children }) {
     }
   };
 
+  // Payment gate: suspended tenants are blocked (super admins bypass)
+  if (subscriptionStatus === "suspended" && !isSuperAdmin) {
+    return <PaymentRequiredScreen />;
+  }
+
   return (
     <div className="min-h-screen bg-background flex">
       {/* Mobile overlay */}
