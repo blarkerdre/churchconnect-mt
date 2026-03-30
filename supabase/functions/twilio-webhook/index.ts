@@ -28,11 +28,9 @@ Deno.serve(async (req) => {
       params[key] = value;
     }
 
-    // Reconstruct the URL as Twilio sees it using forwarded headers
-    const proto = req.headers.get("x-forwarded-proto") || "https";
-    const host = req.headers.get("host") || "";
-    const urlObj = new URL(req.url);
-    const webhookUrl = `${proto}://${host}${urlObj.pathname}${urlObj.search}`;
+    // Use the known public Supabase URL for signature validation
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const webhookUrl = `${supabaseUrl}/functions/v1/twilio-webhook`;
 
     // Validate Twilio signature using HMAC-SHA1
     const twilioSignature = req.headers.get("X-Twilio-Signature") ?? "";
