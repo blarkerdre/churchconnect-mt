@@ -46,6 +46,23 @@ Deno.serve(async (req) => {
 
     for (const msg of messages) {
       try {
+        // Resolve church name for placeholder replacement
+        let churchName = "our church";
+        if (msg.tenant_id) {
+          const { data: tenantData } = await supabase
+            .from("tenants").select("name").eq("id", msg.tenant_id).single();
+          if (tenantData?.name) churchName = tenantData.name;
+        }
+        // Replace placeholders
+        msg.message = (msg.message || "")
+          .replace(/\{name\}/gi, msg.recipient_name || "there")
+          .replace(/\{church\}/gi, churchName);
+        if (msg.subject) {
+          msg.subject = msg.subject
+            .replace(/\{name\}/gi, msg.recipient_name || "there")
+            .replace(/\{church\}/gi, churchName);
+        }
+
         if (msg.channel === "sms") {
           await sendSms(msg, supabase, supabaseUrl);
         } else if (msg.channel === "email") {
@@ -158,7 +175,7 @@ async function sendEmail(
   supabase: any,
   supabaseUrl: string
 ) {
-  // Resolve church name from tenant
+    // Resolve church name from tenant
   let churchName = "ChurchConnect";
   if (msg.tenant_id) {
     const { data: tenant } = await supabase
@@ -168,6 +185,11 @@ async function sendEmail(
       .single();
     if (tenant?.name) churchName = tenant.name;
   }
+
+  // Replace placeholders in message
+  let finalMessage = msg.message;
+  finalMessage = finalMessage.replace(/\{name\}/gi, msg.recipient_name || "there");
+  finalMessage = finalMessage.replace(/\{church\}/gi, churchName);
 
   // Resolve followup type
   let followupType = "";
