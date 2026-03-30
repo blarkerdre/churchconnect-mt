@@ -30,6 +30,7 @@ export default function SMSDialog({
   directRecipients = null,
   title = "Send Message",
   defaultChannel = "sms",
+  unitAudiences = [],
 }) {
   const { isAdmin, leaderUnits } = useAuth();
   const { tenantId, scopeQuery } = useTenantQuery();
