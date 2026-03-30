@@ -13,6 +13,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { useTenant } from "@/contexts/TenantContext";
 import NotificationBell from "@/components/notifications/NotificationBell";
 import MobileBottomNav from "@/components/navigation/MobileBottomNav";
+import PaymentRequiredScreen from "@/components/tenants/PaymentRequiredScreen";
+import PaymentWarningBanner from "@/components/tenants/PaymentWarningBanner";
 import { getEnvironmentLabel, getBackendHost, isBackendMismatch, isPreviewEnvironment } from "@/lib/environment";
 import { useAppSetting } from "@/hooks/useAppSetting";
 import { getIconComponent } from "@/lib/icon-map";
