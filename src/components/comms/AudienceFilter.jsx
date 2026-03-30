@@ -21,20 +21,26 @@ const STATUS_OPTIONS = [
   { value: "Visitor", label: "Visitor" },
 ];
 
+const ACCOUNT_OPTIONS = [
+  { value: "all", label: "All Accounts" },
+  { value: "linked", label: "Linked" },
+  { value: "unlinked", label: "Unlinked" },
+];
+
 export default function AudienceFilter({ filters, onChange, className }) {
-  const { status = "all", unit = "all", dateFrom = null, dateTo = null } = filters || {};
+  const { status = "all", unit = "all", dateFrom = null, dateTo = null, account = "all" } = filters || {};
   const { data: churchUnits = [] } = useChurchUnits();
   const { tenantId, scopeQuery } = useTenantQuery();
 
-  const update = (patch) => onChange({ status, unit, dateFrom, dateTo, ...patch });
+  const update = (patch) => onChange({ status, unit, dateFrom, dateTo, account, ...patch });
 
-  const hasFilters = status !== "all" || unit !== "all" || dateFrom || dateTo;
+  const hasFilters = status !== "all" || unit !== "all" || dateFrom || dateTo || account !== "all";
 
-  const clearAll = () => onChange({ status: "all", unit: "all", dateFrom: null, dateTo: null });
+  const clearAll = () => onChange({ status: "all", unit: "all", dateFrom: null, dateTo: null, account: "all" });
 
   // Live recipient count
   const { data: recipientCount = null, isFetching } = useQuery({
-    queryKey: ["audience-count", status, unit, dateFrom?.toISOString(), dateTo?.toISOString(), tenantId],
+    queryKey: ["audience-count", status, unit, dateFrom?.toISOString(), dateTo?.toISOString(), account, tenantId],
     queryFn: async () => {
       let q = supabase.from("members").select("id", { count: "exact", head: true });
       if (status !== "all") q = q.eq("membership_status", status);
@@ -45,6 +51,8 @@ export default function AudienceFilter({ filters, onChange, className }) {
         end.setHours(23, 59, 59, 999);
         q = q.lte("created_at", end.toISOString());
       }
+      if (account === "linked") q = q.not("user_id", "is", null);
+      if (account === "unlinked") q = q.is("user_id", null);
       const { count, error } = await scopeQuery(q);
       if (error) throw error;
       return count;
@@ -97,6 +105,21 @@ export default function AudienceFilter({ filters, onChange, className }) {
               <SelectItem value="all">All Units</SelectItem>
               {churchUnits.map((u) => (
                 <SelectItem key={u.id} value={u.name}>{u.name}</SelectItem>
+              ))}
+            </SelectContent>
+        </Select>
+        </div>
+
+        {/* Account */}
+        <div className="space-y-1">
+          <label className="text-xs text-muted-foreground">Account</label>
+          <Select value={account} onValueChange={(v) => update({ account: v })}>
+            <SelectTrigger className="h-9">
+              <SelectValue placeholder="All Accounts" />
+            </SelectTrigger>
+            <SelectContent>
+              {ACCOUNT_OPTIONS.map((a) => (
+                <SelectItem key={a.value} value={a.value}>{a.label}</SelectItem>
               ))}
             </SelectContent>
           </Select>

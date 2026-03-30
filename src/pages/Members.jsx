@@ -3,7 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import AudienceFilter from "@/components/comms/AudienceFilter";
 import { Plus, Search, Download, Upload, Mail, Phone, MoreVertical, Edit, Trash2, Loader2, QrCode, Link2, Unlink2, Award } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -31,7 +31,7 @@ export default function Members() {
   const isLeader = isUnitLeader || isWSFLeader;
   const viewOnly = isLeader && !isAdmin;
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
+  const [filters, setFilters] = useState({ status: "all", unit: "all", dateFrom: null, dateTo: null, account: "all" });
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingMember, setEditingMember] = useState(null);
   const [qrOpen, setQrOpen] = useState(false);
@@ -91,8 +91,12 @@ export default function Members() {
 
   const filtered = members.filter((m) => {
     const matchSearch = `${m.first_name} ${m.last_name} ${m.email || ""} ${m.phone || ""}`.toLowerCase().includes(search.toLowerCase());
-    const matchStatus = statusFilter === "all" || m.membership_status === statusFilter;
-    return matchSearch && matchStatus;
+    const matchStatus = filters.status === "all" || m.membership_status === filters.status;
+    const matchUnit = filters.unit === "all" || (m.church_unit || "").toLowerCase().includes(filters.unit.toLowerCase());
+    const matchDateFrom = !filters.dateFrom || new Date(m.created_at) >= filters.dateFrom;
+    const matchDateTo = !filters.dateTo || new Date(m.created_at) <= new Date(new Date(filters.dateTo).setHours(23, 59, 59, 999));
+    const matchAccount = filters.account === "all" || (filters.account === "linked" ? !!m.user_id : !m.user_id);
+    return matchSearch && matchStatus && matchUnit && matchDateFrom && matchDateTo && matchAccount;
   });
 
   const openNew = () => {
@@ -142,20 +146,7 @@ export default function Members() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input placeholder="Search members..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-10" />
           </div>
-          {(isAdmin || viewOnly) && (
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-full sm:w-40">
-                <SelectValue placeholder="All Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="Active">Active Member</SelectItem>
-                
-                <SelectItem value="New Convert">New Convert</SelectItem>
-                <SelectItem value="First Timer">First Timer</SelectItem>
-              </SelectContent>
-            </Select>
-          )}
+          
         </div>
         <div className="grid grid-cols-4 sm:flex sm:flex-wrap items-center gap-2">
           {(isAdmin || isUnitLeader) && (
@@ -184,6 +175,12 @@ export default function Members() {
           )}
         </div>
       </div>
+
+      {/* Filters */}
+      {(isAdmin || viewOnly) && (
+        <AudienceFilter filters={filters} onChange={setFilters} />
+      )}
+
 
       {/* Stats row - admins and leaders */}
       {(isAdmin || viewOnly) && (
