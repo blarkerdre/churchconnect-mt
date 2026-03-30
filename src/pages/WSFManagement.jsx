@@ -11,7 +11,7 @@ export default function WSFManagement() {
   const { tenantId, scopeQuery } = useTenantQuery();
 
   const { data: myMember } = useQuery({
-    queryKey: ["my-member-record", user?.id],
+    queryKey: ["my-member-record", user?.id, tenantId],
     queryFn: async () => {
       if (!user?.id) return null;
       const { data } = await supabase.from("members").select("id").eq("user_id", user.id).eq("tenant_id", tenantId).single();
