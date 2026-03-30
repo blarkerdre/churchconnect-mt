@@ -110,7 +110,11 @@ Deno.serve(async (req) => {
       if (tenantRow?.settings) {
         const s = tenantRow.settings as Record<string, unknown>;
         if (msgChannel === "sms" && s.twilio_sms_from) {
-          fromNumber = s.twilio_sms_from as string;
+          const tenantFrom = s.twilio_sms_from as string;
+          try { validateE164(tenantFrom, "Tenant SMS sender"); } catch { /* fall back to default */ }
+          if (/^\+[1-9]\d{6,14}$/.test(tenantFrom.replace(/[\s\-\(\)\.]/g, ""))) {
+            fromNumber = tenantFrom;
+          }
         }
         if (s.twilio_whatsapp_from) {
           tenantWhatsappFrom = s.twilio_whatsapp_from as string;
