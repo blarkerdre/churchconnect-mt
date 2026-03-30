@@ -102,7 +102,7 @@ export default function FollowupTemplatesSection() {
   });
 
   const openNew = () => {
-    setEditItem({ followup_type: "First Timer", channel: "sms", subject: "", message_template: "", delay_days: 1, sort_order: 0 });
+    setEditItem({ followup_type: "First Timer", channel: "sms", subject: "", message_template: "", delay_hours: 24, sort_order: 0 });
     setEditDialog(true);
   };
 
