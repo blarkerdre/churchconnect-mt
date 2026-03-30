@@ -1,37 +1,30 @@
 
 
-## Fix: Emails Stuck as "Pending" — Invalid 'from' Address
+## Fix: Stale "Pending" Email Logs & Verify Deployment
 
-### Root cause
+### What happened
+- All email-alert messages were queued **before** the `from` address fix was deployed
+- They all failed with `Invalid 'from' email address` and moved to DLQ after 5 retries
+- 3 `pending` log entries remain as orphans — their queue messages are gone (already failed/DLQ'd), so nothing will ever update them to `sent`
+- The code fix (using `app.churchmanagementsuite.org` as FROM_DOMAIN) is correct in the source
 
-The `send-email-alert` edge function constructs the `from` address using the **sender subdomain** (`notify.app.churchmanagementsuite.org`), but the Lovable email API expects the `from` address to use the **root/display domain** (`app.churchmanagementsuite.org`). The `sender_domain` field is correctly set to the subdomain for routing, but the `from` header must use the display domain — exactly how `send-transactional-email` does it.
+### Plan
 
-Current (broken):
-```
-from: "Winners Chapel International Cardiff <noreply@notify.app.churchmanagementsuite.org>"
-```
+1. **Redeploy `send-email-alert`** — ensure the fixed code is live (the function may not have been redeployed after the edit)
 
-Expected (working):
-```
-from: "Winners Chapel International Cardiff <noreply@app.churchmanagementsuite.org>"
-```
+2. **Clean up stale pending rows** — run a migration to mark the 3 orphan `pending` rows as `failed` so they don't confuse the UI:
+   ```sql
+   UPDATE email_send_log
+   SET status = 'failed', error_message = 'Stale: queued before from-address fix'
+   WHERE status = 'pending'
+     AND template_name = 'email-alert'
+     AND created_at < now() - interval '10 minutes';
+   ```
 
-### Fix
-
-**Edit `supabase/functions/send-email-alert/index.ts`:**
-
-- Change `fromAddress` to use `app.churchmanagementsuite.org` (the FROM_DOMAIN) instead of `notify.app.churchmanagementsuite.org` (the SENDER_DOMAIN)
-- Keep `sender_domain` as `notify.app.churchmanagementsuite.org` in the payload (this is correct for routing)
-
-This matches the pattern used by `send-transactional-email` (line 324):
-```
-from: `${SITE_NAME} <noreply@${FROM_DOMAIN}>`  // FROM_DOMAIN = app.churchmanagementsuite.org
-sender_domain: SENDER_DOMAIN                     // notify.app.churchmanagementsuite.org
-```
+3. **Test** — send a new email alert to verify emails now process successfully
 
 ### Files changed
-1. `supabase/functions/send-email-alert/index.ts` — fix `fromAddress` domain
-
-### Expected result
-Queued emails will process successfully and be delivered instead of failing with "Invalid 'from' email address".
+- No file edits needed — code is already correct
+- 1 database migration to clean orphan rows
+- 1 edge function redeploy
 
