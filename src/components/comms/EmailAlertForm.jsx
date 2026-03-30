@@ -72,8 +72,12 @@ export default function EmailAlertForm({ currentUser, myUnits = [], isAdmin, ava
           <Select value={audience} onValueChange={setAudience}>
             <SelectTrigger><SelectValue placeholder="Select audience" /></SelectTrigger>
             <SelectContent>
-              {availableAudiences.map(a => (
+              {effectiveAudiences.map(a => (
                 <SelectItem key={a} value={a}>{a}</SelectItem>
+              ))}
+              <SelectItem disabled value="__status_sep__" className="text-xs font-semibold text-muted-foreground opacity-100 pointer-events-none">— By Membership Status —</SelectItem>
+              {STATUS_AUDIENCES.map(s => (
+                <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
               ))}
             </SelectContent>
           </Select>
