@@ -23,6 +23,15 @@ Deno.serve(async (req) => {
     const TWILIO_FROM = Deno.env.get("TWILIO_FROM_NUMBER");
     if (!TWILIO_FROM) throw new Error("TWILIO_FROM_NUMBER is not configured");
 
+    // Validate sender number is E.164
+    function validateE164(num: string, label: string): void {
+      const cleaned = num.replace(/[\s\-\(\)\.]/g, "");
+      if (!/^\+[1-9]\d{6,14}$/.test(cleaned)) {
+        throw new Error(`${label} "${num}" is not a valid E.164 phone number. Expected format: +1234567890`);
+      }
+    }
+    validateE164(TWILIO_FROM, "TWILIO_FROM_NUMBER");
+
     // Auth check
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
@@ -101,7 +110,11 @@ Deno.serve(async (req) => {
       if (tenantRow?.settings) {
         const s = tenantRow.settings as Record<string, unknown>;
         if (msgChannel === "sms" && s.twilio_sms_from) {
-          fromNumber = s.twilio_sms_from as string;
+          const tenantFrom = s.twilio_sms_from as string;
+          try { validateE164(tenantFrom, "Tenant SMS sender"); } catch { /* fall back to default */ }
+          if (/^\+[1-9]\d{6,14}$/.test(tenantFrom.replace(/[\s\-\(\)\.]/g, ""))) {
+            fromNumber = tenantFrom;
+          }
         }
         if (s.twilio_whatsapp_from) {
           tenantWhatsappFrom = s.twilio_whatsapp_from as string;
