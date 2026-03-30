@@ -210,9 +210,9 @@ export default function FollowupTemplatesSection() {
                 </div>
               </div>
               <div className="space-y-1.5">
-                <Label className="text-sm">Delay (days after registration)</Label>
-                <Input type="number" min={0} max={365} value={editItem.delay_days}
-                  onChange={e => setEditItem(p => ({ ...p, delay_days: parseInt(e.target.value) || 0 }))}
+                <Label className="text-sm">Delay (hours after registration)</Label>
+                <Input type="number" min={0} max={8760} value={editItem.delay_hours}
+                  onChange={e => setEditItem(p => ({ ...p, delay_hours: parseInt(e.target.value) || 0 }))}
                   className="h-9 text-sm" />
               </div>
               {editItem.channel === "email" && (
