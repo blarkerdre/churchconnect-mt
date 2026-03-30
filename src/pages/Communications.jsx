@@ -368,6 +368,7 @@ export default function Communications() {
         smsType={smsAnnouncement ? "announcement" : "bulk"}
         referenceId={smsAnnouncement?.id || null}
         title={smsAnnouncement ? "Send as SMS" : "Bulk SMS"}
+        unitAudiences={AUDIENCES}
       />
 
       <SMSDialog
