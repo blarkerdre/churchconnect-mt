@@ -473,7 +473,7 @@ Deno.serve(async (req) => {
 
     // Fire-and-forget welcome email
     if (email) {
-      triggerWelcomeEmail(email, firstName, lastName);
+      triggerWelcomeEmail(email, firstName, lastName, tenantId);
     }
 
     // Prayer request → pastoral care
