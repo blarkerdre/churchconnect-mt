@@ -1,67 +1,47 @@
 
 
-## Fix: Profile Not Updating — Missing Tenant Memberships After Signup
+## Fix: `members_user_id_fkey` Foreign Key Violation
 
 ### Root cause
 
-When users sign up via the auth page at `/auth` (without a tenant slug in the URL, e.g. `/t/wci-cardiff/auth`), the `tenantSlug` parameter is `undefined`. The `handle_new_user` trigger then:
+The `members.user_id` column has a foreign key constraint `REFERENCES auth.users(id) ON DELETE SET NULL`. The error occurs when code tries to insert or update a member row with a `user_id` that doesn't exist in `auth.users`. Two scenarios trigger this:
 
-1. Finds no `tenant_slug` in auth metadata
-2. Finds no pending invitation for the email
-3. Leaves `_tenant_id` as NULL
-4. Creates a profile with `tenant_id = NULL`
-5. **Skips** creating `tenant_memberships` and `user_roles` entirely
+1. **`admin-create-user` reuse path**: When `createUser` fails with "already been registered", the function calls `listUsers()` and searches by email. If the auth user was previously deleted (via `admin-delete-user`), the user may no longer exist but could still appear transiently, or the function may match a stale profile entry.
 
-Without a `tenant_memberships` row, the user fails `user_has_tenant_access()` RLS checks and cannot read or update their own member record. The My Profile page either shows `CreateMemberProfile` (member not found) or silently fails to update.
-
-**Confirmed**: Both `romokeseun@gmail.com` and `blarkerdre@yahoo.com` have zero `tenant_memberships` rows and zero `user_roles` rows, despite having linked member records in the default tenant.
+2. **Manual account linking in MemberFormDialog**: The "Link Account" feature looks up a `profiles.user_id` by email. If the profile row exists but the referenced `auth.users` row has been deleted, the FK check fails when writing that `user_id` into `members`.
 
 ### Fix
 
-**1. `src/pages/Auth.jsx`** — When no tenant slug is in the URL, pass the default tenant slug so the trigger always has context:
+**1. `supabase/functions/admin-create-user/index.ts`** — After resolving `userId` (both new and reused paths), verify the user actually exists in `auth.users` before inserting into `members`:
+
+```ts
+// After getOrCreateAuthUser, verify user exists
+const { data: verifyUser, error: verifyError } = await supabase.auth.admin.getUserById(userId);
+if (verifyError || !verifyUser?.user) {
+  return jsonResponse({ error: "Auth user could not be verified" }, 400);
+}
+```
+
+**2. `src/components/members/MemberFormDialog.jsx`** — In `handleLinkAccount`, add a verification step: after finding the profile by email, confirm the `user_id` is still valid by checking auth before updating the member. Since we can't call `admin.getUserById` from the client, we should verify via a lightweight edge function call or at minimum catch the FK error gracefully:
+
 ```js
-const effectiveSlug = tenantSlug || "default"; // or resolve from DEFAULT_TENANT_ID
-```
-- Look up the default tenant slug from `DEFAULT_TENANT_ID` and pass it to `signUp()`
-
-**2. `handle_new_user` trigger (migration)** — Add a final fallback: if after checking slug and invitations, `_tenant_id` is still NULL, fall back to `DEFAULT_TENANT_ID`. This ensures every new user gets at least a default tenant membership:
-```sql
-IF _tenant_id IS NULL THEN
-  _tenant_id := 'd8bbbdae-d9b3-4999-912d-3aa5999884b0'::uuid;
-END IF;
+// In linkAccountMutation.onError, show a clear message
+onError: (err) => {
+  const msg = err.message?.includes("members_user_id_fkey")
+    ? "The selected user account no longer exists. It may have been deleted."
+    : err.message;
+  toast({ title: "Error linking account", description: msg, variant: "destructive" });
+}
 ```
 
-**3. Migration — backfill missing memberships** — Fix the existing users who signed up without tenant context:
-```sql
-INSERT INTO tenant_memberships (user_id, tenant_id, role)
-SELECT p.user_id, m.tenant_id, 'member'
-FROM profiles p
-JOIN members m ON m.user_id = p.user_id
-WHERE NOT EXISTS (
-  SELECT 1 FROM tenant_memberships tm
-  WHERE tm.user_id = p.user_id AND tm.tenant_id = m.tenant_id
-)
-AND m.tenant_id IS NOT NULL;
+**3. `MemberFormDialog.jsx` payload fix** — Add the missing `workers_in_training` and `worshipped_at_other_wci` fields to the save payload (secondary fix to prevent data loss):
 
--- Same for user_roles
-INSERT INTO user_roles (user_id, role, tenant_id)
-SELECT p.user_id, 'member', m.tenant_id
-FROM profiles p
-JOIN members m ON m.user_id = p.user_id
-WHERE NOT EXISTS (
-  SELECT 1 FROM user_roles ur
-  WHERE ur.user_id = p.user_id AND ur.role = 'member' AND ur.tenant_id = m.tenant_id
-)
-AND m.tenant_id IS NOT NULL;
-
--- Fix null tenant_id on profiles
-UPDATE profiles p
-SET tenant_id = m.tenant_id
-FROM members m
-WHERE m.user_id = p.user_id AND p.tenant_id IS NULL AND m.tenant_id IS NOT NULL;
+```js
+workers_in_training: form.workers_in_training ?? false,
+worshipped_at_other_wci: isFirstTimerOrNewConvert ? form.worshipped_at_other_wci : null,
 ```
 
 ### Files changed
-- `src/pages/Auth.jsx` — pass default tenant slug when no slug in URL
-- 1 new migration — update `handle_new_user` with DEFAULT_TENANT_ID fallback + backfill missing memberships/roles
+- `supabase/functions/admin-create-user/index.ts` — verify auth user exists before member insert
+- `src/components/members/MemberFormDialog.jsx` — better FK error messaging + add missing fields to payload
 
