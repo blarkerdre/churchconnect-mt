@@ -265,7 +265,7 @@ Deno.serve(async (req) => {
 
     // Fire-and-forget course registration confirmation email
     if (email) {
-      triggerCourseRegistrationEmail(email, firstName, course.name);
+      triggerCourseRegistrationEmail(email, firstName, course.name, tenantId);
     }
 
     return new Response(JSON.stringify({ success: true, course_name: course.name }), {
