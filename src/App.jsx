@@ -1,7 +1,7 @@
 import { Toaster } from "@/components/ui/toaster";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClientInstance } from "@/lib/query-client";
-import { BrowserRouter as Router, Route, Routes, Navigate, useParams } from "react-router-dom";
+import { BrowserRouter as Router, Route, Routes, Navigate, useParams, useLocation } from "react-router-dom";
 import { useUnitMembership } from "@/hooks/useUnitMembership";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import { TenantProvider } from "@/contexts/TenantContext";
@@ -169,12 +169,21 @@ function AuthRoutes() {
   );
 }
 
+/** Redirects bare public routes to their default-tenant-prefixed equivalents */
+function DefaultTenantRedirect({ to }) {
+  const DEFAULT_SLUG = "wci-cardiff";
+  return <Navigate to={`/t/${DEFAULT_SLUG}/${to}`} replace />;
+}
+
 function AppRoutes() {
   return (
     <Routes>
-      {/* Public routes — no auth required */}
-      <Route path="/register" element={<PublicRegistration />} />
-      <Route path="/wofbi-register" element={<PublicWoFBIRegistration />} />
+      {/* Bare public routes → redirect to default tenant */}
+      <Route path="/register" element={<DefaultTenantRedirect to="register" />} />
+      <Route path="/wofbi-register" element={<DefaultTenantRedirect to="wofbi-register" />} />
+      <Route path="/auth" element={<DefaultTenantRedirect to="auth" />} />
+
+      {/* Tenant-independent public routes */}
       <Route path="/presentation" element={<Presentation />} />
       <Route path="/onboard" element={<Onboard />} />
       <Route path="/unsubscribe" element={<Unsubscribe />} />

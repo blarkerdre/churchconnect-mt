@@ -5,6 +5,8 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+const DEFAULT_TENANT_ID = "d8bbbdae-d9b3-4999-912d-3aa5999884b0";
+
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
 const RATE_LIMIT = 5;
 const RATE_WINDOW_MS = 60 * 60 * 1000;
@@ -76,6 +78,25 @@ function triggerCourseRegistrationEmail(email: string, firstName: string | null,
     .catch((err) => console.error("Course registration email trigger error:", err));
 }
 
+async function resolveTenantId(
+  supabase: ReturnType<typeof createClient>,
+  bodyTenantId: string | null,
+  bodyTenantSlug: string | null
+): Promise<string> {
+  // 1. Direct tenant_id from body
+  if (bodyTenantId) return bodyTenantId;
+
+  // 2. Resolve from slug
+  if (bodyTenantSlug) {
+    const { data } = await supabase.rpc("get_tenant_by_slug", { _slug: bodyTenantSlug });
+    const row = Array.isArray(data) ? data[0] : data;
+    if (row?.id) return row.id;
+  }
+
+  // 3. Fallback
+  return DEFAULT_TENANT_ID;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -114,6 +135,13 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    // Resolve tenant
+    const tenantId = await resolveTenantId(
+      supabase,
+      sanitize(body.tenant_id, 36),
+      sanitize(body.tenant_slug, 100)
+    );
 
     const firstName = sanitize(body.first_name, 100);
     const lastName = sanitize(body.last_name, 100);
@@ -155,11 +183,12 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Verify course exists and registration is open
+    // Verify course exists, is active, open, and belongs to tenant
     const { data: course, error: courseError } = await supabase
       .from("exam_titles")
       .select("id, name, registration_open, is_active")
       .eq("id", courseId)
+      .eq("tenant_id", tenantId)
       .maybeSingle();
 
     if (courseError) throw courseError;
@@ -171,7 +200,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Find or create member by email
+    // Find or create member by email — scoped to tenant
     let memberId: string | null = null;
     let isNewMember = false;
 
@@ -179,6 +208,7 @@ Deno.serve(async (req) => {
       .from("members")
       .select("id")
       .eq("email", email)
+      .eq("tenant_id", tenantId)
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();
@@ -196,6 +226,7 @@ Deno.serve(async (req) => {
           membership_status: "First Timer",
           gdpr_consent: true,
           gdpr_consent_date: new Date().toISOString(),
+          tenant_id: tenantId,
         })
         .select("id")
         .single();
@@ -220,10 +251,10 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Insert course registration
+    // Insert course registration with tenant_id
     const { error: regError } = await supabase
       .from("course_registrations")
-      .insert({ member_id: memberId, course_id: courseId });
+      .insert({ member_id: memberId, course_id: courseId, tenant_id: tenantId });
 
     if (regError) throw regError;
 
@@ -232,7 +263,7 @@ Deno.serve(async (req) => {
       triggerWelcomeEmail(email, firstName, lastName);
     }
 
-    // Fire-and-forget course registration confirmation email for all registrants
+    // Fire-and-forget course registration confirmation email
     if (email) {
       triggerCourseRegistrationEmail(email, firstName, course.name);
     }
