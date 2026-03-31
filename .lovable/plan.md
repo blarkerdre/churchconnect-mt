@@ -1,29 +1,40 @@
 
 
-## Scope All Auth, Registration & Update Queries to Tenant
+## Fix: Signup Directed to Demo Church Instead of Correct Tenant
 
-### Problem
+### Root cause
 
-Several queries and operations on key pages lack tenant scoping, causing data leakage across tenants:
+There is a mismatch between two "default tenant" references:
 
-1. **MyProfile.jsx — `wsf_centres` query** (line 169): fetches all active WSF centres globally, no `tenant_id` filter
-2. **MyProfile.jsx — `DynamicExamButtons`** (lines 879-901): `exam_titles` and `exam_subjects` queries have no tenant scope — shows courses from all tenants
-3. **MyProfile.jsx — `course_registrations` query** (line 890): no tenant filter
-4. **MyProfile.jsx — `exam_attempts` query** (line 910): no tenant filter
-5. **MyProfile.jsx — `attendance_records` query** (line 178): no tenant filter
-6. **ResetPassword.jsx** (line 26): navigates to `/` after reset instead of tenant-prefixed URL
+- `DEFAULT_TENANT_ID` in `TenantContext.jsx` and `handle_new_user` trigger = `d8bbbdae-...` = **Demo Church (TEST)**
+- `DefaultTenantRedirect` in `App.jsx` hardcodes slug `"wci-cardiff"` = `95e53cc3-...` = **Winners Chapel International, Cardiff**
+
+When a user signs up, the `defaultTenantSlug` query in Auth.jsx resolves Demo Church's slug (`demo-test`), not WCI Cardiff. And the `handle_new_user` trigger's fallback also creates memberships under Demo Church.
+
+Additionally, `AuthRoutes` still has a bare `/auth` route (line 136) that renders `<Auth />` without tenant context — a potential leak path.
 
 ### Fix
 
-**1. `src/pages/MyProfile.jsx`** — Add tenant scoping to all unscoped queries:
-- `wsf_centres` query: add `.eq("tenant_id", tenantId)` and include `tenantId` in query key
-- `DynamicExamButtons`: accept `tenantId` prop, scope `exam_titles`, `exam_subjects`, `course_registrations`, and `exam_attempts` by tenant
-- `attendance_records` query: add `.eq("tenant_id", tenantId)` filter (via the session's tenant, or directly on the records if the column exists)
-- Pass `tenantId` from the parent component down to `DynamicExamButtons`
+**1. `src/contexts/TenantContext.jsx`** — Change `DEFAULT_TENANT_ID` to WCI Cardiff's ID:
+```js
+const DEFAULT_TENANT_ID = "95e53cc3-4569-4dd3-a4ad-3489593dce81";
+```
 
-**2. `src/pages/ResetPassword.jsx`** — After password reset, redirect to the tenant-prefixed dashboard if a tenant slug is available (query tenant membership), or fall back to `/`.
+**2. Migration** — Update the `handle_new_user` trigger to fall back to WCI Cardiff instead of Demo Church:
+```sql
+-- Change fallback from Demo Church to WCI Cardiff
+_tenant_id := '95e53cc3-4569-4dd3-a4ad-3489593dce81'::uuid;
+```
+
+Also backfill any users currently stuck on Demo Church who should be on WCI Cardiff (same pattern as previous migration).
+
+**3. `src/App.jsx`** — Remove the bare `/auth` route from `AuthRoutes` (line 136) since it's unreachable but could cause confusion if hit.
+
+**4. `supabase/functions/public-register/index.ts`** — Update the `DEFAULT_TENANT_ID` constant to match WCI Cardiff's ID.
 
 ### Files changed
-- `src/pages/MyProfile.jsx` — tenant-scope 5 unscoped queries + pass tenantId to DynamicExamButtons
-- `src/pages/ResetPassword.jsx` — tenant-aware redirect after password update
+- `src/contexts/TenantContext.jsx` — update DEFAULT_TENANT_ID to WCI Cardiff
+- `src/App.jsx` — remove stale bare `/auth` route from AuthRoutes
+- `supabase/functions/public-register/index.ts` — update DEFAULT_TENANT_ID
+- 1 new migration — update `handle_new_user` fallback + backfill mismatched users
 
