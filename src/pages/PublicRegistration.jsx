@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+
+const DEFAULT_TENANT_ID = "d8bbbdae-d9b3-4999-912d-3aa5999884b0";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -39,13 +41,15 @@ const HIDE_SPIRITUAL_STATUSES = ["First Timer", "New Convert", "Visitor"];
 const SHOW_BAPTISM_STATUSES = ["First Timer", "New Convert"];
 
 export default function PublicRegistration() {
-  const { tenantSlug } = useParams();
+  const { tenantSlug: routeSlug } = useParams();
+  const [searchParams] = useSearchParams();
+  const tenantSlug = routeSlug || searchParams.get("tenant") || null;
   const [CHURCH_UNITS, setChurchUnits] = useState([]);
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [wsfCentres, setWsfCentres] = useState([]);
-  const [resolvedTenantId, setResolvedTenantId] = useState(null);
+  const [resolvedTenantId, setResolvedTenantId] = useState(tenantSlug ? null : DEFAULT_TENANT_ID);
   const [tenantName, setTenantName] = useState("");
 
   useEffect(() => {
@@ -135,7 +139,8 @@ export default function PublicRegistration() {
             baptized_by_immersion: form.baptized_by_immersion,
             preferred_contact_modes: form.preferred_contact_modes || null,
           } : {}),
-          ...(resolvedTenantId ? { tenant_id: resolvedTenantId } : {}),
+          tenant_id: resolvedTenantId || DEFAULT_TENANT_ID,
+          ...(tenantSlug ? { tenant_slug: tenantSlug } : {}),
         },
       });
 
