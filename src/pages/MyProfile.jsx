@@ -21,7 +21,7 @@ import MemberJourneyTimeline from "@/components/members/MemberJourneyTimeline";
 import TakeExamDialog from "@/components/exams/TakeExamDialog";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
 import WelcomeQuestions from "@/components/members/WelcomeQuestions";
-import { useTenant } from "@/contexts/TenantContext";
+import { useTenant, DEFAULT_TENANT_ID } from "@/contexts/TenantContext";
 
 const GENDERS = ["Male", "Female"];
 const MEMBERSHIP_STATUSES = ["Active", "First Timer", "New Convert", "Visitor"];
