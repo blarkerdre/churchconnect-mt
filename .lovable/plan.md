@@ -1,47 +1,29 @@
 
 
-## Fix: `members_user_id_fkey` Foreign Key Violation
+## Fix: Tenant and User Mismatch on QR Registration
 
 ### Root cause
 
-The `members.user_id` column has a foreign key constraint `REFERENCES auth.users(id) ON DELETE SET NULL`. The error occurs when code tries to insert or update a member row with a `user_id` that doesn't exist in `auth.users`. Two scenarios trigger this:
+Two issues combine to cause cross-tenant member linking:
 
-1. **`admin-create-user` reuse path**: When `createUser` fails with "already been registered", the function calls `listUsers()` and searches by email. If the auth user was previously deleted (via `admin-delete-user`), the user may no longer exist but could still appear transiently, or the function may match a stale profile entry.
+1. **QR code URL fallback**: `RegistrationQRCode.jsx` (line 13-15) falls back to `/register` (no slug) when `tenantSlug` is null. This means the registration page resolves to `DEFAULT_TENANT_ID` instead of the admin's actual tenant — registering the person into the wrong church.
 
-2. **Manual account linking in MemberFormDialog**: The "Link Account" feature looks up a `profiles.user_id` by email. If the profile row exists but the referenced `auth.users` row has been deleted, the FK check fails when writing that `user_id` into `members`.
+2. **Email-based member claim without `auth.users` verification**: In `public-register/index.ts` (lines 392-429), when an authenticated user scans the QR, the function searches for existing members by email and sets `user_id` on the match. If the referenced `auth.users` row was deleted, this trips the `members_user_id_fkey` FK constraint. Additionally, if `tenantId` happens to be null, the email search is unscoped and can match members from any tenant.
 
 ### Fix
 
-**1. `supabase/functions/admin-create-user/index.ts`** — After resolving `userId` (both new and reused paths), verify the user actually exists in `auth.users` before inserting into `members`:
-
-```ts
-// After getOrCreateAuthUser, verify user exists
-const { data: verifyUser, error: verifyError } = await supabase.auth.admin.getUserById(userId);
-if (verifyError || !verifyUser?.user) {
-  return jsonResponse({ error: "Auth user could not be verified" }, 400);
-}
-```
-
-**2. `src/components/members/MemberFormDialog.jsx`** — In `handleLinkAccount`, add a verification step: after finding the profile by email, confirm the `user_id` is still valid by checking auth before updating the member. Since we can't call `admin.getUserById` from the client, we should verify via a lightweight edge function call or at minimum catch the FK error gracefully:
-
+**1. `src/components/members/RegistrationQRCode.jsx`** — Always include the tenant slug in the QR URL. If `tenantSlug` is somehow null, fall back to querying the tenant's slug from `tenantId`:
 ```js
-// In linkAccountMutation.onError, show a clear message
-onError: (err) => {
-  const msg = err.message?.includes("members_user_id_fkey")
-    ? "The selected user account no longer exists. It may have been deleted."
-    : err.message;
-  toast({ title: "Error linking account", description: msg, variant: "destructive" });
-}
+const registrationUrl = `${window.location.origin}/t/${tenantSlug}/register`;
 ```
+Add early return / disabled state if `tenantSlug` is not yet resolved. Same fix for `WoFBIRegistrationQRCode.jsx`.
 
-**3. `MemberFormDialog.jsx` payload fix** — Add the missing `workers_in_training` and `worshipped_at_other_wci` fields to the save payload (secondary fix to prevent data loss):
-
-```js
-workers_in_training: form.workers_in_training ?? false,
-worshipped_at_other_wci: isFirstTimerOrNewConvert ? form.worshipped_at_other_wci : null,
-```
+**2. `supabase/functions/public-register/index.ts`** — Two hardening changes:
+- Before setting `user_id` on a member (line 408), verify the auth user exists via `supabase.auth.admin.getUserById(authenticatedUser.userId)`. Skip the claim if the user doesn't exist.
+- When `tenantId` is null/missing for anonymous (unauthenticated) registrations, always fall back to `DEFAULT_TENANT_ID` so the email search is always tenant-scoped. (Currently it only falls back for authenticated users.)
 
 ### Files changed
-- `supabase/functions/admin-create-user/index.ts` — verify auth user exists before member insert
-- `src/components/members/MemberFormDialog.jsx` — better FK error messaging + add missing fields to payload
+- `src/components/members/RegistrationQRCode.jsx` — require tenant slug, never generate slug-less URL
+- `src/components/exams/WoFBIRegistrationQRCode.jsx` — same fix
+- `supabase/functions/public-register/index.ts` — verify auth user before FK write + always scope email search by tenant
 
