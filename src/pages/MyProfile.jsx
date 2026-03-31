@@ -164,27 +164,29 @@ export default function MyProfile() {
   });
 
   const { data: wsfCentres = [] } = useQuery({
-    queryKey: ["wsf-centres-active"],
+    queryKey: ["wsf-centres-active", tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("wsf_centres").select("*").eq("is_active", true).order("name");
+      const { data, error } = await supabase.from("wsf_centres").select("*").eq("is_active", true).eq("tenant_id", tenantId).order("name");
       if (error) throw error;
       return data;
     },
+    enabled: !!tenantId,
   });
 
   const { data: attendanceRecords = [] } = useQuery({
-    queryKey: ["my-attendance", member?.id],
+    queryKey: ["my-attendance", member?.id, tenantId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("attendance_records")
         .select("*, attendance_sessions(title, session_date, session_type)")
         .eq("member_id", member.id)
+        .eq("tenant_id", tenantId)
         .order("checked_in_at", { ascending: false })
         .limit(20);
       if (error) throw error;
       return data;
     },
-    enabled: !!member?.id,
+    enabled: !!member?.id && !!tenantId,
   });
 
   const updateMutation = useMutation({
@@ -586,7 +588,7 @@ export default function MyProfile() {
       {!editing && <MyCertificates memberId={member.id} />}
 
       {/* Take Exams */}
-      {!editing && <DynamicExamButtons memberId={member.id} onSelect={setExamSelection} />}
+      {!editing && <DynamicExamButtons memberId={member.id} onSelect={setExamSelection} tenantId={tenantId} />}
 
       <TakeExamDialog
         open={!!examSelection}
@@ -874,46 +876,49 @@ function CreateMemberProfile({ user, onCreated, wsfCentres, churchUnits }) {
   );
 }
 
-function DynamicExamButtons({ memberId, onSelect }) {
+function DynamicExamButtons({ memberId, onSelect, tenantId }) {
   const { data: courses = [], isLoading } = useQuery({
-    queryKey: ["exam-titles"],
+    queryKey: ["exam-titles", tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("exam_titles").select("*").eq("is_active", true).order("name");
+      const { data, error } = await supabase.from("exam_titles").select("*").eq("is_active", true).eq("tenant_id", tenantId).order("name");
       if (error) throw error;
       return data;
     },
+    enabled: !!tenantId,
   });
 
   const { data: registrations = [] } = useQuery({
-    queryKey: ["my-course-registrations", memberId],
+    queryKey: ["my-course-registrations", memberId, tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("course_registrations").select("course_id").eq("member_id", memberId);
+      const { data, error } = await supabase.from("course_registrations").select("course_id").eq("member_id", memberId).eq("tenant_id", tenantId);
       if (error) throw error;
       return data.map(r => r.course_id);
     },
-    enabled: !!memberId,
+    enabled: !!memberId && !!tenantId,
   });
 
   const { data: allSubjects = [] } = useQuery({
-    queryKey: ["all-exam-subjects"],
+    queryKey: ["all-exam-subjects", tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("exam_subjects").select("*").eq("is_active", true).order("sort_order");
+      const { data, error } = await supabase.from("exam_subjects").select("*").eq("is_active", true).eq("tenant_id", tenantId).order("sort_order");
       if (error) throw error;
       return data;
     },
+    enabled: !!tenantId,
   });
 
   const { data: myAttempts = [] } = useQuery({
-    queryKey: ["my-course-attempts", memberId],
+    queryKey: ["my-course-attempts", memberId, tenantId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("exam_attempts")
         .select("subject_id, training_type, score, total_points, passed, retake_allowed")
-        .eq("member_id", memberId);
+        .eq("member_id", memberId)
+        .eq("tenant_id", tenantId);
       if (error) throw error;
       return data;
     },
-    enabled: !!memberId,
+    enabled: !!memberId && !!tenantId,
   });
 
   if (isLoading || courses.length === 0) return null;
