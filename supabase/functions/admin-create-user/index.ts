@@ -12,12 +12,12 @@ function jsonResponse(body: Record<string, unknown>, status = 200) {
   });
 }
 
-async function getOrCreateAuthUser(supabase: ReturnType<typeof createClient>, email: string, password: string, fullName: string) {
+async function getOrCreateAuthUser(supabase: ReturnType<typeof createClient>, email: string, password: string, fullName: string, tenantSlug?: string) {
   const { data: newUser, error: createError } = await supabase.auth.admin.createUser({
     email,
     password,
     email_confirm: true,
-    user_metadata: { full_name: fullName },
+    user_metadata: { full_name: fullName, ...(tenantSlug ? { tenant_slug: tenantSlug } : {}) },
   });
 
   if (!createError) {
@@ -72,11 +72,23 @@ Deno.serve(async (req) => {
       if (!isSuperAdmin) return jsonResponse({ error: "Super-admin access required to assign elevated roles" }, 403);
     }
 
+    // Resolve tenant slug so handle_new_user trigger links to the correct tenant
+    let tenantSlug: string | undefined;
+    if (tenant_id) {
+      const { data: tenantRow } = await supabase
+        .from("tenants")
+        .select("slug")
+        .eq("id", tenant_id)
+        .maybeSingle();
+      tenantSlug = tenantRow?.slug || undefined;
+    }
+
     const { userId, reusedExisting } = await getOrCreateAuthUser(
       supabase,
       normalizedEmail,
       password,
       normalizedFullName,
+      tenantSlug,
     );
 
     await supabase.from("profiles").upsert({
