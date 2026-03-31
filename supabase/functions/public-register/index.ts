@@ -145,6 +145,16 @@ async function ensureTenantAccess(supabase: any, userId: string | null | undefin
       { user_id: userId, role: "member", tenant_id: tenantId },
       { onConflict: "user_id,role,tenant_id" }
     );
+
+    // Fix profile tenant if it defaulted to Demo Church but user registered at a real tenant
+    const DEFAULT_TENANT_ID = "d8bbbdae-d9b3-4999-912d-3aa5999884b0";
+    if (tenantId !== DEFAULT_TENANT_ID) {
+      await supabase
+        .from("profiles")
+        .update({ tenant_id: tenantId })
+        .eq("user_id", userId)
+        .eq("tenant_id", DEFAULT_TENANT_ID);
+    }
   } catch (err) {
     console.error("Failed to ensure tenant access:", err);
   }
