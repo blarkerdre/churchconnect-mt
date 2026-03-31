@@ -56,7 +56,7 @@ async function getAuthenticatedUser(req: Request, supabaseUrl: string, anonKey: 
   };
 }
 
-function triggerWelcomeEmail(email: string, firstName: string | null, lastName: string | null) {
+function triggerWelcomeEmail(email: string, firstName: string | null, lastName: string | null, tenantId?: string | null) {
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
   const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
   fetch(`${supabaseUrl}/functions/v1/send-welcome-email`, {
@@ -65,7 +65,7 @@ function triggerWelcomeEmail(email: string, firstName: string | null, lastName: 
       "Content-Type": "application/json",
       Authorization: `Bearer ${serviceRoleKey}`,
     },
-    body: JSON.stringify({ email, first_name: firstName, last_name: lastName }),
+    body: JSON.stringify({ email, first_name: firstName, last_name: lastName, ...(tenantId ? { tenant_id: tenantId } : {}) }),
   })
     .then(async (res) => {
       if (!res.ok) {
@@ -384,7 +384,7 @@ Deno.serve(async (req) => {
         // Ensure tenant access rows exist
         await ensureTenantAccess(supabase, authenticatedUser.userId, tenantId || memberPayload.tenant_id);
 
-        if (email) triggerWelcomeEmail(email, firstName, lastName);
+        if (email) triggerWelcomeEmail(email, firstName, lastName, tenantId);
 
         // Prayer request routing
         if (notes && notes.trim()) {
@@ -430,7 +430,7 @@ Deno.serve(async (req) => {
           // Ensure tenant access rows exist
           await ensureTenantAccess(supabase, authenticatedUser.userId, tenantId || memberPayload.tenant_id);
 
-          if (email) triggerWelcomeEmail(email, firstName, lastName);
+          if (email) triggerWelcomeEmail(email, firstName, lastName, tenantId);
 
           // Prayer request routing
           if (notes && notes.trim()) {
@@ -473,7 +473,7 @@ Deno.serve(async (req) => {
 
     // Fire-and-forget welcome email
     if (email) {
-      triggerWelcomeEmail(email, firstName, lastName);
+      triggerWelcomeEmail(email, firstName, lastName, tenantId);
     }
 
     // Prayer request → pastoral care

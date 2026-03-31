@@ -104,10 +104,23 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Resolve tenant slug for tenant-scoped URL
+    let tenantSiteUrl = `https://${ROOT_DOMAIN}`;
+    if (tenant_id) {
+      const { data: tenantSlugRow } = await supabase
+        .from("tenants")
+        .select("slug")
+        .eq("id", tenant_id)
+        .maybeSingle();
+      if (tenantSlugRow?.slug) {
+        tenantSiteUrl = `https://${ROOT_DOMAIN}/t/${tenantSlugRow.slug}`;
+      }
+    }
+
     const templateProps = {
       firstName: first_name || "Friend",
       lastName: last_name || "",
-      siteUrl: `https://${ROOT_DOMAIN}`,
+      siteUrl: tenantSiteUrl,
     };
 
     const [html, text, unsubscribeToken] = await Promise.all([
