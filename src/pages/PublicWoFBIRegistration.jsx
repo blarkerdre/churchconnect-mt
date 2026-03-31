@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,6 +10,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Loader2, CheckCircle2, BookOpen } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import { Toaster } from "@/components/ui/toaster";
+
+const DEFAULT_TENANT_ID = "d8bbbdae-d9b3-4999-912d-3aa5999884b0";
 
 const emptyForm = {
   first_name: "",
@@ -21,25 +24,46 @@ const emptyForm = {
 };
 
 export default function PublicWoFBIRegistration() {
+  const { tenantSlug } = useParams();
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [courseName, setCourseName] = useState("");
   const [courses, setCourses] = useState([]);
   const [loadingCourses, setLoadingCourses] = useState(true);
+  const [resolvedTenantId, setResolvedTenantId] = useState(tenantSlug ? null : DEFAULT_TENANT_ID);
+  const [tenantName, setTenantName] = useState("");
+  const [tenantLogo, setTenantLogo] = useState(null);
 
+  // Resolve tenant from slug
   useEffect(() => {
+    if (tenantSlug) {
+      supabase.rpc("get_tenant_by_slug", { _slug: tenantSlug })
+        .then(({ data }) => {
+          const row = Array.isArray(data) ? data[0] : data;
+          if (row?.id) setResolvedTenantId(row.id);
+          if (row?.name) setTenantName(row.name);
+          if (row?.logo_url) setTenantLogo(row.logo_url);
+        });
+    }
+  }, [tenantSlug]);
+
+  // Load courses scoped by tenant
+  useEffect(() => {
+    if (!resolvedTenantId) return;
+    setLoadingCourses(true);
     supabase
       .from("exam_titles")
       .select("id, name, description")
       .eq("is_active", true)
       .eq("registration_open", true)
+      .eq("tenant_id", resolvedTenantId)
       .order("name")
       .then(({ data, error }) => {
         if (!error) setCourses(data || []);
         setLoadingCourses(false);
       });
-  }, []);
+  }, [resolvedTenantId]);
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
 
@@ -70,7 +94,11 @@ export default function PublicWoFBIRegistration() {
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(form),
+          body: JSON.stringify({
+            ...form,
+            tenant_id: resolvedTenantId,
+            tenant_slug: tenantSlug || null,
+          }),
         }
       );
       const result = await res.json();
@@ -118,12 +146,16 @@ export default function PublicWoFBIRegistration() {
       <Toaster />
       <Card className="w-full max-w-lg">
         <CardHeader className="text-center">
-          <div className="flex justify-center mb-2">
-            <BookOpen className="h-10 w-10 text-primary" />
-          </div>
+          {tenantLogo ? (
+            <img src={tenantLogo} alt={tenantName} className="h-14 w-auto mx-auto mb-2 object-contain" />
+          ) : (
+            <div className="flex justify-center mb-2">
+              <BookOpen className="h-10 w-10 text-primary" />
+            </div>
+          )}
           <CardTitle className="text-2xl">WoFBI Course Registration</CardTitle>
           <p className="text-sm text-muted-foreground mt-1">
-            Word of Faith Bible Institute — Register for a course
+            {tenantName ? `${tenantName} — ` : ""}Word of Faith Bible Institute — Register for a course
           </p>
         </CardHeader>
         <CardContent>
