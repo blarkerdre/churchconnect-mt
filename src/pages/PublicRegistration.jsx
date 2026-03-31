@@ -139,7 +139,8 @@ export default function PublicRegistration() {
             baptized_by_immersion: form.baptized_by_immersion,
             preferred_contact_modes: form.preferred_contact_modes || null,
           } : {}),
-          ...(resolvedTenantId ? { tenant_id: resolvedTenantId } : {}),
+          tenant_id: resolvedTenantId || DEFAULT_TENANT_ID,
+          ...(tenantSlug ? { tenant_slug: tenantSlug } : {}),
         },
       });
 
