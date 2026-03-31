@@ -1,24 +1,32 @@
 
 
-## Fix: "Could not find function" Error on Registration/Profile Save
+## Fix: Email-Alert Emails Failing with "Invalid 'from' email address"
 
-### Root cause
-There are 3 overloads of `upsert_own_member_profile` in the database, but none of them accepts both `p_tenant_id` and `p_worshipped_at_other_wci` together. The code in `MyProfile.jsx` passes both parameters, so PostgreSQL cannot resolve which function to call and returns "could not find function".
+### Problem
+Email-alert messages are stuck as `pending`/`failed` because the `send-email-alert` edge function uses mismatched domains:
+- `sender_domain` = `notify.app.churchmanagementsuite.org` (not a configured domain)
+- `from` address = `noreply@app.churchmanagementsuite.org`
 
-Current overloads:
-1. `(p_tenant_id, ..., p_gdpr_consent)` — no welcome question fields
-2. `(p_first_name, ..., p_worshipped_at_other_wci)` — no tenant_id
-3. `(p_tenant_id, ..., p_preferred_contact_modes)` — has tenant_id + welcome questions but missing `p_worshipped_at_other_wci`
-
-The client code sends: `p_tenant_id` + all welcome questions including `p_worshipped_at_other_wci` — this signature matches none of the 3 overloads.
+The email API rejects this because the `from` domain doesn't match the `sender_domain`, and `notify.app.churchmanagementsuite.org` isn't a verified domain anyway. The verified domain is `app.churchmanagementsuite.org`.
 
 ### Fix
-1 database migration to:
-- Drop the 2 outdated overloads (signatures 1 and 3 above)
-- Update overload 2 to include `p_tenant_id` as the first parameter AND `p_worshipped_at_other_wci`, matching exactly what the client sends
+In `supabase/functions/send-email-alert/index.ts`, change lines 199-202:
 
-This creates a single canonical function with the full parameter list that the client expects.
+```
+Before:
+  const senderDomain = 'notify.app.churchmanagementsuite.org'
+  const fromDomain = 'app.churchmanagementsuite.org'
+
+After:
+  const senderDomain = 'app.churchmanagementsuite.org'
+  const fromDomain = 'app.churchmanagementsuite.org'
+```
+
+Both values must use the verified domain `app.churchmanagementsuite.org`.
+
+### Build error (AWS CLI)
+The `dist upload failed: aws s3 cp exit 127` error is the same Nix/AWS CLI infrastructure issue from earlier — it requires re-installing the AWS CLI binary, not a code change. I will fix this after deploying the edge function update.
 
 ### Files changed
-- 1 new migration — drop old overloads, create/replace the definitive `upsert_own_member_profile` with all parameters including `p_tenant_id` and `p_worshipped_at_other_wci`
+- `supabase/functions/send-email-alert/index.ts` — fix `senderDomain` to match the verified email domain
 
