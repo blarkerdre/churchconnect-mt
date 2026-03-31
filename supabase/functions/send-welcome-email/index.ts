@@ -107,8 +107,6 @@ Deno.serve(async (req) => {
     // Resolve tenant slug for tenant-scoped URL
     let tenantSiteUrl = `https://${ROOT_DOMAIN}`;
     if (tenant_id) {
-      const { data: slugRow } = await supabase.rpc("get_tenant_by_slug", { _slug: "" }).limit(0);
-      // Direct slug lookup
       const { data: tenantSlugRow } = await supabase
         .from("tenants")
         .select("slug")
