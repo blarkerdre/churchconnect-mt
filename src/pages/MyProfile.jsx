@@ -876,46 +876,49 @@ function CreateMemberProfile({ user, onCreated, wsfCentres, churchUnits }) {
   );
 }
 
-function DynamicExamButtons({ memberId, onSelect }) {
+function DynamicExamButtons({ memberId, onSelect, tenantId }) {
   const { data: courses = [], isLoading } = useQuery({
-    queryKey: ["exam-titles"],
+    queryKey: ["exam-titles", tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("exam_titles").select("*").eq("is_active", true).order("name");
+      const { data, error } = await supabase.from("exam_titles").select("*").eq("is_active", true).eq("tenant_id", tenantId).order("name");
       if (error) throw error;
       return data;
     },
+    enabled: !!tenantId,
   });
 
   const { data: registrations = [] } = useQuery({
-    queryKey: ["my-course-registrations", memberId],
+    queryKey: ["my-course-registrations", memberId, tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("course_registrations").select("course_id").eq("member_id", memberId);
+      const { data, error } = await supabase.from("course_registrations").select("course_id").eq("member_id", memberId).eq("tenant_id", tenantId);
       if (error) throw error;
       return data.map(r => r.course_id);
     },
-    enabled: !!memberId,
+    enabled: !!memberId && !!tenantId,
   });
 
   const { data: allSubjects = [] } = useQuery({
-    queryKey: ["all-exam-subjects"],
+    queryKey: ["all-exam-subjects", tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("exam_subjects").select("*").eq("is_active", true).order("sort_order");
+      const { data, error } = await supabase.from("exam_subjects").select("*").eq("is_active", true).eq("tenant_id", tenantId).order("sort_order");
       if (error) throw error;
       return data;
     },
+    enabled: !!tenantId,
   });
 
   const { data: myAttempts = [] } = useQuery({
-    queryKey: ["my-course-attempts", memberId],
+    queryKey: ["my-course-attempts", memberId, tenantId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("exam_attempts")
         .select("subject_id, training_type, score, total_points, passed, retake_allowed")
-        .eq("member_id", memberId);
+        .eq("member_id", memberId)
+        .eq("tenant_id", tenantId);
       if (error) throw error;
       return data;
     },
-    enabled: !!memberId,
+    enabled: !!memberId && !!tenantId,
   });
 
   if (isLoading || courses.length === 0) return null;
