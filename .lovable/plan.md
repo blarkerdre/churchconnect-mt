@@ -1,29 +1,17 @@
 
 
-## Fix: Assigned Follow-up Member Not Receiving Email/SMS
+## Remove SMS Reminder from Followups Page
 
-### Problem
-The `auto_create_followup` trigger correctly targets only the assigned user for email/SMS (which is what you want). However, the edge function `notify-followup-assignment` is **never being called** — there are zero logs for it. This means the vault secret `supabase_url` is missing, causing the `IF _supabase_url IS NOT NULL` check to fail silently.
+### What changes
+Remove the "SMS Reminder" button and its associated `SMSDialog` from the Followups page.
 
-### Current behavior (correct logic, broken delivery)
-- Follow-up task is created and assigned to one user via round-robin
-- All follow-up unit members get **in-app notifications** (working)
-- Only the **assigned user** should get email/SMS via `notify-followup-assignment` (correct intent, but the call never fires)
-
-### Root cause
-The trigger reads `supabase_url` from `vault.decrypted_secrets`. This secret was never inserted, so `_supabase_url` is NULL and the `http_post` call is skipped entirely.
-
-### Fix
-**1 database migration** — Insert the `supabase_url` vault secret so the trigger can resolve the edge function URL:
-
-```sql
-INSERT INTO vault.secrets (name, secret)
-VALUES ('supabase_url', 'https://qfordhikmtgedfybktjg.supabase.co')
-ON CONFLICT (name) DO NOTHING;
-```
-
-No changes to the trigger function or edge function — the current logic already sends email/SMS only to the assigned user.
+### Changes to `src/pages/Followups.jsx`
+1. **Remove state**: `smsFollowup` state variable (line 35)
+2. **Remove sub-feature check**: `canSmsFollowup` (line 40)
+3. **Remove SMS button**: lines 375-385 (the "SMS Reminder" button in the follow-up card)
+4. **Remove SMSDialog block**: lines 443-453
+5. **Remove unused imports**: `SMSDialog`, `MessageSquare` (if no longer referenced elsewhere in file)
 
 ### Files changed
-- 1 migration — insert `supabase_url` vault secret
+- `src/pages/Followups.jsx` — remove SMS reminder button and dialog
 
