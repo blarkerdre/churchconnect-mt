@@ -206,7 +206,7 @@ export default function UserManagement() {
       </div>
 
       {/* Search & Filter Toolbar */}
-      <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
+      <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center flex-wrap">
         <div className="relative flex-1 w-full sm:max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
@@ -216,6 +216,23 @@ export default function UserManagement() {
             className="pl-9"
           />
         </div>
+        <Button
+          variant={roleFilter === "unit_leader" ? "default" : "outline"}
+          size="sm"
+          onClick={() => setRoleFilter(roleFilter === "unit_leader" ? "all" : "unit_leader")}
+          className="gap-1.5"
+        >
+          <UserCog className="h-4 w-4" />
+          Unit Leaders
+          {(() => {
+            const count = profiles.filter(p => getUserRoles(p.user_id).includes("unit_leader")).length;
+            return count > 0 ? (
+              <Badge className={`ml-1 px-1.5 py-0 text-[10px] ${roleFilter === "unit_leader" ? "bg-primary-foreground/20 text-primary-foreground" : "bg-muted text-muted-foreground"} border-0`}>
+                {count}
+              </Badge>
+            ) : null;
+          })()}
+        </Button>
         <Select value={roleFilter} onValueChange={setRoleFilter}>
           <SelectTrigger className="w-full sm:w-[160px]"><SelectValue placeholder="Role" /></SelectTrigger>
           <SelectContent>
