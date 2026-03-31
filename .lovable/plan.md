@@ -1,28 +1,18 @@
 
 
-## Fix: Public Registration Fails Without Tenant Context on `/register`
+## Add Unit Leaders Filter in User Management
 
-### Root cause
-The `/register` route has no `:tenantSlug` parameter, so `useParams()` returns no slug. The component never resolves a `tenant_id`, and the `public-register` edge function receives no tenant context — causing the registration to fail or create orphaned records.
+### What already exists
+- The role filter dropdown already includes "unit_leader" which filters to show only unit leaders
+- The "Led Units" column already shows assigned units for unit leaders, but it's **hidden on screens smaller than `lg`** (`hidden lg:table-cell`)
 
-### Fix
+### What to add
 
-**1. `src/pages/PublicRegistration.jsx`** — Add fallback tenant resolution
-- When no `tenantSlug` is available from the URL, resolve the tenant using a fallback:
-  - Check if there's a `tenant` query parameter in the URL (e.g., `/register?tenant=my-church`)
-  - If still no slug, use the default tenant ID as a last resort
-- Show a clear error message if no tenant can be resolved, with guidance to use the church-specific registration link
-
-**2. `src/App.jsx`** — Redirect bare `/register` to tenant-prefixed route
-- Option A: Remove the bare `/register` route entirely and only keep `/t/:tenantSlug/register`
-- Option B: Keep `/register` but add query-param support (`/register?slug=my-church`)
-
-**Recommended approach**: Keep both routes but make the bare `/register` resolve the default tenant automatically (since this is a single-org deployment scenario), while the tenant-prefixed route works as-is.
-
-### Changes
-- `src/pages/PublicRegistration.jsx` — when `tenantSlug` is absent, fall back to the default tenant ID (`d8bbbdae-d9b3-4999-912d-3aa5999884b0`) so registration always has tenant context
-- Also pass `tenant_slug` in the edge function body when `tenantSlug` is available (as a secondary fallback for the edge function)
+**1. `src/pages/UserManagement.jsx`** — Enhance the unit leaders filtering experience:
+- Add a dedicated "Unit Leaders" quick-filter button next to the existing filters (a toggle chip/button) that sets `roleFilter` to `unit_leader` and ensures the units column is visible
+- When the `unit_leader` role filter is active (either via dropdown or quick button), make the "Led Units" column **always visible** (remove the `hidden lg:table-cell` restriction)
+- Add a count badge on the quick-filter button showing how many unit leaders exist
 
 ### Files changed
-- `src/pages/PublicRegistration.jsx` — add default tenant fallback + pass `tenant_slug` to edge function
+- `src/pages/UserManagement.jsx` — add unit leaders quick-filter button, conditionally show Led Units column on all screen sizes when filtering by unit_leader
 
