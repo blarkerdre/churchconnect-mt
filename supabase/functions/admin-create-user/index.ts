@@ -91,6 +91,12 @@ Deno.serve(async (req) => {
       tenantSlug,
     );
 
+    // Verify the auth user actually exists before writing FK references
+    const { data: verifyUser, error: verifyError } = await supabase.auth.admin.getUserById(userId);
+    if (verifyError || !verifyUser?.user) {
+      return jsonResponse({ error: "Auth user could not be verified. The account may have been deleted." }, 400);
+    }
+
     await supabase.from("profiles").upsert({
       user_id: userId,
       email: normalizedEmail,
