@@ -78,7 +78,9 @@ export function AuthProvider({ children }) {
       password,
       options: {
         data: { full_name: fullName, ...(tenantSlug ? { tenant_slug: tenantSlug } : {}) },
-        emailRedirectTo: window.location.origin,
+        emailRedirectTo: tenantSlug
+          ? `${window.location.origin}/t/${tenantSlug}`
+          : window.location.origin,
       },
     });
     return { data, error };
