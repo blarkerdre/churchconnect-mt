@@ -1,41 +1,27 @@
 
 
-## Add Birthday Celebration Feature
+## Fix: Signup Emails Still Showing "pending" — `tenant_id` Missing on Terminal Log Rows
 
-### What it does
-- Show a birthday banner/card on the member dashboard when it's the member's birthday (matching day and month from `date_of_birth`)
-- Show upcoming birthdays list on the admin/leader dashboard so leaders can celebrate members
-- Add a "Birthdays This Week/Month" section visible to admins/leaders
+### Root cause
+The `process-email-queue` edge function writes terminal status rows (`sent`, `failed`, `rate_limited`, `dlq`) to `email_send_log` **without `tenant_id`**, even though the payload contains it. The tenant-scoped dashboard query only sees the earlier `pending` row (which has `tenant_id`), so the email appears stuck as "pending."
 
-### Changes
+The auth-email-hook correctly enqueues `tenant_id` in the payload (line 305), but `process-email-queue` never reads `payload.tenant_id` when inserting log rows.
 
-**1. `src/components/dashboard/MemberDashboard.jsx`**
-- Add a birthday check: compare today's day+month against `myMember.date_of_birth`
-- If it's the member's birthday, show a celebratory banner with confetti/cake icon, e.g. "Happy Birthday, [Name]!" between the welcome card and self check-in widget
+### Fix
+Update `supabase/functions/process-email-queue/index.ts` to include `tenant_id: payload.tenant_id` in every `email_send_log` insert:
 
-**2. `src/components/dashboard/BirthdayCelebration.jsx`** (new file)
-- Reusable component that accepts a member and shows a birthday card with cake icon and festive styling
-- Used on both member dashboard (own birthday) and admin dashboard (list of birthdays)
+1. **`moveToDlq` function** (line 63-69) — add `...(payload.tenant_id ? { tenant_id: payload.tenant_id } : {})`
+2. **Sent log** (line 271-276) — add `...(payload.tenant_id ? { tenant_id: payload.tenant_id } : {})`
+3. **Rate-limited log** (line 298-304) — add `...(payload.tenant_id ? { tenant_id: payload.tenant_id } : {})`
+4. **Failed log** (line 335-341) — add `...(payload.tenant_id ? { tenant_id: payload.tenant_id } : {})`
 
-**3. `src/pages/Dashboard.jsx`**
-- Add a query for upcoming birthdays (members whose day+month falls within the next 7 days)
-- Query uses raw day/month extraction: `EXTRACT(MONTH FROM date_of_birth)` and `EXTRACT(DAY FROM date_of_birth)`
-- Since Supabase JS client doesn't support EXTRACT easily, use an RPC function
-- Show an "Upcoming Birthdays" card on the admin dashboard with member names and dates (dd MMM format, no year)
+Then redeploy `process-email-queue`.
 
-**4. Database: new RPC function `get_upcoming_birthdays`**
-- Takes `_tenant_id uuid` and `_days_ahead int` (default 7)
-- Returns members whose birthday (month+day) falls within the next N days
-- Handles year wrap-around (e.g. late December looking into January)
-- Returns: `id, first_name, last_name, date_of_birth, phone, email, photo_url, church_unit`
-- Security definer scoped to tenant
-
-**5. `src/components/dashboard/MemberDashboard.jsx`** (birthday for self)
-- If `myMember.date_of_birth` matches today's day+month, render the `BirthdayCelebration` banner
+### Backfill
+Run a migration to copy `tenant_id` from existing `pending` rows to their matching terminal rows (same `message_id`) that currently have `NULL` tenant_id.
 
 ### Files changed
-- 1 new migration — `get_upcoming_birthdays` RPC function
-- `src/components/dashboard/BirthdayCelebration.jsx` — new component
-- `src/components/dashboard/MemberDashboard.jsx` — add own-birthday banner
-- `src/pages/Dashboard.jsx` — add upcoming birthdays card for admins/leaders
+- `supabase/functions/process-email-queue/index.ts` — add `tenant_id` to all 4 log insert sites
+- 1 new migration — backfill existing terminal rows
+- Deploy `process-email-queue`
 
