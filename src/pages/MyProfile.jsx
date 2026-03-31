@@ -174,18 +174,19 @@ export default function MyProfile() {
   });
 
   const { data: attendanceRecords = [] } = useQuery({
-    queryKey: ["my-attendance", member?.id],
+    queryKey: ["my-attendance", member?.id, tenantId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("attendance_records")
         .select("*, attendance_sessions(title, session_date, session_type)")
         .eq("member_id", member.id)
+        .eq("tenant_id", tenantId)
         .order("checked_in_at", { ascending: false })
         .limit(20);
       if (error) throw error;
       return data;
     },
-    enabled: !!member?.id,
+    enabled: !!member?.id && !!tenantId,
   });
 
   const updateMutation = useMutation({
