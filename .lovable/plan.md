@@ -1,30 +1,38 @@
 
 
-## Fix: Drop All `update_own_member_profile` Overloads, Create Single Canonical Function
+## Fix: Signup Emails Still Showing "pending" — `tenant_id` Missing in `process-email-queue`
 
-The previous migration failed to drop all overloads because it didn't match exact signatures. There are still **3 overlapping overloads** (15-param, 25-param with enum types, 25-param with text, 34-param with enum, 35-param with text+worshipped_at_other_wci).
+### Root cause
+The `process-email-queue` edge function writes terminal status rows (`sent`, `failed`, `dlq`, `rate_limited`) to `email_send_log` **without `tenant_id`**, even though `payload.tenant_id` is available. The System Logs dashboard uses `scopeQuery` which filters by `tenant_id`, so terminal rows with NULL `tenant_id` are invisible — only the earlier `pending` row (which has `tenant_id`) appears.
+
+There are **4 insert sites** in `process-email-queue/index.ts` that need fixing:
+1. **Line 63** — DLQ log in `moveToDlq` helper
+2. **Line 271** — Success (`sent`) log
+3. **Line 298** — Rate-limited log
+4. **Line 335** — Failed log
 
 ### Fix
 
-**1 new migration** that:
-- Drops all overloads by exact signature (including the 15-param, 24-param, 25-param with `_workers_in_training`, the enum-typed 34-param, and the text-typed 35-param versions)
-- Creates one single function with all 35 parameters using `text` types for `_gender` and `_membership_status` (with safe casting inside the body)
-- Includes `_worshipped_at_other_wci` as the last parameter
+**1. `supabase/functions/process-email-queue/index.ts`**
+Add `tenant_id: payload.tenant_id || null` to all 4 `email_send_log` insert objects.
 
-No client-side changes needed — `MyProfile.jsx` already sends the correct parameter set.
-
-### Technical detail — exact DROP statements
-
+**2. Migration — backfill existing rows**
+Update existing terminal rows that have NULL `tenant_id` by copying it from their matching `pending` row (same `message_id`):
 ```sql
-DROP FUNCTION IF EXISTS public.update_own_member_profile(uuid,text,text,text,text,text,text,text,date,text,text,text,text,text,text);
-DROP FUNCTION IF EXISTS public.update_own_member_profile(uuid,text,text,text,text,text,text,text,date,text,text,text,text,text,text,text,boolean,boolean,boolean,uuid,boolean,boolean,boolean,boolean,boolean);
-DROP FUNCTION IF EXISTS public.update_own_member_profile(uuid,text,text,text,text,text,text,text,date,public.gender_type,text,text,text,text,public.membership_status,text,boolean,boolean,boolean,uuid,boolean,boolean,boolean,boolean,boolean,boolean,text,boolean,boolean,text,boolean,text,boolean,text);
-DROP FUNCTION IF EXISTS public.update_own_member_profile(uuid,text,text,text,text,text,text,text,date,text,text,text,text,text,text,text,boolean,boolean,boolean,uuid,boolean,boolean,boolean,boolean,boolean,boolean,text,boolean,boolean,text,boolean,text,boolean,text);
-DROP FUNCTION IF EXISTS public.update_own_member_profile(uuid,text,text,text,text,text,text,text,date,text,text,text,text,text,text,text,boolean,boolean,boolean,uuid,boolean,boolean,boolean,boolean,boolean,boolean,text,boolean,boolean,text,boolean,text,boolean,text,boolean);
+UPDATE email_send_log t
+SET tenant_id = p.tenant_id
+FROM email_send_log p
+WHERE t.message_id = p.message_id
+  AND t.tenant_id IS NULL
+  AND p.tenant_id IS NOT NULL
+  AND p.status = 'pending'
+  AND t.status IN ('sent','failed','dlq','rate_limited');
 ```
 
-Then CREATE OR REPLACE the single canonical 35-param version.
+**3. Redeploy `process-email-queue`**
 
 ### Files changed
-- 1 new migration — drop all overloads, create single canonical function
+- `supabase/functions/process-email-queue/index.ts` — add `tenant_id` to all 4 log inserts
+- 1 new migration — backfill existing terminal rows
+- Deploy `process-email-queue`
 
