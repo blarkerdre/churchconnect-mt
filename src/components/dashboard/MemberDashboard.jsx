@@ -7,6 +7,7 @@ import { Link } from "react-router-dom";
 import MemberFeed from "@/components/profile/MemberFeed";
 import SelfCheckInWidget from "@/components/attendance/SelfCheckInWidget";
 import BookOfTheMonth from "@/components/dashboard/BookOfTheMonth";
+import { BirthdayBanner } from "@/components/dashboard/BirthdayCelebration";
 import { useTenant } from "@/contexts/TenantContext";
 
 const GROWTH_FIELDS = [
@@ -87,6 +88,15 @@ export default function MemberDashboard({ currentUser, myMember }) {
             </CardContent>
           </Card>
         </Link>
+      )}
+
+      {/* Birthday Banner */}
+      {myMember?.date_of_birth && (() => {
+        const dob = new Date(myMember.date_of_birth);
+        const today = new Date();
+        return dob.getMonth() === today.getMonth() && dob.getDate() === today.getDate();
+      })() && (
+        <BirthdayBanner firstName={myMember.first_name} />
       )}
 
       {/* Self Check-In */}
