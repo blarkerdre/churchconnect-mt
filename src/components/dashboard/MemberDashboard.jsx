@@ -7,6 +7,7 @@ import { Link } from "react-router-dom";
 import MemberFeed from "@/components/profile/MemberFeed";
 import SelfCheckInWidget from "@/components/attendance/SelfCheckInWidget";
 import BookOfTheMonth from "@/components/dashboard/BookOfTheMonth";
+import { BirthdayBanner } from "@/components/dashboard/BirthdayCelebration";
 import { useTenant } from "@/contexts/TenantContext";
 
 const GROWTH_FIELDS = [
