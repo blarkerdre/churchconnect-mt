@@ -1,27 +1,29 @@
 
 
-## Fix: Signup Emails Still Showing "pending" — `tenant_id` Missing on Terminal Log Rows
+## Fix: Follow-up Assignment Notification Failing with 401
 
-### Root cause
-The `process-email-queue` edge function writes terminal status rows (`sent`, `failed`, `rate_limited`, `dlq`) to `email_send_log` **without `tenant_id`**, even though the payload contains it. The tenant-scoped dashboard query only sees the earlier `pending` row (which has `tenant_id`), so the email appears stuck as "pending."
+### What I found
 
-The auth-email-hook correctly enqueues `tenant_id` in the payload (line 305), but `process-email-queue` never reads `payload.tenant_id` when inserting log rows.
+**Issue 1 — Assignment notification to unit member: NOT delivered**
+The `net._http_response` table shows the latest call to `notify-followup-assignment` returned `401 {"error":"Invalid token"}` at 14:01:49. The vault secret `email_queue_service_role_key` is stale again and doesn't match the edge function's `SUPABASE_SERVICE_ROLE_KEY` env var.
+
+**Issue 2 — Follow-up reminder to first timer: Actually IS delivered (email only)**
+The `email_send_log` shows `followup-reminder` emails successfully sent (status=`sent`) to `blarkerdre@yahoo.com`. The SMS channel failed because the member record has no phone number — Twilio rejects with "Invalid 'To' Phone Number: X".
 
 ### Fix
-Update `supabase/functions/process-email-queue/index.ts` to include `tenant_id: payload.tenant_id` in every `email_send_log` insert:
 
-1. **`moveToDlq` function** (line 63-69) — add `...(payload.tenant_id ? { tenant_id: payload.tenant_id } : {})`
-2. **Sent log** (line 271-276) — add `...(payload.tenant_id ? { tenant_id: payload.tenant_id } : {})`
-3. **Rate-limited log** (line 298-304) — add `...(payload.tenant_id ? { tenant_id: payload.tenant_id } : {})`
-4. **Failed log** (line 335-341) — add `...(payload.tenant_id ? { tenant_id: payload.tenant_id } : {})`
+1. **Refresh vault secrets** — Run `setup_email_infra` to resync `email_queue_service_role_key` with the current service role key. This fixes the 401 error blocking assignment notifications.
 
-Then redeploy `process-email-queue`.
+2. **No code changes needed** — The trigger logic and edge function code are correct. The only issue is the stale vault secret.
 
-### Backfill
-Run a migration to copy `tenant_id` from existing `pending` rows to their matching terminal rows (same `message_id`) that currently have `NULL` tenant_id.
+### About the SMS failures
+The SMS failures for first timer reminders are because those members don't have phone numbers in their records. This is expected behavior — the system correctly falls back to email-only delivery. If SMS is needed, ensure members have valid phone numbers.
+
+### Verification after fix
+- Create a new first timer or reassign a follow-up task
+- Check `email_send_log` for a new `followup-assignment` entry with status `sent`
+- Check `sms_log` for a new `followup-assignment` entry (if the unit member has a phone number)
 
 ### Files changed
-- `supabase/functions/process-email-queue/index.ts` — add `tenant_id` to all 4 log insert sites
-- 1 new migration — backfill existing terminal rows
-- Deploy `process-email-queue`
+- None — infrastructure refresh only (vault secret update)
 
