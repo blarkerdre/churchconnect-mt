@@ -10,9 +10,25 @@ import { useTenant } from "@/contexts/TenantContext";
 export default function RegistrationQRCode({ open, onOpenChange }) {
   const qrRef = useRef();
   const { tenantSlug, currentTenant } = useTenant();
-  const registrationUrl = tenantSlug
-    ? `${window.location.origin}/t/${tenantSlug}/register`
-    : `${window.location.origin}/register`;
+
+  if (!tenantSlug) {
+    return (
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <QrCode className="h-5 w-5" /> Registration QR Code
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground py-4 text-center">
+            Unable to generate QR code — church context not resolved yet. Please try again.
+          </p>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
+  const registrationUrl = `${window.location.origin}/t/${tenantSlug}/register`;
 
   const churchName = currentTenant?.name || "Church";
   const logoUrl = currentTenant?.logo_url || "/winners-logo.png";
