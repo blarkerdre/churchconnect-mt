@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Navigate, useParams } from "react-router-dom";
+import { DEFAULT_TENANT_ID } from "@/contexts/TenantContext";
 import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -49,6 +50,24 @@ export default function Auth() {
     },
     enabled: !!tenantSlug,
   });
+
+  // Resolve default tenant slug for signup fallback when no slug in URL
+  const { data: defaultTenantSlug } = useQuery({
+    queryKey: ["default-tenant-slug"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("tenants")
+        .select("slug")
+        .eq("id", DEFAULT_TENANT_ID)
+        .maybeSingle();
+      if (error) throw error;
+      return data?.slug || null;
+    },
+    enabled: !tenantSlug,
+  });
+
+  // Use URL slug or fall back to the default tenant slug
+  const effectiveSlug = tenantSlug || defaultTenantSlug;
 
   const churchName = tenant?.name || "Winners Chapel";
   const churchSubtitle = tenant ? null : "International";
@@ -121,7 +140,7 @@ export default function Auth() {
         const { error } = await signIn(form.email, form.password);
         if (error) throw error;
       } else if (mode === "signup") {
-        const { data, error } = await signUp(form.email, form.password, form.fullName, tenantSlug);
+        const { data, error } = await signUp(form.email, form.password, form.fullName, effectiveSlug);
         if (error) throw error;
         if (data?.user?.identities?.length === 0) {
           toast({
