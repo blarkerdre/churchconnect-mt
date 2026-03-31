@@ -133,6 +133,11 @@ async function sendSms(
   if (/^0[1-9]\d{9,10}$/.test(phone)) phone = "+44" + phone.slice(1);
   if (!phone.startsWith("+")) phone = "+" + phone;
 
+  // Validate E.164 before calling Twilio
+  if (!/^\+[1-9]\d{6,14}$/.test(phone)) {
+    throw new Error(`Invalid or missing phone number: "${msg.recipient_phone}"`);
+  }
+
   const params = new URLSearchParams({
     To: phone,
     From: fromNumber,
