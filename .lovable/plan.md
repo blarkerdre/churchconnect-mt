@@ -1,29 +1,23 @@
 
 
-## Fix: Follow-up Assignment Notification Failing with 401
+## Fix: Profile Update Error — Multiple `update_own_member_profile` Overloads
 
-### What I found
-
-**Issue 1 — Assignment notification to unit member: NOT delivered**
-The `net._http_response` table shows the latest call to `notify-followup-assignment` returned `401 {"error":"Invalid token"}` at 14:01:49. The vault secret `email_queue_service_role_key` is stale again and doesn't match the edge function's `SUPABASE_SERVICE_ROLE_KEY` env var.
-
-**Issue 2 — Follow-up reminder to first timer: Actually IS delivered (email only)**
-The `email_send_log` shows `followup-reminder` emails successfully sent (status=`sent`) to `blarkerdre@yahoo.com`. The SMS channel failed because the member record has no phone number — Twilio rejects with "Invalid 'To' Phone Number: X".
+### Root cause
+There are **5 overloads** of `update_own_member_profile` in the database with overlapping signatures (15, 24, 25, 34, and 34 parameters). When the client calls with 25 parameters, PostgreSQL cannot resolve which overload to use because two 25-param versions exist with near-identical signatures (one casts `gender`/`membership_status` as enum types, the other as `text`). This causes a "could not find function" or ambiguous function error.
 
 ### Fix
+Drop all 5 overloads and create a single canonical `update_own_member_profile` that includes all fields the client might send, matching the full parameter list (including welcome-question fields like `_worshipped_before`, `_worshipped_at_other_wci`, etc.).
 
-1. **Refresh vault secrets** — Run `setup_email_infra` to resync `email_queue_service_role_key` with the current service role key. This fixes the 401 error blocking assignment notifications.
+**1. Migration** — Drop all existing overloads, create one definitive function:
+- Parameters: `_member_id uuid` + all 34 optional fields (personal, spiritual, welcome questions)
+- Uses `text` types for `_gender` and `_membership_status` with safe casting
+- Security definer, scoped to `auth.uid()` ownership check
 
-2. **No code changes needed** — The trigger logic and edge function code are correct. The only issue is the stale vault secret.
-
-### About the SMS failures
-The SMS failures for first timer reminders are because those members don't have phone numbers in their records. This is expected behavior — the system correctly falls back to email-only delivery. If SMS is needed, ensure members have valid phone numbers.
-
-### Verification after fix
-- Create a new first timer or reassign a follow-up task
-- Check `email_send_log` for a new `followup-assignment` entry with status `sent`
-- Check `sms_log` for a new `followup-assignment` entry (if the unit member has a phone number)
+**2. `src/pages/MyProfile.jsx`** — Update `buildOwnMemberProfilePayload` to include the missing welcome-question fields:
+- Add `_worshipped_before`, `_worshipped_when_where`, `_would_like_to_join`, `_live_work_in_city`, `_how_did_you_hear`, `_attended_foundation_school`, `_wofbi_highest_level`, `_baptized_by_immersion`, `_preferred_contact_modes`, `_worshipped_at_other_wci`
+- All default to `null` so existing callers don't break
 
 ### Files changed
-- None — infrastructure refresh only (vault secret update)
+- 1 new migration — drop old overloads, create single canonical function
+- `src/pages/MyProfile.jsx` — extend `buildOwnMemberProfilePayload` with all fields
 
