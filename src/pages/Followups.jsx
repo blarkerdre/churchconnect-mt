@@ -37,7 +37,7 @@ export default function Followups() {
   const [messageFollowup, setMessageFollowup] = useState(null);
   const queryClient = useQueryClient();
   const { enabled: canCreateFollowup } = useSubFeature("followups.create");
-  const { enabled: canSmsFollowup } = useSubFeature("followups.sms");
+  
 
   // Fetch profiles for resolving assigned_to user IDs to names
   const { data: profiles = [] } = useQuery({
