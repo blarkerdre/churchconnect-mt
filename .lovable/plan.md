@@ -1,50 +1,41 @@
 
-Fix the remaining email pipeline gap causing the dashboard to still show `pending`.
 
-What I found
-- The dashboard deduplication in both `src/pages/EmailDashboard.jsx` and `src/pages/SystemLogs.jsx` is correct: each keeps the latest row per `message_id`.
-- `process-email-queue` now preserves `tenant_id` on terminal rows, but only if the queued payload contains `tenant_id`.
-- `send-transactional-email` already enqueues `tenant_id`.
-- The remaining issue is `supabase/functions/auth-email-hook/index.ts`:
-  - it logs the initial `pending` row with `tenant_id`
-  - but it does not include `tenant_id` in the `auth_emails` queue payload
-  - so `process-email-queue` writes the later `sent`/`failed` row without `tenant_id`
-  - tenant-scoped dashboard queries only see the earlier `pending` row
+## Fix: Follow-up Unit Member Not Receiving Email/SMS for First Timer & New Convert
 
-Implementation plan
-1. Update `supabase/functions/auth-email-hook/index.ts`
-- Add `tenant_id: resolvedTenantId` to the payload passed to `enqueue_email`.
-- Keep the existing best-effort tenant resolution logic unchanged.
+### Root cause (two issues)
 
-2. Backfill existing auth email terminal rows
-- Add one migration to copy `tenant_id` from the matching `pending` row onto terminal rows with the same `message_id`.
-- Include statuses: `sent`, `failed`, `dlq`, and `rate_limited`.
-- Scope the source row to `status = 'pending'` so the backfill uses the original tenant-scoped entry.
+1. **Vault secrets were stale/missing** — The `auto_create_followup` trigger reads `supabase_url` and `email_queue_service_role_key` from the vault to call `notify-followup-assignment`. These secrets were stale, so `net.http_post` was silently failing (confirmed: zero edge function logs, zero email/SMS log entries despite followups being created successfully).
 
-3. Align dashboard status filters
-- Update `STATUS_OPTIONS` / `EMAIL_STATUS_OPTIONS` and badge config to include `rate_limited`, since the queue writes that status and the current UI ignores it.
+   **Status: Already fixed** — I just refreshed the vault secrets by running the email infrastructure setup.
 
-4. Verify all email log surfaces
-- Confirm both `src/pages/EmailDashboard.jsx` and `src/pages/SystemLogs.jsx` will naturally show the later terminal row once the backfill and auth payload fix are in place.
-- No dedupe rewrite is needed.
+2. **Wrong sender domain in edge function** — `notify-followup-assignment/index.ts` line 123 uses `notify.churchmanagementsuite.org` as the sender domain, but the verified domain is `notify.app.churchmanagementsuite.org`. Even after the vault fix, emails would be rejected by the email API.
 
-Files to change
-- `supabase/functions/auth-email-hook/index.ts`
-- `supabase/migrations/<new_migration>.sql`
-- `src/pages/EmailDashboard.jsx`
-- `src/pages/SystemLogs.jsx`
+   Same issue exists in two other edge functions:
+   - `send-welcome-email/index.ts` — uses `notify.churchmanagementsuite.org`
+   - `send-course-registration-email/index.ts` — uses `notify.churchmanagementsuite.org`
 
-Technical detail
-```text
-Current auth flow:
-pending row has tenant_id
-auth-email-hook queue payload has no tenant_id
-process-email-queue logs sent/failed with payload.tenant_id
-=> terminal row tenant_id is NULL
-=> tenant-scoped UI only sees pending
+### Fix
 
-Fix:
-auth-email-hook enqueues tenant_id
-process-email-queue keeps propagating it
-migration repairs older rows already written without it
-```
+**1. `supabase/functions/notify-followup-assignment/index.ts`**
+- Change line 123: `notify.churchmanagementsuite.org` → `notify.app.churchmanagementsuite.org`
+- Update `fromAddress` to use `app.churchmanagementsuite.org` for the From header (consistent with other functions)
+
+**2. `supabase/functions/send-welcome-email/index.ts`**
+- Change `SENDER_DOMAIN` to `notify.app.churchmanagementsuite.org`
+- Change `FROM_DOMAIN` and `ROOT_DOMAIN` to `app.churchmanagementsuite.org`
+
+**3. `supabase/functions/send-course-registration-email/index.ts`**
+- Same domain fixes as above
+
+**4. Deploy all 4 edge functions**
+- `notify-followup-assignment`
+- `send-welcome-email`
+- `send-course-registration-email`
+- `process-email-queue` (refreshed by infrastructure setup)
+
+### Files changed
+- `supabase/functions/notify-followup-assignment/index.ts` — fix sender domain
+- `supabase/functions/send-welcome-email/index.ts` — fix sender domain
+- `supabase/functions/send-course-registration-email/index.ts` — fix sender domain
+- Deploy 4 edge functions
+
