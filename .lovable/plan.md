@@ -1,41 +1,41 @@
 
 
-## Fix: Follow-up Unit Member Not Receiving Email/SMS for First Timer & New Convert
+## Add Birthday Celebration Feature
 
-### Root cause (two issues)
+### What it does
+- Show a birthday banner/card on the member dashboard when it's the member's birthday (matching day and month from `date_of_birth`)
+- Show upcoming birthdays list on the admin/leader dashboard so leaders can celebrate members
+- Add a "Birthdays This Week/Month" section visible to admins/leaders
 
-1. **Vault secrets were stale/missing** — The `auto_create_followup` trigger reads `supabase_url` and `email_queue_service_role_key` from the vault to call `notify-followup-assignment`. These secrets were stale, so `net.http_post` was silently failing (confirmed: zero edge function logs, zero email/SMS log entries despite followups being created successfully).
+### Changes
 
-   **Status: Already fixed** — I just refreshed the vault secrets by running the email infrastructure setup.
+**1. `src/components/dashboard/MemberDashboard.jsx`**
+- Add a birthday check: compare today's day+month against `myMember.date_of_birth`
+- If it's the member's birthday, show a celebratory banner with confetti/cake icon, e.g. "Happy Birthday, [Name]!" between the welcome card and self check-in widget
 
-2. **Wrong sender domain in edge function** — `notify-followup-assignment/index.ts` line 123 uses `notify.churchmanagementsuite.org` as the sender domain, but the verified domain is `notify.app.churchmanagementsuite.org`. Even after the vault fix, emails would be rejected by the email API.
+**2. `src/components/dashboard/BirthdayCelebration.jsx`** (new file)
+- Reusable component that accepts a member and shows a birthday card with cake icon and festive styling
+- Used on both member dashboard (own birthday) and admin dashboard (list of birthdays)
 
-   Same issue exists in two other edge functions:
-   - `send-welcome-email/index.ts` — uses `notify.churchmanagementsuite.org`
-   - `send-course-registration-email/index.ts` — uses `notify.churchmanagementsuite.org`
+**3. `src/pages/Dashboard.jsx`**
+- Add a query for upcoming birthdays (members whose day+month falls within the next 7 days)
+- Query uses raw day/month extraction: `EXTRACT(MONTH FROM date_of_birth)` and `EXTRACT(DAY FROM date_of_birth)`
+- Since Supabase JS client doesn't support EXTRACT easily, use an RPC function
+- Show an "Upcoming Birthdays" card on the admin dashboard with member names and dates (dd MMM format, no year)
 
-### Fix
+**4. Database: new RPC function `get_upcoming_birthdays`**
+- Takes `_tenant_id uuid` and `_days_ahead int` (default 7)
+- Returns members whose birthday (month+day) falls within the next N days
+- Handles year wrap-around (e.g. late December looking into January)
+- Returns: `id, first_name, last_name, date_of_birth, phone, email, photo_url, church_unit`
+- Security definer scoped to tenant
 
-**1. `supabase/functions/notify-followup-assignment/index.ts`**
-- Change line 123: `notify.churchmanagementsuite.org` → `notify.app.churchmanagementsuite.org`
-- Update `fromAddress` to use `app.churchmanagementsuite.org` for the From header (consistent with other functions)
-
-**2. `supabase/functions/send-welcome-email/index.ts`**
-- Change `SENDER_DOMAIN` to `notify.app.churchmanagementsuite.org`
-- Change `FROM_DOMAIN` and `ROOT_DOMAIN` to `app.churchmanagementsuite.org`
-
-**3. `supabase/functions/send-course-registration-email/index.ts`**
-- Same domain fixes as above
-
-**4. Deploy all 4 edge functions**
-- `notify-followup-assignment`
-- `send-welcome-email`
-- `send-course-registration-email`
-- `process-email-queue` (refreshed by infrastructure setup)
+**5. `src/components/dashboard/MemberDashboard.jsx`** (birthday for self)
+- If `myMember.date_of_birth` matches today's day+month, render the `BirthdayCelebration` banner
 
 ### Files changed
-- `supabase/functions/notify-followup-assignment/index.ts` — fix sender domain
-- `supabase/functions/send-welcome-email/index.ts` — fix sender domain
-- `supabase/functions/send-course-registration-email/index.ts` — fix sender domain
-- Deploy 4 edge functions
+- 1 new migration — `get_upcoming_birthdays` RPC function
+- `src/components/dashboard/BirthdayCelebration.jsx` — new component
+- `src/components/dashboard/MemberDashboard.jsx` — add own-birthday banner
+- `src/pages/Dashboard.jsx` — add upcoming birthdays card for admins/leaders
 
