@@ -16,7 +16,7 @@ const TIME_RANGES = [
   { label: "Last 30 days", value: "30d", fn: () => subDays(new Date(), 30) },
 ];
 
-const STATUS_OPTIONS = ["All", "sent", "failed", "dlq", "pending", "suppressed"];
+const STATUS_OPTIONS = ["All", "sent", "failed", "dlq", "pending", "suppressed", "rate_limited"];
 
 const statusConfig = {
   sent: { color: "bg-emerald-100 text-emerald-700", icon: CheckCircle },
@@ -24,6 +24,7 @@ const statusConfig = {
   dlq: { color: "bg-red-100 text-red-700", icon: XCircle },
   pending: { color: "bg-amber-100 text-amber-700", icon: Clock },
   suppressed: { color: "bg-yellow-100 text-yellow-700", icon: AlertTriangle },
+  rate_limited: { color: "bg-orange-100 text-orange-700", icon: Clock },
 };
 
 const PAGE_SIZE = 50;
