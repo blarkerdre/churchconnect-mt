@@ -164,12 +164,13 @@ export default function MyProfile() {
   });
 
   const { data: wsfCentres = [] } = useQuery({
-    queryKey: ["wsf-centres-active"],
+    queryKey: ["wsf-centres-active", tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("wsf_centres").select("*").eq("is_active", true).order("name");
+      const { data, error } = await supabase.from("wsf_centres").select("*").eq("is_active", true).eq("tenant_id", tenantId).order("name");
       if (error) throw error;
       return data;
     },
+    enabled: !!tenantId,
   });
 
   const { data: attendanceRecords = [] } = useQuery({
