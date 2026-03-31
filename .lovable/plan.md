@@ -1,37 +1,45 @@
 
 
-## Fix: New Registration Directed to Demo Church
+## Fix: Auto-Link Member to Auth User on Registration & Signup
 
 ### Root cause
 
-Three frontend/edge-function files and the `handle_new_user` database trigger still use the old Demo Church ID (`d8bbbdae-d9b3-4999-912d-3aa5999884b0`) as the default tenant fallback instead of WCI Cardiff (`95e53cc3-4569-4dd3-a4ad-3489593dce81`).
+When a user registers via QR code (`public-register`), the flow is:
+1. Edge function creates a **member record** (no `user_id` — user hasn't signed up yet)
+2. User later signs up via the auth page
+3. `handle_new_user` trigger creates profile + tenant membership
+4. **Nothing links the member record to the new auth user**
 
-When a user registers without an explicit tenant slug, they get assigned to Demo Church instead of WCI Cardiff.
-
-### Stale references
-
-| File | Line | Current value |
-|------|------|--------------|
-| `src/pages/PublicRegistration.jsx` | 5 | `d8bbbdae-...` (Demo Church) |
-| `src/pages/PublicWoFBIRegistration.jsx` | 14 | `d8bbbdae-...` (Demo Church) |
-| `supabase/functions/public-wofbi-register/index.ts` | 8 | `d8bbbdae-...` (Demo Church) |
-| `handle_new_user()` trigger | fallback line | `d8bbbdae-...` (Demo Church) |
-
-The correct ID (`95e53cc3-4569-4dd3-a4ad-3489593dce81`) is already used in `TenantContext.jsx` and `public-register/index.ts`.
+The `auto_link_member_by_email` RPC exists and is used in `admin-create-user`, but it's never called during the normal signup flow.
 
 ### Fix
 
-**1. `src/pages/PublicRegistration.jsx`** — Update `DEFAULT_TENANT_ID` to `95e53cc3-4569-4dd3-a4ad-3489593dce81`
+**1. `handle_new_user()` database trigger** — After creating the profile and tenant membership, call `auto_link_member_by_email` to link any unlinked member record matching the user's email and tenant:
 
-**2. `src/pages/PublicWoFBIRegistration.jsx`** — Same update
+```sql
+-- After the existing INSERT INTO profiles / tenant_memberships block:
+UPDATE public.members
+SET user_id = NEW.id
+WHERE lower(email) = lower(NEW.email)
+  AND tenant_id = _tenant_id
+  AND user_id IS NULL
+LIMIT 1;
+```
 
-**3. `supabase/functions/public-wofbi-register/index.ts`** — Same update
+This is the most robust fix because it runs atomically during signup, regardless of how the user was created (QR registration, direct signup, invitation).
 
-**4. Database migration** — Update the `handle_new_user()` trigger fallback from `d8bbbdae-...` to `95e53cc3-...`
+**2. Backfill migration** — Fix existing unlinked members where a profile exists with the same email and tenant:
+
+```sql
+UPDATE members m
+SET user_id = p.user_id
+FROM profiles p
+WHERE lower(m.email) = lower(p.email)
+  AND m.tenant_id = p.tenant_id
+  AND m.user_id IS NULL
+  AND p.user_id IS NOT NULL;
+```
 
 ### Files changed
-- `src/pages/PublicRegistration.jsx` — fix DEFAULT_TENANT_ID
-- `src/pages/PublicWoFBIRegistration.jsx` — fix DEFAULT_TENANT_ID
-- `supabase/functions/public-wofbi-register/index.ts` — fix DEFAULT_TENANT_ID
-- 1 new migration — update `handle_new_user` fallback tenant ID
+- 1 new migration — enhance `handle_new_user()` to auto-link members + backfill existing unlinked records
 
