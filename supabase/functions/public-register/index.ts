@@ -435,11 +435,22 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Verify auth user exists before writing user_id to prevent FK violation
+    let verifiedUserId: string | null = null;
+    if (authenticatedUser?.userId) {
+      const { data: verifiedUser, error: verifyErr } = await supabase.auth.admin.getUserById(authenticatedUser.userId);
+      if (!verifyErr && verifiedUser?.user) {
+        verifiedUserId = authenticatedUser.userId;
+      } else {
+        console.warn("Auth user not found for insert, skipping user_id:", authenticatedUser.userId);
+      }
+    }
+
     const { data: insertedMember, error: memberError } = await supabase
       .from("members")
       .insert({
         ...memberPayload,
-        user_id: authenticatedUser?.userId ?? null,
+        user_id: verifiedUserId,
       })
       .select("id")
       .single();
