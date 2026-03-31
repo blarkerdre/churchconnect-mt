@@ -1,29 +1,67 @@
 
 
-## Fix: Tenant and User Mismatch on QR Registration
+## Ensure All URLs Are Scoped to Tenant
 
-### Root cause
+### Problem
 
-Two issues combine to cause cross-tenant member linking:
+Several public routes and their backend functions operate without tenant context, causing cross-tenant data issues:
 
-1. **QR code URL fallback**: `RegistrationQRCode.jsx` (line 13-15) falls back to `/register` (no slug) when `tenantSlug` is null. This means the registration page resolves to `DEFAULT_TENANT_ID` instead of the admin's actual tenant — registering the person into the wrong church.
-
-2. **Email-based member claim without `auth.users` verification**: In `public-register/index.ts` (lines 392-429), when an authenticated user scans the QR, the function searches for existing members by email and sets `user_id` on the match. If the referenced `auth.users` row was deleted, this trips the `members_user_id_fkey` FK constraint. Additionally, if `tenantId` happens to be null, the email search is unscoped and can match members from any tenant.
+1. **Bare routes** `/register`, `/wofbi-register`, `/auth` exist without a tenant slug prefix — users landing on these get no tenant context or default to the wrong tenant
+2. **`PublicWoFBIRegistration.jsx`** has zero tenant awareness — no `useParams()`, no slug, no `tenant_id` on member lookups or inserts
+3. **`public-wofbi-register` edge function** creates/finds members and course registrations without any `tenant_id` scoping
+4. **`exam_titles` query** on the frontend is also unscoped — shows courses from all tenants
 
 ### Fix
 
-**1. `src/components/members/RegistrationQRCode.jsx`** — Always include the tenant slug in the QR URL. If `tenantSlug` is somehow null, fall back to querying the tenant's slug from `tenantId`:
-```js
-const registrationUrl = `${window.location.origin}/t/${tenantSlug}/register`;
-```
-Add early return / disabled state if `tenantSlug` is not yet resolved. Same fix for `WoFBIRegistrationQRCode.jsx`.
+**1. Redirect bare public routes to default tenant** (`src/App.jsx`)
+- Change `/register` → redirect to `/t/{defaultSlug}/register`
+- Change `/wofbi-register` → redirect to `/t/{defaultSlug}/wofbi-register`
+- Change `/auth` → redirect to `/t/{defaultSlug}/auth`
+- Keep `/onboard`, `/unsubscribe`, `/presentation` as-is (they're tenant-independent utilities)
 
-**2. `supabase/functions/public-register/index.ts`** — Two hardening changes:
-- Before setting `user_id` on a member (line 408), verify the auth user exists via `supabase.auth.admin.getUserById(authenticatedUser.userId)`. Skip the claim if the user doesn't exist.
-- When `tenantId` is null/missing for anonymous (unauthenticated) registrations, always fall back to `DEFAULT_TENANT_ID` so the email search is always tenant-scoped. (Currently it only falls back for authenticated users.)
+**2. Add tenant scoping to `PublicWoFBIRegistration.jsx`**
+- Use `useParams()` to get `tenantSlug`
+- Resolve `tenant_id` from slug via `get_tenant_by_slug` RPC (same pattern as `PublicRegistration.jsx`)
+- Scope the `exam_titles` query by `tenant_id`
+- Pass `tenant_id` and `tenant_slug` in the edge function request body
+- Show church branding (logo, name) like `PublicRegistration` does
+
+**3. Add tenant scoping to `public-wofbi-register` edge function**
+- Accept `tenant_slug` or `tenant_id` in request body
+- Resolve tenant from slug if needed, fall back to `DEFAULT_TENANT_ID`
+- Scope `members` email lookup by `tenant_id`
+- Include `tenant_id` on new member inserts
+- Scope `exam_titles` lookup by `tenant_id`
+- Include `tenant_id` on `course_registrations` insert
+
+**4. Create a `DefaultTenantRedirect` component** (`src/App.jsx`)
+- Small component that resolves the default tenant slug and redirects bare routes to their tenant-prefixed equivalents
+- Prevents users from ever operating without tenant context
+
+### Technical details
+
+Default tenant redirect component:
+```jsx
+function DefaultTenantRedirect({ to }) {
+  // Query default tenant slug, then Navigate to /t/{slug}/{to}
+}
+```
+
+WoFBI registration tenant resolution (same pattern as PublicRegistration):
+```jsx
+const { tenantSlug } = useParams();
+// Resolve tenant via RPC, get branding, pass tenant_id to edge function
+```
+
+Edge function tenant scoping:
+```ts
+const tenantSlug = body.tenant_slug;
+// Resolve to tenant_id, scope all queries
+.eq("tenant_id", tenantId)
+```
 
 ### Files changed
-- `src/components/members/RegistrationQRCode.jsx` — require tenant slug, never generate slug-less URL
-- `src/components/exams/WoFBIRegistrationQRCode.jsx` — same fix
-- `supabase/functions/public-register/index.ts` — verify auth user before FK write + always scope email search by tenant
+- `src/App.jsx` — replace bare `/register`, `/wofbi-register`, `/auth` with default-tenant redirects
+- `src/pages/PublicWoFBIRegistration.jsx` — add tenant context, branding, scoped queries
+- `supabase/functions/public-wofbi-register/index.ts` — add tenant_id scoping to all DB operations
 
