@@ -32,7 +32,7 @@ export default function Followups() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingFollowup, setEditingFollowup] = useState(null);
   const [selectedFollowup, setSelectedFollowup] = useState(null);
-  const [smsFollowup, setSmsFollowup] = useState(null);
+  
   const [messageDialogOpen, setMessageDialogOpen] = useState(false);
   const [messageFollowup, setMessageFollowup] = useState(null);
   const queryClient = useQueryClient();
