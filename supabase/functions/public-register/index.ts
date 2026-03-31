@@ -384,7 +384,7 @@ Deno.serve(async (req) => {
         // Ensure tenant access rows exist
         await ensureTenantAccess(supabase, authenticatedUser.userId, tenantId || memberPayload.tenant_id);
 
-        if (email) triggerWelcomeEmail(email, firstName, lastName);
+        if (email) triggerWelcomeEmail(email, firstName, lastName, tenantId);
 
         // Prayer request routing
         if (notes && notes.trim()) {
