@@ -193,12 +193,10 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Authenticated users MUST have a tenant context to prevent orphaned records
-    if (authenticatedUser?.userId && !resolvedTenantId) {
-      return new Response(JSON.stringify({ error: "Tenant context is required. Please access your profile through your church portal." }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    // Always fall back to DEFAULT_TENANT_ID so every registration is tenant-scoped
+    const DEFAULT_TENANT_ID = "d8bbbdae-d9b3-4999-912d-3aa5999884b0";
+    if (!resolvedTenantId) {
+      resolvedTenantId = DEFAULT_TENANT_ID;
     }
 
     const tenantId = resolvedTenantId;
