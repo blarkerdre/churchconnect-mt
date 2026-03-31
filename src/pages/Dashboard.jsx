@@ -74,6 +74,19 @@ export default function Dashboard() {
     enabled: isLeaderOrAdmin,
   });
 
+  const { data: upcomingBirthdays = [] } = useQuery({
+    queryKey: ["dashboard-upcoming-birthdays", tenantId],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("get_upcoming_birthdays", {
+        _tenant_id: tenantId,
+        _days_ahead: 7,
+      });
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: isLeaderOrAdmin && !!tenantId,
+  });
+
   // Early returns AFTER all hooks
   if (!authLoading && !isAdmin && isWSFLeader) {
     return <WSFLeaderDashboard />;
