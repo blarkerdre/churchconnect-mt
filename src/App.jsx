@@ -133,7 +133,6 @@ function AppPages() {
 function AuthRoutes() {
   return (
     <Routes>
-      <Route path="/auth" element={<Auth />} />
       <Route path="/reset-password" element={<ResetPassword />} />
       {/* Tenant-prefixed authenticated routes */}
       <Route
