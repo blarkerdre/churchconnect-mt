@@ -1,5 +1,5 @@
 import React from "react";
-import { Users, CalendarDays, HeartHandshake, Heart, TrendingUp, UserPlus, Loader2 } from "lucide-react";
+import { Users, CalendarDays, HeartHandshake, Heart, TrendingUp, UserPlus, Loader2, Cake } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -8,6 +8,7 @@ import SelfCheckInWidget from "@/components/attendance/SelfCheckInWidget";
 import ProfileCompletionBanner from "@/components/profile/ProfileCompletionBanner";
 import MemberDashboard from "@/components/dashboard/MemberDashboard";
 import WSFLeaderDashboard from "@/components/dashboard/WSFLeaderDashboard";
+import { UpcomingBirthdayItem } from "@/components/dashboard/BirthdayCelebration";
 import { useAuth } from "@/hooks/useAuth";
 import { useSubFeature } from "@/hooks/useSubFeature";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
