@@ -2996,45 +2996,6 @@ export type Database = {
         | {
             Args: {
               _address?: string
-              _attended_foundation_school?: boolean
-              _baptized_by_immersion?: boolean
-              _bcc_completed?: boolean
-              _bfc_completed?: boolean
-              _church_unit?: string
-              _city?: string
-              _date_of_birth?: string
-              _email?: string
-              _emergency_contact_name?: string
-              _emergency_contact_phone?: string
-              _first_name?: string
-              _gender?: Database["public"]["Enums"]["gender_type"]
-              _holy_spirit_baptism?: boolean
-              _how_did_you_hear?: string
-              _last_name?: string
-              _lcc_completed?: boolean
-              _ldc_completed?: boolean
-              _live_work_in_city?: boolean
-              _member_id: string
-              _membership_status?: Database["public"]["Enums"]["membership_status"]
-              _notes?: string
-              _phone?: string
-              _photo_url?: string
-              _postcode?: string
-              _preferred_contact_modes?: string
-              _water_baptism?: boolean
-              _winners_satellite?: boolean
-              _wofbi_highest_level?: string
-              _workers_in_training?: boolean
-              _worshipped_before?: boolean
-              _worshipped_when_where?: string
-              _would_like_to_join?: boolean
-              _wsf_centre_id?: string
-            }
-            Returns: undefined
-          }
-        | {
-            Args: {
-              _address?: string
               _city?: string
               _date_of_birth?: string
               _email?: string
@@ -3048,85 +3009,6 @@ export type Database = {
               _phone?: string
               _photo_url?: string
               _postcode?: string
-            }
-            Returns: undefined
-          }
-        | {
-            Args: {
-              _address?: string
-              _city?: string
-              _date_of_birth?: string
-              _email?: string
-              _emergency_contact_name?: string
-              _emergency_contact_phone?: string
-              _first_name?: string
-              _gender?: string
-              _last_name?: string
-              _member_id: string
-              _membership_status?: string
-              _notes?: string
-              _phone?: string
-              _photo_url?: string
-              _postcode?: string
-            }
-            Returns: undefined
-          }
-        | {
-            Args: {
-              _address?: string
-              _bcc_completed?: boolean
-              _bfc_completed?: boolean
-              _church_unit?: string
-              _city?: string
-              _date_of_birth?: string
-              _email?: string
-              _emergency_contact_name?: string
-              _emergency_contact_phone?: string
-              _first_name?: string
-              _gender?: string
-              _holy_spirit_baptism?: boolean
-              _last_name?: string
-              _lcc_completed?: boolean
-              _ldc_completed?: boolean
-              _member_id: string
-              _membership_status?: string
-              _notes?: string
-              _phone?: string
-              _photo_url?: string
-              _postcode?: string
-              _water_baptism?: boolean
-              _winners_satellite?: boolean
-              _wsf_centre_id?: string
-            }
-            Returns: undefined
-          }
-        | {
-            Args: {
-              _address?: string
-              _bcc_completed?: boolean
-              _bfc_completed?: boolean
-              _church_unit?: string
-              _city?: string
-              _date_of_birth?: string
-              _email?: string
-              _emergency_contact_name?: string
-              _emergency_contact_phone?: string
-              _first_name?: string
-              _gender?: string
-              _holy_spirit_baptism?: boolean
-              _last_name?: string
-              _lcc_completed?: boolean
-              _ldc_completed?: boolean
-              _member_id: string
-              _membership_status?: string
-              _notes?: string
-              _phone?: string
-              _photo_url?: string
-              _postcode?: string
-              _water_baptism?: boolean
-              _winners_satellite?: boolean
-              _workers_in_training?: boolean
-              _wsf_centre_id?: string
             }
             Returns: undefined
           }
