@@ -147,7 +147,7 @@ async function ensureTenantAccess(supabase: any, userId: string | null | undefin
     );
 
     // Fix profile tenant if it defaulted to Demo Church but user registered at a real tenant
-    const DEFAULT_TENANT_ID = "d8bbbdae-d9b3-4999-912d-3aa5999884b0";
+    const DEFAULT_TENANT_ID = "95e53cc3-4569-4dd3-a4ad-3489593dce81";
     if (tenantId !== DEFAULT_TENANT_ID) {
       await supabase
         .from("profiles")
@@ -204,7 +204,7 @@ Deno.serve(async (req) => {
     }
 
     // Always fall back to DEFAULT_TENANT_ID so every registration is tenant-scoped
-    const DEFAULT_TENANT_ID = "d8bbbdae-d9b3-4999-912d-3aa5999884b0";
+    const DEFAULT_TENANT_ID = "95e53cc3-4569-4dd3-a4ad-3489593dce81";
     if (!resolvedTenantId) {
       resolvedTenantId = DEFAULT_TENANT_ID;
     }
