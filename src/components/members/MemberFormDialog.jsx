@@ -138,7 +138,12 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
       setLinkSearch("");
       onSaved();
     },
-    onError: (err) => toast({ title: "Error linking account", description: err.message, variant: "destructive" }),
+    onError: (err) => {
+      const msg = err.message?.includes("members_user_id_fkey")
+        ? "The selected user account no longer exists. It may have been deleted."
+        : err.message;
+      toast({ title: "Error linking account", description: msg, variant: "destructive" });
+    },
   });
 
   const unlinkAccountMutation = useMutation({
