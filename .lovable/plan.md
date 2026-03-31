@@ -1,40 +1,25 @@
 
 
-## Fix: Signup Directed to Demo Church Instead of Correct Tenant
+## Fix: Verification Email Link Redirects to Wrong Tenant
 
 ### Root cause
 
-There is a mismatch between two "default tenant" references:
+In `src/hooks/useAuth.jsx` line 81, the `emailRedirectTo` is set to `window.location.origin` (e.g. `https://churchconnect-mt.lovable.app`). This means after email verification, the user lands on the bare root URL with no tenant context, which then defaults or redirects incorrectly.
 
-- `DEFAULT_TENANT_ID` in `TenantContext.jsx` and `handle_new_user` trigger = `d8bbbdae-...` = **Demo Church (TEST)**
-- `DefaultTenantRedirect` in `App.jsx` hardcodes slug `"wci-cardiff"` = `95e53cc3-...` = **Winners Chapel International, Cardiff**
-
-When a user signs up, the `defaultTenantSlug` query in Auth.jsx resolves Demo Church's slug (`demo-test`), not WCI Cardiff. And the `handle_new_user` trigger's fallback also creates memberships under Demo Church.
-
-Additionally, `AuthRoutes` still has a bare `/auth` route (line 136) that renders `<Auth />` without tenant context — a potential leak path.
+The `tenantSlug` parameter is already passed into the `signUp` function but is only used for `user_metadata` — not for the redirect URL.
 
 ### Fix
 
-**1. `src/contexts/TenantContext.jsx`** — Change `DEFAULT_TENANT_ID` to WCI Cardiff's ID:
+**`src/hooks/useAuth.jsx`** — Update `emailRedirectTo` to include the tenant slug:
+
 ```js
-const DEFAULT_TENANT_ID = "95e53cc3-4569-4dd3-a4ad-3489593dce81";
+emailRedirectTo: tenantSlug
+  ? `${window.location.origin}/t/${tenantSlug}`
+  : window.location.origin,
 ```
 
-**2. Migration** — Update the `handle_new_user` trigger to fall back to WCI Cardiff instead of Demo Church:
-```sql
--- Change fallback from Demo Church to WCI Cardiff
-_tenant_id := '95e53cc3-4569-4dd3-a4ad-3489593dce81'::uuid;
-```
-
-Also backfill any users currently stuck on Demo Church who should be on WCI Cardiff (same pattern as previous migration).
-
-**3. `src/App.jsx`** — Remove the bare `/auth` route from `AuthRoutes` (line 136) since it's unreachable but could cause confusion if hit.
-
-**4. `supabase/functions/public-register/index.ts`** — Update the `DEFAULT_TENANT_ID` constant to match WCI Cardiff's ID.
+This ensures that when a user clicks the verification link in their email, they land on `/t/wci-cardiff` (or whichever tenant they signed up under) instead of the bare root.
 
 ### Files changed
-- `src/contexts/TenantContext.jsx` — update DEFAULT_TENANT_ID to WCI Cardiff
-- `src/App.jsx` — remove stale bare `/auth` route from AuthRoutes
-- `supabase/functions/public-register/index.ts` — update DEFAULT_TENANT_ID
-- 1 new migration — update `handle_new_user` fallback + backfill mismatched users
+- `src/hooks/useAuth.jsx` — tenant-scope the `emailRedirectTo` in `signUp`
 
