@@ -68,7 +68,7 @@ function DateRangePicker({ from, to, onFromChange, onToChange }) {
 }
 
 /* ── Email Logs Tab ── */
-const EMAIL_STATUS_OPTIONS = ["All", "sent", "failed", "dlq", "pending", "suppressed"];
+const EMAIL_STATUS_OPTIONS = ["All", "sent", "failed", "dlq", "pending", "suppressed", "rate_limited"];
 const emailStatusConfig = {
   sent: { color: "bg-emerald-100 text-emerald-700", icon: CheckCircle },
   failed: { color: "bg-red-100 text-red-700", icon: XCircle },
