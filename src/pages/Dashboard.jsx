@@ -1,5 +1,5 @@
 import React from "react";
-import { Users, CalendarDays, HeartHandshake, Heart, TrendingUp, UserPlus, Loader2 } from "lucide-react";
+import { Users, CalendarDays, HeartHandshake, Heart, TrendingUp, UserPlus, Loader2, Cake } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -8,6 +8,7 @@ import SelfCheckInWidget from "@/components/attendance/SelfCheckInWidget";
 import ProfileCompletionBanner from "@/components/profile/ProfileCompletionBanner";
 import MemberDashboard from "@/components/dashboard/MemberDashboard";
 import WSFLeaderDashboard from "@/components/dashboard/WSFLeaderDashboard";
+import { UpcomingBirthdayItem } from "@/components/dashboard/BirthdayCelebration";
 import { useAuth } from "@/hooks/useAuth";
 import { useSubFeature } from "@/hooks/useSubFeature";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
@@ -71,6 +72,19 @@ export default function Dashboard() {
       return data;
     },
     enabled: isLeaderOrAdmin,
+  });
+
+  const { data: upcomingBirthdays = [] } = useQuery({
+    queryKey: ["dashboard-upcoming-birthdays", tenantId],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("get_upcoming_birthdays", {
+        _tenant_id: tenantId,
+        _days_ahead: 7,
+      });
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: isLeaderOrAdmin && !!tenantId,
   });
 
   // Early returns AFTER all hooks
@@ -208,6 +222,23 @@ export default function Dashboard() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Upcoming Birthdays */}
+      {upcomingBirthdays.length > 0 && (
+        <Card className="border-0 shadow-sm">
+          <CardHeader>
+            <CardTitle className="text-base font-display flex items-center gap-2">
+              <Cake className="h-4 w-4 text-accent" />
+              Upcoming Birthdays
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {upcomingBirthdays.map((m) => (
+              <UpcomingBirthdayItem key={m.id} member={m} />
+            ))}
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
