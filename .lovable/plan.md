@@ -1,23 +1,30 @@
 
 
-## Fix: Profile Update Error — Multiple `update_own_member_profile` Overloads
+## Fix: Drop All `update_own_member_profile` Overloads, Create Single Canonical Function
 
-### Root cause
-There are **5 overloads** of `update_own_member_profile` in the database with overlapping signatures (15, 24, 25, 34, and 34 parameters). When the client calls with 25 parameters, PostgreSQL cannot resolve which overload to use because two 25-param versions exist with near-identical signatures (one casts `gender`/`membership_status` as enum types, the other as `text`). This causes a "could not find function" or ambiguous function error.
+The previous migration failed to drop all overloads because it didn't match exact signatures. There are still **3 overlapping overloads** (15-param, 25-param with enum types, 25-param with text, 34-param with enum, 35-param with text+worshipped_at_other_wci).
 
 ### Fix
-Drop all 5 overloads and create a single canonical `update_own_member_profile` that includes all fields the client might send, matching the full parameter list (including welcome-question fields like `_worshipped_before`, `_worshipped_at_other_wci`, etc.).
 
-**1. Migration** — Drop all existing overloads, create one definitive function:
-- Parameters: `_member_id uuid` + all 34 optional fields (personal, spiritual, welcome questions)
-- Uses `text` types for `_gender` and `_membership_status` with safe casting
-- Security definer, scoped to `auth.uid()` ownership check
+**1 new migration** that:
+- Drops all overloads by exact signature (including the 15-param, 24-param, 25-param with `_workers_in_training`, the enum-typed 34-param, and the text-typed 35-param versions)
+- Creates one single function with all 35 parameters using `text` types for `_gender` and `_membership_status` (with safe casting inside the body)
+- Includes `_worshipped_at_other_wci` as the last parameter
 
-**2. `src/pages/MyProfile.jsx`** — Update `buildOwnMemberProfilePayload` to include the missing welcome-question fields:
-- Add `_worshipped_before`, `_worshipped_when_where`, `_would_like_to_join`, `_live_work_in_city`, `_how_did_you_hear`, `_attended_foundation_school`, `_wofbi_highest_level`, `_baptized_by_immersion`, `_preferred_contact_modes`, `_worshipped_at_other_wci`
-- All default to `null` so existing callers don't break
+No client-side changes needed — `MyProfile.jsx` already sends the correct parameter set.
+
+### Technical detail — exact DROP statements
+
+```sql
+DROP FUNCTION IF EXISTS public.update_own_member_profile(uuid,text,text,text,text,text,text,text,date,text,text,text,text,text,text);
+DROP FUNCTION IF EXISTS public.update_own_member_profile(uuid,text,text,text,text,text,text,text,date,text,text,text,text,text,text,text,boolean,boolean,boolean,uuid,boolean,boolean,boolean,boolean,boolean);
+DROP FUNCTION IF EXISTS public.update_own_member_profile(uuid,text,text,text,text,text,text,text,date,public.gender_type,text,text,text,text,public.membership_status,text,boolean,boolean,boolean,uuid,boolean,boolean,boolean,boolean,boolean,boolean,text,boolean,boolean,text,boolean,text,boolean,text);
+DROP FUNCTION IF EXISTS public.update_own_member_profile(uuid,text,text,text,text,text,text,text,date,text,text,text,text,text,text,text,boolean,boolean,boolean,uuid,boolean,boolean,boolean,boolean,boolean,boolean,text,boolean,boolean,text,boolean,text,boolean,text);
+DROP FUNCTION IF EXISTS public.update_own_member_profile(uuid,text,text,text,text,text,text,text,date,text,text,text,text,text,text,text,boolean,boolean,boolean,uuid,boolean,boolean,boolean,boolean,boolean,boolean,text,boolean,boolean,text,boolean,text,boolean,text,boolean);
+```
+
+Then CREATE OR REPLACE the single canonical 35-param version.
 
 ### Files changed
-- 1 new migration — drop old overloads, create single canonical function
-- `src/pages/MyProfile.jsx` — extend `buildOwnMemberProfilePayload` with all fields
+- 1 new migration — drop all overloads, create single canonical function
 
