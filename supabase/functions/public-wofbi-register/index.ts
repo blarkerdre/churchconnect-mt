@@ -260,7 +260,7 @@ Deno.serve(async (req) => {
 
     // Fire-and-forget welcome email for new members
     if (isNewMember && email) {
-      triggerWelcomeEmail(email, firstName, lastName);
+      triggerWelcomeEmail(email, firstName, lastName, tenantId);
     }
 
     // Fire-and-forget course registration confirmation email
