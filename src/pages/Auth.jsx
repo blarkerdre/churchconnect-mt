@@ -51,6 +51,24 @@ export default function Auth() {
     enabled: !!tenantSlug,
   });
 
+  // Resolve default tenant slug for signup fallback when no slug in URL
+  const { data: defaultTenantSlug } = useQuery({
+    queryKey: ["default-tenant-slug"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("tenants")
+        .select("slug")
+        .eq("id", DEFAULT_TENANT_ID)
+        .maybeSingle();
+      if (error) throw error;
+      return data?.slug || null;
+    },
+    enabled: !tenantSlug,
+  });
+
+  // Use URL slug or fall back to the default tenant slug
+  const effectiveSlug = tenantSlug || defaultTenantSlug;
+
   const churchName = tenant?.name || "Winners Chapel";
   const churchSubtitle = tenant ? null : "International";
   const logoUrl = tenant?.logo_url || winnersLogo;
