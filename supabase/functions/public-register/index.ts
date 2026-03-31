@@ -193,12 +193,10 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Authenticated users MUST have a tenant context to prevent orphaned records
-    if (authenticatedUser?.userId && !resolvedTenantId) {
-      return new Response(JSON.stringify({ error: "Tenant context is required. Please access your profile through your church portal." }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    // Always fall back to DEFAULT_TENANT_ID so every registration is tenant-scoped
+    const DEFAULT_TENANT_ID = "d8bbbdae-d9b3-4999-912d-3aa5999884b0";
+    if (!resolvedTenantId) {
+      resolvedTenantId = DEFAULT_TENANT_ID;
     }
 
     const tenantId = resolvedTenantId;
@@ -403,6 +401,14 @@ Deno.serve(async (req) => {
         if (emailMatchError) throw emailMatchError;
 
         if (emailMatches.length === 1 && (!emailMatches[0].user_id || emailMatches[0].user_id === authenticatedUser.userId)) {
+          // Verify the auth user actually exists before writing user_id (prevents FK violation)
+          const { data: verifiedUser, error: verifyErr } = await supabase.auth.admin.getUserById(authenticatedUser.userId);
+          if (verifyErr || !verifiedUser?.user) {
+            console.error("Auth user verification failed during claim:", verifyErr?.message);
+            // Skip claim — just insert as new member without user_id
+            break;
+          }
+
           const { error: claimUpdateError } = await supabase
             .from("members")
             .update({ ...memberPayload, user_id: authenticatedUser.userId })
@@ -429,11 +435,22 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Verify auth user exists before writing user_id to prevent FK violation
+    let verifiedUserId: string | null = null;
+    if (authenticatedUser?.userId) {
+      const { data: verifiedUser, error: verifyErr } = await supabase.auth.admin.getUserById(authenticatedUser.userId);
+      if (!verifyErr && verifiedUser?.user) {
+        verifiedUserId = authenticatedUser.userId;
+      } else {
+        console.warn("Auth user not found for insert, skipping user_id:", authenticatedUser.userId);
+      }
+    }
+
     const { data: insertedMember, error: memberError } = await supabase
       .from("members")
       .insert({
         ...memberPayload,
-        user_id: authenticatedUser?.userId ?? null,
+        user_id: verifiedUserId,
       })
       .select("id")
       .single();
