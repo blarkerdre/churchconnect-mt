@@ -1,67 +1,47 @@
 
 
-## Ensure All URLs Are Scoped to Tenant
+## Fix: Users Scanned from WCI Cardiff QR Linked to Demo Church
 
-### Problem
+### Root cause
 
-Several public routes and their backend functions operate without tenant context, causing cross-tenant data issues:
+When a user scans a WCI Cardiff QR code and registers, two things happen:
 
-1. **Bare routes** `/register`, `/wofbi-register`, `/auth` exist without a tenant slug prefix — users landing on these get no tenant context or default to the wrong tenant
-2. **`PublicWoFBIRegistration.jsx`** has zero tenant awareness — no `useParams()`, no slug, no `tenant_id` on member lookups or inserts
-3. **`public-wofbi-register` edge function** creates/finds members and course registrations without any `tenant_id` scoping
-4. **`exam_titles` query** on the frontend is also unscoped — shows courses from all tenants
+1. **Member record** — correctly created in WCI Cardiff's tenant (the edge function passes the right `tenant_id`). This works fine.
+
+2. **User account** (profile + primary tenant) — created by the `handle_new_user` database trigger when they first signed up. If they signed up at `/auth` without a tenant slug (before the redirect fix), or if the trigger couldn't resolve a slug, it defaulted to Demo Church (`d8bbbdae-...`). The `profiles.tenant_id` was set to Demo Church and never updated.
+
+The `ensureTenantAccess()` function in `public-register` adds a `tenant_memberships` row for the correct tenant, but **does not update `profiles.tenant_id`**. So the user's primary context remains Demo Church.
 
 ### Fix
 
-**1. Redirect bare public routes to default tenant** (`src/App.jsx`)
-- Change `/register` → redirect to `/t/{defaultSlug}/register`
-- Change `/wofbi-register` → redirect to `/t/{defaultSlug}/wofbi-register`
-- Change `/auth` → redirect to `/t/{defaultSlug}/auth`
-- Keep `/onboard`, `/unsubscribe`, `/presentation` as-is (they're tenant-independent utilities)
+**1. `supabase/functions/public-register/index.ts`** — Update `ensureTenantAccess()` to also update `profiles.tenant_id` when the current value is the DEFAULT_TENANT_ID and the registration is for a different tenant:
 
-**2. Add tenant scoping to `PublicWoFBIRegistration.jsx`**
-- Use `useParams()` to get `tenantSlug`
-- Resolve `tenant_id` from slug via `get_tenant_by_slug` RPC (same pattern as `PublicRegistration.jsx`)
-- Scope the `exam_titles` query by `tenant_id`
-- Pass `tenant_id` and `tenant_slug` in the edge function request body
-- Show church branding (logo, name) like `PublicRegistration` does
-
-**3. Add tenant scoping to `public-wofbi-register` edge function**
-- Accept `tenant_slug` or `tenant_id` in request body
-- Resolve tenant from slug if needed, fall back to `DEFAULT_TENANT_ID`
-- Scope `members` email lookup by `tenant_id`
-- Include `tenant_id` on new member inserts
-- Scope `exam_titles` lookup by `tenant_id`
-- Include `tenant_id` on `course_registrations` insert
-
-**4. Create a `DefaultTenantRedirect` component** (`src/App.jsx`)
-- Small component that resolves the default tenant slug and redirects bare routes to their tenant-prefixed equivalents
-- Prevents users from ever operating without tenant context
-
-### Technical details
-
-Default tenant redirect component:
-```jsx
-function DefaultTenantRedirect({ to }) {
-  // Query default tenant slug, then Navigate to /t/{slug}/{to}
+```ts
+// Inside ensureTenantAccess, after upserting memberships:
+if (tenantId !== DEFAULT_TENANT_ID) {
+  await supabase
+    .from("profiles")
+    .update({ tenant_id: tenantId })
+    .eq("user_id", userId)
+    .eq("tenant_id", DEFAULT_TENANT_ID);
 }
 ```
 
-WoFBI registration tenant resolution (same pattern as PublicRegistration):
-```jsx
-const { tenantSlug } = useParams();
-// Resolve tenant via RPC, get branding, pass tenant_id to edge function
-```
+This ensures that when a user who defaulted to Demo Church registers via a real church's QR code, their profile gets corrected.
 
-Edge function tenant scoping:
-```ts
-const tenantSlug = body.tenant_slug;
-// Resolve to tenant_id, scope all queries
-.eq("tenant_id", tenantId)
+**2. Migration** — Backfill existing users whose profile says Demo Church but whose member record is in a different tenant:
+
+```sql
+UPDATE profiles p
+SET tenant_id = m.tenant_id
+FROM members m
+WHERE m.user_id = p.user_id
+  AND p.tenant_id = 'd8bbbdae-d9b3-4999-912d-3aa5999884b0'
+  AND m.tenant_id IS NOT NULL
+  AND m.tenant_id != 'd8bbbdae-d9b3-4999-912d-3aa5999884b0';
 ```
 
 ### Files changed
-- `src/App.jsx` — replace bare `/register`, `/wofbi-register`, `/auth` with default-tenant redirects
-- `src/pages/PublicWoFBIRegistration.jsx` — add tenant context, branding, scoped queries
-- `supabase/functions/public-wofbi-register/index.ts` — add tenant_id scoping to all DB operations
+- `supabase/functions/public-register/index.ts` — update `ensureTenantAccess` to fix profile tenant_id
+- 1 new migration — backfill mismatched profile tenant_ids
 
