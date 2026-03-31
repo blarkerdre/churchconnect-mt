@@ -1,24 +1,28 @@
 
 
-## Fix: Follow-up SMS Failing Due to Invalid Phone Numbers
+## Fix: Public Registration Fails Without Tenant Context on `/register`
 
 ### Root cause
-The edge function logs show: `Twilio error: Invalid 'To' Phone Number: X`. The `process-scheduled-followups` function sends SMS without validating that the recipient phone is a valid E.164 number first. Invalid/placeholder phones (like "X") get passed straight to Twilio, which rejects them.
-
-Additionally, the `auto_create_followup` trigger blindly copies `NEW.phone` into `followup_scheduled_messages.recipient_phone` without any validation, so SMS messages get scheduled even when the member has no usable phone number.
+The `/register` route has no `:tenantSlug` parameter, so `useParams()` returns no slug. The component never resolves a `tenant_id`, and the `public-register` edge function receives no tenant context — causing the registration to fail or create orphaned records.
 
 ### Fix
 
-**1. `supabase/functions/process-scheduled-followups/index.ts`** — Add phone validation before sending SMS
-- After phone normalization, validate with E.164 regex (`/^\+[1-9]\d{6,14}$/`)
-- If invalid, throw a clear error (`"Invalid or missing phone number"`) so the message is marked `failed` with a useful error message instead of wasting a Twilio API call
-- This prevents Twilio billing for known-bad numbers
+**1. `src/pages/PublicRegistration.jsx`** — Add fallback tenant resolution
+- When no `tenantSlug` is available from the URL, resolve the tenant using a fallback:
+  - Check if there's a `tenant` query parameter in the URL (e.g., `/register?tenant=my-church`)
+  - If still no slug, use the default tenant ID as a last resort
+- Show a clear error message if no tenant can be resolved, with guidance to use the church-specific registration link
 
-**2. Database trigger improvement (migration)** — Skip scheduling SMS for members without valid phones
-- Update `auto_create_followup` to only insert SMS-channel `followup_scheduled_messages` rows when `NEW.phone` is not null and passes a basic validation pattern
-- Email messages are still scheduled regardless of phone validity
+**2. `src/App.jsx`** — Redirect bare `/register` to tenant-prefixed route
+- Option A: Remove the bare `/register` route entirely and only keep `/t/:tenantSlug/register`
+- Option B: Keep `/register` but add query-param support (`/register?slug=my-church`)
+
+**Recommended approach**: Keep both routes but make the bare `/register` resolve the default tenant automatically (since this is a single-org deployment scenario), while the tenant-prefixed route works as-is.
+
+### Changes
+- `src/pages/PublicRegistration.jsx` — when `tenantSlug` is absent, fall back to the default tenant ID (`d8bbbdae-d9b3-4999-912d-3aa5999884b0`) so registration always has tenant context
+- Also pass `tenant_slug` in the edge function body when `tenantSlug` is available (as a secondary fallback for the edge function)
 
 ### Files changed
-- `supabase/functions/process-scheduled-followups/index.ts` — add E.164 validation before Twilio call
-- 1 new migration — update `auto_create_followup` trigger to skip SMS scheduling for invalid/missing phones
+- `src/pages/PublicRegistration.jsx` — add default tenant fallback + pass `tenant_slug` to edge function
 
