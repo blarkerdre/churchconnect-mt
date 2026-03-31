@@ -1,47 +1,50 @@
 
+Fix the remaining email pipeline gap causing the dashboard to still show `pending`.
 
-## Fix: Email Dashboard Shows "pending" Instead of "sent"
+What I found
+- The dashboard deduplication in both `src/pages/EmailDashboard.jsx` and `src/pages/SystemLogs.jsx` is correct: each keeps the latest row per `message_id`.
+- `process-email-queue` now preserves `tenant_id` on terminal rows, but only if the queued payload contains `tenant_id`.
+- `send-transactional-email` already enqueues `tenant_id`.
+- The remaining issue is `supabase/functions/auth-email-hook/index.ts`:
+  - it logs the initial `pending` row with `tenant_id`
+  - but it does not include `tenant_id` in the `auth_emails` queue payload
+  - so `process-email-queue` writes the later `sent`/`failed` row without `tenant_id`
+  - tenant-scoped dashboard queries only see the earlier `pending` row
 
-### Root cause
-The email pipeline creates two log rows per email sharing the same `message_id`:
-1. A `pending` row (written by the originating function, e.g. `send-transactional-email`) — **includes `tenant_id`**
-2. A `sent`/`dlq`/`failed` row (written by `process-email-queue`) — **missing `tenant_id`**
+Implementation plan
+1. Update `supabase/functions/auth-email-hook/index.ts`
+- Add `tenant_id: resolvedTenantId` to the payload passed to `enqueue_email`.
+- Keep the existing best-effort tenant resolution logic unchanged.
 
-The Email Dashboard filters by `tenant_id` via `scopeQuery`. Because the terminal-status row has no `tenant_id`, it gets excluded. Only the `pending` row survives the filter, so the dashboard incorrectly shows emails as "pending" even after they've been sent.
+2. Backfill existing auth email terminal rows
+- Add one migration to copy `tenant_id` from the matching `pending` row onto terminal rows with the same `message_id`.
+- Include statuses: `sent`, `failed`, `dlq`, and `rate_limited`.
+- Scope the source row to `status = 'pending'` so the backfill uses the original tenant-scoped entry.
 
-### Fix (2 files)
+3. Align dashboard status filters
+- Update `STATUS_OPTIONS` / `EMAIL_STATUS_OPTIONS` and badge config to include `rate_limited`, since the queue writes that status and the current UI ignores it.
 
-**1. `supabase/functions/send-transactional-email/index.ts`** — Add `tenant_id` to the queue payload so `process-email-queue` can propagate it:
+4. Verify all email log surfaces
+- Confirm both `src/pages/EmailDashboard.jsx` and `src/pages/SystemLogs.jsx` will naturally show the later terminal row once the backfill and auth payload fix are in place.
+- No dedupe rewrite is needed.
 
-Add `tenant_id: tenantId` to the payload object passed to `enqueue_email` (around line 321-334), alongside `message_id`, `to`, `from`, etc.
+Files to change
+- `supabase/functions/auth-email-hook/index.ts`
+- `supabase/migrations/<new_migration>.sql`
+- `src/pages/EmailDashboard.jsx`
+- `src/pages/SystemLogs.jsx`
 
-**2. `supabase/functions/process-email-queue/index.ts`** — Include `tenant_id` from the payload in all `email_send_log` inserts:
+Technical detail
+```text
+Current auth flow:
+pending row has tenant_id
+auth-email-hook queue payload has no tenant_id
+process-email-queue logs sent/failed with payload.tenant_id
+=> terminal row tenant_id is NULL
+=> tenant-scoped UI only sees pending
 
-Update all 4 insert locations (lines ~63, ~271, ~298, ~335) to include:
-```ts
-...(payload.tenant_id ? { tenant_id: payload.tenant_id } : {}),
+Fix:
+auth-email-hook enqueues tenant_id
+process-email-queue keeps propagating it
+migration repairs older rows already written without it
 ```
-
-This ensures terminal status rows (`sent`, `dlq`, `failed`, `rate_limited`) carry the same `tenant_id` as the initial `pending` row, so the dashboard's tenant-scoped query returns the latest status correctly.
-
-### Also: backfill existing rows
-One migration to fix existing `sent`/`dlq` rows that are missing `tenant_id` by copying it from the matching `pending` row with the same `message_id`:
-
-```sql
-UPDATE email_send_log target
-SET tenant_id = source.tenant_id
-FROM email_send_log source
-WHERE target.message_id = source.message_id
-  AND target.tenant_id IS NULL
-  AND source.tenant_id IS NOT NULL
-  AND target.status IN ('sent', 'dlq', 'failed');
-```
-
-### No UI changes needed
-The `EmailDashboard.jsx` deduplication logic is correct — once terminal rows have `tenant_id`, it will naturally show the latest status.
-
-### Files changed
-- `supabase/functions/send-transactional-email/index.ts` — add `tenant_id` to queue payload
-- `supabase/functions/process-email-queue/index.ts` — propagate `tenant_id` from payload into all log inserts
-- 1 new migration — backfill `tenant_id` on existing terminal-status rows
-
