@@ -2913,6 +2913,19 @@ export type Database = {
           slug: string
         }[]
       }
+      get_upcoming_birthdays: {
+        Args: { _days_ahead?: number; _tenant_id: string }
+        Returns: {
+          church_unit: string
+          date_of_birth: string
+          email: string
+          first_name: string
+          id: string
+          last_name: string
+          phone: string
+          photo_url: string
+        }[]
+      }
       has_role:
         | {
             Args: {
