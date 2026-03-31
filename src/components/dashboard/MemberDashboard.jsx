@@ -90,6 +90,15 @@ export default function MemberDashboard({ currentUser, myMember }) {
         </Link>
       )}
 
+      {/* Birthday Banner */}
+      {myMember?.date_of_birth && (() => {
+        const dob = new Date(myMember.date_of_birth);
+        const today = new Date();
+        return dob.getMonth() === today.getMonth() && dob.getDate() === today.getDate();
+      })() && (
+        <BirthdayBanner firstName={myMember.first_name} />
+      )}
+
       {/* Self Check-In */}
       <SelfCheckInWidget />
 
