@@ -12,12 +12,12 @@ function jsonResponse(body: Record<string, unknown>, status = 200) {
   });
 }
 
-async function getOrCreateAuthUser(supabase: ReturnType<typeof createClient>, email: string, password: string, fullName: string) {
+async function getOrCreateAuthUser(supabase: ReturnType<typeof createClient>, email: string, password: string, fullName: string, tenantSlug?: string) {
   const { data: newUser, error: createError } = await supabase.auth.admin.createUser({
     email,
     password,
     email_confirm: true,
-    user_metadata: { full_name: fullName },
+    user_metadata: { full_name: fullName, ...(tenantSlug ? { tenant_slug: tenantSlug } : {}) },
   });
 
   if (!createError) {
