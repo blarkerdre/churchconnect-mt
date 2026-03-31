@@ -21,7 +21,7 @@ import MemberJourneyTimeline from "@/components/members/MemberJourneyTimeline";
 import TakeExamDialog from "@/components/exams/TakeExamDialog";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
 import WelcomeQuestions from "@/components/members/WelcomeQuestions";
-import { useTenant } from "@/contexts/TenantContext";
+import { useTenant, DEFAULT_TENANT_ID } from "@/contexts/TenantContext";
 
 const GENDERS = ["Male", "Female"];
 const MEMBERSHIP_STATUSES = ["Active", "First Timer", "New Convert", "Visitor"];
@@ -666,14 +666,15 @@ function CreateMemberProfile({ user, onCreated, wsfCentres, churchUnits }) {
       toast({ title: "GDPR consent is required", variant: "destructive" });
       return;
     }
-    if (!tenantId) {
+    const effectiveTenantId = tenantId || DEFAULT_TENANT_ID;
+    if (!effectiveTenantId) {
       toast({ title: "Error", description: "No church context found. Please access this page through your church portal.", variant: "destructive" });
       return;
     }
     setSaving(true);
     try {
       const { error } = await supabase.rpc("upsert_own_member_profile", {
-        p_tenant_id: tenantId,
+        p_tenant_id: effectiveTenantId,
         p_first_name: form.first_name,
         p_last_name: form.last_name,
         p_email: form.email || null,
