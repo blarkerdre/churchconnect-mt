@@ -62,6 +62,16 @@ const buildOwnMemberProfilePayload = (memberId, updates = {}) => ({
   _bcc_completed: updates.bcc_completed ?? null,
   _lcc_completed: updates.lcc_completed ?? null,
   _ldc_completed: updates.ldc_completed ?? null,
+  _worshipped_before: updates.worshipped_before ?? null,
+  _worshipped_when_where: updates.worshipped_when_where ?? null,
+  _would_like_to_join: updates.would_like_to_join ?? null,
+  _live_work_in_city: updates.live_work_in_city ?? null,
+  _how_did_you_hear: updates.how_did_you_hear ?? null,
+  _attended_foundation_school: updates.attended_foundation_school ?? null,
+  _wofbi_highest_level: updates.wofbi_highest_level ?? null,
+  _baptized_by_immersion: updates.baptized_by_immersion ?? null,
+  _preferred_contact_modes: updates.preferred_contact_modes ?? null,
+  _worshipped_at_other_wci: updates.worshipped_at_other_wci ?? null,
 });
 
 function ProfilePhotoUpload({ member, user, onUpdated }) {
