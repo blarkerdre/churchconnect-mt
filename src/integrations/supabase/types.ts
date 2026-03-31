@@ -3157,112 +3157,45 @@ export type Database = {
             }
             Returns: undefined
           }
-      upsert_own_member_profile:
-        | {
-            Args: {
-              p_address?: string
-              p_attended_foundation_school?: boolean
-              p_baptized_by_immersion?: boolean
-              p_bcc_completed?: boolean
-              p_bfc_completed?: boolean
-              p_church_unit?: string
-              p_city?: string
-              p_date_of_birth?: string
-              p_email?: string
-              p_emergency_contact_name?: string
-              p_emergency_contact_phone?: string
-              p_first_name: string
-              p_gdpr_consent?: boolean
-              p_gender?: string
-              p_holy_spirit_baptism?: boolean
-              p_how_did_you_hear?: string
-              p_last_name: string
-              p_lcc_completed?: boolean
-              p_ldc_completed?: boolean
-              p_live_work_in_city?: boolean
-              p_membership_status?: string
-              p_notes?: string
-              p_phone?: string
-              p_postcode?: string
-              p_preferred_contact_modes?: string
-              p_water_baptism?: boolean
-              p_winners_satellite?: boolean
-              p_wofbi_highest_level?: string
-              p_worshipped_at_other_wci?: boolean
-              p_worshipped_before?: boolean
-              p_worshipped_when_where?: string
-              p_would_like_to_join?: boolean
-              p_wsf_centre_id?: string
-            }
-            Returns: string
-          }
-        | {
-            Args: {
-              p_address?: string
-              p_attended_foundation_school?: boolean
-              p_baptized_by_immersion?: boolean
-              p_bcc_completed?: boolean
-              p_bfc_completed?: boolean
-              p_church_unit?: string
-              p_city?: string
-              p_date_of_birth?: string
-              p_email?: string
-              p_emergency_contact_name?: string
-              p_emergency_contact_phone?: string
-              p_first_name: string
-              p_gdpr_consent?: boolean
-              p_gender?: Database["public"]["Enums"]["gender_type"]
-              p_holy_spirit_baptism?: boolean
-              p_how_did_you_hear?: string
-              p_last_name: string
-              p_lcc_completed?: boolean
-              p_ldc_completed?: boolean
-              p_live_work_in_city?: boolean
-              p_membership_status?: Database["public"]["Enums"]["membership_status"]
-              p_notes?: string
-              p_phone?: string
-              p_postcode?: string
-              p_preferred_contact_modes?: string
-              p_tenant_id: string
-              p_water_baptism?: boolean
-              p_winners_satellite?: boolean
-              p_wofbi_highest_level?: string
-              p_worshipped_before?: boolean
-              p_worshipped_when_where?: string
-              p_would_like_to_join?: boolean
-              p_wsf_centre_id?: string
-            }
-            Returns: undefined
-          }
-        | {
-            Args: {
-              p_address?: string
-              p_bcc_completed?: boolean
-              p_bfc_completed?: boolean
-              p_church_unit?: string
-              p_city?: string
-              p_date_of_birth?: string
-              p_email?: string
-              p_emergency_contact_name?: string
-              p_emergency_contact_phone?: string
-              p_first_name: string
-              p_gdpr_consent?: boolean
-              p_gender?: string
-              p_holy_spirit_baptism?: boolean
-              p_last_name: string
-              p_lcc_completed?: boolean
-              p_ldc_completed?: boolean
-              p_membership_status?: string
-              p_notes?: string
-              p_phone?: string
-              p_postcode?: string
-              p_tenant_id: string
-              p_water_baptism?: boolean
-              p_winners_satellite?: boolean
-              p_wsf_centre_id?: string
-            }
-            Returns: string
-          }
+      upsert_own_member_profile: {
+        Args: {
+          p_address?: string
+          p_attended_foundation_school?: boolean
+          p_baptized_by_immersion?: boolean
+          p_bcc_completed?: boolean
+          p_bfc_completed?: boolean
+          p_church_unit?: string
+          p_city?: string
+          p_date_of_birth?: string
+          p_email?: string
+          p_emergency_contact_name?: string
+          p_emergency_contact_phone?: string
+          p_first_name: string
+          p_gdpr_consent?: boolean
+          p_gender?: string
+          p_holy_spirit_baptism?: boolean
+          p_how_did_you_hear?: string
+          p_last_name: string
+          p_lcc_completed?: boolean
+          p_ldc_completed?: boolean
+          p_live_work_in_city?: boolean
+          p_membership_status?: string
+          p_notes?: string
+          p_phone?: string
+          p_postcode?: string
+          p_preferred_contact_modes?: string
+          p_tenant_id: string
+          p_water_baptism?: boolean
+          p_winners_satellite?: boolean
+          p_wofbi_highest_level?: string
+          p_worshipped_at_other_wci?: boolean
+          p_worshipped_before?: boolean
+          p_worshipped_when_where?: string
+          p_would_like_to_join?: boolean
+          p_wsf_centre_id?: string
+        }
+        Returns: string
+      }
       user_belongs_to_tenant: {
         Args: { _tenant_id: string; _user_id: string }
         Returns: boolean
