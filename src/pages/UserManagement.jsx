@@ -264,7 +264,7 @@ export default function UserManagement() {
                    <th className="text-left p-3 sm:p-4 font-medium text-muted-foreground">User</th>
                    <th className="text-left p-3 sm:p-4 font-medium text-muted-foreground hidden md:table-cell">Email</th>
                    <th className="text-left p-3 sm:p-4 font-medium text-muted-foreground">Roles</th>
-                   <th className="text-left p-3 sm:p-4 font-medium text-muted-foreground hidden lg:table-cell">Led Units</th>
+                   <th className={`text-left p-3 sm:p-4 font-medium text-muted-foreground ${roleFilter === "unit_leader" ? "" : "hidden lg:table-cell"}`}>Led Units</th>
                    <th className="text-left p-3 sm:p-4 font-medium text-muted-foreground hidden md:table-cell">Manage Roles</th>
                    <th className="text-right p-3 sm:p-4 font-medium text-muted-foreground">Actions</th>
                  </tr>
