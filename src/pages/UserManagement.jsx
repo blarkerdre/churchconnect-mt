@@ -318,7 +318,7 @@ export default function UserManagement() {
                           })}
                         </div>
                       </td>
-                      <td className="p-3 sm:p-4 hidden lg:table-cell">
+                      <td className={`p-3 sm:p-4 ${roleFilter === "unit_leader" ? "" : "hidden lg:table-cell"}`}>
                         {userRoles.includes("unit_leader") ? (
                           <UnitLeaderAssignments userId={p.user_id} />
                         ) : (
