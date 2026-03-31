@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { HeartHandshake, Search, Phone, MessageSquare, CalendarCheck, Plus, AlertCircle, Loader2, UserCheck, User, Download, Mail } from "lucide-react";
 import PrintReportButton from "@/components/PrintReportButton";
-import SMSDialog from "@/components/sms/SMSDialog";
+
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
@@ -32,12 +32,12 @@ export default function Followups() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingFollowup, setEditingFollowup] = useState(null);
   const [selectedFollowup, setSelectedFollowup] = useState(null);
-  const [smsFollowup, setSmsFollowup] = useState(null);
+  
   const [messageDialogOpen, setMessageDialogOpen] = useState(false);
   const [messageFollowup, setMessageFollowup] = useState(null);
   const queryClient = useQueryClient();
   const { enabled: canCreateFollowup } = useSubFeature("followups.create");
-  const { enabled: canSmsFollowup } = useSubFeature("followups.sms");
+  
 
   // Fetch profiles for resolving assigned_to user IDs to names
   const { data: profiles = [] } = useQuery({
@@ -372,17 +372,6 @@ export default function Followups() {
                             <UserCheck className="h-3 w-3" /> Convert to Member
                           </button>
                         )}
-                         {f.person_phone && canSmsFollowup && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setSmsFollowup(f);
-                            }}
-                            className="flex items-center gap-1 text-primary font-medium hover:underline"
-                          >
-                            <MessageSquare className="h-3 w-3" /> SMS Reminder
-                          </button>
-                        )}
                       </div>
                     </div>
                   </div>
@@ -440,17 +429,6 @@ export default function Followups() {
         }}
       />
 
-      {smsFollowup && (
-        <SMSDialog
-          open={!!smsFollowup}
-          onOpenChange={(o) => { if (!o) setSmsFollowup(null); }}
-          prefillMessage={`Hi ${smsFollowup.person_name}, this is a follow-up reminder from church. ${smsFollowup.description || smsFollowup.notes || ''}`}
-          smsType="followup"
-          referenceId={smsFollowup.id}
-          directRecipients={[{ phone: smsFollowup.person_phone, member_id: smsFollowup.member_id, name: smsFollowup.person_name }]}
-          title="SMS Follow-up Reminder"
-        />
-      )}
     </div>
   );
 }
