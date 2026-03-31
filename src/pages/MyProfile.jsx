@@ -674,7 +674,7 @@ function CreateMemberProfile({ user, onCreated, wsfCentres, churchUnits }) {
     setSaving(true);
     try {
       const { error } = await supabase.rpc("upsert_own_member_profile", {
-        p_tenant_id: tenantId,
+        p_tenant_id: effectiveTenantId,
         p_first_name: form.first_name,
         p_last_name: form.last_name,
         p_email: form.email || null,
