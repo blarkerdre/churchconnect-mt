@@ -666,7 +666,8 @@ function CreateMemberProfile({ user, onCreated, wsfCentres, churchUnits }) {
       toast({ title: "GDPR consent is required", variant: "destructive" });
       return;
     }
-    if (!tenantId) {
+    const effectiveTenantId = tenantId || DEFAULT_TENANT_ID;
+    if (!effectiveTenantId) {
       toast({ title: "Error", description: "No church context found. Please access this page through your church portal.", variant: "destructive" });
       return;
     }
