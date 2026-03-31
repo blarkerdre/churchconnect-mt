@@ -1,52 +1,34 @@
 
 
-## Fix: Replace `extensions.http_post` with `net.http_post`
+## Fix: Follow-up Assignment Notification Returns 401 "Invalid token"
 
-### Problem
-All database triggers that call edge functions use `extensions.http_post(...)`, which does not exist. The correct function is `net.http_post(...)` from the `pg_net` extension (already available on the platform).
+### Root cause
+The `auto_create_followup` trigger sends the `email_queue_service_role_key` vault secret as the Bearer token when calling `notify-followup-assignment`. The edge function validates this token by comparing it against `SUPABASE_SERVICE_ROLE_KEY` (env var). If the vault secret is stale or differs from the actual service role key, the function returns 401.
 
-### Important difference
-`net.http_post` has a different signature — it takes `jsonb` for headers and body directly, not text:
-```sql
-net.http_post(
-  url := '...',
-  headers := '{"Content-Type":"application/json","Authorization":"Bearer ..."}'::jsonb,
-  body := '{"key":"value"}'::jsonb
-)
-```
+Evidence: `net._http_response` shows the most recent call to the edge function returned `401 {"error":"Invalid token"}`.
 
-### Fix — 1 database migration
-Replace `extensions.http_post` with `net.http_post` in all 6 affected trigger functions:
+### Fix — Two options (both applied)
 
-1. **`auto_create_followup`** — follow-up assignment notifications
-2. **`notify_pastoral_care_new_request`** — pastoral care assignment notifications
-3. **`notify_unit_leaders_on_unit_change`** — unit leader notifications
-4. **`notify_wsf_leader_on_centre_selection`** — WSF leader notifications
-5. **`notify_transport_assignment`** — transport booking notifications
+**1. Update the edge function** to also accept the `email_queue_service_role_key` pattern, making auth more resilient. The simplest approach: instead of comparing the raw token to the service role key string, use `supabase.auth.getUser()` first, and if that fails, check if the token matches the service role key. But since the vault secret *should* be the service role key, the real fix is:
 
-Each function's `PERFORM extensions.http_post(...)` call gets replaced with `SELECT net.http_post(...)` using the correct parameter format (body as `jsonb` instead of `text`).
+**2. Refresh the vault secret** by calling `setup_email_infra` (which updates `email_queue_service_role_key` to the current service role key). This is the recommended approach per the email infrastructure guide.
+
+### Implementation
+1. Call `email_domain--setup_email_infra` to refresh the `email_queue_service_role_key` vault secret to the current service role key value
+2. No code changes needed — the trigger and edge function logic are correct; only the vault secret value was stale
 
 ### Technical detail
 ```text
-Before:
-  PERFORM extensions.http_post(
-    url := _url,
-    body := jsonb_build_object(...)::text,
-    headers := jsonb_build_object(...)::jsonb
-  );
+Trigger sends:
+  Authorization: Bearer <vault:email_queue_service_role_key>
 
-After:
-  PERFORM net.http_post(
-    url := _url,
-    body := jsonb_build_object(...),
-    headers := jsonb_build_object(...)
-  );
+Edge function checks:
+  token === Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")
+
+If vault secret ≠ actual service role key → 401
+Fix: refresh vault secret so they match
 ```
 
-Key changes per call:
-- `extensions.http_post` → `net.http_post`
-- Remove `::text` cast on body (net.http_post expects jsonb)
-
 ### Files changed
-- 1 migration — `CREATE OR REPLACE FUNCTION` for all 5 trigger functions
+- None — infrastructure refresh only (vault secret update via setup_email_infra tool)
 
