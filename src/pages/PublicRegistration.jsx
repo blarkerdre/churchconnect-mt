@@ -41,13 +41,15 @@ const HIDE_SPIRITUAL_STATUSES = ["First Timer", "New Convert", "Visitor"];
 const SHOW_BAPTISM_STATUSES = ["First Timer", "New Convert"];
 
 export default function PublicRegistration() {
-  const { tenantSlug } = useParams();
+  const { tenantSlug: routeSlug } = useParams();
+  const [searchParams] = useSearchParams();
+  const tenantSlug = routeSlug || searchParams.get("tenant") || null;
   const [CHURCH_UNITS, setChurchUnits] = useState([]);
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [wsfCentres, setWsfCentres] = useState([]);
-  const [resolvedTenantId, setResolvedTenantId] = useState(null);
+  const [resolvedTenantId, setResolvedTenantId] = useState(tenantSlug ? null : DEFAULT_TENANT_ID);
   const [tenantName, setTenantName] = useState("");
 
   useEffect(() => {
