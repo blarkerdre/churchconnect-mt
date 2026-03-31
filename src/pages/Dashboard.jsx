@@ -222,6 +222,23 @@ export default function Dashboard() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Upcoming Birthdays */}
+      {upcomingBirthdays.length > 0 && (
+        <Card className="border-0 shadow-sm">
+          <CardHeader>
+            <CardTitle className="text-base font-display flex items-center gap-2">
+              <Cake className="h-4 w-4 text-accent" />
+              Upcoming Birthdays
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {upcomingBirthdays.map((m) => (
+              <UpcomingBirthdayItem key={m.id} member={m} />
+            ))}
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
