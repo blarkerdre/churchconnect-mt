@@ -1,15 +1,16 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Lock, Church, Eye, EyeOff } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function ResetPassword() {
-  const { updatePassword } = useAuth();
+  const { updatePassword, user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
   const [password, setPassword] = useState("");
@@ -23,7 +24,21 @@ export default function ResetPassword() {
       const { error } = await updatePassword(password);
       if (error) throw error;
       toast({ title: "Password updated!", description: "You can now sign in with your new password." });
-      navigate("/");
+
+      // Redirect to tenant-prefixed dashboard if possible
+      let redirectTo = "/";
+      if (user?.id) {
+        const { data: membership } = await supabase
+          .from("tenant_memberships")
+          .select("tenants(slug)")
+          .eq("user_id", user.id)
+          .limit(1)
+          .maybeSingle();
+        if (membership?.tenants?.slug) {
+          redirectTo = `/t/${membership.tenants.slug}`;
+        }
+      }
+      navigate(redirectTo);
     } catch (err) {
       toast({ title: "Error", description: err.message, variant: "destructive" });
     } finally {
