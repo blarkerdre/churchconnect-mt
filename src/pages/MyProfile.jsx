@@ -588,7 +588,7 @@ export default function MyProfile() {
       {!editing && <MyCertificates memberId={member.id} />}
 
       {/* Take Exams */}
-      {!editing && <DynamicExamButtons memberId={member.id} onSelect={setExamSelection} />}
+      {!editing && <DynamicExamButtons memberId={member.id} onSelect={setExamSelection} tenantId={tenantId} />}
 
       <TakeExamDialog
         open={!!examSelection}
