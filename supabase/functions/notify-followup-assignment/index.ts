@@ -120,8 +120,8 @@ Deno.serve(async (req) => {
 
     // Send email notification via queue
     if (recipientEmail) {
-      const senderDomain = "notify.churchmanagementsuite.org";
-      const fromAddress = `${churchShortName} <noreply@${senderDomain}>`;
+      const senderDomain = "notify.app.churchmanagementsuite.org";
+      const fromAddress = `"${churchShortName}" <noreply@app.churchmanagementsuite.org>`;
       const messageId = `followup-assign-${crypto.randomUUID()}`;
 
       const htmlContent = `
