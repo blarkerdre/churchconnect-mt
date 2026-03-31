@@ -401,6 +401,14 @@ Deno.serve(async (req) => {
         if (emailMatchError) throw emailMatchError;
 
         if (emailMatches.length === 1 && (!emailMatches[0].user_id || emailMatches[0].user_id === authenticatedUser.userId)) {
+          // Verify the auth user actually exists before writing user_id (prevents FK violation)
+          const { data: verifiedUser, error: verifyErr } = await supabase.auth.admin.getUserById(authenticatedUser.userId);
+          if (verifyErr || !verifiedUser?.user) {
+            console.error("Auth user verification failed during claim:", verifyErr?.message);
+            // Skip claim — just insert as new member without user_id
+            break;
+          }
+
           const { error: claimUpdateError } = await supabase
             .from("members")
             .update({ ...memberPayload, user_id: authenticatedUser.userId })
