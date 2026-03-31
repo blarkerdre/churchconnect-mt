@@ -1,47 +1,29 @@
 
 
-## Fix: Users Scanned from WCI Cardiff QR Linked to Demo Church
+## Scope All Auth, Registration & Update Queries to Tenant
 
-### Root cause
+### Problem
 
-When a user scans a WCI Cardiff QR code and registers, two things happen:
+Several queries and operations on key pages lack tenant scoping, causing data leakage across tenants:
 
-1. **Member record** — correctly created in WCI Cardiff's tenant (the edge function passes the right `tenant_id`). This works fine.
-
-2. **User account** (profile + primary tenant) — created by the `handle_new_user` database trigger when they first signed up. If they signed up at `/auth` without a tenant slug (before the redirect fix), or if the trigger couldn't resolve a slug, it defaulted to Demo Church (`d8bbbdae-...`). The `profiles.tenant_id` was set to Demo Church and never updated.
-
-The `ensureTenantAccess()` function in `public-register` adds a `tenant_memberships` row for the correct tenant, but **does not update `profiles.tenant_id`**. So the user's primary context remains Demo Church.
+1. **MyProfile.jsx — `wsf_centres` query** (line 169): fetches all active WSF centres globally, no `tenant_id` filter
+2. **MyProfile.jsx — `DynamicExamButtons`** (lines 879-901): `exam_titles` and `exam_subjects` queries have no tenant scope — shows courses from all tenants
+3. **MyProfile.jsx — `course_registrations` query** (line 890): no tenant filter
+4. **MyProfile.jsx — `exam_attempts` query** (line 910): no tenant filter
+5. **MyProfile.jsx — `attendance_records` query** (line 178): no tenant filter
+6. **ResetPassword.jsx** (line 26): navigates to `/` after reset instead of tenant-prefixed URL
 
 ### Fix
 
-**1. `supabase/functions/public-register/index.ts`** — Update `ensureTenantAccess()` to also update `profiles.tenant_id` when the current value is the DEFAULT_TENANT_ID and the registration is for a different tenant:
+**1. `src/pages/MyProfile.jsx`** — Add tenant scoping to all unscoped queries:
+- `wsf_centres` query: add `.eq("tenant_id", tenantId)` and include `tenantId` in query key
+- `DynamicExamButtons`: accept `tenantId` prop, scope `exam_titles`, `exam_subjects`, `course_registrations`, and `exam_attempts` by tenant
+- `attendance_records` query: add `.eq("tenant_id", tenantId)` filter (via the session's tenant, or directly on the records if the column exists)
+- Pass `tenantId` from the parent component down to `DynamicExamButtons`
 
-```ts
-// Inside ensureTenantAccess, after upserting memberships:
-if (tenantId !== DEFAULT_TENANT_ID) {
-  await supabase
-    .from("profiles")
-    .update({ tenant_id: tenantId })
-    .eq("user_id", userId)
-    .eq("tenant_id", DEFAULT_TENANT_ID);
-}
-```
-
-This ensures that when a user who defaulted to Demo Church registers via a real church's QR code, their profile gets corrected.
-
-**2. Migration** — Backfill existing users whose profile says Demo Church but whose member record is in a different tenant:
-
-```sql
-UPDATE profiles p
-SET tenant_id = m.tenant_id
-FROM members m
-WHERE m.user_id = p.user_id
-  AND p.tenant_id = 'd8bbbdae-d9b3-4999-912d-3aa5999884b0'
-  AND m.tenant_id IS NOT NULL
-  AND m.tenant_id != 'd8bbbdae-d9b3-4999-912d-3aa5999884b0';
-```
+**2. `src/pages/ResetPassword.jsx`** — After password reset, redirect to the tenant-prefixed dashboard if a tenant slug is available (query tenant membership), or fall back to `/`.
 
 ### Files changed
-- `supabase/functions/public-register/index.ts` — update `ensureTenantAccess` to fix profile tenant_id
-- 1 new migration — backfill mismatched profile tenant_ids
+- `src/pages/MyProfile.jsx` — tenant-scope 5 unscoped queries + pass tenantId to DynamicExamButtons
+- `src/pages/ResetPassword.jsx` — tenant-aware redirect after password update
 
