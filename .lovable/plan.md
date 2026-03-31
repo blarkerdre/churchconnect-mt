@@ -1,31 +1,37 @@
 
 
-## Fix: `Invalid 'from' email address` in Welcome Email
+## Fix: New Registration Directed to Demo Church
 
 ### Root cause
 
-The `from` field on line 164 is built as:
-```
-${senderName} <noreply@app.churchmanagementsuite.org>
-```
+Three frontend/edge-function files and the `handle_new_user` database trigger still use the old Demo Church ID (`d8bbbdae-d9b3-4999-912d-3aa5999884b0`) as the default tenant fallback instead of WCI Cardiff (`95e53cc3-4569-4dd3-a4ad-3489593dce81`).
 
-If `senderName` contains a comma (e.g. `"Winners Chapel International, Cardiff"`), the resulting string violates RFC 5322 email address format. The email API rejects it as `invalid_email`.
+When a user registers without an explicit tenant slug, they get assigned to Demo Church instead of WCI Cardiff.
 
-The project's own memory note confirms this pattern: *"To prevent parsing failures for church names containing commas, all `from` display names are wrapped in escaped double quotes."*
+### Stale references
+
+| File | Line | Current value |
+|------|------|--------------|
+| `src/pages/PublicRegistration.jsx` | 5 | `d8bbbdae-...` (Demo Church) |
+| `src/pages/PublicWoFBIRegistration.jsx` | 14 | `d8bbbdae-...` (Demo Church) |
+| `supabase/functions/public-wofbi-register/index.ts` | 8 | `d8bbbdae-...` (Demo Church) |
+| `handle_new_user()` trigger | fallback line | `d8bbbdae-...` (Demo Church) |
+
+The correct ID (`95e53cc3-4569-4dd3-a4ad-3489593dce81`) is already used in `TenantContext.jsx` and `public-register/index.ts`.
 
 ### Fix
 
-**`supabase/functions/send-welcome-email/index.ts`** — Wrap `senderName` in double quotes in the `from` field:
+**1. `src/pages/PublicRegistration.jsx`** — Update `DEFAULT_TENANT_ID` to `95e53cc3-4569-4dd3-a4ad-3489593dce81`
 
-```ts
-from: `"${senderName.replace(/"/g, '')}" <noreply@${FROM_DOMAIN}>`,
-```
+**2. `src/pages/PublicWoFBIRegistration.jsx`** — Same update
 
-This strips any existing double quotes from the name (to prevent injection) then wraps it, making the address RFC-compliant regardless of commas or special characters.
+**3. `supabase/functions/public-wofbi-register/index.ts`** — Same update
 
-**`supabase/functions/send-course-registration-email/index.ts`** — Apply the same fix if it has the same unquoted pattern.
+**4. Database migration** — Update the `handle_new_user()` trigger fallback from `d8bbbdae-...` to `95e53cc3-...`
 
 ### Files changed
-- `supabase/functions/send-welcome-email/index.ts` — quote the `from` display name
-- `supabase/functions/send-course-registration-email/index.ts` — same fix (if applicable)
+- `src/pages/PublicRegistration.jsx` — fix DEFAULT_TENANT_ID
+- `src/pages/PublicWoFBIRegistration.jsx` — fix DEFAULT_TENANT_ID
+- `supabase/functions/public-wofbi-register/index.ts` — fix DEFAULT_TENANT_ID
+- 1 new migration — update `handle_new_user` fallback tenant ID
 
