@@ -1,34 +1,42 @@
 
+Fix the notification authentication break so assigned follow-up unit members receive their direct alerts again.
 
-## Fix: Follow-up Assignment Notification Returns 401 "Invalid token"
+1. Confirmed root cause
+- The database trigger `auto_create_followup()` is running.
+- It calls `notify-followup-assignment` with the vault secret `email_queue_service_role_key`.
+- The edge function is rejecting that request with `401 {"error":"Invalid token"}`.
+- Because of that, no `followup-assignment` rows are being created in either `email_send_log` or `sms_log`.
 
-### Root cause
-The `auto_create_followup` trigger sends the `email_queue_service_role_key` vault secret as the Bearer token when calling `notify-followup-assignment`. The edge function validates this token by comparing it against `SUPABASE_SERVICE_ROLE_KEY` (env var). If the vault secret is stale or differs from the actual service role key, the function returns 401.
+2. What I’ll change
+- Refresh the backend email infrastructure so the stored internal service token is updated to the current one.
+- This is the correct fix because the trigger and function contract already match; the stored secret is stale.
 
-Evidence: `net._http_response` shows the most recent call to the edge function returned `401 {"error":"Invalid token"}`.
-
-### Fix — Two options (both applied)
-
-**1. Update the edge function** to also accept the `email_queue_service_role_key` pattern, making auth more resilient. The simplest approach: instead of comparing the raw token to the service role key string, use `supabase.auth.getUser()` first, and if that fails, check if the token matches the service role key. But since the vault secret *should* be the service role key, the real fix is:
-
-**2. Refresh the vault secret** by calling `setup_email_infra` (which updates `email_queue_service_role_key` to the current service role key). This is the recommended approach per the email infrastructure guide.
-
-### Implementation
-1. Call `email_domain--setup_email_infra` to refresh the `email_queue_service_role_key` vault secret to the current service role key value
-2. No code changes needed — the trigger and edge function logic are correct; only the vault secret value was stale
-
-### Technical detail
+3. Why this matches your symptom
 ```text
-Trigger sends:
-  Authorization: Bearer <vault:email_queue_service_role_key>
-
-Edge function checks:
-  token === Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")
-
-If vault secret ≠ actual service role key → 401
-Fix: refresh vault secret so they match
+member status changes / registration
+  -> auto_create_followup trigger runs
+  -> tries to call notify-followup-assignment
+  -> edge function returns 401 Invalid token
+  -> email not enqueued
+  -> sms not sent
 ```
 
-### Files changed
-- None — infrastructure refresh only (vault secret update via setup_email_infra tool)
+4. Validation after the fix
+- Re-check recent internal HTTP responses to confirm the function is no longer returning 401
+- Confirm new `followup-assignment` entries appear in:
+  - `email_send_log`
+  - `sms_log`
+- Verify the assigned follow-up unit member receives only their own task notification
 
+5. Technical details
+- Current trigger code reads:
+  - `supabase_url` from vault
+  - `email_queue_service_role_key` from vault
+- Current edge function auth accepts:
+  - service role token, or
+  - authenticated user JWT
+- The failure is not the SMS/email send logic itself; it is the internal auth between the trigger and the function.
+
+6. No UI changes needed
+- This is a backend/infrastructure repair only.
+- The Followups page and assignment flow do not need code changes for this specific issue.
