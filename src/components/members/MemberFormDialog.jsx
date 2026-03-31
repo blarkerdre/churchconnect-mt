@@ -240,6 +240,8 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
         wofbi_highest_level: isFirstTimerOrNewConvert ? (form.wofbi_highest_level || null) : null,
         baptized_by_immersion: isFirstTimerOrNewConvert ? form.baptized_by_immersion : null,
         preferred_contact_modes: isFirstTimerOrNewConvert ? (form.preferred_contact_modes || null) : null,
+        workers_in_training: form.workers_in_training ?? false,
+        worshipped_at_other_wci: isFirstTimerOrNewConvert ? form.worshipped_at_other_wci : null,
       };
 
       if (member) {
