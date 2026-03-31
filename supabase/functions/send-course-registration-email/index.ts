@@ -155,7 +155,7 @@ Deno.serve(async (req) => {
       await sendLovableEmail(
         {
           to: normalizedEmail,
-          from: `${senderName} <noreply@${FROM_DOMAIN}>`,
+          from: `"${senderName.replace(/"/g, '')}" <noreply@${FROM_DOMAIN}>`,
           sender_domain: SENDER_DOMAIN,
           subject: `Registration Confirmed: ${course_name || "WoFBI Course"}`,
           html,
