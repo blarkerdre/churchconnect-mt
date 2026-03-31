@@ -24,6 +24,7 @@ const statusConfig = {
   dlq: { color: "bg-red-100 text-red-700", icon: XCircle },
   pending: { color: "bg-amber-100 text-amber-700", icon: Clock },
   suppressed: { color: "bg-yellow-100 text-yellow-700", icon: AlertTriangle },
+  rate_limited: { color: "bg-orange-100 text-orange-700", icon: Clock },
 };
 
 const PAGE_SIZE = 50;
