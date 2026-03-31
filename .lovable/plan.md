@@ -1,38 +1,24 @@
 
 
-## Fix: Signup Emails Still Showing "pending" — `tenant_id` Missing in `process-email-queue`
+## Fix: Follow-up SMS Failing Due to Invalid Phone Numbers
 
 ### Root cause
-The `process-email-queue` edge function writes terminal status rows (`sent`, `failed`, `dlq`, `rate_limited`) to `email_send_log` **without `tenant_id`**, even though `payload.tenant_id` is available. The System Logs dashboard uses `scopeQuery` which filters by `tenant_id`, so terminal rows with NULL `tenant_id` are invisible — only the earlier `pending` row (which has `tenant_id`) appears.
+The edge function logs show: `Twilio error: Invalid 'To' Phone Number: X`. The `process-scheduled-followups` function sends SMS without validating that the recipient phone is a valid E.164 number first. Invalid/placeholder phones (like "X") get passed straight to Twilio, which rejects them.
 
-There are **4 insert sites** in `process-email-queue/index.ts` that need fixing:
-1. **Line 63** — DLQ log in `moveToDlq` helper
-2. **Line 271** — Success (`sent`) log
-3. **Line 298** — Rate-limited log
-4. **Line 335** — Failed log
+Additionally, the `auto_create_followup` trigger blindly copies `NEW.phone` into `followup_scheduled_messages.recipient_phone` without any validation, so SMS messages get scheduled even when the member has no usable phone number.
 
 ### Fix
 
-**1. `supabase/functions/process-email-queue/index.ts`**
-Add `tenant_id: payload.tenant_id || null` to all 4 `email_send_log` insert objects.
+**1. `supabase/functions/process-scheduled-followups/index.ts`** — Add phone validation before sending SMS
+- After phone normalization, validate with E.164 regex (`/^\+[1-9]\d{6,14}$/`)
+- If invalid, throw a clear error (`"Invalid or missing phone number"`) so the message is marked `failed` with a useful error message instead of wasting a Twilio API call
+- This prevents Twilio billing for known-bad numbers
 
-**2. Migration — backfill existing rows**
-Update existing terminal rows that have NULL `tenant_id` by copying it from their matching `pending` row (same `message_id`):
-```sql
-UPDATE email_send_log t
-SET tenant_id = p.tenant_id
-FROM email_send_log p
-WHERE t.message_id = p.message_id
-  AND t.tenant_id IS NULL
-  AND p.tenant_id IS NOT NULL
-  AND p.status = 'pending'
-  AND t.status IN ('sent','failed','dlq','rate_limited');
-```
-
-**3. Redeploy `process-email-queue`**
+**2. Database trigger improvement (migration)** — Skip scheduling SMS for members without valid phones
+- Update `auto_create_followup` to only insert SMS-channel `followup_scheduled_messages` rows when `NEW.phone` is not null and passes a basic validation pattern
+- Email messages are still scheduled regardless of phone validity
 
 ### Files changed
-- `supabase/functions/process-email-queue/index.ts` — add `tenant_id` to all 4 log inserts
-- 1 new migration — backfill existing terminal rows
-- Deploy `process-email-queue`
+- `supabase/functions/process-scheduled-followups/index.ts` — add E.164 validation before Twilio call
+- 1 new migration — update `auto_create_followup` trigger to skip SMS scheduling for invalid/missing phones
 
