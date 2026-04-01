@@ -102,10 +102,11 @@ function TrainingRoute({ children }) {
 
 function FeatureGate({ path, children }) {
   const { roles, loading } = useAuth();
+  const { tenantSlug } = useParams();
   const { data: disabledFeatures } = useAppSetting("disabled_features", []);
   if (loading) return null;
   const isSuperAdmin = roles.includes("super_admin");
-  if (!isSuperAdmin && disabledFeatures.includes(path)) return <Navigate to="/" replace />;
+  if (!isSuperAdmin && disabledFeatures.includes(path)) return <Navigate to={tenantSlug ? `/t/${tenantSlug}` : "/"} replace />;
   return children;
 }
 
