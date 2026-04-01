@@ -128,6 +128,7 @@ export default function Layout({ children }) {
       const targetMembership = tenantMemberships.find(m => m.tenant_id === pendingTenantSwitch);
       const targetSlug = targetMembership?.tenants?.slug;
       switchTenant(pendingTenantSwitch);
+      queryClient.clear();
       setPendingTenantSwitch(null);
       setSwitchPassword("");
       toast.success("Tenant switched successfully");
