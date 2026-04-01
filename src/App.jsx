@@ -191,7 +191,7 @@ function AppRoutes() {
       {/* Bare public routes → redirect to default tenant */}
       <Route path="/register" element={<DefaultTenantRedirect to="register" />} />
       <Route path="/wofbi-register" element={<DefaultTenantRedirect to="wofbi-register" />} />
-      <Route path="/auth" element={<DefaultTenantRedirect to="auth" />} />
+      <Route path="/auth" element={<AuthProvider><Auth /></AuthProvider>} />
 
       {/* Tenant-independent public routes */}
       <Route path="/presentation" element={<Presentation />} />
