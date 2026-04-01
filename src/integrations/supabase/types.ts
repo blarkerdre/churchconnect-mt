@@ -2863,6 +2863,10 @@ export type Database = {
             Args: { _email: string; _tenant_id?: string; _user_id: string }
             Returns: string
           }
+      create_tenant_owner: {
+        Args: { p_tenant_id: string; p_user_id: string }
+        Returns: undefined
+      }
       delete_email: {
         Args: { message_id: number; queue_name: string }
         Returns: boolean
