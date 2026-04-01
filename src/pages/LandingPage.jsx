@@ -73,10 +73,10 @@ export default function LandingPage() {
           </div>
           <div className="flex items-center gap-2">
             <Button variant="ghost" size="sm" asChild>
-              <Link to="/t/wci-cardiff/auth">Sign In</Link>
+              <Link to="/auth">Sign In</Link>
             </Button>
             <Button size="sm" asChild>
-              <Link to="/t/wci-cardiff/auth">Get Started</Link>
+              <Link to="/onboard">Get Started</Link>
             </Button>
           </div>
         </div>
@@ -98,12 +98,12 @@ export default function LandingPage() {
           </p>
           <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
             <Button size="lg" className="w-full sm:w-auto text-base" asChild>
-              <Link to="/t/wci-cardiff/auth">
+              <Link to="/onboard">
                 Get Started Free <ArrowRight className="ml-1 h-4 w-4" />
               </Link>
             </Button>
             <Button size="lg" variant="outline" className="w-full sm:w-auto text-base border-white/20 text-white hover:bg-white/10 hover:text-white" asChild>
-              <Link to="/t/wci-cardiff/auth">Sign In</Link>
+              <Link to="/auth">Sign In</Link>
             </Button>
           </div>
         </div>
@@ -172,13 +172,23 @@ export default function LandingPage() {
                     </li>
                   ))}
                 </ul>
-                <Button
-                  className="mt-6 w-full"
-                  variant={tier.highlighted ? "default" : "outline"}
-                  asChild
-                >
-                  <Link to="/t/wci-cardiff/auth">{tier.cta}</Link>
-                </Button>
+                {tier.name === "Enterprise" ? (
+                  <Button
+                    className="mt-6 w-full"
+                    variant="outline"
+                    asChild
+                  >
+                    <a href="mailto:info@churchmanagementsuite.org">{tier.cta}</a>
+                  </Button>
+                ) : (
+                  <Button
+                    className="mt-6 w-full"
+                    variant={tier.highlighted ? "default" : "outline"}
+                    asChild
+                  >
+                    <Link to="/onboard">{tier.cta}</Link>
+                  </Button>
+                )}
               </div>
             ))}
           </div>
