@@ -163,11 +163,15 @@ export default function TenantAdmin() {
         setup_complete: true,
       }).select().single();
       if (error) throw error;
-      await supabase.from("tenant_memberships").insert({
-        user_id: user.id,
-        tenant_id: data.id,
-        role: "owner",
+      // Use SECURITY DEFINER RPC to create owner membership + admin role (bypasses RLS)
+      const { error: rpcError } = await supabase.rpc("create_tenant_owner", {
+        p_tenant_id: data.id,
+        p_user_id: user.id,
       });
+      if (rpcError) {
+        console.error("Failed to create tenant owner:", rpcError);
+        throw new Error("Tenant created but ownership assignment failed: " + rpcError.message);
+      }
       return data;
     },
     onSuccess: () => {
@@ -176,6 +180,7 @@ export default function TenantAdmin() {
       setNewTenant({ name: "", slug: "", timezone: "Europe/London" });
       queryClient.invalidateQueries({ queryKey: ["tenants-admin"] });
       queryClient.invalidateQueries({ queryKey: ["tenant-stats"] });
+      refreshTenantContext?.();
     },
     onError: (err) => {
       toast({ title: "Error creating tenant", description: err.message, variant: "destructive" });
