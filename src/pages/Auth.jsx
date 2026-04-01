@@ -69,9 +69,7 @@ export default function Auth() {
   // Use URL slug or fall back to the default tenant slug
   const effectiveSlug = tenantSlug || defaultTenantSlug;
 
-  const churchName = tenant?.name || "Winners Chapel";
-  const churchSubtitle = tenant ? null : "International";
-  const logoUrl = tenant?.logo_url || winnersLogo;
+  const churchName = tenant?.name || "Church Connect";
 
   // Set favicon and OG tags for tenant auth pages
   useEffect(() => {
