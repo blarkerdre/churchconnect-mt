@@ -88,7 +88,11 @@ export default function Layout({ children }) {
     return false;
   });
 
-  const currentNav = navItems.find(n => n.path === location.pathname) || allNavItems.find(n => n.path === location.pathname) || navItems[0];
+  // Strip tenant prefix from pathname for matching nav items
+  const barePath = tenantSlug && location.pathname.startsWith(`/t/${tenantSlug}`)
+    ? location.pathname.replace(`/t/${tenantSlug}`, "") || "/"
+    : location.pathname;
+  const currentNav = navItems.find(n => n.path === barePath) || allNavItems.find(n => n.path === barePath) || navItems[0];
 
   // Determine role title
   const getRoleTitle = () => {
