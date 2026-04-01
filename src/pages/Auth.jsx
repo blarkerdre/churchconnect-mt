@@ -171,9 +171,7 @@ export default function Auth() {
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="flex flex-col items-center mb-8">
-          <img src={logoUrl} alt={`${churchName} Logo`} className="h-16 w-16 object-contain mb-4" />
           <h1 className="font-display text-2xl font-bold text-foreground">{churchName}</h1>
-          {churchSubtitle && <p className="text-sm text-muted-foreground">{churchSubtitle}</p>}
         </div>
 
         <Card className="border-0 shadow-lg">
