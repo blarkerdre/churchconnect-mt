@@ -60,8 +60,9 @@ function AdminRoute({ children }) {
 
 function SuperAdminRoute({ children }) {
   const { roles, loading } = useAuth();
+  const { tenantSlug } = useParams();
   if (loading) return null;
-  if (!roles.includes("super_admin")) return <Navigate to="/" replace />;
+  if (!roles.includes("super_admin")) return <Navigate to={tenantSlug ? `/t/${tenantSlug}` : "/"} replace />;
   return children;
 }
 
