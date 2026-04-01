@@ -68,8 +68,9 @@ function SuperAdminRoute({ children }) {
 
 function WSFRoute({ children }) {
   const { isAdmin, isWSFLeader, loading } = useAuth();
+  const { tenantSlug } = useParams();
   if (loading) return null;
-  if (!isAdmin && !isWSFLeader) return <Navigate to="/" replace />;
+  if (!isAdmin && !isWSFLeader) return <Navigate to={tenantSlug ? `/t/${tenantSlug}` : "/"} replace />;
   return children;
 }
 
