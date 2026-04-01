@@ -185,6 +185,9 @@ function DefaultTenantRedirect({ to }) {
 function AppRoutes() {
   return (
     <Routes>
+      {/* Public landing page */}
+      <Route path="/" element={<LandingPage />} />
+
       {/* Bare public routes → redirect to default tenant */}
       <Route path="/register" element={<DefaultTenantRedirect to="register" />} />
       <Route path="/wofbi-register" element={<DefaultTenantRedirect to="wofbi-register" />} />
