@@ -33,6 +33,7 @@ import Onboard from "@/pages/Onboard";
 import TenantAdmin from "@/pages/TenantAdmin";
 import Presentation from "@/pages/Presentation";
 import Unsubscribe from "@/pages/Unsubscribe";
+import LandingPage from "@/pages/LandingPage";
 
 
 function ProtectedRoute({ children }) {
@@ -184,6 +185,9 @@ function DefaultTenantRedirect({ to }) {
 function AppRoutes() {
   return (
     <Routes>
+      {/* Public landing page */}
+      <Route path="/" element={<LandingPage />} />
+
       {/* Bare public routes → redirect to default tenant */}
       <Route path="/register" element={<DefaultTenantRedirect to="register" />} />
       <Route path="/wofbi-register" element={<DefaultTenantRedirect to="wofbi-register" />} />
