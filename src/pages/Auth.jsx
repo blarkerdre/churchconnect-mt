@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Mail, Lock, User, ArrowRight, Eye, EyeOff } from "lucide-react";
-import winnersLogo from "@/assets/winners-chapel-logo.png";
+
 import { useToast } from "@/components/ui/use-toast";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -69,9 +69,7 @@ export default function Auth() {
   // Use URL slug or fall back to the default tenant slug
   const effectiveSlug = tenantSlug || defaultTenantSlug;
 
-  const churchName = tenant?.name || "Winners Chapel";
-  const churchSubtitle = tenant ? null : "International";
-  const logoUrl = tenant?.logo_url || winnersLogo;
+  const churchName = tenant?.name || "Church Connect";
 
   // Set favicon and OG tags for tenant auth pages
   useEffect(() => {
@@ -173,9 +171,7 @@ export default function Auth() {
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="flex flex-col items-center mb-8">
-          <img src={logoUrl} alt={`${churchName} Logo`} className="h-16 w-16 object-contain mb-4" />
           <h1 className="font-display text-2xl font-bold text-foreground">{churchName}</h1>
-          {churchSubtitle && <p className="text-sm text-muted-foreground">{churchSubtitle}</p>}
         </div>
 
         <Card className="border-0 shadow-lg">
