@@ -76,8 +76,9 @@ function WSFRoute({ children }) {
 
 function LeaderRoute({ children }) {
   const { isAdmin, isUnitLeader, loading } = useAuth();
+  const { tenantSlug } = useParams();
   if (loading) return null;
-  if (!isAdmin && !isUnitLeader) return <Navigate to="/" replace />;
+  if (!isAdmin && !isUnitLeader) return <Navigate to={tenantSlug ? `/t/${tenantSlug}` : "/"} replace />;
   return children;
 }
 
