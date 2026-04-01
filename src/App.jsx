@@ -52,8 +52,9 @@ function ProtectedRoute({ children }) {
 
 function AdminRoute({ children }) {
   const { isAdmin, loading } = useAuth();
+  const { tenantSlug } = useParams();
   if (loading) return null;
-  if (!isAdmin) return <Navigate to="/" replace />;
+  if (!isAdmin) return <Navigate to={tenantSlug ? `/t/${tenantSlug}` : "/"} replace />;
   return children;
 }
 
