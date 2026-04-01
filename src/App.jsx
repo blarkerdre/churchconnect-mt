@@ -93,9 +93,10 @@ function FollowupRoute({ children }) {
 
 function TrainingRoute({ children }) {
   const { isAdmin, isUnitLeader, roles, loading } = useAuth();
+  const { tenantSlug } = useParams();
   if (loading) return null;
   const isSuperAdmin = roles.includes("super_admin");
-  if (!isAdmin && !isSuperAdmin && !isUnitLeader) return <Navigate to="/" replace />;
+  if (!isAdmin && !isSuperAdmin && !isUnitLeader) return <Navigate to={tenantSlug ? `/t/${tenantSlug}` : "/"} replace />;
   return children;
 }
 
