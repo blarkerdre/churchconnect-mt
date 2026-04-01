@@ -80,8 +80,13 @@ const TENANT_FEATURE_TO_ROUTES = {
  */
 export function useTenantFeatureEnabled(routePath) {
   const { currentTenant } = useTenant();
-  if (!currentTenant?.settings?.features) return true;
 
+  // Check disabled_features array first
+  const disabledFeatures = currentTenant?.settings?.disabled_features || [];
+  if (disabledFeatures.includes(routePath)) return false;
+
+  // Check tenant-level feature flags
+  if (!currentTenant?.settings?.features) return true;
   const features = currentTenant.settings.features;
   for (const [featureKey, routes] of Object.entries(TENANT_FEATURE_TO_ROUTES)) {
     if (routes.includes(routePath) && features[featureKey] === false) {

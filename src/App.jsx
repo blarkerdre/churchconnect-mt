@@ -6,7 +6,7 @@ import { useUnitMembership } from "@/hooks/useUnitMembership";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import { TenantProvider } from "@/contexts/TenantContext";
 import TenantThemeProvider from "@/components/tenants/TenantThemeProvider";
-import { useAppSetting } from "@/hooks/useAppSetting";
+import { useTenant } from "@/contexts/TenantContext";
 import Layout from "@/components/AppLayout";
 import Dashboard from "@/pages/Dashboard";
 import Members from "@/pages/Members";
@@ -104,7 +104,8 @@ function TrainingRoute({ children }) {
 function FeatureGate({ path, children }) {
   const { roles, loading } = useAuth();
   const { tenantSlug } = useParams();
-  const { data: disabledFeatures } = useAppSetting("disabled_features", []);
+  const { currentTenant } = useTenant();
+  const disabledFeatures = currentTenant?.settings?.disabled_features || [];
   if (loading) return null;
   const isSuperAdmin = roles.includes("super_admin");
   if (!isSuperAdmin && disabledFeatures.includes(path)) return <Navigate to={tenantSlug ? `/t/${tenantSlug}` : "/"} replace />;
