@@ -1,61 +1,84 @@
 
 
-## Fix: Tenant Switching and Tenant-Scoped Navigation
+## Fix: Cannot Switch to Newly Created Tenants
 
 ### Root cause
 
-Two interconnected issues prevent proper tenant switching:
+When creating a tenant from the Tenant Admin page, the `tenant_memberships` insert (line 166-170 of `TenantAdmin.jsx`) uses the **anon Supabase client**, which is subject to RLS. Since the user doesn't yet have access to the newly created tenant, the insert fails silently. Additionally, no `user_roles` entry is created for the new tenant.
 
-1. **Nav links use bare paths** — `allNavItems` in `AppLayout.jsx` defines paths like `/`, `/members`, `/events`. When a user is on `/t/wci-cardiff/dashboard`, clicking "Members" navigates to `/members` (bare), which works via the catch-all route but loses the tenant slug from the URL.
-
-2. **TenantContext depends on URL slug** — `TenantProvider` reads `tenantSlugFromUrl` from `useParams()`. When navigating to bare paths, the slug disappears, causing `selectTenant` to fall back to the default tenant instead of maintaining the switched tenant.
-
-Combined effect: after switching tenant and navigating to `/t/new-slug`, the first nav click takes user to a bare path, which resets context back to the default tenant.
+Result: Southampton and Croydon tenants exist but have **zero memberships and zero roles** — the creator is locked out.
 
 ### Fix
 
-**1. `src/components/AppLayout.jsx`** — Make all nav links tenant-aware by prepending `/t/${tenantSlug}` to every path when a tenant slug is available:
+**1. `src/pages/TenantAdmin.jsx`** — After creating the tenant, call the `register-tenant` edge function or a new lightweight edge function to create the membership and roles with the service role key (bypassing RLS). Alternatively, create both `tenant_memberships` and `user_roles` rows via an RPC or edge function that uses the service role.
 
-```text
-Current:  <Link to="/members">
-Fixed:    <Link to={tenantSlug ? `/t/${tenantSlug}/members` : "/members"}>
-```
-
-Apply this to:
-- Main nav items (line ~207-221)
-- External links section
-- MobileBottomNav links (if applicable)
-
-Get `tenantSlug` from `useTenant()` context.
-
-**2. `src/components/navigation/MobileBottomNav.jsx`** — Same fix for mobile nav links, prepend tenant slug prefix.
-
-**3. `src/components/AppLayout.jsx` — `confirmTenantSwitch`** — After switching, also invalidate all React Query caches to prevent stale cross-tenant data:
+Simplest approach: use an edge function call instead of direct client insert for the membership + roles:
 
 ```js
-import { useQueryClient } from "@tanstack/react-query";
-// ...
-queryClient.clear(); // or queryClient.invalidateQueries();
+// Replace lines 166-170 with:
+await supabase.functions.invoke("admin-create-user", ...) 
+// OR create the membership via a new RPC
 ```
 
-**4. `src/App.jsx` — Route guards** — Update `AdminRoute`, `WSFRoute`, etc. to redirect to tenant-scoped paths instead of bare `/`:
+Actually, the simplest fix is to add error handling and use the existing `register-tenant` flow, but since the tenant is already created inline, the best fix is:
 
-```js
-// Current
-if (!isAdmin) return <Navigate to="/" replace />;
-// Fixed — use tenantSlug from params
-const { tenantSlug } = useParams();
-if (!isAdmin) return <Navigate to={tenantSlug ? `/t/${tenantSlug}` : "/"} replace />;
-```
+- Move tenant creation to use the `register-tenant` edge function (which already handles membership + roles + profile + welcome email with service role)
+- OR add an RPC function `create_tenant_membership` with `SECURITY DEFINER` that creates both the membership and user_roles entry
+
+Recommended approach (least disruptive):
+
+a. Create a new database function `create_tenant_owner(p_tenant_id uuid, p_user_id uuid)` with `SECURITY DEFINER` that inserts into both `tenant_memberships` and `user_roles`.
+
+b. Update `TenantAdmin.jsx` `createMutation` to call this RPC after tenant creation.
+
+c. After successful creation, call `refreshTenantContext()` so the new tenant appears in the switcher immediately.
+
+**2. Database migration** — 
+- Create the `create_tenant_owner` RPC
+- Backfill: insert missing memberships and roles for Southampton and Croydon for the creator user
+
+**3. `src/pages/TenantAdmin.jsx`** —
+- Call `refreshTenantContext()` after tenant creation so the switcher updates
+- Add error handling on the membership insert
 
 ### Technical details
 
-- `useTenant()` already provides `tenantSlug` — no new data fetching needed
-- Nav items array stays unchanged; the prefix is applied at render time in the `<Link>` component
-- React Query cache clearing on switch prevents showing data from the previous tenant
+New RPC function:
+```sql
+CREATE OR REPLACE FUNCTION public.create_tenant_owner(p_tenant_id uuid, p_user_id uuid)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  INSERT INTO tenant_memberships (tenant_id, user_id, role)
+  VALUES (p_tenant_id, p_user_id, 'owner')
+  ON CONFLICT (tenant_id, user_id) DO NOTHING;
+  
+  INSERT INTO user_roles (user_id, role, tenant_id)
+  VALUES (p_user_id, 'admin', p_tenant_id)
+  ON CONFLICT DO NOTHING;
+END;
+$$;
+```
+
+Backfill for existing orphaned tenants:
+```sql
+INSERT INTO tenant_memberships (tenant_id, user_id, role)
+VALUES 
+  ('871818c5-0364-427a-87fd-d399dda06f2f', '6483c76f-3ce3-4f14-b0af-0c8a98ebb484', 'owner'),
+  ('a8608b0b-9b0c-46d8-b145-92647660ad7f', '6483c76f-3ce3-4f14-b0af-0c8a98ebb484', 'owner')
+ON CONFLICT DO NOTHING;
+
+INSERT INTO user_roles (user_id, role, tenant_id)
+VALUES
+  ('6483c76f-3ce3-4f14-b0af-0c8a98ebb484', 'admin', '871818c5-0364-427a-87fd-d399dda06f2f'),
+  ('6483c76f-3ce3-4f14-b0af-0c8a98ebb484', 'admin', 'a8608b0b-9b0c-46d8-b145-92647660ad7f')
+ON CONFLICT DO NOTHING;
+```
 
 ### Files changed
-- `src/components/AppLayout.jsx` — prefix all nav links with tenant slug
-- `src/components/navigation/MobileBottomNav.jsx` — same tenant-scoped links
-- `src/App.jsx` — tenant-aware redirects in route guards
+- 1 new migration — `create_tenant_owner` RPC + backfill Southampton/Croydon memberships
+- `src/pages/TenantAdmin.jsx` — use RPC for membership creation + call `refreshTenantContext()`
 
