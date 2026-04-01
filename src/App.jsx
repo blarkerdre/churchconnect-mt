@@ -33,6 +33,7 @@ import Onboard from "@/pages/Onboard";
 import TenantAdmin from "@/pages/TenantAdmin";
 import Presentation from "@/pages/Presentation";
 import Unsubscribe from "@/pages/Unsubscribe";
+import LandingPage from "@/pages/LandingPage";
 
 
 function ProtectedRoute({ children }) {
