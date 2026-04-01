@@ -56,7 +56,9 @@ export default function Layout({ children }) {
   const location = useLocation();
   const navigate = useNavigate();
   const { signOut, user, profile, isAdmin, isUnitLeader, isWSFLeader, roles, leaderUnits, isTenantOwner, isTenantAdmin } = useAuth();
-  const { currentTenant, tenantId, tenantMemberships, switchTenant } = useTenant();
+  const { currentTenant, tenantId, tenantSlug, tenantMemberships, switchTenant } = useTenant();
+  const queryClient = useQueryClient();
+  const tenantPrefix = tenantSlug ? `/t/${tenantSlug}` : "";
   const isSuperAdmin = roles.includes("super_admin");
   const subscriptionStatus = currentTenant?.subscription_status;
   const { data: externalLinks } = useAppSetting("external_links", []);
