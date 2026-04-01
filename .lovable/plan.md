@@ -1,27 +1,18 @@
-## Create Public Landing Page
 
-### Overview
 
-Create a marketing landing page at `/` for unauthenticated users, with hero section, features showcase, pricing tiers, and CTAs to sign up/log in. Authenticated users bypass it and go straight to their dashboard.
+## Replace Logo & Church Name with "Church Connect" on Auth Page
 
-### Approach
+### Changes
 
-**1. `src/pages/LandingPage.jsx**` — New page with these sections:
+**`src/pages/Auth.jsx`**
 
-- **Hero** — Navy-to-dark gradient background, logo, tagline ("All-in-One Church Management Platform"), two CTAs: "Get Started" → `/auth` (signup mode), "Sign In" → `/auth`
-- **Features grid** — 8-10 feature cards (Members, Attendance, Events, Follow-ups, Pastoral Care, Communications, Analytics, Transportation) using lucide icons, navy/gold palette
-- **Pricing** — 4 tiers (Free, Starter, Growth, Enterprise) matching existing tenant plan tiers, with feature bullets and CTA buttons
-- **Footer** — Logo, copyright, links
+1. **Remove logo image** — Delete the `<img>` tag on line 176 and remove the `winnersLogo` import (line 11)
+2. **Replace default name** — Change `churchName` fallback from `"Winners Chapel"` to `"Church Connect"` (line 72)
+3. **Remove subtitle** — Change `churchSubtitle` to always be `null` (line 73), since "International" is no longer relevant
+4. **Clean up** — Remove unused `logoUrl` variable (line 74)
 
-Design uses the existing navy (`hsl(215,53%,24%)`) and gold (`hsl(42,68%,54%)`) palette, Playfair Display headings, Source Sans 3 body text — matching the Presentation page style.
-
-**2. `src/App.jsx**` — Update routing:
-
-- Add a new route `<Route path="/" element={<LandingPage />} />` in `AppRoutes` for unauthenticated users
-- Wrap it so authenticated users redirect to their tenant dashboard
-- Keep existing `/t/:tenantSlug/auth` routes unchanged
+When a tenant **is** loaded (has branding), the tenant name still displays. When no tenant is found, it shows "Church Connect" with no logo and no subtitle.
 
 ### Files changed
+- `src/pages/Auth.jsx` — remove logo, update default name to "Church Connect", remove subtitle
 
-- `src/pages/LandingPage.jsx` — new landing page component
-- `src/App.jsx` — add landing page route for unauthenticated visitors
