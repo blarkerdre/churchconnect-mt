@@ -172,13 +172,23 @@ export default function LandingPage() {
                     </li>
                   ))}
                 </ul>
-                <Button
-                  className="mt-6 w-full"
-                  variant={tier.highlighted ? "default" : "outline"}
-                  asChild
-                >
-                  <Link to="/t/wci-cardiff/auth">{tier.cta}</Link>
-                </Button>
+                {tier.name === "Enterprise" ? (
+                  <Button
+                    className="mt-6 w-full"
+                    variant="outline"
+                    asChild
+                  >
+                    <a href="mailto:info@churchmanagementsuite.org">{tier.cta}</a>
+                  </Button>
+                ) : (
+                  <Button
+                    className="mt-6 w-full"
+                    variant={tier.highlighted ? "default" : "outline"}
+                    asChild
+                  >
+                    <Link to="/onboard">{tier.cta}</Link>
+                  </Button>
+                )}
               </div>
             ))}
           </div>
