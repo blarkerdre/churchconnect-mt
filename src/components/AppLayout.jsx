@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import { useUnitMembership } from "@/hooks/useUnitMembership";
 import {
   LayoutDashboard, Users, CalendarDays, HeartHandshake,
@@ -55,7 +56,9 @@ export default function Layout({ children }) {
   const location = useLocation();
   const navigate = useNavigate();
   const { signOut, user, profile, isAdmin, isUnitLeader, isWSFLeader, roles, leaderUnits, isTenantOwner, isTenantAdmin } = useAuth();
-  const { currentTenant, tenantId, tenantMemberships, switchTenant } = useTenant();
+  const { currentTenant, tenantId, tenantSlug, tenantMemberships, switchTenant } = useTenant();
+  const queryClient = useQueryClient();
+  const tenantPrefix = tenantSlug ? `/t/${tenantSlug}` : "";
   const isSuperAdmin = roles.includes("super_admin");
   const subscriptionStatus = currentTenant?.subscription_status;
   const { data: externalLinks } = useAppSetting("external_links", []);
@@ -85,7 +88,11 @@ export default function Layout({ children }) {
     return false;
   });
 
-  const currentNav = navItems.find(n => n.path === location.pathname) || allNavItems.find(n => n.path === location.pathname) || navItems[0];
+  // Strip tenant prefix from pathname for matching nav items
+  const barePath = tenantSlug && location.pathname.startsWith(`/t/${tenantSlug}`)
+    ? location.pathname.replace(`/t/${tenantSlug}`, "") || "/"
+    : location.pathname;
+  const currentNav = navItems.find(n => n.path === barePath) || allNavItems.find(n => n.path === barePath) || navItems[0];
 
   // Determine role title
   const getRoleTitle = () => {
@@ -121,6 +128,7 @@ export default function Layout({ children }) {
       const targetMembership = tenantMemberships.find(m => m.tenant_id === pendingTenantSwitch);
       const targetSlug = targetMembership?.tenants?.slug;
       switchTenant(pendingTenantSwitch);
+      queryClient.clear();
       setPendingTenantSwitch(null);
       setSwitchPassword("");
       toast.success("Tenant switched successfully");
@@ -202,11 +210,11 @@ export default function Layout({ children }) {
         {/* Nav */}
         <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
           {navItems.map((item) => {
-            const isActive = location.pathname === item.path;
+            const isActive = barePath === item.path;
             return (
               <Link
                 key={item.path}
-                to={item.path}
+                to={`${tenantPrefix}${item.path}`}
                 onClick={() => setSidebarOpen(false)}
                 title={collapsed ? item.name : undefined}
                 className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${

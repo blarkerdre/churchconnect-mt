@@ -52,54 +52,61 @@ function ProtectedRoute({ children }) {
 
 function AdminRoute({ children }) {
   const { isAdmin, loading } = useAuth();
+  const { tenantSlug } = useParams();
   if (loading) return null;
-  if (!isAdmin) return <Navigate to="/" replace />;
+  if (!isAdmin) return <Navigate to={tenantSlug ? `/t/${tenantSlug}` : "/"} replace />;
   return children;
 }
 
 function SuperAdminRoute({ children }) {
   const { roles, loading } = useAuth();
+  const { tenantSlug } = useParams();
   if (loading) return null;
-  if (!roles.includes("super_admin")) return <Navigate to="/" replace />;
+  if (!roles.includes("super_admin")) return <Navigate to={tenantSlug ? `/t/${tenantSlug}` : "/"} replace />;
   return children;
 }
 
 function WSFRoute({ children }) {
   const { isAdmin, isWSFLeader, loading } = useAuth();
+  const { tenantSlug } = useParams();
   if (loading) return null;
-  if (!isAdmin && !isWSFLeader) return <Navigate to="/" replace />;
+  if (!isAdmin && !isWSFLeader) return <Navigate to={tenantSlug ? `/t/${tenantSlug}` : "/"} replace />;
   return children;
 }
 
 function LeaderRoute({ children }) {
   const { isAdmin, isUnitLeader, loading } = useAuth();
+  const { tenantSlug } = useParams();
   if (loading) return null;
-  if (!isAdmin && !isUnitLeader) return <Navigate to="/" replace />;
+  if (!isAdmin && !isUnitLeader) return <Navigate to={tenantSlug ? `/t/${tenantSlug}` : "/"} replace />;
   return children;
 }
 
 function FollowupRoute({ children }) {
   const { isAdmin, isUnitLeader, loading } = useAuth();
+  const { tenantSlug } = useParams();
   const { isMemberOfUnit: isFollowupMember, isLoading: memberLoading } = useUnitMembership("Follow-up");
   if (loading || memberLoading) return null;
-  if (!isAdmin && !isUnitLeader && !isFollowupMember) return <Navigate to="/" replace />;
+  if (!isAdmin && !isUnitLeader && !isFollowupMember) return <Navigate to={tenantSlug ? `/t/${tenantSlug}` : "/"} replace />;
   return children;
 }
 
 function TrainingRoute({ children }) {
   const { isAdmin, isUnitLeader, roles, loading } = useAuth();
+  const { tenantSlug } = useParams();
   if (loading) return null;
   const isSuperAdmin = roles.includes("super_admin");
-  if (!isAdmin && !isSuperAdmin && !isUnitLeader) return <Navigate to="/" replace />;
+  if (!isAdmin && !isSuperAdmin && !isUnitLeader) return <Navigate to={tenantSlug ? `/t/${tenantSlug}` : "/"} replace />;
   return children;
 }
 
 function FeatureGate({ path, children }) {
   const { roles, loading } = useAuth();
+  const { tenantSlug } = useParams();
   const { data: disabledFeatures } = useAppSetting("disabled_features", []);
   if (loading) return null;
   const isSuperAdmin = roles.includes("super_admin");
-  if (!isSuperAdmin && disabledFeatures.includes(path)) return <Navigate to="/" replace />;
+  if (!isSuperAdmin && disabledFeatures.includes(path)) return <Navigate to={tenantSlug ? `/t/${tenantSlug}` : "/"} replace />;
   return children;
 }
 
