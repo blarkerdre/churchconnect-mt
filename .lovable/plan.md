@@ -1,33 +1,25 @@
-## Fix Landing Page CTAs + Auth Runtime Error
-
-### Changes
-
-**1. `src/pages/LandingPage.jsx**` — Update all CTA links:
-
-- **"Sign In"** buttons (navbar + hero) → `/auth` (already correct, keep as-is)
-- **"Get Started Free"** (hero) → `/onboard`
-- **"Start Free Trial"** (Starter & Growth pricing) → `/onboard`
-- **"Get Started Free"** (Free tier pricing) → `/onboard`
-- **"Contact Us"** (Enterprise pricing) → `mailto:info@churchmanagementsuite.org` instead of a route link
-
-**2. `src/pages/Auth.jsx**` — Fix runtime error: `logoUrl is not defined` on line 173. The previous edit removed the variable but left a reference. Remove or guard the remaining `logoUrl` usage.
-
-### Summary of link mapping
 
 
-| Button                  | Current target        | New target                              |
-| ----------------------- | --------------------- | --------------------------------------- |
-| Navbar "Sign In"        | `/t/wci-cardiff/auth` | `/auth`                                 |
-| Navbar "Get Started"    | `/t/wci-cardiff/auth` | `/onboard`                              |
-| Hero "Get Started Free" | `/t/wci-cardiff/auth` | `/onboard`                              |
-| Hero "Sign In"          | `/t/wci-cardiff/auth` | `/auth`                                 |
-| Free tier CTA           | `/t/wci-cardiff/auth` | `/onboard`                              |
-| Starter tier CTA        | `/t/wci-cardiff/auth` | `/onboard`                              |
-| Growth tier CTA         | `/t/wci-cardiff/auth` | `/onboard`                              |
-| Enterprise "Contact Us" | `/t/wci-cardiff/auth` | `mailto:info@churchmanagementsuite.org` |
+## Fix: `/auth` Route Redirects to WCI Cardiff
 
+### Root cause
+
+Line 194 in `src/App.jsx`:
+```jsx
+<Route path="/auth" element={<DefaultTenantRedirect to="auth" />} />
+```
+This always redirects `/auth` → `/t/wci-cardiff/auth`. The landing page "Sign In" buttons link to `/auth`, so every user ends up on WCI Cardiff's auth page regardless of intent.
+
+### Fix
+
+**`src/App.jsx`** — Replace the redirect with a tenant-agnostic Auth page:
+
+```jsx
+<Route path="/auth" element={<AuthProvider><Auth /></AuthProvider>} />
+```
+
+This renders the Auth component directly at `/auth` without a tenant slug. The Auth component already handles this case — it shows "Church Connect" branding (no tenant-specific branding) and after login redirects the user to their actual tenant based on their membership query.
 
 ### Files changed
+- `src/App.jsx` — change `/auth` route from `DefaultTenantRedirect` to render `Auth` directly
 
-- `src/pages/LandingPage.jsx` — update CTA destinations
-- `src/pages/Auth.jsx` — fix `logoUrl` runtime error
