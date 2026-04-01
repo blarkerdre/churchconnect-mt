@@ -171,9 +171,9 @@ export default function Auth() {
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="flex flex-col items-center mb-8">
-          {tenant?.settings?.logo_url && (
+          {tenant?.logo_url && (
             <img
-              src={tenant.settings.logo_url}
+              src={tenant.logo_url}
               alt={churchName}
               className="h-16 w-auto mb-3 object-contain"
             />
