@@ -1,55 +1,30 @@
 
 
-## Fix: Module Toggle Not Hiding Navigation Items
+## Show Tenant Logo on Auth Page
 
-### Root cause
+### What's wrong
 
-**Data is written to one place but read from another.**
-
-- **TenantAdmin** saves `disabled_features` into the `tenants.settings` JSON column (e.g., `tenants.settings.disabled_features = ["/transportation", "/pastoral-care"]`)
-- **AppLayout** and **App.jsx** read `disabled_features` from the `app_settings` table via `useAppSetting("disabled_features", [])` — a completely separate storage location that is never written to by the toggle UI
-
-The toggles work fine in the admin UI but have zero effect on navigation because navigation never checks `tenants.settings`.
+The auth page (line 173-174) only shows the tenant name as text. It doesn't display the tenant's logo even though `tenant.settings.logo_url` is available from the `get_tenant_by_slug` RPC.
 
 ### Fix
 
-Update `AppLayout.jsx` and `App.jsx` to read `disabled_features` from the tenant's settings object (already available via `useTenant()` → `currentTenant.settings.disabled_features`) instead of from `app_settings`.
+**`src/pages/Auth.jsx`** — Add the tenant logo above the church name:
 
-**1. `src/components/AppLayout.jsx`**
-
-Replace:
-```js
-const { data: disabledFeatures } = useAppSetting("disabled_features", []);
-```
-With:
-```js
-const disabledFeatures = currentTenant?.settings?.disabled_features || [];
-```
-
-Remove the `useAppSetting` import if no longer used elsewhere in the file.
-
-**2. `src/App.jsx`**
-
-In the `TenantRoutes` component, replace the `useAppSetting` call for `disabled_features` with reading from the tenant context:
-```js
-const { currentTenant } = useTenant();
-const disabledFeatures = currentTenant?.settings?.disabled_features || [];
+```jsx
+<div className="flex flex-col items-center mb-8">
+  {tenant?.settings?.logo_url && (
+    <img
+      src={tenant.settings.logo_url}
+      alt={churchName}
+      className="h-16 w-auto mb-3 object-contain"
+    />
+  )}
+  <h1 className="font-display text-2xl font-bold text-foreground">{churchName}</h1>
+</div>
 ```
 
-Remove the unused `useAppSetting` import if applicable.
-
-**3. `src/hooks/useSubFeature.js`** — Update `useTenantFeatureEnabled` to also check `disabled_features` from tenant settings:
-```js
-export function useTenantFeatureEnabled(routePath) {
-  const { currentTenant } = useTenant();
-  const disabledFeatures = currentTenant?.settings?.disabled_features || [];
-  if (disabledFeatures.includes(routePath)) return false;
-  // ... existing tenant feature flag checks
-}
-```
+When no tenant is loaded (generic `/auth`), no logo shows and "Church Connect" displays as before. When a tenant slug is present and the tenant has a logo configured, it renders above the name.
 
 ### Files changed
-- `src/components/AppLayout.jsx` — read disabled_features from tenant settings instead of app_settings
-- `src/App.jsx` — same fix in route guards
-- `src/hooks/useSubFeature.js` — unify tenant feature checking
+- `src/pages/Auth.jsx` — add tenant logo image above church name
 
