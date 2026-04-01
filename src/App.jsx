@@ -6,7 +6,7 @@ import { useUnitMembership } from "@/hooks/useUnitMembership";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import { TenantProvider } from "@/contexts/TenantContext";
 import TenantThemeProvider from "@/components/tenants/TenantThemeProvider";
-import { useAppSetting } from "@/hooks/useAppSetting";
+import { useTenant } from "@/contexts/TenantContext";
 import Layout from "@/components/AppLayout";
 import Dashboard from "@/pages/Dashboard";
 import Members from "@/pages/Members";
