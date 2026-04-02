@@ -1,43 +1,72 @@
 
 
-## Display Full Message Dialog for Feed Items
+## Add Detail Dialogs Across SMS, Email, Followup, Notification, and Communications
 
 ### Problem
-Currently, announcements and events in My Feed only expand inline with a small chevron, showing content in a compact space. The user wants to click on a feed item and see its full message and details in a proper dialog/sheet.
+Several list views in the app truncate content (SMS messages, email error details, scheduled communications, followup cards). Users can't read the full content without a detail dialog. The MemberFeed pattern (click to open a full-detail dialog) should be applied consistently.
 
-### Solution
-Add a detail dialog that opens when the user taps on an announcement or event card (anywhere except the like button). The dialog shows the full content in a readable layout.
+### Changes
 
-### Changes to `src/components/profile/MemberFeed.jsx`
+#### 1. SMS History — click to view full message detail
+**File:** `src/components/sms/SMSHistoryDialog.jsx`
+- Add a `selectedLog` state. Clicking an SMS log row opens a nested Dialog showing:
+  - Full message text (no truncation, `whitespace-pre-wrap`)
+  - Recipient phone, channel, type, status badge
+  - Timestamps (created, delivery updated)
+  - Full error message (if any) with trial account hint
+  - Message SID if available
 
-#### 1. Announcement detail dialog
-- Clicking the announcement card body (title or content area) opens a Dialog showing:
-  - Title (large)
-  - Publish date and audience badge
-  - Full content text (no truncation, scrollable)
-  - Like button at the bottom
-- Marks as read on open
+#### 2. Email Dashboard — click row to view full email detail
+**File:** `src/pages/EmailDashboard.jsx`
+- Add a `selectedEmail` state. Clicking a table row opens a Dialog showing:
+  - Template name, recipient email
+  - Status badge, timestamp
+  - Full error message (untruncated)
+  - Message ID and any metadata from the `metadata` JSON column
+  - DLQ/retry info if present
 
-#### 2. Event detail dialog
-- Clicking the event card body opens a Dialog showing:
-  - Date badge, title (large)
-  - Full description
-  - Location, start/end time, event mode, audience — all displayed clearly
-  - Registration button (if applicable)
-  - Like button
-- Marks as read on open
+#### 3. Followup list cards — click to view summary before opening detail panel
+**File:** `src/pages/Followups.jsx`
+- The followup list already opens `FollowupDetailPanel` on click, which is the full detail view. No additional dialog needed here — this is already implemented correctly.
 
-#### 3. Keep inline expand as-is
-- The chevron still toggles inline preview for quick glances
-- Clicking the title/card area opens the full dialog for deeper reading
+#### 4. Scheduled Communications — click to view full message
+**File:** `src/pages/Communications.jsx` (inside `ScheduledList` component)
+- Add a `selectedScheduled` state. Clicking a scheduled item opens a Dialog showing:
+  - Full message text (untruncated)
+  - Subject (if email)
+  - Channel, scheduled time
+  - Filter/audience details from the `filters` JSON
+  - Cancel button inside the dialog
 
-### Implementation
-- Import `Dialog, DialogContent, DialogHeader, DialogTitle` from UI components
-- Add `selectedAnnouncement` and `selectedEvent` state to the parent `MemberFeed` component
-- Pass an `onOpen` callback to each item; clicking the title/card sets the selected item and opens the dialog
-- Two dialogs rendered at the bottom of the component: one for announcements, one for events
-- Both dialogs include the like/react functionality inline
+#### 5. Announcement cards in Communications — click to view full content
+**File:** `src/pages/Communications.jsx`
+- Announcement cards currently truncate content. Add a `selectedAnnouncement` state. Clicking a card opens a Dialog showing:
+  - Title, full content (whitespace-pre-wrap)
+  - Audience, category, publish/expiry dates
+  - Edit/Delete actions for admins
 
-### Files changed
-- `src/components/profile/MemberFeed.jsx` — add detail dialogs for announcements and events
+#### 6. Notification detail dialog — already implemented
+The `NotificationBell.jsx` already has a detail dialog. No changes needed.
+
+### Summary of files changed
+- `src/components/sms/SMSHistoryDialog.jsx` — add SMS detail dialog
+- `src/pages/EmailDashboard.jsx` — add email log detail dialog
+- `src/pages/Communications.jsx` — add detail dialogs for scheduled items and announcement cards
+
+### Technical approach
+Each detail dialog follows the same pattern:
+```jsx
+const [selectedItem, setSelectedItem] = useState(null);
+
+// In list: onClick={() => setSelectedItem(item)}
+// At bottom of component:
+<Dialog open={!!selectedItem} onOpenChange={(v) => !v && setSelectedItem(null)}>
+  <DialogContent>
+    <DialogHeader><DialogTitle>...</DialogTitle></DialogHeader>
+    {/* Full untruncated content */}
+  </DialogContent>
+</Dialog>
+```
+
+All dialogs use `max-w-lg`, `whitespace-pre-wrap` for message bodies, and include relevant metadata badges and timestamps.
 
