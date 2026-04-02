@@ -180,6 +180,96 @@ function ScheduledList({ channel, tenantId }) {
   );
 }
 
+function MemberSmsListView({ memberId, tenantId, channel, onSelect }) {
+  const { data: logs = [], isLoading } = useQuery({
+    queryKey: ["member-sms-received", memberId, channel, tenantId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("sms_log")
+        .select("*")
+        .eq("recipient_member_id", memberId)
+        .eq("channel", channel)
+        .order("created_at", { ascending: false })
+        .limit(100);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!memberId && !!tenantId,
+  });
+
+  if (isLoading) return <div className="flex justify-center py-16"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>;
+  if (logs.length === 0) return (
+    <Card className="border-0 shadow-sm p-16 text-center text-muted-foreground">
+      {channel === "whatsapp" ? <WhatsAppIcon className="h-10 w-10 mx-auto mb-3 opacity-20" /> : <MessageSquare className="h-10 w-10 mx-auto mb-3 opacity-20" />}
+      <p className="text-lg font-medium">No messages yet</p>
+      <p className="text-sm">Messages sent to you will appear here.</p>
+    </Card>
+  );
+
+  return (
+    <div className="space-y-2">
+      {logs.map(log => (
+        <Card key={log.id} className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow" onClick={() => onSelect(log)}>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between gap-2 mb-1">
+              <Badge variant="outline" className="text-xs capitalize">{log.sms_type}</Badge>
+              <Badge className={`border-0 text-xs ${log.status === "sent" || log.status === "delivered" ? "bg-chart-3/10 text-chart-3" : log.status === "failed" ? "bg-destructive/10 text-destructive" : "bg-muted text-muted-foreground"}`}>
+                {log.delivery_status || log.status}
+              </Badge>
+            </div>
+            <p className="text-sm text-foreground line-clamp-2">{log.message}</p>
+            <p className="text-xs text-muted-foreground mt-1">{format(new Date(log.created_at), "dd MMM yyyy, h:mm a")}</p>
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  );
+}
+
+function MemberEmailList({ memberId, memberEmail, tenantId, onSelect }) {
+  const { data: logs = [], isLoading } = useQuery({
+    queryKey: ["member-email-received", memberEmail, tenantId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("email_send_log")
+        .select("*")
+        .eq("recipient_email", memberEmail)
+        .order("created_at", { ascending: false })
+        .limit(100);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!memberEmail && !!tenantId,
+  });
+
+  if (isLoading) return <div className="flex justify-center py-16"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>;
+  if (logs.length === 0) return (
+    <Card className="border-0 shadow-sm p-16 text-center text-muted-foreground">
+      <Mail className="h-10 w-10 mx-auto mb-3 opacity-20" />
+      <p className="text-lg font-medium">No emails yet</p>
+      <p className="text-sm">Emails sent to you will appear here.</p>
+    </Card>
+  );
+
+  return (
+    <div className="space-y-2">
+      {logs.map(log => (
+        <Card key={log.id} className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow" onClick={() => onSelect(log)}>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between gap-2 mb-1">
+              <span className="text-sm font-medium text-foreground truncate">{log.metadata?.subject || log.template_name}</span>
+              <Badge className={`border-0 text-xs ${log.status === "sent" || log.status === "delivered" ? "bg-chart-3/10 text-chart-3" : log.status === "failed" ? "bg-destructive/10 text-destructive" : "bg-muted text-muted-foreground"}`}>
+                {log.status}
+              </Badge>
+            </div>
+            <p className="text-xs text-muted-foreground">{format(new Date(log.created_at), "dd MMM yyyy, h:mm a")}</p>
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  );
+}
+
 export default function Communications() {
   const { user, isAdmin, isUnitLeader, isWSFLeader, leaderUnits } = useAuth();
   const { tenantId, scopeQuery, withTenant } = useTenantQuery();
@@ -193,7 +283,8 @@ export default function Communications() {
   const [smsAnnouncement, setSmsAnnouncement] = useState(null);
   const [waOpen, setWaOpen] = useState(false);
   const [selectedAnnouncement, setSelectedAnnouncement] = useState(null);
-  
+  const [selectedSmsLog, setSelectedSmsLog] = useState(null);
+  const [selectedEmailLog, setSelectedEmailLog] = useState(null);
 
   const canManageComms = isAdmin || isUnitLeader || isWSFLeader;
 
@@ -237,13 +328,13 @@ export default function Communications() {
     ? myWsfCentres.map(c => c.name) : null;
 
   const { data: myMember } = useQuery({
-    queryKey: ["my-member", user?.id],
+    queryKey: ["my-member-comms", user?.id],
     queryFn: async () => {
       const { data } = await supabase
-        .from("members").select("church_unit").eq("user_id", user.id).single();
+        .from("members").select("id, email, phone, church_unit").eq("user_id", user.id).single();
       return data;
     },
-    enabled: !!user?.id && !isAdmin && !unitLeaderUnits && !wsfLeaderCentres,
+    enabled: !!user?.id,
   });
 
   // Build effective units/centres for audience scoping
@@ -393,24 +484,20 @@ export default function Communications() {
                 <Megaphone className="h-3.5 w-3.5" /> Announcements
               </TabsTrigger>
             )}
-            {canManageComms && (
-              <>
-                {emailEnabled && (
-                  <TabsTrigger value="email" className="gap-1.5 text-xs">
-                    <Mail className="h-3.5 w-3.5" /> Email
-                  </TabsTrigger>
-                )}
-                {smsEnabled && (
-                  <TabsTrigger value="sms" className="gap-1.5 text-xs">
-                    <MessageSquare className="h-3.5 w-3.5" /> SMS
-                  </TabsTrigger>
-                )}
-                {whatsappEnabled && (
-                  <TabsTrigger value="whatsapp" className="gap-1.5 text-xs">
-                    <WhatsAppIcon className="h-3.5 w-3.5" /> WhatsApp
-                  </TabsTrigger>
-                )}
-              </>
+            {emailEnabled && (
+              <TabsTrigger value="email" className="gap-1.5 text-xs">
+                <Mail className="h-3.5 w-3.5" /> Email
+              </TabsTrigger>
+            )}
+            {smsEnabled && (
+              <TabsTrigger value="sms" className="gap-1.5 text-xs">
+                <MessageSquare className="h-3.5 w-3.5" /> SMS
+              </TabsTrigger>
+            )}
+            {whatsappEnabled && (
+              <TabsTrigger value="whatsapp" className="gap-1.5 text-xs">
+                <WhatsAppIcon className="h-3.5 w-3.5" /> WhatsApp
+              </TabsTrigger>
             )}
           </TabsList>
         </div>
@@ -453,50 +540,58 @@ export default function Communications() {
           </div>
         </TabsContent>}
 
-        {canManageComms && emailEnabled && (
+        {emailEnabled && (
           <TabsContent value="email">
-            <div className="space-y-4">
-              <EmailAlertForm
-                currentUser={user}
-                myUnits={leaderUnits}
-                isAdmin={isAdmin}
-              />
-              <ScheduledList channel="email" tenantId={tenantId} />
-            </div>
+            {canManageComms ? (
+              <div className="space-y-4">
+                <EmailAlertForm currentUser={user} myUnits={leaderUnits} isAdmin={isAdmin} />
+                <ScheduledList channel="email" tenantId={tenantId} />
+              </div>
+            ) : (
+              <MemberEmailList memberId={myMember?.id} memberEmail={myMember?.email} tenantId={tenantId} onSelect={setSelectedEmailLog} />
+            )}
           </TabsContent>
         )}
 
-        {canManageComms && smsEnabled && (
+        {smsEnabled && (
           <TabsContent value="sms">
-            <div className="space-y-4">
-              <div className="flex items-center gap-2">
-                <Button onClick={() => { setSmsAnnouncement(null); setSmsOpen(true); }} className="bg-primary hover:bg-primary/90">
-                  <MessageSquare className="h-4 w-4 mr-2" /> Send Bulk SMS
-                </Button>
+            {canManageComms ? (
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <Button onClick={() => { setSmsAnnouncement(null); setSmsOpen(true); }} className="bg-primary hover:bg-primary/90">
+                    <MessageSquare className="h-4 w-4 mr-2" /> Send Bulk SMS
+                  </Button>
+                </div>
+                <ScheduledList channel="sms" tenantId={tenantId} />
+                <Card className="border-0 shadow-sm p-8 text-center text-muted-foreground">
+                  <MessageSquare className="h-10 w-10 mx-auto mb-3 opacity-20" />
+                  <p className="text-sm">Use the button above to compose and send SMS messages to members.</p>
+                </Card>
               </div>
-              <ScheduledList channel="sms" tenantId={tenantId} />
-              <Card className="border-0 shadow-sm p-8 text-center text-muted-foreground">
-                <MessageSquare className="h-10 w-10 mx-auto mb-3 opacity-20" />
-                <p className="text-sm">Use the button above to compose and send SMS messages to members.</p>
-              </Card>
-            </div>
+            ) : (
+              <MemberSmsListView memberId={myMember?.id} tenantId={tenantId} channel="sms" onSelect={setSelectedSmsLog} />
+            )}
           </TabsContent>
         )}
 
-        {canManageComms && whatsappEnabled && (
+        {whatsappEnabled && (
           <TabsContent value="whatsapp">
-            <div className="space-y-4">
-              <div className="flex items-center gap-2">
-                <Button onClick={() => setWaOpen(true)} className="bg-primary hover:bg-primary/90">
-                  <WhatsAppIcon className="h-4 w-4 mr-2" /> Send Bulk WhatsApp
-                </Button>
+            {canManageComms ? (
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <Button onClick={() => setWaOpen(true)} className="bg-primary hover:bg-primary/90">
+                    <WhatsAppIcon className="h-4 w-4 mr-2" /> Send Bulk WhatsApp
+                  </Button>
+                </div>
+                <ScheduledList channel="whatsapp" tenantId={tenantId} />
+                <Card className="border-0 shadow-sm p-8 text-center text-muted-foreground">
+                  <WhatsAppIcon className="h-10 w-10 mx-auto mb-3 opacity-20" />
+                  <p className="text-sm">Use the button above to compose and send WhatsApp messages to members.</p>
+                </Card>
               </div>
-              <ScheduledList channel="whatsapp" tenantId={tenantId} />
-              <Card className="border-0 shadow-sm p-8 text-center text-muted-foreground">
-                <WhatsAppIcon className="h-10 w-10 mx-auto mb-3 opacity-20" />
-                <p className="text-sm">Use the button above to compose and send WhatsApp messages to members.</p>
-              </Card>
-            </div>
+            ) : (
+              <MemberSmsListView memberId={myMember?.id} tenantId={tenantId} channel="whatsapp" onSelect={setSelectedSmsLog} />
+            )}
           </TabsContent>
         )}
       </Tabs>
@@ -547,16 +642,13 @@ export default function Communications() {
           {selectedAnnouncement && (
             <div className="space-y-4">
               <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">{selectedAnnouncement.body}</p>
-
               <Separator />
-
               <div className="flex items-center gap-3 text-xs text-muted-foreground">
                 <span className="flex items-center gap-1"><User className="h-3 w-3" />{selectedAnnouncement.author_name}</span>
                 {selectedAnnouncement.created_date && (
                   <span>{format(new Date(selectedAnnouncement.created_date), "dd MMM yyyy, h:mm a")}</span>
                 )}
               </div>
-
               {canManage(selectedAnnouncement) && canManageComms && (
                 <div className="flex gap-2 pt-2">
                   <Button variant="outline" size="sm" onClick={() => { setSelectedAnnouncement(null); handleEdit(selectedAnnouncement); }}>
@@ -565,6 +657,95 @@ export default function Communications() {
                   <Button variant="outline" size="sm" className="text-destructive border-destructive/30" onClick={() => { setSelectedAnnouncement(null); handleDelete(selectedAnnouncement); }}>
                     <Trash2 className="h-3.5 w-3.5 mr-1" /> Delete
                   </Button>
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* SMS/WhatsApp Detail Dialog */}
+      <Dialog open={!!selectedSmsLog} onOpenChange={(v) => !v && setSelectedSmsLog(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              {selectedSmsLog?.channel === "whatsapp" ? <WhatsAppIcon className="h-5 w-5 text-[#25D366]" /> : <MessageSquare className="h-5 w-5 text-primary" />}
+              {selectedSmsLog?.channel === "whatsapp" ? "WhatsApp Message" : "SMS Message"}
+            </DialogTitle>
+            <DialogDescription>Full message details</DialogDescription>
+          </DialogHeader>
+          {selectedSmsLog && (
+            <div className="space-y-4">
+              <div className="flex flex-wrap gap-2">
+                <Badge variant="outline" className={selectedSmsLog.channel === "whatsapp" ? "border-[#25D366] text-[#25D366]" : ""}>
+                  {selectedSmsLog.channel === "whatsapp" ? "WhatsApp" : "SMS"}
+                </Badge>
+                <Badge variant="outline" className="capitalize">{selectedSmsLog.sms_type}</Badge>
+                <Badge className={`border-0 ${selectedSmsLog.status === "sent" || selectedSmsLog.status === "delivered" ? "bg-chart-3/10 text-chart-3" : selectedSmsLog.status === "failed" ? "bg-destructive/10 text-destructive" : "bg-muted text-muted-foreground"}`}>
+                  {selectedSmsLog.delivery_status || selectedSmsLog.status}
+                </Badge>
+              </div>
+              <Separator />
+              <div className="space-y-1">
+                <p className="text-xs font-medium text-muted-foreground">Message</p>
+                <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">{selectedSmsLog.message}</p>
+              </div>
+              <Separator />
+              <div className="text-xs">
+                <p className="text-muted-foreground">Sent</p>
+                <p className="font-medium text-foreground">{format(new Date(selectedSmsLog.created_at), "dd MMM yyyy, h:mm a")}</p>
+              </div>
+              {selectedSmsLog.error_message && (
+                <div className="space-y-1">
+                  <p className="text-xs font-medium text-destructive">Error</p>
+                  <p className="text-sm text-destructive whitespace-pre-wrap">{selectedSmsLog.error_message}</p>
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Email Detail Dialog */}
+      <Dialog open={!!selectedEmailLog} onOpenChange={(v) => !v && setSelectedEmailLog(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Mail className="h-5 w-5 text-primary" />
+              Email Details
+            </DialogTitle>
+            <DialogDescription>Full email log details</DialogDescription>
+          </DialogHeader>
+          {selectedEmailLog && (
+            <div className="space-y-4">
+              <div className="flex flex-wrap gap-2">
+                <Badge variant="outline">{selectedEmailLog.template_name}</Badge>
+                <Badge className={`border-0 ${selectedEmailLog.status === "sent" || selectedEmailLog.status === "delivered" ? "bg-chart-3/10 text-chart-3" : selectedEmailLog.status === "failed" ? "bg-destructive/10 text-destructive" : "bg-muted text-muted-foreground"}`}>
+                  {selectedEmailLog.status}
+                </Badge>
+              </div>
+              <div className="space-y-1">
+                <p className="text-xs font-medium text-muted-foreground">Recipient</p>
+                <p className="text-sm font-medium text-foreground">{selectedEmailLog.recipient_email}</p>
+              </div>
+              {selectedEmailLog.metadata?.subject && (
+                <>
+                  <Separator />
+                  <div className="space-y-1">
+                    <p className="text-xs font-medium text-muted-foreground">Subject</p>
+                    <p className="text-sm text-foreground">{selectedEmailLog.metadata.subject}</p>
+                  </div>
+                </>
+              )}
+              <Separator />
+              <div className="text-xs">
+                <p className="text-muted-foreground">Sent</p>
+                <p className="font-medium text-foreground">{format(new Date(selectedEmailLog.created_at), "dd MMM yyyy, h:mm a")}</p>
+              </div>
+              {selectedEmailLog.error_message && (
+                <div className="space-y-1">
+                  <p className="text-xs font-medium text-destructive">Error</p>
+                  <p className="text-sm text-destructive whitespace-pre-wrap">{selectedEmailLog.error_message}</p>
                 </div>
               )}
             </div>
