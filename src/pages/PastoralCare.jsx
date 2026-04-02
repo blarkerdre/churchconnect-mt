@@ -45,6 +45,7 @@ export default function PastoralCare() {
   const [selectedCase, setSelectedCase] = useState(null);
   const [form, setForm] = useState({ subject: "", care_type: "Prayer Request", description: "", confidential: false });
   const [statusUpdate, setStatusUpdate] = useState({ status: "", resolution_notes: "", assigned_to: "" });
+  const [detailCase, setDetailCase] = useState(null);
 
   const { data: cases = [], isLoading } = useQuery({
     queryKey: ["pastoral-care", tenantId],
