@@ -11,17 +11,13 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
-
-const ALL_UNITS = [
-  "Ushering", "Choir", "Media", "Children's Ministry", "Protocol",
-  "Sanctuary Keepers", "Prayer & Intercession", "Evangelism", "Follow-up",
-  "Youth Ministry", "Men's Ministry", "Women's Ministry", "Drama & Creative Arts",
-  "Altar Ministers", "Pastoral Care", "Welfare", "CSR", "Transportation", "WSF",
-];
+import { useChurchUnits } from "@/hooks/useChurchUnits";
 
 export default function BulkUnitAssignDialog({ open, onOpenChange }) {
   const queryClient = useQueryClient();
   const { tenantId, scopeQuery, withTenant } = useTenantQuery();
+  const { data: churchUnits = [] } = useChurchUnits();
+  const allUnitNames = churchUnits.map(u => u.name);
   const [selectedUnit, setSelectedUnit] = useState("");
   const [selectedUsers, setSelectedUsers] = useState([]);
   const [search, setSearch] = useState("");
@@ -108,7 +104,7 @@ export default function BulkUnitAssignDialog({ open, onOpenChange }) {
             <Select value={selectedUnit} onValueChange={(v) => { setSelectedUnit(v); setSelectedUsers([]); }}>
               <SelectTrigger><SelectValue placeholder="Choose a unit" /></SelectTrigger>
               <SelectContent>
-                {ALL_UNITS.map(u => (
+                {allUnitNames.map(u => (
                   <SelectItem key={u} value={u}>{u}</SelectItem>
                 ))}
               </SelectContent>
