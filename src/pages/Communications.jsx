@@ -180,6 +180,96 @@ function ScheduledList({ channel, tenantId }) {
   );
 }
 
+function MemberSmsListView({ memberId, tenantId, channel, onSelect }) {
+  const { data: logs = [], isLoading } = useQuery({
+    queryKey: ["member-sms-received", memberId, channel, tenantId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("sms_log")
+        .select("*")
+        .eq("recipient_member_id", memberId)
+        .eq("channel", channel)
+        .order("created_at", { ascending: false })
+        .limit(100);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!memberId && !!tenantId,
+  });
+
+  if (isLoading) return <div className="flex justify-center py-16"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>;
+  if (logs.length === 0) return (
+    <Card className="border-0 shadow-sm p-16 text-center text-muted-foreground">
+      {channel === "whatsapp" ? <WhatsAppIcon className="h-10 w-10 mx-auto mb-3 opacity-20" /> : <MessageSquare className="h-10 w-10 mx-auto mb-3 opacity-20" />}
+      <p className="text-lg font-medium">No messages yet</p>
+      <p className="text-sm">Messages sent to you will appear here.</p>
+    </Card>
+  );
+
+  return (
+    <div className="space-y-2">
+      {logs.map(log => (
+        <Card key={log.id} className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow" onClick={() => onSelect(log)}>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between gap-2 mb-1">
+              <Badge variant="outline" className="text-xs capitalize">{log.sms_type}</Badge>
+              <Badge className={`border-0 text-xs ${log.status === "sent" || log.status === "delivered" ? "bg-chart-3/10 text-chart-3" : log.status === "failed" ? "bg-destructive/10 text-destructive" : "bg-muted text-muted-foreground"}`}>
+                {log.delivery_status || log.status}
+              </Badge>
+            </div>
+            <p className="text-sm text-foreground line-clamp-2">{log.message}</p>
+            <p className="text-xs text-muted-foreground mt-1">{format(new Date(log.created_at), "dd MMM yyyy, h:mm a")}</p>
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  );
+}
+
+function MemberEmailList({ memberId, memberEmail, tenantId, onSelect }) {
+  const { data: logs = [], isLoading } = useQuery({
+    queryKey: ["member-email-received", memberEmail, tenantId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("email_send_log")
+        .select("*")
+        .eq("recipient_email", memberEmail)
+        .order("created_at", { ascending: false })
+        .limit(100);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!memberEmail && !!tenantId,
+  });
+
+  if (isLoading) return <div className="flex justify-center py-16"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>;
+  if (logs.length === 0) return (
+    <Card className="border-0 shadow-sm p-16 text-center text-muted-foreground">
+      <Mail className="h-10 w-10 mx-auto mb-3 opacity-20" />
+      <p className="text-lg font-medium">No emails yet</p>
+      <p className="text-sm">Emails sent to you will appear here.</p>
+    </Card>
+  );
+
+  return (
+    <div className="space-y-2">
+      {logs.map(log => (
+        <Card key={log.id} className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow" onClick={() => onSelect(log)}>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between gap-2 mb-1">
+              <span className="text-sm font-medium text-foreground truncate">{log.metadata?.subject || log.template_name}</span>
+              <Badge className={`border-0 text-xs ${log.status === "sent" || log.status === "delivered" ? "bg-chart-3/10 text-chart-3" : log.status === "failed" ? "bg-destructive/10 text-destructive" : "bg-muted text-muted-foreground"}`}>
+                {log.status}
+              </Badge>
+            </div>
+            <p className="text-xs text-muted-foreground">{format(new Date(log.created_at), "dd MMM yyyy, h:mm a")}</p>
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  );
+}
+
 export default function Communications() {
   const { user, isAdmin, isUnitLeader, isWSFLeader, leaderUnits } = useAuth();
   const { tenantId, scopeQuery, withTenant } = useTenantQuery();
