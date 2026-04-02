@@ -1,22 +1,47 @@
 
 
-## Fix: `messageId` Not Defined in auth-email-hook
+## Fix: Auth Emails Not Rendering — Missing Template Render Step
 
 ### Problem
 
-The `auth-email-hook` Edge Function crashes with `ReferenceError: messageId is not defined` at line 294. The variable `messageId` is used in the `email_send_log` insert (line 294) and the `enqueue_email` payload (line 305) but was never declared. This prevents all auth emails (signup, recovery, etc.) from being sent.
+Two issues found:
+
+1. **Emails were disabled again** — Re-enabled now. The most recent email-alert failed with "Emails disabled for this project."
+
+2. **Critical bug: `html` and `text` variables never declared** — In `auth-email-hook/index.ts`, the `enqueue_email` call (line 312-313) passes `html` and `text` in the payload, but the email template is never rendered. There is no `renderAsync()` call between resolving the template (line 211) and enqueuing (line 302). This means auth emails are enqueued with `undefined` content.
+
+   Previous signup emails for `blarkerdre@yahoo.com` show as "sent" in the log, but likely arrived empty or were silently dropped by the email provider.
 
 ### Fix
 
-Add `const messageId = crypto.randomUUID()` before line 292 (the pending log insert), right after the tenant resolution block.
+**`supabase/functions/auth-email-hook/index.ts`** — Add template rendering before the enqueue call.
+
+Insert after line 291 (after `messageId` declaration), before the pending log insert:
 
 ```typescript
-// After line 291 (const tenantSiteUrl = ...)
-const messageId = crypto.randomUUID()
+// Build template props
+const templateProps: Record<string, any> = {
+  siteName: churchName,
+  siteUrl: tenantSiteUrl,
+  recipient: payload.data.email,
+  confirmationUrl: payload.data.confirmation_url || tenantSiteUrl,
+}
+
+if (emailType === 'email_change') {
+  templateProps.email = payload.data.email
+  templateProps.newEmail = payload.data.new_email
+}
+if (emailType === 'reauthentication') {
+  templateProps.token = payload.data.token
+}
+
+// Render email HTML and plain text
+const html = await renderAsync(React.createElement(EmailTemplate, templateProps))
+const text = html.replace(/<[^>]*>/g, '') // basic HTML-to-text fallback
 ```
 
-Then redeploy the `auth-email-hook` Edge Function.
+Then redeploy `auth-email-hook`.
 
 ### Files changed
-- `supabase/functions/auth-email-hook/index.ts` — add missing `messageId` declaration
+- `supabase/functions/auth-email-hook/index.ts` — add missing template rendering before enqueue
 
