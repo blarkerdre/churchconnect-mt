@@ -193,7 +193,8 @@ export default function Communications() {
   const [smsAnnouncement, setSmsAnnouncement] = useState(null);
   const [waOpen, setWaOpen] = useState(false);
   const [selectedAnnouncement, setSelectedAnnouncement] = useState(null);
-  
+  const [selectedSmsLog, setSelectedSmsLog] = useState(null);
+  const [selectedEmailLog, setSelectedEmailLog] = useState(null);
 
   const canManageComms = isAdmin || isUnitLeader || isWSFLeader;
 
