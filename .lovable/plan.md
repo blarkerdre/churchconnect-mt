@@ -1,52 +1,22 @@
 
 
-## Fix: SMS Stuck on "Queued" — Webhook Signature Mismatch
+## Fix: `messageId` Not Defined in auth-email-hook
 
 ### Problem
 
-SMS is sent via the Lovable connector gateway, which uses its own Twilio account internally. When Twilio sends delivery status callbacks (delivered, failed, etc.) to your `twilio-webhook`, the signature is signed with the gateway's auth token — not your `TWILIO_AUTH_TOKEN`. The webhook rejects all callbacks with 403, so `sms_log.delivery_status` stays "queued" forever.
+The `auth-email-hook` Edge Function crashes with `ReferenceError: messageId is not defined` at line 294. The variable `messageId` is used in the `email_send_log` insert (line 294) and the `enqueue_email` payload (line 305) but was never declared. This prevents all auth emails (signup, recovery, etc.) from being sent.
 
-### Solution
+### Fix
 
-Since the connector gateway proxies through its own Twilio account, the StatusCallback signatures will never match your local auth token. Two changes are needed:
-
-#### 1. `supabase/functions/twilio-webhook/index.ts` — Relax signature validation for gateway-sent messages
-
-Replace the strict HMAC-SHA1 signature check with a dual approach:
-- **If `TWILIO_AUTH_TOKEN` matches** → validate normally (for direct Twilio usage)
-- **If signature doesn't match** → check for a secondary validation: verify the request contains a valid `MessageSid` and `MessageStatus`, and that the `MessageSid` exists in `sms_log` (proof it's a legitimate callback for a message we sent)
-
-This prevents random abuse while allowing gateway-proxied callbacks through.
+Add `const messageId = crypto.randomUUID()` before line 292 (the pending log insert), right after the tenant resolution block.
 
 ```typescript
-// After signature validation fails:
-// Fallback: verify MessageSid exists in our sms_log (proves we sent it)
-if (twilioSignature !== expectedSignature) {
-  console.log("Signature mismatch — trying fallback MessageSid verification");
-  
-  if (!messageSid || !messageStatus) {
-    return new Response("Forbidden", { status: 403 });
-  }
-  
-  const { data: existingLog } = await supabase
-    .from("sms_log")
-    .select("id")
-    .eq("message_sid", messageSid)
-    .maybeSingle();
-  
-  if (!existingLog) {
-    console.warn("MessageSid not found in sms_log — rejecting");
-    return new Response("Forbidden", { status: 403 });
-  }
-  
-  console.log("Fallback validation passed — MessageSid exists in sms_log");
-}
+// After line 291 (const tenantSiteUrl = ...)
+const messageId = crypto.randomUUID()
 ```
 
-#### 2. Restructure the webhook to create the Supabase client and extract params before signature validation
-
-Move `messageSid`/`messageStatus` extraction and Supabase client creation above the signature check so the fallback verification can query `sms_log`.
+Then redeploy the `auth-email-hook` Edge Function.
 
 ### Files changed
-- `supabase/functions/twilio-webhook/index.ts`
+- `supabase/functions/auth-email-hook/index.ts` — add missing `messageId` declaration
 
