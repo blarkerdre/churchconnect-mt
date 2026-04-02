@@ -1,44 +1,52 @@
 
 
-## Add Notification Counters to Communications Tabs
+## Add Detail Dialogs to Pastoral Care and Transportation Pages
 
 ### Problem
-The Communications page tabs (Announcements, Email, SMS, WhatsApp) have no indication of how many unread/new messages exist in each channel.
+Pastoral care case cards and transportation booking cards show only summary info (subject, member, status, route). Users cannot click to see the full description, notes, resolution details, or booking notes without using the "Manage" action.
 
-### Solution
-Add badge counters next to each tab label showing the count of recent unread items per channel.
+### Changes
 
-### How counts are determined
+#### 1. Pastoral Care — Case Detail Dialog (`src/pages/PastoralCare.jsx`)
 
-- **Announcements**: Count of published announcements visible to the user that were created in the last 7 days (simple "recent" heuristic since there's no read-tracking on this page)
-- **SMS**: For admins — count of scheduled/processing messages. For members — count of SMS logs received in the last 7 days
-- **Email**: Same pattern as SMS but from `email_send_log`
-- **WhatsApp**: Same as SMS but filtered by `channel = 'whatsapp'`
+- Add `detailCase` state (`null` by default)
+- Make each case card clickable (`onClick={() => setDetailCase(r)}`) — exclude clicks on the Manage button
+- Render a detail dialog at the bottom showing:
+  - Subject, care type badge, status badge, confidential indicator
+  - Member name
+  - Assigned to (from `assigneeMap`)
+  - Created date
+  - **Full description** (`whitespace-pre-wrap`, no truncation)
+  - Resolution notes (if any)
+  - Follow-up date (if set)
 
-### Changes to `src/pages/Communications.jsx`
+#### 2. Transportation — Booking Detail Dialog (`src/pages/Transportation.jsx`)
 
-1. **Compute counts** from already-fetched data where possible:
-   - `announcementCount` = `visibleAnnouncements.length` (already loaded)
-   - For member SMS/Email/WhatsApp counts, add lightweight `useQuery` calls with `.select('id', { count: 'exact', head: true })` to get counts without fetching full rows
+- Add `detailBooking` state (`null` by default)
+- Make each booking card clickable (`onClick={() => setDetailBooking(b)}`) — exclude clicks on Manage/Delete buttons
+- Render a detail dialog at the bottom showing:
+  - Member name, status badge
+  - Pickup address and destination
+  - Date and pickup time
+  - Passengers count
+  - Assigned to (from `assigneeMap`)
+  - Assigned driver and driver phone
+  - **Full notes** (`whitespace-pre-wrap`, no truncation)
 
-2. **Render badges** on each `TabsTrigger`:
-   ```jsx
-   <TabsTrigger value="sms" className="gap-1.5 text-xs">
-     <MessageSquare className="h-3.5 w-3.5" /> SMS
-     {smsCount > 0 && (
-       <Badge variant="secondary" className="h-5 min-w-5 px-1 text-[10px]">
-         {smsCount}
-       </Badge>
-     )}
-   </TabsTrigger>
-   ```
+### Pattern
+Same detail dialog pattern used across Events, Communications, and Follow-ups:
+```jsx
+<Dialog open={!!detailCase} onOpenChange={(v) => !v && setDetailCase(null)}>
+  <DialogContent className="max-w-lg">
+    <DialogHeader><DialogTitle>{detailCase?.subject}</DialogTitle></DialogHeader>
+    {/* Full content with whitespace-pre-wrap */}
+  </DialogContent>
+</Dialog>
+```
 
-3. **Count queries** (for non-admin members):
-   - SMS: `sms_log` where `recipient_member_id = myMember.id`, `channel = 'sms'`, last 30 days, head count
-   - WhatsApp: same but `channel = 'whatsapp'`
-   - Email: `email_send_log` where `recipient_email = myMember.email`, last 30 days, head count
-   - For admins: count scheduled/processing items per channel from `scheduled_communications`
+Cards get `cursor-pointer` and the click handler. Action buttons use `e.stopPropagation()` to prevent the detail dialog from opening when clicking Manage/Delete.
 
 ### Files changed
-- `src/pages/Communications.jsx` — add count queries and badge counters on tab triggers
+- `src/pages/PastoralCare.jsx` — add `detailCase` state, clickable cards, case detail dialog
+- `src/pages/Transportation.jsx` — add `detailBooking` state, clickable cards, booking detail dialog
 
