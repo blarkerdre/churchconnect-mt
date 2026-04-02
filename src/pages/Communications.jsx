@@ -552,16 +552,13 @@ export default function Communications() {
           {selectedAnnouncement && (
             <div className="space-y-4">
               <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">{selectedAnnouncement.body}</p>
-
               <Separator />
-
               <div className="flex items-center gap-3 text-xs text-muted-foreground">
                 <span className="flex items-center gap-1"><User className="h-3 w-3" />{selectedAnnouncement.author_name}</span>
                 {selectedAnnouncement.created_date && (
                   <span>{format(new Date(selectedAnnouncement.created_date), "dd MMM yyyy, h:mm a")}</span>
                 )}
               </div>
-
               {canManage(selectedAnnouncement) && canManageComms && (
                 <div className="flex gap-2 pt-2">
                   <Button variant="outline" size="sm" onClick={() => { setSelectedAnnouncement(null); handleEdit(selectedAnnouncement); }}>
@@ -570,6 +567,95 @@ export default function Communications() {
                   <Button variant="outline" size="sm" className="text-destructive border-destructive/30" onClick={() => { setSelectedAnnouncement(null); handleDelete(selectedAnnouncement); }}>
                     <Trash2 className="h-3.5 w-3.5 mr-1" /> Delete
                   </Button>
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* SMS/WhatsApp Detail Dialog */}
+      <Dialog open={!!selectedSmsLog} onOpenChange={(v) => !v && setSelectedSmsLog(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              {selectedSmsLog?.channel === "whatsapp" ? <WhatsAppIcon className="h-5 w-5 text-[#25D366]" /> : <MessageSquare className="h-5 w-5 text-primary" />}
+              {selectedSmsLog?.channel === "whatsapp" ? "WhatsApp Message" : "SMS Message"}
+            </DialogTitle>
+            <DialogDescription>Full message details</DialogDescription>
+          </DialogHeader>
+          {selectedSmsLog && (
+            <div className="space-y-4">
+              <div className="flex flex-wrap gap-2">
+                <Badge variant="outline" className={selectedSmsLog.channel === "whatsapp" ? "border-[#25D366] text-[#25D366]" : ""}>
+                  {selectedSmsLog.channel === "whatsapp" ? "WhatsApp" : "SMS"}
+                </Badge>
+                <Badge variant="outline" className="capitalize">{selectedSmsLog.sms_type}</Badge>
+                <Badge className={`border-0 ${selectedSmsLog.status === "sent" || selectedSmsLog.status === "delivered" ? "bg-chart-3/10 text-chart-3" : selectedSmsLog.status === "failed" ? "bg-destructive/10 text-destructive" : "bg-muted text-muted-foreground"}`}>
+                  {selectedSmsLog.delivery_status || selectedSmsLog.status}
+                </Badge>
+              </div>
+              <Separator />
+              <div className="space-y-1">
+                <p className="text-xs font-medium text-muted-foreground">Message</p>
+                <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">{selectedSmsLog.message}</p>
+              </div>
+              <Separator />
+              <div className="text-xs">
+                <p className="text-muted-foreground">Sent</p>
+                <p className="font-medium text-foreground">{format(new Date(selectedSmsLog.created_at), "dd MMM yyyy, h:mm a")}</p>
+              </div>
+              {selectedSmsLog.error_message && (
+                <div className="space-y-1">
+                  <p className="text-xs font-medium text-destructive">Error</p>
+                  <p className="text-sm text-destructive whitespace-pre-wrap">{selectedSmsLog.error_message}</p>
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Email Detail Dialog */}
+      <Dialog open={!!selectedEmailLog} onOpenChange={(v) => !v && setSelectedEmailLog(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Mail className="h-5 w-5 text-primary" />
+              Email Details
+            </DialogTitle>
+            <DialogDescription>Full email log details</DialogDescription>
+          </DialogHeader>
+          {selectedEmailLog && (
+            <div className="space-y-4">
+              <div className="flex flex-wrap gap-2">
+                <Badge variant="outline">{selectedEmailLog.template_name}</Badge>
+                <Badge className={`border-0 ${selectedEmailLog.status === "sent" || selectedEmailLog.status === "delivered" ? "bg-chart-3/10 text-chart-3" : selectedEmailLog.status === "failed" ? "bg-destructive/10 text-destructive" : "bg-muted text-muted-foreground"}`}>
+                  {selectedEmailLog.status}
+                </Badge>
+              </div>
+              <div className="space-y-1">
+                <p className="text-xs font-medium text-muted-foreground">Recipient</p>
+                <p className="text-sm font-medium text-foreground">{selectedEmailLog.recipient_email}</p>
+              </div>
+              {selectedEmailLog.metadata?.subject && (
+                <>
+                  <Separator />
+                  <div className="space-y-1">
+                    <p className="text-xs font-medium text-muted-foreground">Subject</p>
+                    <p className="text-sm text-foreground">{selectedEmailLog.metadata.subject}</p>
+                  </div>
+                </>
+              )}
+              <Separator />
+              <div className="text-xs">
+                <p className="text-muted-foreground">Sent</p>
+                <p className="font-medium text-foreground">{format(new Date(selectedEmailLog.created_at), "dd MMM yyyy, h:mm a")}</p>
+              </div>
+              {selectedEmailLog.error_message && (
+                <div className="space-y-1">
+                  <p className="text-xs font-medium text-destructive">Error</p>
+                  <p className="text-sm text-destructive whitespace-pre-wrap">{selectedEmailLog.error_message}</p>
                 </div>
               )}
             </div>
