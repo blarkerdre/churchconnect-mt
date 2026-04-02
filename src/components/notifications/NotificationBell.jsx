@@ -41,7 +41,8 @@ const referenceRoutes = {
 
 export default function NotificationBell() {
   const { user } = useAuth();
-  const { tenantId, tenantSlug } = useTenantQuery();
+  const { tenantId } = useTenantQuery();
+  const { tenantSlug } = useTenant();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
