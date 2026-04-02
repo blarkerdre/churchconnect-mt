@@ -380,6 +380,86 @@ export default function FollowupDetailPanel({ followup, onClose, onUpdate, curre
           </Button>
         </div>
       </div>
+
+      {/* Message Detail Dialog */}
+      <Dialog open={!!selectedMessage} onOpenChange={(v) => !v && setSelectedMessage(null)}>
+        <DialogContent className="max-w-lg z-[60]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              {selectedMessage?.channel === "email" ? <Mail className="h-4 w-4" /> : <MessageSquare className="h-4 w-4" />}
+              {selectedMessage?.channel === "email" ? "Email" : "SMS"} Message
+            </DialogTitle>
+          </DialogHeader>
+          {selectedMessage && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 flex-wrap">
+                <Badge variant="secondary" className="text-xs">{selectedMessage.channel.toUpperCase()}</Badge>
+                <Badge className={`text-xs ${
+                  selectedMessage.status === "sent" ? "bg-chart-3/10 text-chart-3" :
+                  selectedMessage.status === "failed" ? "bg-destructive/10 text-destructive" :
+                  selectedMessage.status === "cancelled" ? "bg-muted text-muted-foreground" :
+                  "bg-primary/10 text-primary"
+                }`}>{selectedMessage.status}</Badge>
+              </div>
+
+              {selectedMessage.recipient_email && (
+                <div className="text-sm">
+                  <span className="text-muted-foreground">To: </span>
+                  <span className="text-foreground">{selectedMessage.recipient_name ? `${selectedMessage.recipient_name} <${selectedMessage.recipient_email}>` : selectedMessage.recipient_email}</span>
+                </div>
+              )}
+              {selectedMessage.recipient_phone && (
+                <div className="text-sm">
+                  <span className="text-muted-foreground">To: </span>
+                  <span className="text-foreground">{selectedMessage.recipient_phone}</span>
+                </div>
+              )}
+              {selectedMessage.subject && (
+                <div className="text-sm">
+                  <span className="text-muted-foreground">Subject: </span>
+                  <span className="font-medium text-foreground">{selectedMessage.subject}</span>
+                </div>
+              )}
+
+              <div className="bg-muted/50 rounded-lg p-3">
+                <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">{selectedMessage.message}</p>
+              </div>
+
+              {selectedMessage.error_message && (
+                <div className="bg-destructive/10 rounded-lg p-3">
+                  <p className="text-xs font-semibold text-destructive mb-1">Error</p>
+                  <p className="text-sm text-destructive whitespace-pre-wrap">{selectedMessage.error_message}</p>
+                </div>
+              )}
+
+              <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                {selectedMessage.scheduled_at && (
+                  <span>Scheduled: {format(new Date(selectedMessage.scheduled_at), "dd MMM yyyy, HH:mm")}</span>
+                )}
+                {selectedMessage.sent_at && (
+                  <span>Sent: {format(new Date(selectedMessage.sent_at), "dd MMM yyyy, HH:mm")}</span>
+                )}
+              </div>
+
+              {selectedMessage.status === "scheduled" && (
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  className="w-full"
+                  onClick={async () => {
+                    await supabase.from("followup_scheduled_messages").update({ status: "cancelled", updated_at: new Date().toISOString() }).eq("id", selectedMessage.id).eq("tenant_id", tenantId);
+                    queryClient.invalidateQueries({ queryKey: ["followup-messages", followup.id] });
+                    toast({ title: "Message cancelled" });
+                    setSelectedMessage(null);
+                  }}
+                >
+                  Cancel Message
+                </Button>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
