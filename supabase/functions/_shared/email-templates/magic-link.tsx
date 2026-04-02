@@ -16,31 +16,37 @@ import {
 interface MagicLinkEmailProps {
   siteName: string
   confirmationUrl: string
+  churchName?: string
 }
 
 export const MagicLinkEmail = ({
   siteName,
   confirmationUrl,
-}: MagicLinkEmailProps) => (
-  <Html lang="en" dir="ltr">
-    <Head />
-    <Preview>Your login link for Winners Chapel International Cardiff</Preview>
-    <Body style={main}>
-      <Container style={container}>
-        <Heading style={h1}>Your login link</Heading>
-        <Text style={text}>
-          Click the button below to log in to Winners Chapel International Cardiff. This link will expire shortly.
-        </Text>
-        <Button style={button} href={confirmationUrl}>
-          Log In
-        </Button>
-        <Text style={footer}>
-          If you didn't request this link, you can safely ignore this email.
-        </Text>
-      </Container>
-    </Body>
-  </Html>
-)
+  churchName,
+}: MagicLinkEmailProps) => {
+  const displayName = churchName || siteName || 'Church Connect'
+
+  return (
+    <Html lang="en" dir="ltr">
+      <Head />
+      <Preview>Your login link for {displayName}</Preview>
+      <Body style={main}>
+        <Container style={container}>
+          <Heading style={h1}>Your login link</Heading>
+          <Text style={text}>
+            Click the button below to log in to {displayName}. This link will expire shortly.
+          </Text>
+          <Button style={button} href={confirmationUrl}>
+            Log In
+          </Button>
+          <Text style={footer}>
+            If you didn't request this link, you can safely ignore this email.
+          </Text>
+        </Container>
+      </Body>
+    </Html>
+  )
+}
 
 export default MagicLinkEmail
 
