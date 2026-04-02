@@ -8,7 +8,9 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { useChurchUnits } from "@/hooks/useChurchUnits";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Megaphone, Pin, Search, Plus, Loader2, Trash2, Pencil, MessageSquare, Mail, Clock, XCircle } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Separator } from "@/components/ui/separator";
+import { Megaphone, Pin, Search, Plus, Loader2, Trash2, Pencil, MessageSquare, Mail, Clock, XCircle, Users, User } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { format } from "date-fns";
 import AnnouncementForm from "@/components/comms/AnnouncementForm";
@@ -38,6 +40,7 @@ const STATUS_AUDIENCES = [
 function ScheduledList({ channel, tenantId }) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const [selectedScheduled, setSelectedScheduled] = useState(null);
 
   const { data: scheduled = [], isLoading } = useQuery({
     queryKey: ["scheduled-communications", channel, tenantId],
@@ -91,7 +94,7 @@ function ScheduledList({ channel, tenantId }) {
         <Clock className="h-3.5 w-3.5" /> Scheduled ({scheduled.length})
       </h4>
       {scheduled.map((item) => (
-        <Card key={item.id} className="border-0 shadow-sm">
+        <Card key={item.id} className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow" onClick={() => setSelectedScheduled(item)}>
           <CardContent className="p-3 flex items-center gap-3">
             <div className="text-muted-foreground">{channelIcon(item.channel)}</div>
             <div className="flex-1 min-w-0">
@@ -107,13 +110,72 @@ function ScheduledList({ channel, tenantId }) {
               variant="ghost"
               size="icon"
               className="h-7 w-7"
-              onClick={() => { if (confirm("Cancel this scheduled message?")) cancelMutation.mutate(item.id); }}
+              onClick={(e) => { e.stopPropagation(); if (confirm("Cancel this scheduled message?")) cancelMutation.mutate(item.id); }}
             >
               <XCircle className="h-3.5 w-3.5 text-destructive" />
             </Button>
           </CardContent>
         </Card>
       ))}
+
+      {/* Scheduled Detail Dialog */}
+      <Dialog open={!!selectedScheduled} onOpenChange={(v) => !v && setSelectedScheduled(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Clock className="h-5 w-5 text-primary" />
+              Scheduled Message
+            </DialogTitle>
+            <DialogDescription>Full message and scheduling details</DialogDescription>
+          </DialogHeader>
+          {selectedScheduled && (
+            <div className="space-y-4">
+              <div className="flex flex-wrap gap-2">
+                <Badge variant="outline" className="capitalize">{selectedScheduled.channel}</Badge>
+                <Badge variant="outline" className="capitalize">{selectedScheduled.status}</Badge>
+              </div>
+
+              {selectedScheduled.subject && (
+                <div className="space-y-1">
+                  <p className="text-xs font-medium text-muted-foreground">Subject</p>
+                  <p className="text-sm font-medium text-foreground">{selectedScheduled.subject}</p>
+                </div>
+              )}
+
+              <Separator />
+
+              <div className="space-y-1">
+                <p className="text-xs font-medium text-muted-foreground">Message</p>
+                <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">{selectedScheduled.message}</p>
+              </div>
+
+              <Separator />
+
+              <div className="text-xs space-y-2">
+                <div>
+                  <p className="text-muted-foreground">Scheduled For</p>
+                  <p className="font-medium text-foreground">{format(new Date(selectedScheduled.scheduled_at), "dd MMM yyyy, HH:mm")}</p>
+                </div>
+                {selectedScheduled.filters && (
+                  <div>
+                    <p className="text-muted-foreground">Audience Filters</p>
+                    <pre className="bg-muted rounded-lg p-2 mt-1 overflow-x-auto text-foreground text-xs">{JSON.stringify(selectedScheduled.filters, null, 2)}</pre>
+                  </div>
+                )}
+              </div>
+
+              <Button variant="destructive" size="sm" className="w-full" onClick={() => {
+                if (confirm("Cancel this scheduled message?")) {
+                  cancelMutation.mutate(selectedScheduled.id);
+                  setSelectedScheduled(null);
+                }
+              }}>
+                <XCircle className="h-4 w-4 mr-2" /> Cancel Message
+              </Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -129,8 +191,8 @@ export default function Communications() {
   const [editing, setEditing] = useState(null);
   const [smsOpen, setSmsOpen] = useState(false);
   const [smsAnnouncement, setSmsAnnouncement] = useState(null);
-  
   const [waOpen, setWaOpen] = useState(false);
+  const [selectedAnnouncement, setSelectedAnnouncement] = useState(null);
   
 
   const canManageComms = isAdmin || isUnitLeader || isWSFLeader;
@@ -287,7 +349,7 @@ export default function Communications() {
     : effectiveScopes.length > 0 ? AUDIENCES.filter(a => effectiveScopes.includes(a)) : [];
 
   const renderCard = (a) => (
-    <Card key={a.id} className={`border-0 shadow-sm ${a.pinned ? "border-l-4 border-l-accent" : ""}`}>
+    <Card key={a.id} className={`border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow ${a.pinned ? "border-l-4 border-l-accent" : ""}`} onClick={() => setSelectedAnnouncement(a)}>
       <CardContent className="p-5">
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1 min-w-0">
@@ -296,14 +358,14 @@ export default function Communications() {
               <h3 className="font-display font-bold text-foreground">{a.title}</h3>
               <Badge className="bg-accent/10 text-accent border-0">{a.audience}</Badge>
             </div>
-            <p className="text-sm text-muted-foreground whitespace-pre-wrap">{a.body}</p>
+            <p className="text-sm text-muted-foreground whitespace-pre-wrap line-clamp-2">{a.body}</p>
             <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
               <span>{a.author_name}</span>
               {a.created_date && <span>{format(new Date(a.created_date), "dd MMM yyyy, h:mm a")}</span>}
             </div>
           </div>
           {canManage(a) && canManageComms && (
-            <div className="flex items-center gap-1 shrink-0">
+            <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
               <Button variant="ghost" size="icon" className="h-8 w-8" title="Send as SMS"
                 onClick={() => { setSmsAnnouncement(a); setSmsOpen(true); }}>
                 <MessageSquare className="h-3.5 w-3.5 text-primary" />
@@ -467,6 +529,48 @@ export default function Communications() {
         defaultChannel="whatsapp"
         unitAudiences={AUDIENCES}
       />
+
+      {/* Announcement Detail Dialog */}
+      <Dialog open={!!selectedAnnouncement} onOpenChange={(v) => !v && setSelectedAnnouncement(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              {selectedAnnouncement?.pinned && <Pin className="h-5 w-5 text-accent" />}
+              {selectedAnnouncement?.title}
+            </DialogTitle>
+            <DialogDescription className="flex items-center gap-2 pt-1">
+              <Badge className="bg-accent/10 text-accent border-0">
+                <Users className="h-3 w-3 mr-1" />{selectedAnnouncement?.audience}
+              </Badge>
+            </DialogDescription>
+          </DialogHeader>
+          {selectedAnnouncement && (
+            <div className="space-y-4">
+              <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">{selectedAnnouncement.body}</p>
+
+              <Separator />
+
+              <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                <span className="flex items-center gap-1"><User className="h-3 w-3" />{selectedAnnouncement.author_name}</span>
+                {selectedAnnouncement.created_date && (
+                  <span>{format(new Date(selectedAnnouncement.created_date), "dd MMM yyyy, h:mm a")}</span>
+                )}
+              </div>
+
+              {canManage(selectedAnnouncement) && canManageComms && (
+                <div className="flex gap-2 pt-2">
+                  <Button variant="outline" size="sm" onClick={() => { setSelectedAnnouncement(null); handleEdit(selectedAnnouncement); }}>
+                    <Pencil className="h-3.5 w-3.5 mr-1" /> Edit
+                  </Button>
+                  <Button variant="outline" size="sm" className="text-destructive border-destructive/30" onClick={() => { setSelectedAnnouncement(null); handleDelete(selectedAnnouncement); }}>
+                    <Trash2 className="h-3.5 w-3.5 mr-1" /> Delete
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
