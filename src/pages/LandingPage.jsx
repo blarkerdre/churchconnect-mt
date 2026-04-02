@@ -87,7 +87,7 @@ export default function LandingPage() {
         <div className="absolute inset-0 opacity-10" style={{ backgroundImage: "radial-gradient(circle at 20% 50%, hsl(42 68% 54% / 0.3) 0%, transparent 50%), radial-gradient(circle at 80% 20%, hsl(42 68% 54% / 0.2) 0%, transparent 40%)" }} />
         <div className="relative mx-auto max-w-5xl px-4 py-20 text-center sm:py-32">
           <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-white/10 backdrop-blur-sm">
-            <img src="/lovable-uploads/40e09a54-d633-4f1c-bbfc-1ef23b34fa49.png" alt="" className="h-10 w-10 rounded" />
+            <img src="/lovable-uploads/church-connect-logo.png" alt="" className="h-10 w-10 rounded" />
           </div>
           <h1 className="font-display text-3xl font-bold tracking-tight text-white sm:text-5xl lg:text-6xl">
             All-in-One Church<br />
