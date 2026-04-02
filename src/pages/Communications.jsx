@@ -337,6 +337,78 @@ export default function Communications() {
     enabled: !!user?.id,
   });
 
+  // Count queries for tab badges
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+
+  const { data: smsCount = 0 } = useQuery({
+    queryKey: ["comms-sms-count", myMember?.id, canManageComms, tenantId],
+    queryFn: async () => {
+      if (canManageComms) {
+        const { count } = await supabase
+          .from("scheduled_communications")
+          .select("id", { count: "exact", head: true })
+          .eq("tenant_id", tenantId)
+          .eq("channel", "sms")
+          .in("status", ["scheduled", "processing"]);
+        return count || 0;
+      }
+      const { count } = await supabase
+        .from("sms_log")
+        .select("id", { count: "exact", head: true })
+        .eq("recipient_member_id", myMember.id)
+        .eq("channel", "sms")
+        .gte("created_at", thirtyDaysAgo);
+      return count || 0;
+    },
+    enabled: smsEnabled && (canManageComms ? !!tenantId : !!myMember?.id),
+  });
+
+  const { data: whatsappCount = 0 } = useQuery({
+    queryKey: ["comms-wa-count", myMember?.id, canManageComms, tenantId],
+    queryFn: async () => {
+      if (canManageComms) {
+        const { count } = await supabase
+          .from("scheduled_communications")
+          .select("id", { count: "exact", head: true })
+          .eq("tenant_id", tenantId)
+          .eq("channel", "whatsapp")
+          .in("status", ["scheduled", "processing"]);
+        return count || 0;
+      }
+      const { count } = await supabase
+        .from("sms_log")
+        .select("id", { count: "exact", head: true })
+        .eq("recipient_member_id", myMember.id)
+        .eq("channel", "whatsapp")
+        .gte("created_at", thirtyDaysAgo);
+      return count || 0;
+    },
+    enabled: whatsappEnabled && (canManageComms ? !!tenantId : !!myMember?.id),
+  });
+
+  const { data: emailCount = 0 } = useQuery({
+    queryKey: ["comms-email-count", myMember?.email, canManageComms, tenantId],
+    queryFn: async () => {
+      if (canManageComms) {
+        const { count } = await supabase
+          .from("scheduled_communications")
+          .select("id", { count: "exact", head: true })
+          .eq("tenant_id", tenantId)
+          .eq("channel", "email")
+          .in("status", ["scheduled", "processing"]);
+        return count || 0;
+      }
+      const { count } = await supabase
+        .from("email_send_log")
+        .select("id", { count: "exact", head: true })
+        .eq("recipient_email", myMember.email)
+        .gte("created_at", thirtyDaysAgo);
+      return count || 0;
+    },
+    enabled: emailEnabled && (canManageComms ? !!tenantId : !!myMember?.email),
+  });
+
   // Build effective units/centres for audience scoping
   const effectiveScopes = [
     ...(unitLeaderUnits || []),
@@ -482,21 +554,41 @@ export default function Communications() {
             {announcementsEnabled && (
               <TabsTrigger value="announcements" className="gap-1.5 text-xs">
                 <Megaphone className="h-3.5 w-3.5" /> Announcements
+                {visibleAnnouncements.length > 0 && (
+                  <Badge variant="secondary" className="h-5 min-w-5 px-1 text-[10px] ml-0.5">
+                    {visibleAnnouncements.length}
+                  </Badge>
+                )}
               </TabsTrigger>
             )}
             {emailEnabled && (
               <TabsTrigger value="email" className="gap-1.5 text-xs">
                 <Mail className="h-3.5 w-3.5" /> Email
+                {emailCount > 0 && (
+                  <Badge variant="secondary" className="h-5 min-w-5 px-1 text-[10px] ml-0.5">
+                    {emailCount}
+                  </Badge>
+                )}
               </TabsTrigger>
             )}
             {smsEnabled && (
               <TabsTrigger value="sms" className="gap-1.5 text-xs">
                 <MessageSquare className="h-3.5 w-3.5" /> SMS
+                {smsCount > 0 && (
+                  <Badge variant="secondary" className="h-5 min-w-5 px-1 text-[10px] ml-0.5">
+                    {smsCount}
+                  </Badge>
+                )}
               </TabsTrigger>
             )}
             {whatsappEnabled && (
               <TabsTrigger value="whatsapp" className="gap-1.5 text-xs">
                 <WhatsAppIcon className="h-3.5 w-3.5" /> WhatsApp
+                {whatsappCount > 0 && (
+                  <Badge variant="secondary" className="h-5 min-w-5 px-1 text-[10px] ml-0.5">
+                    {whatsappCount}
+                  </Badge>
+                )}
               </TabsTrigger>
             )}
           </TabsList>
