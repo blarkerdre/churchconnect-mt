@@ -65,6 +65,7 @@ export default function Events() {
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState({});
   const [smsEvent, setSmsEvent] = useState(null);
+  const [selectedEvent, setSelectedEvent] = useState(null);
 
   const { enabled: canCreateEvent } = useSubFeature("events.create");
   const { enabled: canSmsAttendees } = useSubFeature("events.sms");
@@ -343,7 +344,7 @@ export default function Events() {
             const ModeIcon = modeIcons[e.event_mode] || MapPin;
             const audience = e.audience || "All Members";
             return (
-              <Card key={e.id} className="border-0 shadow-sm hover:shadow-md transition-shadow">
+              <Card key={e.id} className="border-0 shadow-sm hover:shadow-md transition-shadow cursor-pointer" onClick={() => setSelectedEvent(e)}>
                 <CardContent className="p-5">
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1 min-w-0">
@@ -372,12 +373,12 @@ export default function Events() {
                       <div className="flex items-center gap-1">
                         {canSmsAttendees && (
                           <Button variant="ghost" size="icon" title="Notify via SMS"
-                            onClick={() => setSmsEvent(e)}>
+                            onClick={(ev) => { ev.stopPropagation(); setSmsEvent(e); }}>
                             <MessageSquare className="h-4 w-4 text-primary" />
                           </Button>
                         )}
-                        <Button variant="ghost" size="icon" onClick={() => openEdit(e)}><Edit className="h-4 w-4" /></Button>
-                        {isAdmin && <Button variant="ghost" size="icon" onClick={() => handleDelete(e)}><Trash2 className="h-4 w-4 text-destructive" /></Button>}
+                        <Button variant="ghost" size="icon" onClick={(ev) => { ev.stopPropagation(); openEdit(e); }}><Edit className="h-4 w-4" /></Button>
+                        {isAdmin && <Button variant="ghost" size="icon" onClick={(ev) => { ev.stopPropagation(); handleDelete(e); }}><Trash2 className="h-4 w-4 text-destructive" /></Button>}
                       </div>
                     )}
                   </div>
@@ -521,6 +522,65 @@ export default function Events() {
               {editing ? "Save Changes" : form.is_recurring ? "Create Recurring Event" : "Create Event"}
             </Button>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Event Detail Dialog */}
+      <Dialog open={!!selectedEvent} onOpenChange={(v) => !v && setSelectedEvent(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="font-display">{selectedEvent?.title}</DialogTitle>
+          </DialogHeader>
+          {selectedEvent && (() => {
+            const status = getEventStatus(selectedEvent.event_date);
+            const regCount = registrationCounts[selectedEvent.id] || 0;
+            const ModeIcon = modeIcons[selectedEvent.event_mode] || MapPin;
+            const audience = selectedEvent.audience || "All Members";
+            return (
+              <div className="space-y-4">
+                <div className="flex flex-wrap gap-2">
+                  {selectedEvent.category && <Badge className={`border-0 ${categoryColors[selectedEvent.category] || "bg-muted text-muted-foreground"}`}>{selectedEvent.category}</Badge>}
+                  <Badge className={`border-0 ${statusColors[status]}`}>{status}</Badge>
+                  <Badge variant="outline" className="gap-1 text-xs"><ModeIcon className="h-3 w-3" />{selectedEvent.event_mode || "In Person"}</Badge>
+                  {selectedEvent.is_recurring && <Badge variant="outline" className="gap-1 text-xs text-chart-4 border-chart-4/30"><Repeat className="h-3 w-3" />Recurring</Badge>}
+                  {audience !== "All Members" && <Badge variant="outline" className="text-xs">{audience}</Badge>}
+                </div>
+
+                {selectedEvent.description && (
+                  <div className="bg-muted/50 rounded-lg p-3">
+                    <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">{selectedEvent.description}</p>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 gap-2 text-sm text-muted-foreground">
+                  <div className="flex items-center gap-2">
+                    <CalendarDays className="h-4 w-4 text-primary" />
+                    <span>{selectedEvent.event_date}</span>
+                  </div>
+                  {(selectedEvent.start_time || selectedEvent.end_time) && (
+                    <div className="flex items-center gap-2">
+                      <Clock className="h-4 w-4 text-primary" />
+                      <span>{selectedEvent.start_time}{selectedEvent.end_time ? ` – ${selectedEvent.end_time}` : ""}</span>
+                    </div>
+                  )}
+                  {selectedEvent.location && (
+                    <div className="flex items-center gap-2">
+                      <MapPin className="h-4 w-4 text-primary" />
+                      <span>{selectedEvent.location}</span>
+                    </div>
+                  )}
+                  <div className="flex items-center gap-2">
+                    <Users className="h-4 w-4 text-primary" />
+                    <span>{regCount} registered{selectedEvent.capacity ? ` / ${selectedEvent.capacity} capacity` : ""}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Users className="h-4 w-4 text-primary" />
+                    <span>Audience: {audience}</span>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
         </DialogContent>
       </Dialog>
 
