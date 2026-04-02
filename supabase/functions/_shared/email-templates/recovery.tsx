@@ -16,31 +16,37 @@ import {
 interface RecoveryEmailProps {
   siteName: string
   confirmationUrl: string
+  churchName?: string
 }
 
 export const RecoveryEmail = ({
   siteName,
   confirmationUrl,
-}: RecoveryEmailProps) => (
-  <Html lang="en" dir="ltr">
-    <Head />
-    <Preview>Reset your password for Winners Chapel International Cardiff</Preview>
-    <Body style={main}>
-      <Container style={container}>
-        <Heading style={h1}>Reset your password</Heading>
-        <Text style={text}>
-          We received a request to reset your password for Winners Chapel International Cardiff. Click the button below to choose a new password.
-        </Text>
-        <Button style={button} href={confirmationUrl}>
-          Reset Password
-        </Button>
-        <Text style={footer}>
-          If you didn't request a password reset, you can safely ignore this email. Your password will not be changed.
-        </Text>
-      </Container>
-    </Body>
-  </Html>
-)
+  churchName,
+}: RecoveryEmailProps) => {
+  const displayName = churchName || siteName || 'Church Connect'
+
+  return (
+    <Html lang="en" dir="ltr">
+      <Head />
+      <Preview>Reset your password for {displayName}</Preview>
+      <Body style={main}>
+        <Container style={container}>
+          <Heading style={h1}>Reset your password</Heading>
+          <Text style={text}>
+            We received a request to reset your password for {displayName}. Click the button below to choose a new password.
+          </Text>
+          <Button style={button} href={confirmationUrl}>
+            Reset Password
+          </Button>
+          <Text style={footer}>
+            If you didn't request a password reset, you can safely ignore this email. Your password will not be changed.
+          </Text>
+        </Container>
+      </Body>
+    </Html>
+  )
+}
 
 export default RecoveryEmail
 

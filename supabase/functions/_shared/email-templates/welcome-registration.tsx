@@ -15,13 +15,16 @@ interface WelcomeRegistrationEmailProps {
   firstName?: string
   lastName?: string
   siteUrl?: string
+  churchName?: string
 }
 
 export const WelcomeRegistrationEmail: React.FC<WelcomeRegistrationEmailProps> = ({
   firstName = 'Friend',
   lastName = '',
   siteUrl = 'https://churchmanagementsuite.org',
+  churchName,
 }) => {
+  const displayName = churchName || 'Church Connect'
   const fullName = [firstName, lastName].filter(Boolean).join(' ')
 
   return (
@@ -30,14 +33,14 @@ export const WelcomeRegistrationEmail: React.FC<WelcomeRegistrationEmailProps> =
       <Body style={main}>
         <Container style={container}>
           <Section style={headerSection}>
-            <Text style={headerText}>Winners Chapel International Cardiff</Text>
+            <Text style={headerText}>{displayName}</Text>
           </Section>
 
           <Section style={contentSection}>
             <Text style={heading}>Welcome, {firstName}!</Text>
 
             <Text style={paragraph}>
-              Thank you for registering with Winners Chapel International Cardiff.
+              Thank you for registering with {displayName}.
               We're delighted to have you as part of our church family.
             </Text>
 
@@ -68,7 +71,7 @@ export const WelcomeRegistrationEmail: React.FC<WelcomeRegistrationEmailProps> =
 
           <Section style={footerSection}>
             <Text style={footerText}>
-              Winners Chapel International Cardiff
+              {displayName}
             </Text>
             <Text style={footerText}>
               This email was sent because you registered via our church registration form.
