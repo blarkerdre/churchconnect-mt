@@ -289,6 +289,27 @@ async function handleWebhook(req: Request): Promise<Response> {
   const tenantSiteUrl = tenantSlug
     ? `https://${ROOT_DOMAIN}/t/${tenantSlug}`
     : `https://${ROOT_DOMAIN}`
+  // Build template props
+  const templateProps: Record<string, any> = {
+    siteName: churchName,
+    siteUrl: tenantSiteUrl,
+    recipient: payload.data.email,
+    confirmationUrl: payload.data.confirmation_url || tenantSiteUrl,
+    churchName,
+  }
+
+  if (emailType === 'email_change') {
+    templateProps.email = payload.data.email
+    templateProps.newEmail = payload.data.new_email
+  }
+  if (emailType === 'reauthentication') {
+    templateProps.token = payload.data.token
+  }
+
+  // Render email HTML and plain text
+  const html = await renderAsync(React.createElement(EmailTemplate, templateProps))
+  const text = html.replace(/<[^>]*>/g, '')
+
   const messageId = crypto.randomUUID()
   // Log pending BEFORE enqueue so we have a record even if enqueue crashes
   await supabase.from('email_send_log').insert({
