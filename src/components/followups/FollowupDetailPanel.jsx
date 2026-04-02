@@ -49,6 +49,7 @@ export default function FollowupDetailPanel({ followup, onClose, onUpdate, curre
   const [converting, setConverting] = useState(false);
   const [reassigning, setReassigning] = useState(false);
   const [showReassign, setShowReassign] = useState(false);
+  const [selectedMessage, setSelectedMessage] = useState(null);
   const { tenantId, scopeQuery } = useTenantQuery();
   const queryClient = useQueryClient();
 
