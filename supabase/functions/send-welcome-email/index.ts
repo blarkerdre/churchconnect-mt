@@ -164,7 +164,7 @@ Deno.serve(async (req) => {
           to: normalizedEmail,
           from: `"${senderName.replace(/"/g, '')}" <noreply@${FROM_DOMAIN}>`,
           sender_domain: SENDER_DOMAIN,
-          subject: "Welcome to Winners Chapel International Cardiff",
+          subject: `Welcome to ${senderName}`,
           html,
           text,
           purpose: "transactional",
