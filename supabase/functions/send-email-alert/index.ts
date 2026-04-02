@@ -196,7 +196,7 @@ Deno.serve(async (req) => {
   const audienceLabel = buildAudienceLabel(filters, audience)
 
   // Build and enqueue emails
-  const senderDomain = 'app.churchmanagementsuite.org'
+  const senderDomain = 'notify.app.churchmanagementsuite.org'
   const fromDomain = 'app.churchmanagementsuite.org'
   const safeName = tenantSenderName.replace(/[",\\]/g, '')
   const fromAddress = `"${safeName}" <noreply@${fromDomain}>`
