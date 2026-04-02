@@ -1,45 +1,34 @@
 
 
-## Show Published Communications to All Users
+## Make Cover Image Upload Side-by-Side
 
-### Problem
-Currently, the Email, SMS, and WhatsApp tabs on the Communications page are hidden behind the `canManageComms` check (admin/unit leader/WSF leader only). Regular members cannot see any communications sent to them beyond announcements.
+### Change
+In the Book of the Month dialog form, rearrange the Cover Image section so the preview image and the upload button sit side-by-side instead of stacked vertically.
 
-### Solution
-Add read-only views of communications received by the current user. Regular members will see tabs for SMS, Email, and WhatsApp showing messages sent **to them**, without any compose/send capabilities.
+### Changes to `src/components/settings/BookOfTheMonthSettings.jsx`
 
-### Changes
+Replace lines 178-191 (the Cover Image section) with a horizontal flex layout:
 
-#### `src/pages/Communications.jsx`
+```jsx
+<div className="space-y-1">
+  <Label>Cover Image</Label>
+  <div className="flex items-center gap-3">
+    {form.cover_image_url && (
+      <img src={form.cover_image_url} alt="Cover" className="h-20 w-14 rounded object-cover shrink-0" />
+    )}
+    <Button variant="outline" size="sm" asChild disabled={uploading}>
+      <label className="cursor-pointer gap-1.5">
+        {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+        {uploading ? "Uploading..." : "Upload Cover"}
+        <input type="file" accept="image/*" className="hidden" onChange={handleCoverUpload} />
+      </label>
+    </Button>
+  </div>
+</div>
+```
 
-1. **Unlock tabs for all users** -- Remove the `canManageComms` gate on the Email, SMS, and WhatsApp tab triggers (lines 396-414). All users see all enabled tabs.
-
-2. **SMS tab -- dual view**
-   - For admins/leaders: keep existing compose button + ScheduledList
-   - For regular members: show a read-only list of SMS messages sent to them, queried from `sms_log` where `recipient_member_id` matches their linked member ID, channel = `sms`
-   - Each item is a Card showing: message preview (truncated), status badge, timestamp
-   - Clicking opens a detail dialog with full message text
-
-3. **Email tab -- dual view**
-   - For admins/leaders: keep existing EmailAlertForm + ScheduledList
-   - For regular members: show a read-only list from `email_send_log` where `recipient_email` matches their email
-   - Each item shows: template name/subject, status badge, timestamp
-   - Clicking opens a detail dialog
-
-4. **WhatsApp tab -- dual view**
-   - Same pattern as SMS but filtered by `channel = 'whatsapp'` from `sms_log`
-
-5. **Member lookup** -- Query the current user's member record to get their `id` (for `recipient_member_id`) and `email` (for email log matching). Reuse the existing `myMember` query but expand its select to include `id, email, phone`.
-
-6. **Detail dialogs** -- Add `selectedSmsLog`, `selectedEmailLog` state. Clicking a row opens a Dialog with full message, status, timestamps, and error info if any.
-
-### Technical details
-
-- SMS/WhatsApp query: `sms_log` where `recipient_member_id = myMember.id` and `channel = 'sms'|'whatsapp'`, tenant-scoped, ordered by `created_at desc`, limit 100
-- Email query: `email_send_log` where `recipient_email = myMember.email`, tenant-scoped, ordered by `created_at desc`, limit 100
-- No RLS changes needed -- `sms_log` and `email_send_log` RLS policies already allow reads for tenant members
-- Admin compose forms remain gated behind `canManageComms`
+The image preview and upload button are now wrapped in a single `flex items-center gap-3` container. The `mb-2` on the image is removed since the flex gap handles spacing.
 
 ### Files changed
-- `src/pages/Communications.jsx` -- unlock tabs for all users, add read-only received message lists for members, add detail dialogs
+- `src/components/settings/BookOfTheMonthSettings.jsx` — rearrange cover image section to horizontal layout
 
