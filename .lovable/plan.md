@@ -1,23 +1,19 @@
 
 
-## Update Logos on Auth & Landing Pages
+## Use Uploaded Logo on Auth and Landing Pages
 
-Use the existing uploaded image `/lovable-uploads/40e09a54-d633-4f1c-bbfc-1ef23b34fa49.png` as the default logo on both pages.
+Copy the uploaded logo to the project and replace the current default logo references.
 
 ### Changes
 
-**`src/pages/Auth.jsx`** — Add a default logo when no tenant logo exists (generic `/auth` route):
+1. **Copy file**: `user-uploads://tenant-logo.png` → `public/lovable-uploads/church-connect-logo.png`
 
-```jsx
-{tenant?.logo_url ? (
-  <img src={tenant.logo_url} alt={churchName} className="h-16 w-auto mb-3 object-contain" />
-) : (
-  <img src="/lovable-uploads/40e09a54-d633-4f1c-bbfc-1ef23b34fa49.png" alt="Church Connect" className="h-16 w-auto mb-3 object-contain" />
-)}
-```
+2. **`src/pages/Auth.jsx`** — Update the fallback logo path from `/lovable-uploads/40e09a54-d633-4f1c-bbfc-1ef23b34fa49.png` to `/lovable-uploads/church-connect-logo.png`
 
-**`src/pages/LandingPage.jsx`** — Already uses this image. No changes needed.
+3. **`src/pages/LandingPage.jsx`** — Replace all 4 references to `/lovable-uploads/40e09a54-d633-4f1c-bbfc-1ef23b34fa49.png` with `/lovable-uploads/church-connect-logo.png` (navbar, hero icon, hero background, footer)
 
 ### Files changed
-- `src/pages/Auth.jsx` — show default ChurchConnect logo when no tenant branding
+- `public/lovable-uploads/church-connect-logo.png` (new — copied from upload)
+- `src/pages/Auth.jsx`
+- `src/pages/LandingPage.jsx`
 
