@@ -255,7 +255,7 @@ export default function PastoralCare() {
       ) : (
         <div className="space-y-3">
           {filtered.map(r => (
-            <Card key={r.id} className="border-0 shadow-sm hover:shadow-md transition-shadow">
+            <Card key={r.id} className="border-0 shadow-sm hover:shadow-md transition-shadow cursor-pointer" onClick={() => setDetailCase(r)}>
               <CardContent className="p-5">
                 <div className="flex items-start gap-4">
                   <div className="h-10 w-10 rounded-xl bg-chart-5/10 flex items-center justify-center shrink-0">
@@ -277,7 +277,7 @@ export default function PastoralCare() {
                     </div>
                   </div>
                   {canManage && canAssignCases && (r.status === "Open" || r.status === "In Progress") && (
-                    <Button variant="outline" size="sm" onClick={() => openManage(r)}>Manage</Button>
+                    <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); openManage(r); }}>Manage</Button>
                   )}
                 </div>
               </CardContent>
