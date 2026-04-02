@@ -1,19 +1,38 @@
 
 
-## Use Uploaded Logo on Auth and Landing Pages
+## Fix: Profile Photo Storage Policies Missing Ownership Check
 
-Copy the uploaded logo to the project and replace the current default logo references.
+### Problem
 
-### Changes
+The `profile-photos` bucket has duplicate and insecure RLS policies on `storage.objects`:
 
-1. **Copy file**: `user-uploads://tenant-logo.png` → `public/lovable-uploads/church-connect-logo.png`
+| Policy | Operation | Ownership check? |
+|--------|-----------|-------------------|
+| `Users can update own profile photos` | UPDATE | **No** — only checks `bucket_id` |
+| `Users can delete own profile photos` | DELETE | **No** — only checks `bucket_id` |
+| `Users delete own profile photos` | DELETE | Yes — checks folder = `auth.uid()` |
+| `Users upload own profile photos` | INSERT | Yes — checks folder = `auth.uid()` |
+| `Authenticated users can upload profile photos` | INSERT | **No** — only checks `bucket_id` |
 
-2. **`src/pages/Auth.jsx`** — Update the fallback logo path from `/lovable-uploads/40e09a54-d633-4f1c-bbfc-1ef23b34fa49.png` to `/lovable-uploads/church-connect-logo.png`
+Any authenticated user can overwrite or delete any other user's profile photo.
 
-3. **`src/pages/LandingPage.jsx`** — Replace all 4 references to `/lovable-uploads/40e09a54-d633-4f1c-bbfc-1ef23b34fa49.png` with `/lovable-uploads/church-connect-logo.png` (navbar, hero icon, hero background, footer)
+### Fix (single SQL migration)
+
+1. **Drop** the 3 insecure policies: `Users can update own profile photos`, `Users can delete own profile photos`, and `Authenticated users can upload profile photos`
+2. **Re-create** the UPDATE policy with path ownership: `(storage.foldername(name))[1] = auth.uid()::text`
+3. Keep the existing secure DELETE (`Users delete own profile photos`) and INSERT (`Users upload own profile photos`) policies — they already have the correct ownership check
+
+```sql
+DROP POLICY IF EXISTS "Users can update own profile photos" ON storage.objects;
+DROP POLICY IF EXISTS "Users can delete own profile photos" ON storage.objects;
+DROP POLICY IF EXISTS "Authenticated users can upload profile photos" ON storage.objects;
+
+CREATE POLICY "Users can update own profile photos" ON storage.objects
+  FOR UPDATE TO authenticated
+  USING (bucket_id = 'profile-photos' AND (storage.foldername(name))[1] = auth.uid()::text)
+  WITH CHECK (bucket_id = 'profile-photos' AND (storage.foldername(name))[1] = auth.uid()::text);
+```
 
 ### Files changed
-- `public/lovable-uploads/church-connect-logo.png` (new — copied from upload)
-- `src/pages/Auth.jsx`
-- `src/pages/LandingPage.jsx`
+- Database migration only (no code changes needed)
 
