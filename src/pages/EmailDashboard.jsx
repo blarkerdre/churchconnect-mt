@@ -7,6 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Separator } from "@/components/ui/separator";
 import { Mail, CheckCircle, XCircle, Clock, AlertTriangle } from "lucide-react";
 import { format, subDays, subHours } from "date-fns";
 
@@ -35,6 +37,7 @@ export default function EmailDashboard() {
   const [templateFilter, setTemplateFilter] = useState("All");
   const [statusFilter, setStatusFilter] = useState("All");
   const [page, setPage] = useState(0);
+  const [selectedEmail, setSelectedEmail] = useState(null);
 
   const startDate = useMemo(() => {
     const range = TIME_RANGES.find(r => r.value === timeRange);
@@ -156,7 +159,7 @@ export default function EmailDashboard() {
             ) : paginated.map(row => {
               const cfg = statusConfig[row.status] || statusConfig.pending;
               return (
-                <TableRow key={row.id}>
+                <TableRow key={row.id} className="cursor-pointer hover:bg-muted/50" onClick={() => setSelectedEmail(row)}>
                   <TableCell className="font-mono text-xs">{row.template_name}</TableCell>
                   <TableCell className="text-xs max-w-[180px] truncate">{row.recipient_email}</TableCell>
                   <TableCell><Badge className={cfg.color}>{row.status}</Badge></TableCell>
@@ -180,6 +183,70 @@ export default function EmailDashboard() {
           </div>
         </div>
       )}
+
+      {/* Email Detail Dialog */}
+      <Dialog open={!!selectedEmail} onOpenChange={(v) => !v && setSelectedEmail(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Mail className="h-5 w-5 text-primary" />
+              Email Detail
+            </DialogTitle>
+            <DialogDescription>Full email log entry</DialogDescription>
+          </DialogHeader>
+          {selectedEmail && (() => {
+            const cfg = statusConfig[selectedEmail.status] || statusConfig.pending;
+            return (
+              <div className="space-y-4">
+                <div className="flex flex-wrap gap-2">
+                  <Badge className={cfg.color}>{selectedEmail.status}</Badge>
+                  <Badge variant="outline" className="font-mono text-xs">{selectedEmail.template_name}</Badge>
+                </div>
+
+                <div className="space-y-1">
+                  <p className="text-xs font-medium text-muted-foreground">Recipient</p>
+                  <p className="text-sm font-medium text-foreground">{selectedEmail.recipient_email}</p>
+                </div>
+
+                <Separator />
+
+                <div className="grid grid-cols-2 gap-3 text-xs">
+                  <div>
+                    <p className="text-muted-foreground">Sent</p>
+                    <p className="font-medium text-foreground">{format(new Date(selectedEmail.created_at), "dd MMM yyyy, HH:mm")}</p>
+                  </div>
+                  {selectedEmail.message_id && (
+                    <div>
+                      <p className="text-muted-foreground">Message ID</p>
+                      <p className="font-mono text-foreground break-all">{selectedEmail.message_id}</p>
+                    </div>
+                  )}
+                </div>
+
+                {selectedEmail.error_message && (
+                  <>
+                    <Separator />
+                    <div className="space-y-1">
+                      <p className="text-xs font-medium text-destructive">Error</p>
+                      <p className="text-sm text-destructive whitespace-pre-wrap">{selectedEmail.error_message}</p>
+                    </div>
+                  </>
+                )}
+
+                {selectedEmail.metadata && Object.keys(selectedEmail.metadata).length > 0 && (
+                  <>
+                    <Separator />
+                    <div className="space-y-1">
+                      <p className="text-xs font-medium text-muted-foreground">Metadata</p>
+                      <pre className="text-xs bg-muted rounded-lg p-3 overflow-x-auto text-foreground">{JSON.stringify(selectedEmail.metadata, null, 2)}</pre>
+                    </div>
+                  </>
+                )}
+              </div>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
