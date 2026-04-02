@@ -177,10 +177,10 @@ export default function BookOfTheMonthSettings() {
             <div className="space-y-1"><Label>Purchase Link</Label><Input type="url" placeholder="https://..." value={form.purchase_url} onChange={e => setForm(f => ({ ...f, purchase_url: e.target.value }))} /></div>
             <div className="space-y-1">
               <Label>Cover Image</Label>
-              {form.cover_image_url && (
-                <img src={form.cover_image_url} alt="Cover" className="h-20 w-14 rounded object-cover mb-2" />
-              )}
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-3">
+                {form.cover_image_url && (
+                  <img src={form.cover_image_url} alt="Cover" className="h-20 w-14 rounded object-cover shrink-0" />
+                )}
                 <Button variant="outline" size="sm" asChild disabled={uploading}>
                   <label className="cursor-pointer gap-1.5">
                     {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
