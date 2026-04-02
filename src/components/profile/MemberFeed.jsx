@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+
+import React, { useState, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -7,13 +8,58 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Megaphone, CalendarDays, Bell, ChevronDown, ChevronUp, CheckCircle2, Loader2 } from "lucide-react";
+import {
+  Megaphone, CalendarDays, Bell, ChevronDown, ChevronUp,
+  CheckCircle2, Loader2, RefreshCw, Heart, Share2, MapPin, Clock, Users, Monitor
+} from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "@/components/ui/use-toast";
 
-function AnnouncementItem({ a }) {
+function AnnouncementItem({ a, onRead, user, tenantId, withTenant }) {
   const [expanded, setExpanded] = useState(false);
+  const queryClient = useQueryClient();
+
+  const { data: reactions = [] } = useQuery({
+    queryKey: ["announcement-reactions", a.id, tenantId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("announcement_reactions")
+        .select("id, user_id")
+        .eq("announcement_id", a.id)
+        .eq("tenant_id", tenantId);
+      return data || [];
+    },
+    enabled: !!tenantId,
+  });
+
+  const isLiked = reactions.some(r => r.user_id === user?.id);
+  const likeCount = reactions.length;
+
+  const likeMutation = useMutation({
+    mutationFn: async () => {
+      if (isLiked) {
+        const myReaction = reactions.find(r => r.user_id === user.id);
+        if (myReaction) {
+          await supabase.from("announcement_reactions").delete().eq("id", myReaction.id);
+        }
+      } else {
+        await supabase.from("announcement_reactions").insert(withTenant({
+          announcement_id: a.id,
+          user_id: user.id,
+        }));
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["announcement-reactions", a.id] });
+    },
+  });
+
+  const handleExpand = () => {
+    setExpanded(v => !v);
+    if (!expanded) onRead(a.id);
+  };
+
   return (
     <div className="p-3 rounded-xl border transition-colors bg-muted/30 border-border">
       <div className="flex items-start gap-2">
@@ -21,7 +67,7 @@ function AnnouncementItem({ a }) {
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-2">
             <p className="text-sm font-semibold text-foreground leading-tight">{a.title}</p>
-            <button onClick={() => setExpanded(v => !v)} className="shrink-0 text-muted-foreground hover:text-foreground">
+            <button onClick={handleExpand} className="shrink-0 text-muted-foreground hover:text-foreground">
               {expanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
             </button>
           </div>
@@ -36,6 +82,16 @@ function AnnouncementItem({ a }) {
           {expanded && a.content && (
             <p className="text-xs text-muted-foreground mt-2 leading-relaxed border-t border-border pt-2">{a.content}</p>
           )}
+          <div className="flex items-center gap-3 mt-2">
+            <button
+              onClick={() => likeMutation.mutate()}
+              disabled={likeMutation.isPending}
+              className="flex items-center gap-1 text-muted-foreground hover:text-destructive transition-colors"
+            >
+              <Heart className={`h-3.5 w-3.5 ${isLiked ? "fill-destructive text-destructive" : ""}`} />
+              {likeCount > 0 && <span className="text-[10px] font-medium">{likeCount}</span>}
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -46,6 +102,7 @@ function EventItem({ event, member }) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const { withTenant } = useTenantQuery();
+  const [expanded, setExpanded] = useState(false);
 
   const { data: registration } = useQuery({
     queryKey: ["event-reg", event.id, user?.id],
@@ -79,54 +136,128 @@ function EventItem({ event, member }) {
     onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
 
+  const handleShare = async () => {
+    const text = [
+      event.title,
+      event.event_date ? format(parseISO(event.event_date), "dd MMM yyyy") : "",
+      event.location || "",
+      event.start_time ? `Time: ${event.start_time}` : "",
+    ].filter(Boolean).join("\n");
+
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: event.title, text });
+      } catch { /* user cancelled */ }
+    } else {
+      await navigator.clipboard.writeText(text);
+      toast({ title: "Copied!", description: "Event details copied to clipboard" });
+    }
+  };
+
   const isRegistered = !!registration;
+  const modeIcon = { "Online": <Monitor className="h-3 w-3" />, "Hybrid": <Monitor className="h-3 w-3" /> };
 
   return (
-    <div className="flex items-start gap-3 p-3 rounded-xl bg-muted/30 hover:bg-muted/50 transition-colors">
-      <div className="h-10 w-10 rounded-lg bg-primary/10 flex flex-col items-center justify-center shrink-0">
-        <span className="text-[11px] font-bold text-primary leading-none">
-          {event.event_date ? format(parseISO(event.event_date), "dd") : "—"}
-        </span>
-        <span className="text-[9px] text-primary/60 uppercase leading-none mt-0.5">
-          {event.event_date ? format(parseISO(event.event_date), "MMM") : ""}
-        </span>
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-semibold text-foreground truncate">{event.title}</p>
-        <p className="text-xs text-muted-foreground mt-0.5">
-          {event.location || "TBC"}
-          {event.start_time && ` · ${event.start_time}`}
-        </p>
-        {event.requires_registration && (
-          <div className="mt-2">
-            {isRegistered ? (
-              <Badge className="bg-chart-3/10 text-chart-3 border-0 text-[10px]">
-                <CheckCircle2 className="h-3 w-3 mr-1" /> Registered
-              </Badge>
-            ) : (
-              <Button
-                size="sm"
-                variant="outline"
-                className="h-6 text-[10px] px-2"
-                onClick={() => registerMutation.mutate()}
-                disabled={registerMutation.isPending}
-              >
-                {registerMutation.isPending && <Loader2 className="h-3 w-3 mr-1 animate-spin" />}
-                Register
-              </Button>
-            )}
+    <div className="p-3 rounded-xl bg-muted/30 hover:bg-muted/50 transition-colors">
+      <div className="flex items-start gap-3">
+        <div className="h-10 w-10 rounded-lg bg-primary/10 flex flex-col items-center justify-center shrink-0">
+          <span className="text-[11px] font-bold text-primary leading-none">
+            {event.event_date ? format(parseISO(event.event_date), "dd") : "—"}
+          </span>
+          <span className="text-[9px] text-primary/60 uppercase leading-none mt-0.5">
+            {event.event_date ? format(parseISO(event.event_date), "MMM") : ""}
+          </span>
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-start justify-between gap-2">
+            <p className="text-sm font-semibold text-foreground truncate">{event.title}</p>
+            <div className="flex items-center gap-1 shrink-0">
+              <button onClick={handleShare} className="text-muted-foreground hover:text-foreground p-0.5">
+                <Share2 className="h-3.5 w-3.5" />
+              </button>
+              <button onClick={() => setExpanded(v => !v)} className="text-muted-foreground hover:text-foreground p-0.5">
+                {expanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+              </button>
+            </div>
           </div>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            {event.location || "TBC"}
+            {event.start_time && ` · ${event.start_time}`}
+          </p>
+          {expanded && (
+            <div className="mt-2 border-t border-border pt-2 space-y-1.5">
+              {event.description && (
+                <p className="text-xs text-muted-foreground leading-relaxed">{event.description}</p>
+              )}
+              <div className="flex flex-wrap gap-2 text-[10px] text-muted-foreground">
+                {event.end_time && (
+                  <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> Ends {event.end_time}</span>
+                )}
+                {event.event_mode && event.event_mode !== "In Person" && (
+                  <span className="flex items-center gap-1">{modeIcon[event.event_mode] || null} {event.event_mode}</span>
+                )}
+                {event.audience && event.audience !== "All Members" && (
+                  <span className="flex items-center gap-1"><Users className="h-3 w-3" /> {event.audience}</span>
+                )}
+                {event.location && (
+                  <span className="flex items-center gap-1"><MapPin className="h-3 w-3" /> {event.location}</span>
+                )}
+              </div>
+            </div>
+          )}
+          {event.requires_registration && (
+            <div className="mt-2">
+              {isRegistered ? (
+                <Badge className="bg-chart-3/10 text-chart-3 border-0 text-[10px]">
+                  <CheckCircle2 className="h-3 w-3 mr-1" /> Registered
+                </Badge>
+              ) : (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-6 text-[10px] px-2"
+                  onClick={() => registerMutation.mutate()}
+                  disabled={registerMutation.isPending}
+                >
+                  {registerMutation.isPending && <Loader2 className="h-3 w-3 mr-1 animate-spin" />}
+                  Register
+                </Button>
+              )}
+            </div>
+          )}
+        </div>
+        {event.category && (
+          <Badge variant="secondary" className="text-[10px] shrink-0">{event.category}</Badge>
         )}
       </div>
-      {event.category && (
-        <Badge variant="secondary" className="text-[10px] shrink-0">{event.category}</Badge>
-      )}
     </div>
   );
 }
 
 export default function MemberFeed({ member }) {
-  const { tenantId, scopeQuery } = useTenantQuery();
+  const { user } = useAuth();
+  const { tenantId, scopeQuery, withTenant } = useTenantQuery();
+  const queryClient = useQueryClient();
+  const [readIds, setReadIds] = useState(new Set());
+  const [refreshing, setRefreshing] = useState(false);
+
+  const handleRead = useCallback((id) => {
+    setReadIds(prev => {
+      const next = new Set(prev);
+      next.add(id);
+      return next;
+    });
+  }, []);
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["member-feed-announcements", tenantId] }),
+      queryClient.invalidateQueries({ queryKey: ["member-feed-events", tenantId] }),
+    ]);
+    setReadIds(new Set());
+    setTimeout(() => setRefreshing(false), 600);
+  };
 
   const { data: announcements = [], isLoading: loadingAnn } = useQuery({
     queryKey: ["member-feed-announcements", tenantId],
@@ -168,10 +299,21 @@ export default function MemberFeed({ member }) {
     return false;
   });
 
+  const unreadCount = Math.max(0, relevantAnnouncements.length - readIds.size);
+
   return (
     <Card className="border-0 shadow-sm">
-      <CardHeader className="pb-0">
+      <CardHeader className="pb-0 flex flex-row items-center justify-between">
         <CardTitle className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">My Feed</CardTitle>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-7 w-7"
+          onClick={handleRefresh}
+          disabled={refreshing}
+        >
+          <RefreshCw className={`h-3.5 w-3.5 ${refreshing ? "animate-spin" : ""}`} />
+        </Button>
       </CardHeader>
       <CardContent className="pt-3">
         <Tabs defaultValue="announcements">
@@ -179,9 +321,9 @@ export default function MemberFeed({ member }) {
             <TabsTrigger value="announcements" className="flex-1 flex items-center gap-1.5 text-xs">
               <Megaphone className="h-3.5 w-3.5" />
               Announcements
-              {relevantAnnouncements.length > 0 && (
+              {unreadCount > 0 && (
                 <span className="ml-1 bg-accent text-accent-foreground text-[10px] font-bold px-1.5 py-0.5 rounded-full leading-none">
-                  {relevantAnnouncements.length}
+                  {unreadCount}
                 </span>
               )}
             </TabsTrigger>
@@ -203,7 +345,16 @@ export default function MemberFeed({ member }) {
               <p className="text-sm text-muted-foreground text-center py-8">No announcements for you right now</p>
             ) : (
               <div className="space-y-2">
-                {relevantAnnouncements.map(a => <AnnouncementItem key={a.id} a={a} />)}
+                {relevantAnnouncements.map(a => (
+                  <AnnouncementItem
+                    key={a.id}
+                    a={a}
+                    onRead={handleRead}
+                    user={user}
+                    tenantId={tenantId}
+                    withTenant={withTenant}
+                  />
+                ))}
               </div>
             )}
           </TabsContent>
