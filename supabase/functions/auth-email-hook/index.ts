@@ -298,6 +298,16 @@ async function handleWebhook(req: Request): Promise<Response> {
     churchName,
   }
 
+  console.log('Auth email template props', {
+    run_id,
+    emailType,
+    email: payload.data.email,
+    confirmationUrl: templateProps.confirmationUrl,
+    rawConfirmationUrl: payload.data.confirmation_url,
+    tenantId: resolvedTenantId,
+    churchName,
+  })
+
   if (emailType === 'email_change') {
     templateProps.email = payload.data.email
     templateProps.newEmail = payload.data.new_email
