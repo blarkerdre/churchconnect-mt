@@ -1,68 +1,43 @@
 
 
-## Enhance Events Tab & Fix Refresh Behaviour
+## Display Full Message Dialog for Feed Items
 
-### Changes
+### Problem
+Currently, announcements and events in My Feed only expand inline with a small chevron, showing content in a compact space. The user wants to click on a feed item and see its full message and details in a proper dialog/sheet.
 
-#### 1. Add like/react to events
-- Reuse the same `announcement_reactions` table — it already has a generic structure. However, since it references `announcement_id`, we need an `event_reactions` table instead.
-- **Database migration**: Create `event_reactions` table (same structure as `announcement_reactions` but with `event_id` referencing `events(id)`), with tenant-scoped RLS.
-- Add a Heart button to each `EventItem` with the same toggle logic as announcements.
+### Solution
+Add a detail dialog that opens when the user taps on an announcement or event card (anywhere except the like button). The dialog shows the full content in a readable layout.
 
-#### 2. Add read tracking to events
-- Pass `onRead` and `readEventIds` to `EventItem`. When an event is expanded, mark it as read.
-- Events tab badge shows `events.length - readEventIds.size` (unread only).
+### Changes to `src/components/profile/MemberFeed.jsx`
 
-#### 3. Remove share button from events
-- Remove the `handleShare` function and `Share2` button from `EventItem`.
-- Remove `Share2` from the import.
+#### 1. Announcement detail dialog
+- Clicking the announcement card body (title or content area) opens a Dialog showing:
+  - Title (large)
+  - Publish date and audience badge
+  - Full content text (no truncation, scrollable)
+  - Like button at the bottom
+- Marks as read on open
 
-#### 4. Refresh preserves read state — only shows new items
-- On refresh, capture the current set of known IDs before invalidating.
-- After refetch, only items with IDs not in the previous known set are treated as "unread". Previously read items stay read.
-- Implementation: store `readIds` and `readEventIds` as before, but on refresh do NOT reset them. Instead, merge — add all currently-known IDs to the read sets, so only genuinely new items from the server appear unread.
+#### 2. Event detail dialog
+- Clicking the event card body opens a Dialog showing:
+  - Date badge, title (large)
+  - Full description
+  - Location, start/end time, event mode, audience — all displayed clearly
+  - Registration button (if applicable)
+  - Like button
+- Marks as read on open
+
+#### 3. Keep inline expand as-is
+- The chevron still toggles inline preview for quick glances
+- Clicking the title/card area opens the full dialog for deeper reading
+
+### Implementation
+- Import `Dialog, DialogContent, DialogHeader, DialogTitle` from UI components
+- Add `selectedAnnouncement` and `selectedEvent` state to the parent `MemberFeed` component
+- Pass an `onOpen` callback to each item; clicking the title/card sets the selected item and opens the dialog
+- Two dialogs rendered at the bottom of the component: one for announcements, one for events
+- Both dialogs include the like/react functionality inline
 
 ### Files changed
-- **Database migration** — new `event_reactions` table with RLS
-- `src/components/profile/MemberFeed.jsx` — all UI changes
-
-### Technical details
-
-**event_reactions table:**
-```sql
-CREATE TABLE public.event_reactions (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  event_id uuid NOT NULL REFERENCES public.events(id) ON DELETE CASCADE,
-  user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  tenant_id uuid REFERENCES public.tenants(id),
-  reaction text NOT NULL DEFAULT 'like',
-  created_at timestamptz NOT NULL DEFAULT now(),
-  UNIQUE(event_id, user_id)
-);
-ALTER TABLE public.event_reactions ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Users can manage own event reactions"
-ON public.event_reactions FOR ALL TO authenticated
-USING (auth.uid() = user_id AND user_has_tenant_access(tenant_id))
-WITH CHECK (auth.uid() = user_id AND user_has_tenant_access(tenant_id));
-
-CREATE POLICY "Tenant members can view event reactions"
-ON public.event_reactions FOR SELECT TO authenticated
-USING (user_has_tenant_access(tenant_id));
-```
-
-**Refresh logic change:**
-```javascript
-const handleRefresh = async () => {
-  setRefreshing(true);
-  // Mark all currently visible items as "read" before refresh
-  relevantAnnouncements.forEach(a => readIds.add(a.id));
-  events.forEach(e => readEventIds.add(e.id));
-  setReadIds(new Set(readIds));
-  setReadEventIds(new Set(readEventIds));
-  // Refetch — new items won't be in the read sets
-  await Promise.all([...invalidate queries...]);
-  setTimeout(() => setRefreshing(false), 600);
-};
-```
+- `src/components/profile/MemberFeed.jsx` — add detail dialogs for announcements and events
 
