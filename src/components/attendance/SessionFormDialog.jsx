@@ -6,20 +6,17 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Loader2 } from "lucide-react";
+import { useChurchUnits } from "@/hooks/useChurchUnits";
 
 const SESSION_TYPES = ["Sunday Service", "Midweek Service", "Unit Meeting", "Special Event", "Prayer Meeting"];
-const UNITS = [
-  "Ushering", "Choir", "Media", "Children's Ministry", "Protocol",
-  "Sanctuary Keepers", "Prayer & Intercession", "Evangelism", "Follow-up",
-  "Youth Ministry", "Men's Ministry", "Women's Ministry", "Drama & Creative Arts",
-  "Altar Ministers", "Pastoral Care", "Welfare", "CSR", "Transportation"
-];
 
 const empty = {
   title: "", session_type: "Sunday Service", unit: "", date: new Date().toISOString().split("T")[0], notes: "", status: "Open"
 };
 
 export default function SessionFormDialog({ open, onOpenChange, onSave, isAdmin = true, myUnits = [] }) {
+  const { data: churchUnits = [] } = useChurchUnits();
+  const allUnitNames = churchUnits.map(u => u.name);
   const isUnitLeader = !isAdmin;
   const singleUnit = myUnits.length === 1 ? myUnits[0] : "";
 
@@ -47,7 +44,7 @@ export default function SessionFormDialog({ open, onOpenChange, onSave, isAdmin 
     onOpenChange(false);
   };
 
-  const unitOptions = isAdmin ? UNITS : myUnits;
+  const unitOptions = isAdmin ? allUnitNames : myUnits;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

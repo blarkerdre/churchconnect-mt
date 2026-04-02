@@ -7,13 +7,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
-
-const ALL_UNITS = [
-  "Ushering", "Choir", "Media", "Children's Ministry", "Protocol",
-  "Sanctuary Keepers", "Prayer & Intercession", "Evangelism", "Follow-up",
-  "Youth Ministry", "Men's Ministry", "Women's Ministry", "Drama & Creative Arts",
-  "Altar Ministers", "Pastoral Care", "Welfare", "CSR", "Transportation", "WSF",
-];
+import { useChurchUnits } from "@/hooks/useChurchUnits";
 
 export default function UnitLeaderAssignments({ userId }) {
   const queryClient = useQueryClient();
@@ -34,8 +28,10 @@ export default function UnitLeaderAssignments({ userId }) {
     enabled: !!userId,
   });
 
+  const { data: churchUnits = [] } = useChurchUnits();
+  const allUnitNames = churchUnits.map(u => u.name);
   const assignedUnits = assignments.map((a) => a.unit_name);
-  const availableUnits = ALL_UNITS.filter((u) => !assignedUnits.includes(u));
+  const availableUnits = allUnitNames.filter((u) => !assignedUnits.includes(u));
 
   const addMutation = useMutation({
     mutationFn: async (unitName) => {
