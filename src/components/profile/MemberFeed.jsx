@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Megaphone, CalendarDays, Bell, ChevronDown, ChevronUp,
-  CheckCircle2, Loader2, RefreshCw, Heart, Share2, MapPin, Clock, Users, Monitor
+  CheckCircle2, Loader2, RefreshCw, Heart, MapPin, Clock, Users, Monitor
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -98,10 +98,8 @@ function AnnouncementItem({ a, onRead, user, tenantId, withTenant }) {
   );
 }
 
-function EventItem({ event, member }) {
-  const { user } = useAuth();
+function EventItem({ event, member, onRead, user, tenantId, withTenant }) {
   const queryClient = useQueryClient();
-  const { withTenant } = useTenantQuery();
   const [expanded, setExpanded] = useState(false);
 
   const { data: registration } = useQuery({
@@ -116,6 +114,41 @@ function EventItem({ event, member }) {
       return data;
     },
     enabled: !!user?.id && !!event.requires_registration,
+  });
+
+  const { data: reactions = [] } = useQuery({
+    queryKey: ["event-reactions", event.id, tenantId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("event_reactions")
+        .select("id, user_id")
+        .eq("event_id", event.id)
+        .eq("tenant_id", tenantId);
+      return data || [];
+    },
+    enabled: !!tenantId,
+  });
+
+  const isLiked = reactions.some(r => r.user_id === user?.id);
+  const likeCount = reactions.length;
+
+  const likeMutation = useMutation({
+    mutationFn: async () => {
+      if (isLiked) {
+        const myReaction = reactions.find(r => r.user_id === user.id);
+        if (myReaction) {
+          await supabase.from("event_reactions").delete().eq("id", myReaction.id);
+        }
+      } else {
+        await supabase.from("event_reactions").insert(withTenant({
+          event_id: event.id,
+          user_id: user.id,
+        }));
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["event-reactions", event.id] });
+    },
   });
 
   const registerMutation = useMutation({
@@ -136,22 +169,9 @@ function EventItem({ event, member }) {
     onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
 
-  const handleShare = async () => {
-    const text = [
-      event.title,
-      event.event_date ? format(parseISO(event.event_date), "dd MMM yyyy") : "",
-      event.location || "",
-      event.start_time ? `Time: ${event.start_time}` : "",
-    ].filter(Boolean).join("\n");
-
-    if (navigator.share) {
-      try {
-        await navigator.share({ title: event.title, text });
-      } catch { /* user cancelled */ }
-    } else {
-      await navigator.clipboard.writeText(text);
-      toast({ title: "Copied!", description: "Event details copied to clipboard" });
-    }
+  const handleExpand = () => {
+    setExpanded(v => !v);
+    if (!expanded) onRead(event.id);
   };
 
   const isRegistered = !!registration;
@@ -171,14 +191,9 @@ function EventItem({ event, member }) {
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-2">
             <p className="text-sm font-semibold text-foreground truncate">{event.title}</p>
-            <div className="flex items-center gap-1 shrink-0">
-              <button onClick={handleShare} className="text-muted-foreground hover:text-foreground p-0.5">
-                <Share2 className="h-3.5 w-3.5" />
-              </button>
-              <button onClick={() => setExpanded(v => !v)} className="text-muted-foreground hover:text-foreground p-0.5">
-                {expanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
-              </button>
-            </div>
+            <button onClick={handleExpand} className="shrink-0 text-muted-foreground hover:text-foreground p-0.5">
+              {expanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+            </button>
           </div>
           <p className="text-xs text-muted-foreground mt-0.5">
             {event.location || "TBC"}
@@ -205,9 +220,17 @@ function EventItem({ event, member }) {
               </div>
             </div>
           )}
-          {event.requires_registration && (
-            <div className="mt-2">
-              {isRegistered ? (
+          <div className="flex items-center gap-3 mt-2">
+            <button
+              onClick={() => likeMutation.mutate()}
+              disabled={likeMutation.isPending}
+              className="flex items-center gap-1 text-muted-foreground hover:text-destructive transition-colors"
+            >
+              <Heart className={`h-3.5 w-3.5 ${isLiked ? "fill-destructive text-destructive" : ""}`} />
+              {likeCount > 0 && <span className="text-[10px] font-medium">{likeCount}</span>}
+            </button>
+            {event.requires_registration && (
+              isRegistered ? (
                 <Badge className="bg-chart-3/10 text-chart-3 border-0 text-[10px]">
                   <CheckCircle2 className="h-3 w-3 mr-1" /> Registered
                 </Badge>
@@ -222,9 +245,9 @@ function EventItem({ event, member }) {
                   {registerMutation.isPending && <Loader2 className="h-3 w-3 mr-1 animate-spin" />}
                   Register
                 </Button>
-              )}
-            </div>
-          )}
+              )
+            )}
+          </div>
         </div>
         {event.category && (
           <Badge variant="secondary" className="text-[10px] shrink-0">{event.category}</Badge>
@@ -239,9 +262,10 @@ export default function MemberFeed({ member }) {
   const { tenantId, scopeQuery, withTenant } = useTenantQuery();
   const queryClient = useQueryClient();
   const [readIds, setReadIds] = useState(new Set());
+  const [readEventIds, setReadEventIds] = useState(new Set());
   const [refreshing, setRefreshing] = useState(false);
 
-  const handleRead = useCallback((id) => {
+  const handleReadAnnouncement = useCallback((id) => {
     setReadIds(prev => {
       const next = new Set(prev);
       next.add(id);
@@ -249,15 +273,13 @@ export default function MemberFeed({ member }) {
     });
   }, []);
 
-  const handleRefresh = async () => {
-    setRefreshing(true);
-    await Promise.all([
-      queryClient.invalidateQueries({ queryKey: ["member-feed-announcements", tenantId] }),
-      queryClient.invalidateQueries({ queryKey: ["member-feed-events", tenantId] }),
-    ]);
-    setReadIds(new Set());
-    setTimeout(() => setRefreshing(false), 600);
-  };
+  const handleReadEvent = useCallback((id) => {
+    setReadEventIds(prev => {
+      const next = new Set(prev);
+      next.add(id);
+      return next;
+    });
+  }, []);
 
   const { data: announcements = [], isLoading: loadingAnn } = useQuery({
     queryKey: ["member-feed-announcements", tenantId],
@@ -299,7 +321,28 @@ export default function MemberFeed({ member }) {
     return false;
   });
 
-  const unreadCount = Math.max(0, relevantAnnouncements.length - readIds.size);
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    // Mark all currently visible items as "read" so only new items after refresh appear unread
+    setReadIds(prev => {
+      const next = new Set(prev);
+      relevantAnnouncements.forEach(a => next.add(a.id));
+      return next;
+    });
+    setReadEventIds(prev => {
+      const next = new Set(prev);
+      events.forEach(e => next.add(e.id));
+      return next;
+    });
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["member-feed-announcements", tenantId] }),
+      queryClient.invalidateQueries({ queryKey: ["member-feed-events", tenantId] }),
+    ]);
+    setTimeout(() => setRefreshing(false), 600);
+  };
+
+  const unreadAnnCount = Math.max(0, relevantAnnouncements.filter(a => !readIds.has(a.id)).length);
+  const unreadEventCount = Math.max(0, events.filter(e => !readEventIds.has(e.id)).length);
 
   return (
     <Card className="border-0 shadow-sm">
@@ -321,18 +364,18 @@ export default function MemberFeed({ member }) {
             <TabsTrigger value="announcements" className="flex-1 flex items-center gap-1.5 text-xs">
               <Megaphone className="h-3.5 w-3.5" />
               Announcements
-              {unreadCount > 0 && (
+              {unreadAnnCount > 0 && (
                 <span className="ml-1 bg-accent text-accent-foreground text-[10px] font-bold px-1.5 py-0.5 rounded-full leading-none">
-                  {unreadCount}
+                  {unreadAnnCount}
                 </span>
               )}
             </TabsTrigger>
             <TabsTrigger value="events" className="flex-1 flex items-center gap-1.5 text-xs">
               <CalendarDays className="h-3.5 w-3.5" />
               Events
-              {events.length > 0 && (
+              {unreadEventCount > 0 && (
                 <span className="ml-1 bg-primary text-primary-foreground text-[10px] font-bold px-1.5 py-0.5 rounded-full leading-none">
-                  {events.length}
+                  {unreadEventCount}
                 </span>
               )}
             </TabsTrigger>
@@ -349,7 +392,7 @@ export default function MemberFeed({ member }) {
                   <AnnouncementItem
                     key={a.id}
                     a={a}
-                    onRead={handleRead}
+                    onRead={handleReadAnnouncement}
                     user={user}
                     tenantId={tenantId}
                     withTenant={withTenant}
@@ -366,7 +409,17 @@ export default function MemberFeed({ member }) {
               <p className="text-sm text-muted-foreground text-center py-8">No upcoming events</p>
             ) : (
               <div className="space-y-2">
-                {events.map(e => <EventItem key={e.id} event={e} member={member} />)}
+                {events.map(e => (
+                  <EventItem
+                    key={e.id}
+                    event={e}
+                    member={member}
+                    onRead={handleReadEvent}
+                    user={user}
+                    tenantId={tenantId}
+                    withTenant={withTenant}
+                  />
+                ))}
               </div>
             )}
           </TabsContent>
