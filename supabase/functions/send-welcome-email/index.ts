@@ -121,6 +121,7 @@ Deno.serve(async (req) => {
       firstName: first_name || "Friend",
       lastName: last_name || "",
       siteUrl: tenantSiteUrl,
+      churchName: senderName,
     };
 
     const [html, text, unsubscribeToken] = await Promise.all([
@@ -163,7 +164,7 @@ Deno.serve(async (req) => {
           to: normalizedEmail,
           from: `"${senderName.replace(/"/g, '')}" <noreply@${FROM_DOMAIN}>`,
           sender_domain: SENDER_DOMAIN,
-          subject: "Welcome to Winners Chapel International Cardiff",
+          subject: `Welcome to ${senderName}`,
           html,
           text,
           purpose: "transactional",

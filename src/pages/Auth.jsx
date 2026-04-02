@@ -153,7 +153,7 @@ export default function Auth() {
         }
         setMode("login");
       } else if (mode === "forgot") {
-        const { error } = await resetPassword(form.email);
+        const { error } = await resetPassword(form.email, effectiveSlug);
         if (error) throw error;
         toast({ title: "Reset email sent", description: "Check your inbox for a password reset link." });
         setMode("login");

@@ -217,15 +217,37 @@ async function handleWebhook(req: Request): Promise<Response> {
     )
   }
 
+  // Resolve tenant name and slug for tenant-scoped emails
+  let tenantName = ''
+  let tenantSlug = ''
+  if (resolvedTenantId) {
+    try {
+      const { data: t } = await supabase
+        .from('tenants')
+        .select('name, slug')
+        .eq('id', resolvedTenantId)
+        .maybeSingle()
+      if (t) {
+        tenantName = t.name || ''
+        tenantSlug = t.slug || ''
+      }
+    } catch (_) { /* best-effort */ }
+  }
+  const churchName = tenantName || 'Church Connect'
+  const tenantSiteUrl = tenantSlug
+    ? `https://${ROOT_DOMAIN}/t/${tenantSlug}`
+    : `https://${ROOT_DOMAIN}`
+
   // Build template props from payload.data (HookData structure)
   const templateProps = {
     siteName: SITE_NAME,
-    siteUrl: `https://app.${ROOT_DOMAIN}`,
+    siteUrl: tenantSiteUrl,
     recipient: payload.data.email,
     confirmationUrl: payload.data.url,
     token: payload.data.token,
     email: payload.data.email,
     newEmail: payload.data.new_email,
+    churchName,
   }
 
   // Render React Email to HTML and plain text
@@ -304,7 +326,7 @@ async function handleWebhook(req: Request): Promise<Response> {
       message_id: messageId,
       tenant_id: resolvedTenantId,
       to: payload.data.email,
-      from: `${SITE_NAME} <noreply@${FROM_DOMAIN}>`,
+      from: `"${churchName.replace(/"/g, '')}" <noreply@${FROM_DOMAIN}>`,
       sender_domain: SENDER_DOMAIN,
       subject: EMAIL_SUBJECTS[emailType] || 'Notification',
       html,
