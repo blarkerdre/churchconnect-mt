@@ -237,13 +237,13 @@ export default function Communications() {
     ? myWsfCentres.map(c => c.name) : null;
 
   const { data: myMember } = useQuery({
-    queryKey: ["my-member", user?.id],
+    queryKey: ["my-member-comms", user?.id],
     queryFn: async () => {
       const { data } = await supabase
-        .from("members").select("church_unit").eq("user_id", user.id).single();
+        .from("members").select("id, email, phone, church_unit").eq("user_id", user.id).single();
       return data;
     },
-    enabled: !!user?.id && !isAdmin && !unitLeaderUnits && !wsfLeaderCentres,
+    enabled: !!user?.id,
   });
 
   // Build effective units/centres for audience scoping
