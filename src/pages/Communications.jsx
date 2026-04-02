@@ -337,6 +337,78 @@ export default function Communications() {
     enabled: !!user?.id,
   });
 
+  // Count queries for tab badges
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+
+  const { data: smsCount = 0 } = useQuery({
+    queryKey: ["comms-sms-count", myMember?.id, canManageComms, tenantId],
+    queryFn: async () => {
+      if (canManageComms) {
+        const { count } = await supabase
+          .from("scheduled_communications")
+          .select("id", { count: "exact", head: true })
+          .eq("tenant_id", tenantId)
+          .eq("channel", "sms")
+          .in("status", ["scheduled", "processing"]);
+        return count || 0;
+      }
+      const { count } = await supabase
+        .from("sms_log")
+        .select("id", { count: "exact", head: true })
+        .eq("recipient_member_id", myMember.id)
+        .eq("channel", "sms")
+        .gte("created_at", thirtyDaysAgo);
+      return count || 0;
+    },
+    enabled: smsEnabled && (canManageComms ? !!tenantId : !!myMember?.id),
+  });
+
+  const { data: whatsappCount = 0 } = useQuery({
+    queryKey: ["comms-wa-count", myMember?.id, canManageComms, tenantId],
+    queryFn: async () => {
+      if (canManageComms) {
+        const { count } = await supabase
+          .from("scheduled_communications")
+          .select("id", { count: "exact", head: true })
+          .eq("tenant_id", tenantId)
+          .eq("channel", "whatsapp")
+          .in("status", ["scheduled", "processing"]);
+        return count || 0;
+      }
+      const { count } = await supabase
+        .from("sms_log")
+        .select("id", { count: "exact", head: true })
+        .eq("recipient_member_id", myMember.id)
+        .eq("channel", "whatsapp")
+        .gte("created_at", thirtyDaysAgo);
+      return count || 0;
+    },
+    enabled: whatsappEnabled && (canManageComms ? !!tenantId : !!myMember?.id),
+  });
+
+  const { data: emailCount = 0 } = useQuery({
+    queryKey: ["comms-email-count", myMember?.email, canManageComms, tenantId],
+    queryFn: async () => {
+      if (canManageComms) {
+        const { count } = await supabase
+          .from("scheduled_communications")
+          .select("id", { count: "exact", head: true })
+          .eq("tenant_id", tenantId)
+          .eq("channel", "email")
+          .in("status", ["scheduled", "processing"]);
+        return count || 0;
+      }
+      const { count } = await supabase
+        .from("email_send_log")
+        .select("id", { count: "exact", head: true })
+        .eq("recipient_email", myMember.email)
+        .gte("created_at", thirtyDaysAgo);
+      return count || 0;
+    },
+    enabled: emailEnabled && (canManageComms ? !!tenantId : !!myMember?.email),
+  });
+
   // Build effective units/centres for audience scoping
   const effectiveScopes = [
     ...(unitLeaderUnits || []),
