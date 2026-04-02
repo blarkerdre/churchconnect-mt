@@ -217,52 +217,11 @@ async function handleWebhook(req: Request): Promise<Response> {
     )
   }
 
-  // Resolve tenant name and slug for tenant-scoped emails
-  let tenantName = ''
-  let tenantSlug = ''
-  if (resolvedTenantId) {
-    try {
-      const { data: t } = await supabase
-        .from('tenants')
-        .select('name, slug')
-        .eq('id', resolvedTenantId)
-        .maybeSingle()
-      if (t) {
-        tenantName = t.name || ''
-        tenantSlug = t.slug || ''
-      }
-    } catch (_) { /* best-effort */ }
-  }
-  const churchName = tenantName || 'Church Connect'
-  const tenantSiteUrl = tenantSlug
-    ? `https://${ROOT_DOMAIN}/t/${tenantSlug}`
-    : `https://${ROOT_DOMAIN}`
-
-  // Build template props from payload.data (HookData structure)
-  const templateProps = {
-    siteName: SITE_NAME,
-    siteUrl: tenantSiteUrl,
-    recipient: payload.data.email,
-    confirmationUrl: payload.data.url,
-    token: payload.data.token,
-    email: payload.data.email,
-    newEmail: payload.data.new_email,
-    churchName,
-  }
-
-  // Render React Email to HTML and plain text
-  const html = await renderAsync(React.createElement(EmailTemplate, templateProps))
-  const text = await renderAsync(React.createElement(EmailTemplate, templateProps), {
-    plainText: true,
-  })
-
-  // Enqueue email for async processing by the dispatcher (process-email-queue).
+  // Create supabase client for tenant resolution and email enqueue
   const supabase = createClient(
     Deno.env.get('SUPABASE_URL')!,
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
   )
-
-  const messageId = crypto.randomUUID()
 
   // Resolve tenant_id from user's tenant membership for log isolation
   let resolvedTenantId: string | null = null
@@ -278,12 +237,12 @@ async function handleWebhook(req: Request): Promise<Response> {
 
     // 2. Fallback: resolve from user_meta_data.tenant_slug (signup case)
     if (!resolvedTenantId) {
-      const tenantSlug = payload.data.user_meta_data?.tenant_slug
-      if (tenantSlug) {
+      const metaSlug = payload.data.user_meta_data?.tenant_slug
+      if (metaSlug) {
         const { data: tenant } = await supabase
           .from('tenants')
           .select('id')
-          .eq('slug', tenantSlug)
+          .eq('slug', metaSlug)
           .limit(1)
           .maybeSingle()
         if (tenant?.id) resolvedTenantId = tenant.id
@@ -310,6 +269,26 @@ async function handleWebhook(req: Request): Promise<Response> {
     }
   } catch (_) { /* best-effort */ }
 
+  // Resolve tenant name and slug for tenant-scoped emails
+  let tenantName = ''
+  let tenantSlug = ''
+  if (resolvedTenantId) {
+    try {
+      const { data: t } = await supabase
+        .from('tenants')
+        .select('name, slug')
+        .eq('id', resolvedTenantId)
+        .maybeSingle()
+      if (t) {
+        tenantName = t.name || ''
+        tenantSlug = t.slug || ''
+      }
+    } catch (_) { /* best-effort */ }
+  }
+  const churchName = tenantName || 'Church Connect'
+  const tenantSiteUrl = tenantSlug
+    ? `https://${ROOT_DOMAIN}/t/${tenantSlug}`
+    : `https://${ROOT_DOMAIN}`
   // Log pending BEFORE enqueue so we have a record even if enqueue crashes
   await supabase.from('email_send_log').insert({
     message_id: messageId,
