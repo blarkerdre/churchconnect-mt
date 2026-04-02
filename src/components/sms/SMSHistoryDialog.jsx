@@ -1,8 +1,9 @@
 import React, { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Separator } from "@/components/ui/separator";
 import { Loader2, MessageSquare, AlertTriangle, Info } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -37,6 +38,7 @@ function getTrialAccountHint(errorMessage) {
 
 export default function SMSHistoryDialog({ open, onOpenChange, defaultFilter = "All", channelFilter = null }) {
   const [typeFilter, setTypeFilter] = useState(defaultFilter);
+  const [selectedLog, setSelectedLog] = useState(null);
 
   const { data: logs = [], isLoading } = useQuery({
     queryKey: ["sms-logs", typeFilter, channelFilter],
@@ -108,7 +110,7 @@ export default function SMSHistoryDialog({ open, onOpenChange, defaultFilter = "
               const statusDisplay = getStatusDisplay(log);
               const trialHint = getTrialAccountHint(log.error_message);
               return (
-                <div key={log.id} className="border rounded-lg p-3 text-sm space-y-1">
+                <div key={log.id} className="border rounded-lg p-3 text-sm space-y-1 cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => setSelectedLog(log)}>
                   <div className="flex items-center justify-between">
                     <span className="font-medium truncate">{log.recipient_phone}</span>
                     <div className="flex items-center gap-2">
@@ -133,13 +135,7 @@ export default function SMSHistoryDialog({ open, onOpenChange, defaultFilter = "
                     )}
                   </div>
                   {log.error_message && (
-                    <p className="text-xs text-destructive">{log.error_message}</p>
-                  )}
-                  {trialHint && (
-                    <div className="flex items-start gap-1.5 mt-1">
-                      <AlertTriangle className="h-3 w-3 text-amber-500 mt-0.5 shrink-0" />
-                      <p className="text-xs text-amber-600">{trialHint}</p>
-                    </div>
+                    <p className="text-xs text-destructive truncate">{log.error_message}</p>
                   )}
                 </div>
               );
@@ -147,6 +143,82 @@ export default function SMSHistoryDialog({ open, onOpenChange, defaultFilter = "
           )}
         </div>
       </DialogContent>
+
+      {/* SMS Detail Dialog */}
+      <Dialog open={!!selectedLog} onOpenChange={(v) => !v && setSelectedLog(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <MessageSquare className="h-5 w-5 text-primary" />
+              Message Detail
+            </DialogTitle>
+            <DialogDescription>Full message and delivery details</DialogDescription>
+          </DialogHeader>
+          {selectedLog && (() => {
+            const sd = getStatusDisplay(selectedLog);
+            const hint = getTrialAccountHint(selectedLog.error_message);
+            return (
+              <div className="space-y-4">
+                <div className="flex flex-wrap gap-2">
+                  <Badge variant="outline" className={`${selectedLog.channel === "whatsapp" ? "border-[#25D366] text-[#25D366]" : ""}`}>
+                    {selectedLog.channel === "whatsapp" ? "WhatsApp" : "SMS"}
+                  </Badge>
+                  <Badge variant="outline">{selectedLog.sms_type}</Badge>
+                  <Badge className={`border-0 ${sd.className}`}>{sd.label}</Badge>
+                </div>
+
+                <div className="space-y-1">
+                  <p className="text-xs font-medium text-muted-foreground">Recipient</p>
+                  <p className="text-sm font-medium text-foreground">{selectedLog.recipient_phone}</p>
+                </div>
+
+                <Separator />
+
+                <div className="space-y-1">
+                  <p className="text-xs font-medium text-muted-foreground">Message</p>
+                  <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">{selectedLog.message}</p>
+                </div>
+
+                <Separator />
+
+                <div className="grid grid-cols-2 gap-3 text-xs">
+                  <div>
+                    <p className="text-muted-foreground">Sent</p>
+                    <p className="font-medium text-foreground">{format(new Date(selectedLog.created_at), "dd MMM yyyy, h:mm a")}</p>
+                  </div>
+                  {selectedLog.delivery_updated_at && (
+                    <div>
+                      <p className="text-muted-foreground">Last Updated</p>
+                      <p className="font-medium text-foreground">{format(new Date(selectedLog.delivery_updated_at), "dd MMM yyyy, h:mm a")}</p>
+                    </div>
+                  )}
+                </div>
+
+                {selectedLog.message_sid && (
+                  <div className="text-xs">
+                    <p className="text-muted-foreground">Message SID</p>
+                    <p className="font-mono text-foreground break-all">{selectedLog.message_sid}</p>
+                  </div>
+                )}
+
+                {selectedLog.error_message && (
+                  <div className="space-y-1">
+                    <p className="text-xs font-medium text-destructive">Error</p>
+                    <p className="text-sm text-destructive whitespace-pre-wrap">{selectedLog.error_message}</p>
+                  </div>
+                )}
+
+                {hint && (
+                  <div className="flex items-start gap-1.5 bg-amber-50 dark:bg-amber-950/30 p-3 rounded-lg">
+                    <AlertTriangle className="h-4 w-4 text-amber-500 mt-0.5 shrink-0" />
+                    <p className="text-xs text-amber-600 dark:text-amber-400">{hint}</p>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
     </Dialog>
   );
 }
