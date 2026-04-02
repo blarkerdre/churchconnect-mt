@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
+import { useTenant } from "@/contexts/TenantContext";
 import { useNavigate } from "react-router-dom";
 import { Bell, Check, Trash2, Heart, Megaphone, CalendarDays, Info, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -40,7 +41,8 @@ const referenceRoutes = {
 
 export default function NotificationBell() {
   const { user } = useAuth();
-  const { tenantId, tenantSlug } = useTenantQuery();
+  const { tenantId } = useTenantQuery();
+  const { tenantSlug } = useTenant();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
