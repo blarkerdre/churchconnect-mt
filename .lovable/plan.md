@@ -1,23 +1,52 @@
 
 
-## Route /auth Signups to "Demo Church (TEST)" Tenant
+## Fix: SMS Stuck on "Queued" — Webhook Signature Mismatch
 
 ### Problem
-Currently, signups from the generic `/auth` page fall back to `DEFAULT_TENANT_ID` which points to "Winners Chapel International, Cardiff" (`95e53cc3-...`). The user wants these to land in "Demo Church (TEST)" (`d8bbbdae-d9b3-4999-912d-3aa5999884b0`, slug `demo-test`).
 
-### Changes
+SMS is sent via the Lovable connector gateway, which uses its own Twilio account internally. When Twilio sends delivery status callbacks (delivered, failed, etc.) to your `twilio-webhook`, the signature is signed with the gateway's auth token — not your `TWILIO_AUTH_TOKEN`. The webhook rejects all callbacks with 403, so `sms_log.delivery_status` stays "queued" forever.
 
-#### 1. `src/contexts/TenantContext.jsx` — Update DEFAULT_TENANT_ID
-Change the constant from `95e53cc3-4569-4dd3-a4ad-3489593dce81` to `d8bbbdae-d9b3-4999-912d-3aa5999884b0`.
+### Solution
 
-#### 2. Database migration — Update `handle_new_user()` trigger
-The trigger hardcodes the fallback tenant ID. Update it from `95e53cc3-...` to `d8bbbdae-d9b3-4999-912d-3aa5999884b0`.
+Since the connector gateway proxies through its own Twilio account, the StatusCallback signatures will never match your local auth token. Two changes are needed:
 
-#### 3. `supabase/functions/public-register/index.ts` — Update DEFAULT_TENANT_ID
-Change the hardcoded fallback from `95e53cc3-...` to `d8bbbdae-d9b3-4999-912d-3aa5999884b0`.
+#### 1. `supabase/functions/twilio-webhook/index.ts` — Relax signature validation for gateway-sent messages
+
+Replace the strict HMAC-SHA1 signature check with a dual approach:
+- **If `TWILIO_AUTH_TOKEN` matches** → validate normally (for direct Twilio usage)
+- **If signature doesn't match** → check for a secondary validation: verify the request contains a valid `MessageSid` and `MessageStatus`, and that the `MessageSid` exists in `sms_log` (proof it's a legitimate callback for a message we sent)
+
+This prevents random abuse while allowing gateway-proxied callbacks through.
+
+```typescript
+// After signature validation fails:
+// Fallback: verify MessageSid exists in our sms_log (proves we sent it)
+if (twilioSignature !== expectedSignature) {
+  console.log("Signature mismatch — trying fallback MessageSid verification");
+  
+  if (!messageSid || !messageStatus) {
+    return new Response("Forbidden", { status: 403 });
+  }
+  
+  const { data: existingLog } = await supabase
+    .from("sms_log")
+    .select("id")
+    .eq("message_sid", messageSid)
+    .maybeSingle();
+  
+  if (!existingLog) {
+    console.warn("MessageSid not found in sms_log — rejecting");
+    return new Response("Forbidden", { status: 403 });
+  }
+  
+  console.log("Fallback validation passed — MessageSid exists in sms_log");
+}
+```
+
+#### 2. Restructure the webhook to create the Supabase client and extract params before signature validation
+
+Move `messageSid`/`messageStatus` extraction and Supabase client creation above the signature check so the fallback verification can query `sms_log`.
 
 ### Files changed
-- `src/contexts/TenantContext.jsx`
-- `supabase/functions/public-register/index.ts`
-- Database migration (update `handle_new_user()` fallback)
+- `supabase/functions/twilio-webhook/index.ts`
 
