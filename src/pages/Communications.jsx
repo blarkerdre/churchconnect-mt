@@ -450,50 +450,58 @@ export default function Communications() {
           </div>
         </TabsContent>}
 
-        {canManageComms && emailEnabled && (
+        {emailEnabled && (
           <TabsContent value="email">
-            <div className="space-y-4">
-              <EmailAlertForm
-                currentUser={user}
-                myUnits={leaderUnits}
-                isAdmin={isAdmin}
-              />
-              <ScheduledList channel="email" tenantId={tenantId} />
-            </div>
+            {canManageComms ? (
+              <div className="space-y-4">
+                <EmailAlertForm currentUser={user} myUnits={leaderUnits} isAdmin={isAdmin} />
+                <ScheduledList channel="email" tenantId={tenantId} />
+              </div>
+            ) : (
+              <MemberEmailList memberId={myMember?.id} memberEmail={myMember?.email} tenantId={tenantId} onSelect={setSelectedEmailLog} />
+            )}
           </TabsContent>
         )}
 
-        {canManageComms && smsEnabled && (
+        {smsEnabled && (
           <TabsContent value="sms">
-            <div className="space-y-4">
-              <div className="flex items-center gap-2">
-                <Button onClick={() => { setSmsAnnouncement(null); setSmsOpen(true); }} className="bg-primary hover:bg-primary/90">
-                  <MessageSquare className="h-4 w-4 mr-2" /> Send Bulk SMS
-                </Button>
+            {canManageComms ? (
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <Button onClick={() => { setSmsAnnouncement(null); setSmsOpen(true); }} className="bg-primary hover:bg-primary/90">
+                    <MessageSquare className="h-4 w-4 mr-2" /> Send Bulk SMS
+                  </Button>
+                </div>
+                <ScheduledList channel="sms" tenantId={tenantId} />
+                <Card className="border-0 shadow-sm p-8 text-center text-muted-foreground">
+                  <MessageSquare className="h-10 w-10 mx-auto mb-3 opacity-20" />
+                  <p className="text-sm">Use the button above to compose and send SMS messages to members.</p>
+                </Card>
               </div>
-              <ScheduledList channel="sms" tenantId={tenantId} />
-              <Card className="border-0 shadow-sm p-8 text-center text-muted-foreground">
-                <MessageSquare className="h-10 w-10 mx-auto mb-3 opacity-20" />
-                <p className="text-sm">Use the button above to compose and send SMS messages to members.</p>
-              </Card>
-            </div>
+            ) : (
+              <MemberSmsListView memberId={myMember?.id} tenantId={tenantId} channel="sms" onSelect={setSelectedSmsLog} />
+            )}
           </TabsContent>
         )}
 
-        {canManageComms && whatsappEnabled && (
+        {whatsappEnabled && (
           <TabsContent value="whatsapp">
-            <div className="space-y-4">
-              <div className="flex items-center gap-2">
-                <Button onClick={() => setWaOpen(true)} className="bg-primary hover:bg-primary/90">
-                  <WhatsAppIcon className="h-4 w-4 mr-2" /> Send Bulk WhatsApp
-                </Button>
+            {canManageComms ? (
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <Button onClick={() => setWaOpen(true)} className="bg-primary hover:bg-primary/90">
+                    <WhatsAppIcon className="h-4 w-4 mr-2" /> Send Bulk WhatsApp
+                  </Button>
+                </div>
+                <ScheduledList channel="whatsapp" tenantId={tenantId} />
+                <Card className="border-0 shadow-sm p-8 text-center text-muted-foreground">
+                  <WhatsAppIcon className="h-10 w-10 mx-auto mb-3 opacity-20" />
+                  <p className="text-sm">Use the button above to compose and send WhatsApp messages to members.</p>
+                </Card>
               </div>
-              <ScheduledList channel="whatsapp" tenantId={tenantId} />
-              <Card className="border-0 shadow-sm p-8 text-center text-muted-foreground">
-                <WhatsAppIcon className="h-10 w-10 mx-auto mb-3 opacity-20" />
-                <p className="text-sm">Use the button above to compose and send WhatsApp messages to members.</p>
-              </Card>
-            </div>
+            ) : (
+              <MemberSmsListView memberId={myMember?.id} tenantId={tenantId} channel="whatsapp" onSelect={setSelectedSmsLog} />
+            )}
           </TabsContent>
         )}
       </Tabs>
