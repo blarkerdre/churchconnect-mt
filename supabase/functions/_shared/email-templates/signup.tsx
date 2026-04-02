@@ -19,6 +19,7 @@ interface SignupEmailProps {
   siteUrl: string
   recipient: string
   confirmationUrl: string
+  churchName?: string
 }
 
 export const SignupEmail = ({
@@ -26,37 +27,42 @@ export const SignupEmail = ({
   siteUrl,
   recipient,
   confirmationUrl,
-}: SignupEmailProps) => (
-  <Html lang="en" dir="ltr">
-    <Head />
-    <Preview>Confirm your email for Winners Chapel International Cardiff</Preview>
-    <Body style={main}>
-      <Container style={container}>
-        <Heading style={h1}>Welcome to Winners Chapel!</Heading>
-        <Text style={text}>
-          Thank you for signing up for{' '}
-          <Link href={siteUrl} style={link}>
-            <strong>Winners Chapel International Cardiff</strong>
-          </Link>
-          .
-        </Text>
-        <Text style={text}>
-          Please confirm your email address (
-          <Link href={`mailto:${recipient}`} style={link}>
-            {recipient}
-          </Link>
-          ) by clicking the button below:
-        </Text>
-        <Button style={button} href={confirmationUrl}>
-          Verify Email
-        </Button>
-        <Text style={footer}>
-          If you didn't create an account, you can safely ignore this email.
-        </Text>
-      </Container>
-    </Body>
-  </Html>
-)
+  churchName,
+}: SignupEmailProps) => {
+  const displayName = churchName || siteName || 'Church Connect'
+
+  return (
+    <Html lang="en" dir="ltr">
+      <Head />
+      <Preview>Confirm your email for {displayName}</Preview>
+      <Body style={main}>
+        <Container style={container}>
+          <Heading style={h1}>Welcome to {displayName}!</Heading>
+          <Text style={text}>
+            Thank you for signing up for{' '}
+            <Link href={siteUrl} style={link}>
+              <strong>{displayName}</strong>
+            </Link>
+            .
+          </Text>
+          <Text style={text}>
+            Please confirm your email address (
+            <Link href={`mailto:${recipient}`} style={link}>
+              {recipient}
+            </Link>
+            ) by clicking the button below:
+          </Text>
+          <Button style={button} href={confirmationUrl}>
+            Verify Email
+          </Button>
+          <Text style={footer}>
+            If you didn't create an account, you can safely ignore this email.
+          </Text>
+        </Container>
+      </Body>
+    </Html>
+  )
+}
 
 export default SignupEmail
 

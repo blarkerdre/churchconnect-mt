@@ -101,9 +101,12 @@ export function AuthProvider({ children }) {
     setTenantMemberships([]);
   };
 
-  const resetPassword = async (email) => {
+  const resetPassword = async (email, tenantSlug) => {
+    const redirectTo = tenantSlug
+      ? `${window.location.origin}/t/${tenantSlug}/reset-password`
+      : `${window.location.origin}/reset-password`;
     const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/reset-password`,
+      redirectTo,
     });
     return { data, error };
   };
