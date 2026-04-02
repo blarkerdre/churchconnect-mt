@@ -1,23 +1,31 @@
 
 
-## Fix: Remove Duplicate Church Unit Entries with Wrong Capitalisation
+## Replace Hardcoded Unit Lists with Tenant-Scoped `useChurchUnits` Hook
 
 ### Problem
-Four WCI Cardiff members have duplicate church unit assignments caused by case-inconsistent entries (e.g. `Follow-Up` and `FOLLOW-UP` both assigned). The `church_unit` field stores a comma-separated string, so duplicates with different casing are treated as separate entries.
+Three components still use hardcoded `ALL_UNITS` / `UNITS` arrays instead of pulling from the tenant-scoped `church_units` database table. This means tenants who add or remove units in Settings don't see those changes reflected in unit leader assignments or attendance session forms.
 
 ### Fix
 
-#### 1. Database migration — clean up existing data
-Run an UPDATE to normalise the `church_unit` values for the 3 affected members:
+Replace the hardcoded arrays with the existing `useChurchUnits()` hook in three files:
 
-- **Favour Igbineweka** (`7aeb418e-...`): `Follow-Up, FOLLOW-UP` → `Follow-Up`
-- **Loveth Osho** (`2a93a60a-...`): `Follow-Up, FOLLOW-UP` → `Follow-Up`
-- **Odunsi Temitayo Ezekiel** (`fdbf7c80-...`): deduplicate to `Follow-Up, Deacon's Assembly, Fire Marshals And Warden, Technical & Media`
+#### 1. `src/components/users/UnitLeaderAssignments.jsx`
+- Remove `ALL_UNITS` constant
+- Import and call `useChurchUnits()`
+- Derive unit names from `churchUnits.map(u => u.name)`
 
-#### 2. Code fix — prevent future duplicates
-In `MemberFormDialog.jsx`, when toggling a church unit on/off, use **case-insensitive comparison** so selecting "Follow-Up" when "FOLLOW-UP" already exists replaces it instead of adding a duplicate.
+#### 2. `src/components/users/BulkUnitAssignDialog.jsx`
+- Remove `ALL_UNITS` constant
+- Import and call `useChurchUnits()`
+- Use `churchUnits.map(u => u.name)` in the Select dropdown and assignment logic
+
+#### 3. `src/components/attendance/SessionFormDialog.jsx`
+- Remove `UNITS` constant
+- Import and call `useChurchUnits()`
+- Use `churchUnits.map(u => u.name)` for the unit options (both admin and unit leader paths)
 
 ### Files changed
-- Database migration (3 UPDATE statements)
-- `src/components/members/MemberFormDialog.jsx` — case-insensitive unit toggle logic
+- `src/components/users/UnitLeaderAssignments.jsx`
+- `src/components/users/BulkUnitAssignDialog.jsx`
+- `src/components/attendance/SessionFormDialog.jsx`
 
