@@ -1,47 +1,43 @@
 
 
-## Fix: Auth Emails Not Rendering — Missing Template Render Step
+## Fix: Email Verification Link Debugging and Reliability
 
 ### Problem
 
-Two issues found:
+The signup verification email for `blarkerdre@yahoo.com` was delivered (confirmed `sent` in logs) but clicking the link didn't confirm the email. The user account no longer exists, so we can't retroactively inspect the URL. Two likely causes:
 
-1. **Emails were disabled again** — Re-enabled now. The most recent email-alert failed with "Emails disabled for this project."
+1. **No diagnostic logging** — the `confirmation_url` passed to the template is never logged, making it impossible to debug
+2. **Token expiry** — auth emails go through pgmq async queue; if processing is delayed, the OTP token in the URL may expire (default: 1 hour, auth email TTL: 15 min — so this is unlikely but possible)
 
-2. **Critical bug: `html` and `text` variables never declared** — In `auth-email-hook/index.ts`, the `enqueue_email` call (line 312-313) passes `html` and `text` in the payload, but the email template is never rendered. There is no `renderAsync()` call between resolving the template (line 211) and enqueuing (line 302). This means auth emails are enqueued with `undefined` content.
+### Changes
 
-   Previous signup emails for `blarkerdre@yahoo.com` show as "sent" in the log, but likely arrived empty or were silently dropped by the email provider.
+#### 1. `supabase/functions/auth-email-hook/index.ts` — Add diagnostic logging
 
-### Fix
-
-**`supabase/functions/auth-email-hook/index.ts`** — Add template rendering before the enqueue call.
-
-Insert after line 291 (after `messageId` declaration), before the pending log insert:
+After building `templateProps` (line 299), log the confirmation URL so future issues can be diagnosed:
 
 ```typescript
-// Build template props
-const templateProps: Record<string, any> = {
-  siteName: churchName,
-  siteUrl: tenantSiteUrl,
-  recipient: payload.data.email,
-  confirmationUrl: payload.data.confirmation_url || tenantSiteUrl,
-}
-
-if (emailType === 'email_change') {
-  templateProps.email = payload.data.email
-  templateProps.newEmail = payload.data.new_email
-}
-if (emailType === 'reauthentication') {
-  templateProps.token = payload.data.token
-}
-
-// Render email HTML and plain text
-const html = await renderAsync(React.createElement(EmailTemplate, templateProps))
-const text = html.replace(/<[^>]*>/g, '') // basic HTML-to-text fallback
+console.log('Auth email template props', {
+  run_id,
+  emailType,
+  email: payload.data.email,
+  confirmationUrl: templateProps.confirmationUrl,
+  rawConfirmationUrl: payload.data.confirmation_url,
+  tenantId: resolvedTenantId,
+  churchName,
+})
 ```
 
-Then redeploy `auth-email-hook`.
+#### 2. Redeploy `auth-email-hook`
+
+Deploy the updated function so logs are captured on the next signup.
+
+#### 3. Test with a fresh signup
+
+After deploying, the user should sign up a test account and:
+- Check the edge function logs for the `confirmationUrl` value
+- Click the link and verify it confirms the email
 
 ### Files changed
-- `supabase/functions/auth-email-hook/index.ts` — add missing template rendering before enqueue
+- `supabase/functions/auth-email-hook/index.ts` — add confirmation URL logging
+- Redeploy `auth-email-hook`
 
