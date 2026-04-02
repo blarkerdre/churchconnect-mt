@@ -1,31 +1,33 @@
 
 
-## Replace Hardcoded Unit Lists with Tenant-Scoped `useChurchUnits` Hook
+## Fix: Email Alerts Failing with "No Matching Sender Domain"
 
 ### Problem
-Three components still use hardcoded `ALL_UNITS` / `UNITS` arrays instead of pulling from the tenant-scoped `church_units` database table. This means tenants who add or remove units in Settings don't see those changes reflected in unit leader assignments or attendance session forms.
+
+The `send-email-alert` Edge Function has the wrong `sender_domain`. It uses:
+- `sender_domain = 'app.churchmanagementsuite.org'` (root domain)
+
+But the verified email domain is:
+- `notify.app.churchmanagementsuite.org` (subdomain)
+
+The email API rejects every send with `403 no_matching_sender`, causing all email alerts to DLQ.
 
 ### Fix
 
-Replace the hardcoded arrays with the existing `useChurchUnits()` hook in three files:
+In `supabase/functions/send-email-alert/index.ts`, change line 199:
 
-#### 1. `src/components/users/UnitLeaderAssignments.jsx`
-- Remove `ALL_UNITS` constant
-- Import and call `useChurchUnits()`
-- Derive unit names from `churchUnits.map(u => u.name)`
+```typescript
+// Before
+const senderDomain = 'app.churchmanagementsuite.org'
 
-#### 2. `src/components/users/BulkUnitAssignDialog.jsx`
-- Remove `ALL_UNITS` constant
-- Import and call `useChurchUnits()`
-- Use `churchUnits.map(u => u.name)` in the Select dropdown and assignment logic
+// After
+const senderDomain = 'notify.app.churchmanagementsuite.org'
+```
 
-#### 3. `src/components/attendance/SessionFormDialog.jsx`
-- Remove `UNITS` constant
-- Import and call `useChurchUnits()`
-- Use `churchUnits.map(u => u.name)` for the unit options (both admin and unit leader paths)
+The `fromDomain` on line 200 can stay as `app.churchmanagementsuite.org` — that's the cosmetic "From:" header domain, which is correct.
+
+Then redeploy the `send-email-alert` Edge Function.
 
 ### Files changed
-- `src/components/users/UnitLeaderAssignments.jsx`
-- `src/components/users/BulkUnitAssignDialog.jsx`
-- `src/components/attendance/SessionFormDialog.jsx`
+- `supabase/functions/send-email-alert/index.ts` — fix `senderDomain` to verified subdomain
 
