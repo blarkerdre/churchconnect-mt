@@ -289,6 +289,7 @@ async function handleWebhook(req: Request): Promise<Response> {
   const tenantSiteUrl = tenantSlug
     ? `https://${ROOT_DOMAIN}/t/${tenantSlug}`
     : `https://${ROOT_DOMAIN}`
+  const messageId = crypto.randomUUID()
   // Log pending BEFORE enqueue so we have a record even if enqueue crashes
   await supabase.from('email_send_log').insert({
     message_id: messageId,
