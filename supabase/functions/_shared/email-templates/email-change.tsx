@@ -19,6 +19,7 @@ interface EmailChangeEmailProps {
   email: string
   newEmail: string
   confirmationUrl: string
+  churchName?: string
 }
 
 export const EmailChangeEmail = ({
@@ -26,30 +27,35 @@ export const EmailChangeEmail = ({
   email,
   newEmail,
   confirmationUrl,
-}: EmailChangeEmailProps) => (
-  <Html lang="en" dir="ltr">
-    <Head />
-    <Preview>Confirm your email change for Winners Chapel International Cardiff</Preview>
-    <Body style={main}>
-      <Container style={container}>
-        <Heading style={h1}>Confirm your email change</Heading>
-        <Text style={text}>
-          You requested to change your email address from{' '}
-          <Link href={`mailto:${email}`} style={link}>{email}</Link>{' '}
-          to{' '}
-          <Link href={`mailto:${newEmail}`} style={link}>{newEmail}</Link>.
-        </Text>
-        <Text style={text}>Click the button below to confirm this change:</Text>
-        <Button style={button} href={confirmationUrl}>
-          Confirm Email Change
-        </Button>
-        <Text style={footer}>
-          If you didn't request this change, please secure your account immediately.
-        </Text>
-      </Container>
-    </Body>
-  </Html>
-)
+  churchName,
+}: EmailChangeEmailProps) => {
+  const displayName = churchName || siteName || 'Church Connect'
+
+  return (
+    <Html lang="en" dir="ltr">
+      <Head />
+      <Preview>Confirm your email change for {displayName}</Preview>
+      <Body style={main}>
+        <Container style={container}>
+          <Heading style={h1}>Confirm your email change</Heading>
+          <Text style={text}>
+            You requested to change your email address for {displayName} from{' '}
+            <Link href={`mailto:${email}`} style={link}>{email}</Link>{' '}
+            to{' '}
+            <Link href={`mailto:${newEmail}`} style={link}>{newEmail}</Link>.
+          </Text>
+          <Text style={text}>Click the button below to confirm this change:</Text>
+          <Button style={button} href={confirmationUrl}>
+            Confirm Email Change
+          </Button>
+          <Text style={footer}>
+            If you didn't request this change, please secure your account immediately.
+          </Text>
+        </Container>
+      </Body>
+    </Html>
+  )
+}
 
 export default EmailChangeEmail
 
