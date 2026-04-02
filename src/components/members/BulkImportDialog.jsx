@@ -76,7 +76,7 @@ export default function BulkImportDialog({ open, onOpenChange, onComplete }) {
   const [rowErrors, setRowErrors] = useState([]);
   const [results, setResults] = useState({ created: 0, updated: 0, skipped: 0 });
   const fileRef = useRef(null);
-  const { withTenant, scopeQuery } = useTenantQuery();
+  const { tenantId, withTenant, scopeQuery } = useTenantQuery();
 
   const reset = () => {
     setStep("upload");
@@ -144,7 +144,7 @@ export default function BulkImportDialog({ open, onOpenChange, onComplete }) {
       }
 
       for (const { id, ...updateData } of toUpdate) {
-        const { error } = await supabase.from("members").update(updateData).eq("id", id);
+        const { error } = await supabase.from("members").update(updateData).eq("id", id).eq("tenant_id", tenantId);
         if (error) { skipped++; } else { updated++; }
       }
     }

@@ -79,7 +79,8 @@ export default function FollowupDetailPanel({ followup, onClose, onUpdate, curre
       const { error: memberErr } = await supabase
         .from("members")
         .update({ membership_status: "Active" })
-        .eq("id", followup.member_id);
+        .eq("id", followup.member_id)
+        .eq("tenant_id", tenantId);
       if (memberErr) throw memberErr;
 
       await onUpdate(followup.id, {
@@ -356,7 +357,7 @@ export default function FollowupDetailPanel({ followup, onClose, onUpdate, curre
                         variant="ghost"
                         className="h-6 text-xs text-destructive px-2"
                         onClick={async () => {
-                          await supabase.from("followup_scheduled_messages").update({ status: "cancelled", updated_at: new Date().toISOString() }).eq("id", sm.id);
+                          await supabase.from("followup_scheduled_messages").update({ status: "cancelled", updated_at: new Date().toISOString() }).eq("id", sm.id).eq("tenant_id", tenantId);
                           queryClient.invalidateQueries({ queryKey: ["followup-messages", followup.id] });
                           toast({ title: "Message cancelled" });
                         }}
