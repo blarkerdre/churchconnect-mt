@@ -307,7 +307,6 @@ async function handleWebhook(req: Request): Promise<Response> {
     tenantId: resolvedTenantId,
     churchName,
   })
-  }
 
   if (emailType === 'email_change') {
     templateProps.email = payload.data.email
