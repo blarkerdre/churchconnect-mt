@@ -1,33 +1,41 @@
 
 
-## Fix: Email Alerts Failing with "No Matching Sender Domain"
+## Tenant-Scoping Audit: Follow-ups, Email Alerts, and Components
 
-### Problem
+### Summary
 
-The `send-email-alert` Edge Function has the wrong `sender_domain`. It uses:
-- `sender_domain = 'app.churchmanagementsuite.org'` (root domain)
+After auditing the codebase, the follow-up automation trigger (`auto_create_followup`), follow-up edge functions, and email alert system are **already well tenant-scoped**. However, there are a few specific gaps that need fixing.
 
-But the verified email domain is:
-- `notify.app.churchmanagementsuite.org` (subdomain)
+### Gaps Found
 
-The email API rejects every send with `403 no_matching_sender`, causing all email alerts to DLQ.
+#### 1. `FollowupDetailPanel.jsx` — "Convert to Active" missing tenant scope
+Line 82: `supabase.from("members").update(...).eq("id", followup.member_id)` — missing `.eq("tenant_id", tenantId)`. This could theoretically update a member in another tenant.
 
-### Fix
+#### 2. `FollowupDetailPanel.jsx` — Cancel message missing tenant scope
+Line 359: `supabase.from("followup_scheduled_messages").update(...).eq("id", sm.id)` — missing `.eq("tenant_id", tenantId)` guard.
 
-In `supabase/functions/send-email-alert/index.ts`, change line 199:
+#### 3. `BulkImportDialog.jsx` — Bulk update missing tenant scope
+Line 147: `supabase.from("members").update(updateData).eq("id", id)` — missing `.eq("tenant_id", tenantId)`. Inserts use `withTenant()` correctly, but updates don't scope by tenant.
 
-```typescript
-// Before
-const senderDomain = 'app.churchmanagementsuite.org'
+### What's Already Correct
 
-// After
-const senderDomain = 'notify.app.churchmanagementsuite.org'
-```
+- **`auto_create_followup` trigger**: Fully tenant-scoped — propagates `NEW.tenant_id` to followups, scheduled messages, notifications, and edge function calls. Unit pool queries filter by `NEW.tenant_id`.
+- **`send-email-alert` edge function**: Already requires `tenant_id`, validates caller belongs to tenant, and filters members by `tenant_id`.
+- **`process-scheduled-followups` edge function**: Already resolves tenant name per message for branding.
+- **`notify-followup-assignment` edge function**: Already receives and uses `tenant_id` for branding, email, and SMS.
+- **Followups page**: All queries use `scopeQuery()` and mutations use `withTenant()` / `.eq("tenant_id", tenantId)`.
+- **FollowupMessageDialog**: Uses `withTenant()` for inserts and `.eq("tenant_id", tenantId)` for updates.
 
-The `fromDomain` on line 200 can stay as `app.churchmanagementsuite.org` — that's the cosmetic "From:" header domain, which is correct.
+### Fix Plan
 
-Then redeploy the `send-email-alert` Edge Function.
+#### File 1: `src/components/followups/FollowupDetailPanel.jsx`
+- Line 82: Add `.eq("tenant_id", tenantId)` to the member status update
+- Line 359: Add `.eq("tenant_id", tenantId)` to the scheduled message cancellation
+
+#### File 2: `src/components/members/BulkImportDialog.jsx`
+- Line 147: Add `.eq("tenant_id", tenantId)` to the member update in bulk import
 
 ### Files changed
-- `supabase/functions/send-email-alert/index.ts` — fix `senderDomain` to verified subdomain
+- `src/components/followups/FollowupDetailPanel.jsx` — add tenant scoping to 2 queries
+- `src/components/members/BulkImportDialog.jsx` — add tenant scoping to bulk update
 
