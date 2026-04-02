@@ -1,33 +1,23 @@
 
 
-## Fix: auth-email-hook `resolvedTenantId` Reference Error
+## Route /auth Signups to "Demo Church (TEST)" Tenant
 
 ### Problem
+Currently, signups from the generic `/auth` page fall back to `DEFAULT_TENANT_ID` which points to "Winners Chapel International, Cardiff" (`95e53cc3-...`). The user wants these to land in "Demo Church (TEST)" (`d8bbbdae-d9b3-4999-912d-3aa5999884b0`, slug `demo-test`).
 
-The `auth-email-hook/index.ts` has a variable ordering bug:
-- Line 223: `if (resolvedTenantId)` — first usage
-- Line 260: `const supabase = createClient(...)` — client created
-- Line 268: `let resolvedTenantId: string | null = null` — declaration
+### Changes
 
-`resolvedTenantId` and the `supabase` client are used before they're declared. This causes a `ReferenceError` on every signup, preventing confirmation emails from being sent.
+#### 1. `src/contexts/TenantContext.jsx` — Update DEFAULT_TENANT_ID
+Change the constant from `95e53cc3-4569-4dd3-a4ad-3489593dce81` to `d8bbbdae-d9b3-4999-912d-3aa5999884b0`.
 
-### Fix
+#### 2. Database migration — Update `handle_new_user()` trigger
+The trigger hardcodes the fallback tenant ID. Update it from `95e53cc3-...` to `d8bbbdae-d9b3-4999-912d-3aa5999884b0`.
 
-Reorder the code in `supabase/functions/auth-email-hook/index.ts` so that:
-1. The `supabase` client is created **immediately after** determining `emailType` (after line 218)
-2. The `resolvedTenantId` resolution block (lines 268-311) is moved **before** the tenant name/slug lookup (line 220)
-3. Remove the duplicate `supabase` creation on lines 260-263
-
-The resulting order will be:
-1. Determine `emailType` and `EmailTemplate`
-2. Create `supabase` client
-3. Resolve `resolvedTenantId` from memberships/metadata
-4. Resolve `tenantName` and `tenantSlug` using `resolvedTenantId`
-5. Build template props and render
-6. Generate `messageId`, log, and enqueue
-
-After fixing, redeploy the `auth-email-hook` edge function.
+#### 3. `supabase/functions/public-register/index.ts` — Update DEFAULT_TENANT_ID
+Change the hardcoded fallback from `95e53cc3-...` to `d8bbbdae-d9b3-4999-912d-3aa5999884b0`.
 
 ### Files changed
-- `supabase/functions/auth-email-hook/index.ts` — reorder variable declarations and supabase client creation
+- `src/contexts/TenantContext.jsx`
+- `supabase/functions/public-register/index.ts`
+- Database migration (update `handle_new_user()` fallback)
 
