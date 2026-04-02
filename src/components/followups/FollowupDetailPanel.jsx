@@ -336,7 +336,7 @@ export default function FollowupDetailPanel({ followup, onClose, onUpdate, curre
               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Messages</p>
               <div className="space-y-2">
                 {scheduledMessages.map(sm => (
-                  <div key={sm.id} className="bg-muted/50 rounded-lg p-2.5 space-y-1">
+                  <div key={sm.id} className="bg-muted/50 rounded-lg p-2.5 space-y-1 cursor-pointer hover:bg-muted/80 transition-colors" onClick={() => setSelectedMessage(sm)}>
                     <div className="flex items-center gap-1.5 flex-wrap">
                       {sm.channel === "email" ? <Mail className="h-3 w-3 text-muted-foreground" /> : <MessageSquare className="h-3 w-3 text-muted-foreground" />}
                       <Badge variant="secondary" className="text-[10px]">{sm.channel.toUpperCase()}</Badge>
@@ -353,20 +353,6 @@ export default function FollowupDetailPanel({ followup, onClose, onUpdate, curre
                       )}
                     </div>
                     <p className="text-xs text-foreground/80 line-clamp-2">{sm.message}</p>
-                    {sm.status === "scheduled" && (
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="h-6 text-xs text-destructive px-2"
-                        onClick={async () => {
-                          await supabase.from("followup_scheduled_messages").update({ status: "cancelled", updated_at: new Date().toISOString() }).eq("id", sm.id).eq("tenant_id", tenantId);
-                          queryClient.invalidateQueries({ queryKey: ["followup-messages", followup.id] });
-                          toast({ title: "Message cancelled" });
-                        }}
-                      >
-                        Cancel
-                      </Button>
-                    )}
                   </div>
                 ))}
               </div>
