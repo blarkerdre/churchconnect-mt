@@ -1,27 +1,28 @@
 
 
-## View Full Follow-up SMS and Email Messages
+## Add Event Detail Dialog on Events Page
 
 ### Problem
-In the follow-up detail panel, scheduled messages are truncated to 2 lines (`line-clamp-2` on line 353). Users cannot read the full SMS or email content that was sent or scheduled.
+Event cards on the Events page show truncated descriptions (`line-clamp-2` in EventCard, no description shown at all in the inline Events.jsx list). Clicking an event has no detail view — users can't see the full description, mode, audience, capacity, or registration info.
 
 ### Solution
-Add a detail dialog that opens when a user clicks on a message in the Messages section. The dialog shows the full, untruncated message along with all metadata.
+Add a detail dialog in `src/pages/Events.jsx`. Clicking the event card body (title or content area) opens a Dialog showing all event details.
 
-### Changes to `src/components/followups/FollowupDetailPanel.jsx`
+### Changes to `src/pages/Events.jsx`
 
-1. Import `Dialog, DialogContent, DialogHeader, DialogTitle` from UI components
-2. Add `selectedMessage` state
-3. Make each message card clickable — clicking sets `selectedMessage` and opens the dialog
-4. The dialog displays:
-   - Channel badge (EMAIL/SMS) and status badge
-   - Recipient (email or phone)
-   - Subject line (for email messages)
-   - Full message body (`whitespace-pre-wrap`, no truncation)
-   - Scheduled/sent timestamp
-   - Error details if status is `failed`
-   - Cancel button if status is `scheduled`
+1. Add `selectedEvent` state
+2. Make the card content area clickable (`cursor-pointer`, `onClick` sets `selectedEvent`)
+3. Use `e.stopPropagation()` on action buttons (Edit, Delete, SMS) to prevent dialog from opening
+4. Render a Dialog at the bottom showing:
+   - Title, category badge, status badge, mode badge, recurring badge, audience badge
+   - Full description (`whitespace-pre-wrap`, no truncation)
+   - Date and end date
+   - Start/end time
+   - Location
+   - Event mode (In Person / Online / Hybrid)
+   - Registration info (count, capacity)
+   - Audience
 
 ### Files changed
-- `src/components/followups/FollowupDetailPanel.jsx` — add message detail dialog
+- `src/pages/Events.jsx` — add `selectedEvent` state, clickable cards, and event detail dialog
 
