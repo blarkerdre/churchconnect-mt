@@ -1,42 +1,26 @@
 
 
-## Fix: Email Verification Link Missing from Auth Emails
+## Verification Emails Are Already Tenant-Scoped
 
-### Problem
+After reviewing the full flow, the auth email system is already tenant-aware:
 
-Edge function logs confirm the root cause:
+### What's already in place
 
-```
-confirmationUrl: "https://app.churchmanagementsuite.org/t/demo-test"
-rawConfirmationUrl: undefined
-```
+1. **Signup** (`useAuth.jsx` line 75-86): Passes `tenant_slug` in user metadata and sets `emailRedirectTo` to `/t/${tenantSlug}` — so the verification link redirects users to their correct tenant after confirming.
 
-The `confirmation_url` field in `payload.data.confirmation_url` is `undefined` — it doesn't exist in the Lovable email webhook payload. The template falls back to the bare site URL, which has no verification token. Clicking it just loads the homepage without confirming the email.
+2. **Auth-email-hook** (`index.ts` lines 211-226): Resolves the tenant from `tenant_memberships` or `user_meta_data.tenant_slug`, then:
+   - Sets `from` to `"Church Name" <noreply@...>` using the resolved tenant name
+   - Sets `siteUrl` to `https://app.churchmanagementsuite.org/t/{slug}`
+   - Uses `payload.data.url` (Supabase's token-bearing verification URL) as the `confirmationUrl`
+   - Logs `tenant_id` in `email_send_log`
 
-The current `auth-email-hook` was manually modified over multiple iterations and is now out of sync with the expected webhook payload structure from `@lovable.dev/email-js` and `@lovable.dev/webhooks-js`.
+3. **Password reset** (`useAuth.jsx` line 104-111): Also includes `/t/${tenantSlug}/reset-password` in the redirect URL.
 
-### Fix: Re-scaffold the auth-email-hook
+4. **Email templates** (`signup.tsx`, etc.): Display `churchName` in headings, preview text, and body.
 
-The safest fix is to re-scaffold the `auth-email-hook` using the scaffolding tool, which generates code that correctly maps the webhook payload fields (including the confirmation URL). After re-scaffolding:
+### No changes needed
 
-1. **Re-apply tenant-scoped customizations** — The scaffolded hook uses a generic site name. We need to re-add:
-   - Tenant resolution logic (lookup tenant from user's membership/metadata)
-   - Dynamic `churchName` and tenant-scoped URLs in template props
-   - The diagnostic logging we added previously
+The verification email confirmation URL, branding, sender name, and post-verification redirect are all already scoped to the user's tenant. The previous fix (ensuring `payload.data.url` is used correctly) resolved the broken link issue.
 
-2. **Re-apply brand styling** to the email templates to match the existing look (navy `#1a2d4d` primary, cream `#faf8f5` background, Playfair Display headings).
-
-3. **Redeploy** the edge function.
-
-### Steps
-
-1. Call `scaffold_auth_email_templates` (with overwrite) to get a fresh hook with correct payload mapping
-2. Read the re-scaffolded `index.ts` to understand the correct payload field names
-3. Re-add tenant resolution and scoped branding on top of the scaffolded code
-4. Re-apply existing brand styles to templates
-5. Deploy `auth-email-hook`
-
-### Files changed
-- `supabase/functions/auth-email-hook/index.ts` — re-scaffold + re-add tenant customizations
-- `supabase/functions/_shared/email-templates/*.tsx` — re-apply brand styling
+If you're seeing a specific problem — like emails showing the wrong church name or redirecting to the wrong tenant — please share the details so I can target the exact issue.
 
