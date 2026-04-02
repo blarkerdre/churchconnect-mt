@@ -1,62 +1,43 @@
 
-## Fix notification View still redirecting to /auth
 
-### Root cause
-This is no longer just a `tenantSlug` issue.
+## Fix: Follow-up Unit Members Seeing "Unknown" for Assigned Names
 
-From the current code and network snapshot:
+### Root Cause
 
-1. `NotificationBell.jsx` fetches notifications by `user_id` only, not by the active `tenant_id`.
-2. Your current tenant is `demo-test`, but the loaded notification belongs to a different church:
-   - active tenant: `d8bbbdae...` / slug `demo-test`
-   - notification tenant: `95e53cc3...`
-3. When you click **View**, the app builds a URL inside the current tenant, but the target record belongs to another tenant. That destination is then blocked by tenant-aware access checks and you end up on an auth/redirect path.
-4. There is also a route bug: announcement notifications map to `/dashboard`, but this app’s actual dashboard route is `/`.
+Loveth and Favour have the `member` role (not `unit_leader`). They can see followups assigned to them via the RLS policy `auth.uid() = assigned_to`, but the **joined member data** (`members(first_name, last_name, ...)`) returns `null` because the `members` table RLS only allows SELECT for admins, unit leaders, or the member viewing their own record.
 
-### What to change
+Since Loveth can't SELECT Shola Phillips' member row, the join returns `null` → "Unknown".
 
-#### 1. Scope notifications to the active tenant
-Update `src/components/notifications/NotificationBell.jsx` so the query only loads notifications for:
-- `user_id = current user`
-- `tenant_id = current tenant`
+### Solution
 
-Also update:
-- realtime subscription filter
-- mark-as-read
-- mark-all-read
-- delete mutation
+Add an RLS policy on the `members` table that allows a follow-up assignee to read the member record linked to their assigned followup. This uses a subquery: "allow SELECT on members where there exists a followup assigned to the current user referencing this member_id."
 
-Each should include `tenant_id` so the bell only works within the active church context.
+### Changes
 
-#### 2. Fix the announcement route
-Change:
-- `announcement: "/dashboard"`
-to:
-- `announcement: "/"`
+#### 1. Database migration — new RLS policy on `members`
 
-That matches the actual router in `src/App.jsx`.
+```sql
+CREATE POLICY "Assigned followup users can view followup member"
+ON public.members
+FOR SELECT
+TO authenticated
+USING (
+  EXISTS (
+    SELECT 1 FROM public.followups f
+    WHERE f.member_id = members.id
+      AND f.assigned_to = auth.uid()
+      AND f.tenant_id = members.tenant_id
+  )
+  AND user_has_tenant_access(tenant_id)
+);
+```
 
-#### 3. Add a tenant guard before navigation
-In `handleNavigate`, if `selected.tenant_id !== tenantId`, do not navigate.
-Instead, show a clear message or disable the button for cross-tenant notifications.
+This lets any user who is `assigned_to` a followup see the member record that followup references — scoped to the same tenant.
 
-This prevents future wrong-tenant redirects even if old notifications still exist.
+### No code changes needed
 
-#### 4. Optional cleanup for old mixed notifications
-If users already have legacy cross-tenant notifications in the table, the UI should either:
-- hide them automatically because of tenant filtering, or
-- show them without a View button if they somehow still appear.
+The query in `Followups.jsx` already joins `members(first_name, last_name, email, phone, membership_status)`. Once RLS permits the SELECT, the join will return the member data and "Unknown" will be replaced with the actual name.
 
-### Files to update
-- `src/components/notifications/NotificationBell.jsx`
+### Files changed
+- Database migration — add RLS policy on `members` table
 
-### Expected result
-After this fix:
-- each church only sees its own notifications
-- announcement notifications open the correct dashboard route
-- View will no longer send users to `/auth` because of wrong-tenant notification records
-
-### Technical notes
-- Current bug is caused by missing tenant scoping, not hosting or SPA routing.
-- The network snapshot confirms a mismatch: notification tenant_id differs from the active tenant.
-- This aligns with the project’s tenant-isolation rule: all reads/writes must include `tenant_id`.
