@@ -12,6 +12,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { formatDistanceToNow, format } from "date-fns";
+import { toast } from "sonner";
 
 const typeIcons = {
   pastoral_care: Heart,
@@ -32,7 +33,7 @@ const typeLabels = {
 
 const referenceRoutes = {
   event: "/events",
-  announcement: "/dashboard",
+  announcement: "/",
   followup: "/followups",
   pastoral_care: "/pastoral-care",
   transport: "/transportation",
@@ -55,17 +56,18 @@ export default function NotificationBell() {
         .from("notifications")
         .select("*")
         .eq("user_id", user.id)
+        .eq("tenant_id", tenantId)
         .order("created_at", { ascending: false })
         .limit(50);
       if (error) throw error;
       return data;
     },
-    enabled: !!user?.id,
+    enabled: !!user?.id && !!tenantId,
     refetchInterval: 30000,
   });
 
   useEffect(() => {
-    if (!user?.id) return;
+    if (!user?.id || !tenantId) return;
     const channel = supabase
       .channel("my-notifications")
       .on("postgres_changes", {
@@ -73,34 +75,36 @@ export default function NotificationBell() {
         schema: "public",
         table: "notifications",
         filter: `user_id=eq.${user.id}`,
-      }, () => {
-        queryClient.invalidateQueries({ queryKey: ["notifications", user.id] });
+      }, (payload) => {
+        if (payload.new?.tenant_id === tenantId) {
+          queryClient.invalidateQueries({ queryKey: ["notifications", user.id, tenantId] });
+        }
       })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, [user?.id, queryClient]);
+  }, [user?.id, tenantId, queryClient]);
 
   const unreadCount = notifications.filter(n => !n.is_read).length;
 
   const markRead = useMutation({
     mutationFn: async (id) => {
-      await supabase.from("notifications").update({ is_read: true }).eq("id", id);
+      await supabase.from("notifications").update({ is_read: true }).eq("id", id).eq("tenant_id", tenantId);
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["notifications"] }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["notifications", user?.id, tenantId] }),
   });
 
   const markAllRead = useMutation({
     mutationFn: async () => {
-      await supabase.from("notifications").update({ is_read: true }).eq("user_id", user.id).eq("is_read", false);
+      await supabase.from("notifications").update({ is_read: true }).eq("user_id", user.id).eq("tenant_id", tenantId).eq("is_read", false);
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["notifications"] }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["notifications", user?.id, tenantId] }),
   });
 
   const deleteNotif = useMutation({
     mutationFn: async (id) => {
-      await supabase.from("notifications").delete().eq("id", id);
+      await supabase.from("notifications").delete().eq("id", id).eq("tenant_id", tenantId);
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["notifications"] }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["notifications", user?.id, tenantId] }),
   });
 
   const handleNotificationClick = (n) => {
@@ -109,7 +113,12 @@ export default function NotificationBell() {
   };
 
   const handleNavigate = () => {
-    const refType = selected?.reference_type || selected?.type;
+    if (!selected) return;
+    if (selected.tenant_id && selected.tenant_id !== tenantId) {
+      toast.error("This notification belongs to a different church.");
+      return;
+    }
+    const refType = selected.reference_type || selected.type;
     const route = referenceRoutes[refType];
     if (route) {
       const fullRoute = tenantSlug ? `/t/${tenantSlug}${route}` : route;
@@ -128,7 +137,7 @@ export default function NotificationBell() {
 
   const Icon = selected ? (typeIcons[selected.type] || Info) : Info;
   const refType = selected?.reference_type || selected?.type;
-  const hasRoute = refType && referenceRoutes[refType];
+  const hasRoute = refType && referenceRoutes[refType] && (!selected?.tenant_id || selected.tenant_id === tenantId);
 
   return (
     <>
