@@ -64,7 +64,7 @@ export default function LandingPage() {
       <nav className="sticky top-0 z-50 border-b border-border/40 bg-background/80 backdrop-blur-lg">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6">
           <div className="flex items-center gap-2">
-            <img src="/lovable-uploads/40e09a54-d633-4f1c-bbfc-1ef23b34fa49.png" alt="ChurchConnect logo" className="h-8 w-8 rounded" />
+            <img src="/lovable-uploads/church-connect-logo.png" alt="ChurchConnect logo" className="h-8 w-8 rounded" />
             <span className="font-display text-lg font-bold text-primary">ChurchConnect</span>
           </div>
           <div className="hidden items-center gap-6 sm:flex">
