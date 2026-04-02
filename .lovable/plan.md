@@ -1,43 +1,42 @@
 
 
-## Fix: Email Verification Link Debugging and Reliability
+## Fix: Email Verification Link Missing from Auth Emails
 
 ### Problem
 
-The signup verification email for `blarkerdre@yahoo.com` was delivered (confirmed `sent` in logs) but clicking the link didn't confirm the email. The user account no longer exists, so we can't retroactively inspect the URL. Two likely causes:
+Edge function logs confirm the root cause:
 
-1. **No diagnostic logging** — the `confirmation_url` passed to the template is never logged, making it impossible to debug
-2. **Token expiry** — auth emails go through pgmq async queue; if processing is delayed, the OTP token in the URL may expire (default: 1 hour, auth email TTL: 15 min — so this is unlikely but possible)
-
-### Changes
-
-#### 1. `supabase/functions/auth-email-hook/index.ts` — Add diagnostic logging
-
-After building `templateProps` (line 299), log the confirmation URL so future issues can be diagnosed:
-
-```typescript
-console.log('Auth email template props', {
-  run_id,
-  emailType,
-  email: payload.data.email,
-  confirmationUrl: templateProps.confirmationUrl,
-  rawConfirmationUrl: payload.data.confirmation_url,
-  tenantId: resolvedTenantId,
-  churchName,
-})
+```
+confirmationUrl: "https://app.churchmanagementsuite.org/t/demo-test"
+rawConfirmationUrl: undefined
 ```
 
-#### 2. Redeploy `auth-email-hook`
+The `confirmation_url` field in `payload.data.confirmation_url` is `undefined` — it doesn't exist in the Lovable email webhook payload. The template falls back to the bare site URL, which has no verification token. Clicking it just loads the homepage without confirming the email.
 
-Deploy the updated function so logs are captured on the next signup.
+The current `auth-email-hook` was manually modified over multiple iterations and is now out of sync with the expected webhook payload structure from `@lovable.dev/email-js` and `@lovable.dev/webhooks-js`.
 
-#### 3. Test with a fresh signup
+### Fix: Re-scaffold the auth-email-hook
 
-After deploying, the user should sign up a test account and:
-- Check the edge function logs for the `confirmationUrl` value
-- Click the link and verify it confirms the email
+The safest fix is to re-scaffold the `auth-email-hook` using the scaffolding tool, which generates code that correctly maps the webhook payload fields (including the confirmation URL). After re-scaffolding:
+
+1. **Re-apply tenant-scoped customizations** — The scaffolded hook uses a generic site name. We need to re-add:
+   - Tenant resolution logic (lookup tenant from user's membership/metadata)
+   - Dynamic `churchName` and tenant-scoped URLs in template props
+   - The diagnostic logging we added previously
+
+2. **Re-apply brand styling** to the email templates to match the existing look (navy `#1a2d4d` primary, cream `#faf8f5` background, Playfair Display headings).
+
+3. **Redeploy** the edge function.
+
+### Steps
+
+1. Call `scaffold_auth_email_templates` (with overwrite) to get a fresh hook with correct payload mapping
+2. Read the re-scaffolded `index.ts` to understand the correct payload field names
+3. Re-add tenant resolution and scoped branding on top of the scaffolded code
+4. Re-apply existing brand styles to templates
+5. Deploy `auth-email-hook`
 
 ### Files changed
-- `supabase/functions/auth-email-hook/index.ts` — add confirmation URL logging
-- Redeploy `auth-email-hook`
+- `supabase/functions/auth-email-hook/index.ts` — re-scaffold + re-add tenant customizations
+- `supabase/functions/_shared/email-templates/*.tsx` — re-apply brand styling
 
