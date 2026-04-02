@@ -1,32 +1,20 @@
 
 
-## Add Full Notification Detail View
+## Fix: View Button Navigating to /auth
 
-### Problem
-Currently, clicking a notification only marks it as read. The notification's `message` is truncated to 2 lines (`line-clamp-2`), and there's no way to read the full content or navigate to the related item (event, announcement, follow-up, pastoral care request, etc.).
+### Root Cause
 
-### Solution
-Add a detail dialog that opens when a notification is clicked, showing the full message and a "View" button that navigates to the relevant page based on `reference_type`.
+`NotificationBell.jsx` line 43 destructures `tenantSlug` from `useTenantQuery()`, but that hook does not return `tenantSlug`. It's always `undefined`, so `handleNavigate` builds routes like `/events` instead of `/t/demo-test/events`. The router sees no tenant context and redirects to `/auth`.
 
-### Changes
+### Fix
 
-#### 1. `src/components/notifications/NotificationBell.jsx`
-- Add a `NotificationDetailDialog` component using the existing Dialog primitive
-- When a notification row is clicked, open the dialog showing:
-  - Full title and message (no truncation)
-  - Notification type badge and timestamp
-  - "Go to [item]" button that navigates based on `reference_type`:
-    - `event` → `/events`
-    - `announcement` → dashboard (feed)
-    - `followup` → `/followups`
-    - `pastoral_care` → `/pastoral-care`
-    - `transport` → `/transportation`
-    - `meeting` → `/wsf`
-    - Default → close dialog
-  - "Mark as read" + "Delete" actions in the dialog footer
-- Auto-mark the notification as read when the dialog opens
-- Use `useNavigate` from react-router-dom for navigation; close popover + dialog on navigate
+Import `useTenant` from `TenantContext` directly (which does expose `tenantSlug`) instead of trying to get it from `useTenantQuery`.
+
+#### `src/components/notifications/NotificationBell.jsx`
+- Add `import { useTenant } from "@/contexts/TenantContext";`
+- Get `tenantSlug` from `useTenant()` instead of `useTenantQuery()`
+- Keep `useTenantQuery()` for `tenantId` (used in the query key)
 
 ### Files changed
-- `src/components/notifications/NotificationBell.jsx` — add detail dialog with full message view and navigation
+- `src/components/notifications/NotificationBell.jsx` — fix `tenantSlug` source
 
