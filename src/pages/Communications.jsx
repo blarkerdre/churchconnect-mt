@@ -554,21 +554,41 @@ export default function Communications() {
             {announcementsEnabled && (
               <TabsTrigger value="announcements" className="gap-1.5 text-xs">
                 <Megaphone className="h-3.5 w-3.5" /> Announcements
+                {visibleAnnouncements.length > 0 && (
+                  <Badge variant="secondary" className="h-5 min-w-5 px-1 text-[10px] ml-0.5">
+                    {visibleAnnouncements.length}
+                  </Badge>
+                )}
               </TabsTrigger>
             )}
             {emailEnabled && (
               <TabsTrigger value="email" className="gap-1.5 text-xs">
                 <Mail className="h-3.5 w-3.5" /> Email
+                {emailCount > 0 && (
+                  <Badge variant="secondary" className="h-5 min-w-5 px-1 text-[10px] ml-0.5">
+                    {emailCount}
+                  </Badge>
+                )}
               </TabsTrigger>
             )}
             {smsEnabled && (
               <TabsTrigger value="sms" className="gap-1.5 text-xs">
                 <MessageSquare className="h-3.5 w-3.5" /> SMS
+                {smsCount > 0 && (
+                  <Badge variant="secondary" className="h-5 min-w-5 px-1 text-[10px] ml-0.5">
+                    {smsCount}
+                  </Badge>
+                )}
               </TabsTrigger>
             )}
             {whatsappEnabled && (
               <TabsTrigger value="whatsapp" className="gap-1.5 text-xs">
                 <WhatsAppIcon className="h-3.5 w-3.5" /> WhatsApp
+                {whatsappCount > 0 && (
+                  <Badge variant="secondary" className="h-5 min-w-5 px-1 text-[10px] ml-0.5">
+                    {whatsappCount}
+                  </Badge>
+                )}
               </TabsTrigger>
             )}
           </TabsList>
