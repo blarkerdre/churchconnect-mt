@@ -16,62 +16,56 @@ import {
 interface RecoveryEmailProps {
   siteName: string
   confirmationUrl: string
-  churchName?: string
 }
 
 export const RecoveryEmail = ({
   siteName,
   confirmationUrl,
-  churchName,
-}: RecoveryEmailProps) => {
-  const displayName = churchName || siteName || 'Church Connect'
-
-  return (
-    <Html lang="en" dir="ltr">
-      <Head />
-      <Preview>Reset your password for {displayName}</Preview>
-      <Body style={main}>
-        <Container style={container}>
-          <Heading style={h1}>Reset your password</Heading>
-          <Text style={text}>
-            We received a request to reset your password for {displayName}. Click the button below to choose a new password.
-          </Text>
-          <Button style={button} href={confirmationUrl}>
-            Reset Password
-          </Button>
-          <Text style={footer}>
-            If you didn't request a password reset, you can safely ignore this email. Your password will not be changed.
-          </Text>
-        </Container>
-      </Body>
-    </Html>
-  )
-}
+}: RecoveryEmailProps) => (
+  <Html lang="en" dir="ltr">
+    <Head />
+    <Preview>Reset your password for {siteName}</Preview>
+    <Body style={main}>
+      <Container style={container}>
+        <Heading style={h1}>Reset your password</Heading>
+        <Text style={text}>
+          We received a request to reset your password for {siteName}. Click
+          the button below to choose a new password.
+        </Text>
+        <Button style={button} href={confirmationUrl}>
+          Reset Password
+        </Button>
+        <Text style={footer}>
+          If you didn't request a password reset, you can safely ignore this
+          email. Your password will not be changed.
+        </Text>
+      </Container>
+    </Body>
+  </Html>
+)
 
 export default RecoveryEmail
 
-const main = { backgroundColor: '#faf8f5', fontFamily: "'Source Sans 3', Arial, sans-serif" }
-const container = { padding: '30px 25px', maxWidth: '500px', margin: '0 auto' }
+const main = { backgroundColor: '#ffffff', fontFamily: 'Arial, sans-serif' }
+const container = { padding: '20px 25px' }
 const h1 = {
   fontSize: '22px',
   fontWeight: 'bold' as const,
-  color: '#1a2d4d',
+  color: '#000000',
   margin: '0 0 20px',
-  fontFamily: "'Playfair Display', Georgia, serif",
 }
 const text = {
   fontSize: '14px',
-  color: '#64748b',
-  lineHeight: '1.6',
+  color: '#55575d',
+  lineHeight: '1.5',
   margin: '0 0 25px',
 }
 const button = {
-  backgroundColor: '#1a2d4d',
-  color: '#faf8f5',
+  backgroundColor: '#000000',
+  color: '#ffffff',
   fontSize: '14px',
-  borderRadius: '12px',
-  padding: '12px 24px',
+  borderRadius: '8px',
+  padding: '12px 20px',
   textDecoration: 'none',
-  fontWeight: '600' as const,
 }
-const footer = { fontSize: '12px', color: '#94a3b8', margin: '30px 0 0' }
+const footer = { fontSize: '12px', color: '#999999', margin: '30px 0 0' }

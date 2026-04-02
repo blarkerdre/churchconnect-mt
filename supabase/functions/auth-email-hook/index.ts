@@ -36,7 +36,7 @@ const EMAIL_TEMPLATES: Record<string, React.ComponentType<any>> = {
 }
 
 // Configuration
-const SITE_NAME = "mychurchconnect"
+const SITE_NAME = "churchconnect-mt"
 const SENDER_DOMAIN = "notify.app.churchmanagementsuite.org"
 const ROOT_DOMAIN = "app.churchmanagementsuite.org"
 const FROM_DOMAIN = "app.churchmanagementsuite.org" // Domain shown in From address (may be root or sender subdomain)
@@ -46,7 +46,7 @@ const FROM_DOMAIN = "app.churchmanagementsuite.org" // Domain shown in From addr
 // The sample email uses a fixed placeholder (RFC 6761 .test TLD) so the Go backend
 // can always find-and-replace it with the actual recipient when sending test emails,
 // even if the project's domain has changed since the template was scaffolded.
-const SAMPLE_PROJECT_URL = "https://app.churchmanagementsuite.org"
+const SAMPLE_PROJECT_URL = "https://churchconnect-mt.lovable.app"
 const SAMPLE_EMAIL = "user@example.test"
 const SAMPLE_DATA: Record<string, object> = {
   signup: {
@@ -217,117 +217,37 @@ async function handleWebhook(req: Request): Promise<Response> {
     )
   }
 
-  // Create supabase client for tenant resolution and email enqueue
+  // Build template props from payload.data (HookData structure)
+  const templateProps = {
+    siteName: SITE_NAME,
+    siteUrl: `https://${ROOT_DOMAIN}`,
+    recipient: payload.data.email,
+    confirmationUrl: payload.data.url,
+    token: payload.data.token,
+    email: payload.data.email,
+    newEmail: payload.data.new_email,
+  }
+
+  // Render React Email to HTML and plain text
+  const html = await renderAsync(React.createElement(EmailTemplate, templateProps))
+  const text = await renderAsync(React.createElement(EmailTemplate, templateProps), {
+    plainText: true,
+  })
+
+  // Enqueue email for async processing by the dispatcher (process-email-queue).
   const supabase = createClient(
     Deno.env.get('SUPABASE_URL')!,
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
   )
 
-  // Resolve tenant_id from user's tenant membership for log isolation
-  let resolvedTenantId: string | null = null
-  try {
-    // 1. Try tenant_memberships (works for recovery, magic link, etc.)
-    const { data: membership } = await supabase
-      .from('tenant_memberships')
-      .select('tenant_id')
-      .eq('user_id', payload.data.user_id || '')
-      .limit(1)
-      .maybeSingle()
-    if (membership?.tenant_id) resolvedTenantId = membership.tenant_id
-
-    // 2. Fallback: resolve from user_meta_data.tenant_slug (signup case)
-    if (!resolvedTenantId) {
-      const metaSlug = payload.data.user_meta_data?.tenant_slug
-      if (metaSlug) {
-        const { data: tenant } = await supabase
-          .from('tenants')
-          .select('id')
-          .eq('slug', metaSlug)
-          .limit(1)
-          .maybeSingle()
-        if (tenant?.id) resolvedTenantId = tenant.id
-      }
-    }
-
-    // 3. Fallback: resolve via profiles.email → tenant_memberships
-    if (!resolvedTenantId && payload.data.email) {
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('user_id')
-        .ilike('email', payload.data.email)
-        .limit(1)
-        .maybeSingle()
-      if (profile?.user_id) {
-        const { data: mem } = await supabase
-          .from('tenant_memberships')
-          .select('tenant_id')
-          .eq('user_id', profile.user_id)
-          .limit(1)
-          .maybeSingle()
-        if (mem?.tenant_id) resolvedTenantId = mem.tenant_id
-      }
-    }
-  } catch (_) { /* best-effort */ }
-
-  // Resolve tenant name and slug for tenant-scoped emails
-  let tenantName = ''
-  let tenantSlug = ''
-  if (resolvedTenantId) {
-    try {
-      const { data: t } = await supabase
-        .from('tenants')
-        .select('name, slug')
-        .eq('id', resolvedTenantId)
-        .maybeSingle()
-      if (t) {
-        tenantName = t.name || ''
-        tenantSlug = t.slug || ''
-      }
-    } catch (_) { /* best-effort */ }
-  }
-  const churchName = tenantName || 'Church Connect'
-  const tenantSiteUrl = tenantSlug
-    ? `https://${ROOT_DOMAIN}/t/${tenantSlug}`
-    : `https://${ROOT_DOMAIN}`
-  // Build template props
-  const templateProps: Record<string, any> = {
-    siteName: churchName,
-    siteUrl: tenantSiteUrl,
-    recipient: payload.data.email,
-    confirmationUrl: payload.data.confirmation_url || tenantSiteUrl,
-    churchName,
-  }
-
-  console.log('Auth email template props', {
-    run_id,
-    emailType,
-    email: payload.data.email,
-    confirmationUrl: templateProps.confirmationUrl,
-    rawConfirmationUrl: payload.data.confirmation_url,
-    tenantId: resolvedTenantId,
-    churchName,
-  })
-
-  if (emailType === 'email_change') {
-    templateProps.email = payload.data.email
-    templateProps.newEmail = payload.data.new_email
-  }
-  if (emailType === 'reauthentication') {
-    templateProps.token = payload.data.token
-  }
-
-  // Render email HTML and plain text
-  const html = await renderAsync(React.createElement(EmailTemplate, templateProps))
-  const text = html.replace(/<[^>]*>/g, '')
-
   const messageId = crypto.randomUUID()
+
   // Log pending BEFORE enqueue so we have a record even if enqueue crashes
   await supabase.from('email_send_log').insert({
     message_id: messageId,
     template_name: emailType,
     recipient_email: payload.data.email,
     status: 'pending',
-    ...(resolvedTenantId ? { tenant_id: resolvedTenantId } : {}),
   })
 
   const { error: enqueueError } = await supabase.rpc('enqueue_email', {
@@ -335,9 +255,8 @@ async function handleWebhook(req: Request): Promise<Response> {
     payload: {
       run_id,
       message_id: messageId,
-      tenant_id: resolvedTenantId,
       to: payload.data.email,
-      from: `"${churchName.replace(/"/g, '')}" <noreply@${FROM_DOMAIN}>`,
+      from: `${SITE_NAME} <noreply@${FROM_DOMAIN}>`,
       sender_domain: SENDER_DOMAIN,
       subject: EMAIL_SUBJECTS[emailType] || 'Notification',
       html,
@@ -356,7 +275,6 @@ async function handleWebhook(req: Request): Promise<Response> {
       recipient_email: payload.data.email,
       status: 'failed',
       error_message: 'Failed to enqueue email',
-      ...(resolvedTenantId ? { tenant_id: resolvedTenantId } : {}),
     })
     return new Response(JSON.stringify({ error: 'Failed to enqueue email' }), {
       status: 500,
