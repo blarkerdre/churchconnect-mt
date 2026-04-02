@@ -314,6 +314,54 @@ export default function PastoralCare() {
         </DialogContent>
       </Dialog>
 
+      {/* Case Detail Dialog */}
+      <Dialog open={!!detailCase} onOpenChange={(v) => !v && setDetailCase(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="font-display flex items-center gap-2">
+              {detailCase?.subject}
+              {detailCase?.confidential && <Lock className="h-4 w-4 text-destructive" />}
+            </DialogTitle>
+          </DialogHeader>
+          {detailCase && (
+            <div className="space-y-3 text-sm">
+              <div className="flex flex-wrap gap-2">
+                <Badge className={`border-0 ${statusColors[detailCase.status]}`}>{detailCase.status}</Badge>
+                <Badge variant="outline">{detailCase.care_type}</Badge>
+              </div>
+              {detailCase.members && (
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <User className="h-4 w-4" />
+                  <span>{detailCase.members.first_name} {detailCase.members.last_name}</span>
+                </div>
+              )}
+              {detailCase.assigned_to && assigneeMap[detailCase.assigned_to] && (
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <UserCheck className="h-4 w-4" />
+                  <span>Assigned to {assigneeMap[detailCase.assigned_to]}</span>
+                </div>
+              )}
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <CalendarDays className="h-4 w-4" />
+                <span>{new Date(detailCase.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })}</span>
+              </div>
+              {detailCase.description && (
+                <div>
+                  <p className="font-medium text-foreground mb-1">Description</p>
+                  <p className="whitespace-pre-wrap text-muted-foreground">{detailCase.description}</p>
+                </div>
+              )}
+              {detailCase.resolution_notes && (
+                <div>
+                  <p className="font-medium text-foreground mb-1">Resolution Notes</p>
+                  <p className="whitespace-pre-wrap text-muted-foreground">{detailCase.resolution_notes}</p>
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
       {/* Manage Case Dialog */}
       <Dialog open={manageDialogOpen} onOpenChange={setManageDialogOpen}>
         <DialogContent className="max-w-md">

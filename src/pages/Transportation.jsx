@@ -317,7 +317,7 @@ export default function Transportation() {
       ) : (
         <div className="space-y-3">
           {filtered.map(b => (
-            <Card key={b.id} className="border-0 shadow-sm hover:shadow-md transition-shadow">
+            <Card key={b.id} className="border-0 shadow-sm hover:shadow-md transition-shadow cursor-pointer" onClick={() => setDetailBooking(b)}>
               <CardContent className="p-5">
                 <div className="flex items-start gap-4">
                   <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
@@ -341,8 +341,9 @@ export default function Transportation() {
                   </div>
                   {canManage && (
                     <div className="flex items-center gap-1">
-                      <Button variant="outline" size="sm" onClick={() => openManage(b)}>Manage</Button>
-                      <Button variant="ghost" size="icon" onClick={() => {
+                      <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); openManage(b); }}>Manage</Button>
+                      <Button variant="ghost" size="icon" onClick={(e) => {
+                        e.stopPropagation();
                         if (window.confirm("Delete this booking?")) deleteBookingMutation.mutate(b.id);
                       }}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                     </div>
