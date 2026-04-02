@@ -144,7 +144,7 @@ export default function BulkImportDialog({ open, onOpenChange, onComplete }) {
       }
 
       for (const { id, ...updateData } of toUpdate) {
-        const { error } = await supabase.from("members").update(updateData).eq("id", id);
+        const { error } = await supabase.from("members").update(updateData).eq("id", id).eq("tenant_id", tenantId);
         if (error) { skipped++; } else { updated++; }
       }
     }
