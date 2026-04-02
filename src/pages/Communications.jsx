@@ -394,24 +394,20 @@ export default function Communications() {
                 <Megaphone className="h-3.5 w-3.5" /> Announcements
               </TabsTrigger>
             )}
-            {canManageComms && (
-              <>
-                {emailEnabled && (
-                  <TabsTrigger value="email" className="gap-1.5 text-xs">
-                    <Mail className="h-3.5 w-3.5" /> Email
-                  </TabsTrigger>
-                )}
-                {smsEnabled && (
-                  <TabsTrigger value="sms" className="gap-1.5 text-xs">
-                    <MessageSquare className="h-3.5 w-3.5" /> SMS
-                  </TabsTrigger>
-                )}
-                {whatsappEnabled && (
-                  <TabsTrigger value="whatsapp" className="gap-1.5 text-xs">
-                    <WhatsAppIcon className="h-3.5 w-3.5" /> WhatsApp
-                  </TabsTrigger>
-                )}
-              </>
+            {emailEnabled && (
+              <TabsTrigger value="email" className="gap-1.5 text-xs">
+                <Mail className="h-3.5 w-3.5" /> Email
+              </TabsTrigger>
+            )}
+            {smsEnabled && (
+              <TabsTrigger value="sms" className="gap-1.5 text-xs">
+                <MessageSquare className="h-3.5 w-3.5" /> SMS
+              </TabsTrigger>
+            )}
+            {whatsappEnabled && (
+              <TabsTrigger value="whatsapp" className="gap-1.5 text-xs">
+                <WhatsAppIcon className="h-3.5 w-3.5" /> WhatsApp
+              </TabsTrigger>
             )}
           </TabsList>
         </div>
