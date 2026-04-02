@@ -47,6 +47,7 @@ export default function Transportation() {
   const [form, setForm] = useState({ pickup_address: "", destination: "Church", request_date: "", pickup_time: "", notes: "", passengers: 1 });
   const [manageForm, setManageForm] = useState({ status: "", assigned_driver: "", driver_phone: "", assigned_to: "" });
   const [locationForm, setLocationForm] = useState({ name: "", address: "", notes: "" });
+  const [detailBooking, setDetailBooking] = useState(null);
 
   const { data: bookings = [], isLoading } = useQuery({
     queryKey: ["transportation", tenantId],
@@ -316,7 +317,7 @@ export default function Transportation() {
       ) : (
         <div className="space-y-3">
           {filtered.map(b => (
-            <Card key={b.id} className="border-0 shadow-sm hover:shadow-md transition-shadow">
+            <Card key={b.id} className="border-0 shadow-sm hover:shadow-md transition-shadow cursor-pointer" onClick={() => setDetailBooking(b)}>
               <CardContent className="p-5">
                 <div className="flex items-start gap-4">
                   <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
@@ -340,8 +341,9 @@ export default function Transportation() {
                   </div>
                   {canManage && (
                     <div className="flex items-center gap-1">
-                      <Button variant="outline" size="sm" onClick={() => openManage(b)}>Manage</Button>
-                      <Button variant="ghost" size="icon" onClick={() => {
+                      <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); openManage(b); }}>Manage</Button>
+                      <Button variant="ghost" size="icon" onClick={(e) => {
+                        e.stopPropagation();
                         if (window.confirm("Delete this booking?")) deleteBookingMutation.mutate(b.id);
                       }}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                     </div>
@@ -352,6 +354,52 @@ export default function Transportation() {
           ))}
         </div>
       )}
+
+      {/* Booking Detail Dialog */}
+      <Dialog open={!!detailBooking} onOpenChange={(v) => !v && setDetailBooking(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="font-display">
+              {detailBooking?.members ? `${detailBooking.members.first_name} ${detailBooking.members.last_name}` : "Booking Details"}
+            </DialogTitle>
+          </DialogHeader>
+          {detailBooking && (
+            <div className="space-y-3 text-sm">
+              <Badge className={`border-0 ${statusColors[detailBooking.status] || ""}`}>{detailBooking.status}</Badge>
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <MapPin className="h-4 w-4" />
+                <span>{detailBooking.pickup_address} → {detailBooking.destination || "Church"}</span>
+              </div>
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <Clock className="h-4 w-4" />
+                <span>{detailBooking.request_date}{detailBooking.pickup_time ? ` · ${detailBooking.pickup_time}` : ""}</span>
+              </div>
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <User className="h-4 w-4" />
+                <span>{detailBooking.passengers || 1} passenger{(detailBooking.passengers || 1) > 1 ? "s" : ""}</span>
+              </div>
+              {detailBooking.assigned_to && assigneeMap[detailBooking.assigned_to] && (
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <UserCheck className="h-4 w-4" />
+                  <span>Assigned to {assigneeMap[detailBooking.assigned_to]}</span>
+                </div>
+              )}
+              {detailBooking.assigned_driver && (
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <Car className="h-4 w-4" />
+                  <span>Driver: {detailBooking.assigned_driver}{detailBooking.driver_phone ? ` · ${detailBooking.driver_phone}` : ""}</span>
+                </div>
+              )}
+              {detailBooking.notes && (
+                <div>
+                  <p className="font-medium text-foreground mb-1">Notes</p>
+                  <p className="whitespace-pre-wrap text-muted-foreground">{detailBooking.notes}</p>
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Book Transport Dialog */}
       <Dialog open={bookDialogOpen} onOpenChange={setBookDialogOpen}>

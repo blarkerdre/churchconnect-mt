@@ -45,6 +45,7 @@ export default function PastoralCare() {
   const [selectedCase, setSelectedCase] = useState(null);
   const [form, setForm] = useState({ subject: "", care_type: "Prayer Request", description: "", confidential: false });
   const [statusUpdate, setStatusUpdate] = useState({ status: "", resolution_notes: "", assigned_to: "" });
+  const [detailCase, setDetailCase] = useState(null);
 
   const { data: cases = [], isLoading } = useQuery({
     queryKey: ["pastoral-care", tenantId],
@@ -254,7 +255,7 @@ export default function PastoralCare() {
       ) : (
         <div className="space-y-3">
           {filtered.map(r => (
-            <Card key={r.id} className="border-0 shadow-sm hover:shadow-md transition-shadow">
+            <Card key={r.id} className="border-0 shadow-sm hover:shadow-md transition-shadow cursor-pointer" onClick={() => setDetailCase(r)}>
               <CardContent className="p-5">
                 <div className="flex items-start gap-4">
                   <div className="h-10 w-10 rounded-xl bg-chart-5/10 flex items-center justify-center shrink-0">
@@ -276,7 +277,7 @@ export default function PastoralCare() {
                     </div>
                   </div>
                   {canManage && canAssignCases && (r.status === "Open" || r.status === "In Progress") && (
-                    <Button variant="outline" size="sm" onClick={() => openManage(r)}>Manage</Button>
+                    <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); openManage(r); }}>Manage</Button>
                   )}
                 </div>
               </CardContent>
@@ -310,6 +311,54 @@ export default function PastoralCare() {
               Submit Request
             </Button>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Case Detail Dialog */}
+      <Dialog open={!!detailCase} onOpenChange={(v) => !v && setDetailCase(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="font-display flex items-center gap-2">
+              {detailCase?.subject}
+              {detailCase?.confidential && <Lock className="h-4 w-4 text-destructive" />}
+            </DialogTitle>
+          </DialogHeader>
+          {detailCase && (
+            <div className="space-y-3 text-sm">
+              <div className="flex flex-wrap gap-2">
+                <Badge className={`border-0 ${statusColors[detailCase.status]}`}>{detailCase.status}</Badge>
+                <Badge variant="outline">{detailCase.care_type}</Badge>
+              </div>
+              {detailCase.members && (
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <User className="h-4 w-4" />
+                  <span>{detailCase.members.first_name} {detailCase.members.last_name}</span>
+                </div>
+              )}
+              {detailCase.assigned_to && assigneeMap[detailCase.assigned_to] && (
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <UserCheck className="h-4 w-4" />
+                  <span>Assigned to {assigneeMap[detailCase.assigned_to]}</span>
+                </div>
+              )}
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <CalendarDays className="h-4 w-4" />
+                <span>{new Date(detailCase.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })}</span>
+              </div>
+              {detailCase.description && (
+                <div>
+                  <p className="font-medium text-foreground mb-1">Description</p>
+                  <p className="whitespace-pre-wrap text-muted-foreground">{detailCase.description}</p>
+                </div>
+              )}
+              {detailCase.resolution_notes && (
+                <div>
+                  <p className="font-medium text-foreground mb-1">Resolution Notes</p>
+                  <p className="whitespace-pre-wrap text-muted-foreground">{detailCase.resolution_notes}</p>
+                </div>
+              )}
+            </div>
+          )}
         </DialogContent>
       </Dialog>
 
