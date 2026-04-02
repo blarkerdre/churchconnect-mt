@@ -14,9 +14,10 @@ import {
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "@/components/ui/use-toast";
 
-function AnnouncementItem({ a, onRead, user, tenantId, withTenant }) {
+function AnnouncementItem({ a, onRead, onOpen, user, tenantId, withTenant }) {
   const [expanded, setExpanded] = useState(false);
   const queryClient = useQueryClient();
 
@@ -66,7 +67,7 @@ function AnnouncementItem({ a, onRead, user, tenantId, withTenant }) {
         <Bell className="h-3.5 w-3.5 mt-0.5 shrink-0 text-muted-foreground" />
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-2">
-            <p className="text-sm font-semibold text-foreground leading-tight">{a.title}</p>
+            <p className="text-sm font-semibold text-foreground leading-tight cursor-pointer hover:underline" onClick={() => { onRead(a.id); onOpen(a); }}>{a.title}</p>
             <button onClick={handleExpand} className="shrink-0 text-muted-foreground hover:text-foreground">
               {expanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
             </button>
@@ -98,7 +99,7 @@ function AnnouncementItem({ a, onRead, user, tenantId, withTenant }) {
   );
 }
 
-function EventItem({ event, member, onRead, user, tenantId, withTenant }) {
+function EventItem({ event, member, onRead, onOpen, user, tenantId, withTenant }) {
   const queryClient = useQueryClient();
   const [expanded, setExpanded] = useState(false);
 
@@ -190,7 +191,7 @@ function EventItem({ event, member, onRead, user, tenantId, withTenant }) {
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-2">
-            <p className="text-sm font-semibold text-foreground truncate">{event.title}</p>
+            <p className="text-sm font-semibold text-foreground truncate cursor-pointer hover:underline" onClick={() => { onRead(event.id); onOpen(event); }}>{event.title}</p>
             <button onClick={handleExpand} className="shrink-0 text-muted-foreground hover:text-foreground p-0.5">
               {expanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
             </button>
@@ -264,6 +265,8 @@ export default function MemberFeed({ member }) {
   const [readIds, setReadIds] = useState(new Set());
   const [readEventIds, setReadEventIds] = useState(new Set());
   const [refreshing, setRefreshing] = useState(false);
+  const [selectedAnnouncement, setSelectedAnnouncement] = useState(null);
+  const [selectedEvent, setSelectedEvent] = useState(null);
 
   const handleReadAnnouncement = useCallback((id) => {
     setReadIds(prev => {
@@ -393,6 +396,7 @@ export default function MemberFeed({ member }) {
                     key={a.id}
                     a={a}
                     onRead={handleReadAnnouncement}
+                    onOpen={setSelectedAnnouncement}
                     user={user}
                     tenantId={tenantId}
                     withTenant={withTenant}
@@ -415,6 +419,7 @@ export default function MemberFeed({ member }) {
                     event={e}
                     member={member}
                     onRead={handleReadEvent}
+                    onOpen={setSelectedEvent}
                     user={user}
                     tenantId={tenantId}
                     withTenant={withTenant}
@@ -424,6 +429,68 @@ export default function MemberFeed({ member }) {
             )}
           </TabsContent>
         </Tabs>
+
+        {/* Announcement Detail Dialog */}
+        <Dialog open={!!selectedAnnouncement} onOpenChange={(open) => !open && setSelectedAnnouncement(null)}>
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle className="text-base">{selectedAnnouncement?.title}</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 flex-wrap">
+                {selectedAnnouncement?.target_audience && (
+                  <Badge variant="outline" className="text-xs">{selectedAnnouncement.target_audience}</Badge>
+                )}
+                {selectedAnnouncement?.publish_date && (
+                  <span className="text-xs text-muted-foreground">{format(new Date(selectedAnnouncement.publish_date), "d MMM yyyy")}</span>
+                )}
+              </div>
+              <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">{selectedAnnouncement?.content}</p>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Event Detail Dialog */}
+        <Dialog open={!!selectedEvent} onOpenChange={(open) => !open && setSelectedEvent(null)}>
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle className="text-base">{selectedEvent?.title}</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-3">
+              <div className="flex items-center gap-3 flex-wrap text-xs text-muted-foreground">
+                {selectedEvent?.event_date && (
+                  <span className="flex items-center gap-1">
+                    <CalendarDays className="h-3.5 w-3.5" />
+                    {format(parseISO(selectedEvent.event_date), "EEEE, d MMMM yyyy")}
+                  </span>
+                )}
+                {selectedEvent?.start_time && (
+                  <span className="flex items-center gap-1"><Clock className="h-3.5 w-3.5" /> {selectedEvent.start_time}{selectedEvent.end_time ? ` – ${selectedEvent.end_time}` : ""}</span>
+                )}
+              </div>
+              <div className="flex items-center gap-2 flex-wrap text-xs text-muted-foreground">
+                {selectedEvent?.location && (
+                  <span className="flex items-center gap-1"><MapPin className="h-3.5 w-3.5" /> {selectedEvent.location}</span>
+                )}
+                {selectedEvent?.event_mode && selectedEvent.event_mode !== "In Person" && (
+                  <span className="flex items-center gap-1"><Monitor className="h-3.5 w-3.5" /> {selectedEvent.event_mode}</span>
+                )}
+                {selectedEvent?.audience && selectedEvent.audience !== "All Members" && (
+                  <span className="flex items-center gap-1"><Users className="h-3.5 w-3.5" /> {selectedEvent.audience}</span>
+                )}
+              </div>
+              {selectedEvent?.category && <Badge variant="secondary" className="text-xs">{selectedEvent.category}</Badge>}
+              {selectedEvent?.description && (
+                <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap border-t border-border pt-3">{selectedEvent.description}</p>
+              )}
+              {selectedEvent?.requires_registration && (
+                <div className="pt-2">
+                  <Badge className="bg-primary/10 text-primary border-0 text-xs">Registration Required</Badge>
+                </div>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
       </CardContent>
     </Card>
   );
