@@ -199,7 +199,7 @@ export default function LandingPage() {
       <footer className="border-t border-border bg-card px-4 py-10">
         <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 sm:flex-row">
           <div className="flex items-center gap-2">
-            <img src="/lovable-uploads/40e09a54-d633-4f1c-bbfc-1ef23b34fa49.png" alt="" className="h-6 w-6 rounded" />
+            <img src="/lovable-uploads/church-connect-logo.png" alt="" className="h-6 w-6 rounded" />
             <span className="font-display text-sm font-bold text-primary">ChurchConnect</span>
           </div>
           <p className="text-xs text-muted-foreground">© {new Date().getFullYear()} ChurchConnect. All rights reserved.</p>
