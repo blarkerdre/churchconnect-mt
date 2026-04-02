@@ -363,7 +363,7 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
               <div className="flex flex-wrap gap-2 p-3 rounded-lg border border-border bg-background min-h-[40px]">
                 {CHURCH_UNITS.filter(u => u !== "None").map(unit => {
                   const selected = (form.church_unit || "").split(",").map(s => s.trim()).filter(Boolean);
-                  const isSelected = selected.includes(unit);
+                  const isSelected = selected.some(s => s.toLowerCase() === unit.toLowerCase());
                   return (
                     <button
                       key={unit}
@@ -371,7 +371,7 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
                       onClick={() => {
                         const current = (form.church_unit || "").split(",").map(s => s.trim()).filter(Boolean);
                         const updated = isSelected
-                          ? current.filter(u => u !== unit)
+                          ? current.filter(u => u.toLowerCase() !== unit.toLowerCase())
                           : [...current, unit];
                         set("church_unit", updated.join(", "));
                       }}
