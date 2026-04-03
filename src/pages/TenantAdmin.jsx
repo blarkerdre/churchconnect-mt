@@ -320,6 +320,8 @@ export default function TenantAdmin() {
       plan_tier: tier,
       member_limit: plan?.memberLimit || editForm.member_limit,
       storage_limit_mb: plan?.storageLimit || editForm.storage_limit_mb,
+      sms_limit_monthly: plan?.smsLimit ?? editForm.sms_limit_monthly,
+      whatsapp_limit_monthly: plan?.whatsappLimit ?? editForm.whatsapp_limit_monthly,
     });
   };
 
