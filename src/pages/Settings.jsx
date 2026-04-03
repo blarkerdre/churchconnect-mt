@@ -920,6 +920,31 @@ function CommunicationsSection() {
           </p>
         </div>
 
+        {/* Message Usage */}
+        {msgUsage && (currentTenant?.sms_limit_monthly > 0 || currentTenant?.whatsapp_limit_monthly > 0) && (
+          <div className="space-y-3 p-3 bg-muted/50 rounded-lg">
+            <p className="text-xs font-medium text-muted-foreground">Monthly Message Usage</p>
+            {currentTenant?.sms_limit_monthly > 0 && (
+              <div className="space-y-1">
+                <div className="flex justify-between text-xs text-muted-foreground">
+                  <span>SMS</span>
+                  <span>{msgUsage.sms}/{currentTenant.sms_limit_monthly}</span>
+                </div>
+                <Progress value={Math.min(Math.round((msgUsage.sms / currentTenant.sms_limit_monthly) * 100), 100)} className="h-2" />
+              </div>
+            )}
+            {currentTenant?.whatsapp_limit_monthly > 0 && (
+              <div className="space-y-1">
+                <div className="flex justify-between text-xs text-muted-foreground">
+                  <span>WhatsApp</span>
+                  <span>{msgUsage.whatsapp}/{currentTenant.whatsapp_limit_monthly}</span>
+                </div>
+                <Progress value={Math.min(Math.round((msgUsage.whatsapp / currentTenant.whatsapp_limit_monthly) * 100), 100)} className="h-2" />
+              </div>
+            )}
+          </div>
+        )}
+
         <Button onClick={handleSave} disabled={saving} className="w-full sm:w-auto">
           {saving && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
           Save Communications Settings
