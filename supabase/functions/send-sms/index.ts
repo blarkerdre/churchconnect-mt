@@ -136,6 +136,44 @@ Deno.serve(async (req) => {
       });
     }
 
+    // ── Quota enforcement ──
+    const { data: tenantLimits } = await serviceClient
+      .from("tenants")
+      .select("sms_limit_monthly, whatsapp_limit_monthly")
+      .eq("id", tenant_id)
+      .single();
+
+    const monthStart = new Date();
+    monthStart.setDate(1);
+    monthStart.setHours(0, 0, 0, 0);
+
+    const limitField = msgChannel === "whatsapp" ? "whatsapp_limit_monthly" : "sms_limit_monthly";
+    const quota = tenantLimits?.[limitField] || 0;
+
+    let currentUsage = 0;
+    if (quota > 0) {
+      const { count } = await serviceClient
+        .from("sms_log")
+        .select("*", { count: "exact", head: true })
+        .eq("tenant_id", tenant_id)
+        .eq("channel", msgChannel)
+        .eq("status", "sent")
+        .gte("created_at", monthStart.toISOString());
+      currentUsage = count || 0;
+
+      const remaining = quota - currentUsage;
+      if (recipients.length > remaining) {
+        return new Response(
+          JSON.stringify({
+            error: `${msgChannel === "whatsapp" ? "WhatsApp" : "SMS"} quota exceeded. ${Math.max(remaining, 0)} messages remaining this month (limit: ${quota}).`,
+            remaining: Math.max(remaining, 0),
+            limit: quota,
+          }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
+
     if (!message || typeof message !== "string" || message.trim().length === 0) {
       return new Response(JSON.stringify({ error: "Message is required" }), {
         status: 400,
