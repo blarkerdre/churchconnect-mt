@@ -47,10 +47,10 @@ const FEATURE_MODULES = [
 ];
 
 const PLAN_TIERS = [
-  { value: "free", label: "Free", memberLimit: 100, storageLimit: 500 },
-  { value: "starter", label: "Starter", memberLimit: 500, storageLimit: 2000 },
-  { value: "growth", label: "Growth", memberLimit: 2000, storageLimit: 5000 },
-  { value: "enterprise", label: "Enterprise", memberLimit: 10000, storageLimit: 20000 },
+  { value: "free", label: "Free", memberLimit: 100, storageLimit: 500, smsLimit: 50, whatsappLimit: 50 },
+  { value: "starter", label: "Starter", memberLimit: 500, storageLimit: 2000, smsLimit: 500, whatsappLimit: 500 },
+  { value: "growth", label: "Growth", memberLimit: 2000, storageLimit: 5000, smsLimit: 2000, whatsappLimit: 2000 },
+  { value: "enterprise", label: "Enterprise", memberLimit: 10000, storageLimit: 20000, smsLimit: 0, whatsappLimit: 0 },
 ];
 
 const DATA_TABLES_FOR_COUNTS = [
