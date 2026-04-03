@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -795,6 +796,23 @@ function CommunicationsSection() {
   const [smsFrom, setSmsFrom] = useState("");
   const [whatsappFrom, setWhatsappFrom] = useState("");
 
+  // Fetch current month usage
+  const { data: msgUsage } = useQuery({
+    queryKey: ["msg-usage", tenantId],
+    queryFn: async () => {
+      const monthStart = new Date();
+      monthStart.setDate(1);
+      monthStart.setHours(0, 0, 0, 0);
+      const ms = monthStart.toISOString();
+      const [{ count: sms }, { count: wa }] = await Promise.all([
+        supabase.from("sms_log").select("*", { count: "exact", head: true }).eq("tenant_id", tenantId).eq("channel", "sms").eq("status", "sent").gte("created_at", ms),
+        supabase.from("sms_log").select("*", { count: "exact", head: true }).eq("tenant_id", tenantId).eq("channel", "whatsapp").eq("status", "sent").gte("created_at", ms),
+      ]);
+      return { sms: sms || 0, whatsapp: wa || 0 };
+    },
+    enabled: !!tenantId,
+  });
+
   const settings = currentTenant?.settings || {};
 
   // Initialize from tenant settings
@@ -901,6 +919,31 @@ function CommunicationsSection() {
             Your Twilio WhatsApp-enabled number. Must be in E.164 format
           </p>
         </div>
+
+        {/* Message Usage */}
+        {msgUsage && (currentTenant?.sms_limit_monthly > 0 || currentTenant?.whatsapp_limit_monthly > 0) && (
+          <div className="space-y-3 p-3 bg-muted/50 rounded-lg">
+            <p className="text-xs font-medium text-muted-foreground">Monthly Message Usage</p>
+            {currentTenant?.sms_limit_monthly > 0 && (
+              <div className="space-y-1">
+                <div className="flex justify-between text-xs text-muted-foreground">
+                  <span>SMS</span>
+                  <span>{msgUsage.sms}/{currentTenant.sms_limit_monthly}</span>
+                </div>
+                <Progress value={Math.min(Math.round((msgUsage.sms / currentTenant.sms_limit_monthly) * 100), 100)} className="h-2" />
+              </div>
+            )}
+            {currentTenant?.whatsapp_limit_monthly > 0 && (
+              <div className="space-y-1">
+                <div className="flex justify-between text-xs text-muted-foreground">
+                  <span>WhatsApp</span>
+                  <span>{msgUsage.whatsapp}/{currentTenant.whatsapp_limit_monthly}</span>
+                </div>
+                <Progress value={Math.min(Math.round((msgUsage.whatsapp / currentTenant.whatsapp_limit_monthly) * 100), 100)} className="h-2" />
+              </div>
+            )}
+          </div>
+        )}
 
         <Button onClick={handleSave} disabled={saving} className="w-full sm:w-auto">
           {saving && <Loader2 className="h-4 w-4 animate-spin mr-2" />}

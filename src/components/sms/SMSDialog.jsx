@@ -139,6 +139,45 @@ export default function SMSDialog({
       return;
     }
 
+    // Pre-send quota check
+    try {
+      const { data: tenant } = await supabase
+        .from("tenants")
+        .select("sms_limit_monthly, whatsapp_limit_monthly")
+        .eq("id", tenantId)
+        .single();
+
+      const limitField = channel === "whatsapp" ? "whatsapp_limit_monthly" : "sms_limit_monthly";
+      const quota = tenant?.[limitField] || 0;
+
+      if (quota > 0) {
+        const monthStart = new Date();
+        monthStart.setDate(1);
+        monthStart.setHours(0, 0, 0, 0);
+
+        const { count } = await supabase
+          .from("sms_log")
+          .select("*", { count: "exact", head: true })
+          .eq("tenant_id", tenantId)
+          .eq("channel", channel)
+          .eq("status", "sent")
+          .gte("created_at", monthStart.toISOString());
+
+        const remaining = quota - (count || 0);
+        if (validCount > remaining) {
+          toast({
+            title: `${channel === "whatsapp" ? "WhatsApp" : "SMS"} quota exceeded`,
+            description: `You have ${Math.max(remaining, 0)} messages remaining this month (limit: ${quota}). Trying to send ${validCount}.`,
+            variant: "destructive",
+          });
+          return;
+        }
+      }
+    } catch (err) {
+      // Non-blocking — edge function will also enforce
+      console.warn("Quota pre-check failed:", err);
+    }
+
     if (validCount === 0) {
       toast({ title: "No recipients with valid phone numbers", variant: "destructive" });
       return;

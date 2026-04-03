@@ -47,10 +47,10 @@ const FEATURE_MODULES = [
 ];
 
 const PLAN_TIERS = [
-  { value: "free", label: "Free", memberLimit: 100, storageLimit: 500 },
-  { value: "starter", label: "Starter", memberLimit: 500, storageLimit: 2000 },
-  { value: "growth", label: "Growth", memberLimit: 2000, storageLimit: 5000 },
-  { value: "enterprise", label: "Enterprise", memberLimit: 10000, storageLimit: 20000 },
+  { value: "free", label: "Free", memberLimit: 100, storageLimit: 500, smsLimit: 50, whatsappLimit: 50 },
+  { value: "starter", label: "Starter", memberLimit: 500, storageLimit: 2000, smsLimit: 500, whatsappLimit: 500 },
+  { value: "growth", label: "Growth", memberLimit: 2000, storageLimit: 5000, smsLimit: 2000, whatsappLimit: 2000 },
+  { value: "enterprise", label: "Enterprise", memberLimit: 10000, storageLimit: 20000, smsLimit: 0, whatsappLimit: 0 },
 ];
 
 const DATA_TABLES_FOR_COUNTS = [
@@ -269,6 +269,8 @@ export default function TenantAdmin() {
       plan_tier: tenant.plan_tier || "free",
       member_limit: tenant.member_limit || 100,
       storage_limit_mb: tenant.storage_limit_mb || 500,
+      sms_limit_monthly: tenant.sms_limit_monthly || 0,
+      whatsapp_limit_monthly: tenant.whatsapp_limit_monthly || 0,
       disabled_features: settings.disabled_features || [],
       primary_color: settings.primary_color || "",
       welcome_message: settings.welcome_message || "",
@@ -277,7 +279,7 @@ export default function TenantAdmin() {
 
   const handleSaveEdit = () => {
     if (!editTenant) return;
-    const { name, slug, timezone, logo_url, setup_complete, plan_tier, member_limit, storage_limit_mb, disabled_features, primary_color, welcome_message } = editForm;
+    const { name, slug, timezone, logo_url, setup_complete, plan_tier, member_limit, storage_limit_mb, sms_limit_monthly, whatsapp_limit_monthly, disabled_features, primary_color, welcome_message } = editForm;
     const settings = {
       ...(editTenant.settings || {}),
       disabled_features,
@@ -294,6 +296,8 @@ export default function TenantAdmin() {
       plan_tier,
       member_limit: parseInt(member_limit) || 100,
       storage_limit_mb: parseInt(storage_limit_mb) || 500,
+      sms_limit_monthly: parseInt(sms_limit_monthly) || 0,
+      whatsapp_limit_monthly: parseInt(whatsapp_limit_monthly) || 0,
       settings,
     });
   };
@@ -316,6 +320,8 @@ export default function TenantAdmin() {
       plan_tier: tier,
       member_limit: plan?.memberLimit || editForm.member_limit,
       storage_limit_mb: plan?.storageLimit || editForm.storage_limit_mb,
+      sms_limit_monthly: plan?.smsLimit ?? editForm.sms_limit_monthly,
+      whatsapp_limit_monthly: plan?.whatsappLimit ?? editForm.whatsapp_limit_monthly,
     });
   };
 
@@ -1017,10 +1023,32 @@ export default function TenantAdmin() {
                 />
               </div>
 
+              <div className="space-y-2">
+                <Label>Monthly SMS Limit <span className="text-muted-foreground font-normal">(0 = unlimited)</span></Label>
+                <Input
+                  type="number"
+                  value={editForm.sms_limit_monthly || ""}
+                  onChange={(e) => setEditForm({ ...editForm, sms_limit_monthly: e.target.value })}
+                  min={0}
+                  placeholder="0"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Monthly WhatsApp Limit <span className="text-muted-foreground font-normal">(0 = unlimited)</span></Label>
+                <Input
+                  type="number"
+                  value={editForm.whatsapp_limit_monthly || ""}
+                  onChange={(e) => setEditForm({ ...editForm, whatsapp_limit_monthly: e.target.value })}
+                  min={0}
+                  placeholder="0"
+                />
+              </div>
+
               <div className="p-3 bg-muted/50 rounded-lg text-xs text-muted-foreground space-y-1">
                 <p className="font-medium">Plan tier presets:</p>
                 {PLAN_TIERS.map(p => (
-                  <p key={p.value}>• <strong>{p.label}</strong>: {p.memberLimit} members, {p.storageLimit}MB storage</p>
+                  <p key={p.value}>• <strong>{p.label}</strong>: {p.memberLimit} members, {p.storageLimit}MB, {p.smsLimit || "∞"} SMS, {p.whatsappLimit || "∞"} WhatsApp</p>
                 ))}
               </div>
             </TabsContent>
