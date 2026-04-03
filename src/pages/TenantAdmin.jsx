@@ -279,7 +279,7 @@ export default function TenantAdmin() {
 
   const handleSaveEdit = () => {
     if (!editTenant) return;
-    const { name, slug, timezone, logo_url, setup_complete, plan_tier, member_limit, storage_limit_mb, disabled_features, primary_color, welcome_message } = editForm;
+    const { name, slug, timezone, logo_url, setup_complete, plan_tier, member_limit, storage_limit_mb, sms_limit_monthly, whatsapp_limit_monthly, disabled_features, primary_color, welcome_message } = editForm;
     const settings = {
       ...(editTenant.settings || {}),
       disabled_features,
@@ -296,6 +296,8 @@ export default function TenantAdmin() {
       plan_tier,
       member_limit: parseInt(member_limit) || 100,
       storage_limit_mb: parseInt(storage_limit_mb) || 500,
+      sms_limit_monthly: parseInt(sms_limit_monthly) || 0,
+      whatsapp_limit_monthly: parseInt(whatsapp_limit_monthly) || 0,
       settings,
     });
   };
