@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Users, CalendarDays, MessageSquare, TrendingUp } from "lucide-react";
+import { Users, CalendarDays, MessageSquare, TrendingUp, Phone } from "lucide-react";
 
 export default function TenantAnalyticsTab({ tenants }) {
   const { data: analytics = {}, isLoading } = useQuery({
@@ -12,6 +12,9 @@ export default function TenantAnalyticsTab({ tenants }) {
       const results = {};
       for (const t of tenants) {
         const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+        const monthStart = new Date();
+        monthStart.setDate(1);
+        monthStart.setHours(0, 0, 0, 0);
         const [
           { count: memberCount },
           { count: userCount },
@@ -19,6 +22,8 @@ export default function TenantAnalyticsTab({ tenants }) {
           { count: recentMembers },
           { count: attendanceSessions },
           { count: followupCount },
+          { count: smsCount },
+          { count: waCount },
         ] = await Promise.all([
           supabase.from("members").select("*", { count: "exact", head: true }).eq("tenant_id", t.id),
           supabase.from("tenant_memberships").select("*", { count: "exact", head: true }).eq("tenant_id", t.id),
@@ -26,6 +31,8 @@ export default function TenantAnalyticsTab({ tenants }) {
           supabase.from("members").select("*", { count: "exact", head: true }).eq("tenant_id", t.id).gte("created_at", thirtyDaysAgo),
           supabase.from("attendance_sessions").select("*", { count: "exact", head: true }).eq("tenant_id", t.id).gte("created_at", thirtyDaysAgo),
           supabase.from("followups").select("*", { count: "exact", head: true }).eq("tenant_id", t.id).eq("status", "Pending"),
+          supabase.from("sms_log").select("*", { count: "exact", head: true }).eq("tenant_id", t.id).eq("channel", "sms").eq("status", "sent").gte("created_at", monthStart.toISOString()),
+          supabase.from("sms_log").select("*", { count: "exact", head: true }).eq("tenant_id", t.id).eq("channel", "whatsapp").eq("status", "sent").gte("created_at", monthStart.toISOString()),
         ]);
         results[t.id] = {
           members: memberCount || 0,
@@ -34,6 +41,8 @@ export default function TenantAnalyticsTab({ tenants }) {
           recentMembers: recentMembers || 0,
           attendanceSessions: attendanceSessions || 0,
           pendingFollowups: followupCount || 0,
+          smsSent: smsCount || 0,
+          whatsappSent: waCount || 0,
         };
       }
       return results;
@@ -48,6 +57,8 @@ export default function TenantAnalyticsTab({ tenants }) {
       {tenants.filter(t => !t.is_archived).map((t) => {
         const stats = analytics[t.id] || {};
         const memberUsage = t.member_limit > 0 ? Math.round((stats.members / t.member_limit) * 100) : 0;
+        const smsUsage = t.sms_limit_monthly > 0 ? Math.round((stats.smsSent / t.sms_limit_monthly) * 100) : 0;
+        const waUsage = t.whatsapp_limit_monthly > 0 ? Math.round((stats.whatsappSent / t.whatsapp_limit_monthly) * 100) : 0;
         return (
           <Card key={t.id}>
             <CardHeader className="pb-2">
@@ -98,10 +109,32 @@ export default function TenantAnalyticsTab({ tenants }) {
                 </div>
               )}
 
-              <div className="flex gap-2 text-xs text-muted-foreground">
+              {t.sms_limit_monthly > 0 && (
+                <div className="space-y-1">
+                  <div className="flex justify-between text-xs text-muted-foreground">
+                    <span>SMS usage (this month)</span>
+                    <span>{stats.smsSent}/{t.sms_limit_monthly}</span>
+                  </div>
+                  <Progress value={Math.min(smsUsage, 100)} className="h-2" />
+                </div>
+              )}
+
+              {t.whatsapp_limit_monthly > 0 && (
+                <div className="space-y-1">
+                  <div className="flex justify-between text-xs text-muted-foreground">
+                    <span>WhatsApp usage (this month)</span>
+                    <span>{stats.whatsappSent}/{t.whatsapp_limit_monthly}</span>
+                  </div>
+                  <Progress value={Math.min(waUsage, 100)} className="h-2" />
+                </div>
+              )}
+
+              <div className="flex gap-2 text-xs text-muted-foreground flex-wrap">
                 <span>{stats.users} users</span>
                 <span>•</span>
                 <span>{stats.attendanceSessions} sessions (30d)</span>
+                <span>•</span>
+                <span>{stats.smsSent} SMS / {stats.whatsappSent} WA (month)</span>
               </div>
             </CardContent>
           </Card>
