@@ -795,6 +795,23 @@ function CommunicationsSection() {
   const [smsFrom, setSmsFrom] = useState("");
   const [whatsappFrom, setWhatsappFrom] = useState("");
 
+  // Fetch current month usage
+  const { data: msgUsage } = useQuery({
+    queryKey: ["msg-usage", tenantId],
+    queryFn: async () => {
+      const monthStart = new Date();
+      monthStart.setDate(1);
+      monthStart.setHours(0, 0, 0, 0);
+      const ms = monthStart.toISOString();
+      const [{ count: sms }, { count: wa }] = await Promise.all([
+        supabase.from("sms_log").select("*", { count: "exact", head: true }).eq("tenant_id", tenantId).eq("channel", "sms").eq("status", "sent").gte("created_at", ms),
+        supabase.from("sms_log").select("*", { count: "exact", head: true }).eq("tenant_id", tenantId).eq("channel", "whatsapp").eq("status", "sent").gte("created_at", ms),
+      ]);
+      return { sms: sms || 0, whatsapp: wa || 0 };
+    },
+    enabled: !!tenantId,
+  });
+
   const settings = currentTenant?.settings || {};
 
   // Initialize from tenant settings
