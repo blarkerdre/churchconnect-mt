@@ -298,8 +298,14 @@ Deno.serve(async (req) => {
       await serviceClient.from("sms_log").insert(logs);
     }
 
+    const responseBody: Record<string, unknown> = { sent, failed, total: recipients.length };
+    if (quota > 0) {
+      responseBody.remaining = Math.max(quota - currentUsage - sent, 0);
+      responseBody.limit = quota;
+    }
+
     return new Response(
-      JSON.stringify({ sent, failed, total: recipients.length }),
+      JSON.stringify(responseBody),
       {
         status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
