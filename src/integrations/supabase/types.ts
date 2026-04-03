@@ -2404,10 +2404,12 @@ export type Database = {
           settings: Json | null
           setup_complete: boolean
           slug: string
+          sms_limit_monthly: number
           storage_limit_mb: number
           subscription_status: string
           timezone: string
           updated_at: string
+          whatsapp_limit_monthly: number
         }
         Insert: {
           archived_at?: string | null
@@ -2423,10 +2425,12 @@ export type Database = {
           settings?: Json | null
           setup_complete?: boolean
           slug: string
+          sms_limit_monthly?: number
           storage_limit_mb?: number
           subscription_status?: string
           timezone?: string
           updated_at?: string
+          whatsapp_limit_monthly?: number
         }
         Update: {
           archived_at?: string | null
@@ -2442,10 +2446,12 @@ export type Database = {
           settings?: Json | null
           setup_complete?: boolean
           slug?: string
+          sms_limit_monthly?: number
           storage_limit_mb?: number
           subscription_status?: string
           timezone?: string
           updated_at?: string
+          whatsapp_limit_monthly?: number
         }
         Relationships: []
       }
@@ -2999,6 +3005,13 @@ export type Database = {
           name: string
           settings: Json
           slug: string
+        }[]
+      }
+      get_tenant_message_usage: {
+        Args: { _tenant_id: string }
+        Returns: {
+          sms_count: number
+          whatsapp_count: number
         }[]
       }
       get_upcoming_birthdays: {
