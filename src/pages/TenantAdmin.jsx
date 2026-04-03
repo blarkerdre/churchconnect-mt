@@ -1023,10 +1023,32 @@ export default function TenantAdmin() {
                 />
               </div>
 
+              <div className="space-y-2">
+                <Label>Monthly SMS Limit <span className="text-muted-foreground font-normal">(0 = unlimited)</span></Label>
+                <Input
+                  type="number"
+                  value={editForm.sms_limit_monthly || ""}
+                  onChange={(e) => setEditForm({ ...editForm, sms_limit_monthly: e.target.value })}
+                  min={0}
+                  placeholder="0"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Monthly WhatsApp Limit <span className="text-muted-foreground font-normal">(0 = unlimited)</span></Label>
+                <Input
+                  type="number"
+                  value={editForm.whatsapp_limit_monthly || ""}
+                  onChange={(e) => setEditForm({ ...editForm, whatsapp_limit_monthly: e.target.value })}
+                  min={0}
+                  placeholder="0"
+                />
+              </div>
+
               <div className="p-3 bg-muted/50 rounded-lg text-xs text-muted-foreground space-y-1">
                 <p className="font-medium">Plan tier presets:</p>
                 {PLAN_TIERS.map(p => (
-                  <p key={p.value}>• <strong>{p.label}</strong>: {p.memberLimit} members, {p.storageLimit}MB storage</p>
+                  <p key={p.value}>• <strong>{p.label}</strong>: {p.memberLimit} members, {p.storageLimit}MB, {p.smsLimit || "∞"} SMS, {p.whatsappLimit || "∞"} WhatsApp</p>
                 ))}
               </div>
             </TabsContent>
