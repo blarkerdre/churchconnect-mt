@@ -269,6 +269,8 @@ export default function TenantAdmin() {
       plan_tier: tenant.plan_tier || "free",
       member_limit: tenant.member_limit || 100,
       storage_limit_mb: tenant.storage_limit_mb || 500,
+      sms_limit_monthly: tenant.sms_limit_monthly || 0,
+      whatsapp_limit_monthly: tenant.whatsapp_limit_monthly || 0,
       disabled_features: settings.disabled_features || [],
       primary_color: settings.primary_color || "",
       welcome_message: settings.welcome_message || "",
