@@ -93,7 +93,7 @@ export default function Followups() {
     queryFn: async () => {
       const { data, error } = await scopeQuery(
         supabase.from("followups")
-          .select("*, members(first_name, last_name, email, phone, membership_status)")
+          .select("*, members(first_name, last_name, email, phone, membership_status, preferred_contact_modes)")
           .order("created_at", { ascending: false })
       );
       if (error) throw error;
@@ -103,6 +103,7 @@ export default function Followups() {
         person_email: f.members?.email,
         person_phone: f.members?.phone,
         person_status: f.members?.membership_status,
+        person_preferred_contact: f.members?.preferred_contact_modes,
       }));
     },
   });

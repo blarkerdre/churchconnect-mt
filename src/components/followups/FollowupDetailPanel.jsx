@@ -164,6 +164,12 @@ export default function FollowupDetailPanel({ followup, onClose, onUpdate, curre
                   <Mail className="h-3.5 w-3.5" /> {followup.person_email}
                 </a>
               )}
+              {followup.person_preferred_contact && (
+                <div className="flex items-center gap-2 text-xs text-muted-foreground pt-1">
+                  <MessageSquare className="h-3.5 w-3.5" />
+                  <span>Preferred: <span className="font-medium text-foreground">{followup.person_preferred_contact}</span></span>
+                </div>
+              )}
             </div>
           )}
 
