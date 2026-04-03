@@ -631,12 +631,6 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
             </div>
           )}
 
-          {/* Notes */}
-          <div className="space-y-1.5">
-            <Label>Prayer Request</Label>
-            <Textarea value={form.notes} onChange={(e) => set("notes", e.target.value)} rows={3} />
-          </div>
-
           {/* GDPR Consent — new registrations only */}
           {!member && (
             <div className={`rounded-xl border p-4 space-y-2 transition-colors ${form.gdpr_consent ? "border-chart-3/30 bg-chart-3/5" : "border-accent/30 bg-accent/5"}`}>

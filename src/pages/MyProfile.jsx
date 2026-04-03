@@ -486,12 +486,6 @@ export default function MyProfile() {
                       </div>
                     )}
 
-                    {/* Notes */}
-                    <div className="space-y-1.5">
-                      <Label>Prayer Request</Label>
-                      <Textarea value={form.notes} onChange={e => set("notes", e.target.value)} rows={3} />
-                    </div>
-
                     <div className="flex gap-2 pt-2">
                       <Button onClick={handleSave} disabled={updateMutation.isPending} size="sm">
                         {updateMutation.isPending ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Save className="h-4 w-4 mr-1" />} Save
