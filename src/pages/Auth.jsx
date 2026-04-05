@@ -11,11 +11,14 @@ import { Mail, Lock, User, ArrowRight, Eye, EyeOff } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Info } from "lucide-react";
 
 export default function Auth() {
   const { user, loading, signIn, signUp, resetPassword } = useAuth();
   const { toast } = useToast();
   const { tenantSlug } = useParams();
+  const canSignup = !!tenantSlug;
   const [mode, setMode] = useState("login"); // login | signup | forgot
   const [form, setForm] = useState({ email: "", password: "", fullName: "" });
   const [submitting, setSubmitting] = useState(false);
@@ -51,23 +54,8 @@ export default function Auth() {
     enabled: !!tenantSlug,
   });
 
-  // Resolve default tenant slug for signup fallback when no slug in URL
-  const { data: defaultTenantSlug } = useQuery({
-    queryKey: ["default-tenant-slug"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("tenants")
-        .select("slug")
-        .eq("id", DEFAULT_TENANT_ID)
-        .maybeSingle();
-      if (error) throw error;
-      return data?.slug || null;
-    },
-    enabled: !tenantSlug,
-  });
-
-  // Use URL slug or fall back to the default tenant slug
-  const effectiveSlug = tenantSlug || defaultTenantSlug;
+  // Use URL slug directly (no fallback)
+  const effectiveSlug = tenantSlug || null;
 
   const churchName = tenant?.name || "Church Connect";
 
@@ -269,12 +257,21 @@ export default function Auth() {
                   <button onClick={() => setMode("forgot")} className="text-sm text-primary hover:underline">
                     Forgot password?
                   </button>
-                  <p className="text-sm text-muted-foreground">
-                    Don't have an account?{" "}
-                    <button onClick={() => setMode("signup")} className="text-primary hover:underline font-medium">
-                      Sign up
-                    </button>
-                  </p>
+                  {canSignup ? (
+                    <p className="text-sm text-muted-foreground">
+                      Don't have an account?{" "}
+                      <button onClick={() => setMode("signup")} className="text-primary hover:underline font-medium">
+                        Sign up
+                      </button>
+                    </p>
+                  ) : (
+                    <Alert variant="default" className="mt-3 text-left">
+                      <Info className="h-4 w-4" />
+                      <AlertDescription>
+                        To create an account, please use the signup link provided by your church.
+                      </AlertDescription>
+                    </Alert>
+                  )}
                 </>
               )}
               {mode !== "login" && (
