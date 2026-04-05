@@ -54,23 +54,8 @@ export default function Auth() {
     enabled: !!tenantSlug,
   });
 
-  // Resolve default tenant slug for signup fallback when no slug in URL
-  const { data: defaultTenantSlug } = useQuery({
-    queryKey: ["default-tenant-slug"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("tenants")
-        .select("slug")
-        .eq("id", DEFAULT_TENANT_ID)
-        .maybeSingle();
-      if (error) throw error;
-      return data?.slug || null;
-    },
-    enabled: !tenantSlug,
-  });
-
-  // Use URL slug or fall back to the default tenant slug
-  const effectiveSlug = tenantSlug || defaultTenantSlug;
+  // Use URL slug directly (no fallback)
+  const effectiveSlug = tenantSlug || null;
 
   const churchName = tenant?.name || "Church Connect";
 
