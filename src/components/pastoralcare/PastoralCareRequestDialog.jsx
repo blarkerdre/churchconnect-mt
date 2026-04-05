@@ -1,5 +1,6 @@
 import React, { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import TenantDialogHeader from "@/components/ui/TenantDialogHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -93,12 +94,10 @@ export default function PastoralCareRequestDialog({ open, onOpenChange, currentU
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
+        <TenantDialogHeader>
             <Heart className="h-4 w-4 text-destructive" />
             Request Pastoral Care
-          </DialogTitle>
-        </DialogHeader>
+          </TenantDialogHeader>
 
         {submitted ? (
           <div className="py-8 text-center space-y-3">

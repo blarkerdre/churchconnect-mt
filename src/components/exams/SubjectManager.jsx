@@ -5,7 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import TenantDialogHeader from "@/components/ui/TenantDialogHeader";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -128,9 +129,7 @@ export default function SubjectManager({ course, onSelectSubject, selectedSubjec
 
       <Dialog open={dialogOpen} onOpenChange={(v) => !v && closeDialog()}>
         <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle>{editing ? "Edit Subject" : "Add Subject"}</DialogTitle>
-          </DialogHeader>
+          <TenantDialogHeader>{editing ? "Edit Subject" : "Add Subject"}</TenantDialogHeader>
           <form onSubmit={(e) => {
             e.preventDefault();
             if (!form.name.trim()) { toast({ title: "Subject name is required", variant: "destructive" }); return; }

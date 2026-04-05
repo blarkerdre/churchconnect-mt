@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import TenantDialogHeader from "@/components/ui/TenantDialogHeader";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -232,12 +233,10 @@ export default function SMSDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="font-display flex items-center gap-2">
+        <TenantDialogHeader>
             <MessageSquare className="h-5 w-5 text-primary" />
             {title}
-          </DialogTitle>
-        </DialogHeader>
+          </TenantDialogHeader>
 
         {result ? (
           <div className="space-y-4 text-center py-4">
