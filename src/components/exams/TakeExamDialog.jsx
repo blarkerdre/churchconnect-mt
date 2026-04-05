@@ -213,19 +213,17 @@ export default function TakeExamDialog({ open, onOpenChange, trainingType, membe
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <div className="flex items-center justify-between w-full">
-            <DialogTitle className="font-display flex items-center gap-2">{title}</DialogTitle>
-            {timeLeft !== null && !submitted && (
-              <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-mono font-bold ${
-                isWarning ? "bg-destructive/10 text-destructive animate-pulse" : "bg-muted text-foreground"
-              }`}>
-                <Clock className="h-4 w-4" />
-                {formatTime(timeLeft)}
-              </div>
-            )}
-          </div>
-        </DialogHeader>
+        <div className="flex items-center justify-between w-full">
+          <TenantDialogHeader>{title}</TenantDialogHeader>
+          {timeLeft !== null && !submitted && (
+            <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-mono font-bold ${
+              isWarning ? "bg-destructive/10 text-destructive animate-pulse" : "bg-muted text-foreground"
+            }`}>
+              <Clock className="h-4 w-4" />
+              {formatTime(timeLeft)}
+            </div>
+          )}
+        </div>
 
         {previewMode && (
           <div className="px-4 py-2.5 rounded-lg bg-accent/10 border border-accent/30 text-accent-foreground text-sm font-medium flex items-center gap-2">
