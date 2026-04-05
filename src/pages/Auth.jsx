@@ -6,12 +6,12 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Mail, Lock, User, ArrowRight, Eye, EyeOff } from "lucide-react";
+import { Mail, Lock, User, ArrowRight, Eye, EyeOff, CheckCircle2 } from "lucide-react";
 
 import { useToast } from "@/components/ui/use-toast";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Info } from "lucide-react";
 
 export default function Auth() {
@@ -25,6 +25,7 @@ export default function Auth() {
   const [showPassword, setShowPassword] = useState(false);
   const [signupCooldown, setSignupCooldown] = useState(false);
   const [cooldownSeconds, setCooldownSeconds] = useState(0);
+  const [signupSuccess, setSignupSuccess] = useState(false);
 
   useEffect(() => {
     if (!signupCooldown) return;
@@ -136,6 +137,7 @@ export default function Auth() {
           });
         } else {
           toast({ title: "Account created!", description: "Please check your email to verify your account." });
+          setSignupSuccess(true);
           setSignupCooldown(true);
           setCooldownSeconds(60);
         }
@@ -181,6 +183,13 @@ export default function Auth() {
             </CardDescription>
           </CardHeader>
           <CardContent>
+            {signupSuccess && (
+              <Alert className="bg-green-50 border-green-200 text-green-800 mb-4">
+                <CheckCircle2 className="h-4 w-4 text-green-600" />
+                <AlertTitle>Account created!</AlertTitle>
+                <AlertDescription>Please check your email to verify your account before signing in.</AlertDescription>
+              </Alert>
+            )}
             <form onSubmit={handleSubmit} className="space-y-4">
               {mode === "signup" && (
                 <div className="space-y-2">
