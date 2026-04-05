@@ -11,7 +11,7 @@ import { Mail, Lock, User, ArrowRight, Eye, EyeOff, CheckCircle2 } from "lucide-
 import { useToast } from "@/components/ui/use-toast";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Info } from "lucide-react";
 
 export default function Auth() {
