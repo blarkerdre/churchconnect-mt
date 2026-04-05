@@ -137,6 +137,7 @@ export default function Auth() {
           });
         } else {
           toast({ title: "Account created!", description: "Please check your email to verify your account." });
+          setSignupSuccess(true);
           setSignupCooldown(true);
           setCooldownSeconds(60);
         }
