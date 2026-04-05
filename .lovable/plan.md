@@ -1,87 +1,79 @@
 
 
-## SMS & WhatsApp Quota Management Per Tenant
+## Convert Billing to Recurring Stripe Subscriptions
 
 ### Problem
-There is no mechanism to set, enforce, or monitor SMS/WhatsApp message limits per tenant. The `tenants` table has `member_limit` and `storage_limit_mb` but no messaging quotas. The `send-sms` edge function sends without checking any limit.
+Currently, the checkout flow uses `mode: "payment"` (one-time charges). Tenants must manually pay each cycle. The `advance_subscription_on_payment` trigger advances the `next_due_date`, but Stripe doesn't automatically charge again — someone must click "Pay Now" every month/year.
 
 ### Solution
-Add per-tenant monthly SMS and WhatsApp quotas with enforcement in the edge function, monitoring in Tenant Admin, and usage visibility in Settings.
+Switch to Stripe's native recurring subscription model (`mode: "subscription"`) so Stripe automatically charges tenants each billing cycle. The webhook handles invoice events to record payments and update statuses automatically.
 
 ### Changes
 
-#### 1. Database Migration
-Add two columns to the `tenants` table:
-- `sms_limit_monthly` (integer, default 0 = unlimited)
-- `whatsapp_limit_monthly` (integer, default 0 = unlimited)
+#### 1. `supabase/functions/create-tenant-checkout/index.ts` — Switch to subscription mode
+- Change `mode: "payment"` to `mode: "subscription"`
+- Use `price_data` with `recurring: { interval: sub.billing_cycle === "yearly" ? "year" : "month" }` so Stripe creates a recurring price
+- Remove `metadata` from the session level (subscription metadata is set separately)
+- Add `subscription_data.metadata` with `tenant_id` and `subscription_id` so the webhook can identify the tenant from recurring invoice events
 
-Create a database function `get_tenant_message_usage(_tenant_id uuid, _month_start timestamptz)` that counts rows from `sms_log` for the given tenant and month, grouped by channel, returning `{sms_count, whatsapp_count}`.
+#### 2. `supabase/functions/stripe-subscription-webhook/index.ts` — Handle subscription lifecycle events
+Expand from handling only `checkout.session.completed` to also handle:
+- **`invoice.payment_succeeded`** — Record payment in `tenant_payments`, update tenant status to `active`, store `stripe_subscription_id` on first payment, advance `next_due_date`
+- **`invoice.payment_failed`** — Set tenant status to `past_due`
+- **`customer.subscription.deleted`** — Set tenant status to `suspended`
+- **`checkout.session.completed`** — Store `stripe_subscription_id` and `stripe_customer_id` on the `tenant_subscriptions` row
 
-#### 2. Edge Function — Enforce Limits (`supabase/functions/send-sms/index.ts`)
-Before sending, query the tenant's limits and current month usage:
-- If `sms_limit_monthly > 0` and `current_sms_count + recipients.length > sms_limit_monthly`, return 403 with a clear error message showing remaining quota
-- Same logic for WhatsApp using `whatsapp_limit_monthly`
-- Include remaining quota in the success response
+The `invoice.payment_succeeded` handler retrieves `tenant_id` from the subscription's metadata (via `stripe.subscriptions.retrieve`).
 
-#### 3. Tenant Admin — Configure Limits (`src/pages/TenantAdmin.jsx`)
-In the tenant edit form (alongside `member_limit` and `storage_limit_mb`):
-- Add "Monthly SMS Limit" and "Monthly WhatsApp Limit" number inputs
-- 0 = unlimited
-- Save to tenants table
+#### 3. `supabase/functions/check-tenant-payments/index.ts` — Sync with Stripe status
+For tenants that have a `stripe_subscription_id`, optionally query Stripe to confirm the subscription status rather than relying solely on date math. Keep the existing date-based logic as fallback for manually-billed tenants (no `stripe_subscription_id`).
 
-Also update `PLAN_TIERS` defaults:
-- Free: 50 SMS, 50 WhatsApp
-- Starter: 500 SMS, 500 WhatsApp
-- Growth: 2000 SMS, 2000 WhatsApp
-- Enterprise: 0 (unlimited)
+#### 4. `src/components/tenants/TenantBillingTab.jsx` — Show Stripe subscription status
+- Display the `stripe_subscription_id` if present (like the existing `stripe_customer_id` display)
+- Add a "Cancel Subscription" button that calls a new edge function or uses the Stripe customer portal
+- Show "Auto-renewing" badge when a Stripe subscription is active
 
-#### 4. Tenant Analytics — Monitor Usage (`src/components/tenants/TenantAnalyticsTab.jsx`)
-Add SMS and WhatsApp usage counts (current month) per tenant with progress bars against limits, matching the existing member/storage usage pattern.
+#### 5. New: `supabase/functions/manage-tenant-subscription/index.ts` — Cancel/manage subscription
+- Accepts `action: "cancel" | "portal"` and `tenant_id`
+- For `cancel`: calls `stripe.subscriptions.cancel(stripe_subscription_id)`
+- For `portal`: creates a Stripe Customer Portal session so the tenant admin can manage payment methods, view invoices, or cancel
+- Returns the portal URL or confirmation
 
-#### 5. Settings Page — Usage Visibility (`src/pages/Settings.jsx`)
-Show tenant admins their current month SMS/WhatsApp usage vs limit (progress bar + count), so they know how many messages remain.
+#### 6. `src/pages/Settings.jsx` — Add "Manage Subscription" button
+- For tenants with an active Stripe subscription, show "Manage Subscription" (opens Stripe Customer Portal) instead of / alongside the "Pay Now" button
+- Keep "Pay Now" for tenants without a Stripe subscription (manual billing)
 
-#### 6. SMS Dialog — Pre-send Warning (`src/components/sms/SMSDialog.jsx`)
-Before sending, check remaining quota. If sending would exceed the limit, show a warning with the remaining count and prevent the send.
+#### 7. Database migration — Add `stripe_price_id` column
+Add `stripe_price_id text` to `tenant_subscriptions` to store the recurring Stripe price ID after checkout. This allows re-using the same price for subscription updates.
 
-### Technical Detail
+### How it works end-to-end
 
-**Usage counting query pattern:**
-```sql
-SELECT
-  count(*) FILTER (WHERE channel = 'sms' AND status = 'sent') as sms_sent,
-  count(*) FILTER (WHERE channel = 'whatsapp' AND status = 'sent') as wa_sent
-FROM sms_log
-WHERE tenant_id = _tenant_id
-  AND created_at >= date_trunc('month', now())
-```
-
-**Edge function enforcement (in send-sms):**
-```typescript
-const { data: tenant } = await serviceClient
-  .from("tenants")
-  .select("sms_limit_monthly, whatsapp_limit_monthly, settings")
-  .eq("id", tenant_id)
-  .single();
-
-if (msgChannel === "sms" && tenant.sms_limit_monthly > 0) {
-  const { count } = await serviceClient.from("sms_log")
-    .select("*", { count: "exact", head: true })
-    .eq("tenant_id", tenant_id)
-    .eq("channel", "sms")
-    .eq("status", "sent")
-    .gte("created_at", monthStart);
-  if ((count || 0) + recipients.length > tenant.sms_limit_monthly) {
-    return Response(JSON.stringify({ error: `SMS quota exceeded. ${tenant.sms_limit_monthly - (count||0)} remaining this month.` }), { status: 403 });
-  }
-}
+```text
+Tenant Admin clicks "Subscribe"
+  → create-tenant-checkout (mode: "subscription")
+  → Stripe Checkout page
+  → Stripe creates subscription + first invoice
+  → Webhook: checkout.session.completed → store stripe_subscription_id
+  → Webhook: invoice.payment_succeeded → record payment, set status active
+  
+Next billing cycle (automatic):
+  → Stripe charges card automatically
+  → Webhook: invoice.payment_succeeded → record payment, advance next_due_date
+  
+If payment fails:
+  → Webhook: invoice.payment_failed → set status past_due
+  → Stripe retries per its retry settings
+  
+If subscription canceled:
+  → Webhook: customer.subscription.deleted → set status suspended
 ```
 
 ### Files changed
-- **Database migration** — add `sms_limit_monthly`, `whatsapp_limit_monthly` columns to `tenants`; add `get_tenant_message_usage` function
-- `supabase/functions/send-sms/index.ts` — add quota enforcement before sending
-- `src/pages/TenantAdmin.jsx` — add SMS/WhatsApp limit inputs in tenant edit form and plan tier defaults
-- `src/components/tenants/TenantAnalyticsTab.jsx` — add SMS/WhatsApp usage metrics
-- `src/pages/Settings.jsx` — show current month usage vs limit for tenant admins
-- `src/components/sms/SMSDialog.jsx` — pre-send quota check with warning
+- `supabase/functions/create-tenant-checkout/index.ts` — switch to `mode: "subscription"`
+- `supabase/functions/stripe-subscription-webhook/index.ts` — handle invoice and subscription lifecycle events
+- `supabase/functions/check-tenant-payments/index.ts` — respect Stripe-managed subscriptions
+- `src/components/tenants/TenantBillingTab.jsx` — show subscription ID, add cancel/manage button
+- `src/pages/Settings.jsx` — add "Manage Subscription" portal button
+- New: `supabase/functions/manage-tenant-subscription/index.ts` — cancel subscription or open portal
+- Database migration — add `stripe_price_id` column to `tenant_subscriptions`
 
