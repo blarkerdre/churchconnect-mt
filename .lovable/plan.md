@@ -1,39 +1,59 @@
 
 
-## Make Signup Toast More Visible
+## Statement of Result + Grade Classification
 
 ### Problem
-After signing up, the success toast ("Account created! Please check your email to verify your account.") uses the default toast style which can be easy to miss, especially on mobile.
+There is no way to generate or view a formal "Statement of Result" for a course, and results are only labelled "Passed" or "Failed" — there is no grade classification (Pass, Merit, Distinction, etc.).
 
 ### Solution
-Replace the brief toast with a persistent inline success alert that appears directly in the Auth card after signup. This is much more visible than a transient toast notification.
 
-### Changes to `src/pages/Auth.jsx`
+#### 1. Database — Add configurable grade classification thresholds per course
+Add a new column `grade_classifications` (JSONB) to `exam_titles` to store admin-configurable grade bands.
 
-1. Add a `signupSuccess` state (boolean) that gets set to `true` after successful signup
-2. After signup, instead of (or in addition to) the toast, show a prominent green `Alert` box at the top of the form with a `CheckCircle2` icon, title "Account created!", and description "Please check your email to verify your account before signing in."
-3. The alert stays visible until the user interacts with the login form
-4. Keep the toast as a secondary notification, but the inline alert ensures the message is unmissable
+**Migration:**
+```sql
+ALTER TABLE public.exam_titles
+ADD COLUMN grade_classifications jsonb
+DEFAULT '[{"label":"Distinction","min_percentage":75},{"label":"Merit","min_percentage":65},{"label":"Pass","min_percentage":50}]'::jsonb;
+```
 
-### Technical detail
+Default bands: Distinction (>=75%), Merit (>=65%), Pass (>=50%). Admin can edit these per course.
 
-```jsx
-// New state
-const [signupSuccess, setSignupSuccess] = useState(false);
+#### 2. Course edit form — Add grade classification editor (`src/pages/ExamManagement.jsx`)
+In the course create/edit dialog, add a section to manage grade bands:
+- Show a small table of classification rows: Label + Min %
+- Allow add/remove/edit rows
+- Store in `titleForm.grade_classifications` and save to `exam_titles.grade_classifications`
 
-// After successful signup (line 138 area)
-setSignupSuccess(true);
+#### 3. New component — `StatementOfResult` dialog (`src/components/exams/StatementOfResult.jsx`)
+A dialog that displays a formal statement of result for a specific member + course:
+- Header: Course name, member name, tenant logo (via `useTenant`)
+- Table: Subject name | Score | Total | Percentage | Subject Grade
+- Footer: Aggregate score, overall percentage, overall classification (Distinction/Merit/Pass/Fail)
+- Print button and CSV download
+- Subject-level grade classification based on course thresholds
 
-// In the JSX, above the form:
-{signupSuccess && (
-  <Alert className="bg-green-50 border-green-200 text-green-800 mb-4">
-    <CheckCircle2 className="h-4 w-4 text-green-600" />
-    <AlertTitle>Account created!</AlertTitle>
-    <AlertDescription>Please check your email to verify your account before signing in.</AlertDescription>
-  </Alert>
-)}
+#### 4. Admin view — Add "Statement" button per member in `CourseResultsView.jsx`
+In the results table, add a small button per member row that opens the `StatementOfResult` dialog for that member. Only shown when member has completed all subjects.
+
+#### 5. Member view — Add "View Statement of Result" in `MemberExamsView`
+When a member has completed all subjects for a course, show a "View Statement of Result" button that opens the same dialog with their own data.
+
+#### 6. Grade classification helper (`src/lib/grade-utils.js`)
+```js
+export function getGradeClassification(percentage, classifications) {
+  const sorted = [...(classifications || [])].sort((a, b) => b.min_percentage - a.min_percentage);
+  for (const c of sorted) {
+    if (percentage >= c.min_percentage) return c.label;
+  }
+  return "Fail";
+}
 ```
 
 ### Files changed
-- `src/pages/Auth.jsx` — add inline success alert after signup, import `CheckCircle2` and `AlertTitle`
+- **Database migration** — add `grade_classifications` JSONB column to `exam_titles`
+- **New**: `src/lib/grade-utils.js` — grade classification helper
+- **New**: `src/components/exams/StatementOfResult.jsx` — statement of result dialog
+- `src/pages/ExamManagement.jsx` — add grade band editor in course form; add "View Statement" in member view; pass classifications to CourseResultsView
+- `src/components/exams/CourseResultsView.jsx` — add "Statement" button per member, show classification badge instead of Pass/Fail
 
