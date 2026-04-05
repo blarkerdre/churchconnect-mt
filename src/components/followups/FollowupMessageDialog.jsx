@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import TenantDialogHeader from "@/components/ui/TenantDialogHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -127,17 +128,15 @@ export default function FollowupMessageDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
+        <TenantDialogHeader>
             {channel === "email" ? <Mail className="h-5 w-5" /> : <MessageSquare className="h-5 w-5" />}
             {existingMessage ? "Edit Message" : "Send Follow-up Message"}
-          </DialogTitle>
-          <DialogDescription>
+          </TenantDialogHeader>
+        <DialogDescription>
             {followup?.person_name && (
               <span>To: <strong>{followup.person_name}</strong></span>
             )}
           </DialogDescription>
-        </DialogHeader>
 
         <div className="space-y-4">
           {/* Channel selector */}

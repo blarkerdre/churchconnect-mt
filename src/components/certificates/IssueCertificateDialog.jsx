@@ -1,5 +1,6 @@
 import React, { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import TenantDialogHeader from "@/components/ui/TenantDialogHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -112,12 +113,10 @@ export default function IssueCertificateDialog({ open, onOpenChange, member }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="font-display flex items-center gap-2">
+        <TenantDialogHeader>
             <Award className="h-5 w-5 text-primary" />
             Issue Certificate — {member?.first_name} {member?.last_name}
-          </DialogTitle>
-        </DialogHeader>
+          </TenantDialogHeader>
 
         <div className="space-y-5 py-2">
           {/* Existing completions */}

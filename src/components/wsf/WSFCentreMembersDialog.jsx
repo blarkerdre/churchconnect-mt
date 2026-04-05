@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import TenantDialogHeader from "@/components/ui/TenantDialogHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -98,12 +99,10 @@ export default function WSFCentreMembersDialog({ open, onOpenChange, centre }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md max-h-[85vh] flex flex-col">
-        <DialogHeader>
-          <DialogTitle className="font-display">
+        <TenantDialogHeader>
             {centre?.name} — Members
             <Badge variant="outline" className="ml-2 font-mono">{centreMembers.length}</Badge>
-          </DialogTitle>
-        </DialogHeader>
+          </TenantDialogHeader>
 
         {!showAdd ? (
           <div className="flex flex-col gap-3 flex-1 min-h-0">

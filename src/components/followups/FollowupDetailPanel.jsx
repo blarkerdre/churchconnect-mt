@@ -4,7 +4,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { X, Clock, User, Calendar, Flag, Send, CheckCircle2, AlertCircle, TimerReset, Loader2, Phone, Mail, Lightbulb, UserCheck, RefreshCw, MessageSquare } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import TenantDialogHeader from "@/components/ui/TenantDialogHeader";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
@@ -390,12 +391,10 @@ export default function FollowupDetailPanel({ followup, onClose, onUpdate, curre
       {/* Message Detail Dialog */}
       <Dialog open={!!selectedMessage} onOpenChange={(v) => !v && setSelectedMessage(null)}>
         <DialogContent className="max-w-lg z-[60]">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
+          <TenantDialogHeader>
               {selectedMessage?.channel === "email" ? <Mail className="h-4 w-4" /> : <MessageSquare className="h-4 w-4" />}
               {selectedMessage?.channel === "email" ? "Email" : "SMS"} Message
-            </DialogTitle>
-          </DialogHeader>
+            </TenantDialogHeader>
           {selectedMessage && (
             <div className="space-y-4">
               <div className="flex items-center gap-2 flex-wrap">
