@@ -183,6 +183,13 @@ export default function Auth() {
             </CardDescription>
           </CardHeader>
           <CardContent>
+            {signupSuccess && (
+              <Alert className="bg-green-50 border-green-200 text-green-800 mb-4">
+                <CheckCircle2 className="h-4 w-4 text-green-600" />
+                <AlertTitle>Account created!</AlertTitle>
+                <AlertDescription>Please check your email to verify your account before signing in.</AlertDescription>
+              </Alert>
+            )}
             <form onSubmit={handleSubmit} className="space-y-4">
               {mode === "signup" && (
                 <div className="space-y-2">
