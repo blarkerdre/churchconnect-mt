@@ -25,6 +25,7 @@ export default function Auth() {
   const [showPassword, setShowPassword] = useState(false);
   const [signupCooldown, setSignupCooldown] = useState(false);
   const [cooldownSeconds, setCooldownSeconds] = useState(0);
+  const [signupSuccess, setSignupSuccess] = useState(false);
 
   useEffect(() => {
     if (!signupCooldown) return;
