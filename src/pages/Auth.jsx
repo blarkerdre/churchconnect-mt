@@ -257,12 +257,21 @@ export default function Auth() {
                   <button onClick={() => setMode("forgot")} className="text-sm text-primary hover:underline">
                     Forgot password?
                   </button>
-                  <p className="text-sm text-muted-foreground">
-                    Don't have an account?{" "}
-                    <button onClick={() => setMode("signup")} className="text-primary hover:underline font-medium">
-                      Sign up
-                    </button>
-                  </p>
+                  {canSignup ? (
+                    <p className="text-sm text-muted-foreground">
+                      Don't have an account?{" "}
+                      <button onClick={() => setMode("signup")} className="text-primary hover:underline font-medium">
+                        Sign up
+                      </button>
+                    </p>
+                  ) : (
+                    <Alert variant="default" className="mt-3 text-left">
+                      <Info className="h-4 w-4" />
+                      <AlertDescription>
+                        To create an account, please use the signup link provided by your church.
+                      </AlertDescription>
+                    </Alert>
+                  )}
                 </>
               )}
               {mode !== "login" && (
