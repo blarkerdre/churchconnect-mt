@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import TenantDialogHeader from "@/components/ui/TenantDialogHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -27,12 +28,10 @@ export default function ReEngagementDialog({ open, onOpenChange, member }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
+        <TenantDialogHeader>
             <Mail className="h-4 w-4 text-primary" />
             Re-engagement Contact
-          </DialogTitle>
-        </DialogHeader>
+          </TenantDialogHeader>
 
         <div className="space-y-4 pt-2">
           <div>

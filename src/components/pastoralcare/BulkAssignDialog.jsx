@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import TenantDialogHeader from "@/components/ui/TenantDialogHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -74,11 +75,9 @@ export default function BulkAssignDialog({ open, onOpenChange, records, onAssign
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
+        <TenantDialogHeader>
             <UserCheck className="h-5 w-5 text-[#1e3a5f]" /> Bulk Assign Requests
-          </DialogTitle>
-        </DialogHeader>
+          </TenantDialogHeader>
 
         <div className="flex-1 overflow-hidden flex flex-col gap-4 py-2">
           {/* Assign to */}

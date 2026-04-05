@@ -1,5 +1,6 @@
 import React, { useState, useRef } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import TenantDialogHeader from "@/components/ui/TenantDialogHeader";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Upload, FileText, AlertTriangle, CheckCircle2, Loader2 } from "lucide-react";
@@ -167,12 +168,10 @@ export default function BulkImportDialog({ open, onOpenChange, onComplete }) {
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Bulk Import Members</DialogTitle>
-          <DialogDescription>
+        <TenantDialogHeader>Bulk Import Members</TenantDialogHeader>
+        <DialogDescription>
             Upload a CSV file to create or update members in bulk. Members are matched by email address.
           </DialogDescription>
-        </DialogHeader>
 
         {step === "upload" && (
           <div className="space-y-4">

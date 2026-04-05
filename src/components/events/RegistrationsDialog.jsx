@@ -1,7 +1,8 @@
 import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import TenantDialogHeader from "@/components/ui/TenantDialogHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -77,9 +78,7 @@ export default function RegistrationsDialog({ open, onOpenChange, event }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Registrations — {event?.title}</DialogTitle>
-        </DialogHeader>
+        <TenantDialogHeader>Registrations — {event?.title}</TenantDialogHeader>
         <div className="space-y-5 py-2">
           <div className="grid grid-cols-3 gap-3">
             <div className="text-center p-3 bg-muted/50 rounded-xl">

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import TenantDialogHeader from "@/components/ui/TenantDialogHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -51,9 +52,7 @@ export default function FollowupFormDialog({ open, onOpenChange, followup, onSav
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>{followup ? "Edit Follow-up" : "Create Follow-up"}</DialogTitle>
-        </DialogHeader>
+        <TenantDialogHeader>{followup ? "Edit Follow-up" : "Create Follow-up"}</TenantDialogHeader>
         <div className="space-y-4 py-4">
 
           {/* Person */}

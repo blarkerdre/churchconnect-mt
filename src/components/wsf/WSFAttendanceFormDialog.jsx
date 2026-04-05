@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import TenantDialogHeader from "@/components/ui/TenantDialogHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -61,10 +62,8 @@ export default function WSFAttendanceFormDialog({ open, onOpenChange, centre, re
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md max-h-[90vh] flex flex-col">
-        <DialogHeader className="flex-shrink-0">
-          <DialogTitle>{report ? "Edit Attendance Report" : "Record Attendance"}</DialogTitle>
-          {centre && <p className="text-sm text-muted-foreground">{centre.name}</p>}
-        </DialogHeader>
+        <TenantDialogHeader className="flex-shrink-0">{report ? "Edit Attendance Report" : "Record Attendance"}</TenantDialogHeader>
+        {centre && <p className="text-sm text-muted-foreground">{centre.name}</p>}
         <div className="space-y-4 py-4 overflow-y-auto flex-1 min-h-0">
           {!centre && allCentres.length > 0 && (
             <div className="space-y-1.5">

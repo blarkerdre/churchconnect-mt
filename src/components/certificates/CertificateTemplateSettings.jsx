@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import TenantDialogHeader from "@/components/ui/TenantDialogHeader";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2, Award, Plus, Pencil, Trash2, Upload, Image, Eye } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -305,9 +306,7 @@ export default function CertificateTemplateSettings() {
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-[95vw] sm:max-w-md max-h-[85vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{editing ? "Edit Template" : "Add Certificate Template"}</DialogTitle>
-          </DialogHeader>
+          <TenantDialogHeader>{editing ? "Edit Template" : "Add Certificate Template"}</TenantDialogHeader>
           <div className="space-y-4 mt-2">
             <div className="space-y-1.5">
               <Label>Training Type *</Label>
@@ -453,9 +452,7 @@ export default function CertificateTemplateSettings() {
       {/* Preview Dialog */}
       <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
         <DialogContent className="max-w-[95vw] sm:max-w-3xl">
-          <DialogHeader>
-            <DialogTitle>Certificate Preview</DialogTitle>
-          </DialogHeader>
+          <TenantDialogHeader>Certificate Preview</TenantDialogHeader>
           <div className="mt-2 rounded-lg overflow-hidden border bg-muted/30">
             <div
               dangerouslySetInnerHTML={{ __html: generatePreviewSvg() }}

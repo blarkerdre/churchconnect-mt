@@ -1,5 +1,6 @@
 import React, { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import TenantDialogHeader from "@/components/ui/TenantDialogHeader";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -95,9 +96,7 @@ export default function BulkUnitAssignDialog({ open, onOpenChange }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle className="font-display">Bulk Unit Assignment</DialogTitle>
-        </DialogHeader>
+        <TenantDialogHeader>Bulk Unit Assignment</TenantDialogHeader>
         <div className="space-y-4">
           <div className="space-y-1.5">
             <Label>Select Unit</Label>

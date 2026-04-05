@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import TenantDialogHeader from "@/components/ui/TenantDialogHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -165,16 +166,14 @@ export default function TenantUsersDialog({ tenant, open, onOpenChange }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
+        <TenantDialogHeader>
             Users — {tenant.name}
             {isSuperAdmin && (
               <Badge variant="outline" className="text-xs text-violet-600 border-violet-200 bg-violet-50 ml-2">
                 <ShieldCheck className="h-3 w-3 mr-1" />Super Admin Mode
               </Badge>
             )}
-          </DialogTitle>
-        </DialogHeader>
+          </TenantDialogHeader>
 
         {/* Invite User Form */}
         <form onSubmit={handleInvite} className="flex flex-col sm:flex-row gap-2 p-3 bg-muted/50 rounded-lg">
