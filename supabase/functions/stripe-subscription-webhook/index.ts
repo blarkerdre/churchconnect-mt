@@ -118,16 +118,21 @@ serve(async (req) => {
           break;
         }
 
+        const paymentAmount = (invoice.amount_paid || 0) / 100;
+        const paymentCurrency = (invoice.currency || "gbp").toUpperCase();
+        const paymentDate = new Date().toISOString().split("T")[0];
+        const paymentReference = invoice.id;
+
         // Record payment
         await supabaseAdmin.from("tenant_payments").insert({
           tenant_id: tenantId,
           subscription_id: subscriptionId || null,
-          amount: (invoice.amount_paid || 0) / 100,
-          currency: (invoice.currency || "gbp").toUpperCase(),
-          payment_date: new Date().toISOString().split("T")[0],
+          amount: paymentAmount,
+          currency: paymentCurrency,
+          payment_date: paymentDate,
           payment_method: "Stripe",
           stripe_payment_intent_id: invoice.payment_intent as string,
-          reference: invoice.id,
+          reference: paymentReference,
           status: "completed",
         });
 
@@ -137,7 +142,58 @@ serve(async (req) => {
           .update({ subscription_status: "active" })
           .eq("id", tenantId);
 
-        logStep("Payment recorded & status set to active", { tenantId, amount: (invoice.amount_paid || 0) / 100 });
+        logStep("Payment recorded & status set to active", { tenantId, amount: paymentAmount });
+
+        // Send payment receipt emails to tenant admins (non-blocking)
+        try {
+          const { data: tenantInfo } = await supabaseAdmin
+            .from("tenants").select("name, slug").eq("id", tenantId).single();
+
+          const { data: subInfo } = await supabaseAdmin
+            .from("tenant_subscriptions")
+            .select("billing_cycle, next_due_date")
+            .eq("tenant_id", tenantId)
+            .eq("is_active", true)
+            .maybeSingle();
+
+          const { data: admins } = await supabaseAdmin
+            .from("tenant_memberships")
+            .select("user_id, profiles!inner(email, full_name)")
+            .eq("tenant_id", tenantId)
+            .in("role", ["owner", "admin"]);
+
+          const settingsUrl = tenantInfo?.slug
+            ? `https://churchconnect-mt.lovable.app/t/${tenantInfo.slug}/settings`
+            : "https://churchconnect-mt.lovable.app/settings";
+
+          for (const admin of admins || []) {
+            const email = (admin as any).profiles?.email;
+            if (!email) continue;
+            await supabaseAdmin.functions.invoke("send-transactional-email", {
+              body: {
+                templateName: "payment-receipt",
+                recipientEmail: email,
+                tenant_id: tenantId,
+                idempotencyKey: `payment-receipt-${paymentReference}-${email}`,
+                templateData: {
+                  churchName: tenantInfo?.name || "Your Church",
+                  amount: paymentAmount.toFixed(2),
+                  currency: paymentCurrency,
+                  paymentDate,
+                  paymentMethod: "Stripe",
+                  reference: paymentReference,
+                  billingCycle: subInfo?.billing_cycle || "monthly",
+                  nextDueDate: subInfo?.next_due_date || null,
+                  settingsUrl,
+                },
+              },
+            });
+          }
+          logStep("Payment receipt emails sent", { tenantId });
+        } catch (emailErr) {
+          console.error("[stripe-webhook] Failed to send receipt email:", emailErr.message);
+        }
+
         break;
       }
 

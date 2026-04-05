@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -121,6 +122,8 @@ function BillingSection() {
     enabled: !!tenantId,
   });
 
+  const [showAllPayments, setShowAllPayments] = useState(false);
+
   const { data: payments = [] } = useQuery({
     queryKey: ["tenant-payments", tenantId],
     queryFn: async () => {
@@ -129,7 +132,7 @@ function BillingSection() {
         .select("*")
         .eq("tenant_id", tenantId)
         .order("payment_date", { ascending: false })
-        .limit(10);
+        .limit(50);
       if (error) throw error;
       return data || [];
     },
@@ -232,15 +235,43 @@ function BillingSection() {
 
             {payments.length > 0 && (
               <div className="space-y-2">
-                <h4 className="text-sm font-medium">Recent Payments</h4>
-                <div className="space-y-1.5">
-                  {payments.map((p) => (
-                    <div key={p.id} className="flex items-center justify-between py-1.5 px-2 rounded hover:bg-muted/50 text-xs">
-                      <span>{p.payment_date}</span>
-                      <span className="font-medium">{p.currency} {Number(p.amount).toFixed(2)}</span>
-                      <span className="text-muted-foreground">{p.payment_method || "Stripe"}</span>
-                    </div>
-                  ))}
+                <div className="flex items-center justify-between">
+                  <h4 className="text-sm font-medium">Payment History</h4>
+                  {payments.length > 5 && (
+                    <Button variant="ghost" size="sm" className="text-xs h-7" onClick={() => setShowAllPayments(!showAllPayments)}>
+                      {showAllPayments ? "Show Less" : `View All (${payments.length})`}
+                    </Button>
+                  )}
+                </div>
+                <div className={showAllPayments ? "max-h-80 overflow-y-auto" : ""}>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="text-xs">Date</TableHead>
+                        <TableHead className="text-xs">Amount</TableHead>
+                        <TableHead className="text-xs">Method</TableHead>
+                        <TableHead className="text-xs">Status</TableHead>
+                        <TableHead className="text-xs">Reference</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {(showAllPayments ? payments : payments.slice(0, 5)).map((p) => (
+                        <TableRow key={p.id}>
+                          <TableCell className="text-xs">{p.payment_date}</TableCell>
+                          <TableCell className="text-xs font-medium">{p.currency} {Number(p.amount).toFixed(2)}</TableCell>
+                          <TableCell className="text-xs">{p.payment_method || "Stripe"}</TableCell>
+                          <TableCell className="text-xs">
+                            <Badge variant={p.status === "completed" ? "default" : p.status === "pending" ? "secondary" : "destructive"} className={`text-[10px] ${p.status === "completed" ? "bg-green-600" : p.status === "pending" ? "bg-amber-500" : ""}`}>
+                              {p.status || "completed"}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-xs text-muted-foreground truncate max-w-[100px]" title={p.reference || p.stripe_payment_intent_id || "—"}>
+                            {p.reference || p.stripe_payment_intent_id || "—"}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
                 </div>
               </div>
             )}
