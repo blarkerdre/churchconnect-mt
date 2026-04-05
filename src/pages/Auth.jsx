@@ -11,11 +11,14 @@ import { Mail, Lock, User, ArrowRight, Eye, EyeOff } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Info } from "lucide-react";
 
 export default function Auth() {
   const { user, loading, signIn, signUp, resetPassword } = useAuth();
   const { toast } = useToast();
   const { tenantSlug } = useParams();
+  const canSignup = !!tenantSlug;
   const [mode, setMode] = useState("login"); // login | signup | forgot
   const [form, setForm] = useState({ email: "", password: "", fullName: "" });
   const [submitting, setSubmitting] = useState(false);
