@@ -166,6 +166,22 @@ function BillingSection() {
     }
   };
 
+  const handleManageSubscription = async () => {
+    setManageLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("manage-tenant-subscription", {
+        body: { tenant_id: tenantId, action: "portal" },
+      });
+      if (error) throw new Error(error.message || "Failed to open portal");
+      if (!data?.url) throw new Error("Missing portal URL");
+      window.open(data.url, "_blank", "noopener,noreferrer");
+    } catch (err) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    } finally {
+      setManageLoading(false);
+    }
+  };
+
   const statusColor = tenantData?.subscription_status === "active" ? "text-emerald-600 bg-emerald-50" : tenantData?.subscription_status === "past_due" ? "text-amber-600 bg-amber-50" : "text-destructive bg-destructive/10";
 
   return (
