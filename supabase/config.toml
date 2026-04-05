@@ -21,3 +21,5 @@ project_id = "qfordhikmtgedfybktjg"
     verify_jwt = false
   [functions.twilio-webhook]
     verify_jwt = false
+  [functions.manage-tenant-subscription]
+    verify_jwt = false
