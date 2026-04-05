@@ -1,0 +1,1 @@
+ALTER TABLE public.tenant_subscriptions ADD COLUMN IF NOT EXISTS stripe_subscription_id text, ADD COLUMN IF NOT EXISTS stripe_price_id text;
