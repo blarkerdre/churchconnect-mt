@@ -104,6 +104,7 @@ function BillingSection() {
   const { tenantId } = useTenantQuery();
   const { isTenantOwner, isTenantAdmin: isTAdmin } = useTenant();
   const [payLoading, setPayLoading] = useState(false);
+  const [manageLoading, setManageLoading] = useState(false);
 
   const { data: subscription, isLoading: subLoading } = useQuery({
     queryKey: ["tenant-subscription", tenantId],
@@ -165,6 +166,22 @@ function BillingSection() {
     }
   };
 
+  const handleManageSubscription = async () => {
+    setManageLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("manage-tenant-subscription", {
+        body: { tenant_id: tenantId, action: "portal" },
+      });
+      if (error) throw new Error(error.message || "Failed to open portal");
+      if (!data?.url) throw new Error("Missing portal URL");
+      window.open(data.url, "_blank", "noopener,noreferrer");
+    } catch (err) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    } finally {
+      setManageLoading(false);
+    }
+  };
+
   const statusColor = tenantData?.subscription_status === "active" ? "text-emerald-600 bg-emerald-50" : tenantData?.subscription_status === "past_due" ? "text-amber-600 bg-amber-50" : "text-destructive bg-destructive/10";
 
   return (
@@ -192,10 +209,25 @@ function BillingSection() {
               <div className="flex justify-between"><span className="text-muted-foreground">Next Due Date</span><span className={tenantData?.subscription_status !== "active" ? "text-destructive font-medium" : ""}>{subscription.next_due_date}</span></div>
             </div>
 
+            {subscription.stripe_subscription_id && (
+              <div className="flex items-center gap-2 p-2 bg-emerald-50 dark:bg-emerald-950/30 rounded-lg text-xs text-emerald-700 dark:text-emerald-400">
+                <CreditCard className="h-3.5 w-3.5" />
+                <span>Auto-renewing via Stripe</span>
+              </div>
+            )}
+
             {(isTenantOwner || isTAdmin) && (
-              <Button onClick={handlePayNow} disabled={payLoading} className="w-full">
-                {payLoading ? <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Redirecting...</> : <><CreditCard className="h-4 w-4 mr-2" /> Pay Now via Stripe</>}
-              </Button>
+              <div className="flex gap-2">
+                {subscription.stripe_subscription_id ? (
+                  <Button onClick={handleManageSubscription} disabled={manageLoading} className="w-full" variant="outline">
+                    {manageLoading ? <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Opening...</> : <><CreditCard className="h-4 w-4 mr-2" /> Manage Subscription</>}
+                  </Button>
+                ) : (
+                  <Button onClick={handlePayNow} disabled={payLoading} className="w-full">
+                    {payLoading ? <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Redirecting...</> : <><CreditCard className="h-4 w-4 mr-2" /> Subscribe via Stripe</>}
+                  </Button>
+                )}
+              </div>
             )}
 
             {payments.length > 0 && (

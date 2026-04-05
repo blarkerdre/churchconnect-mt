@@ -53,6 +53,11 @@ serve(async (req) => {
 
     if (!sub) throw new Error("No active subscription found for this tenant");
 
+    // If tenant already has an active Stripe subscription, redirect to portal instead
+    if (sub.stripe_subscription_id) {
+      throw new Error("Tenant already has an active Stripe subscription. Use the Manage Subscription option instead.");
+    }
+
     const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
       apiVersion: "2025-08-27.basil",
     });
@@ -79,7 +84,7 @@ serve(async (req) => {
         .eq("id", sub.id);
     }
 
-    // Create checkout session with a one-time payment for the subscription amount
+    // Create checkout session with recurring subscription
     const origin = req.headers.get("origin") || "https://churchconnect-mt.lovable.app";
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
@@ -91,17 +96,22 @@ serve(async (req) => {
               name: `Church Management - ${sub.billing_cycle === "yearly" ? "Annual" : "Monthly"} Subscription`,
             },
             unit_amount: Math.round(Number(sub.amount) * 100),
+            recurring: {
+              interval: sub.billing_cycle === "yearly" ? "year" : "month",
+            },
           },
           quantity: 1,
         },
       ],
-      mode: "payment",
+      mode: "subscription",
       success_url: `${origin}/settings?payment=success`,
       cancel_url: `${origin}/settings?payment=cancelled`,
-      metadata: {
-        tenant_id,
-        subscription_id: sub.id,
-        billing_cycle: sub.billing_cycle,
+      subscription_data: {
+        metadata: {
+          tenant_id,
+          subscription_id: sub.id,
+          billing_cycle: sub.billing_cycle,
+        },
       },
     });
 

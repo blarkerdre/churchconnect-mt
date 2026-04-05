@@ -2347,6 +2347,7 @@ export type Database = {
           is_active: boolean
           next_due_date: string
           stripe_customer_id: string | null
+          stripe_price_id: string | null
           stripe_subscription_id: string | null
           tenant_id: string
           updated_at: string
@@ -2361,6 +2362,7 @@ export type Database = {
           is_active?: boolean
           next_due_date: string
           stripe_customer_id?: string | null
+          stripe_price_id?: string | null
           stripe_subscription_id?: string | null
           tenant_id: string
           updated_at?: string
@@ -2375,6 +2377,7 @@ export type Database = {
           is_active?: boolean
           next_due_date?: string
           stripe_customer_id?: string | null
+          stripe_price_id?: string | null
           stripe_subscription_id?: string | null
           tenant_id?: string
           updated_at?: string
