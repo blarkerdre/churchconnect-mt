@@ -121,6 +121,8 @@ function BillingSection() {
     enabled: !!tenantId,
   });
 
+  const [showAllPayments, setShowAllPayments] = useState(false);
+
   const { data: payments = [] } = useQuery({
     queryKey: ["tenant-payments", tenantId],
     queryFn: async () => {
@@ -129,7 +131,7 @@ function BillingSection() {
         .select("*")
         .eq("tenant_id", tenantId)
         .order("payment_date", { ascending: false })
-        .limit(10);
+        .limit(50);
       if (error) throw error;
       return data || [];
     },
