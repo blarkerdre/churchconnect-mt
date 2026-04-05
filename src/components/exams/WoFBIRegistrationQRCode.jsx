@@ -1,6 +1,7 @@
 import React, { useRef } from "react";
 import { QRCodeSVG } from "qrcode.react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import TenantDialogHeader from "@/components/ui/TenantDialogHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Download, Copy, QrCode } from "lucide-react";
@@ -15,11 +16,9 @@ export default function WoFBIRegistrationQRCode({ open, onOpenChange }) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
+          <TenantDialogHeader>
               <QrCode className="h-5 w-5" /> WoFBI Registration QR Code
-            </DialogTitle>
-          </DialogHeader>
+            </TenantDialogHeader>
           <p className="text-sm text-muted-foreground py-4 text-center">
             Unable to generate QR code — church context not resolved yet. Please try again.
           </p>
@@ -71,11 +70,9 @@ export default function WoFBIRegistrationQRCode({ open, onOpenChange }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-sm">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
+        <TenantDialogHeader>
             <QrCode className="h-5 w-5" /> WoFBI Registration QR Code
-          </DialogTitle>
-        </DialogHeader>
+          </TenantDialogHeader>
         <div className="space-y-4 py-2">
           <p className="text-sm font-semibold text-center text-primary">{label}</p>
           <div ref={qrRef} className="flex justify-center p-6 bg-white rounded-xl border border-border">

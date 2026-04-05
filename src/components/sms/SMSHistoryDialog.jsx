@@ -1,5 +1,6 @@
 import React, { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import TenantDialogHeader from "@/components/ui/TenantDialogHeader";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -68,12 +69,10 @@ export default function SMSHistoryDialog({ open, onOpenChange, defaultFilter = "
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg max-h-[80vh] flex flex-col">
-        <DialogHeader>
-          <DialogTitle className="font-display flex items-center gap-2">
+        <TenantDialogHeader>
             <MessageSquare className="h-5 w-5 text-primary" />
             SMS History
-          </DialogTitle>
-        </DialogHeader>
+          </TenantDialogHeader>
 
         <div className="flex items-center justify-between gap-3 mt-2">
           <Select value={typeFilter} onValueChange={setTypeFilter}>
@@ -147,13 +146,11 @@ export default function SMSHistoryDialog({ open, onOpenChange, defaultFilter = "
       {/* SMS Detail Dialog */}
       <Dialog open={!!selectedLog} onOpenChange={(v) => !v && setSelectedLog(null)}>
         <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
+          <TenantDialogHeader>
               <MessageSquare className="h-5 w-5 text-primary" />
               Message Detail
-            </DialogTitle>
-            <DialogDescription>Full message and delivery details</DialogDescription>
-          </DialogHeader>
+            </TenantDialogHeader>
+        <DialogDescription>Full message and delivery details</DialogDescription>
           {selectedLog && (() => {
             const sd = getStatusDisplay(selectedLog);
             const hint = getTrialAccountHint(selectedLog.error_message);
