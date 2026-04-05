@@ -104,6 +104,7 @@ function BillingSection() {
   const { tenantId } = useTenantQuery();
   const { isTenantOwner, isTenantAdmin: isTAdmin } = useTenant();
   const [payLoading, setPayLoading] = useState(false);
+  const [manageLoading, setManageLoading] = useState(false);
 
   const { data: subscription, isLoading: subLoading } = useQuery({
     queryKey: ["tenant-subscription", tenantId],
