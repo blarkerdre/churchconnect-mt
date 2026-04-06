@@ -115,7 +115,7 @@ Deno.serve(async (req) => {
 
     const templateProps = {
       firstName: first_name || "Friend",
-      courseName: course_name || "WoFBI Course",
+      courseName: course_name || "Bible School Course",
       siteUrl: tenantSiteUrl,
     };
 
