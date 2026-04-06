@@ -308,7 +308,7 @@ export default function ExamManagement() {
                   </Badge>
                    {!t.is_active && <Badge variant="secondary" className="text-[9px] h-4">Inactive</Badge>}
                    {t.registration_open && <Badge variant="outline" className="text-[9px] h-4 border-chart-3/40 text-chart-3">Reg Open</Badge>}
-                   {t.exams_open && <Badge variant="outline" className="text-[9px] h-4 border-primary/40 text-primary">WoFBI Open</Badge>}
+                   {t.exams_open && <Badge variant="outline" className="text-[9px] h-4 border-primary/40 text-primary">Exams Open</Badge>}
                   <button className="opacity-0 group-hover:opacity-100 transition-opacity ml-1" onClick={(e) => {
                     e.stopPropagation();
                     setEditingTitle(t);
