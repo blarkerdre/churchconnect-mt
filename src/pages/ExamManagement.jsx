@@ -476,6 +476,7 @@ export default function ExamManagement() {
               is_active: true,
               registration_open: titleForm.registration_open,
               exams_open: titleForm.exams_open,
+              grade_classifications: titleForm.grade_classifications,
             });
           }} className="space-y-4">
             <div><Label>Course Name *</Label><Input value={titleForm.name} onChange={e => setTitleForm(f => ({ ...f, name: e.target.value }))} placeholder="e.g. BCC, LCC" /></div>
