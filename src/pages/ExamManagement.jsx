@@ -868,7 +868,7 @@ function WofbiAboutEditor() {
       <CardContent>
         {editing ? (
           <div className="space-y-3">
-            <Textarea value={draft} onChange={(e) => setDraft(e.target.value)} rows={4} placeholder="Describe what WoFBI is..." />
+            <Textarea value={draft} onChange={(e) => setDraft(e.target.value)} rows={4} placeholder="Describe what Bible School is..." />
             <div className="flex gap-2 justify-end">
               <Button size="sm" variant="outline" onClick={() => setEditing(false)}>Cancel</Button>
               <Button size="sm" className="gap-1.5" onClick={() => saveMutation.mutate(draft)} disabled={saveMutation.isPending}>
