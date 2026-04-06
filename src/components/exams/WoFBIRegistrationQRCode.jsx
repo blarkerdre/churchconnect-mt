@@ -71,8 +71,8 @@ export default function WoFBIRegistrationQRCode({ open, onOpenChange }) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-sm">
         <TenantDialogHeader>
-            <QrCode className="h-5 w-5" /> WoFBI Registration QR Code
-          </TenantDialogHeader>
+            <QrCode className="h-5 w-5" /> Bible School Registration QR Code
+           </TenantDialogHeader>
         <div className="space-y-4 py-2">
           <p className="text-sm font-semibold text-center text-primary">{label}</p>
           <div ref={qrRef} className="flex justify-center p-6 bg-white rounded-xl border border-border">
