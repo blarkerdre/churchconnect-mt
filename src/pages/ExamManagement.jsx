@@ -985,9 +985,9 @@ function MemberExamsView({ memberId, courses, loading }) {
     <div className="space-y-6">
       <div>
         <h1 className="text-xl font-display font-bold text-foreground flex items-center gap-2">
-          <BookOpen className="h-5 w-5 text-primary" /> WoFBI
-        </h1>
-        <p className="text-sm text-muted-foreground mt-1">Register for courses and take your WoFBI exams</p>
+           <BookOpen className="h-5 w-5 text-primary" /> Bible School
+         </h1>
+         <p className="text-sm text-muted-foreground mt-1">Register for courses and take your Bible School exams</p>
       </div>
 
       <WofbiAboutDisplay />
