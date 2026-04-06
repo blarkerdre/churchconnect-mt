@@ -13,6 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Badge } from "@/components/ui/badge";
 import { formatDistanceToNow, format } from "date-fns";
 import { toast } from "sonner";
+import { requestNotificationPermission, triggerNotificationAlert } from "@/lib/notification-alert";
 
 const typeIcons = {
   pastoral_care: Heart,
