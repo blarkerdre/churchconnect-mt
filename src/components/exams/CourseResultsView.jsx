@@ -311,5 +311,17 @@ export default function CourseResultsView({ course }) {
         )}
       </CardContent>
     </Card>
+
+    {statementMember && (
+      <StatementOfResult
+        open={!!statementMember}
+        onOpenChange={(v) => { if (!v) setStatementMember(null); }}
+        member={statementMember}
+        course={course}
+        subjects={subjects}
+        memberSubjects={statementMember.subjects}
+      />
+    )}
+    </>
   );
 }
