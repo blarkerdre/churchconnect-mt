@@ -25,6 +25,13 @@ function downloadCSV(filename, headers, rows) {
 
 export default function CourseResultsView({ course }) {
   const qc = useQueryClient();
+  const [statementMember, setStatementMember] = useState(null);
+
+  const classifications = course.grade_classifications || [
+    { label: "Distinction", min_percentage: 75 },
+    { label: "Merit", min_percentage: 65 },
+    { label: "Pass", min_percentage: 50 },
+  ];
 
   const { data: subjects = [] } = useQuery({
     queryKey: ["exam-subjects", course.id],
