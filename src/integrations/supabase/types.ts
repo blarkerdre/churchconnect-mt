@@ -101,6 +101,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "announcements_created_by_profiles_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
             foreignKeyName: "announcements_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
