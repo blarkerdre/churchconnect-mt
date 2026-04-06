@@ -19,7 +19,7 @@ interface WoFBICourseRegistrationEmailProps {
 
 export const WoFBICourseRegistrationEmail: React.FC<WoFBICourseRegistrationEmailProps> = ({
   firstName = 'Friend',
-  courseName = 'WoFBI Course',
+  courseName = 'Bible School Course',
   siteUrl = 'https://churchmanagementsuite.org',
 }) => {
   return (
