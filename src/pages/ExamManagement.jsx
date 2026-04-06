@@ -281,7 +281,7 @@ export default function ExamManagement() {
              {canCreateCourse && (
                <Button size="sm" variant="outline" className="gap-1.5" onClick={() => {
                 setEditingTitle(null);
-                setTitleForm({ name: "", description: "", pass_mark_percentage: 50, registration_open: false, exams_open: false });
+                setTitleForm({ name: "", description: "", pass_mark_percentage: 50, registration_open: false, exams_open: false, grade_classifications: DEFAULT_GRADE_CLASSIFICATIONS });
                 setTitleDialogOpen(true);
               }}>
                 <Plus className="h-3.5 w-3.5" /> Add Course
