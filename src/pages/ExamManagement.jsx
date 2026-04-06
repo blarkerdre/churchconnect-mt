@@ -15,13 +15,15 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "@/components/ui/use-toast";
-import { Loader2, Plus, Trash2, Edit, BookOpen, Save, Tag, Layers, Eye, CheckCircle2, Download, Users, QrCode, Search } from "lucide-react";
+import { Loader2, Plus, Trash2, Edit, BookOpen, Save, Tag, Layers, Eye, CheckCircle2, Download, Users, QrCode, Search, FileText } from "lucide-react";
 import WoFBIRegistrationQRCode from "@/components/exams/WoFBIRegistrationQRCode";
 import SubjectManager from "@/components/exams/SubjectManager";
 import CourseResultsView from "@/components/exams/CourseResultsView";
 import TakeExamDialog from "@/components/exams/TakeExamDialog";
 import { useSubFeature } from "@/hooks/useSubFeature";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
+import { getGradeClassification, DEFAULT_GRADE_CLASSIFICATIONS } from "@/lib/grade-utils";
+import StatementOfResult from "@/components/exams/StatementOfResult";
 
 const OPTION_LETTERS = ["a", "b", "c", "d"];
 const QUESTION_TYPES = [
@@ -59,7 +61,7 @@ export default function ExamManagement() {
   // Course CRUD state
   const [titleDialogOpen, setTitleDialogOpen] = useState(false);
   const [editingTitle, setEditingTitle] = useState(null);
-  const [titleForm, setTitleForm] = useState({ name: "", description: "", pass_mark_percentage: 50, registration_open: false, exams_open: false });
+  const [titleForm, setTitleForm] = useState({ name: "", description: "", pass_mark_percentage: 50, registration_open: false, exams_open: false, grade_classifications: DEFAULT_GRADE_CLASSIFICATIONS });
   const [deleteTitleTarget, setDeleteTitleTarget] = useState(null);
   const [showResults, setShowResults] = useState(false);
   const [showRegistrations, setShowRegistrations] = useState(false);
@@ -100,7 +102,7 @@ export default function ExamManagement() {
       toast({ title: editingTitle ? "Course updated" : "Course created" });
       setTitleDialogOpen(false);
       setEditingTitle(null);
-      setTitleForm({ name: "", description: "", pass_mark_percentage: 50, registration_open: false, exams_open: false });
+      setTitleForm({ name: "", description: "", pass_mark_percentage: 50, registration_open: false, exams_open: false, grade_classifications: DEFAULT_GRADE_CLASSIFICATIONS });
     },
     onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
@@ -279,7 +281,7 @@ export default function ExamManagement() {
              {canCreateCourse && (
                <Button size="sm" variant="outline" className="gap-1.5" onClick={() => {
                 setEditingTitle(null);
-                setTitleForm({ name: "", description: "", pass_mark_percentage: 50, registration_open: false, exams_open: false });
+                setTitleForm({ name: "", description: "", pass_mark_percentage: 50, registration_open: false, exams_open: false, grade_classifications: DEFAULT_GRADE_CLASSIFICATIONS });
                 setTitleDialogOpen(true);
               }}>
                 <Plus className="h-3.5 w-3.5" /> Add Course
@@ -310,7 +312,7 @@ export default function ExamManagement() {
                   <button className="opacity-0 group-hover:opacity-100 transition-opacity ml-1" onClick={(e) => {
                     e.stopPropagation();
                     setEditingTitle(t);
-                    setTitleForm({ name: t.name, description: t.description || "", pass_mark_percentage: t.pass_mark_percentage || 50, registration_open: !!t.registration_open, exams_open: !!t.exams_open });
+                    setTitleForm({ name: t.name, description: t.description || "", pass_mark_percentage: t.pass_mark_percentage || 50, registration_open: !!t.registration_open, exams_open: !!t.exams_open, grade_classifications: t.grade_classifications || DEFAULT_GRADE_CLASSIFICATIONS });
                     setTitleDialogOpen(true);
                   }}>
                     <Edit className="h-3 w-3" />
@@ -474,6 +476,7 @@ export default function ExamManagement() {
               is_active: true,
               registration_open: titleForm.registration_open,
               exams_open: titleForm.exams_open,
+              grade_classifications: titleForm.grade_classifications,
             });
           }} className="space-y-4">
             <div><Label>Course Name *</Label><Input value={titleForm.name} onChange={e => setTitleForm(f => ({ ...f, name: e.target.value }))} placeholder="e.g. BCC, LCC" /></div>
@@ -486,6 +489,50 @@ export default function ExamManagement() {
             <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50 border border-border">
               <Label htmlFor="exams-open" className="cursor-pointer">WoFBI Open</Label>
               <Switch id="exams-open" checked={titleForm.exams_open} onCheckedChange={v => setTitleForm(f => ({ ...f, exams_open: v }))} />
+            </div>
+            {/* Grade Classifications Editor */}
+            <div className="space-y-2">
+              <Label>Grade Classifications</Label>
+              <div className="space-y-2">
+                {(titleForm.grade_classifications || []).map((gc, idx) => (
+                  <div key={idx} className="flex items-center gap-2">
+                    <Input
+                      value={gc.label}
+                      onChange={e => {
+                        const updated = [...titleForm.grade_classifications];
+                        updated[idx] = { ...updated[idx], label: e.target.value };
+                        setTitleForm(f => ({ ...f, grade_classifications: updated }));
+                      }}
+                      placeholder="Label"
+                      className="flex-1"
+                    />
+                    <Input
+                      type="number"
+                      min="0"
+                      max="100"
+                      value={gc.min_percentage}
+                      onChange={e => {
+                        const updated = [...titleForm.grade_classifications];
+                        updated[idx] = { ...updated[idx], min_percentage: Number(e.target.value) };
+                        setTitleForm(f => ({ ...f, grade_classifications: updated }));
+                      }}
+                      className="w-20"
+                    />
+                    <span className="text-xs text-muted-foreground">%</span>
+                    <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => {
+                      setTitleForm(f => ({ ...f, grade_classifications: f.grade_classifications.filter((_, i) => i !== idx) }));
+                    }}>
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  </div>
+                ))}
+                <Button type="button" variant="outline" size="sm" className="gap-1.5" onClick={() => {
+                  setTitleForm(f => ({ ...f, grade_classifications: [...(f.grade_classifications || []), { label: "", min_percentage: 0 }] }));
+                }}>
+                  <Plus className="h-3 w-3" /> Add Grade
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">Highest percentage first. Students below the lowest threshold get "Fail".</p>
             </div>
             <DialogFooter>
               <Button type="submit" disabled={saveTitleMutation.isPending}>
@@ -865,6 +912,7 @@ function WofbiAboutDisplay() {
 function MemberExamsView({ memberId, courses, loading }) {
   const qc = useQueryClient();
   const [examSelection, setExamSelection] = useState(null);
+  const [statementCourse, setStatementCourse] = useState(null);
 
   const { data: registrations = [], isLoading: regLoading } = useQuery({
     queryKey: ["my-course-registrations", memberId],
@@ -976,8 +1024,13 @@ function MemberExamsView({ memberId, courses, loading }) {
                       )}
                       {allDone && (
                         <Badge variant={passed ? "default" : "destructive"} className="text-xs">
-                          {passed ? "Passed ✓" : "Not Passed"}
+                          {passed ? getGradeClassification(aggPct, course.grade_classifications || DEFAULT_GRADE_CLASSIFICATIONS) : "Fail"}
                         </Badge>
+                      )}
+                      {allDone && (
+                        <Button variant="outline" size="sm" className="gap-1 text-xs h-7" onClick={() => setStatementCourse(course)}>
+                          <FileText className="h-3 w-3" /> Statement
+                        </Button>
                       )}
                     </div>
                   </div>
@@ -1043,6 +1096,26 @@ function MemberExamsView({ memberId, courses, loading }) {
         subjectId={examSelection?.subjectId}
         subjectName={examSelection?.subjectName}
       />
+
+      {statementCourse && (() => {
+        const subjects = allSubjects.filter(s => s.course_id === statementCourse.id);
+        const memberSubs = {};
+        subjects.forEach(s => {
+          if (bestBySubject[s.id]) {
+            memberSubs[s.id] = { score: bestBySubject[s.id].score, total_points: bestBySubject[s.id].total_points };
+          }
+        });
+        return (
+          <StatementOfResult
+            open={!!statementCourse}
+            onOpenChange={(v) => { if (!v) setStatementCourse(null); }}
+            member={{ id: memberId, name: "My Results" }}
+            course={statementCourse}
+            subjects={subjects}
+            memberSubjects={memberSubs}
+          />
+        );
+      })()}
     </div>
   );
 }

@@ -1,0 +1,1 @@
+ALTER TABLE public.exam_titles ADD COLUMN grade_classifications jsonb DEFAULT '[{"label":"Distinction","min_percentage":75},{"label":"Merit","min_percentage":65},{"label":"Pass","min_percentage":50}]'::jsonb;
