@@ -1,13 +1,15 @@
-import React from "react";
+import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Trophy, Download, RotateCcw } from "lucide-react";
+import { Loader2, Trophy, Download, RotateCcw, FileText } from "lucide-react";
 import PrintReportButton from "@/components/PrintReportButton";
 import { toast } from "@/components/ui/use-toast";
+import { getGradeClassification } from "@/lib/grade-utils";
+import StatementOfResult from "@/components/exams/StatementOfResult";
 
 function downloadCSV(filename, headers, rows) {
   const escape = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
@@ -23,6 +25,13 @@ function downloadCSV(filename, headers, rows) {
 
 export default function CourseResultsView({ course }) {
   const qc = useQueryClient();
+  const [statementMember, setStatementMember] = useState(null);
+
+  const classifications = course.grade_classifications || [
+    { label: "Distinction", min_percentage: 75 },
+    { label: "Merit", min_percentage: 65 },
+    { label: "Pass", min_percentage: 50 },
+  ];
 
   const { data: subjects = [] } = useQuery({
     queryKey: ["exam-subjects", course.id],
@@ -110,6 +119,7 @@ export default function CourseResultsView({ course }) {
     percentage: m.totalPoints > 0 ? (m.totalScore / m.totalPoints) * 100 : 0,
     subjectsTaken: Object.keys(m.subjects).length,
     passed: m.totalPoints > 0 && ((m.totalScore / m.totalPoints) * 100) >= course.pass_mark_percentage,
+    grade: getGradeClassification(m.totalPoints > 0 ? (m.totalScore / m.totalPoints) * 100 : 0, classifications),
   }));
 
   const totalParticipants = members.length;
@@ -174,6 +184,7 @@ export default function CourseResultsView({ course }) {
   };
 
   return (
+    <>
     <Card className="border-0 shadow-sm">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between flex-wrap gap-2">
@@ -249,22 +260,30 @@ export default function CourseResultsView({ course }) {
                       <TableCell className="text-center text-sm font-semibold">{m.totalScore}/{m.totalPoints}</TableCell>
                       <TableCell className="text-center text-sm">{Math.round(m.percentage)}%</TableCell>
                       <TableCell className="text-center">
-                        <div className="flex items-center justify-center gap-1">
+                        <div className="flex items-center justify-center gap-1 flex-wrap">
                           {m.subjectsTaken < subjects.length ? (
                             <Badge variant="outline" className="text-[10px]">{m.subjectsTaken}/{subjects.length}</Badge>
                           ) : (
                             <Badge variant={m.passed ? "default" : "destructive"} className="text-[10px]">
-                              {m.passed ? "Passed" : "Failed"}
+                              {m.grade}
                             </Badge>
                           )}
-                          {/* Show Allow Retake for each failed subject */}
+                          {m.subjectsTaken === subjects.length && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 text-[10px] px-1.5 gap-0.5"
+                              onClick={() => setStatementMember({ id: m.id, name: m.name, subjects: m.subjects })}
+                            >
+                              <FileText className="h-3 w-3" /> Statement
+                            </Button>
+                          )}
                           {subjects.map(s => {
                             const sub = m.subjects[s.id];
                             if (!sub) return null;
                             const subPct = sub.total_points > 0 ? (sub.score / sub.total_points) * 100 : 0;
                             const subPassMark = s.pass_mark_percentage ?? 50;
                             if (subPct >= subPassMark) return null;
-                            // Check if retake already allowed
                             const hasRetake = attempts.some(a => a.member_id === m.id && a.subject_id === s.id && a.retake_allowed === true);
                             if (hasRetake) return (
                               <Badge key={s.id} variant="outline" className="text-[9px] border-accent text-accent-foreground">↻ {s.name}</Badge>
@@ -293,5 +312,17 @@ export default function CourseResultsView({ course }) {
         )}
       </CardContent>
     </Card>
+
+    {statementMember && (
+      <StatementOfResult
+        open={!!statementMember}
+        onOpenChange={(v) => { if (!v) setStatementMember(null); }}
+        member={statementMember}
+        course={course}
+        subjects={subjects}
+        memberSubjects={statementMember.subjects}
+      />
+    )}
+    </>
   );
 }
