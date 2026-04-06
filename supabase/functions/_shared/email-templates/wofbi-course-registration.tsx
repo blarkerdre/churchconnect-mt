@@ -68,7 +68,7 @@ export const WoFBICourseRegistrationEmail: React.FC<WoFBICourseRegistrationEmail
 
           <Section style={footerSection}>
             <Text style={footerText}>
-              Winners Chapel International Cardiff — Word of Faith Bible Institute
+              Winners Chapel International Cardiff — Bible School
             </Text>
             <Text style={footerText}>
               This email was sent because you registered for a WoFBI course.
