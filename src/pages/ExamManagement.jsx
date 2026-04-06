@@ -44,7 +44,7 @@ const emptyQuestion = {
   question_type: "multiple_choice",
 };
 
-const WOFBI_DEFAULT_ABOUT = "WoFBI — Word of Faith Bible Institute — is a structured Bible training programme designed to equip believers with foundational knowledge of God's Word through courses and examinations.";
+const WOFBI_DEFAULT_ABOUT = "Bible School is a structured Bible training programme designed to equip believers with foundational knowledge of God's Word through courses and examinations.";
 
 export default function ExamManagement() {
   const { user, isAdmin, myMember } = useAuth();
