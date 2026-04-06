@@ -1,42 +1,36 @@
 
 
-## Add PWA Push Notification Support
+## Fix: Announcements Not Loading — Missing Foreign Key
 
-### Problem
-Currently, notification alerts (sound, vibration, browser Notification API) only work while the app tab is in the foreground. When users install the PWA and the app is in the background or closed, they receive no alerts because there is no service worker handling push notifications.
+### Root Cause
+The announcements query in `Communications.jsx` (line 424) uses a PostgREST embedded join:
+```js
+supabase.from("announcements")
+  .select("*, profiles:created_by(full_name)")
+```
 
-### Approach
-Register a lightweight service worker that listens for `push` events and displays native OS notifications with sound/vibration. This works even when the app is closed or in the background on mobile devices.
+This requires a foreign key from `announcements.created_by` to `profiles.user_id`. No such FK exists, so the API returns a `PGRST200` error ("Could not find a relationship between 'announcements' and 'created_by'"), causing the entire query to fail silently and return no data.
 
-No `vite-plugin-pwa` needed — the app already has a `manifest.json` with `display: "standalone"`. We just need a service worker for push event handling and to register it from the app.
+### Solution
 
-### Changes
+Two changes:
 
-#### 1. New: `public/sw.js` — Service Worker
-- Listen for `push` events and display notifications using `self.registration.showNotification()`
-- Listen for `notificationclick` to open/focus the app
-- Keep it minimal — no caching/offline support (avoids stale content issues)
-
-#### 2. Update: `src/lib/notification-alert.js` — Register SW + enhance notifications
-- Add `registerServiceWorker()` function that registers `/sw.js` only when:
-  - Not in an iframe (prevents preview issues)
-  - Not on a Lovable preview host
-  - `serviceWorker` is supported
-- Update `showBrowserNotification()` to use the service worker registration's `showNotification()` when available (this works in background, unlike `new Notification()`)
-- Keep the existing `new Notification()` as fallback
-
-#### 3. Update: `src/components/notifications/NotificationBell.jsx`
-- Call `registerServiceWorker()` on mount alongside `requestNotificationPermission()`
+1. **Database migration** — Add a foreign key from `announcements.created_by` to `profiles.user_id`
+2. **Defensive fallback** — Update the select query to gracefully handle the join, and ensure the `content` field maps correctly
 
 ### Technical Details
-- Service worker `showNotification()` works even when the app is backgrounded on mobile — regular `new Notification()` does not
-- The SW includes `vibrate` and a tag to prevent duplicate notifications
-- Clicking the notification opens/focuses the app window
-- No caching strategies — avoids stale content in preview
-- Registration is guarded against iframe/preview contexts per PWA guidelines
+
+#### Migration SQL
+```sql
+ALTER TABLE public.announcements
+  ADD CONSTRAINT announcements_created_by_fkey
+  FOREIGN KEY (created_by) REFERENCES public.profiles(user_id)
+  ON DELETE SET NULL;
+```
+
+#### Code change — `src/pages/Communications.jsx` (no change needed)
+The existing code at line 435 already has a fallback: `a.profiles?.full_name || "Admin"`. Once the FK exists, the join will work correctly.
 
 ### Files changed
-- **New**: `public/sw.js`
-- `src/lib/notification-alert.js`
-- `src/components/notifications/NotificationBell.jsx`
+- **Database migration** — add FK from `announcements.created_by` to `profiles.user_id`
 
