@@ -1,30 +1,24 @@
 
 
-## Fix: Announcements Not Visible in Communications
+## Route Announcement Notifications to Communications Page
 
 ### Problem
-The `visibleAnnouncements` filter on line 442-452 of `Communications.jsx` only matches `audience === "All Members"` for non-admin users. However, the database column `target_audience` defaults to `'All'`, and some announcements may have `null` audience. These get filtered out for regular users, showing "No communications found."
+When clicking "View" on an announcement notification, it navigates to `/` (Dashboard) instead of the Communications page with the Announcements tab selected.
 
 ### Solution
-Update the audience filter to also match `"All"` and falsy (null/empty) values, consistent with how `MemberFeed.jsx` already handles this.
+Update the `referenceRoutes` map in `NotificationBell.jsx` to point `announcement` to `/communications` instead of `/`.
 
 ### Change
 
-#### `src/pages/Communications.jsx` (line 444)
-Replace:
+#### `src/components/notifications/NotificationBell.jsx` (line 37)
 ```js
-if (a.audience === "All Members") return true;
-```
-With:
-```js
-if (!a.audience || a.audience === "All Members" || a.audience === "All") return true;
-```
+// Before
+announcement: "/",
 
-Also filter out unpublished announcements for non-admins (line 443, add before the audience checks):
-```js
-if (!isAdmin && !a.is_published) return false;
+// After
+announcement: "/communications",
 ```
 
 ### Files changed
-- `src/pages/Communications.jsx` — fix audience filter to include "All" and null values, hide unpublished for non-admins
+- `src/components/notifications/NotificationBell.jsx` — change announcement route to `/communications`
 
