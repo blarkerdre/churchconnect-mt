@@ -68,6 +68,10 @@ export default function NotificationBell() {
   });
 
   useEffect(() => {
+    requestNotificationPermission();
+  }, []);
+
+  useEffect(() => {
     if (!user?.id || !tenantId) return;
     const channel = supabase
       .channel("my-notifications")
@@ -79,6 +83,7 @@ export default function NotificationBell() {
       }, (payload) => {
         if (payload.new?.tenant_id === tenantId) {
           queryClient.invalidateQueries({ queryKey: ["notifications", user.id, tenantId] });
+          triggerNotificationAlert(payload.new.title, payload.new.message);
         }
       })
       .subscribe();
