@@ -487,7 +487,7 @@ export default function ExamManagement() {
               <Switch id="reg-open" checked={titleForm.registration_open} onCheckedChange={v => setTitleForm(f => ({ ...f, registration_open: v }))} />
             </div>
             <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50 border border-border">
-              <Label htmlFor="exams-open" className="cursor-pointer">WoFBI Open</Label>
+              <Label htmlFor="exams-open" className="cursor-pointer">Exams Open</Label>
               <Switch id="exams-open" checked={titleForm.exams_open} onCheckedChange={v => setTitleForm(f => ({ ...f, exams_open: v }))} />
             </div>
             {/* Grade Classifications Editor */}
