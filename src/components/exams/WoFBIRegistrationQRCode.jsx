@@ -90,7 +90,7 @@ export default function WoFBIRegistrationQRCode({ open, onOpenChange }) {
             />
           </div>
           <p className="text-xs text-muted-foreground text-center">
-            Scan this code to open the WoFBI course registration page
+            Scan this code to open the Bible School course registration page
           </p>
           <div className="flex items-center gap-2">
             <Input value={registrationUrl} readOnly className="text-xs" />
