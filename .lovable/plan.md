@@ -1,41 +1,44 @@
 
 
-## Fix: Signup Fails Even With Tenant Slug
+## Rename "WoFBI" to "Bible School" Across the Codebase
 
-### Root Cause
-The `handle_new_user()` trigger has a bug in its invitation lookup. After resolving `_tenant_id` from the slug (line: `SELECT id INTO _tenant_id FROM tenants WHERE slug = _slug`), the next query:
+### Scope
+Replace all user-facing references of "WoFBI", "Word of Faith Bible Institute", and related identifiers with "Bible School". This spans ~17 files across frontend pages, components, edge functions, and email templates.
 
-```sql
-SELECT ti.tenant_id, ti.id, ti.role INTO _tenant_id, _inv_id, _inv_role
-FROM public.tenant_invitations ti
-WHERE ...
-```
+### Changes
 
-**overwrites `_tenant_id` with NULL** when no matching invitation exists. The `SELECT ... INTO` sets all target variables to NULL if no row is found. This destroys the tenant ID that was already resolved from the slug.
+#### Frontend — UI Labels & Text
+1. **`src/components/AppLayout.jsx`** — Nav item label: "WoFBI" → "Bible School"
+2. **`src/pages/ExamManagement.jsx`** — Header "WoFBI Management" → "Bible School Management"; about section title "About WoFBI" → "About Bible School"; default about text; badge "WoFBI Open" → "Exams Open"; app_settings key stays `wofbi_about` (data compatibility) but display text changes; component names `WofbiAboutEditor`/`WofbiAboutDisplay` renamed
+3. **`src/pages/Onboard.jsx`** — Feature option label: "WoFBI Exams" → "Bible School"
+4. **`src/pages/TenantAdmin.jsx`** — Feature label: "WoFBI Exams" → "Bible School"
+5. **`src/pages/PublicWoFBIRegistration.jsx`** — Title "WoFBI Course Registration" → "Bible School Course Registration"; description text updated; file stays same name for route compatibility
+6. **`src/pages/PublicRegistration.jsx`** — Section heading "Word of Faith Bible Institute — WoFBI" → "Bible School"
+7. **`src/components/exams/WoFBIRegistrationQRCode.jsx`** — Dialog title, label, download filename, description text all updated
+8. **`src/hooks/useSubFeature.js`** — Keep keys `wofbi.create_course` and `wofbi.registration_qr` unchanged (data keys), only change display `name` if present
 
-### Fix
-Wrap the invitation lookups so they only overwrite `_tenant_id` when an invitation is actually found. Use intermediate variables or add `IF FOUND` guards.
+#### Routes
+- URL paths (`/wofbi-register`) stay unchanged to avoid breaking existing QR codes and shared links. Only display text changes.
 
-### Migration SQL
-Update the `handle_new_user()` function to preserve `_tenant_id` when no invitation matches:
+#### Edge Functions — Email Templates
+9. **`supabase/functions/_shared/email-templates/wofbi-course-registration.tsx`** — Default course name "WoFBI Course" → "Bible School Course"; body text "Word of Faith Bible Institute (WoFBI)" → "Bible School"; footer text updated
+10. **`supabase/functions/send-course-registration-email/index.ts`** — Default course name and email subject fallback updated
+11. **`supabase/functions/public-wofbi-register/index.ts`** — Console log text only (no user-facing change needed)
 
-```sql
--- After resolving _tenant_id from slug, use separate variables for invitation lookup
-SELECT ti.tenant_id, ti.id, ti.role INTO _inv_tenant_id, _inv_id, _inv_role
-FROM public.tenant_invitations ti
-WHERE lower(ti.email) = lower(NEW.email)
-  AND ti.status = 'pending'
-  AND (_tenant_id IS NULL OR ti.tenant_id = _tenant_id)
-ORDER BY ti.created_at DESC
-LIMIT 1;
-
-IF _inv_tenant_id IS NOT NULL THEN
-  _tenant_id := _inv_tenant_id;
-END IF;
-```
-
-Same pattern for the second invitation lookup block.
+#### Data Keys Preserved
+- Database column `wofbi_highest_level` in members table — unchanged (would need migration + data update)
+- App settings key `wofbi_about` — unchanged for backward compatibility
+- Sub-feature keys `wofbi.create_course`, `wofbi.registration_qr` — unchanged
+- Route paths `/wofbi-register` — unchanged
 
 ### Files changed
-- **Database migration** — rewrite `handle_new_user()` to avoid overwriting `_tenant_id` on empty invitation results
+- `src/components/AppLayout.jsx`
+- `src/pages/ExamManagement.jsx`
+- `src/pages/Onboard.jsx`
+- `src/pages/TenantAdmin.jsx`
+- `src/pages/PublicWoFBIRegistration.jsx`
+- `src/pages/PublicRegistration.jsx`
+- `src/components/exams/WoFBIRegistrationQRCode.jsx`
+- `supabase/functions/_shared/email-templates/wofbi-course-registration.tsx`
+- `supabase/functions/send-course-registration-email/index.ts`
 
