@@ -1024,8 +1024,13 @@ function MemberExamsView({ memberId, courses, loading }) {
                       )}
                       {allDone && (
                         <Badge variant={passed ? "default" : "destructive"} className="text-xs">
-                          {passed ? "Passed ✓" : "Not Passed"}
+                          {passed ? getGradeClassification(aggPct, course.grade_classifications || DEFAULT_GRADE_CLASSIFICATIONS) : "Fail"}
                         </Badge>
+                      )}
+                      {allDone && (
+                        <Button variant="outline" size="sm" className="gap-1 text-xs h-7" onClick={() => setStatementCourse(course)}>
+                          <FileText className="h-3 w-3" /> Statement
+                        </Button>
                       )}
                     </div>
                   </div>
