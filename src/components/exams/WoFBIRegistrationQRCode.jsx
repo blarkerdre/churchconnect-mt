@@ -31,7 +31,7 @@ export default function WoFBIRegistrationQRCode({ open, onOpenChange }) {
 
   const churchName = currentTenant?.name || "Church";
   const logoUrl = currentTenant?.logo_url || "/winners-logo.png";
-  const label = `${churchName} — WoFBI Registration`;
+  const label = `${churchName} — Bible School Registration`;
 
   const handleCopy = () => {
     navigator.clipboard.writeText(registrationUrl);
