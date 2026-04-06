@@ -153,7 +153,7 @@ export default function PublicWoFBIRegistration() {
               <BookOpen className="h-10 w-10 text-primary" />
             </div>
           )}
-          <CardTitle className="text-2xl">WoFBI Course Registration</CardTitle>
+          <CardTitle className="text-2xl">Bible School Course Registration</CardTitle>
           <p className="text-sm text-muted-foreground mt-1">
             {tenantName ? `${tenantName} — ` : ""}Word of Faith Bible Institute — Register for a course
           </p>
