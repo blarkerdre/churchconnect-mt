@@ -449,9 +449,9 @@ export default function MyProfile() {
                           )}
                           <SwitchRow id="bfc_completed" label="Believers Foundation Class (BFC)" checked={form.bfc_completed} onChange={v => set("bfc_completed", v)} />
 
-                          {/* Word of Faith Bible Institute - WoFBI */}
+                          {/* Bible School */}
                           <div className="mt-2">
-                            <p className="text-xs font-semibold text-muted-foreground mb-2">Word of Faith Bible Institute — WoFBI</p>
+                            <p className="text-xs font-semibold text-muted-foreground mb-2">Bible School</p>
                             <div className="space-y-3">
                               <SwitchRow id="bcc_completed" label="Basic Certificate Course (BCC)" checked={form.bcc_completed} onChange={v => set("bcc_completed", v)} />
                               <SwitchRow id="lcc_completed" label="Leadership Certificate Course (LCC)" checked={form.lcc_completed} onChange={v => set("lcc_completed", v)} />
