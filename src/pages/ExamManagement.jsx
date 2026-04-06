@@ -845,7 +845,7 @@ function WofbiAboutEditor() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["app-settings", "wofbi_about", tenantId] });
-      toast({ title: "WoFBI description updated" });
+      toast({ title: "Bible School description updated" });
       setEditing(false);
     },
     onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
