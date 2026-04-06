@@ -259,22 +259,30 @@ export default function CourseResultsView({ course }) {
                       <TableCell className="text-center text-sm font-semibold">{m.totalScore}/{m.totalPoints}</TableCell>
                       <TableCell className="text-center text-sm">{Math.round(m.percentage)}%</TableCell>
                       <TableCell className="text-center">
-                        <div className="flex items-center justify-center gap-1">
+                        <div className="flex items-center justify-center gap-1 flex-wrap">
                           {m.subjectsTaken < subjects.length ? (
                             <Badge variant="outline" className="text-[10px]">{m.subjectsTaken}/{subjects.length}</Badge>
                           ) : (
                             <Badge variant={m.passed ? "default" : "destructive"} className="text-[10px]">
-                              {m.passed ? "Passed" : "Failed"}
+                              {m.grade}
                             </Badge>
                           )}
-                          {/* Show Allow Retake for each failed subject */}
+                          {m.subjectsTaken === subjects.length && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 text-[10px] px-1.5 gap-0.5"
+                              onClick={() => setStatementMember({ id: m.id, name: m.name, subjects: m.subjects })}
+                            >
+                              <FileText className="h-3 w-3" /> Statement
+                            </Button>
+                          )}
                           {subjects.map(s => {
                             const sub = m.subjects[s.id];
                             if (!sub) return null;
                             const subPct = sub.total_points > 0 ? (sub.score / sub.total_points) * 100 : 0;
                             const subPassMark = s.pass_mark_percentage ?? 50;
                             if (subPct >= subPassMark) return null;
-                            // Check if retake already allowed
                             const hasRetake = attempts.some(a => a.member_id === m.id && a.subject_id === s.id && a.retake_allowed === true);
                             if (hasRetake) return (
                               <Badge key={s.id} variant="outline" className="text-[9px] border-accent text-accent-foreground">↻ {s.name}</Badge>
