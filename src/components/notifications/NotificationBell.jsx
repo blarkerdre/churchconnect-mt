@@ -34,7 +34,7 @@ const typeLabels = {
 
 const referenceRoutes = {
   event: "/events",
-  announcement: "/",
+  announcement: "/communications",
   followup: "/followups",
   pastoral_care: "/pastoral-care",
   transport: "/transportation",
