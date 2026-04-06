@@ -420,13 +420,21 @@ export default function Communications() {
   const { data: announcements = [], isLoading } = useQuery({
     queryKey: ["announcements", tenantId],
     queryFn: async () => {
-      const { data, error } = await scopeQuery(
+      let result = await scopeQuery(
         supabase.from("announcements")
           .select("*, profiles:created_by(full_name)")
           .order("created_at", { ascending: false })
       );
-      if (error) throw error;
-      return data.map(a => ({
+      // Fallback: if the join fails, retry without profile join
+      if (result.error) {
+        result = await scopeQuery(
+          supabase.from("announcements")
+            .select("*")
+            .order("created_at", { ascending: false })
+        );
+      }
+      if (result.error) throw result.error;
+      return (result.data || []).map(a => ({
         id: a.id, title: a.title, body: a.content,
         audience: a.target_audience || "All Members",
         pinned: a.category === "pinned",
