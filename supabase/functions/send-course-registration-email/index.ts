@@ -157,7 +157,7 @@ Deno.serve(async (req) => {
           to: normalizedEmail,
           from: `"${senderName.replace(/"/g, '')}" <noreply@${FROM_DOMAIN}>`,
           sender_domain: SENDER_DOMAIN,
-          subject: `Registration Confirmed: ${course_name || "WoFBI Course"}`,
+          subject: `Registration Confirmed: ${course_name || "Bible School Course"}`,
           html,
           text,
           purpose: "transactional",
