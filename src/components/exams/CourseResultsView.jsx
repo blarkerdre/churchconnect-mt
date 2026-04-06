@@ -5,9 +5,11 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Trophy, Download, RotateCcw } from "lucide-react";
+import { Loader2, Trophy, Download, RotateCcw, FileText } from "lucide-react";
 import PrintReportButton from "@/components/PrintReportButton";
 import { toast } from "@/components/ui/use-toast";
+import { getGradeClassification } from "@/lib/grade-utils";
+import StatementOfResult from "@/components/exams/StatementOfResult";
 
 function downloadCSV(filename, headers, rows) {
   const escape = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
