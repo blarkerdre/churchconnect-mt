@@ -490,6 +490,50 @@ export default function ExamManagement() {
               <Label htmlFor="exams-open" className="cursor-pointer">WoFBI Open</Label>
               <Switch id="exams-open" checked={titleForm.exams_open} onCheckedChange={v => setTitleForm(f => ({ ...f, exams_open: v }))} />
             </div>
+            {/* Grade Classifications Editor */}
+            <div className="space-y-2">
+              <Label>Grade Classifications</Label>
+              <div className="space-y-2">
+                {(titleForm.grade_classifications || []).map((gc, idx) => (
+                  <div key={idx} className="flex items-center gap-2">
+                    <Input
+                      value={gc.label}
+                      onChange={e => {
+                        const updated = [...titleForm.grade_classifications];
+                        updated[idx] = { ...updated[idx], label: e.target.value };
+                        setTitleForm(f => ({ ...f, grade_classifications: updated }));
+                      }}
+                      placeholder="Label"
+                      className="flex-1"
+                    />
+                    <Input
+                      type="number"
+                      min="0"
+                      max="100"
+                      value={gc.min_percentage}
+                      onChange={e => {
+                        const updated = [...titleForm.grade_classifications];
+                        updated[idx] = { ...updated[idx], min_percentage: Number(e.target.value) };
+                        setTitleForm(f => ({ ...f, grade_classifications: updated }));
+                      }}
+                      className="w-20"
+                    />
+                    <span className="text-xs text-muted-foreground">%</span>
+                    <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => {
+                      setTitleForm(f => ({ ...f, grade_classifications: f.grade_classifications.filter((_, i) => i !== idx) }));
+                    }}>
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  </div>
+                ))}
+                <Button type="button" variant="outline" size="sm" className="gap-1.5" onClick={() => {
+                  setTitleForm(f => ({ ...f, grade_classifications: [...(f.grade_classifications || []), { label: "", min_percentage: 0 }] }));
+                }}>
+                  <Plus className="h-3 w-3" /> Add Grade
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">Highest percentage first. Students below the lowest threshold get "Fail".</p>
+            </div>
             <DialogFooter>
               <Button type="submit" disabled={saveTitleMutation.isPending}>
                 {saveTitleMutation.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
