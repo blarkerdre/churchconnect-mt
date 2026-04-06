@@ -40,7 +40,7 @@ export const WoFBICourseRegistrationEmail: React.FC<WoFBICourseRegistrationEmail
 
             <Text style={paragraph}>
               You have been successfully registered for <strong>{courseName}</strong> at
-              the Word of Faith Bible Institute (WoFBI).
+              the Bible School.
             </Text>
 
             <Text style={paragraph}>
