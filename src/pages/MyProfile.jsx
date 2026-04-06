@@ -968,7 +968,7 @@ function DynamicExamButtons({ memberId, onSelect, tenantId }) {
     <Card className="border-0 shadow-sm">
       <CardHeader className="pb-2">
         <CardTitle className="text-base flex items-center gap-2">
-          <BookOpen className="h-4 w-4 text-primary" /> WoFBI
+          <BookOpen className="h-4 w-4 text-primary" /> Bible School
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
