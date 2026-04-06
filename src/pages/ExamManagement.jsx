@@ -44,7 +44,7 @@ const emptyQuestion = {
   question_type: "multiple_choice",
 };
 
-const WOFBI_DEFAULT_ABOUT = "WoFBI — Word of Faith Bible Institute — is a structured Bible training programme designed to equip believers with foundational knowledge of God's Word through courses and examinations.";
+const WOFBI_DEFAULT_ABOUT = "Bible School is a structured Bible training programme designed to equip believers with foundational knowledge of God's Word through courses and examinations.";
 
 export default function ExamManagement() {
   const { user, isAdmin, myMember } = useAuth();
@@ -255,7 +255,7 @@ export default function ExamManagement() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-xl font-display font-bold text-foreground flex items-center gap-2">
-            <BookOpen className="h-5 w-5 text-primary" /> WoFBI Management
+            <BookOpen className="h-5 w-5 text-primary" /> Bible School Management
           </h1>
           <p className="text-sm text-muted-foreground mt-1">Manage certificate courses, subjects, and exam questions</p>
         </div>
@@ -308,7 +308,7 @@ export default function ExamManagement() {
                   </Badge>
                    {!t.is_active && <Badge variant="secondary" className="text-[9px] h-4">Inactive</Badge>}
                    {t.registration_open && <Badge variant="outline" className="text-[9px] h-4 border-chart-3/40 text-chart-3">Reg Open</Badge>}
-                   {t.exams_open && <Badge variant="outline" className="text-[9px] h-4 border-primary/40 text-primary">WoFBI Open</Badge>}
+                   {t.exams_open && <Badge variant="outline" className="text-[9px] h-4 border-primary/40 text-primary">Exams Open</Badge>}
                   <button className="opacity-0 group-hover:opacity-100 transition-opacity ml-1" onClick={(e) => {
                     e.stopPropagation();
                     setEditingTitle(t);
@@ -487,7 +487,7 @@ export default function ExamManagement() {
               <Switch id="reg-open" checked={titleForm.registration_open} onCheckedChange={v => setTitleForm(f => ({ ...f, registration_open: v }))} />
             </div>
             <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50 border border-border">
-              <Label htmlFor="exams-open" className="cursor-pointer">WoFBI Open</Label>
+              <Label htmlFor="exams-open" className="cursor-pointer">Exams Open</Label>
               <Switch id="exams-open" checked={titleForm.exams_open} onCheckedChange={v => setTitleForm(f => ({ ...f, exams_open: v }))} />
             </div>
             {/* Grade Classifications Editor */}
@@ -845,7 +845,7 @@ function WofbiAboutEditor() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["app-settings", "wofbi_about", tenantId] });
-      toast({ title: "WoFBI description updated" });
+      toast({ title: "Bible School description updated" });
       setEditing(false);
     },
     onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
@@ -856,7 +856,7 @@ function WofbiAboutEditor() {
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <CardTitle className="text-base font-display flex items-center gap-2">
-            <BookOpen className="h-4 w-4 text-primary" /> About WoFBI
+            <BookOpen className="h-4 w-4 text-primary" /> About Bible School
           </CardTitle>
           {!editing && (
             <Button size="sm" variant="outline" className="gap-1.5" onClick={() => { setDraft(aboutText); setEditing(true); }}>
@@ -868,7 +868,7 @@ function WofbiAboutEditor() {
       <CardContent>
         {editing ? (
           <div className="space-y-3">
-            <Textarea value={draft} onChange={(e) => setDraft(e.target.value)} rows={4} placeholder="Describe what WoFBI is..." />
+            <Textarea value={draft} onChange={(e) => setDraft(e.target.value)} rows={4} placeholder="Describe what Bible School is..." />
             <div className="flex gap-2 justify-end">
               <Button size="sm" variant="outline" onClick={() => setEditing(false)}>Cancel</Button>
               <Button size="sm" className="gap-1.5" onClick={() => saveMutation.mutate(draft)} disabled={saveMutation.isPending}>
@@ -974,7 +974,7 @@ function MemberExamsView({ memberId, courses, loading }) {
   if (!memberId) {
     return (
       <div className="text-center py-12">
-        <p className="text-muted-foreground">Please complete your member profile first to access WoFBI.</p>
+        <p className="text-muted-foreground">Please complete your member profile first to access Bible School.</p>
       </div>
     );
   }
@@ -985,9 +985,9 @@ function MemberExamsView({ memberId, courses, loading }) {
     <div className="space-y-6">
       <div>
         <h1 className="text-xl font-display font-bold text-foreground flex items-center gap-2">
-          <BookOpen className="h-5 w-5 text-primary" /> WoFBI
-        </h1>
-        <p className="text-sm text-muted-foreground mt-1">Register for courses and take your WoFBI exams</p>
+           <BookOpen className="h-5 w-5 text-primary" /> Bible School
+         </h1>
+         <p className="text-sm text-muted-foreground mt-1">Register for courses and take your Bible School exams</p>
       </div>
 
       <WofbiAboutDisplay />
@@ -1045,7 +1045,7 @@ function MemberExamsView({ memberId, courses, loading }) {
                       <p className="text-xs text-muted-foreground italic">Registration is currently closed.</p>
                     )
                   ) : !course.exams_open ? (
-                    <p className="text-xs text-muted-foreground italic">WoFBI exams are not yet available. Please wait for the admin to open the exam window.</p>
+                    <p className="text-xs text-muted-foreground italic">Bible School exams are not yet available. Please wait for the admin to open the exam window.</p>
                   ) : subjects.length === 0 ? (
                     <p className="text-xs text-muted-foreground">No subjects configured yet.</p>
                   ) : (

@@ -41,7 +41,7 @@ const FEATURE_MODULES = [
   { key: "analytics", label: "Analytics", description: "Attendance and growth analytics" },
   { key: "training-reports", label: "Training Reports", description: "BFC and training progress" },
   { key: "church-attendance", label: "Church Attendance", description: "Sunday service attendance" },
-  { key: "exam-management", label: "WoFBI Exams", description: "Exam sessions and results" },
+  { key: "exam-management", label: "Bible School", description: "Exam sessions and results" },
   { key: "wsf", label: "WSF Centres", description: "Winners Satellite Fellowship management" },
   { key: "sms", label: "SMS", description: "SMS messaging capability" },
 ];
