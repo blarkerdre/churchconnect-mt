@@ -119,6 +119,7 @@ export default function CourseResultsView({ course }) {
     percentage: m.totalPoints > 0 ? (m.totalScore / m.totalPoints) * 100 : 0,
     subjectsTaken: Object.keys(m.subjects).length,
     passed: m.totalPoints > 0 && ((m.totalScore / m.totalPoints) * 100) >= course.pass_mark_percentage,
+    grade: getGradeClassification(m.totalPoints > 0 ? (m.totalScore / m.totalPoints) * 100 : 0, classifications),
   }));
 
   const totalParticipants = members.length;
