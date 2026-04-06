@@ -95,7 +95,7 @@ export default function WelcomeQuestions({ form, set, tenantName }) {
         />
 
         <div className="space-y-1.5">
-          <Label>Have you attended our Word of Faith Bible School? Please select the highest level achieved</Label>
+          <Label>Have you attended our Bible School? Please select the highest level achieved</Label>
           <Select value={form.wofbi_highest_level || "None"} onValueChange={v => set("wofbi_highest_level", v)}>
             <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>
