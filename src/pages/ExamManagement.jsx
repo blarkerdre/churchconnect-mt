@@ -102,7 +102,7 @@ export default function ExamManagement() {
       toast({ title: editingTitle ? "Course updated" : "Course created" });
       setTitleDialogOpen(false);
       setEditingTitle(null);
-      setTitleForm({ name: "", description: "", pass_mark_percentage: 50, registration_open: false, exams_open: false });
+      setTitleForm({ name: "", description: "", pass_mark_percentage: 50, registration_open: false, exams_open: false, grade_classifications: DEFAULT_GRADE_CLASSIFICATIONS });
     },
     onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
