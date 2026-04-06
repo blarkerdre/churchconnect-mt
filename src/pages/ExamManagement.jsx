@@ -1045,7 +1045,7 @@ function MemberExamsView({ memberId, courses, loading }) {
                       <p className="text-xs text-muted-foreground italic">Registration is currently closed.</p>
                     )
                   ) : !course.exams_open ? (
-                    <p className="text-xs text-muted-foreground italic">WoFBI exams are not yet available. Please wait for the admin to open the exam window.</p>
+                    <p className="text-xs text-muted-foreground italic">Bible School exams are not yet available. Please wait for the admin to open the exam window.</p>
                   ) : subjects.length === 0 ? (
                     <p className="text-xs text-muted-foreground">No subjects configured yet.</p>
                   ) : (
