@@ -38,7 +38,7 @@ const allNavItems = [
   { name: "Analytics", icon: BarChart2, path: "/analytics", access: "admin" },
   { name: "BFC & Training Report", icon: TrendingUp, path: "/training-reports", access: "training" },
   { name: "Church Attendance", icon: ClipboardList, path: "/church-attendance", access: "training" },
-  { name: "WoFBI", icon: BookOpen, path: "/exam-management", access: null },
+  { name: "Bible School", icon: BookOpen, path: "/exam-management", access: null },
   { name: "WSF Centres", icon: Globe, path: "/wsf", access: "wsf" },
   { name: "User Management", icon: Shield, path: "/user-management", access: "admin" },
   { name: "System Logs", icon: FileText, path: "/system-logs", access: "admin" },

@@ -17,7 +17,7 @@ export default function WoFBIRegistrationQRCode({ open, onOpenChange }) {
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-sm">
           <TenantDialogHeader>
-              <QrCode className="h-5 w-5" /> WoFBI Registration QR Code
+              <QrCode className="h-5 w-5" /> Bible School Registration QR Code
             </TenantDialogHeader>
           <p className="text-sm text-muted-foreground py-4 text-center">
             Unable to generate QR code — church context not resolved yet. Please try again.
@@ -31,7 +31,7 @@ export default function WoFBIRegistrationQRCode({ open, onOpenChange }) {
 
   const churchName = currentTenant?.name || "Church";
   const logoUrl = currentTenant?.logo_url || "/winners-logo.png";
-  const label = `${churchName} — WoFBI Registration`;
+  const label = `${churchName} — Bible School Registration`;
 
   const handleCopy = () => {
     navigator.clipboard.writeText(registrationUrl);
@@ -71,8 +71,8 @@ export default function WoFBIRegistrationQRCode({ open, onOpenChange }) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-sm">
         <TenantDialogHeader>
-            <QrCode className="h-5 w-5" /> WoFBI Registration QR Code
-          </TenantDialogHeader>
+            <QrCode className="h-5 w-5" /> Bible School Registration QR Code
+           </TenantDialogHeader>
         <div className="space-y-4 py-2">
           <p className="text-sm font-semibold text-center text-primary">{label}</p>
           <div ref={qrRef} className="flex justify-center p-6 bg-white rounded-xl border border-border">
@@ -90,7 +90,7 @@ export default function WoFBIRegistrationQRCode({ open, onOpenChange }) {
             />
           </div>
           <p className="text-xs text-muted-foreground text-center">
-            Scan this code to open the WoFBI course registration page
+            Scan this code to open the Bible School course registration page
           </p>
           <div className="flex items-center gap-2">
             <Input value={registrationUrl} readOnly className="text-xs" />

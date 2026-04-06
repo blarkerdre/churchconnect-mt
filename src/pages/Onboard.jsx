@@ -23,7 +23,7 @@ const STEPS = [
 
 const FEATURE_OPTIONS = [
   { key: "sms_enabled", label: "SMS & WhatsApp", desc: "Send SMS and WhatsApp messages to members" },
-  { key: "exams_enabled", label: "WoFBI Exams", desc: "Bible institute course management and exams" },
+  { key: "exams_enabled", label: "Bible School", desc: "Bible school course management and exams" },
   { key: "transportation", label: "Transportation", desc: "Manage transport bookings for services" },
   { key: "pastoral_care", label: "Pastoral Care", desc: "Track and manage pastoral care cases" },
   { key: "wsf_enabled", label: "WSF Centres", desc: "Winners Satellite Fellowship centre management" },

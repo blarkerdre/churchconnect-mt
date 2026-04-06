@@ -449,9 +449,9 @@ export default function MyProfile() {
                           )}
                           <SwitchRow id="bfc_completed" label="Believers Foundation Class (BFC)" checked={form.bfc_completed} onChange={v => set("bfc_completed", v)} />
 
-                          {/* Word of Faith Bible Institute - WoFBI */}
+                          {/* Bible School */}
                           <div className="mt-2">
-                            <p className="text-xs font-semibold text-muted-foreground mb-2">Word of Faith Bible Institute — WoFBI</p>
+                            <p className="text-xs font-semibold text-muted-foreground mb-2">Bible School</p>
                             <div className="space-y-3">
                               <SwitchRow id="bcc_completed" label="Basic Certificate Course (BCC)" checked={form.bcc_completed} onChange={v => set("bcc_completed", v)} />
                               <SwitchRow id="lcc_completed" label="Leadership Certificate Course (LCC)" checked={form.lcc_completed} onChange={v => set("lcc_completed", v)} />
@@ -812,9 +812,9 @@ function CreateMemberProfile({ user, onCreated, wsfCentres, churchUnits }) {
               )}
               <SwitchRow id="bfc_completed" label="Believers Foundation Class (BFC)" checked={form.bfc_completed} onChange={v => set("bfc_completed", v)} />
 
-              {/* Word of Faith Bible Institute - WoFBI */}
+              {/* Bible School */}
               <div className="mt-2">
-                <p className="text-xs font-semibold text-muted-foreground mb-2">Word of Faith Bible Institute — WoFBI</p>
+                <p className="text-xs font-semibold text-muted-foreground mb-2">Bible School</p>
                 <div className="space-y-3">
                   <SwitchRow id="bcc_completed" label="Basic Certificate Course (BCC)" checked={form.bcc_completed} onChange={v => set("bcc_completed", v)} />
                   <SwitchRow id="lcc_completed" label="Leadership Certificate Course (LCC)" checked={form.lcc_completed} onChange={v => set("lcc_completed", v)} />
@@ -968,7 +968,7 @@ function DynamicExamButtons({ memberId, onSelect, tenantId }) {
     <Card className="border-0 shadow-sm">
       <CardHeader className="pb-2">
         <CardTitle className="text-base flex items-center gap-2">
-          <BookOpen className="h-4 w-4 text-primary" /> WoFBI
+          <BookOpen className="h-4 w-4 text-primary" /> Bible School
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
