@@ -912,6 +912,7 @@ function WofbiAboutDisplay() {
 function MemberExamsView({ memberId, courses, loading }) {
   const qc = useQueryClient();
   const [examSelection, setExamSelection] = useState(null);
+  const [statementCourse, setStatementCourse] = useState(null);
 
   const { data: registrations = [], isLoading: regLoading } = useQuery({
     queryKey: ["my-course-registrations", memberId],
