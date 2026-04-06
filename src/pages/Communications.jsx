@@ -441,7 +441,8 @@ export default function Communications() {
   // All users see "All Members" announcements + their unit announcements
   const visibleAnnouncements = announcements.filter(a => {
     if (isAdmin) return true;
-    if (a.audience === "All Members") return true;
+    if (!a.is_published) return false;
+    if (!a.audience || a.audience === "All Members" || a.audience === "All") return true;
     if (effectiveScopes.includes(a.audience)) return true;
     if (a.created_by === user?.id) return true;
     if (myMember?.church_unit) {
