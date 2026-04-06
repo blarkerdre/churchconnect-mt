@@ -1248,6 +1248,7 @@ export type Database = {
           created_by: string | null
           description: string | null
           exams_open: boolean
+          grade_classifications: Json | null
           id: string
           is_active: boolean
           name: string
@@ -1260,6 +1261,7 @@ export type Database = {
           created_by?: string | null
           description?: string | null
           exams_open?: boolean
+          grade_classifications?: Json | null
           id?: string
           is_active?: boolean
           name: string
@@ -1272,6 +1274,7 @@ export type Database = {
           created_by?: string | null
           description?: string | null
           exams_open?: boolean
+          grade_classifications?: Json | null
           id?: string
           is_active?: boolean
           name?: string
