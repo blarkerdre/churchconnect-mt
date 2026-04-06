@@ -17,7 +17,7 @@ export default function WoFBIRegistrationQRCode({ open, onOpenChange }) {
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-sm">
           <TenantDialogHeader>
-              <QrCode className="h-5 w-5" /> WoFBI Registration QR Code
+              <QrCode className="h-5 w-5" /> Bible School Registration QR Code
             </TenantDialogHeader>
           <p className="text-sm text-muted-foreground py-4 text-center">
             Unable to generate QR code — church context not resolved yet. Please try again.
