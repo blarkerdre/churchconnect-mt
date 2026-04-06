@@ -1096,6 +1096,26 @@ function MemberExamsView({ memberId, courses, loading }) {
         subjectId={examSelection?.subjectId}
         subjectName={examSelection?.subjectName}
       />
+
+      {statementCourse && (() => {
+        const subjects = allSubjects.filter(s => s.course_id === statementCourse.id);
+        const memberSubs = {};
+        subjects.forEach(s => {
+          if (bestBySubject[s.id]) {
+            memberSubs[s.id] = { score: bestBySubject[s.id].score, total_points: bestBySubject[s.id].total_points };
+          }
+        });
+        return (
+          <StatementOfResult
+            open={!!statementCourse}
+            onOpenChange={(v) => { if (!v) setStatementCourse(null); }}
+            member={{ id: memberId, name: "My Results" }}
+            course={statementCourse}
+            subjects={subjects}
+            memberSubjects={memberSubs}
+          />
+        );
+      })()}
     </div>
   );
 }
