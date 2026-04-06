@@ -856,7 +856,7 @@ function WofbiAboutEditor() {
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <CardTitle className="text-base font-display flex items-center gap-2">
-            <BookOpen className="h-4 w-4 text-primary" /> About WoFBI
+            <BookOpen className="h-4 w-4 text-primary" /> About Bible School
           </CardTitle>
           {!editing && (
             <Button size="sm" variant="outline" className="gap-1.5" onClick={() => { setDraft(aboutText); setEditing(true); }}>
