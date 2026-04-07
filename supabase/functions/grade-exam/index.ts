@@ -49,7 +49,7 @@ Deno.serve(async (req) => {
     // Verify the caller owns this member record
     const { data: member } = await adminClient
       .from("members")
-      .select("id, user_id, tenant_id")
+      .select("id, user_id, tenant_id, email, first_name, last_name")
       .eq("id", member_id)
       .single();
 
@@ -168,6 +168,19 @@ Deno.serve(async (req) => {
       await issueCertificate(supabaseUrl, serviceKey, member_id, training_type, attempt.id, member.tenant_id, adminClient);
     }
 
+    // Send result statement email
+    await sendResultEmail(adminClient, member, {
+      subjectName: subject_id
+        ? questions[0]?.subject_id ? (await adminClient.from("exam_subjects").select("name").eq("id", subject_id).single()).data?.name || training_type : training_type
+        : training_type,
+      score,
+      totalPoints,
+      percentage: Math.round(percentage * 100) / 100,
+      passed,
+      passThreshold,
+      tenantId: member.tenant_id,
+    });
+
     return new Response(
       JSON.stringify({
         score,
@@ -274,5 +287,93 @@ async function issueCertificate(
     }
   } catch (e) {
     console.error("Certificate generation failed:", e);
+  }
+}
+
+async function sendResultEmail(
+  adminClient: any,
+  member: { email?: string; first_name?: string; last_name?: string; tenant_id?: string },
+  result: { subjectName: string; score: number; totalPoints: number; percentage: number; passed: boolean; passThreshold: number; tenantId: string }
+) {
+  if (!member.email) return;
+
+  const ROOT_DOMAIN = "app.churchmanagementsuite.org";
+  const SENDER_DOMAIN = "notify.app.churchmanagementsuite.org";
+
+  try {
+    // Get tenant info for sender name
+    let senderName = "mychurchconnect";
+    let tenantSiteUrl = `https://${ROOT_DOMAIN}`;
+    if (result.tenantId) {
+      const { data: t } = await adminClient
+        .from("tenants")
+        .select("name, slug, settings")
+        .eq("id", result.tenantId)
+        .single();
+      if (t) {
+        const s = t.settings as Record<string, unknown> | null;
+        senderName = (s?.email_sender_name as string) || t.name || senderName;
+        if (t.slug) tenantSiteUrl = `https://${ROOT_DOMAIN}/t/${t.slug}`;
+      }
+    }
+
+    const memberName = `${member.first_name || ""} ${member.last_name || ""}`.trim() || "Student";
+    const statusColor = result.passed ? "#38a169" : "#e53e3e";
+    const statusText = result.passed ? "PASSED" : "NOT YET PASSED";
+
+    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"></head>
+<body style="margin:0;padding:0;background:#ffffff;font-family:Georgia,'Times New Roman',serif;">
+<div style="max-width:560px;margin:0 auto;padding:20px 0 48px;">
+  <div style="padding:24px 32px;background:#1a2d4d;border-radius:8px 8px 0 0;text-align:center;">
+    <p style="color:#fff;font-size:20px;font-weight:700;margin:0;">Exam Result Statement</p>
+  </div>
+  <div style="padding:32px;background:#f8f9fa;">
+    <h1 style="color:#1a2d4d;font-size:22px;font-weight:700;margin:0 0 20px;">Hello ${memberName},</h1>
+    <p style="color:#4a5568;font-size:15px;line-height:1.6;margin:0 0 16px;">
+      Your exam for <strong>${result.subjectName}</strong> has been graded. Here are your results:
+    </p>
+    <table style="width:100%;border-collapse:collapse;margin:20px 0;">
+      <tr><td style="padding:10px 16px;border:1px solid #e2e8f0;font-weight:600;background:#edf2f7;color:#1a2d4d;">Subject / Course</td><td style="padding:10px 16px;border:1px solid #e2e8f0;">${result.subjectName}</td></tr>
+      <tr><td style="padding:10px 16px;border:1px solid #e2e8f0;font-weight:600;background:#edf2f7;color:#1a2d4d;">Score</td><td style="padding:10px 16px;border:1px solid #e2e8f0;">${result.score} / ${result.totalPoints}</td></tr>
+      <tr><td style="padding:10px 16px;border:1px solid #e2e8f0;font-weight:600;background:#edf2f7;color:#1a2d4d;">Percentage</td><td style="padding:10px 16px;border:1px solid #e2e8f0;">${result.percentage}%</td></tr>
+      <tr><td style="padding:10px 16px;border:1px solid #e2e8f0;font-weight:600;background:#edf2f7;color:#1a2d4d;">Pass Mark</td><td style="padding:10px 16px;border:1px solid #e2e8f0;">${result.passThreshold}%</td></tr>
+      <tr><td style="padding:10px 16px;border:1px solid #e2e8f0;font-weight:600;background:#edf2f7;color:#1a2d4d;">Status</td><td style="padding:10px 16px;border:1px solid #e2e8f0;font-weight:700;color:${statusColor};">${statusText}</td></tr>
+    </table>
+    <div style="text-align:center;margin:24px 0;">
+      <a href="${tenantSiteUrl}/auth" style="background:#1a2d4d;border-radius:6px;color:#fff;display:inline-block;font-size:15px;font-weight:600;padding:12px 32px;text-decoration:none;">View Full Results</a>
+    </div>
+    <p style="color:#4a5568;font-size:14px;line-height:1.6;margin:0;">
+      ${result.passed ? "Congratulations on passing! Keep up the great work." : "Don't be discouraged — you can retake the exam when ready."}
+    </p>
+  </div>
+  <hr style="border-color:#e2e8f0;margin:0;" />
+  <div style="padding:24px 32px;text-align:center;">
+    <p style="color:#a0aec0;font-size:12px;margin:0 0 4px;">Bible School — Exam Results</p>
+  </div>
+</div></body></html>`;
+
+    const text = `Exam Result Statement\n\nHello ${memberName},\n\nYour exam for ${result.subjectName} has been graded.\n\nScore: ${result.score} / ${result.totalPoints} (${result.percentage}%)\nPass Mark: ${result.passThreshold}%\nStatus: ${statusText}\n\n${result.passed ? "Congratulations on passing!" : "You can retake the exam when ready."}\n\nView your results: ${tenantSiteUrl}/auth`;
+
+    const messageId = crypto.randomUUID();
+
+    await adminClient.rpc("enqueue_email", {
+      queue_name: "transactional_emails",
+      payload: {
+        to: member.email.trim().toLowerCase(),
+        from: `"${senderName.replace(/"/g, "")}" <noreply@${ROOT_DOMAIN}>`,
+        sender_domain: SENDER_DOMAIN,
+        subject: `Exam Result: ${result.subjectName} — ${statusText}`,
+        html,
+        text,
+        purpose: "transactional",
+        label: "exam-result",
+        message_id: messageId,
+        idempotency_key: messageId,
+      },
+    });
+
+    console.log("Result email enqueued", { email: member.email, subjectName: result.subjectName });
+  } catch (e) {
+    console.error("Result email failed:", e);
   }
 }
