@@ -1,36 +1,34 @@
 
 
-## Fix: Announcements Not Loading — FK Points to Wrong Table
+## Fix: Exam Management Tenant Scoping for Members
 
-### Root Cause
-The `announcements.created_by` foreign key currently references `auth.users(id)`. However, the query in `Communications.jsx` uses a PostgREST embedded join:
-```js
-supabase.from("announcements").select("*, profiles:created_by(full_name)")
-```
-This requires a FK from `announcements.created_by` to `profiles.user_id`. Since the FK points to `auth.users` instead, PostgREST returns an error and the entire query fails silently — resulting in no announcements displayed.
+### Problem
+The `MemberExamsView` component (non-admin exam view) has two issues:
+1. **`withTenant` is not in scope** — line 951 calls `withTenant(...)` for course registration, but the component never calls `useTenantQuery()`. This causes a runtime error preventing course registration.
+2. **Queries are not tenant-scoped** — the member's course registrations, subjects, and attempts queries don't filter by `tenant_id`, potentially showing cross-tenant data.
 
 ### Solution
-Two changes:
+Add `useTenantQuery()` to `MemberExamsView` and scope all queries with `tenant_id`.
 
-1. **Database migration** — Drop the existing FK to `auth.users` and add a new one from `announcements.created_by` to `profiles(user_id)`.
+### Changes — `src/pages/ExamManagement.jsx`
 
-2. **Defensive fallback in code** — Wrap the query in a try/catch so that if the join ever fails again, announcements still load (just without author names).
-
-### Migration SQL
-```sql
-ALTER TABLE public.announcements
-  DROP CONSTRAINT announcements_created_by_fkey;
-
-ALTER TABLE public.announcements
-  ADD CONSTRAINT announcements_created_by_profiles_fkey
-  FOREIGN KEY (created_by) REFERENCES public.profiles(user_id)
-  ON DELETE SET NULL;
+#### 1. Add tenant hook to MemberExamsView (after line 914)
+```js
+const { tenantId, scopeQuery, withTenant } = useTenantQuery();
 ```
 
-### Code change — `src/pages/Communications.jsx`
-Add a fallback query if the join fails: catch the error from the main query and retry without the `profiles:created_by(full_name)` join, mapping `author_name` to `"Admin"` for all rows.
+#### 2. Scope registrations query (line 920)
+Add `.eq("tenant_id", tenantId)` to the course_registrations query and add `tenantId` to the query key.
+
+#### 3. Scope subjects query (line 929)
+Add tenant scoping via `scopeQuery` and add `tenantId` to the query key.
+
+#### 4. Scope attempts query (line 939)
+Add `.eq("tenant_id", tenantId)` to exam_attempts query and add `tenantId` to the query key.
+
+#### 5. Scope register mutation (line 951)
+`withTenant` is now available — no change needed to the insert call itself.
 
 ### Files changed
-- **Database migration** — re-point FK from `auth.users` to `profiles(user_id)`
-- `src/pages/Communications.jsx` — add error fallback for the announcements query
+- `src/pages/ExamManagement.jsx` — add tenant scoping to `MemberExamsView`
 
