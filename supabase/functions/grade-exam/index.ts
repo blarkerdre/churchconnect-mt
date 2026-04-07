@@ -49,7 +49,7 @@ Deno.serve(async (req) => {
     // Verify the caller owns this member record
     const { data: member } = await adminClient
       .from("members")
-      .select("id, user_id, tenant_id")
+      .select("id, user_id, tenant_id, email, first_name, last_name")
       .eq("id", member_id)
       .single();
 
@@ -167,6 +167,19 @@ Deno.serve(async (req) => {
     } else if (passed) {
       await issueCertificate(supabaseUrl, serviceKey, member_id, training_type, attempt.id, member.tenant_id, adminClient);
     }
+
+    // Send result statement email
+    await sendResultEmail(adminClient, member, {
+      subjectName: subject_id
+        ? questions[0]?.subject_id ? (await adminClient.from("exam_subjects").select("name").eq("id", subject_id).single()).data?.name || training_type : training_type
+        : training_type,
+      score,
+      totalPoints,
+      percentage: Math.round(percentage * 100) / 100,
+      passed,
+      passThreshold,
+      tenantId: member.tenant_id,
+    });
 
     return new Response(
       JSON.stringify({
