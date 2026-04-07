@@ -247,7 +247,7 @@ export default function ExamManagement() {
 
   // If not admin, show member view
   if (!isAdmin) {
-    return <MemberExamsView memberId={myMember?.id} courses={examTitles} loading={titlesLoading} />;
+    return <MemberExamsView memberId={myMember?.id} memberRecord={myMember} courses={examTitles} loading={titlesLoading} />;
   }
 
   return (
@@ -909,7 +909,7 @@ function WofbiAboutDisplay() {
   );
 }
 
-function MemberExamsView({ memberId, courses, loading }) {
+function MemberExamsView({ memberId, memberRecord, courses, loading }) {
   const qc = useQueryClient();
   const { tenantId, scopeQuery, withTenant } = useTenantQuery();
   const [examSelection, setExamSelection] = useState(null);
@@ -955,10 +955,23 @@ function MemberExamsView({ memberId, courses, loading }) {
     mutationFn: async (courseId) => {
       const { error } = await supabase.from("course_registrations").insert(withTenant({ member_id: memberId, course_id: courseId }));
       if (error) throw error;
+      return courseId;
     },
-    onSuccess: () => {
+    onSuccess: (courseId) => {
       qc.invalidateQueries({ queryKey: ["my-course-registrations"] });
       toast({ title: "Registered successfully!" });
+      // Send registration confirmation email
+      const course = courses?.find(c => c.id === courseId);
+      if (memberRecord?.email) {
+        supabase.functions.invoke("send-course-registration-email", {
+          body: {
+            email: memberRecord.email,
+            first_name: memberRecord.first_name || "Friend",
+            course_name: course?.name || "Bible School Course",
+            tenant_id: tenantId,
+          },
+        }).catch(err => console.error("Registration email failed:", err));
+      }
     },
     onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
