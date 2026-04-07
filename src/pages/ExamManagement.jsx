@@ -911,13 +911,16 @@ function WofbiAboutDisplay() {
 
 function MemberExamsView({ memberId, courses, loading }) {
   const qc = useQueryClient();
+  const { tenantId, scopeQuery, withTenant } = useTenantQuery();
   const [examSelection, setExamSelection] = useState(null);
   const [statementCourse, setStatementCourse] = useState(null);
 
   const { data: registrations = [], isLoading: regLoading } = useQuery({
-    queryKey: ["my-course-registrations", memberId],
+    queryKey: ["my-course-registrations", memberId, tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("course_registrations").select("course_id").eq("member_id", memberId);
+      let query = supabase.from("course_registrations").select("course_id").eq("member_id", memberId);
+      if (tenantId) query = query.eq("tenant_id", tenantId);
+      const { data, error } = await query;
       if (error) throw error;
       return data.map(r => r.course_id);
     },
@@ -925,21 +928,23 @@ function MemberExamsView({ memberId, courses, loading }) {
   });
 
   const { data: allSubjects = [] } = useQuery({
-    queryKey: ["all-exam-subjects"],
+    queryKey: ["all-exam-subjects", tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("exam_subjects").select("*").eq("is_active", true).order("sort_order");
+      const { data, error } = await scopeQuery(supabase.from("exam_subjects").select("*").eq("is_active", true).order("sort_order"));
       if (error) throw error;
       return data;
     },
   });
 
   const { data: myAttempts = [] } = useQuery({
-    queryKey: ["my-course-attempts", memberId],
+    queryKey: ["my-course-attempts", memberId, tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from("exam_attempts")
         .select("subject_id, training_type, score, total_points, passed, retake_allowed")
         .eq("member_id", memberId);
+      if (tenantId) query = query.eq("tenant_id", tenantId);
+      const { data, error } = await query;
       if (error) throw error;
       return data;
     },
