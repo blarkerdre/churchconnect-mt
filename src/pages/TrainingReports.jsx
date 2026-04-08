@@ -145,13 +145,13 @@ export default function TrainingReports() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `bfc-training-report-${format(new Date(), "yyyy-MM-dd")}.csv`;
+    a.download = `training-report-${format(new Date(), "yyyy-MM-dd")}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   };
 
   const buildPrintRows = () => ({
-    title: "BFC & Training Report",
+    title: "Training Report",
     headers: ["Date", "Type", "Title", "Total", "Male", "Female", "HG Baptism", "Water Baptism"],
     rows: reports.map(r => [
       format(parseISO(r.session_date), "dd MMM yyyy"),
@@ -175,9 +175,9 @@ export default function TrainingReports() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-xl font-display font-bold text-foreground flex items-center gap-2">
-            <TrendingUp className="h-5 w-5 text-primary" /> BFC & Training Report
+            <TrendingUp className="h-5 w-5 text-primary" /> Training Report
           </h1>
-          <p className="text-sm text-muted-foreground mt-1">Record attendance and outcomes for BFC and training sessions</p>
+          <p className="text-sm text-muted-foreground mt-1">Record attendance and outcomes for training sessions</p>
         </div>
         {canRecordSession && (
           <Dialog open={open} onOpenChange={setOpen}>

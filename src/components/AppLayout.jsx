@@ -36,7 +36,7 @@ const allNavItems = [
   { name: "Communications", icon: Megaphone, path: "/communications", access: null },
   { name: "Transportation", icon: Car, path: "/transportation", access: null },
   { name: "Analytics", icon: BarChart2, path: "/analytics", access: "admin" },
-  { name: "BFC & Training Report", icon: TrendingUp, path: "/training-reports", access: "training" },
+  { name: "Training Report", icon: TrendingUp, path: "/training-reports", access: "training" },
   { name: "Church Attendance", icon: ClipboardList, path: "/church-attendance", access: "training" },
   { name: "Bible School", icon: BookOpen, path: "/exam-management", access: null },
   { name: "WSF Centres", icon: Globe, path: "/wsf", access: "wsf" },
