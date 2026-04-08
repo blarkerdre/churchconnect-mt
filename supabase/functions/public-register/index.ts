@@ -456,6 +456,30 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Check for existing member by email (prevents duplicates from double-submit)
+    if (email) {
+      let dupeQuery = supabase.from("members").select("id").eq("email", email);
+      if (tenantId) dupeQuery = dupeQuery.eq("tenant_id", tenantId);
+      const { data: existingByEmail } = await dupeQuery.limit(1).maybeSingle();
+
+      if (existingByEmail) {
+        // Update existing record instead of creating duplicate
+        await supabase.from("members").update(memberPayload).eq("id", existingByEmail.id);
+        resultMemberId = existingByEmail.id;
+        resultMode = "updated";
+        if (email) triggerWelcomeEmail(email, firstName, lastName, tenantId);
+
+        // Prayer request → pastoral care
+        if (notes && notes.trim()) {
+          createPastoralCareForPrayerRequest(supabase, existingByEmail.id, firstName, lastName, notes, tenantId);
+        }
+
+        return new Response(JSON.stringify({ success: true, mode: resultMode }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
+
     const { data: insertedMember, error: memberError } = await supabase
       .from("members")
       .insert({
