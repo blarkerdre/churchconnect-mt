@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Loader2, CheckCircle2, BookOpen } from "lucide-react";
+import { usePublicConsentText } from "@/hooks/useConsentText";
 import { toast } from "@/components/ui/use-toast";
 import { Toaster } from "@/components/ui/toaster";
 
@@ -244,25 +245,7 @@ export default function PublicWoFBIRegistration() {
               )}
             </div>
 
-            <div className="flex items-start gap-3 pt-2">
-              <Checkbox
-                id="gdpr"
-                checked={form.gdpr_consent}
-                onCheckedChange={(v) => set("gdpr_consent", !!v)}
-              />
-              <Label htmlFor="gdpr" className="text-sm leading-snug cursor-pointer">
-                By completing this form, you agree that WMA-WCI will use, process and retain your personal data in accordance with our{" "}
-                <a
-                  href="https://winners-chapel.org.uk/wp-content/uploads/2024/11/WMA_PrivacyPolicy2024.pdf"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-primary underline"
-                >
-                  Privacy Policy
-                </a>
-                . You have the right to withdraw this consent at any time. *
-              </Label>
-            </div>
+            <WoFBIConsentBlock form={form} set={set} resolvedTenantId={resolvedTenantId} />
 
             <Button
               type="submit"
@@ -280,6 +263,31 @@ export default function PublicWoFBIRegistration() {
           </form>
         </CardContent>
       </Card>
+    </div>
+  );
+}
+
+function WoFBIConsentBlock({ form, set, resolvedTenantId }) {
+  const { consentText, privacyUrl } = usePublicConsentText(resolvedTenantId);
+  const parts = consentText.split("Privacy Policy");
+  return (
+    <div className="flex items-start gap-3 pt-2">
+      <Checkbox
+        id="gdpr"
+        checked={form.gdpr_consent}
+        onCheckedChange={(v) => set("gdpr_consent", !!v)}
+      />
+      <Label htmlFor="gdpr" className="text-sm leading-snug cursor-pointer">
+        {parts.length > 1 ? (
+          <>
+            {parts[0]}
+            <a href={privacyUrl} target="_blank" rel="noopener noreferrer" className="text-primary underline">{" "}Privacy Policy</a>
+            {parts[1]} *
+          </>
+        ) : (
+          <>{consentText}{" "}<a href={privacyUrl} target="_blank" rel="noopener noreferrer" className="text-primary underline">Privacy Policy</a> *</>
+        )}
+      </Label>
     </div>
   );
 }
