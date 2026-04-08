@@ -16,6 +16,7 @@ import { toast } from "@/components/ui/use-toast";
 import { Toaster } from "@/components/ui/toaster";
 import { suggestClosestWSFCentre } from "@/lib/wsf-suggest";
 import { normalizePhone } from "@/lib/phone-utils";
+import { usePublicConsentText } from "@/hooks/useConsentText";
 import WelcomeQuestions from "@/components/members/WelcomeQuestions";
 const STATUSES = ["First Timer", "New Convert", "Visitor", "Active"];
 const GENDERS = ["Male", "Female"];
@@ -354,16 +355,7 @@ export default function PublicRegistration() {
             </div>
 
             {/* GDPR Consent */}
-            <div className={`rounded-xl border p-4 space-y-2 transition-colors ${form.gdpr_consent ? "border-emerald-200 bg-emerald-50/50" : "border-destructive/30 bg-destructive/5"}`}>
-              <label className="flex items-start gap-3 cursor-pointer">
-                <input type="checkbox" checked={form.gdpr_consent} onChange={e => set("gdpr_consent", e.target.checked)} className="mt-0.5 rounded h-4 w-4 shrink-0" />
-                <span className="text-sm text-foreground leading-relaxed">
-                  By completing this form, you agree that WMA-WCI will use, process and retain your personal data in accordance with our{" "}
-                  <a href="https://winners-chapel.org.uk/wp-content/uploads/2024/11/WMA_PrivacyPolicy2024.pdf" target="_blank" rel="noopener noreferrer" className="text-primary underline hover:text-primary/80">Privacy Policy</a>. You have the right to withdraw this consent at any time.
-                </span>
-              </label>
-              {!form.gdpr_consent && <p className="text-xs text-destructive pl-7">⚠️ Consent is required to complete registration.</p>}
-            </div>
+            <ConsentBlock form={form} set={set} resolvedTenantId={resolvedTenantId} />
 
             <Button type="submit" className="w-full" disabled={saving || submitted || !form.first_name || !form.last_name || !form.gdpr_consent}>
               {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
