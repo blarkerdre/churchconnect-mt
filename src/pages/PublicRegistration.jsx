@@ -365,9 +365,9 @@ export default function PublicRegistration() {
               {!form.gdpr_consent && <p className="text-xs text-destructive pl-7">⚠️ Consent is required to complete registration.</p>}
             </div>
 
-            <Button type="submit" className="w-full" disabled={saving || !form.first_name || !form.last_name || !form.gdpr_consent}>
+            <Button type="submit" className="w-full" disabled={saving || submitted || !form.first_name || !form.last_name || !form.gdpr_consent}>
               {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              Register
+              {saving ? "Registering…" : "Register"}
             </Button>
           </form>
         </CardContent>
