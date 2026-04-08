@@ -269,7 +269,6 @@ export default function PublicWoFBIRegistration() {
 
 function WoFBIConsentBlock({ form, set, resolvedTenantId }) {
   const { consentText, privacyUrl } = usePublicConsentText(resolvedTenantId);
-  const parts = consentText.split("Privacy Policy");
   return (
     <div className="flex items-start gap-3 pt-2">
       <Checkbox
@@ -278,15 +277,7 @@ function WoFBIConsentBlock({ form, set, resolvedTenantId }) {
         onCheckedChange={(v) => set("gdpr_consent", !!v)}
       />
       <Label htmlFor="gdpr" className="text-sm leading-snug cursor-pointer">
-        {parts.length > 1 ? (
-          <>
-            {parts[0]}
-            <a href={privacyUrl} target="_blank" rel="noopener noreferrer" className="text-primary underline">{" "}Privacy Policy</a>
-            {parts[1]} *
-          </>
-        ) : (
-          <>{consentText}{" "}<a href={privacyUrl} target="_blank" rel="noopener noreferrer" className="text-primary underline">Privacy Policy</a> *</>
-        )}
+        {renderConsentText(consentText, privacyUrl)} *
       </Label>
     </div>
   );
