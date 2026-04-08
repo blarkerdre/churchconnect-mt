@@ -98,7 +98,7 @@ export default function ConsentPrivacySection() {
         </div>
 
         <div className="space-y-1.5">
-          <Label>Privacy Policy URL</Label>
+          <Label>Privacy Policy URL (Optional)</Label>
           <Input
             type="url"
             value={privacyUrl}
@@ -107,7 +107,7 @@ export default function ConsentPrivacySection() {
             maxLength={500}
           />
           <p className="text-xs text-muted-foreground">
-            Leave blank to use the default WMA Privacy Policy link.
+            Leave blank to show "Privacy Policy" as plain text (no link).
           </p>
         </div>
 
