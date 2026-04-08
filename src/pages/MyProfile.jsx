@@ -22,6 +22,7 @@ import TakeExamDialog from "@/components/exams/TakeExamDialog";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
 import WelcomeQuestions from "@/components/members/WelcomeQuestions";
 import { useTenant, DEFAULT_TENANT_ID } from "@/contexts/TenantContext";
+import { useConsentText } from "@/hooks/useConsentText";
 
 const GENDERS = ["Male", "Female"];
 const MEMBERSHIP_STATUSES = ["Active", "First Timer", "New Convert", "Visitor"];
@@ -850,16 +851,7 @@ function CreateMemberProfile({ user, onCreated, wsfCentres, churchUnits }) {
         )}
 
         {/* GDPR */}
-        <div className={`rounded-xl border p-4 space-y-2 transition-colors ${form.gdpr_consent ? "border-chart-3/30 bg-chart-3/5" : "border-accent/30 bg-accent/5"}`}>
-          <label className="flex items-start gap-3 cursor-pointer">
-            <input type="checkbox" checked={form.gdpr_consent} onChange={e => set("gdpr_consent", e.target.checked)} className="mt-0.5 rounded h-4 w-4 shrink-0" />
-            <span className="text-sm text-foreground leading-relaxed">
-              By completing this form, you agree that WMA-WCI will use, process and retain your personal data in accordance with our{" "}
-              <a href="https://winners-chapel.org.uk/wp-content/uploads/2024/11/WMA_PrivacyPolicy2024.pdf" target="_blank" rel="noopener noreferrer" className="text-primary underline hover:text-primary/80">Privacy Policy</a>. You have the right to withdraw this consent at any time.
-            </span>
-          </label>
-          {!form.gdpr_consent && <p className="text-xs text-accent pl-7">⚠️ Consent is required to complete registration.</p>}
-        </div>
+        <ProfileConsentBlock form={form} set={set} />
 
         <Button onClick={handleCreate} disabled={saving || !form.first_name || !form.last_name || !form.gdpr_consent} className="w-full">
           {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
