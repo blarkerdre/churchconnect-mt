@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Loader2, CheckCircle2, BookOpen } from "lucide-react";
-import { usePublicConsentText } from "@/hooks/useConsentText";
+import { usePublicConsentText, renderConsentText } from "@/hooks/useConsentText";
 import { toast } from "@/components/ui/use-toast";
 import { Toaster } from "@/components/ui/toaster";
 

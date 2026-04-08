@@ -22,7 +22,7 @@ import { useChurchUnits } from "@/hooks/useChurchUnits";
 import { useAuth } from "@/hooks/useAuth";
 import { logAudit } from "@/lib/audit";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
-import { useConsentText } from "@/hooks/useConsentText";
+import { useConsentText, renderConsentText } from "@/hooks/useConsentText";
 import MemberJourneyTimeline from "@/components/members/MemberJourneyTimeline";
 
 const STATUSES = ["Active", "New Convert", "First Timer", "Visitor"];

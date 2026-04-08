@@ -22,7 +22,7 @@ import TakeExamDialog from "@/components/exams/TakeExamDialog";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
 import WelcomeQuestions from "@/components/members/WelcomeQuestions";
 import { useTenant, DEFAULT_TENANT_ID } from "@/contexts/TenantContext";
-import { useConsentText } from "@/hooks/useConsentText";
+import { useConsentText, renderConsentText } from "@/hooks/useConsentText";
 
 const GENDERS = ["Male", "Female"];
 const MEMBERSHIP_STATUSES = ["Active", "First Timer", "New Convert", "Visitor"];
