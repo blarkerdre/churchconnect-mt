@@ -16,7 +16,7 @@ import { toast } from "@/components/ui/use-toast";
 import { Toaster } from "@/components/ui/toaster";
 import { suggestClosestWSFCentre } from "@/lib/wsf-suggest";
 import { normalizePhone } from "@/lib/phone-utils";
-import { usePublicConsentText } from "@/hooks/useConsentText";
+import { usePublicConsentText, renderConsentText } from "@/hooks/useConsentText";
 import WelcomeQuestions from "@/components/members/WelcomeQuestions";
 const STATUSES = ["First Timer", "New Convert", "Visitor", "Active"];
 const GENDERS = ["Male", "Female"];
@@ -371,21 +371,12 @@ export default function PublicRegistration() {
 
 function ConsentBlock({ form, set, resolvedTenantId }) {
   const { consentText, privacyUrl } = usePublicConsentText(resolvedTenantId);
-  const parts = consentText.split("Privacy Policy");
   return (
     <div className={`rounded-xl border p-4 space-y-2 transition-colors ${form.gdpr_consent ? "border-emerald-200 bg-emerald-50/50" : "border-destructive/30 bg-destructive/5"}`}>
       <label className="flex items-start gap-3 cursor-pointer">
         <input type="checkbox" checked={form.gdpr_consent} onChange={e => set("gdpr_consent", e.target.checked)} className="mt-0.5 rounded h-4 w-4 shrink-0" />
         <span className="text-sm text-foreground leading-relaxed">
-          {parts.length > 1 ? (
-            <>
-              {parts[0]}
-              <a href={privacyUrl} target="_blank" rel="noopener noreferrer" className="text-primary underline hover:text-primary/80">Privacy Policy</a>
-              {parts[1]}
-            </>
-          ) : (
-            <>{consentText}{" "}<a href={privacyUrl} target="_blank" rel="noopener noreferrer" className="text-primary underline hover:text-primary/80">Privacy Policy</a></>
-          )}
+          {renderConsentText(consentText, privacyUrl)}
         </span>
       </label>
       {!form.gdpr_consent && <p className="text-xs text-destructive pl-7">⚠️ Consent is required to complete registration.</p>}
