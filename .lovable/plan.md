@@ -1,48 +1,48 @@
 
 
-## Send Course Registration Email + Result/Certificate Email on Exam Completion
+## Fix: Duplicate Member Registration + Delete Duplicate Record
 
-### What This Does
-1. When a logged-in member registers for a course (in-app), they receive a confirmation email
-2. When an exam is completed and graded, the member receives an email with their result statement (scores, grade)
-3. Certificate emails are already sent — no change needed there
+### Problem
+`dvpwallace@yahoo.com` (Daphne Wallace) was registered twice within 12 seconds via the public registration form. The `public-register` edge function has no duplicate check for unauthenticated submissions — it only checks by `user_id` (which is null for public registrations). Neither record has any linked data (no course registrations, attendance, exams, or followups).
 
-### Current State
-- **Public registration** (`public-wofbi-register` edge function) already triggers `send-course-registration-email` — working
-- **In-app registration** (`ExamManagement.jsx` and `MemberFeed.jsx`) does NOT send any email — just inserts into `course_registrations`
-- **Exam grading** (`grade-exam` edge function) issues certificates on completion but does NOT email the result statement
-- **Certificate email** is already sent by `issue-certificate` edge function — no change needed
+### Solution
 
-### Changes
+#### 1. Delete the duplicate member record
+Use the insert tool to delete the second (newer) duplicate:
+```sql
+DELETE FROM members WHERE id = '701d1fe0-727a-417c-a03a-2580aaf0d231';
+```
+Keep the first record (`c7d807f5-0a62-49f9-a86d-242283c1432f`).
 
-#### 1. In-app course registration email — `src/pages/ExamManagement.jsx`
-After successful registration in `registerMutation.onSuccess`, call the existing `send-course-registration-email` edge function with the member's email, name, course name, and tenant_id. Need to look up member email and the course name from available data.
+#### 2. Add duplicate email guard to `public-register` edge function
+Before inserting a new member (for unauthenticated requests), check if a member with the same email already exists in the same tenant. If so, update the existing record instead of creating a new one.
 
-#### 2. In-app course registration email — `src/components/profile/MemberFeed.jsx`
-Same pattern — after successful registration, trigger the course registration email.
+Add this check around line 455 (before the INSERT), for the unauthenticated branch:
+```typescript
+// Check for existing member by email (prevents duplicates from double-submit)
+if (email) {
+  let dupeQuery = supabase.from("members").select("id").eq("email", email);
+  if (tenantId) dupeQuery = dupeQuery.eq("tenant_id", tenantId);
+  const { data: existingByEmail } = await dupeQuery.limit(1).maybeSingle();
+  
+  if (existingByEmail) {
+    // Update existing record instead of creating duplicate
+    await supabase.from("members").update(memberPayload).eq("id", existingByEmail.id);
+    resultMemberId = existingByEmail.id;
+    resultMode = "updated";
+    if (email) triggerWelcomeEmail(email, firstName, lastName, tenantId);
+    return new Response(JSON.stringify({ success: true, mode: resultMode }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+}
+```
 
-#### 3. Exam result email — `supabase/functions/grade-exam/index.ts`
-After grading is complete (attempt inserted), send an email with the result statement:
-- Member name, subject/course name, score, total, percentage, pass/fail, grade
-- Use the existing `enqueue_email` RPC pattern (same as `issue-certificate`)
-- Build an HTML email showing a results table
-- Only send if the member has an email address
+#### 3. Add UI double-submit prevention
+In `src/pages/PublicRegistration.jsx`, disable the submit button while the mutation is pending to prevent rapid double-clicks.
 
-#### 4. New email template — Result Statement
-Create an inline HTML email in `grade-exam/index.ts` (matching the style of the certificate email) showing:
-- Subject/course name
-- Score breakdown (score / total points, percentage)
-- Pass/Fail status with grade classification
-- Link to dashboard to view full details
-
-### Technical Details
-- The `send-course-registration-email` edge function already exists and accepts `{ email, first_name, course_name, tenant_id }` with service role auth
-- For the result email, we use `enqueue_email` RPC (same pattern as certificate email in `issue-certificate`)
-- The grade-exam function already has access to member info, scores, and tenant context
-- No new database tables or migrations needed
-
-### Files Changed
-- `src/pages/ExamManagement.jsx` — trigger registration email on in-app registration
-- `src/components/profile/MemberFeed.jsx` — trigger registration email on in-app registration
-- `supabase/functions/grade-exam/index.ts` — send result statement email after grading
+### Files changed
+- **Database** — delete duplicate record (insert tool)
+- `supabase/functions/public-register/index.ts` — add email duplicate check for unauthenticated registrations
+- `src/pages/PublicRegistration.jsx` — disable submit button during pending state
 
