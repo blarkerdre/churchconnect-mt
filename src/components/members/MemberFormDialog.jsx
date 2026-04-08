@@ -22,7 +22,7 @@ import { useChurchUnits } from "@/hooks/useChurchUnits";
 import { useAuth } from "@/hooks/useAuth";
 import { logAudit } from "@/lib/audit";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
-import { useConsentText } from "@/hooks/useConsentText";
+import { useConsentText, renderConsentText } from "@/hooks/useConsentText";
 import MemberJourneyTimeline from "@/components/members/MemberJourneyTimeline";
 
 const STATUSES = ["Active", "New Convert", "First Timer", "Visitor"];
@@ -652,21 +652,12 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
 function MemberConsentBlock({ form, set }) {
   const { tenantId } = useTenantQuery();
   const { consentText, privacyUrl } = useConsentText(tenantId);
-  const parts = consentText.split("Privacy Policy");
   return (
     <div className={`rounded-xl border p-4 space-y-2 transition-colors ${form.gdpr_consent ? "border-chart-3/30 bg-chart-3/5" : "border-accent/30 bg-accent/5"}`}>
       <label className="flex items-start gap-3 cursor-pointer">
         <input type="checkbox" checked={form.gdpr_consent} onChange={e => set("gdpr_consent", e.target.checked)} className="mt-0.5 rounded h-4 w-4 shrink-0" />
         <span className="text-sm text-foreground leading-relaxed">
-          {parts.length > 1 ? (
-            <>
-              {parts[0]}
-              <a href={privacyUrl} target="_blank" rel="noopener noreferrer" className="text-primary underline hover:text-primary/80">Privacy Policy</a>
-              {parts[1]}
-            </>
-          ) : (
-            <>{consentText}{" "}<a href={privacyUrl} target="_blank" rel="noopener noreferrer" className="text-primary underline hover:text-primary/80">Privacy Policy</a></>
-          )}
+          {renderConsentText(consentText, privacyUrl)}
         </span>
       </label>
       {!form.gdpr_consent && <p className="text-xs text-accent pl-7">⚠️ Consent is required to complete registration.</p>}

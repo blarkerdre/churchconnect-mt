@@ -1,3 +1,4 @@
+import React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -28,7 +29,7 @@ export function useConsentText(tenantId) {
 
   return {
     consentText: data?.consent_text || DEFAULT_CONSENT_TEXT,
-    privacyUrl: data?.privacy_policy_url || DEFAULT_PRIVACY_URL,
+    privacyUrl: data?.privacy_policy_url || "",
   };
 }
 
@@ -54,6 +55,23 @@ export function usePublicConsentText(resolvedTenantId) {
 
   return {
     consentText: data?.consent_text || DEFAULT_CONSENT_TEXT,
-    privacyUrl: data?.privacy_policy_url || DEFAULT_PRIVACY_URL,
+    privacyUrl: data?.privacy_policy_url || "",
   };
+}
+
+/** Render "Privacy Policy" as a link if URL is provided, otherwise plain text */
+export function renderPrivacyLink(privacyUrl) {
+  if (privacyUrl) {
+    return <a href={privacyUrl} target="_blank" rel="noopener noreferrer" className="text-primary underline hover:text-primary/80">Privacy Policy</a>;
+  }
+  return <span>Privacy Policy</span>;
+}
+
+/** Render consent text, splitting on "Privacy Policy" and conditionally linking */
+export function renderConsentText(consentText, privacyUrl) {
+  const parts = consentText.split("Privacy Policy");
+  if (parts.length > 1) {
+    return <>{parts[0]}{renderPrivacyLink(privacyUrl)}{parts[1]}</>;
+  }
+  return <>{consentText}{" "}{renderPrivacyLink(privacyUrl)}</>;
 }
