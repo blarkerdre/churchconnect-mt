@@ -1,27 +1,51 @@
 
 
-## Enlarge Book Covers and Profile Picture on Click (Lightbox)
+## Add Sermon Notes Feature
 
-### Approach
-Add a simple image lightbox using a Dialog overlay. When a user taps the book cover image or their profile photo in the welcome banner, a fullscreen overlay shows the image at its natural size.
+### What This Does
+Members can write, save, and review personal sermon notes directly within the app. Each note is tied to a date and optionally a sermon title/speaker. Notes are private to each member.
 
-### Changes
+### Database
 
-#### 1. Create `src/components/ui/ImageLightbox.jsx`
-A reusable component that wraps any clickable image. Uses Radix Dialog (already installed) to show a centered, fullscreen overlay with the enlarged image. Tap backdrop or X to close.
+#### New table: `sermon_notes`
+| Column | Type | Notes |
+|--------|------|-------|
+| id | uuid PK | default gen_random_uuid() |
+| user_id | uuid NOT NULL | references auth.users(id) |
+| tenant_id | uuid | tenant scoping |
+| title | text | sermon title (optional) |
+| speaker | text | preacher name (optional) |
+| service_date | date | defaults to today |
+| content | text NOT NULL | the actual notes |
+| created_at | timestamptz | default now() |
+| updated_at | timestamptz | default now() |
 
-#### 2. `src/components/dashboard/BookOfTheMonth.jsx`
-- Import `ImageLightbox`
-- Wrap each book cover `<img>` so clicking it opens the lightbox with the full `cover_image_url`
-- Add `cursor-pointer` to the thumbnail
+**RLS policies:**
+- Members can CRUD their own notes (`auth.uid() = user_id AND user_has_tenant_access(tenant_id)`)
+- Admins can view all notes in their tenant (read-only)
 
-#### 3. `src/components/dashboard/MemberDashboard.jsx`
-- Import `ImageLightbox`
-- Wrap the profile photo `<img>` (line 42) so clicking opens the lightbox with `myMember.photo_url`
-- Add `cursor-pointer` to the avatar container (only when photo exists)
+### New Page: `src/pages/SermonNotes.jsx`
+- List view showing saved notes sorted by date (newest first)
+- Search/filter by title or date
+- "New Note" button opens a form dialog
+- Click a note to view/edit it
+- Delete option on each note
+
+### New Component: `src/components/sermons/SermonNoteFormDialog.jsx`
+- Dialog with fields: Title (optional), Speaker (optional), Date, Content (textarea, large)
+- Save creates/updates the note via Supabase
+
+### Navigation
+- Add "Sermon Notes" to `allNavItems` in `AppLayout.jsx` with `access: null` (all authenticated users)
+- Use the `BookOpen` or `FileText` icon (will use `FileText` since `BookOpen` is taken by Bible School)
+
+### Route
+- Add `/sermon-notes` route in `App.jsx` pointing to the new page
 
 ### Files changed
-- **New**: `src/components/ui/ImageLightbox.jsx`
-- `src/components/dashboard/BookOfTheMonth.jsx` — clickable book covers
-- `src/components/dashboard/MemberDashboard.jsx` — clickable profile photo
+- **Database migration** — create `sermon_notes` table with RLS
+- **New**: `src/pages/SermonNotes.jsx` — list + view notes
+- **New**: `src/components/sermons/SermonNoteFormDialog.jsx` — create/edit dialog
+- `src/App.jsx` — add route
+- `src/components/AppLayout.jsx` — add nav item
 
