@@ -1,24 +1,27 @@
 
 
-## Rename "wofbi-register" to "bible-school-register" in URLs
+## Enlarge Book Covers and Profile Picture on Click (Lightbox)
+
+### Approach
+Add a simple image lightbox using a Dialog overlay. When a user taps the book cover image or their profile photo in the welcome banner, a fullscreen overlay shows the image at its natural size.
 
 ### Changes
 
-#### `src/App.jsx`
-- Line 194: `/wofbi-register` → `/bible-school-register`
-- Line 194: `DefaultTenantRedirect to="wofbi-register"` → `to="bible-school-register"`
-- Line 205: `/t/:tenantSlug/wofbi-register` → `/t/:tenantSlug/bible-school-register`
+#### 1. Create `src/components/ui/ImageLightbox.jsx`
+A reusable component that wraps any clickable image. Uses Radix Dialog (already installed) to show a centered, fullscreen overlay with the enlarged image. Tap backdrop or X to close.
 
-#### `src/components/exams/WoFBIRegistrationQRCode.jsx`
-- Line 30: URL path `wofbi-register` → `bible-school-register`
-- Line 53: Download filename `wofbi-registration-qr` → `bible-school-registration-qr`
+#### 2. `src/components/dashboard/BookOfTheMonth.jsx`
+- Import `ImageLightbox`
+- Wrap each book cover `<img>` so clicking it opens the lightbox with the full `cover_image_url`
+- Add `cursor-pointer` to the thumbnail
 
-#### `src/pages/PublicWoFBIRegistration.jsx`
-- No URL path changes needed (this file doesn't reference its own route path aside from the edge function call, which stays as `public-wofbi-register` since that's the function name)
-
-Internal identifiers (component names, file names, edge function names, database columns like `wofbi_highest_level`) remain unchanged — only the user-facing URL slug changes.
+#### 3. `src/components/dashboard/MemberDashboard.jsx`
+- Import `ImageLightbox`
+- Wrap the profile photo `<img>` (line 42) so clicking opens the lightbox with `myMember.photo_url`
+- Add `cursor-pointer` to the avatar container (only when photo exists)
 
 ### Files changed
-- `src/App.jsx` — update 3 route paths
-- `src/components/exams/WoFBIRegistrationQRCode.jsx` — update QR code URL and download filename
+- **New**: `src/components/ui/ImageLightbox.jsx`
+- `src/components/dashboard/BookOfTheMonth.jsx` — clickable book covers
+- `src/components/dashboard/MemberDashboard.jsx` — clickable profile photo
 
