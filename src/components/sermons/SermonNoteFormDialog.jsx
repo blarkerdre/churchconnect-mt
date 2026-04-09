@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
+import SermonRichEditor from "@/components/sermons/SermonRichEditor";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -36,7 +36,8 @@ export default function SermonNoteFormDialog({ open, onOpenChange, note, onSaved
   }, [open, note]);
 
   const handleSave = async () => {
-    if (!content.trim()) {
+    const stripped = content.replace(/<[^>]*>/g, "").trim();
+    if (!stripped) {
       toast.error("Please write some notes before saving.");
       return;
     }
@@ -75,7 +76,7 @@ export default function SermonNoteFormDialog({ open, onOpenChange, note, onSaved
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle>{note ? "Edit Note" : "New Sermon Note"}</DialogTitle>
         </DialogHeader>
@@ -93,8 +94,8 @@ export default function SermonNoteFormDialog({ open, onOpenChange, note, onSaved
             <Input id="sn-date" type="date" value={serviceDate} onChange={(e) => setServiceDate(e.target.value)} />
           </div>
           <div>
-            <Label htmlFor="sn-content">Notes *</Label>
-            <Textarea id="sn-content" value={content} onChange={(e) => setContent(e.target.value)} placeholder="Write your sermon notes here..." rows={10} className="min-h-[200px]" />
+            <Label>Notes *</Label>
+            <SermonRichEditor content={content} onChange={setContent} />
           </div>
         </div>
         <DialogFooter>
