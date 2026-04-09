@@ -1,34 +1,40 @@
-
-
-## Make Privacy Policy URL Optional + Fix Runtime Error
+## Show Post-Registration Notification with Exam Link
 
 ### Problem
-1. **Runtime error**: `MemberConsentBlock is not defined` — the component is defined at the bottom of `MemberFormDialog.jsx` but referenced before its declaration (likely a hoisting issue with the function expression).
-2. **Privacy Policy URL is always rendered as a link**, even when no URL is configured. It should only show the "Privacy Policy" link when a URL is provided.
+
+After registering for a course via the QR code public form, the success screen only says "You will be contacted with further details." There's no way for the student to know where to go to take their exam or how to access the app.
+
+### Solution
+
+Enhance the success screen in `PublicWoFBIRegistration.jsx` to:
+
+1. Show a clear message explaining the next steps — they need to create an account or log in to take exams
+2. Add a "Go to Login" button that links to the tenant-scoped auth page (`/t/{tenantSlug}/auth`)
+3. Mention that exams are available in the Bible School section once logged in
 
 ### Changes
 
-#### 1. Fix runtime error in `MemberFormDialog.jsx`
-Move the `MemberConsentBlock` function definition above the main `MemberFormDialog` component, or ensure it's properly hoisted. Since it's a `function` declaration (not const/arrow), it should hoist — need to verify the exact cause. Most likely the component needs to be moved before the main export.
+#### `src/pages/PublicWoFBIRegistration.jsx`
 
-#### 2. Make Privacy Policy link conditional in all 4 consent blocks
-In each consent block (`MemberFormDialog.jsx`, `PublicRegistration.jsx`, `PublicWoFBIRegistration.jsx`, `MyProfile.jsx`):
-- If `privacyUrl` is set, render "Privacy Policy" as a clickable link (current behavior)
-- If `privacyUrl` is empty/null, render "Privacy Policy" as plain text (no link)
+Update the success screen (lines 119–142) to add:
 
-#### 3. Update `useConsentText.jsx` hook
-Change the fallback for `privacyUrl` from `DEFAULT_PRIVACY_URL` to `null` or `""`, so tenants that haven't set a URL don't get the default WMA link. The default URL will only be shown as a placeholder in the settings form.
+- A short "What's Next?" section explaining they need an account to access exams
+- A "Login / Create Account" button linking to `/t/{tenantSlug}/auth`
+- Keep the existing "Register Another Person" button
 
-Alternatively, keep the default but allow tenants to explicitly clear it. The simpler approach: keep the default URL as fallback (since most tenants are WMA churches), but if the consent text doesn't contain "Privacy Policy", don't append a link at all.
+The success screen will look like:
 
-#### 4. Settings form — mark URL as optional
-In `ConsentPrivacySection.jsx`, update the label/helper text to indicate the URL is optional.
+```text
+✓ Registration Successful!
+You have been registered for [Course Name].
+
+What's next?
+To access and take exams, 
+log in or create an account.
+
+[ Login / Create Account ]    [ Register Another Person ]
+```
 
 ### Files changed
-- `src/components/members/MemberFormDialog.jsx` — fix runtime error + conditional link
-- `src/pages/PublicRegistration.jsx` — conditional link
-- `src/pages/PublicWoFBIRegistration.jsx` — conditional link
-- `src/pages/MyProfile.jsx` — conditional link
-- `src/hooks/useConsentText.jsx` — allow null/empty privacy URL
-- `src/components/settings/ConsentPrivacySection.jsx` — mark URL as optional in UI
 
+- `src/pages/PublicWoFBIRegistration.jsx` — enhance success screen with next-steps info and login link
