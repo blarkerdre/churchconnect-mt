@@ -1,40 +1,24 @@
-## Show Post-Registration Notification with Exam Link
 
-### Problem
 
-After registering for a course via the QR code public form, the success screen only says "You will be contacted with further details." There's no way for the student to know where to go to take their exam or how to access the app.
-
-### Solution
-
-Enhance the success screen in `PublicWoFBIRegistration.jsx` to:
-
-1. Show a clear message explaining the next steps — they need to create an account or log in to take exams
-2. Add a "Go to Login" button that links to the tenant-scoped auth page (`/t/{tenantSlug}/auth`)
-3. Mention that exams are available in the Bible School section once logged in
+## Rename "wofbi-register" to "bible-school-register" in URLs
 
 ### Changes
 
+#### `src/App.jsx`
+- Line 194: `/wofbi-register` → `/bible-school-register`
+- Line 194: `DefaultTenantRedirect to="wofbi-register"` → `to="bible-school-register"`
+- Line 205: `/t/:tenantSlug/wofbi-register` → `/t/:tenantSlug/bible-school-register`
+
+#### `src/components/exams/WoFBIRegistrationQRCode.jsx`
+- Line 30: URL path `wofbi-register` → `bible-school-register`
+- Line 53: Download filename `wofbi-registration-qr` → `bible-school-registration-qr`
+
 #### `src/pages/PublicWoFBIRegistration.jsx`
+- No URL path changes needed (this file doesn't reference its own route path aside from the edge function call, which stays as `public-wofbi-register` since that's the function name)
 
-Update the success screen (lines 119–142) to add:
-
-- A short "What's Next?" section explaining they need an account to access exams
-- A "Login / Create Account" button linking to `/t/{tenantSlug}/auth`
-- Keep the existing "Register Another Person" button
-
-The success screen will look like:
-
-```text
-✓ Registration Successful!
-You have been registered for [Course Name].
-
-What's next?
-To access and take exams, 
-log in or create an account.
-
-[ Login / Create Account ]    [ Register Another Person ]
-```
+Internal identifiers (component names, file names, edge function names, database columns like `wofbi_highest_level`) remain unchanged — only the user-facing URL slug changes.
 
 ### Files changed
+- `src/App.jsx` — update 3 route paths
+- `src/components/exams/WoFBIRegistrationQRCode.jsx` — update QR code URL and download filename
 
-- `src/pages/PublicWoFBIRegistration.jsx` — enhance success screen with next-steps info and login link
