@@ -32,6 +32,7 @@ import PublicWoFBIRegistration from "@/pages/PublicWoFBIRegistration";
 import Onboard from "@/pages/Onboard";
 import TenantAdmin from "@/pages/TenantAdmin";
 import Presentation from "@/pages/Presentation";
+import SermonNotes from "@/pages/SermonNotes";
 import Unsubscribe from "@/pages/Unsubscribe";
 import LandingPage from "@/pages/LandingPage";
 
@@ -131,6 +132,7 @@ function AppPages() {
       <Route path="/church-attendance" element={<FeatureGate path="/church-attendance"><TrainingRoute><ChurchAttendance /></TrainingRoute></FeatureGate>} />
       <Route path="/wsf" element={<FeatureGate path="/wsf"><WSFRoute><WSFManagement /></WSFRoute></FeatureGate>} />
       <Route path="/user-management" element={<AdminRoute><UserManagement /></AdminRoute>} />
+      <Route path="/sermon-notes" element={<SermonNotes />} />
       <Route path="/settings" element={<AdminRoute><Settings /></AdminRoute>} />
       <Route path="/system-logs" element={<AdminRoute><SystemLogs /></AdminRoute>} />
       <Route path="/tenant-admin" element={<SuperAdminRoute><TenantAdmin /></SuperAdminRoute>} />

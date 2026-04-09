@@ -2100,6 +2100,50 @@ export type Database = {
           },
         ]
       }
+      sermon_notes: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          service_date: string
+          speaker: string | null
+          tenant_id: string | null
+          title: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          service_date?: string
+          speaker?: string | null
+          tenant_id?: string | null
+          title?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          service_date?: string
+          speaker?: string | null
+          tenant_id?: string | null
+          title?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sermon_notes_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sms_log: {
         Row: {
           channel: string
