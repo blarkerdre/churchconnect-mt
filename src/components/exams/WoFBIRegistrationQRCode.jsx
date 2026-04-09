@@ -27,7 +27,7 @@ export default function WoFBIRegistrationQRCode({ open, onOpenChange }) {
     );
   }
 
-  const registrationUrl = `${window.location.origin}/t/${tenantSlug}/wofbi-register`;
+  const registrationUrl = `${window.location.origin}/t/${tenantSlug}/bible-school-register`;
 
   const churchName = currentTenant?.name || "Church";
   const logoUrl = currentTenant?.logo_url || "/winners-logo.png";
@@ -60,7 +60,7 @@ export default function WoFBIRegistrationQRCode({ open, onOpenChange }) {
       // Draw QR
       ctx.drawImage(img, 0, labelHeight + padding / 2, 512, 512);
       const a = document.createElement("a");
-      a.download = `${tenantSlug || "church"}-wofbi-registration-qr.png`;
+      a.download = `${tenantSlug || "church"}-bible-school-registration-qr.png`;
       a.href = canvas.toDataURL("image/png");
       a.click();
     };
