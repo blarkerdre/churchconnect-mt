@@ -117,25 +117,37 @@ export default function PublicWoFBIRegistration() {
   };
 
   if (submitted) {
+    const loginUrl = tenantSlug ? `/t/${tenantSlug}/auth` : "/auth";
     return (
       <div className="min-h-screen flex items-center justify-center bg-muted/30 p-4">
         <Toaster />
         <Card className="w-full max-w-md text-center">
-          <CardContent className="py-12 space-y-4">
+          <CardContent className="py-12 space-y-6">
             <CheckCircle2 className="mx-auto h-16 w-16 text-green-600" />
             <h2 className="text-2xl font-bold">Registration Successful!</h2>
             <p className="text-muted-foreground">
-              You have been registered for <strong>{courseName}</strong>. You will be contacted with further details.
+              You have been registered for <strong>{courseName}</strong>.
             </p>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setForm(emptyForm);
-                setSubmitted(false);
-              }}
-            >
-              Register Another Person
-            </Button>
+            <div className="bg-muted rounded-lg p-4 space-y-2 text-left">
+              <h3 className="font-semibold text-sm">What's next?</h3>
+              <p className="text-sm text-muted-foreground">
+                To access and take your exams, log in or create an account in the Bible School section.
+              </p>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              <Button asChild>
+                <a href={loginUrl}>Login / Create Account</a>
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setForm(emptyForm);
+                  setSubmitted(false);
+                }}
+              >
+                Register Another Person
+              </Button>
+            </div>
           </CardContent>
         </Card>
       </div>
