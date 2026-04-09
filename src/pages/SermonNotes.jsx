@@ -106,7 +106,7 @@ export default function SermonNotes() {
                   </div>
                 </div>
                 <p className="text-xs text-muted-foreground">{format(new Date(n.service_date), "PPP")}</p>
-                <p className="text-sm line-clamp-3 text-muted-foreground">{n.content}</p>
+                <p className="text-sm line-clamp-3 text-muted-foreground">{n.content?.replace(/<[^>]*>/g, "") || ""}</p>
               </CardContent>
             </Card>
           ))}
