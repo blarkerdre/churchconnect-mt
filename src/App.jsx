@@ -191,7 +191,7 @@ function AppRoutes() {
 
       {/* Bare public routes → redirect to default tenant */}
       <Route path="/register" element={<DefaultTenantRedirect to="register" />} />
-      <Route path="/wofbi-register" element={<DefaultTenantRedirect to="wofbi-register" />} />
+      <Route path="/bible-school-register" element={<DefaultTenantRedirect to="bible-school-register" />} />
       <Route path="/auth" element={<AuthProvider><Auth /></AuthProvider>} />
 
       {/* Tenant-independent public routes */}
@@ -202,7 +202,7 @@ function AppRoutes() {
       {/* Tenant-prefixed public routes */}
       <Route path="/t/:tenantSlug/auth" element={<AuthProvider><Auth /></AuthProvider>} />
       <Route path="/t/:tenantSlug/register" element={<PublicRegistration />} />
-      <Route path="/t/:tenantSlug/wofbi-register" element={<PublicWoFBIRegistration />} />
+      <Route path="/t/:tenantSlug/bible-school-register" element={<PublicWoFBIRegistration />} />
 
       {/* Authenticated routes — current paths */}
       <Route path="/*" element={<AuthProvider><AuthRoutes /></AuthProvider>} />
