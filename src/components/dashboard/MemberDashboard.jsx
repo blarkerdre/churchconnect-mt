@@ -9,6 +9,7 @@ import SelfCheckInWidget from "@/components/attendance/SelfCheckInWidget";
 import BookOfTheMonth from "@/components/dashboard/BookOfTheMonth";
 import { BirthdayBanner } from "@/components/dashboard/BirthdayCelebration";
 import { useTenant } from "@/contexts/TenantContext";
+import ImageLightbox from "@/components/ui/ImageLightbox";
 
 const GROWTH_FIELDS = [
   { key: "water_baptism", label: "Water Baptism" },
@@ -37,13 +38,17 @@ export default function MemberDashboard({ currentUser, myMember }) {
       {/* Welcome Banner */}
       <Card className="border-0 shadow-sm bg-gradient-to-r from-primary to-primary/70 text-primary-foreground overflow-hidden">
         <CardContent className="p-6 flex items-center gap-4">
-          <div className="h-14 w-14 rounded-2xl bg-accent flex items-center justify-center text-xl font-bold text-accent-foreground shrink-0 overflow-hidden">
-            {myMember?.photo_url ? (
-              <img src={myMember.photo_url} alt="" className="h-full w-full object-cover" />
-            ) : (
-              myMember ? `${myMember.first_name?.[0]}${myMember.last_name?.[0]}` : currentUser?.full_name?.[0] || "?"
-            )}
-          </div>
+          {myMember?.photo_url ? (
+            <ImageLightbox src={myMember.photo_url} alt={`${myMember.first_name} ${myMember.last_name}`}>
+              <div className="h-14 w-14 rounded-2xl bg-accent flex items-center justify-center text-xl font-bold text-accent-foreground shrink-0 overflow-hidden cursor-pointer hover:opacity-80 transition-opacity">
+                <img src={myMember.photo_url} alt="" className="h-full w-full object-cover" />
+              </div>
+            </ImageLightbox>
+          ) : (
+            <div className="h-14 w-14 rounded-2xl bg-accent flex items-center justify-center text-xl font-bold text-accent-foreground shrink-0 overflow-hidden">
+              {myMember ? `${myMember.first_name?.[0]}${myMember.last_name?.[0]}` : currentUser?.full_name?.[0] || "?"}
+            </div>
+          )}
           <div className="flex-1 min-w-0">
             <h2 className="text-lg font-bold leading-tight">
               Welcome, {myMember?.first_name || currentUser?.full_name || "Member"}!

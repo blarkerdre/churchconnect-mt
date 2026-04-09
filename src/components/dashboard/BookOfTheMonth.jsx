@@ -2,6 +2,7 @@ import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BookOpen, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import ImageLightbox from "@/components/ui/ImageLightbox";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
@@ -40,11 +41,13 @@ export default function BookOfTheMonth() {
           {books.map((book) => (
             <div key={book.id} className="flex gap-4">
               {book.cover_image_url && (
-                <img
-                  src={book.cover_image_url}
-                  alt={book.title}
-                  className="h-28 w-20 rounded-lg object-cover shadow-sm shrink-0"
-                />
+                <ImageLightbox src={book.cover_image_url} alt={book.title}>
+                  <img
+                    src={book.cover_image_url}
+                    alt={book.title}
+                    className="h-28 w-20 rounded-lg object-cover shadow-sm shrink-0 cursor-pointer hover:opacity-80 transition-opacity"
+                  />
+                </ImageLightbox>
               )}
               <div className="min-w-0 flex-1">
                 <h3 className="font-bold text-foreground text-sm leading-tight">{book.title}</h3>
