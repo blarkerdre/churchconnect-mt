@@ -94,7 +94,10 @@ export default function SermonNoteFormDialog({ open, onOpenChange, note, onSaved
             <Input id="sn-speaker" value={speaker} onChange={(e) => setSpeaker(e.target.value)} placeholder="e.g. Pastor John" maxLength={100} />
           </div>
           <div>
-            <Label htmlFor="sn-date">Date</Label>
+            <Label htmlFor="sn-category">Category (optional)</Label>
+            <Input id="sn-category" value={category} onChange={(e) => setCategory(e.target.value)} placeholder="e.g. Faith, Prayer, Worship" maxLength={50} />
+          </div>
+          <div>
             <Input id="sn-date" type="date" value={serviceDate} onChange={(e) => setServiceDate(e.target.value)} />
           </div>
           <div>
