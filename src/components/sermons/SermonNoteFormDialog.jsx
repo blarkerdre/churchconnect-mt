@@ -16,6 +16,7 @@ export default function SermonNoteFormDialog({ open, onOpenChange, note, onSaved
   const [saving, setSaving] = useState(false);
   const [title, setTitle] = useState("");
   const [speaker, setSpeaker] = useState("");
+  const [category, setCategory] = useState("");
   const [serviceDate, setServiceDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [content, setContent] = useState("");
 
@@ -24,11 +25,13 @@ export default function SermonNoteFormDialog({ open, onOpenChange, note, onSaved
       if (note) {
         setTitle(note.title || "");
         setSpeaker(note.speaker || "");
+        setCategory(note.category || "");
         setServiceDate(note.service_date || format(new Date(), "yyyy-MM-dd"));
         setContent(note.content || "");
       } else {
         setTitle("");
         setSpeaker("");
+        setCategory("");
         setServiceDate(format(new Date(), "yyyy-MM-dd"));
         setContent("");
       }
@@ -46,6 +49,7 @@ export default function SermonNoteFormDialog({ open, onOpenChange, note, onSaved
       const payload = {
         title: title.trim() || null,
         speaker: speaker.trim() || null,
+        category: category.trim() || null,
         service_date: serviceDate,
         content: content.trim(),
         user_id: user.id,
@@ -55,7 +59,7 @@ export default function SermonNoteFormDialog({ open, onOpenChange, note, onSaved
       if (note) {
         const { error } = await supabase
           .from("sermon_notes")
-          .update({ title: payload.title, speaker: payload.speaker, service_date: payload.service_date, content: payload.content })
+          .update({ title: payload.title, speaker: payload.speaker, category: payload.category, service_date: payload.service_date, content: payload.content })
           .eq("id", note.id)
           .eq("user_id", user.id);
         if (error) throw error;
@@ -90,7 +94,10 @@ export default function SermonNoteFormDialog({ open, onOpenChange, note, onSaved
             <Input id="sn-speaker" value={speaker} onChange={(e) => setSpeaker(e.target.value)} placeholder="e.g. Pastor John" maxLength={100} />
           </div>
           <div>
-            <Label htmlFor="sn-date">Date</Label>
+            <Label htmlFor="sn-category">Category (optional)</Label>
+            <Input id="sn-category" value={category} onChange={(e) => setCategory(e.target.value)} placeholder="e.g. Faith, Prayer, Worship" maxLength={50} />
+          </div>
+          <div>
             <Input id="sn-date" type="date" value={serviceDate} onChange={(e) => setServiceDate(e.target.value)} />
           </div>
           <div>
