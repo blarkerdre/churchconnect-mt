@@ -25,11 +25,13 @@ export default function SermonNoteFormDialog({ open, onOpenChange, note, onSaved
       if (note) {
         setTitle(note.title || "");
         setSpeaker(note.speaker || "");
+        setCategory(note.category || "");
         setServiceDate(note.service_date || format(new Date(), "yyyy-MM-dd"));
         setContent(note.content || "");
       } else {
         setTitle("");
         setSpeaker("");
+        setCategory("");
         setServiceDate(format(new Date(), "yyyy-MM-dd"));
         setContent("");
       }
