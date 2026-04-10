@@ -1,30 +1,39 @@
 
 
-## Add Banner Image Resize Control
+## Add Sermon Notes Organization (Categories, Sort, Filter)
 
 ### Overview
-Allow admins to control the display height of each banner slide via a simple height slider in the settings. The chosen height is saved per-slide and applied in the carousel.
+Add the ability to organize sermon notes by categories/tags, sort by different fields, and filter by category. This gives users a way to group and find notes more easily.
 
-### Data Model Change
-Add an optional `height` field to each slide object in the `dashboard_banners` JSON:
-```json
-{ "type": "banner", "image_url": "...", "height": 200 }
+### Database Migration
+Add a `category` column to the `sermon_notes` table:
+
+```sql
+ALTER TABLE public.sermon_notes ADD COLUMN category text DEFAULT null;
 ```
-No migration needed — just an extra JSON property. Default: 200px for banners, unchanged for books.
+
+No new RLS policies needed — existing policies cover the column automatically.
 
 ### Implementation
 
-#### 1. Settings UI — `DashboardBannerSettings.jsx`
-- Import `Slider` from `@/components/ui/slider`
-- For each slide, add a "Banner Height" slider (range 100–400px, step 10) below the image upload
-- Display the current value in pixels next to the label
-- On change, call `updateSlide(i, "height", value)`
+#### 1. Update `SermonNoteFormDialog.jsx`
+- Add a "Category" input field (with autocomplete from existing categories) between Speaker and Date fields
+- Save category value with the note payload
 
-#### 2. Carousel display — `DashboardBanner.jsx`
-- In `BannerSlide`, replace the fixed `aspect-[21/9]` class with an inline `style={{ height: slide.height || 200 }}` and use `object-cover w-full rounded-xl`
-- For `BookSlide`, apply `min-height` from `slide.height` if set, keeping the flex layout intact
+#### 2. Update `SermonNotes.jsx`
+- Add sort controls: sort by Date (default), Title, Speaker, or Category
+- Add ascending/descending toggle
+- Add category filter dropdown populated from unique categories in the user's notes
+- Show category badge on each note card
+- Filter notes by selected category before applying search
+
+#### 3. UI Layout (mobile-friendly at 384px)
+- Toolbar row with: Search input | Sort dropdown | Category filter dropdown
+- Category badge shown on each card below the date
+- Sort options: Date (newest), Date (oldest), Title A-Z, Speaker A-Z
 
 ### Files changed
-- **Edit**: `src/components/settings/DashboardBannerSettings.jsx` — add height slider per slide
-- **Edit**: `src/components/dashboard/DashboardBanner.jsx` — use dynamic height from slide data
+- **Migration**: Add `category` column to `sermon_notes`
+- **Edit**: `src/components/sermons/SermonNoteFormDialog.jsx` — add category field
+- **Edit**: `src/pages/SermonNotes.jsx` — add sort, category filter, and category badges
 
