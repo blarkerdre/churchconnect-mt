@@ -1,32 +1,30 @@
 
 
-## Fix: Banner Images Not Displaying
+## Add Banner Image Resize Control
 
-### Root Cause
-The `DashboardBanner` component uses `getPublicUrl()` to generate image URLs, which produces URLs like `/storage/v1/object/public/church-documents/...`. These return 404 "Bucket not found" because:
-1. The bucket may not exist (creation migration may have failed)
-2. The bucket was created with `public: false`, but public URLs only work for public buckets
+### Overview
+Allow admins to control the display height of each banner slide via a simple height slider in the settings. The chosen height is saved per-slide and applied in the carousel.
 
-### Fix
-
-#### Database migration
-Run a single migration to ensure the bucket exists and is public:
-
-```sql
--- Ensure bucket exists and is public (so getPublicUrl works for banner images)
-UPDATE storage.buckets SET public = true WHERE id = 'church-documents';
-
--- If it doesn't exist, create it
-INSERT INTO storage.buckets (id, name, public)
-VALUES ('church-documents', 'church-documents', true)
-ON CONFLICT (id) DO UPDATE SET public = true;
+### Data Model Change
+Add an optional `height` field to each slide object in the `dashboard_banners` JSON:
+```json
+{ "type": "banner", "image_url": "...", "height": 200 }
 ```
+No migration needed — just an extra JSON property. Default: 200px for banners, unchanged for books.
 
-Making the bucket public allows anyone to **read** files via public URLs, which is needed for dashboard banners visible to all users. Upload/delete access is still controlled by the existing RLS policies on `storage.objects`.
+### Implementation
 
-#### No code changes needed
-The `DashboardBanner.jsx` and `DashboardBannerSettings.jsx` code is correct. The only issue is the storage bucket configuration.
+#### 1. Settings UI — `DashboardBannerSettings.jsx`
+- Import `Slider` from `@/components/ui/slider`
+- For each slide, add a "Banner Height" slider (range 100–400px, step 10) below the image upload
+- Display the current value in pixels next to the label
+- On change, call `updateSlide(i, "height", value)`
+
+#### 2. Carousel display — `DashboardBanner.jsx`
+- In `BannerSlide`, replace the fixed `aspect-[21/9]` class with an inline `style={{ height: slide.height || 200 }}` and use `object-cover w-full rounded-xl`
+- For `BookSlide`, apply `min-height` from `slide.height` if set, keeping the flex layout intact
 
 ### Files changed
-- **Database migration** — ensure `church-documents` bucket exists and is public
+- **Edit**: `src/components/settings/DashboardBannerSettings.jsx` — add height slider per slide
+- **Edit**: `src/components/dashboard/DashboardBanner.jsx` — use dynamic height from slide data
 
