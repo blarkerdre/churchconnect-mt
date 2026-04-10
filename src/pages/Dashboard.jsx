@@ -7,6 +7,7 @@ import { format } from "date-fns";
 import SelfCheckInWidget from "@/components/attendance/SelfCheckInWidget";
 import ProfileCompletionBanner from "@/components/profile/ProfileCompletionBanner";
 import MemberDashboard from "@/components/dashboard/MemberDashboard";
+import DashboardBanner from "@/components/dashboard/DashboardBanner";
 import WSFLeaderDashboard from "@/components/dashboard/WSFLeaderDashboard";
 import { UpcomingBirthdayItem } from "@/components/dashboard/BirthdayCelebration";
 import { useAuth } from "@/hooks/useAuth";
@@ -154,6 +155,7 @@ export default function Dashboard() {
         <h2 className="text-lg font-bold text-foreground">{currentTenant?.name || "Dashboard"}</h2>
         {roleLabel && <Badge className="text-xs">{roleLabel}</Badge>}
       </div>
+      <DashboardBanner />
       <ProfileCompletionBanner />
       {selfCheckinEnabled && <SelfCheckInWidget />}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
