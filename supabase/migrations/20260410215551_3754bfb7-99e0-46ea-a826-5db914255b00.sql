@@ -1,0 +1,1 @@
+ALTER TABLE public.sermon_notes ADD COLUMN category text DEFAULT null;
