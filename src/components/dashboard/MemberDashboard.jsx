@@ -6,7 +6,7 @@ import { CheckCircle2, XCircle, UserCircle, ChevronRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import MemberFeed from "@/components/profile/MemberFeed";
 import SelfCheckInWidget from "@/components/attendance/SelfCheckInWidget";
-import BookOfTheMonth from "@/components/dashboard/BookOfTheMonth";
+
 import { BirthdayBanner } from "@/components/dashboard/BirthdayCelebration";
 import { useTenant } from "@/contexts/TenantContext";
 import ImageLightbox from "@/components/ui/ImageLightbox";
@@ -111,8 +111,6 @@ export default function MemberDashboard({ currentUser, myMember }) {
       {/* Self Check-In */}
       <SelfCheckInWidget />
 
-      {/* Book of the Month */}
-      <BookOfTheMonth />
 
       {/* Feed: Announcements + Events tabs */}
       <MemberFeed member={myMember} />
