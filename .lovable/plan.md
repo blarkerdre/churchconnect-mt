@@ -1,49 +1,49 @@
 
 
-## Dashboard Banner Slideshow Feature
+## Merge Books of the Month into Banner Slideshow
 
 ### Overview
-Add a configurable image banner carousel that auto-scrolls at the top of the dashboard. Admins can upload multiple banner images via Settings. All users see a smooth auto-playing slideshow.
+Combine the separate "Book of the Month" card and "Dashboard Banner" slideshow into a single unified carousel. Admins can add two types of slides: **image banners** (existing) and **book promotions** (with title, author, cover image, purchase link). Both slide types rotate together in the same auto-playing carousel.
 
-### Data Model
-Use `app_settings` with key `dashboard_banners`. Value is a JSON array:
+### Data Model Change
+Extend the `dashboard_banners` JSON array in `app_settings` to support a `type` field:
+
 ```json
 [
-  { "image_url": "https://...", "link_url": "https://...", "alt_text": "..." },
-  { "image_url": "https://...", "link_url": null, "alt_text": "..." }
+  { "type": "banner", "image_url": "...", "link_url": "...", "alt_text": "..." },
+  { "type": "book", "image_url": "...", "title": "Book Title", "author": "Author Name", "description": "...", "purchase_url": "https://..." }
 ]
 ```
-No migration needed — reuses existing `app_settings` table and `church-documents` storage bucket.
+
+No migration needed — same `app_settings` key, just richer JSON.
 
 ### Implementation
 
-#### 1. `DashboardBannerSettings.jsx` (new)
-Admin UI in Settings to manage banner slides:
-- Upload multiple images to `church-documents/{tenant_id}/banners/`
-- Set optional link URL and alt text per slide
-- Reorder, add, and remove slides
-- Preview the slideshow
+#### 1. Merge settings UI — `DashboardBannerSettings.jsx`
+- Rename section to "Dashboard Slideshow"
+- Add a slide type picker when adding a new slide: **Image Banner** or **Book Promotion**
+- Image Banner slides: same as today (image upload, link URL, alt text)
+- Book Promotion slides: cover image upload, title, author, description, purchase URL
+- Both types appear in the same ordered list with drag/reorder
 
-#### 2. `DashboardBanner.jsx` (new)
-Display component using Embla Carousel (already installed via the existing `carousel.jsx` UI component):
-- Fetches `dashboard_banners` from `app_settings`
-- Auto-plays with configurable interval (~5s)
-- Full-width, rounded, responsive aspect ratio
-- Dot indicators for current slide
-- Each slide optionally wraps in a link
-- Hides if no banners configured or array is empty
+#### 2. Update `DashboardBanner.jsx` carousel
+- Render two slide layouts based on `type`:
+  - `banner`: full-width image (existing behavior)
+  - `book`: split layout with cover image on left, title/author/description + "Buy Now" button on right, styled attractively
+- Keep auto-play, dot indicators, responsive sizing
 
-#### 3. Wire into dashboards
-- `Dashboard.jsx` — render `<DashboardBanner />` above the stats grid
-- `MemberDashboard.jsx` — render `<DashboardBanner />` above the welcome card
-
-#### 4. Wire into Settings
-- `Settings.jsx` — add `<DashboardBannerSettings />` section
+#### 3. Remove standalone components
+- Remove `BookOfTheMonth.jsx` component
+- Remove `BookOfTheMonthSettings.jsx` component
+- Remove `<BookOfTheMonth />` from `MemberDashboard.jsx`
+- Remove the "Books" tab from `Settings.jsx`
+- The `books_of_the_month` table remains (no data deletion) but is no longer queried
 
 ### Files changed
-- **New**: `src/components/dashboard/DashboardBanner.jsx`
-- **New**: `src/components/settings/DashboardBannerSettings.jsx`
-- **Edit**: `src/pages/Dashboard.jsx` — add banner above stats
-- **Edit**: `src/components/dashboard/MemberDashboard.jsx` — add banner above welcome card
-- **Edit**: `src/pages/Settings.jsx` — add banner settings section
+- **Edit**: `src/components/dashboard/DashboardBanner.jsx` — add book slide rendering
+- **Edit**: `src/components/settings/DashboardBannerSettings.jsx` — add book slide type with fields
+- **Edit**: `src/components/dashboard/MemberDashboard.jsx` — remove `<BookOfTheMonth />`
+- **Edit**: `src/pages/Settings.jsx` — remove Books tab and BookOfTheMonthSettings import
+- **Delete**: `src/components/dashboard/BookOfTheMonth.jsx`
+- **Delete**: `src/components/settings/BookOfTheMonthSettings.jsx`
 
