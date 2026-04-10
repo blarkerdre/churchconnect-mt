@@ -28,6 +28,7 @@ import ExternalLinksSection from "@/components/settings/ExternalLinksSection";
 import DangerZoneSection from "@/components/settings/DangerZoneSection";
 import BookOfTheMonthSettings from "@/components/settings/BookOfTheMonthSettings";
 import ConsentPrivacySection from "@/components/settings/ConsentPrivacySection";
+import DashboardBannerSettings from "@/components/settings/DashboardBannerSettings";
 
 /* ─── Notification Preferences section ─── */
 function NotificationPreferencesSection() {
@@ -1061,6 +1062,7 @@ export default function Settings() {
         <TabsContent value="branding" className="space-y-6">
           <ChurchBrandingSection />
           <FaviconOgImageSection />
+          <DashboardBannerSettings />
         </TabsContent>
 
         <TabsContent value="billing">
