@@ -59,7 +59,7 @@ export default function SermonNoteFormDialog({ open, onOpenChange, note, onSaved
       if (note) {
         const { error } = await supabase
           .from("sermon_notes")
-          .update({ title: payload.title, speaker: payload.speaker, service_date: payload.service_date, content: payload.content })
+          .update({ title: payload.title, speaker: payload.speaker, category: payload.category, service_date: payload.service_date, content: payload.content })
           .eq("id", note.id)
           .eq("user_id", user.id);
         if (error) throw error;
