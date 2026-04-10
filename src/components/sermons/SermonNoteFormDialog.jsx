@@ -16,6 +16,7 @@ export default function SermonNoteFormDialog({ open, onOpenChange, note, onSaved
   const [saving, setSaving] = useState(false);
   const [title, setTitle] = useState("");
   const [speaker, setSpeaker] = useState("");
+  const [category, setCategory] = useState("");
   const [serviceDate, setServiceDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [content, setContent] = useState("");
 
