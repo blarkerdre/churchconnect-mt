@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Loader2, Plus, Trash2, ImageIcon, BookOpen } from "lucide-react";
+import { Slider } from "@/components/ui/slider";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
@@ -138,6 +139,19 @@ export default function DashboardBannerSettings() {
                 />
                 {uploading === i && <Loader2 className="h-4 w-4 animate-spin" />}
               </div>
+            </div>
+
+            {/* Height slider */}
+            <div>
+              <Label className="text-xs">Display Height: {slide.height || 200}px</Label>
+              <Slider
+                min={100}
+                max={400}
+                step={10}
+                value={[slide.height || 200]}
+                onValueChange={([v]) => updateSlide(i, "height", v)}
+                className="mt-1"
+              />
             </div>
 
             {slide.type === "book" ? (
