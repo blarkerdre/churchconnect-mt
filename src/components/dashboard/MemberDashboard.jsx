@@ -10,6 +10,7 @@ import BookOfTheMonth from "@/components/dashboard/BookOfTheMonth";
 import { BirthdayBanner } from "@/components/dashboard/BirthdayCelebration";
 import { useTenant } from "@/contexts/TenantContext";
 import ImageLightbox from "@/components/ui/ImageLightbox";
+import DashboardBanner from "@/components/dashboard/DashboardBanner";
 
 const GROWTH_FIELDS = [
   { key: "water_baptism", label: "Water Baptism" },
@@ -35,6 +36,9 @@ export default function MemberDashboard({ currentUser, myMember }) {
 
   return (
     <div className="space-y-6">
+      {/* Dashboard Banner Slideshow */}
+      <DashboardBanner />
+
       {/* Welcome Banner */}
       <Card className="border-0 shadow-sm bg-gradient-to-r from-primary to-primary/70 text-primary-foreground overflow-hidden">
         <CardContent className="p-6 flex items-center gap-4">
