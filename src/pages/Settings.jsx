@@ -14,7 +14,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 import {
   Settings as SettingsIcon, Plus, Pencil, Trash2, Loader2,
-  Users, Church, CalendarDays, TrendingUp, Heart, Globe, Bell, Award, Link2, ShieldAlert, BookOpen, Upload, X, ImageIcon, Mail, Phone, CreditCard, Send
+  Users, Church, CalendarDays, TrendingUp, Heart, Globe, Bell, Award, Link2, ShieldAlert, Upload, X, ImageIcon, Mail, Phone, CreditCard, Send
 } from "lucide-react";
 import FollowupTemplatesSection from "@/components/settings/FollowupTemplatesSection";
 import { Textarea } from "@/components/ui/textarea";
