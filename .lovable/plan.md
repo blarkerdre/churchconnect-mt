@@ -1,51 +1,49 @@
 
 
-## Fix: Duplicate Member Records from Profile Self-Service
+## Dashboard Banner Slideshow Feature
 
-### Root Cause
+### Overview
+Add a configurable image banner carousel that auto-scrolls at the top of the dashboard. Admins can upload multiple banner images via Settings. All users see a smooth auto-playing slideshow.
 
-The duplicate for dvpwallace@yahoo.com was created through this sequence:
-
-1. **Apr 7 22:11** — Auth user created (via signup). The `handle_new_user` trigger ran but no member record existed yet, so nothing was linked.
-2. **Apr 7 22:18** — Admin created a member record manually (no `user_id` set).
-3. **Apr 9 21:40** — Daphne visited MyProfile and saved. The `upsert_own_member_profile` RPC looked for a member with her `user_id` — found none (the original had no `user_id`). It **inserted a new member record**, creating the duplicate.
-4. **Apr 10** — An admin manually linked the original record to her `user_id`, so now both records point to the same user.
-
-The core issue: `upsert_own_member_profile` only checks `WHERE user_id = auth.uid()` to find an existing record. It does not fall back to checking by **email** before inserting. Additionally, there is no unique constraint on `(user_id, tenant_id)` to prevent this at the database level.
-
-### Fix (3 parts)
-
-#### 1. Database migration — Add unique constraint + fix RPC
-
-```sql
--- Delete the duplicate record (the newer one with no associated data)
-DELETE FROM members WHERE id = '8d9208a6-6df7-4090-8592-6bde615d56a6';
-
--- Add partial unique constraint: one member per user per tenant
-CREATE UNIQUE INDEX idx_members_user_tenant_unique
-  ON members (user_id, tenant_id)
-  WHERE user_id IS NOT NULL;
+### Data Model
+Use `app_settings` with key `dashboard_banners`. Value is a JSON array:
+```json
+[
+  { "image_url": "https://...", "link_url": "https://...", "alt_text": "..." },
+  { "image_url": "https://...", "link_url": null, "alt_text": "..." }
+]
 ```
+No migration needed — reuses existing `app_settings` table and `church-documents` storage bucket.
 
-#### 2. Update `upsert_own_member_profile` RPC
+### Implementation
 
-Add an email-based fallback lookup before inserting. If no member is found by `user_id`, check for an unlinked member by email in the same tenant, link it, then update — instead of creating a new record.
+#### 1. `DashboardBannerSettings.jsx` (new)
+Admin UI in Settings to manage banner slides:
+- Upload multiple images to `church-documents/{tenant_id}/banners/`
+- Set optional link URL and alt text per slide
+- Reorder, add, and remove slides
+- Preview the slideshow
 
-```text
-Current logic:
-  1. Look up member by user_id → found? UPDATE
-  2. Not found? INSERT new record
+#### 2. `DashboardBanner.jsx` (new)
+Display component using Embla Carousel (already installed via the existing `carousel.jsx` UI component):
+- Fetches `dashboard_banners` from `app_settings`
+- Auto-plays with configurable interval (~5s)
+- Full-width, rounded, responsive aspect ratio
+- Dot indicators for current slide
+- Each slide optionally wraps in a link
+- Hides if no banners configured or array is empty
 
-Fixed logic:
-  1. Look up member by user_id → found? UPDATE
-  2. Not found? Look up unlinked member by email + tenant → found? SET user_id, then UPDATE
-  3. Still not found? INSERT new record
-```
+#### 3. Wire into dashboards
+- `Dashboard.jsx` — render `<DashboardBanner />` above the stats grid
+- `MemberDashboard.jsx` — render `<DashboardBanner />` above the welcome card
 
-#### 3. No frontend changes needed
-
-The MyProfile page already calls the RPC correctly. The fix is entirely in the database layer.
+#### 4. Wire into Settings
+- `Settings.jsx` — add `<DashboardBannerSettings />` section
 
 ### Files changed
-- **Database migration** — delete duplicate, add unique index, update `upsert_own_member_profile` function
+- **New**: `src/components/dashboard/DashboardBanner.jsx`
+- **New**: `src/components/settings/DashboardBannerSettings.jsx`
+- **Edit**: `src/pages/Dashboard.jsx` — add banner above stats
+- **Edit**: `src/components/dashboard/MemberDashboard.jsx` — add banner above welcome card
+- **Edit**: `src/pages/Settings.jsx` — add banner settings section
 
