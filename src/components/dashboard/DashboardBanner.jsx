@@ -86,11 +86,13 @@ export default function DashboardBanner() {
 }
 
 function BannerSlide({ slide, index }) {
+  const height = slide.height || 200;
   const img = (
     <img
       src={slide.image_url}
       alt={slide.alt_text || `Banner ${index + 1}`}
-      className="w-full h-auto object-cover aspect-[21/9] sm:aspect-[3/1]"
+      className="w-full object-cover rounded-xl"
+      style={{ height }}
       loading="lazy"
     />
   );
@@ -101,7 +103,7 @@ function BannerSlide({ slide, index }) {
 
 function BookSlide({ slide }) {
   return (
-    <div className="flex items-center gap-4 sm:gap-6 p-4 sm:p-6 bg-gradient-to-r from-primary/5 to-accent/10 rounded-xl min-h-[140px]">
+    <div className="flex items-center gap-4 sm:gap-6 p-4 sm:p-6 bg-gradient-to-r from-primary/5 to-accent/10 rounded-xl" style={{ minHeight: slide.height || 140 }}>
       {slide.image_url && (
         <img
           src={slide.image_url}
