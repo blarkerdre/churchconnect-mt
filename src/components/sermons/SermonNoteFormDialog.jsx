@@ -49,6 +49,7 @@ export default function SermonNoteFormDialog({ open, onOpenChange, note, onSaved
       const payload = {
         title: title.trim() || null,
         speaker: speaker.trim() || null,
+        category: category.trim() || null,
         service_date: serviceDate,
         content: content.trim(),
         user_id: user.id,
