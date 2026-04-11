@@ -251,6 +251,9 @@ export default function CourseResultsView({ course }) {
                       <TableCell className="text-sm font-medium">{m.name}</TableCell>
                       {subjects.map(s => {
                         const sub = m.subjects[s.id];
+                        const subClassifications = (s.grade_classifications && s.grade_classifications.length > 0) ? s.grade_classifications : classifications;
+                        const subPct = sub && sub.total_points > 0 ? (sub.score / sub.total_points) * 100 : 0;
+                        const subGrade = sub ? getGradeClassification(subPct, subClassifications) : null;
                         return (
                           <TableCell key={s.id} className="text-center text-xs">
                             {sub ? `${sub.score}/${sub.total_points}` : "—"}
