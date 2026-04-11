@@ -132,7 +132,7 @@ function AppPages() {
       <Route path="/church-attendance" element={<FeatureGate path="/church-attendance"><TrainingRoute><ChurchAttendance /></TrainingRoute></FeatureGate>} />
       <Route path="/wsf" element={<FeatureGate path="/wsf"><WSFRoute><WSFManagement /></WSFRoute></FeatureGate>} />
       <Route path="/user-management" element={<AdminRoute><UserManagement /></AdminRoute>} />
-      <Route path="/sermon-notes" element={<SermonNotes />} />
+      <Route path="/sermon-notes" element={<FeatureGate path="/sermon-notes"><SermonNotes /></FeatureGate>} />
       <Route path="/settings" element={<AdminRoute><Settings /></AdminRoute>} />
       <Route path="/system-logs" element={<AdminRoute><SystemLogs /></AdminRoute>} />
       <Route path="/tenant-admin" element={<SuperAdminRoute><TenantAdmin /></SuperAdminRoute>} />
