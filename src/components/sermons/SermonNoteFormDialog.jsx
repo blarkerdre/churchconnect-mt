@@ -84,7 +84,7 @@ export default function SermonNoteFormDialog({ open, onOpenChange, note, onSaved
         <DialogHeader>
           <DialogTitle>{note ? "Edit Note" : "New Sermon Note"}</DialogTitle>
         </DialogHeader>
-        <div className="space-y-4">
+        <div className="space-y-4 max-h-[60vh] overflow-y-auto">
           <div>
             <Label htmlFor="sn-title">Sermon Title (optional)</Label>
             <Input id="sn-title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. The Power of Faith" maxLength={200} />
