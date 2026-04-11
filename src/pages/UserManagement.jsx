@@ -35,6 +35,14 @@ const roleColors = {
   member: "bg-muted text-muted-foreground",
 };
 
+const roleLabels = {
+  super_admin: "Super Admin",
+  admin: "Admin",
+  unit_leader: "Unit Leader",
+  wsf_leader: "Home Cell Leader",
+  member: "Member",
+};
+
 export default function UserManagement() {
   const { isAdmin, roles, user } = useAuth();
   const isSuperAdmin = roles.includes("super_admin");
@@ -237,7 +245,7 @@ export default function UserManagement() {
           <SelectTrigger className="w-full sm:w-[160px]"><SelectValue placeholder="Role" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Roles</SelectItem>
-            {ROLES.map(r => <SelectItem key={r} value={r}>{r.replace("_", " ")}</SelectItem>)}
+            {ROLES.map(r => <SelectItem key={r} value={r}>{roleLabels[r] || r.replace("_", " ")}</SelectItem>)}
           </SelectContent>
         </Select>
         <Select value={statusFilter} onValueChange={setStatusFilter}>
@@ -312,7 +320,7 @@ export default function UserManagement() {
                             return (
                               <Badge key={r} className={`${roleColors[r]} border-0 gap-1`}>
                                 <RoleIcon className="h-3 w-3" />
-                                {r.replace("_", " ")}
+                                {roleLabels[r] || r.replace("_", " ")}
                               </Badge>
                             );
                           })}
@@ -344,7 +352,7 @@ export default function UserManagement() {
                                     }}
                                     disabled={toggleRoleMutation.isPending}
                                   />
-                                  <span className="capitalize">{r.replace("_", " ")}</span>
+                                  <span className="capitalize">{roleLabels[r] || r.replace("_", " ")}</span>
                                 </label>
                               );
                             })}
@@ -420,7 +428,7 @@ export default function UserManagement() {
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {(isSuperAdmin ? ROLES : ROLES.filter(r => !["super_admin", "admin"].includes(r))).map(r => (
-                    <SelectItem key={r} value={r}>{r.replace("_", " ")}</SelectItem>
+                    <SelectItem key={r} value={r}>{roleLabels[r] || r.replace("_", " ")}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
