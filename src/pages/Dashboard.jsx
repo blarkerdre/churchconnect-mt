@@ -122,7 +122,7 @@ export default function Dashboard() {
     { label: "Water Baptism", value: waterBaptism, total },
     { label: "Holy Spirit Baptism", value: hsBaptism, total },
     { label: "BFC Completed", value: bfcCompleted, total },
-    { label: "Winners Satellite", value: winnersSatellite, total },
+    { label: "Home Cell", value: winnersSatellite, total },
   ];
 
   const recentActivity = [

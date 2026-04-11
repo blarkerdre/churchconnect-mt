@@ -21,7 +21,7 @@ export default function GrowthIndices({ members }) {
       bg: "bg-orange-50",
     },
     {
-      label: "Winners Satellite Fellowship",
+      label: "Home Cell Fellowship",
       icon: Users,
       count: members.filter((m) => m.winners_satellite).length,
       color: "text-violet-500",
