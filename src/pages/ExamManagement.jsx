@@ -1050,12 +1050,12 @@ function MemberExamsView({ memberId, memberRecord, courses, loading }) {
                           <CheckCircle2 className="h-3 w-3 mr-1" /> Registered
                         </Badge>
                       )}
-                      {allDone && (
+                      {allDone && course.send_result_email && (
                         <Badge variant={passed ? "default" : "destructive"} className="text-xs">
                           {passed ? getGradeClassification(aggPct, course.grade_classifications || DEFAULT_GRADE_CLASSIFICATIONS) : "Fail"}
                         </Badge>
                       )}
-                      {allDone && (
+                      {allDone && course.send_result_email && (
                         <Button variant="outline" size="sm" className="gap-1 text-xs h-7" onClick={() => setStatementCourse(course)}>
                           <FileText className="h-3 w-3" /> Statement
                         </Button>
@@ -1080,8 +1080,8 @@ function MemberExamsView({ memberId, memberRecord, courses, loading }) {
                     <>
                       <p className="text-xs text-muted-foreground">
                         {completedSubjectIds.length}/{subjects.length} subjects completed
-                        {totalPoints > 0 && ` · Aggregate: ${Math.round(aggPct)}%`}
-                        {` · Pass mark: ${course.pass_mark_percentage}%`}
+                        {course.send_result_email && totalPoints > 0 && ` · Aggregate: ${Math.round(aggPct)}%`}
+                        {course.send_result_email && ` · Pass mark: ${course.pass_mark_percentage}%`}
                       </p>
                       <div className="flex flex-wrap gap-2">
                         {subjects.map(s => {
@@ -1102,7 +1102,7 @@ function MemberExamsView({ memberId, memberRecord, courses, loading }) {
                               className="gap-1.5"
                             >
                               <BookOpen className="h-3.5 w-3.5" />
-                              {s.name} {taken ? (canRetake ? "↻ Retake" : `✓ ${best.score}/${best.total_points}`) : ""}
+                              {s.name} {taken ? (canRetake ? "↻ Retake" : (course.send_result_email ? `✓ ${best.score}/${best.total_points}` : "✓ Completed")) : ""}
                             </Button>
                           );
                         })}
