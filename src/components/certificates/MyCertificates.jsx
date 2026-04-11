@@ -9,7 +9,7 @@ import { useTenantQuery } from "@/hooks/useTenantQuery";
 import { toast } from "@/components/ui/use-toast";
 import { format } from "date-fns";
 
-export default function MyCertificates({ memberId }) {
+export default function MyCertificates({ memberId, hiddenCourseNames = [] }) {
   const { tenantId } = useTenantQuery();
   const { data: completions = [], isLoading } = useQuery({
     queryKey: ["training-completions", memberId, tenantId],
@@ -51,7 +51,9 @@ export default function MyCertificates({ memberId }) {
     );
   }
 
-  if (completions.length === 0) return null;
+  const visibleCompletions = completions.filter(c => !hiddenCourseNames.includes(c.training_type));
+
+  if (visibleCompletions.length === 0) return null;
 
   return (
     <Card className="border-0 shadow-sm">
@@ -62,7 +64,7 @@ export default function MyCertificates({ memberId }) {
       </CardHeader>
       <CardContent>
         <div className="space-y-2">
-          {completions.map((c) => (
+          {visibleCompletions.map((c) => (
             <div key={c.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
               <div>
                 <p className="text-sm font-medium text-foreground">{c.training_type}</p>
