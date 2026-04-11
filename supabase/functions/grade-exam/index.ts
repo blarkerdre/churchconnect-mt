@@ -227,7 +227,7 @@ Deno.serve(async (req) => {
   }
 });
 
-async function checkCourseCompletion(adminClient: any, memberId: string, courseName: string, tenantId: string) {
+async function checkCourseCompletion(adminClient: any, memberId: string, courseName: string, tenantId: string, sendCertificateEmail: boolean) {
   try {
     const { data: course } = await adminClient
       .from("exam_titles")
@@ -276,7 +276,7 @@ async function checkCourseCompletion(adminClient: any, memberId: string, courseN
             "Content-Type": "application/json",
             "Authorization": `Bearer ${serviceKey}`,
           },
-          body: JSON.stringify({ member_id: memberId, training_type: courseName, tenant_id: tenantId }),
+          body: JSON.stringify({ member_id: memberId, training_type: courseName, tenant_id: tenantId, send_certificate_email: sendCertificateEmail }),
         });
       } catch (e) {
         console.error("Certificate issuance failed:", e);
@@ -290,7 +290,7 @@ async function checkCourseCompletion(adminClient: any, memberId: string, courseN
 async function issueCertificate(
   supabaseUrl: string, serviceKey: string,
   memberId: string, trainingType: string, attemptId: string, tenantId: string,
-  adminClient: any
+  adminClient: any, sendCertificateEmail: boolean
 ) {
   try {
     const resp = await fetch(`${supabaseUrl}/functions/v1/issue-certificate`, {
@@ -299,12 +299,7 @@ async function issueCertificate(
         "Content-Type": "application/json",
         "Authorization": `Bearer ${serviceKey}`,
       },
-      body: JSON.stringify({ member_id: memberId, training_type: trainingType, tenant_id: tenantId }),
-    });
-    const certData = await resp.json();
-    if (certData?.success) {
-      await adminClient.from("exam_attempts").update({ certificate_issued: true }).eq("id", attemptId);
-    }
+      body: JSON.stringify({ member_id: memberId, training_type: trainingType, tenant_id: tenantId, send_certificate_email: sendCertificateEmail }),
   } catch (e) {
     console.error("Certificate generation failed:", e);
   }
