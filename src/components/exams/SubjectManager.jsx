@@ -19,7 +19,7 @@ export default function SubjectManager({ course, onSelectSubject, selectedSubjec
   const { tenantId, withTenant, scopeQuery } = useTenantQuery();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState(null);
-  const [form, setForm] = useState({ name: "", description: "", pass_mark_percentage: 50, time_limit_minutes: "", randomize_questions: false });
+  const [form, setForm] = useState({ name: "", description: "", pass_mark_percentage: 50, time_limit_minutes: "", randomize_questions: false, useCustomGrades: false, grade_classifications: [] });
   const [deleteTarget, setDeleteTarget] = useState(null);
 
   const { data: subjects = [], isLoading } = useQuery({
