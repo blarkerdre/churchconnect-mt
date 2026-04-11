@@ -1,52 +1,45 @@
 
 
-## Fix: Church Logo Upload RLS Violation
+## Rename "Winners Satellite Fellowship" to "Home Cell Fellowship"
 
-### Root Cause
-The Settings branding section uploads the church logo to the `profile-photos` storage bucket at path `${tenantId}/tenant-logo.${ext}`. However, the INSERT policy on `profile-photos` only allows uploads where the first folder matches `auth.uid()`. Since `tenantId ≠ auth.uid()`, the upload is blocked.
+### Summary
+Replace all user-facing instances of "Winners Satellite Fellowship" and "Winners Satellite" with "Home Cell Fellowship" and "Home Cell" across 10 files.
 
-### Solution
-Add a new INSERT policy on `storage.objects` that allows tenant admins to upload to tenant-prefixed paths in `profile-photos`. Also add matching UPDATE and DELETE policies so logos can be replaced or removed.
+### Changes
 
-### Database Migration
+**`src/components/members/MemberFormDialog.jsx`**
+- Line 456: label `"Winners Satellite Fellowship"` → `"Home Cell Fellowship"`
 
-```sql
--- Allow tenant admins to upload logos to profile-photos under their tenant folder
-CREATE POLICY "Tenant admins upload tenant logos"
-ON storage.objects FOR INSERT TO authenticated
-WITH CHECK (
-  bucket_id = 'profile-photos'
-  AND (storage.foldername(name))[1] IS NOT NULL
-  AND is_admin(auth.uid(), ((storage.foldername(name))[1])::uuid)
-);
+**`src/pages/MyProfile.jsx`**
+- Line 447: label `"Winners Satellite Fellowship"` → `"Home Cell Fellowship"`
+- Line 575: label `"Winners Satellite"` → `"Home Cell"`
+- Line 816: label `"Winners Satellite Fellowship"` → `"Home Cell Fellowship"`
 
--- Allow tenant admins to update tenant logos
-CREATE POLICY "Tenant admins update tenant logos"
-ON storage.objects FOR UPDATE TO authenticated
-USING (
-  bucket_id = 'profile-photos'
-  AND (storage.foldername(name))[1] IS NOT NULL
-  AND is_admin(auth.uid(), ((storage.foldername(name))[1])::uuid)
-)
-WITH CHECK (
-  bucket_id = 'profile-photos'
-  AND (storage.foldername(name))[1] IS NOT NULL
-  AND is_admin(auth.uid(), ((storage.foldername(name))[1])::uuid)
-);
+**`src/pages/PublicRegistration.jsx`**
+- Line 296: label `"Winners Satellite Fellowship"` → `"Home Cell Fellowship"`
 
--- Allow tenant admins to delete tenant logos
-CREATE POLICY "Tenant admins delete tenant logos"
-ON storage.objects FOR DELETE TO authenticated
-USING (
-  bucket_id = 'profile-photos'
-  AND (storage.foldername(name))[1] IS NOT NULL
-  AND is_admin(auth.uid(), ((storage.foldername(name))[1])::uuid)
-);
-```
+**`src/pages/TenantAdmin.jsx`**
+- Line 45: description `"Winners Satellite Fellowship management"` → `"Home Cell Fellowship management"`
+- Line 45: label `"WSF Centres"` → `"Home Cell Centres"`
 
-### No code changes needed
-The upload code in `Settings.jsx` is correct — the path `${tenantId}/tenant-logo.${ext}` is appropriate. Only the RLS policies need updating.
+**`src/pages/Onboard.jsx`**
+- Line 29: label `"WSF Centres"` → `"Home Cell Centres"`, desc `"Winners Satellite Fellowship centre management"` → `"Home Cell Fellowship centre management"`
+
+**`src/pages/Dashboard.jsx`**
+- Line 125: label `"Winners Satellite"` → `"Home Cell"`
+
+**`src/pages/Analytics.jsx`**
+- Line 105: label `"Winners Satellite"` → `"Home Cell"`
+
+**`src/pages/Presentation.jsx`**
+- Line 282: `"Winners Satellite Fellowship — extending the church into communities"` → `"Home Cell Fellowship — extending the church into communities"`
+
+**`src/components/dashboard/GrowthIndices.jsx`**
+- Line 24: label `"Winners Satellite Fellowship"` → `"Home Cell Fellowship"`
+
+**`src/components/followups/FollowupDetailPanel.jsx`**
+- Line 26: `"Introduce to Winners Satellite Fellowship"` → `"Introduce to Home Cell Fellowship"`
 
 ### Files changed
-- **Migration**: Add 3 storage RLS policies for tenant admin logo management
+10 files — display-only label changes, no database or backend modifications.
 
