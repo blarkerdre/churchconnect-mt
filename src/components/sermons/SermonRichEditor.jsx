@@ -3,7 +3,10 @@ import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Underline from "@tiptap/extension-underline";
 import Placeholder from "@tiptap/extension-placeholder";
-import { Bold, Italic, Underline as UnderlineIcon, List, ListOrdered, Heading2 } from "lucide-react";
+import TextStyle from "@tiptap/extension-text-style";
+import Color from "@tiptap/extension-color";
+import TextAlign from "@tiptap/extension-text-align";
+import { Bold, Italic, Underline as UnderlineIcon, List, ListOrdered, Heading2, AlignLeft, AlignCenter, AlignRight, AlignJustify } from "lucide-react";
 import { Toggle } from "@/components/ui/toggle";
 
 const MenuBar = ({ editor }) => {
@@ -18,8 +21,15 @@ const MenuBar = ({ editor }) => {
     { icon: ListOrdered, action: () => editor.chain().focus().toggleOrderedList().run(), active: editor.isActive("orderedList"), label: "Ordered List" },
   ];
 
+  const alignButtons = [
+    { icon: AlignLeft, action: () => editor.chain().focus().setTextAlign("left").run(), active: editor.isActive({ textAlign: "left" }), label: "Align Left" },
+    { icon: AlignCenter, action: () => editor.chain().focus().setTextAlign("center").run(), active: editor.isActive({ textAlign: "center" }), label: "Align Center" },
+    { icon: AlignRight, action: () => editor.chain().focus().setTextAlign("right").run(), active: editor.isActive({ textAlign: "right" }), label: "Align Right" },
+    { icon: AlignJustify, action: () => editor.chain().focus().setTextAlign("justify").run(), active: editor.isActive({ textAlign: "justify" }), label: "Justify" },
+  ];
+
   return (
-    <div className="flex flex-wrap gap-1 border-b border-border p-1">
+    <div className="flex flex-wrap items-center gap-1 border-b border-border p-1">
       {buttons.map((btn) => (
         <Toggle
           key={btn.label}
@@ -32,6 +42,27 @@ const MenuBar = ({ editor }) => {
           <btn.icon className="h-4 w-4" />
         </Toggle>
       ))}
+      <div className="w-px h-6 bg-border mx-0.5" />
+      {alignButtons.map((btn) => (
+        <Toggle
+          key={btn.label}
+          size="sm"
+          pressed={btn.active}
+          onPressedChange={btn.action}
+          aria-label={btn.label}
+          className="h-8 w-8 p-0"
+        >
+          <btn.icon className="h-4 w-4" />
+        </Toggle>
+      ))}
+      <div className="w-px h-6 bg-border mx-0.5" />
+      <input
+        type="color"
+        value={editor.getAttributes("textStyle").color || "#000000"}
+        onChange={(e) => editor.chain().focus().setColor(e.target.value).run()}
+        className="h-7 w-7 rounded border border-input cursor-pointer p-0"
+        title="Text color"
+      />
     </div>
   );
 };
@@ -42,6 +73,9 @@ export default function SermonRichEditor({ content, onChange }) {
       StarterKit.configure({ heading: { levels: [2, 3] } }),
       Underline,
       Placeholder.configure({ placeholder: "Write your sermon notes here..." }),
+      TextStyle,
+      Color,
+      TextAlign.configure({ types: ["heading", "paragraph"] }),
     ],
     content: content || "",
     onUpdate: ({ editor }) => onChange(editor.getHTML()),
@@ -50,10 +84,12 @@ export default function SermonRichEditor({ content, onChange }) {
   return (
     <div className="rounded-md border border-input bg-transparent shadow-sm focus-within:ring-1 focus-within:ring-ring">
       <MenuBar editor={editor} />
-      <EditorContent
-        editor={editor}
-        className="prose prose-sm dark:prose-invert max-w-none px-3 py-2 min-h-[200px] focus:outline-none [&_.tiptap]:outline-none [&_.tiptap]:min-h-[200px] [&_.tiptap_p.is-editor-empty:first-child::before]:text-muted-foreground [&_.tiptap_p.is-editor-empty:first-child::before]:content-[attr(data-placeholder)] [&_.tiptap_p.is-editor-empty:first-child::before]:float-left [&_.tiptap_p.is-editor-empty:first-child::before]:h-0 [&_.tiptap_p.is-editor-empty:first-child::before]:pointer-events-none"
-      />
+      <div className="max-h-[400px] overflow-y-auto">
+        <EditorContent
+          editor={editor}
+          className="prose prose-sm dark:prose-invert max-w-none px-3 py-2 min-h-[200px] focus:outline-none [&_.tiptap]:outline-none [&_.tiptap]:min-h-[200px] [&_.tiptap_p.is-editor-empty:first-child::before]:text-muted-foreground [&_.tiptap_p.is-editor-empty:first-child::before]:content-[attr(data-placeholder)] [&_.tiptap_p.is-editor-empty:first-child::before]:float-left [&_.tiptap_p.is-editor-empty:first-child::before]:h-0 [&_.tiptap_p.is-editor-empty:first-child::before]:pointer-events-none"
+        />
+      </div>
     </div>
   );
 }
