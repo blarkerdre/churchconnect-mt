@@ -1,41 +1,29 @@
 
 
-## Fix: Demo Church PWA Icon Showing WCI Icon
+## Add Color, Text Alignment, and Scrollable Content to Sermon Notes
 
-### Problem
-When a tenant hasn't uploaded a dedicated PWA icon (`pwa_icon_url`), the manifest falls back to hardcoded `/icon-192.png` and `/icon-512.png` files — which are Winners Chapel International icons. Other tenants (demo churches) then get WCI branding when members install the app.
+### Changes
 
-### Solution
-Update the fallback chain in `TenantThemeProvider.jsx` so that when `pwa_icon_url` is not set, it tries the tenant's `logo_url` before falling back to the generic static icons. This way each church's own logo is used for the PWA install icon automatically.
+#### 1. Install TipTap extensions
+- `@tiptap/extension-color` — text color support
+- `@tiptap/extension-text-style` — required dependency for color
+- `@tiptap/extension-text-align` — paragraph alignment (left, center, right, justify)
 
-### Implementation
+#### 2. Update `src/components/sermons/SermonRichEditor.jsx`
+- Register `TextStyle`, `Color`, and `TextAlign` extensions in the editor
+- Add a color picker input (HTML `<input type="color">`) to the toolbar
+- Add alignment buttons (AlignLeft, AlignCenter, AlignRight, AlignJustify icons from lucide-react)
+- Make the editor content area scrollable: change `min-h-[200px]` to `max-h-[400px] overflow-y-auto` so long notes scroll within the editor
 
-**Edit `src/components/tenants/TenantThemeProvider.jsx`** — in the PWA manifest `useEffect`:
+#### 3. Update `src/pages/SermonNotes.jsx`
+- Make the note preview content on cards scrollable by adding `max-h-[80px] overflow-y-auto` to the content preview paragraph (the `line-clamp-3` area)
 
-- Change the icon source resolution to: `pwa_icon_url` → `logo_url` → static defaults
-- Apply the same fallback for the apple-touch-icon link
-
-```javascript
-const iconUrl = pwaIconUrl || currentTenant?.logo_url || null;
-
-icons: iconUrl
-  ? [
-      { src: iconUrl, sizes: "192x192", type: "image/png" },
-      { src: iconUrl, sizes: "512x512", type: "image/png" },
-    ]
-  : [
-      { src: "/icon-192.png", sizes: "192x192", type: "image/png" },
-      { src: "/icon-512.png", sizes: "512x512", type: "image/png" },
-    ],
-```
-
-Also update the apple-touch-icon line:
-```javascript
-appleIcon.href = iconUrl || "/icon-192.png";
-```
-
-And add `currentTenant?.logo_url` to the `useEffect` dependency array.
+#### 4. Update `src/components/sermons/SermonNoteFormDialog.jsx`
+- Add `max-h-[60vh] overflow-y-auto` to the dialog body so the entire form scrolls on smaller screens
 
 ### Files changed
-- **Edit**: `src/components/tenants/TenantThemeProvider.jsx`
+- **Install**: `@tiptap/extension-color`, `@tiptap/extension-text-style`, `@tiptap/extension-text-align`
+- **Edit**: `src/components/sermons/SermonRichEditor.jsx` — add color picker, alignment buttons, scrollable editor
+- **Edit**: `src/pages/SermonNotes.jsx` — scrollable card previews
+- **Edit**: `src/components/sermons/SermonNoteFormDialog.jsx` — scrollable dialog body
 
