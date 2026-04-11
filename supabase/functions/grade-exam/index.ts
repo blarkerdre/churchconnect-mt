@@ -300,12 +300,17 @@ async function issueCertificate(
         "Authorization": `Bearer ${serviceKey}`,
       },
       body: JSON.stringify({ member_id: memberId, training_type: trainingType, tenant_id: tenantId, send_certificate_email: sendCertificateEmail }),
+    });
+    const certData = await resp.json();
+    if (certData?.success) {
+      await adminClient.from("exam_attempts").update({ certificate_issued: true }).eq("id", attemptId);
+    }
   } catch (e) {
     console.error("Certificate generation failed:", e);
   }
 }
 
-async function sendResultEmail(
+async function sendResultEmail_fn(
   adminClient: any,
   member: { email?: string; first_name?: string; last_name?: string; tenant_id?: string },
   result: { subjectName: string; score: number; totalPoints: number; percentage: number; passed: boolean; passThreshold: number; tenantId: string }
