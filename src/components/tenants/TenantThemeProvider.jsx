@@ -130,6 +130,7 @@ export default function TenantThemeProvider({ children }) {
   // Dynamic PWA manifest & apple-touch-icon
   useEffect(() => {
     const pwaIconUrl = currentTenant?.settings?.pwa_icon_url;
+    const iconUrl = pwaIconUrl || currentTenant?.logo_url || null;
     const tenantName = currentTenant?.name || "Winners Chapel Cardiff";
 
     // Build manifest JSON
@@ -141,10 +142,10 @@ export default function TenantThemeProvider({ children }) {
       display: "standalone",
       background_color: "#ffffff",
       theme_color: "#1e3a5f",
-      icons: pwaIconUrl
+      icons: iconUrl
         ? [
-            { src: pwaIconUrl, sizes: "192x192", type: "image/png" },
-            { src: pwaIconUrl, sizes: "512x512", type: "image/png" },
+            { src: iconUrl, sizes: "192x192", type: "image/png" },
+            { src: iconUrl, sizes: "512x512", type: "image/png" },
           ]
         : [
             { src: "/icon-192.png", sizes: "192x192", type: "image/png" },
@@ -171,14 +172,14 @@ export default function TenantThemeProvider({ children }) {
       appleIcon.rel = "apple-touch-icon";
       document.head.appendChild(appleIcon);
     }
-    appleIcon.href = pwaIconUrl || "/icon-192.png";
+    appleIcon.href = iconUrl || "/icon-192.png";
 
     return () => {
       URL.revokeObjectURL(blobUrl);
       manifestLink.href = "/manifest.json";
       appleIcon.href = "/icon-192.png";
     };
-  }, [currentTenant?.settings?.pwa_icon_url, currentTenant?.name]);
+  }, [currentTenant?.settings?.pwa_icon_url, currentTenant?.logo_url, currentTenant?.name]);
 
   // Dynamic OG image meta tags
   useEffect(() => {
