@@ -144,7 +144,6 @@ function AppPages() {
 function AuthRoutes() {
   return (
     <Routes>
-      <Route path="/reset-password" element={<ResetPassword />} />
       {/* Tenant-prefixed authenticated routes */}
       <Route
         path="/t/:tenantSlug/*"
@@ -205,6 +204,10 @@ function AppRoutes() {
       <Route path="/t/:tenantSlug/auth" element={<AuthProvider><Auth /></AuthProvider>} />
       <Route path="/t/:tenantSlug/register" element={<PublicRegistration />} />
       <Route path="/t/:tenantSlug/bible-school-register" element={<PublicWoFBIRegistration />} />
+
+      {/* Public reset-password routes */}
+      <Route path="/reset-password" element={<AuthProvider><ResetPassword /></AuthProvider>} />
+      <Route path="/t/:tenantSlug/reset-password" element={<AuthProvider><ResetPassword /></AuthProvider>} />
 
       {/* Authenticated routes — current paths */}
       <Route path="/*" element={<AuthProvider><AuthRoutes /></AuthProvider>} />
