@@ -1,32 +1,25 @@
 
 
-## Fix Feature Toggle for Tenants + Add Sermon Notes
+## Update Landing Page
 
-### Issues Found
-1. **Sermon Notes missing from toggle list** — `FEATURE_MODULES` in `TenantAdmin.jsx` doesn't include `sermon-notes`, so Super Admins can't disable it for tenants.
-2. **Sermon Notes route unprotected** — In `App.jsx`, the `/sermon-notes` route has no `FeatureGate` wrapper, so even if it were added to `disabled_features`, users could still access it via direct URL.
-3. Everything else (Members, Events, Attendance, etc.) is correctly wired with both `FeatureGate` and sidebar filtering — those work properly.
+### Changes to `src/pages/LandingPage.jsx`
 
-### Changes
+**1. Make Sign In button more visible**
+- Navbar: Change Sign In from `variant="ghost"` to `variant="outline"` with a visible border
+- Hero: Style the Sign In button with a solid white background and dark text instead of the current transparent outline
 
-**`src/pages/TenantAdmin.jsx`** — Add Sermon Notes to `FEATURE_MODULES` array:
-```js
-{ key: "sermon-notes", label: "Sermon Notes", description: "Sermon notes management" },
-```
+**2. Add all features to the feature grid**
+Add the missing modules to match the full feature set (currently 10, expanding to 14):
+- SMS Messaging — "Send targeted SMS messages to members and groups"
+- Home Cell Fellowship — "Manage home cell centres, leaders, and attendance"
+- Church Attendance — "Track Sunday service attendance with detailed records"
+- Sermon Notes — "Create, share, and manage sermon notes and resources"
 
-**`src/App.jsx`** — Wrap the Sermon Notes route with `FeatureGate`:
-```jsx
-// Before:
-<Route path="/sermon-notes" element={<SermonNotes />} />
-
-// After:
-<Route path="/sermon-notes" element={<FeatureGate path="/sermon-notes"><SermonNotes /></FeatureGate>} />
-```
-
-### No database changes needed
-The `disabled_features` array in `tenants.settings` JSONB already supports arbitrary paths — no migration required.
+**3. Remove pricing section**
+- Delete the entire `pricingTiers` array and the pricing `<section>` block
+- Remove the "Pricing" link from the navbar
+- Remove the unused `Check` icon import
 
 ### Files changed
-- **Edit**: `src/pages/TenantAdmin.jsx` — add sermon-notes to FEATURE_MODULES
-- **Edit**: `src/App.jsx` — add FeatureGate to sermon-notes route
+- `src/pages/LandingPage.jsx` — single file edit
 
