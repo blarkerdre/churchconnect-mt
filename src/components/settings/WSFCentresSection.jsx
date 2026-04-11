@@ -159,9 +159,9 @@ export default function WSFCentresSection() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <div>
               <CardTitle className="text-base font-display flex items-center gap-2">
-                <Globe className="h-4 w-4 text-accent" /> WSF Centres
+                <Globe className="h-4 w-4 text-accent" /> Home Cell Centres
               </CardTitle>
-              <p className="text-xs text-muted-foreground mt-1">Manage Winners Satellite Fellowship centres</p>
+              <p className="text-xs text-muted-foreground mt-1">Manage Home Cell centres</p>
             </div>
             <Button size="sm" onClick={openNew} className="gap-1.5 w-full sm:w-auto">
               <Plus className="h-4 w-4" /> Add Centre
@@ -172,7 +172,7 @@ export default function WSFCentresSection() {
           {isLoading ? (
             <div className="flex justify-center py-6"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
           ) : centres.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-6">No WSF centres configured</p>
+            <p className="text-sm text-muted-foreground text-center py-6"><p className="text-sm text-muted-foreground text-center py-6">No Home Cell centres configured</p></p>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {centres.map(c => (

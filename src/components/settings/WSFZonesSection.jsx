@@ -100,9 +100,9 @@ export default function WSFZonesSection() {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <div>
               <CardTitle className="text-base font-display flex items-center gap-2">
-                <MapPin className="h-4 w-4 text-accent" /> WSF Zones
+                <MapPin className="h-4 w-4 text-accent" /> Home Cell Zones
               </CardTitle>
-              <p className="text-xs text-muted-foreground mt-1">Group WSF centres into zones for better organisation</p>
+              <p className="text-xs text-muted-foreground mt-1">Group Home Cell centres into zones for better organisation</p>
             </div>
             <Button size="sm" onClick={openNew} className="gap-1.5 w-full sm:w-auto">
               <Plus className="h-4 w-4" /> Add Zone
@@ -113,7 +113,7 @@ export default function WSFZonesSection() {
           {isLoading ? (
             <div className="flex justify-center py-6"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
           ) : zones.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-6">No WSF zones configured</p>
+            <p className="text-sm text-muted-foreground text-center py-6"><p className="text-sm text-muted-foreground text-center py-6">No Home Cell zones configured</p></p>
           ) : (
             <div className="space-y-2">
               {zones.map(z => (
