@@ -175,7 +175,7 @@ export default function SermonNotes() {
                 </div>
                 <p className="text-xs text-muted-foreground">{format(new Date(n.service_date), "PPP")}</p>
                 {n.category && <Badge variant="secondary" className="text-xs">{n.category}</Badge>}
-                <p className="text-sm line-clamp-3 text-muted-foreground">{n.content?.replace(/<[^>]*>/g, "") || ""}</p>
+                <p className="text-sm text-muted-foreground max-h-[80px] overflow-y-auto">{n.content?.replace(/<[^>]*>/g, "") || ""}</p>
               </CardContent>
             </Card>
           ))}
