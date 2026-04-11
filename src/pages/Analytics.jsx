@@ -102,7 +102,7 @@ export default function Analytics() {
       { label: "BCC", key: "bcc_completed" },
       { label: "LCC", key: "lcc_completed" },
       { label: "LDC", key: "ldc_completed" },
-      { label: "Winners Satellite", key: "winners_satellite" },
+      { label: "Home Cell", key: "winners_satellite" },
     ];
     return indices.map(({ label, key }) => ({
       label,

@@ -444,7 +444,7 @@ export default function MyProfile() {
                         <div className="space-y-3">
                           <SwitchRow id="water_baptism" label="Water Baptism" checked={form.water_baptism} onChange={v => set("water_baptism", v)} />
                           <SwitchRow id="holy_spirit_baptism" label="Holy Spirit Baptism" checked={form.holy_spirit_baptism} onChange={v => set("holy_spirit_baptism", v)} />
-                          <SwitchRow id="winners_satellite" label="Winners Satellite Fellowship" checked={form.winners_satellite} onChange={v => {
+                          <SwitchRow id="winners_satellite" label="Home Cell Fellowship" checked={form.winners_satellite} onChange={v => {
                             set("winners_satellite", v);
                             if (v && !form.wsf_centre_id) {
                               const best = suggestClosestWSFCentre(wsfCentres, form);
@@ -572,7 +572,7 @@ export default function MyProfile() {
               <BoolBadge value={member.bcc_completed} label="BCC Completed" />
               <BoolBadge value={member.lcc_completed} label="LCC Completed" />
               <BoolBadge value={member.ldc_completed} label="LDC Completed" />
-              <BoolBadge value={member.winners_satellite} label="Winners Satellite" />
+              <BoolBadge value={member.winners_satellite} label="Home Cell" />
             </div>
             {member.wsf_centres?.name && (
               <p className="text-sm text-muted-foreground mt-3">WSF Centre: <span className="text-foreground font-medium">{member.wsf_centres.name}</span></p>
@@ -813,7 +813,7 @@ function CreateMemberProfile({ user, onCreated, wsfCentres, churchUnits }) {
             <div className="space-y-3">
               <SwitchRow id="water_baptism" label="Water Baptism" checked={form.water_baptism} onChange={v => set("water_baptism", v)} />
               <SwitchRow id="holy_spirit_baptism" label="Holy Spirit Baptism" checked={form.holy_spirit_baptism} onChange={v => set("holy_spirit_baptism", v)} />
-              <SwitchRow id="winners_satellite" label="Winners Satellite Fellowship" checked={form.winners_satellite} onChange={v => set("winners_satellite", v)} />
+              <SwitchRow id="winners_satellite" label="Home Cell Fellowship" checked={form.winners_satellite} onChange={v => set("winners_satellite", v)} />
               {form.winners_satellite && (
                 <div className="space-y-1.5 pl-4">
                   <Label>WSF Centre</Label>

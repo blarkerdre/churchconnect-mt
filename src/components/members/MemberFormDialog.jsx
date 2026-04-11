@@ -453,7 +453,7 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
               <div className="space-y-3">
                 <SwitchRow id="water_baptism" label="Water Baptism" checked={form.water_baptism} onChange={(v) => set("water_baptism", v)} />
                 <SwitchRow id="holy_spirit_baptism" label="Holy Spirit Baptism" checked={form.holy_spirit_baptism} onChange={(v) => set("holy_spirit_baptism", v)} />
-                <SwitchRow id="winners_satellite" label="Winners Satellite Fellowship" checked={form.winners_satellite} onChange={(v) => {
+                <SwitchRow id="winners_satellite" label="Home Cell Fellowship" checked={form.winners_satellite} onChange={(v) => {
                   set("winners_satellite", v);
                   if (v && !form.wsf_centre_id) {
                     const best = suggestClosestWSFCentre(wsfCentres, form);
