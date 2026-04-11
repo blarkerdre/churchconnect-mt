@@ -3,9 +3,9 @@ import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Underline from "@tiptap/extension-underline";
 import Placeholder from "@tiptap/extension-placeholder";
-import TextStyle from "@tiptap/extension-text-style";
-import Color from "@tiptap/extension-color";
-import TextAlign from "@tiptap/extension-text-align";
+import { TextStyle } from "@tiptap/extension-text-style";
+import { Color } from "@tiptap/extension-color";
+import { TextAlign } from "@tiptap/extension-text-align";
 import { Bold, Italic, Underline as UnderlineIcon, List, ListOrdered, Heading2, AlignLeft, AlignCenter, AlignRight, AlignJustify } from "lucide-react";
 import { Toggle } from "@/components/ui/toggle";
 
