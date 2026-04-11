@@ -44,6 +44,7 @@ const FEATURE_MODULES = [
   { key: "exam-management", label: "Bible School", description: "Exam sessions and results" },
   { key: "wsf", label: "Home Cell Centres", description: "Home Cell Fellowship management" },
   { key: "sms", label: "SMS", description: "SMS messaging capability" },
+  { key: "sermon-notes", label: "Sermon Notes", description: "Sermon notes management" },
 ];
 
 const PLAN_TIERS = [
