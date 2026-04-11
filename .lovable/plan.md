@@ -1,39 +1,27 @@
 
 
-## Add Sermon Notes Organization (Categories, Sort, Filter)
+## Fix: Reset Password Not Working
 
-### Overview
-Add the ability to organize sermon notes by categories/tags, sort by different fields, and filter by category. This gives users a way to group and find notes more easily.
+### Root Cause
+When a user clicks the password reset link in their email, the URL is `/t/:tenantSlug/reset-password` (or `/reset-password`). Both paths fall into the `AuthRoutes` component where:
+- `/reset-password` is matched correctly BUT is nested inside `ProtectedRoute`'s catch-all, so if the recovery session isn't established instantly, the user gets bounced to login.
+- `/t/:tenantSlug/reset-password` has NO dedicated route — it matches the tenant `ProtectedRoute` wildcard, which redirects unauthenticated users to the auth page.
 
-### Database Migration
-Add a `category` column to the `sermon_notes` table:
-
-```sql
-ALTER TABLE public.sermon_notes ADD COLUMN category text DEFAULT null;
-```
-
-No new RLS policies needed — existing policies cover the column automatically.
+### Fix
+Move the reset password routes OUT of `AuthRoutes` and into `AppRoutes` as public routes (same pattern as `/auth`), wrapped only in `AuthProvider` (needed for `useAuth` hook) but NOT in `ProtectedRoute`.
 
 ### Implementation
 
-#### 1. Update `SermonNoteFormDialog.jsx`
-- Add a "Category" input field (with autocomplete from existing categories) between Speaker and Date fields
-- Save category value with the note payload
+**Edit `src/App.jsx`**:
 
-#### 2. Update `SermonNotes.jsx`
-- Add sort controls: sort by Date (default), Title, Speaker, or Category
-- Add ascending/descending toggle
-- Add category filter dropdown populated from unique categories in the user's notes
-- Show category badge on each note card
-- Filter notes by selected category before applying search
+1. Add two new public routes in `AppRoutes` (before the `/*` catch-all):
+   ```jsx
+   <Route path="/reset-password" element={<AuthProvider><ResetPassword /></AuthProvider>} />
+   <Route path="/t/:tenantSlug/reset-password" element={<AuthProvider><ResetPassword /></AuthProvider>} />
+   ```
 
-#### 3. UI Layout (mobile-friendly at 384px)
-- Toolbar row with: Search input | Sort dropdown | Category filter dropdown
-- Category badge shown on each card below the date
-- Sort options: Date (newest), Date (oldest), Title A-Z, Speaker A-Z
+2. Remove the `/reset-password` route from inside `AuthRoutes` (line 147).
 
 ### Files changed
-- **Migration**: Add `category` column to `sermon_notes`
-- **Edit**: `src/components/sermons/SermonNoteFormDialog.jsx` — add category field
-- **Edit**: `src/pages/SermonNotes.jsx` — add sort, category filter, and category badges
+- **Edit**: `src/App.jsx` — move reset password routes to public scope
 
