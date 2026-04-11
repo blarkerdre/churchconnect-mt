@@ -1040,7 +1040,7 @@ export default function Settings() {
           <TabsTrigger value="notifications" className="gap-1.5 text-xs"><Bell className="h-3.5 w-3.5" /><span className="hidden sm:inline"> Notifications</span></TabsTrigger>
           <TabsTrigger value="comms" className="gap-1.5 text-xs"><Mail className="h-3.5 w-3.5" /><span className="hidden sm:inline"> Comms</span></TabsTrigger>
           <TabsTrigger value="units" className="gap-1.5 text-xs"><Users className="h-3.5 w-3.5" /><span className="hidden sm:inline"> Units</span></TabsTrigger>
-          <TabsTrigger value="wsf" className="gap-1.5 text-xs"><Globe className="h-3.5 w-3.5" /><span className="hidden sm:inline"> WSF</span></TabsTrigger>
+          <TabsTrigger value="wsf" className="gap-1.5 text-xs"><Globe className="h-3.5 w-3.5" /><span className="hidden sm:inline"> Home Cell</span></TabsTrigger>
           <TabsTrigger value="services" className="gap-1.5 text-xs"><Church className="h-3.5 w-3.5" /><span className="hidden sm:inline"> Services</span></TabsTrigger>
           <TabsTrigger value="events" className="gap-1.5 text-xs"><CalendarDays className="h-3.5 w-3.5" /><span className="hidden sm:inline"> Events</span></TabsTrigger>
           <TabsTrigger value="training" className="gap-1.5 text-xs"><TrendingUp className="h-3.5 w-3.5" /><span className="hidden sm:inline"> Training</span></TabsTrigger>
