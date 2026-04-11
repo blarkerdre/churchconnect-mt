@@ -1261,6 +1261,8 @@ export type Database = {
           name: string
           pass_mark_percentage: number
           registration_open: boolean
+          send_certificate_email: boolean
+          send_result_email: boolean
           tenant_id: string | null
         }
         Insert: {
@@ -1274,6 +1276,8 @@ export type Database = {
           name: string
           pass_mark_percentage?: number
           registration_open?: boolean
+          send_certificate_email?: boolean
+          send_result_email?: boolean
           tenant_id?: string | null
         }
         Update: {
@@ -1287,6 +1291,8 @@ export type Database = {
           name?: string
           pass_mark_percentage?: number
           registration_open?: boolean
+          send_certificate_email?: boolean
+          send_result_email?: boolean
           tenant_id?: string | null
         }
         Relationships: [
