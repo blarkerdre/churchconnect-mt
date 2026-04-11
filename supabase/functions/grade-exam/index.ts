@@ -91,22 +91,40 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Get pass threshold
+    // Get pass threshold and email flags
     let passThreshold = 50;
+    let sendResultEmail = true;
+    let sendCertificateEmail = true;
     if (subject_id) {
       const { data: subj } = await adminClient
         .from("exam_subjects")
-        .select("pass_mark_percentage")
+        .select("pass_mark_percentage, course_id")
         .eq("id", subject_id)
         .maybeSingle();
       if (subj) passThreshold = subj.pass_mark_percentage;
+      // Fetch email flags from the course
+      if (subj?.course_id) {
+        const { data: courseFlags } = await adminClient
+          .from("exam_titles")
+          .select("send_result_email, send_certificate_email")
+          .eq("id", subj.course_id)
+          .maybeSingle();
+        if (courseFlags) {
+          sendResultEmail = courseFlags.send_result_email !== false;
+          sendCertificateEmail = courseFlags.send_certificate_email !== false;
+        }
+      }
     } else {
       const { data: course } = await adminClient
         .from("exam_titles")
-        .select("pass_mark_percentage")
+        .select("pass_mark_percentage, send_result_email, send_certificate_email")
         .eq("name", training_type)
         .maybeSingle();
-      if (course) passThreshold = course.pass_mark_percentage;
+      if (course) {
+        passThreshold = course.pass_mark_percentage;
+        sendResultEmail = course.send_result_email !== false;
+        sendCertificateEmail = course.send_certificate_email !== false;
+      }
     }
 
     // Grade
@@ -163,23 +181,25 @@ Deno.serve(async (req) => {
 
     // Course completion check / certificate issuance
     if (subject_id) {
-      await checkCourseCompletion(adminClient, member_id, training_type, member.tenant_id);
+      await checkCourseCompletion(adminClient, member_id, training_type, member.tenant_id, sendCertificateEmail);
     } else if (passed) {
-      await issueCertificate(supabaseUrl, serviceKey, member_id, training_type, attempt.id, member.tenant_id, adminClient);
+      await issueCertificate(supabaseUrl, serviceKey, member_id, training_type, attempt.id, member.tenant_id, adminClient, sendCertificateEmail);
     }
 
-    // Send result statement email
-    await sendResultEmail(adminClient, member, {
-      subjectName: subject_id
-        ? questions[0]?.subject_id ? (await adminClient.from("exam_subjects").select("name").eq("id", subject_id).single()).data?.name || training_type : training_type
-        : training_type,
-      score,
-      totalPoints,
-      percentage: Math.round(percentage * 100) / 100,
-      passed,
-      passThreshold,
-      tenantId: member.tenant_id,
-    });
+    // Send result statement email (if enabled)
+    if (sendResultEmail) {
+      await sendResultEmail_fn(adminClient, member, {
+        subjectName: subject_id
+          ? questions[0]?.subject_id ? (await adminClient.from("exam_subjects").select("name").eq("id", subject_id).single()).data?.name || training_type : training_type
+          : training_type,
+        score,
+        totalPoints,
+        percentage: Math.round(percentage * 100) / 100,
+        passed,
+        passThreshold,
+        tenantId: member.tenant_id,
+      });
+    }
 
     return new Response(
       JSON.stringify({
@@ -207,7 +227,7 @@ Deno.serve(async (req) => {
   }
 });
 
-async function checkCourseCompletion(adminClient: any, memberId: string, courseName: string, tenantId: string) {
+async function checkCourseCompletion(adminClient: any, memberId: string, courseName: string, tenantId: string, sendCertificateEmail: boolean) {
   try {
     const { data: course } = await adminClient
       .from("exam_titles")
@@ -256,7 +276,7 @@ async function checkCourseCompletion(adminClient: any, memberId: string, courseN
             "Content-Type": "application/json",
             "Authorization": `Bearer ${serviceKey}`,
           },
-          body: JSON.stringify({ member_id: memberId, training_type: courseName, tenant_id: tenantId }),
+          body: JSON.stringify({ member_id: memberId, training_type: courseName, tenant_id: tenantId, send_certificate_email: sendCertificateEmail }),
         });
       } catch (e) {
         console.error("Certificate issuance failed:", e);
@@ -270,7 +290,7 @@ async function checkCourseCompletion(adminClient: any, memberId: string, courseN
 async function issueCertificate(
   supabaseUrl: string, serviceKey: string,
   memberId: string, trainingType: string, attemptId: string, tenantId: string,
-  adminClient: any
+  adminClient: any, sendCertificateEmail: boolean
 ) {
   try {
     const resp = await fetch(`${supabaseUrl}/functions/v1/issue-certificate`, {
@@ -279,7 +299,7 @@ async function issueCertificate(
         "Content-Type": "application/json",
         "Authorization": `Bearer ${serviceKey}`,
       },
-      body: JSON.stringify({ member_id: memberId, training_type: trainingType, tenant_id: tenantId }),
+      body: JSON.stringify({ member_id: memberId, training_type: trainingType, tenant_id: tenantId, send_certificate_email: sendCertificateEmail }),
     });
     const certData = await resp.json();
     if (certData?.success) {
@@ -290,7 +310,7 @@ async function issueCertificate(
   }
 }
 
-async function sendResultEmail(
+async function sendResultEmail_fn(
   adminClient: any,
   member: { email?: string; first_name?: string; last_name?: string; tenant_id?: string },
   result: { subjectName: string; score: number; totalPoints: number; percentage: number; passed: boolean; passThreshold: number; tenantId: string }
