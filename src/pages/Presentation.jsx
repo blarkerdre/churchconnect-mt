@@ -279,7 +279,7 @@ const SLIDES = [
             WSF Centres
           </h2>
         </div>
-        <p className="text-white/60 text-lg max-w-2xl text-center">Winners Satellite Fellowship — extending the church into communities</p>
+        <p className="text-white/60 text-lg max-w-2xl text-center">Home Cell Fellowship — extending the church into communities</p>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl w-full mt-2">
           {[
             { icon: Globe, title: "Centre Management", desc: "Create and manage WSF centres with location, meeting day/time, coverage postcodes, and assigned leaders." },

@@ -42,7 +42,7 @@ const FEATURE_MODULES = [
   { key: "training-reports", label: "Training Reports", description: "BFC and training progress" },
   { key: "church-attendance", label: "Church Attendance", description: "Sunday service attendance" },
   { key: "exam-management", label: "Bible School", description: "Exam sessions and results" },
-  { key: "wsf", label: "WSF Centres", description: "Winners Satellite Fellowship management" },
+  { key: "wsf", label: "Home Cell Centres", description: "Home Cell Fellowship management" },
   { key: "sms", label: "SMS", description: "SMS messaging capability" },
 ];
 
