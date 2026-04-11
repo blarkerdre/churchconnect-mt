@@ -1,29 +1,24 @@
 
 
-## Add Color, Text Alignment, and Scrollable Content to Sermon Notes
+## Rename "WSF" to "Home Cell" in Settings
+
+### Summary
+Replace all user-facing "WSF" / "Winners Satellite Fellowship" labels with "Home Cell" across the Settings page tab and both settings sections (Zones and Centres).
 
 ### Changes
 
-#### 1. Install TipTap extensions
-- `@tiptap/extension-color` — text color support
-- `@tiptap/extension-text-style` — required dependency for color
-- `@tiptap/extension-text-align` — paragraph alignment (left, center, right, justify)
+**`src/pages/Settings.jsx`**
+- Line 1043: Change tab label from `WSF` to `Home Cell`
 
-#### 2. Update `src/components/sermons/SermonRichEditor.jsx`
-- Register `TextStyle`, `Color`, and `TextAlign` extensions in the editor
-- Add a color picker input (HTML `<input type="color">`) to the toolbar
-- Add alignment buttons (AlignLeft, AlignCenter, AlignRight, AlignJustify icons from lucide-react)
-- Make the editor content area scrollable: change `min-h-[200px]` to `max-h-[400px] overflow-y-auto` so long notes scroll within the editor
+**`src/components/settings/WSFCentresSection.jsx`**
+- Line 162: `WSF Centres` → `Home Cell Centres`
+- Line 164: `Manage Winners Satellite Fellowship centres` → `Manage Home Cell centres`
+- Line 175: `No WSF centres configured` → `No Home Cell centres configured`
 
-#### 3. Update `src/pages/SermonNotes.jsx`
-- Make the note preview content on cards scrollable by adding `max-h-[80px] overflow-y-auto` to the content preview paragraph (the `line-clamp-3` area)
+**`src/components/settings/WSFZonesSection.jsx`**
+- Line 103: `WSF Zones` → `Home Cell Zones`
+- Line 105: `Group WSF centres into zones…` → `Group Home Cell centres into zones…`
+- Line 116: `No WSF zones configured` → `No Home Cell zones configured`
 
-#### 4. Update `src/components/sermons/SermonNoteFormDialog.jsx`
-- Add `max-h-[60vh] overflow-y-auto` to the dialog body so the entire form scrolls on smaller screens
-
-### Files changed
-- **Install**: `@tiptap/extension-color`, `@tiptap/extension-text-style`, `@tiptap/extension-text-align`
-- **Edit**: `src/components/sermons/SermonRichEditor.jsx` — add color picker, alignment buttons, scrollable editor
-- **Edit**: `src/pages/SermonNotes.jsx` — scrollable card previews
-- **Edit**: `src/components/sermons/SermonNoteFormDialog.jsx` — scrollable dialog body
+No database or backend changes required — this is a display-only rename in Settings.
 
