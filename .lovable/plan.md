@@ -1,41 +1,41 @@
 
 
-## Add Grade Classifications to Subjects
+## Fix: Demo Church PWA Icon Showing WCI Icon
 
-### Overview
-Currently, grade classifications (Distinction, Merit, Pass) are only configurable at the **course** level. This change adds per-subject grade classifications so each subject can have its own grading scale. Subjects will default to the parent course's classifications if none are set.
+### Problem
+When a tenant hasn't uploaded a dedicated PWA icon (`pwa_icon_url`), the manifest falls back to hardcoded `/icon-192.png` and `/icon-512.png` files — which are Winners Chapel International icons. Other tenants (demo churches) then get WCI branding when members install the app.
 
-### Database Migration
-Add a `grade_classifications` JSONB column to `exam_subjects`:
-
-```sql
-ALTER TABLE public.exam_subjects
-  ADD COLUMN grade_classifications jsonb DEFAULT NULL;
-```
-
-A `NULL` value means "inherit from the parent course." When set, it overrides the course-level classifications for that subject.
+### Solution
+Update the fallback chain in `TenantThemeProvider.jsx` so that when `pwa_icon_url` is not set, it tries the tenant's `logo_url` before falling back to the generic static icons. This way each church's own logo is used for the PWA install icon automatically.
 
 ### Implementation
 
-#### 1. SubjectManager — `src/components/exams/SubjectManager.jsx`
-- Add `grade_classifications` to the form state (default `null` / empty array)
-- Add a "Use custom grade bands" switch; when ON, show the same label + min_percentage editor used in the course dialog
-- When OFF (default), display "Inherits from course" text
-- Include `grade_classifications` in save mutation payload
+**Edit `src/components/tenants/TenantThemeProvider.jsx`** — in the PWA manifest `useEffect`:
 
-#### 2. StatementOfResult — `src/components/exams/StatementOfResult.jsx`
-- When computing per-subject grades, check if `subject.grade_classifications` exists; if so, use it instead of the course-level classifications
+- Change the icon source resolution to: `pwa_icon_url` → `logo_url` → static defaults
+- Apply the same fallback for the apple-touch-icon link
 
-#### 3. CourseResultsView — `src/components/exams/CourseResultsView.jsx`
-- Same logic: use subject-level classifications when available for per-subject grade display
+```javascript
+const iconUrl = pwaIconUrl || currentTenant?.logo_url || null;
 
-#### 4. MemberExamsView (in ExamManagement.jsx)
-- When displaying per-subject grade badges, use subject-level classifications if available
+icons: iconUrl
+  ? [
+      { src: iconUrl, sizes: "192x192", type: "image/png" },
+      { src: iconUrl, sizes: "512x512", type: "image/png" },
+    ]
+  : [
+      { src: "/icon-192.png", sizes: "192x192", type: "image/png" },
+      { src: "/icon-512.png", sizes: "512x512", type: "image/png" },
+    ],
+```
+
+Also update the apple-touch-icon line:
+```javascript
+appleIcon.href = iconUrl || "/icon-192.png";
+```
+
+And add `currentTenant?.logo_url` to the `useEffect` dependency array.
 
 ### Files changed
-- **Migration**: Add `grade_classifications` column to `exam_subjects`
-- **Edit**: `src/components/exams/SubjectManager.jsx` — add grade classification editor
-- **Edit**: `src/components/exams/StatementOfResult.jsx` — use subject-level classifications
-- **Edit**: `src/components/exams/CourseResultsView.jsx` — use subject-level classifications
-- **Edit**: `src/pages/ExamManagement.jsx` — use subject-level classifications in member view
+- **Edit**: `src/components/tenants/TenantThemeProvider.jsx`
 
