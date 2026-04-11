@@ -23,7 +23,7 @@ const NEXT_STEPS = {
     "Enrol in Believers Foundation Class (BFC)",
     "Assign a spiritual mentor",
     "Follow up on water baptism",
-    "Introduce to Winners Satellite Fellowship",
+    "Introduce to Home Cell Fellowship",
   ],
   "Pastoral": ["Arrange pastoral visit", "Offer prayer support"],
   "Absentee": ["Check on welfare", "Invite back to service"],

@@ -26,7 +26,7 @@ const FEATURE_OPTIONS = [
   { key: "exams_enabled", label: "Bible School", desc: "Bible school course management and exams" },
   { key: "transportation", label: "Transportation", desc: "Manage transport bookings for services" },
   { key: "pastoral_care", label: "Pastoral Care", desc: "Track and manage pastoral care cases" },
-  { key: "wsf_enabled", label: "WSF Centres", desc: "Winners Satellite Fellowship centre management" },
+  { key: "wsf_enabled", label: "Home Cell Centres", desc: "Home Cell Fellowship centre management" },
 ];
 
 const TIMEZONE_OPTIONS = [
