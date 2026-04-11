@@ -25,7 +25,8 @@ export default function StatementOfResult({ open, onOpenChange, member, course, 
   const rows = subjects.map(s => {
     const sub = memberSubjects[s.id];
     const pct = sub && sub.total_points > 0 ? (sub.score / sub.total_points) * 100 : 0;
-    const grade = sub ? getGradeClassification(pct, classifications) : "—";
+    const subClassifications = (s.grade_classifications && s.grade_classifications.length > 0) ? s.grade_classifications : classifications;
+    const grade = sub ? getGradeClassification(pct, subClassifications) : "—";
     return { name: s.name, score: sub?.score ?? 0, total: sub?.total_points ?? 0, pct, grade, taken: !!sub };
   });
 

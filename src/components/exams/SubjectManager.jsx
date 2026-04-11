@@ -70,7 +70,7 @@ export default function SubjectManager({ course, onSelectSubject, selectedSubjec
   const closeDialog = () => {
     setDialogOpen(false);
     setEditing(null);
-    setForm({ name: "", description: "", pass_mark_percentage: 50, time_limit_minutes: "", randomize_questions: false });
+    setForm({ name: "", description: "", pass_mark_percentage: 50, time_limit_minutes: "", randomize_questions: false, useCustomGrades: false, grade_classifications: [] });
   };
 
   return (
@@ -81,7 +81,7 @@ export default function SubjectManager({ course, onSelectSubject, selectedSubjec
             <CardTitle className="text-base font-display flex items-center gap-2">
               <Layers className="h-4 w-4 text-primary" /> {course.name} — Subjects
             </CardTitle>
-            <Button size="sm" variant="outline" className="gap-1.5" onClick={() => { setEditing(null); setForm({ name: "", description: "", pass_mark_percentage: 50, time_limit_minutes: "", randomize_questions: false }); setDialogOpen(true); }}>
+            <Button size="sm" variant="outline" className="gap-1.5" onClick={() => { setEditing(null); setForm({ name: "", description: "", pass_mark_percentage: 50, time_limit_minutes: "", randomize_questions: false, useCustomGrades: false, grade_classifications: [] }); setDialogOpen(true); }}>
               <Plus className="h-3.5 w-3.5" /> Add Subject
             </Button>
           </div>
@@ -113,7 +113,7 @@ export default function SubjectManager({ course, onSelectSubject, selectedSubjec
                     {!s.is_active && <Badge variant="secondary" className="text-[9px] h-4">Inactive</Badge>}
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
-                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); setEditing(s); setForm({ name: s.name, description: s.description || "", pass_mark_percentage: s.pass_mark_percentage ?? 50, time_limit_minutes: s.time_limit_minutes ?? "", randomize_questions: s.randomize_questions ?? false }); setDialogOpen(true); }}>
+                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); setEditing(s); setForm({ name: s.name, description: s.description || "", pass_mark_percentage: s.pass_mark_percentage ?? 50, time_limit_minutes: s.time_limit_minutes ?? "", randomize_questions: s.randomize_questions ?? false, useCustomGrades: !!(s.grade_classifications && s.grade_classifications.length > 0), grade_classifications: s.grade_classifications || [] }); setDialogOpen(true); }}>
                       <Edit className="h-3.5 w-3.5" />
                     </Button>
                     <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={(e) => { e.stopPropagation(); setDeleteTarget(s); }}>
@@ -139,6 +139,7 @@ export default function SubjectManager({ course, onSelectSubject, selectedSubjec
               pass_mark_percentage: Number(form.pass_mark_percentage) || 50,
               time_limit_minutes: form.time_limit_minutes ? Number(form.time_limit_minutes) : null,
               randomize_questions: !!form.randomize_questions,
+              grade_classifications: form.useCustomGrades && form.grade_classifications.length > 0 ? form.grade_classifications : null,
             });
           }} className="space-y-4">
             <div className="space-y-1.5">
@@ -161,6 +162,51 @@ export default function SubjectManager({ course, onSelectSubject, selectedSubjec
             <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50 border border-border">
               <Label htmlFor="randomize" className="text-sm font-medium">Randomize Questions</Label>
               <Switch id="randomize" checked={!!form.randomize_questions} onCheckedChange={v => setForm(f => ({ ...f, randomize_questions: v }))} />
+            </div>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50 border border-border">
+                <Label htmlFor="customGrades" className="text-sm font-medium">Custom Grade Bands</Label>
+                <Switch id="customGrades" checked={!!form.useCustomGrades} onCheckedChange={v => setForm(f => ({ ...f, useCustomGrades: v, grade_classifications: v && f.grade_classifications.length === 0 ? [{ label: "Distinction", min_percentage: 75 }, { label: "Merit", min_percentage: 65 }, { label: "Pass", min_percentage: 50 }] : f.grade_classifications }))} />
+              </div>
+              {form.useCustomGrades ? (
+                <div className="space-y-2 pl-1">
+                  {form.grade_classifications.map((gc, idx) => (
+                    <div key={idx} className="flex items-center gap-2">
+                      <Input
+                        value={gc.label}
+                        onChange={e => {
+                          const updated = [...form.grade_classifications];
+                          updated[idx] = { ...updated[idx], label: e.target.value };
+                          setForm(f => ({ ...f, grade_classifications: updated }));
+                        }}
+                        placeholder="Label"
+                        className="flex-1"
+                      />
+                      <Input
+                        type="number"
+                        min="0"
+                        max="100"
+                        value={gc.min_percentage}
+                        onChange={e => {
+                          const updated = [...form.grade_classifications];
+                          updated[idx] = { ...updated[idx], min_percentage: Number(e.target.value) };
+                          setForm(f => ({ ...f, grade_classifications: updated }));
+                        }}
+                        className="w-20"
+                        placeholder="%"
+                      />
+                      <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-destructive shrink-0" onClick={() => setForm(f => ({ ...f, grade_classifications: f.grade_classifications.filter((_, i) => i !== idx) }))}>
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  ))}
+                  <Button type="button" variant="outline" size="sm" className="gap-1 text-xs" onClick={() => setForm(f => ({ ...f, grade_classifications: [...f.grade_classifications, { label: "", min_percentage: 0 }] }))}>
+                    <Plus className="h-3 w-3" /> Add Band
+                  </Button>
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground pl-1">Inherits grade bands from course</p>
+              )}
             </div>
             <DialogFooter>
               <Button type="submit" disabled={saveMutation.isPending}>
