@@ -1,27 +1,40 @@
 
 
-## Fix: Reset Password Not Working
+## Add Email Notification Toggles for Exam Results & Certificates
 
-### Root Cause
-When a user clicks the password reset link in their email, the URL is `/t/:tenantSlug/reset-password` (or `/reset-password`). Both paths fall into the `AuthRoutes` component where:
-- `/reset-password` is matched correctly BUT is nested inside `ProtectedRoute`'s catch-all, so if the recovery session isn't established instantly, the user gets bounced to login.
-- `/t/:tenantSlug/reset-password` has NO dedicated route — it matches the tenant `ProtectedRoute` wildcard, which redirects unauthenticated users to the auth page.
+### Overview
+Add two per-course toggles that control whether participants receive (1) a Statement of Result email and (2) a Certificate email upon exam completion. Both default to enabled for backward compatibility.
 
-### Fix
-Move the reset password routes OUT of `AuthRoutes` and into `AppRoutes` as public routes (same pattern as `/auth`), wrapped only in `AuthProvider` (needed for `useAuth` hook) but NOT in `ProtectedRoute`.
+### Database Migration
+Add two boolean columns to `exam_titles`:
+
+```sql
+ALTER TABLE public.exam_titles
+  ADD COLUMN send_result_email boolean NOT NULL DEFAULT true,
+  ADD COLUMN send_certificate_email boolean NOT NULL DEFAULT true;
+```
 
 ### Implementation
 
-**Edit `src/App.jsx`**:
+#### 1. Course Form — `src/pages/ExamManagement.jsx`
+- Add `send_result_email` and `send_certificate_email` to `titleForm` state (default `true`)
+- Add two Switch toggles in the course dialog (after "Exams Open"):
+  - "Email Result Statement on Completion"
+  - "Email Certificate on Completion"
+- Include both fields in the save mutation payload
+- Populate them when editing an existing course
 
-1. Add two new public routes in `AppRoutes` (before the `/*` catch-all):
-   ```jsx
-   <Route path="/reset-password" element={<AuthProvider><ResetPassword /></AuthProvider>} />
-   <Route path="/t/:tenantSlug/reset-password" element={<AuthProvider><ResetPassword /></AuthProvider>} />
-   ```
+#### 2. Edge Function — `supabase/functions/grade-exam/index.ts`
+- After grading, fetch the course's `send_result_email` and `send_certificate_email` flags from `exam_titles`
+- Conditionally skip `sendResultEmail()` if `send_result_email` is false
+- Pass `send_certificate_email` flag to `checkCourseCompletion()` and `issueCertificate()`, and conditionally skip email sending in the certificate flow (the certificate record is still created, only the email notification is controlled)
 
-2. Remove the `/reset-password` route from inside `AuthRoutes` (line 147).
+#### 3. Fix runtime error
+- The `useEffect` null error appears to be a transient Vite HMR issue, not a code bug. Will monitor.
 
 ### Files changed
-- **Edit**: `src/App.jsx` — move reset password routes to public scope
+- **Migration**: Add two columns to `exam_titles`
+- **Edit**: `src/pages/ExamManagement.jsx` — add toggles to course form
+- **Edit**: `supabase/functions/grade-exam/index.ts` — conditionally send emails
+- **Edit**: `supabase/functions/issue-certificate/index.ts` — respect `send_certificate_email` flag
 
