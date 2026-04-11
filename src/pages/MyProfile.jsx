@@ -174,6 +174,18 @@ export default function MyProfile() {
     enabled: !!tenantId,
   });
 
+  const { data: examTitles = [] } = useQuery({
+    queryKey: ["exam-titles-cert-flags", tenantId],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("exam_titles").select("name, send_certificate_email").eq("tenant_id", tenantId);
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!tenantId,
+  });
+
+  const hiddenCourseNames = examTitles.filter(c => !c.send_certificate_email).map(c => c.name);
+
   const { data: attendanceRecords = [] } = useQuery({
     queryKey: ["my-attendance", member?.id, tenantId],
     queryFn: async () => {
@@ -580,7 +592,7 @@ export default function MyProfile() {
       )}
 
       {/* Certificates */}
-      {!editing && <MyCertificates memberId={member.id} />}
+      {!editing && <MyCertificates memberId={member.id} hiddenCourseNames={hiddenCourseNames} />}
 
       {/* Take Exams */}
       {!editing && <DynamicExamButtons memberId={member.id} onSelect={setExamSelection} tenantId={tenantId} />}
