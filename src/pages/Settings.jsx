@@ -1073,8 +1073,9 @@ export default function Settings() {
           <NotificationPreferencesSection />
         </TabsContent>
 
-        <TabsContent value="comms">
+        <TabsContent value="comms" className="space-y-4">
           <CommunicationsSection />
+          <TestimonyEmailSection />
         </TabsContent>
 
         <TabsContent value="units">

@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { CheckCircle2, XCircle, UserCircle, ChevronRight } from "lucide-react";
+import { CheckCircle2, XCircle, UserCircle, ChevronRight, MessageSquareHeart } from "lucide-react";
 import { Link } from "react-router-dom";
 import MemberFeed from "@/components/profile/MemberFeed";
 import SelfCheckInWidget from "@/components/attendance/SelfCheckInWidget";
@@ -11,6 +11,7 @@ import { BirthdayBanner } from "@/components/dashboard/BirthdayCelebration";
 import { useTenant } from "@/contexts/TenantContext";
 import ImageLightbox from "@/components/ui/ImageLightbox";
 import DashboardBanner from "@/components/dashboard/DashboardBanner";
+import TestimonyFormDialog from "@/components/testimony/TestimonyFormDialog";
 
 const GROWTH_FIELDS = [
   { key: "water_baptism", label: "Water Baptism" },
@@ -24,6 +25,7 @@ const GROWTH_FIELDS = [
 
 export default function MemberDashboard({ currentUser, myMember }) {
   const { currentTenant, tenantRole } = useTenant();
+  const [testimonyOpen, setTestimonyOpen] = useState(false);
   const roleLabel = tenantRole ? tenantRole.charAt(0).toUpperCase() + tenantRole.slice(1) : "";
 
   const statusColors = {
@@ -111,6 +113,20 @@ export default function MemberDashboard({ currentUser, myMember }) {
       {/* Self Check-In */}
       <SelfCheckInWidget />
 
+      {/* Share Testimony */}
+      <Card className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow" onClick={() => setTestimonyOpen(true)}>
+        <CardContent className="p-4 flex items-center gap-3">
+          <div className="h-10 w-10 rounded-xl bg-accent/10 flex items-center justify-center shrink-0">
+            <MessageSquareHeart className="h-5 w-5 text-accent" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-foreground">Share Your Testimony</p>
+            <p className="text-xs text-muted-foreground mt-0.5">Tell us what the Lord has done in your life</p>
+          </div>
+          <ChevronRight className="h-5 w-5 text-muted-foreground shrink-0" />
+        </CardContent>
+      </Card>
+      <TestimonyFormDialog open={testimonyOpen} onOpenChange={setTestimonyOpen} myMember={myMember} />
 
       {/* Feed: Announcements + Events tabs */}
       <MemberFeed member={myMember} />
