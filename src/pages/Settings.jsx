@@ -1019,6 +1019,80 @@ function CommunicationsSection() {
   );
 }
 
+/* ─── Testimony Email Recipient ─── */
+function TestimonyEmailSection() {
+  const qc = useQueryClient();
+  const { tenantId, withTenant } = useTenantQuery();
+  const [email, setEmail] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const { data: currentEmail, isLoading } = useQuery({
+    queryKey: ["app-settings", "testimony_recipient_email", tenantId],
+    queryFn: async () => {
+      let q = supabase.from("app_settings").select("value").eq("key", "testimony_recipient_email");
+      if (tenantId) q = q.eq("tenant_id", tenantId);
+      const { data, error } = await q.maybeSingle();
+      if (error) throw error;
+      return typeof data?.value === "string" ? data.value : "";
+    },
+    enabled: !!tenantId,
+  });
+
+  React.useEffect(() => {
+    if (currentEmail !== undefined) setEmail(currentEmail);
+  }, [currentEmail]);
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const { error } = await supabase
+        .from("app_settings")
+        .upsert(withTenant({ key: "testimony_recipient_email", value: email.trim() || null }), { onConflict: "key,tenant_id" });
+      if (error) throw error;
+      qc.invalidateQueries({ queryKey: ["app-settings", "testimony_recipient_email"] });
+      toast({ title: "Testimony recipient email saved" });
+    } catch (err) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (!tenantId) return null;
+
+  return (
+    <Card className="border-0 shadow-sm">
+      <CardHeader className="pb-3">
+        <CardTitle className="text-base font-display flex items-center gap-2">
+          <Heart className="h-4 w-4 text-accent" /> Testimony Settings
+        </CardTitle>
+        <p className="text-xs text-muted-foreground mt-1">
+          Set the email address where member testimonies will be sent.
+        </p>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <div className="space-y-1.5">
+          <Label className="text-sm font-medium">Testimony Recipient Email</Label>
+          <Input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="pastor@example.com"
+            maxLength={255}
+          />
+          <p className="text-xs text-muted-foreground">
+            Testimonies submitted by members will be emailed to this address.
+          </p>
+        </div>
+        <Button onClick={handleSave} disabled={saving || isLoading} size="sm">
+          {saving && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+          Save
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
 /* ─── Main Settings page ─── */
 export default function Settings() {
   const { roles } = useAuth();
@@ -1073,8 +1147,9 @@ export default function Settings() {
           <NotificationPreferencesSection />
         </TabsContent>
 
-        <TabsContent value="comms">
+        <TabsContent value="comms" className="space-y-4">
           <CommunicationsSection />
+          <TestimonyEmailSection />
         </TabsContent>
 
         <TabsContent value="units">
