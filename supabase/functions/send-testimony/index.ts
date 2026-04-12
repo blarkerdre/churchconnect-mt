@@ -7,10 +7,15 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { tenant_id, member_name, situation, action, god_did, sender_email } = await req.json();
+    const { tenant_id, member_name, title, situation, action, god_did, sender_email, user_id } = await req.json();
 
     if (!tenant_id) {
       return new Response(JSON.stringify({ error: "tenant_id is required" }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    if (!title?.trim()) {
+      return new Response(JSON.stringify({ error: "Title is required" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -23,6 +28,19 @@ Deno.serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, serviceKey);
+
+    // Save testimony to database
+    if (user_id) {
+      await supabase.from("testimonies").insert({
+        tenant_id,
+        user_id,
+        member_name: member_name?.trim() || "Anonymous",
+        title: title.trim(),
+        situation: situation.trim(),
+        action: action.trim(),
+        god_did: god_did.trim(),
+      });
+    }
 
     // Get the testimony recipient email from app_settings
     const { data: setting } = await supabase
@@ -52,7 +70,7 @@ Deno.serve(async (req) => {
 
     const htmlBody = `
       <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;">
-        <h2 style="color:#1a2d4d;margin-bottom:4px;">New Testimony Received</h2>
+        <h2 style="color:#1a2d4d;margin-bottom:4px;">New Testimony: ${escapeHtml(title.trim())}</h2>
         <p style="color:#666;font-size:14px;margin-top:0;">From <strong>${escapeHtml(name)}</strong>${sender_email ? ` (${escapeHtml(sender_email)})` : ""} at ${escapeHtml(churchName)}</p>
         <hr style="border:none;border-top:1px solid #e5e7eb;margin:16px 0;" />
         <h3 style="color:#1a2d4d;font-size:15px;">What was the situation?</h3>
@@ -71,7 +89,7 @@ Deno.serve(async (req) => {
       body: {
         tenant_id,
         to: recipientEmail,
-        subject: `New Testimony from ${name}`,
+        subject: `New Testimony from ${name}: ${title.trim()}`,
         html: htmlBody,
       },
     });

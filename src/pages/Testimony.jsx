@@ -4,17 +4,22 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Loader2, Send, MessageSquareHeart } from "lucide-react";
+import { Loader2, Send, MessageSquareHeart, Search, ChevronDown, ChevronUp } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
 import { useAuth } from "@/hooks/useAuth";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { format } from "date-fns";
 
 export default function Testimony() {
   const { tenantId } = useTenantQuery();
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [saving, setSaving] = useState(false);
+  const [search, setSearch] = useState("");
+  const [expandedId, setExpandedId] = useState(null);
 
   const { data: myMember } = useQuery({
     queryKey: ["my-member", user?.id, tenantId],
@@ -31,14 +36,30 @@ export default function Testimony() {
     enabled: !!user?.id && !!tenantId,
   });
 
+  const { data: testimonies = [], isLoading: loadingTestimonies } = useQuery({
+    queryKey: ["my-testimonies", user?.id, tenantId],
+    queryFn: async () => {
+      if (!user?.id || !tenantId) return [];
+      const { data, error } = await supabase
+        .from("testimonies")
+        .select("*")
+        .eq("user_id", user.id)
+        .eq("tenant_id", tenantId)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!user?.id && !!tenantId,
+  });
+
   const [form, setForm] = useState({
     name: "",
+    title: "",
     situation: "",
     action: "",
     god_did: "",
   });
 
-  // Update name when myMember loads
   React.useEffect(() => {
     if (myMember) {
       setForm((f) => ({ ...f, name: `${myMember.first_name} ${myMember.last_name}` }));
@@ -49,6 +70,10 @@ export default function Testimony() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!form.title.trim()) {
+      toast({ title: "Please enter a title", variant: "destructive" });
+      return;
+    }
     if (!form.situation.trim() || !form.action.trim() || !form.god_did.trim()) {
       toast({ title: "Please fill in all three fields", variant: "destructive" });
       return;
@@ -59,21 +84,34 @@ export default function Testimony() {
         body: {
           tenant_id: tenantId,
           member_name: form.name.trim() || "Anonymous",
+          title: form.title.trim(),
           situation: form.situation.trim(),
           action: form.action.trim(),
           god_did: form.god_did.trim(),
           sender_email: myMember?.email || null,
+          user_id: user?.id || null,
         },
       });
       if (error) throw error;
       toast({ title: "Testimony shared!", description: "Thank you for sharing what the Lord has done." });
-      setForm({ name: myMember ? `${myMember.first_name} ${myMember.last_name}` : "", situation: "", action: "", god_did: "" });
+      setForm({ name: myMember ? `${myMember.first_name} ${myMember.last_name}` : "", title: "", situation: "", action: "", god_did: "" });
+      queryClient.invalidateQueries({ queryKey: ["my-testimonies"] });
     } catch (err) {
       toast({ title: "Error sending testimony", description: err.message, variant: "destructive" });
     } finally {
       setSaving(false);
     }
   };
+
+  const filtered = testimonies.filter((t) => {
+    if (!search.trim()) return true;
+    const q = search.toLowerCase();
+    return (
+      t.title?.toLowerCase().includes(q) ||
+      t.situation?.toLowerCase().includes(q) ||
+      t.god_did?.toLowerCase().includes(q)
+    );
+  });
 
   return (
     <div className="space-y-6">
@@ -82,61 +120,116 @@ export default function Testimony() {
         <p className="text-sm text-muted-foreground mt-1">Tell us what the Lord has done in your life</p>
       </div>
 
-      <Card className="border shadow-sm">
-        <CardHeader className="pb-4">
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-xl bg-accent/10 flex items-center justify-center shrink-0">
-              <MessageSquareHeart className="h-5 w-5 text-accent" />
+      <Tabs defaultValue="new" className="w-full">
+        <TabsList className="w-full">
+          <TabsTrigger value="new" className="flex-1">New Testimony</TabsTrigger>
+          <TabsTrigger value="history" className="flex-1">My Testimonies</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="new">
+          <Card className="border shadow-sm">
+            <CardHeader className="pb-4">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-xl bg-accent/10 flex items-center justify-center shrink-0">
+                  <MessageSquareHeart className="h-5 w-5 text-accent" />
+                </div>
+                <CardTitle className="text-lg font-semibold">Your Testimony</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="space-y-1.5">
+                  <Label className="text-sm font-medium">Your Name</Label>
+                  <Input value={form.name} onChange={set("name")} placeholder="Your name (optional)" maxLength={100} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-sm font-medium">Testimony Title</Label>
+                  <Input value={form.title} onChange={set("title")} placeholder="Give your testimony a title..." maxLength={200} required />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-sm font-medium">What was the situation?</Label>
+                  <Textarea value={form.situation} onChange={set("situation")} placeholder="Describe the challenge or circumstance you faced..." rows={4} maxLength={2000} required />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-sm font-medium">What did you do?</Label>
+                  <Textarea value={form.action} onChange={set("action")} placeholder="What steps of faith did you take..." rows={4} maxLength={2000} required />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-sm font-medium">What has the Lord done?</Label>
+                  <Textarea value={form.god_did} onChange={set("god_did")} placeholder="Share how God moved in your situation..." rows={4} maxLength={2000} required />
+                </div>
+                <Button type="submit" disabled={saving} className="w-full">
+                  {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Send className="h-4 w-4 mr-2" />}
+                  Submit Testimony
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="history">
+          <div className="space-y-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search testimonies..."
+                className="pl-9"
+              />
             </div>
-            <CardTitle className="text-lg font-semibold">Your Testimony</CardTitle>
+
+            {loadingTestimonies ? (
+              <div className="flex justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : filtered.length === 0 ? (
+              <Card className="border">
+                <CardContent className="py-8 text-center text-muted-foreground">
+                  {testimonies.length === 0
+                    ? "You haven't shared any testimonies yet."
+                    : "No testimonies match your search."}
+                </CardContent>
+              </Card>
+            ) : (
+              filtered.map((t) => {
+                const isExpanded = expandedId === t.id;
+                return (
+                  <Card key={t.id} className="border shadow-sm">
+                    <button
+                      type="button"
+                      className="w-full text-left px-4 py-3 flex items-center justify-between gap-2"
+                      onClick={() => setExpandedId(isExpanded ? null : t.id)}
+                    >
+                      <div className="min-w-0">
+                        <p className="font-medium text-sm text-foreground truncate">{t.title}</p>
+                        <p className="text-xs text-muted-foreground">{format(new Date(t.created_at), "dd MMM yyyy")}</p>
+                      </div>
+                      {isExpanded ? <ChevronUp className="h-4 w-4 shrink-0 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />}
+                    </button>
+                    {isExpanded && (
+                      <CardContent className="pt-0 pb-4 space-y-3 text-sm">
+                        <div>
+                          <p className="font-medium text-muted-foreground text-xs mb-1">What was the situation?</p>
+                          <p className="whitespace-pre-wrap text-foreground">{t.situation}</p>
+                        </div>
+                        <div>
+                          <p className="font-medium text-muted-foreground text-xs mb-1">What did you do?</p>
+                          <p className="whitespace-pre-wrap text-foreground">{t.action}</p>
+                        </div>
+                        <div>
+                          <p className="font-medium text-muted-foreground text-xs mb-1">What has the Lord done?</p>
+                          <p className="whitespace-pre-wrap text-foreground">{t.god_did}</p>
+                        </div>
+                      </CardContent>
+                    )}
+                  </Card>
+                );
+              })
+            )}
           </div>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-1.5">
-              <Label className="text-sm font-medium">Your Name</Label>
-              <Input value={form.name} onChange={set("name")} placeholder="Your name (optional)" maxLength={100} />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-sm font-medium">What was the situation?</Label>
-              <Textarea
-                value={form.situation}
-                onChange={set("situation")}
-                placeholder="Describe the challenge or circumstance you faced..."
-                rows={4}
-                maxLength={2000}
-                required
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-sm font-medium">What did you do?</Label>
-              <Textarea
-                value={form.action}
-                onChange={set("action")}
-                placeholder="What steps of faith did you take..."
-                rows={4}
-                maxLength={2000}
-                required
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-sm font-medium">What has the Lord done?</Label>
-              <Textarea
-                value={form.god_did}
-                onChange={set("god_did")}
-                placeholder="Share how God moved in your situation..."
-                rows={4}
-                maxLength={2000}
-                required
-              />
-            </div>
-            <Button type="submit" disabled={saving} className="w-full">
-              {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Send className="h-4 w-4 mr-2" />}
-              Submit Testimony
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
