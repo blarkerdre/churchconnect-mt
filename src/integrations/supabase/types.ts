@@ -2524,6 +2524,50 @@ export type Database = {
         }
         Relationships: []
       }
+      testimonies: {
+        Row: {
+          action: string
+          created_at: string
+          god_did: string
+          id: string
+          member_name: string | null
+          situation: string
+          tenant_id: string
+          title: string
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          god_did: string
+          id?: string
+          member_name?: string | null
+          situation: string
+          tenant_id: string
+          title: string
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          god_did?: string
+          id?: string
+          member_name?: string | null
+          situation?: string
+          tenant_id?: string
+          title?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "testimonies_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       training_completions: {
         Row: {
           certificate_number: string
