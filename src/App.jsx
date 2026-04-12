@@ -33,6 +33,7 @@ import Onboard from "@/pages/Onboard";
 import TenantAdmin from "@/pages/TenantAdmin";
 import Presentation from "@/pages/Presentation";
 import SermonNotes from "@/pages/SermonNotes";
+import Testimony from "@/pages/Testimony";
 import Unsubscribe from "@/pages/Unsubscribe";
 import LandingPage from "@/pages/LandingPage";
 
@@ -133,6 +134,7 @@ function AppPages() {
       <Route path="/wsf" element={<FeatureGate path="/wsf"><WSFRoute><WSFManagement /></WSFRoute></FeatureGate>} />
       <Route path="/user-management" element={<AdminRoute><UserManagement /></AdminRoute>} />
       <Route path="/sermon-notes" element={<FeatureGate path="/sermon-notes"><SermonNotes /></FeatureGate>} />
+      <Route path="/testimony" element={<FeatureGate path="/testimony"><Testimony /></FeatureGate>} />
       <Route path="/settings" element={<AdminRoute><Settings /></AdminRoute>} />
       <Route path="/system-logs" element={<AdminRoute><SystemLogs /></AdminRoute>} />
       <Route path="/tenant-admin" element={<SuperAdminRoute><TenantAdmin /></SuperAdminRoute>} />

@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import {
   Users, CalendarCheck, Calendar, UserCheck, Heart, MessageSquare,
   BarChart3, Bus, GraduationCap, Church, ArrowRight, MessageCircle,
-  Home, ChurchIcon, BookOpen
+  Home, ChurchIcon, BookOpen, MessageSquareHeart
 } from "lucide-react";
 
 const features = [
@@ -21,6 +21,7 @@ const features = [
   { icon: Home, title: "Home Cell Fellowship", desc: "Manage home cell centres, leaders, and attendance." },
   { icon: ChurchIcon, title: "Church Attendance", desc: "Track Sunday service attendance with detailed records." },
   { icon: BookOpen, title: "Sermon Notes", desc: "Create, share, and manage sermon notes and resources." },
+  { icon: MessageSquareHeart, title: "Testimony Sharing", desc: "Members can share what the Lord has done in structured testimony reports." },
 ];
 
 export default function LandingPage() {
