@@ -1,42 +1,60 @@
 
 
-## Add Testimony as Sidebar Feature
+## Add Testimony Title + Sent Testimonies History
 
 ### Summary
-Move testimony from a dashboard card to a dedicated sidebar navigation item with its own page. Add it to the landing page features and ensure it's tenant-scoped and toggleable.
+Add a "title" field to the testimony form (below name), persist testimonies in a new database table, and show members their sent testimonies with search functionality.
 
-### Changes
+### Database Migration
+Create a `testimonies` table to store submitted testimonies:
 
-**1. New page: `src/pages/Testimony.jsx`**
-- Page with title "Share Your Testimony" and the existing `TestimonyFormDialog` content rendered inline (not as a dialog)
-- Shows the three-field form directly on the page
+```sql
+CREATE TABLE public.testimonies (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id uuid NOT NULL,
+  user_id uuid REFERENCES auth.users(id) ON DELETE CASCADE,
+  member_name text,
+  title text NOT NULL,
+  situation text NOT NULL,
+  action text NOT NULL,
+  god_did text NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
 
-**2. Update sidebar: `src/components/AppLayout.jsx`**
-- Add nav item: `{ name: "Testimony", icon: MessageSquareHeart, path: "/testimony", access: null }`
-- Import `MessageSquareHeart` from lucide-react
+ALTER TABLE public.testimonies ENABLE ROW LEVEL SECURITY;
 
-**3. Add route: `src/App.jsx`**
-- Add `/testimony` route wrapped in `FeatureGate`
-- Import the new Testimony page
+-- Members can view their own testimonies
+CREATE POLICY "Members can view own testimonies"
+  ON public.testimonies FOR SELECT TO authenticated
+  USING (auth.uid() = user_id AND user_has_tenant_access(tenant_id));
 
-**4. Add to feature toggles: `src/pages/TenantAdmin.jsx`**
-- Add `{ key: "/testimony", label: "Testimony", description: "Member testimony sharing" }` to `FEATURE_MODULES`
+-- Admins can view all testimonies in tenant
+CREATE POLICY "Admins can view all testimonies"
+  ON public.testimonies FOR SELECT TO authenticated
+  USING (is_admin(auth.uid(), tenant_id));
 
-**5. Remove from dashboard: `src/components/dashboard/MemberDashboard.jsx`**
-- Remove the "Share Testimony" card and `TestimonyFormDialog` from the dashboard
-- Remove related imports and state
+-- Service role can insert (edge function)
+CREATE POLICY "Service role can insert testimonies"
+  ON public.testimonies FOR INSERT TO public
+  WITH CHECK (auth.role() = 'service_role');
+```
 
-**6. Update landing page: `src/pages/LandingPage.jsx`**
-- Add `{ icon: MessageSquareHeart, title: "Testimony Sharing", desc: "Members can share what the Lord has done in structured testimony reports." }` to features array
+### Edge Function Update: `send-testimony/index.ts`
+- Accept new `title` field and `user_id`
+- Insert testimony into `testimonies` table before sending email
+- Include title in email subject and body
 
-**7. Update mobile nav consideration**
-- The testimony page will be accessible via sidebar; no mobile bottom nav change needed (already has 5 tabs)
+### UI Update: `src/pages/Testimony.jsx`
+- Add "Testimony Title" input field between Name and Situation
+- Add a "My Testimonies" section below the form with:
+  - Search input filtering by title/situation/god_did
+  - List of sent testimonies as expandable cards showing title, date, and content
+- Fetch testimonies from the new table using `useQuery`
+- Use Tabs to separate "New Testimony" and "My Testimonies"
 
-### Files changed
-- **New**: `src/pages/Testimony.jsx`
-- **Edit**: `src/components/AppLayout.jsx` — add sidebar item
-- **Edit**: `src/App.jsx` — add route with FeatureGate
-- **Edit**: `src/pages/TenantAdmin.jsx` — add to FEATURE_MODULES
-- **Edit**: `src/components/dashboard/MemberDashboard.jsx` — remove testimony card
-- **Edit**: `src/pages/LandingPage.jsx` — add testimony to features grid
+### Files Changed
+- **Migration**: New `testimonies` table with RLS
+- **Edit**: `supabase/functions/send-testimony/index.ts` — accept title + user_id, insert into DB
+- **Edit**: `src/pages/Testimony.jsx` — add title field, tabs, history list with search
+- **Edit**: `src/components/testimony/TestimonyFormDialog.jsx` — add title field (keep in sync)
 
