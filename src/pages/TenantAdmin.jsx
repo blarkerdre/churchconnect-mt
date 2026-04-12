@@ -45,6 +45,7 @@ const FEATURE_MODULES = [
   { key: "wsf", label: "Home Cell Centres", description: "Home Cell Fellowship management" },
   { key: "sms", label: "SMS", description: "SMS messaging capability" },
   { key: "sermon-notes", label: "Sermon Notes", description: "Sermon notes management" },
+  { key: "testimony", label: "Testimony", description: "Member testimony sharing" },
 ];
 
 const PLAN_TIERS = [
