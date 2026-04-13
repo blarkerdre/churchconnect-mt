@@ -6,7 +6,9 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
-const GATEWAY_URL = "https://connector-gateway.lovable.dev/twilio";
+const TWILIO_GATEWAY_URL = "https://connector-gateway.lovable.dev/twilio";
+const AT_SMS_URL = "https://api.africastalking.com/version1/messaging";
+const TERMII_SMS_URL = "https://api.ng.termii.com/api/sms/send";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -106,25 +108,18 @@ async function sendSms(
   supabase: any,
   supabaseUrl: string
 ) {
-  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-  if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
-
-  const TWILIO_API_KEY = Deno.env.get("TWILIO_API_KEY") || Deno.env.get("TWILIO_API_KEY_1");
-  if (!TWILIO_API_KEY) throw new Error("TWILIO_API_KEY not configured");
-
-  const TWILIO_FROM = Deno.env.get("TWILIO_FROM_NUMBER");
-  if (!TWILIO_FROM) throw new Error("TWILIO_FROM_NUMBER not configured");
-
-  // Check tenant-specific Twilio number
-  let fromNumber = TWILIO_FROM;
+  // Get tenant settings for provider
+  let smsProvider = "twilio";
+  let tenantSettings: Record<string, unknown> = {};
   if (msg.tenant_id) {
     const { data: tenantRow } = await supabase
       .from("tenants")
       .select("settings")
       .eq("id", msg.tenant_id)
       .single();
-    if (tenantRow?.settings?.twilio_sms_from) {
-      fromNumber = tenantRow.settings.twilio_sms_from;
+    if (tenantRow?.settings) {
+      tenantSettings = tenantRow.settings as Record<string, unknown>;
+      smsProvider = (tenantSettings.sms_provider as string) || "twilio";
     }
   }
 
@@ -132,31 +127,115 @@ async function sendSms(
   let phone = (msg.recipient_phone || "").replace(/[\s\-\(\)\.]/g, "");
   if (/^0[1-9]\d{9,10}$/.test(phone)) phone = "+44" + phone.slice(1);
   if (!phone.startsWith("+")) phone = "+" + phone;
-
-  // Validate E.164 before calling Twilio
   if (!/^\+[1-9]\d{6,14}$/.test(phone)) {
     throw new Error(`Invalid or missing phone number: "${msg.recipient_phone}"`);
   }
 
-  const params = new URLSearchParams({
-    To: phone,
-    From: fromNumber,
-    Body: msg.message,
-  });
+  let messageSid: string | null = null;
 
-  const response = await fetch(`${GATEWAY_URL}/Messages.json`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${LOVABLE_API_KEY}`,
-      "X-Connection-Api-Key": TWILIO_API_KEY,
-      "Content-Type": "application/x-www-form-urlencoded",
-    },
-    body: params,
-  });
+  if (smsProvider === "africastalking") {
+    const { data: credData } = await supabase
+      .from("app_settings")
+      .select("key, value")
+      .eq("tenant_id", msg.tenant_id)
+      .in("key", ["africastalking_api_key", "africastalking_username", "africastalking_sender_id"]);
+    const creds: Record<string, string> = {};
+    (credData || []).forEach((r: any) => { creds[r.key] = r.value || ""; });
 
-  const data = await response.json();
-  if (!response.ok) {
-    throw new Error(`Twilio error: ${data.message || JSON.stringify(data)}`);
+    if (!creds.africastalking_api_key || !creds.africastalking_username) {
+      throw new Error("Africa's Talking credentials not configured");
+    }
+
+    const params = new URLSearchParams({
+      username: creds.africastalking_username,
+      to: phone,
+      message: msg.message,
+      ...(creds.africastalking_sender_id ? { from: creds.africastalking_sender_id } : {}),
+    });
+
+    const response = await fetch(AT_SMS_URL, {
+      method: "POST",
+      headers: {
+        apiKey: creds.africastalking_api_key,
+        Accept: "application/json",
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: params,
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(`Africa's Talking error: ${JSON.stringify(data)}`);
+    const recipient = data.SMSMessageData?.Recipients?.[0];
+    if (recipient?.status !== "Success") {
+      throw new Error(`Africa's Talking: ${recipient?.status || JSON.stringify(data)}`);
+    }
+    messageSid = recipient.messageId || null;
+
+  } else if (smsProvider === "termii") {
+    const { data: credData } = await supabase
+      .from("app_settings")
+      .select("key, value")
+      .eq("tenant_id", msg.tenant_id)
+      .in("key", ["termii_api_key", "termii_sender_id"]);
+    const creds: Record<string, string> = {};
+    (credData || []).forEach((r: any) => { creds[r.key] = r.value || ""; });
+
+    if (!creds.termii_api_key) throw new Error("Termii API key not configured");
+
+    const response = await fetch(TERMII_SMS_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        api_key: creds.termii_api_key,
+        to: phone.replace("+", ""),
+        from: creds.termii_sender_id || "N-Alert",
+        sms: msg.message,
+        type: "plain",
+        channel: "generic",
+      }),
+    });
+    const data = await response.json();
+    if (!response.ok || data.code !== "ok") {
+      throw new Error(`Termii error: ${data.message || JSON.stringify(data)}`);
+    }
+    messageSid = data.message_id || null;
+
+  } else {
+    // Twilio (default)
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+
+    const TWILIO_API_KEY = Deno.env.get("TWILIO_API_KEY") || Deno.env.get("TWILIO_API_KEY_1");
+    if (!TWILIO_API_KEY) throw new Error("TWILIO_API_KEY not configured");
+
+    const TWILIO_FROM = Deno.env.get("TWILIO_FROM_NUMBER");
+    if (!TWILIO_FROM) throw new Error("TWILIO_FROM_NUMBER not configured");
+
+    let fromNumber = TWILIO_FROM;
+    if (tenantSettings.twilio_sms_from) {
+      fromNumber = tenantSettings.twilio_sms_from as string;
+    }
+
+    const params = new URLSearchParams({
+      To: phone,
+      From: fromNumber,
+      Body: msg.message,
+    });
+
+    const response = await fetch(`${TWILIO_GATEWAY_URL}/Messages.json`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        "X-Connection-Api-Key": TWILIO_API_KEY,
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: params,
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(`Twilio error: ${data.message || JSON.stringify(data)}`);
+    }
+    messageSid = data.sid || null;
   }
 
   // Log to sms_log
@@ -169,7 +248,7 @@ async function sendSms(
     reference_id: msg.followup_id,
     status: "sent",
     channel: "sms",
-    message_sid: data.sid || null,
+    message_sid: messageSid,
     delivery_status: "queued",
     ...(msg.tenant_id ? { tenant_id: msg.tenant_id } : {}),
   });
