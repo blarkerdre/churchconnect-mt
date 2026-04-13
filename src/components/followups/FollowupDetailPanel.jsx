@@ -381,10 +381,10 @@ export default function FollowupDetailPanel({ followup, onClose, onUpdate, curre
             </div>
           )}
 
-          {/* Send Message (when completed too) */}
+          {/* Send Message / Call (when completed too) */}
           {followup.status === "Completed" && (followup.person_email || followup.person_phone) && (
             <div className="space-y-2">
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Send Message</p>
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Contact</p>
               <div className="flex gap-2 flex-wrap">
                 {followup.person_email && (
                   <Button size="sm" variant="outline" className="text-primary border-primary/20 hover:bg-primary/10"
@@ -393,10 +393,18 @@ export default function FollowupDetailPanel({ followup, onClose, onUpdate, curre
                   </Button>
                 )}
                 {followup.person_phone && (
-                  <Button size="sm" variant="outline" className="text-primary border-primary/20 hover:bg-primary/10"
-                    onClick={() => onOpenMessageDialog?.("sms")}>
-                    <MessageSquare className="h-3.5 w-3.5 mr-1" /> Send SMS
-                  </Button>
+                  <>
+                    <Button size="sm" variant="outline" className="text-primary border-primary/20 hover:bg-primary/10"
+                      onClick={() => onOpenMessageDialog?.("sms")}>
+                      <MessageSquare className="h-3.5 w-3.5 mr-1" /> Send SMS
+                    </Button>
+                    <Button size="sm" variant="outline" className="text-accent border-accent/20 hover:bg-accent/10"
+                      onClick={handleMakeCall}
+                      disabled={callingPhone}>
+                      {callingPhone ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <PhoneCall className="h-3.5 w-3.5 mr-1" />}
+                      Make Call
+                    </Button>
+                  </>
                 )}
               </div>
             </div>
