@@ -215,8 +215,17 @@ export default function FollowupMessageDialog({
           {/* Recipient info */}
           <div className="text-xs text-muted-foreground">
             {channel === "email" && hasEmail && <span>To: {followup?.person_email}</span>}
-            {channel === "sms" && hasPhone && <span>To: {followup?.person_phone}</span>}
+            {(channel === "sms" || channel === "phone") && hasPhone && <span>To: {followup?.person_phone}</span>}
           </div>
+
+          {/* Phone call — simplified UI */}
+          {channel === "phone" && (
+            <div className="bg-accent/10 rounded-lg p-4 text-center space-y-2">
+              <PhoneCall className="h-8 w-8 mx-auto text-accent" />
+              <p className="text-sm font-medium">Initiate a phone call to {followup?.person_name}</p>
+              <p className="text-xs text-muted-foreground">This will place an outbound call via your configured voice provider.</p>
+            </div>
+          )}
 
           {/* Subject (email only) */}
           {channel === "email" && (
@@ -226,45 +235,49 @@ export default function FollowupMessageDialog({
             </div>
           )}
 
-          {/* Message */}
-          <div className="space-y-1.5">
-            <div className="flex items-center justify-between">
-              <Label className="text-sm">Message</Label>
-              {channel === "sms" && (
-                <Badge variant="secondary" className="text-xs">
-                  {message.length}/1600
-                </Badge>
-              )}
+          {/* Message (not for phone) */}
+          {channel !== "phone" && (
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <Label className="text-sm">Message</Label>
+                {channel === "sms" && (
+                  <Badge variant="secondary" className="text-xs">
+                    {message.length}/1600
+                  </Badge>
+                )}
+              </div>
+              <Textarea
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                rows={5}
+                className="text-sm resize-none"
+                placeholder="Type your message..."
+                maxLength={channel === "sms" ? 1600 : undefined}
+              />
             </div>
-            <Textarea
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              rows={5}
-              className="text-sm resize-none"
-              placeholder="Type your message..."
-              maxLength={channel === "sms" ? 1600 : undefined}
-            />
-          </div>
+          )}
 
-          {/* Send mode */}
-          <div className="space-y-1.5">
-            <Label className="text-sm">When to send</Label>
-            <Select value={sendMode} onValueChange={setSendMode}>
-              <SelectTrigger className="h-9 text-sm">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="now">
-                  <span className="flex items-center gap-1.5"><Send className="h-3.5 w-3.5" /> Send Now</span>
-                </SelectItem>
-                <SelectItem value="schedule">
-                  <span className="flex items-center gap-1.5"><Clock className="h-3.5 w-3.5" /> Schedule</span>
-                </SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          {/* Send mode (not for phone) */}
+          {channel !== "phone" && (
+            <div className="space-y-1.5">
+              <Label className="text-sm">When to send</Label>
+              <Select value={sendMode} onValueChange={setSendMode}>
+                <SelectTrigger className="h-9 text-sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="now">
+                    <span className="flex items-center gap-1.5"><Send className="h-3.5 w-3.5" /> Send Now</span>
+                  </SelectItem>
+                  <SelectItem value="schedule">
+                    <span className="flex items-center gap-1.5"><Clock className="h-3.5 w-3.5" /> Schedule</span>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
-          {sendMode === "schedule" && (
+          {channel !== "phone" && sendMode === "schedule" && (
             <div className="space-y-1.5">
               <Label className="text-sm">Schedule date & time</Label>
               <Input
@@ -283,12 +296,14 @@ export default function FollowupMessageDialog({
           >
             {saving ? (
               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : channel === "phone" ? (
+              <PhoneCall className="h-4 w-4 mr-2" />
             ) : sendMode === "now" ? (
               <Send className="h-4 w-4 mr-2" />
             ) : (
               <Clock className="h-4 w-4 mr-2" />
             )}
-            {saving ? "Saving..." : sendMode === "now" ? "Send Now" : "Schedule Message"}
+            {saving ? "Processing..." : channel === "phone" ? "Make Call Now" : sendMode === "now" ? "Send Now" : "Schedule Message"}
           </Button>
         </div>
       </DialogContent>
