@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { X, Clock, User, Calendar, Flag, Send, CheckCircle2, AlertCircle, TimerReset, Loader2, Phone, Mail, Lightbulb, UserCheck, RefreshCw, MessageSquare } from "lucide-react";
+import { X, Clock, User, Calendar, Flag, Send, CheckCircle2, AlertCircle, TimerReset, Loader2, Phone, Mail, Lightbulb, UserCheck, RefreshCw, MessageSquare, PhoneCall } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import TenantDialogHeader from "@/components/ui/TenantDialogHeader";
 import { format } from "date-fns";
@@ -51,10 +51,42 @@ export default function FollowupDetailPanel({ followup, onClose, onUpdate, curre
   const [reassigning, setReassigning] = useState(false);
   const [showReassign, setShowReassign] = useState(false);
   const [selectedMessage, setSelectedMessage] = useState(null);
+  const [callingPhone, setCallingPhone] = useState(false);
   const { tenantId, scopeQuery } = useTenantQuery();
   const queryClient = useQueryClient();
 
   // Fetch scheduled messages for this followup
+  const { data: scheduledMessages = [] } = useQuery({
+    queryKey: ["followup-messages", followup.id, tenantId],
+    queryFn: async () => {
+      const { data, error } = await scopeQuery(
+        supabase.from("followup_scheduled_messages")
+          .select("*")
+          .eq("followup_id", followup.id)
+          .order("created_at", { ascending: false })
+      );
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!followup.id,
+  });
+
+  // Fetch call history for this followup
+  const { data: callHistory = [] } = useQuery({
+    queryKey: ["followup-calls", followup.id, tenantId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("call_log")
+        .select("*")
+        .eq("tenant_id", tenantId)
+        .eq("reference_type", "followup")
+        .eq("reference_id", followup.id)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!followup.id && !!tenantId,
+  });
   const { data: scheduledMessages = [] } = useQuery({
     queryKey: ["followup-messages", followup.id, tenantId],
     queryFn: async () => {
