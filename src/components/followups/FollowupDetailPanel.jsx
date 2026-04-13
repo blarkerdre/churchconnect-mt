@@ -102,6 +102,31 @@ export default function FollowupDetailPanel({ followup, onClose, onUpdate, curre
     enabled: !!followup.id,
   });
 
+  const handleMakeCall = async () => {
+    if (!followup.person_phone) return;
+    if (!window.confirm(`Initiate a phone call to ${followup.person_name} at ${followup.person_phone}?`)) return;
+    setCallingPhone(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("make-call", {
+        body: {
+          recipient_phone: followup.person_phone,
+          member_id: followup.member_id || null,
+          reference_type: "followup",
+          reference_id: followup.id,
+          tenant_id: tenantId,
+          notes: `Follow-up call for ${followup.person_name}`,
+        },
+      });
+      if (error) throw new Error(error.message);
+      toast({ title: "Call initiated", description: `Provider: ${data?.provider || "twilio"}` });
+      queryClient.invalidateQueries({ queryKey: ["followup-calls", followup.id] });
+    } catch (err) {
+      toast({ title: "Call failed", description: err.message, variant: "destructive" });
+    } finally {
+      setCallingPhone(false);
+    }
+  };
+
   const isConvertible = ["First Timer", "New Convert"].includes(followup.category) &&
     followup.member_id &&
     followup.status !== "Completed";
