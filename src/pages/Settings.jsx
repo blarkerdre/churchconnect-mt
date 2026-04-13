@@ -16,6 +16,8 @@ import {
   Settings as SettingsIcon, Plus, Pencil, Trash2, Loader2,
   Users, Church, CalendarDays, TrendingUp, Heart, Globe, Bell, Award, Link2, ShieldAlert, Upload, X, ImageIcon, Mail, Phone, CreditCard, Send
 } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+} from "lucide-react";
 import FollowupTemplatesSection from "@/components/settings/FollowupTemplatesSection";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/hooks/useAuth";
