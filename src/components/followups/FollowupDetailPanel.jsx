@@ -87,20 +87,6 @@ export default function FollowupDetailPanel({ followup, onClose, onUpdate, curre
     },
     enabled: !!followup.id && !!tenantId,
   });
-  const { data: scheduledMessages = [] } = useQuery({
-    queryKey: ["followup-messages", followup.id, tenantId],
-    queryFn: async () => {
-      const { data, error } = await scopeQuery(
-        supabase.from("followup_scheduled_messages")
-          .select("*")
-          .eq("followup_id", followup.id)
-          .order("created_at", { ascending: false })
-      );
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!followup.id,
-  });
 
   const handleMakeCall = async () => {
     if (!followup.person_phone) return;
