@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Mail, MessageSquare, Send, Clock, Loader2 } from "lucide-react";
+import { Mail, MessageSquare, Send, Clock, Loader2, PhoneCall } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
@@ -140,26 +140,40 @@ export default function FollowupMessageDialog({
 
         <div className="space-y-4">
           {/* Channel selector */}
-          {hasPhone && hasEmail && (
+          {(hasPhone || hasEmail) && (
             <div className="space-y-1.5">
               <Label className="text-sm">Channel</Label>
-              <div className="flex gap-2">
-                <Button
-                  type="button"
-                  size="sm"
-                  variant={channel === "email" ? "default" : "outline"}
-                  onClick={() => setChannel("email")}
-                >
-                  <Mail className="h-3.5 w-3.5 mr-1" /> Email
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant={channel === "sms" ? "default" : "outline"}
-                  onClick={() => setChannel("sms")}
-                >
-                  <MessageSquare className="h-3.5 w-3.5 mr-1" /> SMS
-                </Button>
+              <div className="flex gap-2 flex-wrap">
+                {hasEmail && (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={channel === "email" ? "default" : "outline"}
+                    onClick={() => setChannel("email")}
+                  >
+                    <Mail className="h-3.5 w-3.5 mr-1" /> Email
+                  </Button>
+                )}
+                {hasPhone && (
+                  <>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant={channel === "sms" ? "default" : "outline"}
+                      onClick={() => setChannel("sms")}
+                    >
+                      <MessageSquare className="h-3.5 w-3.5 mr-1" /> SMS
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant={channel === "phone" ? "default" : "outline"}
+                      onClick={() => setChannel("phone")}
+                    >
+                      <PhoneCall className="h-3.5 w-3.5 mr-1" /> Call
+                    </Button>
+                  </>
+                )}
               </div>
             </div>
           )}
