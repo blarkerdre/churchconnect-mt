@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { X, Clock, User, Calendar, Flag, Send, CheckCircle2, AlertCircle, TimerReset, Loader2, Phone, Mail, Lightbulb, UserCheck, RefreshCw, MessageSquare } from "lucide-react";
+import { X, Clock, User, Calendar, Flag, Send, CheckCircle2, AlertCircle, TimerReset, Loader2, Phone, Mail, Lightbulb, UserCheck, RefreshCw, MessageSquare, PhoneCall } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import TenantDialogHeader from "@/components/ui/TenantDialogHeader";
 import { format } from "date-fns";
@@ -51,6 +51,7 @@ export default function FollowupDetailPanel({ followup, onClose, onUpdate, curre
   const [reassigning, setReassigning] = useState(false);
   const [showReassign, setShowReassign] = useState(false);
   const [selectedMessage, setSelectedMessage] = useState(null);
+  const [callingPhone, setCallingPhone] = useState(false);
   const { tenantId, scopeQuery } = useTenantQuery();
   const queryClient = useQueryClient();
 
@@ -69,6 +70,62 @@ export default function FollowupDetailPanel({ followup, onClose, onUpdate, curre
     },
     enabled: !!followup.id,
   });
+
+  // Fetch call history for this followup
+  const { data: callHistory = [] } = useQuery({
+    queryKey: ["followup-calls", followup.id, tenantId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("call_log")
+        .select("*")
+        .eq("tenant_id", tenantId)
+        .eq("reference_type", "followup")
+        .eq("reference_id", followup.id)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!followup.id && !!tenantId,
+  });
+  const { data: scheduledMessages = [] } = useQuery({
+    queryKey: ["followup-messages", followup.id, tenantId],
+    queryFn: async () => {
+      const { data, error } = await scopeQuery(
+        supabase.from("followup_scheduled_messages")
+          .select("*")
+          .eq("followup_id", followup.id)
+          .order("created_at", { ascending: false })
+      );
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!followup.id,
+  });
+
+  const handleMakeCall = async () => {
+    if (!followup.person_phone) return;
+    if (!window.confirm(`Initiate a phone call to ${followup.person_name} at ${followup.person_phone}?`)) return;
+    setCallingPhone(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("make-call", {
+        body: {
+          recipient_phone: followup.person_phone,
+          member_id: followup.member_id || null,
+          reference_type: "followup",
+          reference_id: followup.id,
+          tenant_id: tenantId,
+          notes: `Follow-up call for ${followup.person_name}`,
+        },
+      });
+      if (error) throw new Error(error.message);
+      toast({ title: "Call initiated", description: `Provider: ${data?.provider || "twilio"}` });
+      queryClient.invalidateQueries({ queryKey: ["followup-calls", followup.id] });
+    } catch (err) {
+      toast({ title: "Call failed", description: err.message, variant: "destructive" });
+    } finally {
+      setCallingPhone(false);
+    }
+  };
 
   const isConvertible = ["First Timer", "New Convert"].includes(followup.category) &&
     followup.member_id &&
@@ -298,7 +355,7 @@ export default function FollowupDetailPanel({ followup, onClose, onUpdate, curre
                   </Button>
                 )}
               </div>
-              {/* Send Message buttons */}
+              {/* Send Message & Call buttons */}
               <div className="flex gap-2 flex-wrap mt-2">
                 {followup.person_email && (
                   <Button size="sm" variant="outline" className="text-primary border-primary/20 hover:bg-primary/10"
@@ -307,19 +364,27 @@ export default function FollowupDetailPanel({ followup, onClose, onUpdate, curre
                   </Button>
                 )}
                 {followup.person_phone && (
-                  <Button size="sm" variant="outline" className="text-primary border-primary/20 hover:bg-primary/10"
-                    onClick={() => onOpenMessageDialog?.("sms")}>
-                    <MessageSquare className="h-3.5 w-3.5 mr-1" /> Send SMS
-                  </Button>
+                  <>
+                    <Button size="sm" variant="outline" className="text-primary border-primary/20 hover:bg-primary/10"
+                      onClick={() => onOpenMessageDialog?.("sms")}>
+                      <MessageSquare className="h-3.5 w-3.5 mr-1" /> Send SMS
+                    </Button>
+                    <Button size="sm" variant="outline" className="text-accent border-accent/20 hover:bg-accent/10"
+                      onClick={handleMakeCall}
+                      disabled={callingPhone}>
+                      {callingPhone ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <PhoneCall className="h-3.5 w-3.5 mr-1" />}
+                      Make Call
+                    </Button>
+                  </>
                 )}
               </div>
             </div>
           )}
 
-          {/* Send Message (when completed too) */}
+          {/* Send Message / Call (when completed too) */}
           {followup.status === "Completed" && (followup.person_email || followup.person_phone) && (
             <div className="space-y-2">
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Send Message</p>
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Contact</p>
               <div className="flex gap-2 flex-wrap">
                 {followup.person_email && (
                   <Button size="sm" variant="outline" className="text-primary border-primary/20 hover:bg-primary/10"
@@ -328,10 +393,18 @@ export default function FollowupDetailPanel({ followup, onClose, onUpdate, curre
                   </Button>
                 )}
                 {followup.person_phone && (
-                  <Button size="sm" variant="outline" className="text-primary border-primary/20 hover:bg-primary/10"
-                    onClick={() => onOpenMessageDialog?.("sms")}>
-                    <MessageSquare className="h-3.5 w-3.5 mr-1" /> Send SMS
-                  </Button>
+                  <>
+                    <Button size="sm" variant="outline" className="text-primary border-primary/20 hover:bg-primary/10"
+                      onClick={() => onOpenMessageDialog?.("sms")}>
+                      <MessageSquare className="h-3.5 w-3.5 mr-1" /> Send SMS
+                    </Button>
+                    <Button size="sm" variant="outline" className="text-accent border-accent/20 hover:bg-accent/10"
+                      onClick={handleMakeCall}
+                      disabled={callingPhone}>
+                      {callingPhone ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <PhoneCall className="h-3.5 w-3.5 mr-1" />}
+                      Make Call
+                    </Button>
+                  </>
                 )}
               </div>
             </div>
@@ -360,6 +433,33 @@ export default function FollowupDetailPanel({ followup, onClose, onUpdate, curre
                       )}
                     </div>
                     <p className="text-xs text-foreground/80 line-clamp-2">{sm.message}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Call History */}
+          {callHistory.length > 0 && (
+            <div className="space-y-2">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Call History</p>
+              <div className="space-y-2">
+                {callHistory.map(call => (
+                  <div key={call.id} className="bg-muted/50 rounded-lg p-2.5 space-y-1">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <PhoneCall className="h-3 w-3 text-muted-foreground" />
+                      <Badge variant="secondary" className="text-[10px]">{(call.provider || "twilio").toUpperCase()}</Badge>
+                      <Badge className={`text-[10px] ${
+                        call.status === "completed" ? "bg-chart-3/10 text-chart-3" :
+                        call.status === "failed" ? "bg-destructive/10 text-destructive" :
+                        "bg-primary/10 text-primary"
+                      }`}>{call.status}</Badge>
+                      <span className="text-[10px] text-muted-foreground ml-auto">
+                        {format(new Date(call.created_at), "dd MMM, HH:mm")}
+                      </span>
+                    </div>
+                    <p className="text-xs text-foreground/80">{call.recipient_phone}</p>
+                    {call.notes && <p className="text-xs text-muted-foreground">{call.notes}</p>}
                   </div>
                 ))}
               </div>
