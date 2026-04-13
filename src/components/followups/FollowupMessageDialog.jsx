@@ -68,6 +68,36 @@ export default function FollowupMessageDialog({
   }, [open, followup, existingMessage, hasEmail, hasPhone]);
 
   const handleSave = async () => {
+    if (channel === "phone") {
+      // Initiate phone call
+      if (!hasPhone) {
+        toast({ title: "No phone number available", variant: "destructive" });
+        return;
+      }
+      setSaving(true);
+      try {
+        const { data, error } = await supabase.functions.invoke("make-call", {
+          body: {
+            recipient_phone: followup.person_phone,
+            member_id: followup.member_id || null,
+            reference_type: "followup",
+            reference_id: followup.id,
+            tenant_id: tenantId,
+            notes: `Follow-up call for ${followup.person_name}`,
+          },
+        });
+        if (error) throw new Error(error.message);
+        toast({ title: "Call initiated", description: `Provider: ${data?.provider || "twilio"}` });
+        onSaved?.();
+        onOpenChange(false);
+      } catch (err) {
+        toast({ title: "Call failed", description: err.message, variant: "destructive" });
+      } finally {
+        setSaving(false);
+      }
+      return;
+    }
+
     if (!message.trim()) {
       toast({ title: "Message is required", variant: "destructive" });
       return;
@@ -96,7 +126,7 @@ export default function FollowupMessageDialog({
         recipient_name: followup.person_name || null,
         subject: channel === "email" ? subject : null,
         message: message.trim(),
-        status: sendMode === "now" ? "scheduled" : "scheduled",
+        status: "scheduled",
         scheduled_at: sendMode === "now" ? new Date().toISOString() : new Date(scheduledAt).toISOString(),
         created_by: user?.id,
       };
