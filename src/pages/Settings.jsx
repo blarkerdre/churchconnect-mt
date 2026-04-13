@@ -16,6 +16,8 @@ import {
   Settings as SettingsIcon, Plus, Pencil, Trash2, Loader2,
   Users, Church, CalendarDays, TrendingUp, Heart, Globe, Bell, Award, Link2, ShieldAlert, Upload, X, ImageIcon, Mail, Phone, CreditCard, Send
 } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+} from "lucide-react";
 import FollowupTemplatesSection from "@/components/settings/FollowupTemplatesSection";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/hooks/useAuth";
@@ -852,14 +854,27 @@ function FaviconOgImageSection() {
   );
 }
 
-/* ─── Communications Settings (email sender name + Twilio numbers) ─── */
+/* ─── Communications Settings (email sender name + provider config) ─── */
 function CommunicationsSection() {
   const qc = useQueryClient();
   const { currentTenant, tenantId } = useTenant();
+  const { withTenant } = useTenantQuery();
   const [saving, setSaving] = useState(false);
   const [emailSenderName, setEmailSenderName] = useState("");
   const [smsFrom, setSmsFrom] = useState("");
   const [whatsappFrom, setWhatsappFrom] = useState("");
+  const [smsProvider, setSmsProvider] = useState("twilio");
+  const [voiceProvider, setVoiceProvider] = useState("twilio");
+
+  // Africa's Talking fields
+  const [atApiKey, setAtApiKey] = useState("");
+  const [atUsername, setAtUsername] = useState("");
+  const [atSenderId, setAtSenderId] = useState("");
+  const [atVoiceFrom, setAtVoiceFrom] = useState("");
+
+  // Termii fields
+  const [termiiApiKey, setTermiiApiKey] = useState("");
+  const [termiiSenderId, setTermiiSenderId] = useState("");
 
   // Fetch current month usage
   const { data: msgUsage } = useQuery({
@@ -878,6 +893,26 @@ function CommunicationsSection() {
     enabled: !!tenantId,
   });
 
+  // Fetch provider-specific credentials from app_settings
+  const { data: providerSettings } = useQuery({
+    queryKey: ["provider-settings", tenantId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("app_settings")
+        .select("key, value")
+        .eq("tenant_id", tenantId)
+        .in("key", [
+          "africastalking_api_key", "africastalking_username", "africastalking_sender_id",
+          "termii_api_key", "termii_sender_id",
+        ]);
+      if (error) throw error;
+      const map = {};
+      (data || []).forEach(r => { map[r.key] = r.value; });
+      return map;
+    },
+    enabled: !!tenantId,
+  });
+
   const settings = currentTenant?.settings || {};
 
   // Initialize from tenant settings
@@ -887,13 +922,26 @@ function CommunicationsSection() {
       setEmailSenderName(s.email_sender_name || "");
       setSmsFrom(s.twilio_sms_from || "");
       setWhatsappFrom(s.twilio_whatsapp_from || "");
+      setSmsProvider(s.sms_provider || "twilio");
+      setVoiceProvider(s.voice_provider || "twilio");
+      setAtVoiceFrom(s.africastalking_voice_from || "");
     }
   }, [currentTenant?.settings]);
+
+  React.useEffect(() => {
+    if (providerSettings) {
+      setAtApiKey(providerSettings.africastalking_api_key || "");
+      setAtUsername(providerSettings.africastalking_username || "");
+      setAtSenderId(providerSettings.africastalking_sender_id || "");
+      setTermiiApiKey(providerSettings.termii_api_key || "");
+      setTermiiSenderId(providerSettings.termii_sender_id || "");
+    }
+  }, [providerSettings]);
 
   const e164Regex = /^\+[1-9]\d{6,14}$/;
 
   const handleSave = async () => {
-    if (smsFrom && !e164Regex.test(smsFrom.trim())) {
+    if (smsProvider === "twilio" && smsFrom && !e164Regex.test(smsFrom.trim())) {
       toast({ title: "Invalid SMS number", description: "Must be E.164 format (e.g. +447123456789)", variant: "destructive" });
       return;
     }
@@ -904,11 +952,15 @@ function CommunicationsSection() {
 
     setSaving(true);
     try {
+      // Save tenant settings
       const mergedSettings = {
         ...(currentTenant?.settings || {}),
         email_sender_name: emailSenderName.trim() || null,
         twilio_sms_from: smsFrom.trim() || null,
         twilio_whatsapp_from: whatsappFrom.trim() || null,
+        sms_provider: smsProvider,
+        voice_provider: voiceProvider,
+        africastalking_voice_from: atVoiceFrom.trim() || null,
       };
 
       const { error } = await supabase
@@ -917,7 +969,30 @@ function CommunicationsSection() {
         .eq("id", tenantId);
       if (error) throw error;
 
+      // Save provider credentials to app_settings
+      const credentialPairs = [];
+      if (smsProvider === "africastalking" || voiceProvider === "africastalking") {
+        credentialPairs.push(
+          { key: "africastalking_api_key", value: atApiKey.trim() || null },
+          { key: "africastalking_username", value: atUsername.trim() || null },
+          { key: "africastalking_sender_id", value: atSenderId.trim() || null },
+        );
+      }
+      if (smsProvider === "termii") {
+        credentialPairs.push(
+          { key: "termii_api_key", value: termiiApiKey.trim() || null },
+          { key: "termii_sender_id", value: termiiSenderId.trim() || null },
+        );
+      }
+
+      for (const pair of credentialPairs) {
+        await supabase
+          .from("app_settings")
+          .upsert(withTenant(pair), { onConflict: "key,tenant_id" });
+      }
+
       qc.invalidateQueries({ queryKey: ["tenants"] });
+      qc.invalidateQueries({ queryKey: ["provider-settings"] });
       toast({ title: "Communications settings saved" });
     } catch (err) {
       toast({ title: "Error", description: err.message, variant: "destructive" });
@@ -928,6 +1003,8 @@ function CommunicationsSection() {
 
   if (!tenantId) return null;
 
+  const Select_ = Select;
+
   return (
     <Card className="border-0 shadow-sm">
       <CardHeader className="pb-3">
@@ -935,7 +1012,7 @@ function CommunicationsSection() {
           <Mail className="h-4 w-4 text-accent" /> Communications Settings
         </CardTitle>
         <p className="text-xs text-muted-foreground mt-1">
-          Configure the sender name for emails and phone numbers for SMS/WhatsApp. Leave blank to use system defaults.
+          Configure email sender, SMS/Voice providers, and phone numbers.
         </p>
       </CardHeader>
       <CardContent className="space-y-5">
@@ -949,41 +1026,108 @@ function CommunicationsSection() {
             maxLength={100}
           />
           <p className="text-xs text-muted-foreground">
-            Appears as the "From" name in outgoing emails (e.g. "LFC Cardiff &lt;noreply@...&gt;")
+            Appears as the "From" name in outgoing emails
           </p>
         </div>
 
-        {/* SMS From Number */}
+        {/* SMS Provider */}
         <div className="space-y-2">
-          <Label className="text-sm font-medium flex items-center gap-1.5">
-            <Phone className="h-3.5 w-3.5" /> SMS From Number
-          </Label>
-          <Input
-            value={smsFrom}
-            onChange={(e) => setSmsFrom(e.target.value)}
-            placeholder="+44... (uses system default if empty)"
-            maxLength={20}
-          />
-          <p className="text-xs text-muted-foreground">
-            Your Twilio phone number for SMS. Must be in E.164 format (e.g. +447123456789)
-          </p>
+          <Label className="text-sm font-medium">SMS Provider</Label>
+          <Select value={smsProvider} onValueChange={setSmsProvider}>
+            <SelectTrigger className="h-9 text-sm">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="twilio">Twilio</SelectItem>
+              <SelectItem value="africastalking">Africa's Talking</SelectItem>
+              <SelectItem value="termii">Termii</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
-        {/* WhatsApp From Number */}
+        {/* Voice Call Provider */}
         <div className="space-y-2">
-          <Label className="text-sm font-medium flex items-center gap-1.5">
-            <Phone className="h-3.5 w-3.5" /> WhatsApp From Number
-          </Label>
-          <Input
-            value={whatsappFrom}
-            onChange={(e) => setWhatsappFrom(e.target.value)}
-            placeholder="+44... (uses system default if empty)"
-            maxLength={20}
-          />
-          <p className="text-xs text-muted-foreground">
-            Your Twilio WhatsApp-enabled number. Must be in E.164 format
-          </p>
+          <Label className="text-sm font-medium">Voice Call Provider</Label>
+          <Select value={voiceProvider} onValueChange={setVoiceProvider}>
+            <SelectTrigger className="h-9 text-sm">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="twilio">Twilio</SelectItem>
+              <SelectItem value="africastalking">Africa's Talking</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
+
+        {/* Twilio fields */}
+        {(smsProvider === "twilio" || voiceProvider === "twilio") && (
+          <div className="space-y-3 p-3 bg-muted/50 rounded-lg">
+            <p className="text-xs font-semibold text-muted-foreground">Twilio Settings</p>
+            <div className="space-y-2">
+              <Label className="text-sm flex items-center gap-1.5">
+                <Phone className="h-3.5 w-3.5" /> SMS From Number
+              </Label>
+              <Input
+                value={smsFrom}
+                onChange={(e) => setSmsFrom(e.target.value)}
+                placeholder="+44... (uses system default if empty)"
+                maxLength={20}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-sm flex items-center gap-1.5">
+                <Phone className="h-3.5 w-3.5" /> WhatsApp From Number
+              </Label>
+              <Input
+                value={whatsappFrom}
+                onChange={(e) => setWhatsappFrom(e.target.value)}
+                placeholder="+44... (uses system default if empty)"
+                maxLength={20}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Africa's Talking fields */}
+        {(smsProvider === "africastalking" || voiceProvider === "africastalking") && (
+          <div className="space-y-3 p-3 bg-muted/50 rounded-lg">
+            <p className="text-xs font-semibold text-muted-foreground">Africa's Talking Settings</p>
+            <div className="space-y-2">
+              <Label className="text-sm">Username</Label>
+              <Input value={atUsername} onChange={(e) => setAtUsername(e.target.value)} placeholder="sandbox or production username" />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-sm">API Key</Label>
+              <Input value={atApiKey} onChange={(e) => setAtApiKey(e.target.value)} placeholder="Your Africa's Talking API key" type="password" />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-sm">Sender ID / Short Code</Label>
+              <Input value={atSenderId} onChange={(e) => setAtSenderId(e.target.value)} placeholder="e.g. MyChurch or short code" />
+              <p className="text-xs text-muted-foreground">Leave blank for default sender</p>
+            </div>
+            {voiceProvider === "africastalking" && (
+              <div className="space-y-2">
+                <Label className="text-sm">Voice From Number</Label>
+                <Input value={atVoiceFrom} onChange={(e) => setAtVoiceFrom(e.target.value)} placeholder="Your Africa's Talking phone number" />
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Termii fields */}
+        {smsProvider === "termii" && (
+          <div className="space-y-3 p-3 bg-muted/50 rounded-lg">
+            <p className="text-xs font-semibold text-muted-foreground">Termii Settings</p>
+            <div className="space-y-2">
+              <Label className="text-sm">API Key</Label>
+              <Input value={termiiApiKey} onChange={(e) => setTermiiApiKey(e.target.value)} placeholder="Your Termii API key" type="password" />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-sm">Sender ID</Label>
+              <Input value={termiiSenderId} onChange={(e) => setTermiiSenderId(e.target.value)} placeholder="e.g. MyChurch" />
+            </div>
+          </div>
+        )}
 
         {/* Message Usage */}
         {msgUsage && (currentTenant?.sms_limit_monthly > 0 || currentTenant?.whatsapp_limit_monthly > 0) && (

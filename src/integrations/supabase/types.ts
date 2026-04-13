@@ -356,6 +356,72 @@ export type Database = {
           },
         ]
       }
+      call_log: {
+        Row: {
+          call_type: string | null
+          caller_id: string | null
+          created_at: string
+          duration_seconds: number | null
+          id: string
+          member_id: string | null
+          notes: string | null
+          provider: string | null
+          provider_call_id: string | null
+          recipient_phone: string
+          reference_id: string | null
+          reference_type: string | null
+          status: string | null
+          tenant_id: string
+        }
+        Insert: {
+          call_type?: string | null
+          caller_id?: string | null
+          created_at?: string
+          duration_seconds?: number | null
+          id?: string
+          member_id?: string | null
+          notes?: string | null
+          provider?: string | null
+          provider_call_id?: string | null
+          recipient_phone: string
+          reference_id?: string | null
+          reference_type?: string | null
+          status?: string | null
+          tenant_id: string
+        }
+        Update: {
+          call_type?: string | null
+          caller_id?: string | null
+          created_at?: string
+          duration_seconds?: number | null
+          id?: string
+          member_id?: string | null
+          notes?: string | null
+          provider?: string | null
+          provider_call_id?: string | null
+          recipient_phone?: string
+          reference_id?: string | null
+          reference_type?: string | null
+          status?: string | null
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "call_log_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "call_log_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       certificate_templates: {
         Row: {
           accent_color: string
