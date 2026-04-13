@@ -6,7 +6,9 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const GATEWAY_URL = "https://connector-gateway.lovable.dev/twilio";
+const TWILIO_GATEWAY_URL = "https://connector-gateway.lovable.dev/twilio";
+const AT_SMS_URL = "https://api.africastalking.com/version1/messaging";
+const TERMII_SMS_URL = "https://api.ng.termii.com/api/sms/send";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -98,9 +100,11 @@ Deno.serve(async (req) => {
 
     const msgChannel = channel === "whatsapp" ? "whatsapp" : "sms";
 
-    // Resolve per-tenant Twilio numbers
+    // Resolve per-tenant settings and provider
     let fromNumber = TWILIO_FROM;
     let tenantWhatsappFrom: string | null = null;
+    let smsProvider = "twilio";
+    let tenantSettings: Record<string, unknown> = {};
     {
       const { data: tenantRow } = await serviceClient
         .from("tenants")
@@ -108,25 +112,42 @@ Deno.serve(async (req) => {
         .eq("id", tenant_id)
         .single();
       if (tenantRow?.settings) {
-        const s = tenantRow.settings as Record<string, unknown>;
-        if (msgChannel === "sms" && s.twilio_sms_from) {
-          const tenantFrom = s.twilio_sms_from as string;
+        tenantSettings = tenantRow.settings as Record<string, unknown>;
+        smsProvider = (tenantSettings.sms_provider as string) || "twilio";
+        if (msgChannel === "sms" && tenantSettings.twilio_sms_from) {
+          const tenantFrom = tenantSettings.twilio_sms_from as string;
           try { validateE164(tenantFrom, "Tenant SMS sender"); } catch { /* fall back to default */ }
           if (/^\+[1-9]\d{6,14}$/.test(tenantFrom.replace(/[\s\-\(\)\.]/g, ""))) {
             fromNumber = tenantFrom;
           }
         }
-        if (s.twilio_whatsapp_from) {
-          tenantWhatsappFrom = s.twilio_whatsapp_from as string;
+        if (tenantSettings.twilio_whatsapp_from) {
+          tenantWhatsappFrom = tenantSettings.twilio_whatsapp_from as string;
         }
       }
     }
 
+    // For WhatsApp, always use Twilio
     if (msgChannel === "whatsapp") {
+      smsProvider = "twilio";
       const waFromRaw = tenantWhatsappFrom || Deno.env.get("TWILIO_WHATSAPP_FROM");
       if (!waFromRaw) throw new Error("TWILIO_WHATSAPP_FROM is not configured");
       const waFrom = waFromRaw.replace(/\s/g, "");
       fromNumber = waFrom.startsWith("whatsapp:") ? waFrom : `whatsapp:${waFrom}`;
+    }
+
+    // Fetch provider credentials for non-Twilio providers
+    let providerCreds: Record<string, string> = {};
+    if (smsProvider !== "twilio") {
+      const credKeys = smsProvider === "africastalking"
+        ? ["africastalking_api_key", "africastalking_username", "africastalking_sender_id"]
+        : ["termii_api_key", "termii_sender_id"];
+      const { data: credData } = await serviceClient
+        .from("app_settings")
+        .select("key, value")
+        .eq("tenant_id", tenant_id)
+        .in("key", credKeys);
+      (credData || []).forEach((r: any) => { providerCreds[r.key] = r.value || ""; });
     }
 
     if (!recipients || !Array.isArray(recipients) || recipients.length === 0) {
