@@ -355,7 +355,7 @@ export default function FollowupDetailPanel({ followup, onClose, onUpdate, curre
                   </Button>
                 )}
               </div>
-              {/* Send Message buttons */}
+              {/* Send Message & Call buttons */}
               <div className="flex gap-2 flex-wrap mt-2">
                 {followup.person_email && (
                   <Button size="sm" variant="outline" className="text-primary border-primary/20 hover:bg-primary/10"
@@ -364,10 +364,18 @@ export default function FollowupDetailPanel({ followup, onClose, onUpdate, curre
                   </Button>
                 )}
                 {followup.person_phone && (
-                  <Button size="sm" variant="outline" className="text-primary border-primary/20 hover:bg-primary/10"
-                    onClick={() => onOpenMessageDialog?.("sms")}>
-                    <MessageSquare className="h-3.5 w-3.5 mr-1" /> Send SMS
-                  </Button>
+                  <>
+                    <Button size="sm" variant="outline" className="text-primary border-primary/20 hover:bg-primary/10"
+                      onClick={() => onOpenMessageDialog?.("sms")}>
+                      <MessageSquare className="h-3.5 w-3.5 mr-1" /> Send SMS
+                    </Button>
+                    <Button size="sm" variant="outline" className="text-accent border-accent/20 hover:bg-accent/10"
+                      onClick={handleMakeCall}
+                      disabled={callingPhone}>
+                      {callingPhone ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <PhoneCall className="h-3.5 w-3.5 mr-1" />}
+                      Make Call
+                    </Button>
+                  </>
                 )}
               </div>
             </div>
