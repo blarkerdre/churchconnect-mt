@@ -1,86 +1,46 @@
 
 
-## Multi-Provider SMS & Phone Call System
+## Custom SMS & Voice Provider Integration
 
 ### Summary
-Add a tenant-configurable SMS/Voice provider system supporting Twilio (existing) and Africa's Talking, Termii, and other providers. Add "Phone Call" as a follow-up action with click-to-call and call logging. Tenants choose and configure their preferred provider in Settings > Comms.
+Replace the hardcoded provider dropdowns with a flexible system where tenants can configure **any** SMS or voice call provider by supplying a custom API endpoint URL, authentication headers, and request body template. Keep the existing pre-built providers (Twilio, Africa's Talking, Termii) as ready-made presets, but add a "Custom" option that lets tenants integrate any provider with an HTTP API.
+
+### How It Works for Tenants
+1. In Settings > Communications, the SMS/Voice provider dropdown gains a new **"Custom"** option
+2. When "Custom" is selected, a configuration form appears with:
+   - **Provider Name** (e.g. "BulkSMS", "Vonage", "SMSLive247")
+   - **API Endpoint URL** (the provider's send SMS/call endpoint)
+   - **HTTP Method** (POST/GET)
+   - **Auth Header Name** and **Auth Header Value** (e.g. `Authorization: Bearer xxx` or `apiKey: xxx`)
+   - **Request Content Type** (JSON or form-encoded)
+   - **Request Body Template** — a JSON template with placeholders `{{to}}`, `{{message}}`, `{{from}}` that get replaced at send time
+   - **Sender ID / From Number**
+3. Pre-built providers (Twilio, Africa's Talking, Termii) continue to work as before with their dedicated fields
 
 ### Technical Details
 
-**Provider Architecture**:
-- Store provider config in `tenants.settings` JSONB: `sms_provider` (default: "twilio"), `voice_provider`, plus provider-specific credentials stored as secrets per tenant in `app_settings`
-- Create a provider abstraction in the edge function that routes SMS/Voice calls to the correct API based on tenant config
+**Settings UI** (`src/pages/Settings.jsx`):
+- Add "custom" as an option in both SMS and Voice provider selects
+- When custom is selected, render the custom provider config form
+- Store custom config in `app_settings` with keys like `custom_sms_provider_config` and `custom_voice_provider_config` (JSON value containing endpoint, headers, body template, etc.)
 
-### Database Changes
+**Edge Function** (`supabase/functions/send-sms/index.ts`):
+- Add a `custom` provider branch
+- Read the custom config from `app_settings`
+- Build the HTTP request from the template, replacing `{{to}}` and `{{message}}` placeholders
+- Apply the configured auth header
+- Send the request and parse the response
 
-**Migration**: Add `call_log` table for tracking phone calls:
-```sql
-CREATE TABLE public.call_log (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id uuid NOT NULL REFERENCES public.tenants(id),
-  caller_id uuid REFERENCES auth.users(id),
-  member_id uuid REFERENCES public.members(id),
-  recipient_phone text NOT NULL,
-  call_type text DEFAULT 'outbound',
-  duration_seconds integer,
-  status text DEFAULT 'initiated',
-  provider text DEFAULT 'twilio',
-  provider_call_id text,
-  reference_type text,
-  reference_id text,
-  notes text,
-  created_at timestamptz DEFAULT now()
-);
-ALTER TABLE public.call_log ENABLE ROW LEVEL SECURITY;
--- RLS: admins/leaders can view tenant calls, members can view own
-```
+**Edge Function** (`supabase/functions/make-call/index.ts`):
+- Same pattern — add `custom` provider branch for voice calls
+- Read custom voice config, build request from template with `{{to}}` placeholder
 
-### Edge Function Changes
-
-**1. New: `supabase/functions/make-call/index.ts`**
-- Initiates outbound voice call via configured provider (Twilio Calls API or Africa's Talking)
-- Logs call to `call_log` table
-- Supports provider routing based on tenant settings
-
-**2. Update: `supabase/functions/send-sms/index.ts`**
-- Add provider abstraction layer
-- Read `sms_provider` from tenant settings
-- Route to Twilio gateway (existing) or Africa's Talking / Termii based on config
-- Africa's Talking: direct HTTPS POST to `https://api.africastalking.com/version1/messaging`
-- Termii: direct HTTPS POST to `https://api.ng.termii.com/api/sms/send`
-
-**3. Update: `supabase/functions/process-scheduled-followups/index.ts`**
-- Add same provider routing for scheduled SMS
-
-### Settings UI Changes
-
-**Update: `src/pages/Settings.jsx` — CommunicationsSection**
-- Add "SMS Provider" dropdown: Twilio (default), Africa's Talking, Termii
-- Add "Voice Call Provider" dropdown: Twilio (default), Africa's Talking
-- Conditionally show provider-specific config fields:
-  - **Twilio**: SMS From Number, WhatsApp From Number (existing)
-  - **Africa's Talking**: API Key, Username, Short Code/Sender ID fields (stored in `app_settings` with keys like `africastalking_api_key`, `africastalking_username`, `africastalking_sender_id`)
-  - **Termii**: API Key, Sender ID (stored in `app_settings`)
-- Save provider choice to `tenants.settings.sms_provider` / `tenants.settings.voice_provider`
-
-### Follow-up Phone Call Integration
-
-**Update: `src/components/followups/FollowupDetailPanel.jsx`**
-- Add "Make Call" button alongside Send Email / Send SMS buttons
-- On click: opens a small dialog to confirm call initiation, invokes `make-call` edge function
-- Shows call history from `call_log` in the messages section
-
-**Update: `src/components/followups/FollowupMessageDialog.jsx`**
-- Add "phone" as a channel option (alongside email/sms)
-- When phone selected, show simplified UI (no message body, just confirm call)
+**Edge Function** (`supabase/functions/process-scheduled-followups/index.ts`):
+- Add same custom provider routing in the `sendSms` function
 
 ### Files Changed
-- **Migration**: New `call_log` table with RLS
-- **New**: `supabase/functions/make-call/index.ts`
-- **Edit**: `supabase/functions/send-sms/index.ts` — multi-provider routing
-- **Edit**: `supabase/functions/process-scheduled-followups/index.ts` — multi-provider routing
-- **Edit**: `src/pages/Settings.jsx` — provider selection + provider-specific config
-- **Edit**: `src/components/followups/FollowupDetailPanel.jsx` — add Make Call button + call history
-- **Edit**: `src/components/followups/FollowupMessageDialog.jsx` — add phone call channel
-- **Edit**: `supabase/config.toml` — add make-call function config
+- **Edit**: `src/pages/Settings.jsx` — add "Custom" option + dynamic config form for custom SMS/Voice providers
+- **Edit**: `supabase/functions/send-sms/index.ts` — add custom provider routing
+- **Edit**: `supabase/functions/make-call/index.ts` — add custom provider routing
+- **Edit**: `supabase/functions/process-scheduled-followups/index.ts` — add custom provider routing in sendSms
 
