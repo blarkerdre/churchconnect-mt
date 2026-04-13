@@ -356,20 +356,6 @@ Deno.serve(async (req) => {
           error_message: err instanceof Error ? err.message : "Unknown error",
           ...(tenant_id ? { tenant_id } : {}),
         });
-      } catch (err) {
-        failed++;
-        logs.push({
-          sender_id: userId,
-          recipient_phone: normalized,
-          recipient_member_id: recipient.member_id || null,
-          message,
-          sms_type: sms_type || "bulk",
-          reference_id: reference_id || null,
-          status: "failed",
-          channel: msgChannel,
-          error_message: err instanceof Error ? err.message : "Unknown error",
-          ...(tenant_id ? { tenant_id } : {}),
-        });
       }
     }
 
