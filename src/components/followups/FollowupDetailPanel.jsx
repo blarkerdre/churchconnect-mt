@@ -438,6 +438,33 @@ export default function FollowupDetailPanel({ followup, onClose, onUpdate, curre
               </div>
             </div>
           )}
+
+          {/* Call History */}
+          {callHistory.length > 0 && (
+            <div className="space-y-2">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Call History</p>
+              <div className="space-y-2">
+                {callHistory.map(call => (
+                  <div key={call.id} className="bg-muted/50 rounded-lg p-2.5 space-y-1">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <PhoneCall className="h-3 w-3 text-muted-foreground" />
+                      <Badge variant="secondary" className="text-[10px]">{(call.provider || "twilio").toUpperCase()}</Badge>
+                      <Badge className={`text-[10px] ${
+                        call.status === "completed" ? "bg-chart-3/10 text-chart-3" :
+                        call.status === "failed" ? "bg-destructive/10 text-destructive" :
+                        "bg-primary/10 text-primary"
+                      }`}>{call.status}</Badge>
+                      <span className="text-[10px] text-muted-foreground ml-auto">
+                        {format(new Date(call.created_at), "dd MMM, HH:mm")}
+                      </span>
+                    </div>
+                    <p className="text-xs text-foreground/80">{call.recipient_phone}</p>
+                    {call.notes && <p className="text-xs text-muted-foreground">{call.notes}</p>}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Add progress note */}
