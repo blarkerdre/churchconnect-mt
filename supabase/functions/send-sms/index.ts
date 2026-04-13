@@ -249,7 +249,40 @@ Deno.serve(async (req) => {
         let data: any = {};
         let response: Response;
 
-        if (smsProvider === "africastalking") {
+        if (smsProvider === "custom") {
+          // Custom provider
+          const { data: customConfigRow } = await serviceClient
+            .from("app_settings")
+            .select("value")
+            .eq("tenant_id", tenant_id)
+            .eq("key", "custom_sms_provider_config")
+            .maybeSingle();
+          const customConfig = customConfigRow?.value as Record<string, string> | null;
+          if (!customConfig?.endpoint) throw new Error("Custom SMS provider not configured");
+
+          let bodyStr = (customConfig.body_template || "")
+            .replace(/\{\{to\}\}/g, normalized)
+            .replace(/\{\{message\}\}/g, message)
+            .replace(/\{\{from\}\}/g, customConfig.sender_id || "");
+
+          const headers: Record<string, string> = {};
+          if (customConfig.content_type) headers["Content-Type"] = customConfig.content_type;
+          if (customConfig.auth_header && customConfig.auth_value) {
+            headers[customConfig.auth_header] = customConfig.auth_value;
+          }
+
+          response = await fetch(customConfig.endpoint, {
+            method: customConfig.method || "POST",
+            headers,
+            body: bodyStr,
+          });
+          data = await response.json().catch(() => ({}));
+          if (!response.ok) {
+            throw new Error(`Custom provider error (${response.status}): ${JSON.stringify(data)}`);
+          }
+          data.sid = data.id || data.message_id || data.sid || null;
+
+        } else if (smsProvider === "africastalking") {
           const atApiKey = providerCreds.africastalking_api_key;
           const atUsername = providerCreds.africastalking_username;
           if (!atApiKey || !atUsername) throw new Error("Africa's Talking credentials not configured");
