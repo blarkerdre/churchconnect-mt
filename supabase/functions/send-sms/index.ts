@@ -246,57 +246,116 @@ Deno.serve(async (req) => {
       }
 
       try {
-        const toNumber = msgChannel === "whatsapp" ? `whatsapp:${normalized}` : normalized;
+        let data: any = {};
+        let response: Response;
 
-        const params = new URLSearchParams({
-          To: toNumber,
-          From: fromNumber,
-          Body: message,
-          StatusCallback: webhookUrl,
-        });
+        if (smsProvider === "africastalking") {
+          const atApiKey = providerCreds.africastalking_api_key;
+          const atUsername = providerCreds.africastalking_username;
+          if (!atApiKey || !atUsername) throw new Error("Africa's Talking credentials not configured");
 
-        const response = await fetch(`${GATEWAY_URL}/Messages.json`, {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${LOVABLE_API_KEY}`,
-            "X-Connection-Api-Key": TWILIO_API_KEY,
-            "Content-Type": "application/x-www-form-urlencoded",
-          },
-          body: params,
-        });
-
-        const data = await response.json();
-
-        if (response.ok) {
-          sent++;
-          logs.push({
-            sender_id: userId,
-            recipient_phone: normalized,
-            recipient_member_id: recipient.member_id || null,
+          const atFrom = providerCreds.africastalking_sender_id || "";
+          const params = new URLSearchParams({
+            username: atUsername,
+            to: normalized,
             message,
-            sms_type: sms_type || "bulk",
-            reference_id: reference_id || null,
-            status: "sent",
-            channel: msgChannel,
-            message_sid: data.sid || null,
-            delivery_status: "queued",
-            ...(tenant_id ? { tenant_id } : {}),
+            ...(atFrom ? { from: atFrom } : {}),
           });
+
+          response = await fetch(AT_SMS_URL, {
+            method: "POST",
+            headers: {
+              apiKey: atApiKey,
+              Accept: "application/json",
+              "Content-Type": "application/x-www-form-urlencoded",
+            },
+            body: params,
+          });
+          data = await response.json();
+          if (!response.ok) throw new Error(`Africa's Talking error: ${JSON.stringify(data)}`);
+          const msgData = data.SMSMessageData?.Recipients?.[0];
+          if (msgData?.status === "Success") {
+            data.sid = msgData.messageId;
+          } else {
+            throw new Error(`Africa's Talking: ${msgData?.status || JSON.stringify(data)}`);
+          }
+
+        } else if (smsProvider === "termii") {
+          const termiiKey = providerCreds.termii_api_key;
+          const termiiSender = providerCreds.termii_sender_id || "N-Alert";
+          if (!termiiKey) throw new Error("Termii API key not configured");
+
+          response = await fetch(TERMII_SMS_URL, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              api_key: termiiKey,
+              to: normalized.replace("+", ""),
+              from: termiiSender,
+              sms: message,
+              type: "plain",
+              channel: "generic",
+            }),
+          });
+          data = await response.json();
+          if (!response.ok || data.code !== "ok") {
+            throw new Error(`Termii error: ${data.message || JSON.stringify(data)}`);
+          }
+          data.sid = data.message_id || null;
+
         } else {
-          failed++;
-          logs.push({
-            sender_id: userId,
-            recipient_phone: normalized,
-            recipient_member_id: recipient.member_id || null,
-            message,
-            sms_type: sms_type || "bulk",
-            reference_id: reference_id || null,
-            status: "failed",
-            channel: msgChannel,
-            error_message: data.message || JSON.stringify(data),
-            ...(tenant_id ? { tenant_id } : {}),
+          // Twilio (default)
+          const toNumber = msgChannel === "whatsapp" ? `whatsapp:${normalized}` : normalized;
+          const params = new URLSearchParams({
+            To: toNumber,
+            From: fromNumber,
+            Body: message,
+            StatusCallback: webhookUrl,
           });
+
+          response = await fetch(`${TWILIO_GATEWAY_URL}/Messages.json`, {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${LOVABLE_API_KEY}`,
+              "X-Connection-Api-Key": TWILIO_API_KEY,
+              "Content-Type": "application/x-www-form-urlencoded",
+            },
+            body: params,
+          });
+          data = await response.json();
+          if (!response.ok) {
+            throw new Error(data.message || JSON.stringify(data));
+          }
         }
+
+        sent++;
+        logs.push({
+          sender_id: userId,
+          recipient_phone: normalized,
+          recipient_member_id: recipient.member_id || null,
+          message,
+          sms_type: sms_type || "bulk",
+          reference_id: reference_id || null,
+          status: "sent",
+          channel: msgChannel,
+          message_sid: data.sid || null,
+          delivery_status: "queued",
+          ...(tenant_id ? { tenant_id } : {}),
+        });
+      } catch (err) {
+        failed++;
+        logs.push({
+          sender_id: userId,
+          recipient_phone: normalized,
+          recipient_member_id: recipient.member_id || null,
+          message,
+          sms_type: sms_type || "bulk",
+          reference_id: reference_id || null,
+          status: "failed",
+          channel: msgChannel,
+          error_message: err instanceof Error ? err.message : "Unknown error",
+          ...(tenant_id ? { tenant_id } : {}),
+        });
       } catch (err) {
         failed++;
         logs.push({
