@@ -875,6 +875,26 @@ function CommunicationsSection() {
   const [termiiApiKey, setTermiiApiKey] = useState("");
   const [termiiSenderId, setTermiiSenderId] = useState("");
 
+  // Custom SMS provider fields
+  const [customSmsName, setCustomSmsName] = useState("");
+  const [customSmsEndpoint, setCustomSmsEndpoint] = useState("");
+  const [customSmsMethod, setCustomSmsMethod] = useState("POST");
+  const [customSmsAuthHeader, setCustomSmsAuthHeader] = useState("");
+  const [customSmsAuthValue, setCustomSmsAuthValue] = useState("");
+  const [customSmsContentType, setCustomSmsContentType] = useState("application/json");
+  const [customSmsBodyTemplate, setCustomSmsBodyTemplate] = useState('{\n  "to": "{{to}}",\n  "message": "{{message}}",\n  "from": "{{from}}"\n}');
+  const [customSmsSenderId, setCustomSmsSenderId] = useState("");
+
+  // Custom Voice provider fields
+  const [customVoiceName, setCustomVoiceName] = useState("");
+  const [customVoiceEndpoint, setCustomVoiceEndpoint] = useState("");
+  const [customVoiceMethod, setCustomVoiceMethod] = useState("POST");
+  const [customVoiceAuthHeader, setCustomVoiceAuthHeader] = useState("");
+  const [customVoiceAuthValue, setCustomVoiceAuthValue] = useState("");
+  const [customVoiceContentType, setCustomVoiceContentType] = useState("application/json");
+  const [customVoiceBodyTemplate, setCustomVoiceBodyTemplate] = useState('{\n  "to": "{{to}}",\n  "from": "{{from}}"\n}');
+  const [customVoiceSenderId, setCustomVoiceSenderId] = useState("");
+
   // Fetch current month usage
   const { data: msgUsage } = useQuery({
     queryKey: ["msg-usage", tenantId],
@@ -903,6 +923,7 @@ function CommunicationsSection() {
         .in("key", [
           "africastalking_api_key", "africastalking_username", "africastalking_sender_id",
           "termii_api_key", "termii_sender_id",
+          "custom_sms_provider_config", "custom_voice_provider_config",
         ]);
       if (error) throw error;
       const map = {};
@@ -934,6 +955,32 @@ function CommunicationsSection() {
       setAtSenderId(providerSettings.africastalking_sender_id || "");
       setTermiiApiKey(providerSettings.termii_api_key || "");
       setTermiiSenderId(providerSettings.termii_sender_id || "");
+
+      // Custom SMS config
+      const csms = providerSettings.custom_sms_provider_config;
+      if (csms && typeof csms === "object") {
+        setCustomSmsName(csms.name || "");
+        setCustomSmsEndpoint(csms.endpoint || "");
+        setCustomSmsMethod(csms.method || "POST");
+        setCustomSmsAuthHeader(csms.auth_header || "");
+        setCustomSmsAuthValue(csms.auth_value || "");
+        setCustomSmsContentType(csms.content_type || "application/json");
+        setCustomSmsBodyTemplate(csms.body_template || '{\n  "to": "{{to}}",\n  "message": "{{message}}",\n  "from": "{{from}}"\n}');
+        setCustomSmsSenderId(csms.sender_id || "");
+      }
+
+      // Custom Voice config
+      const cvoice = providerSettings.custom_voice_provider_config;
+      if (cvoice && typeof cvoice === "object") {
+        setCustomVoiceName(cvoice.name || "");
+        setCustomVoiceEndpoint(cvoice.endpoint || "");
+        setCustomVoiceMethod(cvoice.method || "POST");
+        setCustomVoiceAuthHeader(cvoice.auth_header || "");
+        setCustomVoiceAuthValue(cvoice.auth_value || "");
+        setCustomVoiceContentType(cvoice.content_type || "application/json");
+        setCustomVoiceBodyTemplate(cvoice.body_template || '{\n  "to": "{{to}}",\n  "from": "{{from}}"\n}');
+        setCustomVoiceSenderId(cvoice.sender_id || "");
+      }
     }
   }, [providerSettings]);
 
@@ -946,6 +993,14 @@ function CommunicationsSection() {
     }
     if (whatsappFrom && !e164Regex.test(whatsappFrom.trim())) {
       toast({ title: "Invalid WhatsApp number", description: "Must be E.164 format (e.g. +447123456789)", variant: "destructive" });
+      return;
+    }
+    if (smsProvider === "custom" && !customSmsEndpoint.trim()) {
+      toast({ title: "Custom SMS endpoint URL is required", variant: "destructive" });
+      return;
+    }
+    if (voiceProvider === "custom" && !customVoiceEndpoint.trim()) {
+      toast({ title: "Custom Voice endpoint URL is required", variant: "destructive" });
       return;
     }
 
@@ -983,6 +1038,36 @@ function CommunicationsSection() {
           { key: "termii_sender_id", value: termiiSenderId.trim() || null },
         );
       }
+      if (smsProvider === "custom") {
+        credentialPairs.push({
+          key: "custom_sms_provider_config",
+          value: {
+            name: customSmsName.trim(),
+            endpoint: customSmsEndpoint.trim(),
+            method: customSmsMethod,
+            auth_header: customSmsAuthHeader.trim(),
+            auth_value: customSmsAuthValue.trim(),
+            content_type: customSmsContentType,
+            body_template: customSmsBodyTemplate,
+            sender_id: customSmsSenderId.trim(),
+          },
+        });
+      }
+      if (voiceProvider === "custom") {
+        credentialPairs.push({
+          key: "custom_voice_provider_config",
+          value: {
+            name: customVoiceName.trim(),
+            endpoint: customVoiceEndpoint.trim(),
+            method: customVoiceMethod,
+            auth_header: customVoiceAuthHeader.trim(),
+            auth_value: customVoiceAuthValue.trim(),
+            content_type: customVoiceContentType,
+            body_template: customVoiceBodyTemplate,
+            sender_id: customVoiceSenderId.trim(),
+          },
+        });
+      }
 
       for (const pair of credentialPairs) {
         await supabase
@@ -1001,8 +1086,6 @@ function CommunicationsSection() {
   };
 
   if (!tenantId) return null;
-
-  const Select_ = Select;
 
   return (
     <Card className="border-0 shadow-sm">
@@ -1040,6 +1123,7 @@ function CommunicationsSection() {
               <SelectItem value="twilio">Twilio</SelectItem>
               <SelectItem value="africastalking">Africa's Talking</SelectItem>
               <SelectItem value="termii">Termii</SelectItem>
+              <SelectItem value="custom">Custom Provider</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -1054,6 +1138,7 @@ function CommunicationsSection() {
             <SelectContent>
               <SelectItem value="twilio">Twilio</SelectItem>
               <SelectItem value="africastalking">Africa's Talking</SelectItem>
+              <SelectItem value="custom">Custom Provider</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -1124,6 +1209,130 @@ function CommunicationsSection() {
             <div className="space-y-2">
               <Label className="text-sm">Sender ID</Label>
               <Input value={termiiSenderId} onChange={(e) => setTermiiSenderId(e.target.value)} placeholder="e.g. MyChurch" />
+            </div>
+          </div>
+        )}
+
+        {/* Custom SMS Provider fields */}
+        {smsProvider === "custom" && (
+          <div className="space-y-3 p-3 bg-muted/50 rounded-lg">
+            <p className="text-xs font-semibold text-muted-foreground">Custom SMS Provider</p>
+            <div className="space-y-2">
+              <Label className="text-sm">Provider Name</Label>
+              <Input value={customSmsName} onChange={(e) => setCustomSmsName(e.target.value)} placeholder="e.g. BulkSMS, Vonage, SMSLive247" />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-sm">API Endpoint URL</Label>
+              <Input value={customSmsEndpoint} onChange={(e) => setCustomSmsEndpoint(e.target.value)} placeholder="https://api.provider.com/sms/send" />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label className="text-sm">HTTP Method</Label>
+                <Select value={customSmsMethod} onValueChange={setCustomSmsMethod}>
+                  <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="POST">POST</SelectItem>
+                    <SelectItem value="GET">GET</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-sm">Content Type</Label>
+                <Select value={customSmsContentType} onValueChange={setCustomSmsContentType}>
+                  <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="application/json">JSON</SelectItem>
+                    <SelectItem value="application/x-www-form-urlencoded">Form Encoded</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-sm">Auth Header Name</Label>
+              <Input value={customSmsAuthHeader} onChange={(e) => setCustomSmsAuthHeader(e.target.value)} placeholder="e.g. Authorization, apiKey, X-API-Key" />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-sm">Auth Header Value</Label>
+              <Input value={customSmsAuthValue} onChange={(e) => setCustomSmsAuthValue(e.target.value)} placeholder="e.g. Bearer your-api-key" type="password" />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-sm">Sender ID / From Number</Label>
+              <Input value={customSmsSenderId} onChange={(e) => setCustomSmsSenderId(e.target.value)} placeholder="e.g. MyChurch" />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-sm">Request Body Template</Label>
+              <Textarea
+                value={customSmsBodyTemplate}
+                onChange={(e) => setCustomSmsBodyTemplate(e.target.value)}
+                rows={5}
+                className="font-mono text-xs"
+                placeholder='{"to": "{{to}}", "message": "{{message}}", "from": "{{from}}"}'
+              />
+              <p className="text-xs text-muted-foreground">
+                Use placeholders: <code className="bg-muted px-1 rounded">{"{{to}}"}</code>, <code className="bg-muted px-1 rounded">{"{{message}}"}</code>, <code className="bg-muted px-1 rounded">{"{{from}}"}</code>
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Custom Voice Provider fields */}
+        {voiceProvider === "custom" && (
+          <div className="space-y-3 p-3 bg-muted/50 rounded-lg">
+            <p className="text-xs font-semibold text-muted-foreground">Custom Voice Provider</p>
+            <div className="space-y-2">
+              <Label className="text-sm">Provider Name</Label>
+              <Input value={customVoiceName} onChange={(e) => setCustomVoiceName(e.target.value)} placeholder="e.g. Vonage, Plivo" />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-sm">API Endpoint URL</Label>
+              <Input value={customVoiceEndpoint} onChange={(e) => setCustomVoiceEndpoint(e.target.value)} placeholder="https://api.provider.com/calls" />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label className="text-sm">HTTP Method</Label>
+                <Select value={customVoiceMethod} onValueChange={setCustomVoiceMethod}>
+                  <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="POST">POST</SelectItem>
+                    <SelectItem value="GET">GET</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-sm">Content Type</Label>
+                <Select value={customVoiceContentType} onValueChange={setCustomVoiceContentType}>
+                  <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="application/json">JSON</SelectItem>
+                    <SelectItem value="application/x-www-form-urlencoded">Form Encoded</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-sm">Auth Header Name</Label>
+              <Input value={customVoiceAuthHeader} onChange={(e) => setCustomVoiceAuthHeader(e.target.value)} placeholder="e.g. Authorization" />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-sm">Auth Header Value</Label>
+              <Input value={customVoiceAuthValue} onChange={(e) => setCustomVoiceAuthValue(e.target.value)} placeholder="e.g. Bearer your-api-key" type="password" />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-sm">Sender ID / From Number</Label>
+              <Input value={customVoiceSenderId} onChange={(e) => setCustomVoiceSenderId(e.target.value)} placeholder="Your caller ID" />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-sm">Request Body Template</Label>
+              <Textarea
+                value={customVoiceBodyTemplate}
+                onChange={(e) => setCustomVoiceBodyTemplate(e.target.value)}
+                rows={4}
+                className="font-mono text-xs"
+                placeholder='{"to": "{{to}}", "from": "{{from}}"}'
+              />
+              <p className="text-xs text-muted-foreground">
+                Use placeholders: <code className="bg-muted px-1 rounded">{"{{to}}"}</code>, <code className="bg-muted px-1 rounded">{"{{from}}"}</code>
+              </p>
             </div>
           </div>
         )}

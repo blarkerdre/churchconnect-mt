@@ -86,7 +86,45 @@ Deno.serve(async (req) => {
     let providerCallId: string | null = null;
     let callStatus = "initiated";
 
-    if (voiceProvider === "africastalking") {
+    if (voiceProvider === "custom") {
+      // Custom voice provider
+      const { data: customConfigRow } = await serviceClient
+        .from("app_settings")
+        .select("value")
+        .eq("tenant_id", tenant_id)
+        .eq("key", "custom_voice_provider_config")
+        .maybeSingle();
+      const customConfig = customConfigRow?.value as Record<string, string> | null;
+      if (!customConfig?.endpoint) {
+        return new Response(JSON.stringify({ error: "Custom voice provider not configured" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      let bodyStr = (customConfig.body_template || "")
+        .replace(/\{\{to\}\}/g, phone)
+        .replace(/\{\{from\}\}/g, customConfig.sender_id || "");
+
+      const headers: Record<string, string> = {};
+      if (customConfig.content_type) headers["Content-Type"] = customConfig.content_type;
+      if (customConfig.auth_header && customConfig.auth_value) {
+        headers[customConfig.auth_header] = customConfig.auth_value;
+      }
+
+      const response = await fetch(customConfig.endpoint, {
+        method: customConfig.method || "POST",
+        headers,
+        body: bodyStr,
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(`Custom voice provider error (${response.status}): ${JSON.stringify(data)}`);
+      }
+      providerCallId = data.id || data.call_id || data.sid || null;
+      callStatus = "initiated";
+
+    } else if (voiceProvider === "africastalking") {
       // Africa's Talking voice call
       const { data: atSettings } = await serviceClient
         .from("app_settings")

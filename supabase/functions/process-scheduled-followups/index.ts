@@ -133,7 +133,40 @@ async function sendSms(
 
   let messageSid: string | null = null;
 
-  if (smsProvider === "africastalking") {
+  if (smsProvider === "custom") {
+    // Custom provider
+    const { data: customConfigRow } = await supabase
+      .from("app_settings")
+      .select("value")
+      .eq("tenant_id", msg.tenant_id)
+      .eq("key", "custom_sms_provider_config")
+      .maybeSingle();
+    const customConfig = customConfigRow?.value as Record<string, string> | null;
+    if (!customConfig?.endpoint) throw new Error("Custom SMS provider not configured");
+
+    let bodyStr = (customConfig.body_template || "")
+      .replace(/\{\{to\}\}/g, phone)
+      .replace(/\{\{message\}\}/g, msg.message)
+      .replace(/\{\{from\}\}/g, customConfig.sender_id || "");
+
+    const headers: Record<string, string> = {};
+    if (customConfig.content_type) headers["Content-Type"] = customConfig.content_type;
+    if (customConfig.auth_header && customConfig.auth_value) {
+      headers[customConfig.auth_header] = customConfig.auth_value;
+    }
+
+    const response = await fetch(customConfig.endpoint, {
+      method: customConfig.method || "POST",
+      headers,
+      body: bodyStr,
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(`Custom provider error (${response.status}): ${JSON.stringify(data)}`);
+    }
+    messageSid = data.id || data.message_id || data.sid || null;
+
+  } else if (smsProvider === "africastalking") {
     const { data: credData } = await supabase
       .from("app_settings")
       .select("key, value")
