@@ -1,29 +1,25 @@
 
 
-## Add Home Cell Centre Assignments to User Management
+## Rename "WSF Leader" to "Home Cell Leader" in All Forms
 
 ### Problem
-Admins can already assign the "Unit Leader" and "Home Cell Leader" roles via checkboxes in User Management. Unit leaders also get an inline widget (`UnitLeaderAssignments`) to assign specific church units directly from the user table. However, Home Cell (WSF) leaders have no equivalent — their centre assignment is buried in Settings > Home Cell Centres. This makes it inconsistent and harder to manage.
+Several UI components still display "WSF Leader" instead of "Home Cell Leader". The internal key `wsf_leader` is correct, but the display labels need updating.
 
-### Solution
-Create a `WSFLeaderAssignments` component (mirroring `UnitLeaderAssignments`) that shows which Home Cell centres a WSF leader is assigned to, with inline add/remove capability. Display it in the User Management table alongside the existing "Led Units" column.
+### Changes
 
-### Technical Details
+**`src/components/members/MemberFormDialog.jsx`**
+- Line 424: Change `<SelectItem value="wsf_leader">WSF Leader</SelectItem>` to `Home Cell Leader`
+- Lines 586 and 602: The role badges/checkboxes use `r.replace("_", " ")` which produces "wsf leader". Add a `roleLabels` map (like UserManagement has) to display proper names, mapping `wsf_leader` → "Home Cell Leader"
 
-**New Component: `src/components/users/WSFLeaderAssignments.jsx`**
-- Fetches the user's linked member record to get `member.id`
-- Queries `wsf_centres` where `leader_id = member.id` (scoped to tenant)
-- Shows assigned centres as badges with remove (X) buttons
-- Popover with available (unassigned) centres to add
-- On add: updates `wsf_centres.leader_id` to the member's ID
-- On remove: sets `wsf_centres.leader_id` to null
+**`src/components/wsf/WSFCentreFormDialog.jsx`**
+- Line 75: Change label from "WSF Leader Name" to "Home Cell Leader Name"
+- Line 79: Change label from "WSF Leader Email" to "Home Cell Leader Email"
 
-**Edit: `src/pages/UserManagement.jsx`**
-- Import `WSFLeaderAssignments`
-- In the "Led Units" column, also show `WSFLeaderAssignments` for users with the `wsf_leader` role
-- Rename column header from "Led Units" to "Assignments" to cover both unit and centre assignments
+**`src/pages/MyProfile.jsx`**
+- Line 142: Change `"Unit & WSF Leader"` to `"Unit & Home Cell Leader"`
+- Line 144: Change `"WSF Leader"` to `"Home Cell Leader"`
 
-### Files Changed
-- **New**: `src/components/users/WSFLeaderAssignments.jsx`
-- **Edit**: `src/pages/UserManagement.jsx` — show WSF centre assignments inline
+**`src/components/AppLayout.jsx`**
+- Line 105: Change `"Unit & WSF Leader"` to `"Unit & Home Cell Leader"`
+- Line 107: Change `"WSF Leader"` to `"Home Cell Leader"`
 
