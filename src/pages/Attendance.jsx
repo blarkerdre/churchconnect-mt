@@ -17,10 +17,11 @@ import { useTenantQuery } from "@/hooks/useTenantQuery";
 import ReportAttachments from "@/components/reports/ReportAttachments";
 
 export default function Attendance() {
-  const { isAdmin, isUnitLeader, leaderUnits = [] } = useAuth();
+  const { isAdmin, isUnitLeader, isWSFLeader, leaderUnits = [], leaderCentres = [] } = useAuth();
   const { tenantId, scopeQuery, withTenant } = useTenantQuery();
-  const canManage = isAdmin || isUnitLeader;
+  const canManage = isAdmin || isUnitLeader || isWSFLeader;
   const isUnitLeaderOnly = isUnitLeader && !isAdmin;
+  const isWSFLeaderOnly = isWSFLeader && !isAdmin && !isUnitLeader;
   const queryClient = useQueryClient();
   const [selectedSessionId, setSelectedSessionId] = useState(null);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -43,13 +44,24 @@ export default function Attendance() {
       if (dateFrom && s.session_date < dateFrom) return false;
       if (dateTo && s.session_date > dateTo) return false;
       // Unit leaders only see their unit meetings
-      if (isUnitLeaderOnly) {
+      if (isUnitLeaderOnly && !isWSFLeader) {
         if (s.session_type !== "Unit Meeting") return false;
         if (!leaderUnits.some(u => u.toLowerCase() === (s.unit || "").toLowerCase())) return false;
       }
+      // WSF leaders only see their WSF meetings
+      if (isWSFLeaderOnly) {
+        if (s.session_type !== "WSF Meeting") return false;
+        if (!leaderCentres.some(c => c.toLowerCase() === (s.unit || "").toLowerCase())) return false;
+      }
+      // Combined unit + WSF leader (not admin): see both their unit and WSF meetings
+      if (isUnitLeader && isWSFLeader && !isAdmin) {
+        const isMyUnit = s.session_type === "Unit Meeting" && leaderUnits.some(u => u.toLowerCase() === (s.unit || "").toLowerCase());
+        const isMyCentre = s.session_type === "WSF Meeting" && leaderCentres.some(c => c.toLowerCase() === (s.unit || "").toLowerCase());
+        if (!isMyUnit && !isMyCentre) return false;
+      }
       return true;
     });
-  }, [sessions, dateFrom, dateTo, isUnitLeaderOnly, leaderUnits]);
+  }, [sessions, dateFrom, dateTo, isUnitLeaderOnly, isWSFLeaderOnly, isUnitLeader, isWSFLeader, isAdmin, leaderUnits, leaderCentres]);
 
   const selectedSession = filteredSessions.find(s => s.id === selectedSessionId) || filteredSessions[0];
 
@@ -241,12 +253,15 @@ export default function Attendance() {
           )}
           {canManage && (
             <Button onClick={() => {
+              const defaultType = isWSFLeaderOnly ? "WSF Meeting" : isUnitLeaderOnly ? "Unit Meeting" : "Sunday Service";
+              const defaultUnit = isWSFLeaderOnly && leaderCentres.length === 1 ? leaderCentres[0]
+                : isUnitLeaderOnly && leaderUnits.length === 1 ? leaderUnits[0] : "";
               setForm({
                 title: "",
-                session_type: isUnitLeaderOnly ? "Unit Meeting" : "Sunday Service",
+                session_type: defaultType,
                 session_date: "",
                 notes: "",
-                unit: isUnitLeaderOnly && leaderUnits.length === 1 ? leaderUnits[0] : "",
+                unit: defaultUnit,
               });
               setDialogOpen(true);
             }} className="bg-primary hover:bg-primary/90 w-full sm:w-auto">
@@ -336,7 +351,7 @@ export default function Attendance() {
             </Card>
 
             {/* Session Report — only for unit leaders after session is closed */}
-            {selectedSession && isClosed && (isAdmin || isUnitLeader) && (
+            {selectedSession && isClosed && (isAdmin || isUnitLeader || isWSFLeader) && (
               <Card className="border-0 shadow-sm">
                 <CardHeader><CardTitle className="text-base font-display flex items-center gap-2"><FileText className="h-4 w-4 text-accent" /> Meeting Report</CardTitle></CardHeader>
                 <CardContent className="space-y-4">
@@ -422,6 +437,8 @@ export default function Attendance() {
               <Label>Type</Label>
               {isUnitLeaderOnly ? (
                 <div className="h-9 flex items-center px-3 rounded-md border border-input bg-muted text-sm font-medium text-foreground">Unit Meeting</div>
+              ) : isWSFLeaderOnly ? (
+                <div className="h-9 flex items-center px-3 rounded-md border border-input bg-muted text-sm font-medium text-foreground">WSF Meeting</div>
               ) : (
                 <Select value={form.session_type} onValueChange={v => setForm(f => ({ ...f, session_type: v }))}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
@@ -450,6 +467,25 @@ export default function Attendance() {
                   )
                 ) : (
                   <Input value={form.unit} onChange={e => setForm(f => ({ ...f, unit: e.target.value }))} placeholder="e.g. Choir, Ushering" />
+                )}
+              </div>
+            )}
+            {(form.session_type === "WSF Meeting" || isWSFLeaderOnly) && (
+              <div>
+                <Label>Home Cell Centre</Label>
+                {isWSFLeaderOnly ? (
+                  leaderCentres.length === 1 ? (
+                    <div className="h-9 flex items-center px-3 rounded-md border border-input bg-muted text-sm font-medium text-foreground">{leaderCentres[0]}</div>
+                  ) : (
+                    <Select value={form.unit} onValueChange={v => setForm(f => ({ ...f, unit: v }))}>
+                      <SelectTrigger><SelectValue placeholder="Select your centre" /></SelectTrigger>
+                      <SelectContent>
+                        {leaderCentres.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  )
+                ) : (
+                  <Input value={form.unit} onChange={e => setForm(f => ({ ...f, unit: e.target.value }))} placeholder="e.g. Cardiff Central" />
                 )}
               </div>
             )}
