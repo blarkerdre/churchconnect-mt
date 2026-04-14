@@ -17,9 +17,10 @@ import { useTenantQuery } from "@/hooks/useTenantQuery";
 import ReportAttachments from "@/components/reports/ReportAttachments";
 
 export default function Attendance() {
-  const { isAdmin, isUnitLeader } = useAuth();
+  const { isAdmin, isUnitLeader, leaderUnits = [] } = useAuth();
   const { tenantId, scopeQuery, withTenant } = useTenantQuery();
   const canManage = isAdmin || isUnitLeader;
+  const isUnitLeaderOnly = isUnitLeader && !isAdmin;
   const queryClient = useQueryClient();
   const [selectedSessionId, setSelectedSessionId] = useState(null);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -41,9 +42,14 @@ export default function Attendance() {
     return sessions.filter(s => {
       if (dateFrom && s.session_date < dateFrom) return false;
       if (dateTo && s.session_date > dateTo) return false;
+      // Unit leaders only see their unit meetings
+      if (isUnitLeaderOnly) {
+        if (s.session_type !== "Unit Meeting") return false;
+        if (!leaderUnits.some(u => u.toLowerCase() === (s.unit || "").toLowerCase())) return false;
+      }
       return true;
     });
-  }, [sessions, dateFrom, dateTo]);
+  }, [sessions, dateFrom, dateTo, isUnitLeaderOnly, leaderUnits]);
 
   const selectedSession = filteredSessions.find(s => s.id === selectedSessionId) || filteredSessions[0];
 
@@ -234,8 +240,18 @@ export default function Attendance() {
             </Button>
           )}
           {canManage && (
-            <Button onClick={() => { setForm({ title: "", session_type: "Sunday Service", session_date: "", notes: "", unit: "" }); setDialogOpen(true); }} className="bg-primary hover:bg-primary/90 w-full sm:w-auto">
+            <Button onClick={() => {
+              setForm({
+                title: "",
+                session_type: isUnitLeaderOnly ? "Unit Meeting" : "Sunday Service",
+                session_date: "",
+                notes: "",
+                unit: isUnitLeaderOnly && leaderUnits.length === 1 ? leaderUnits[0] : "",
+              });
+              setDialogOpen(true);
+            }} className="bg-primary hover:bg-primary/90 w-full sm:w-auto">
               <Plus className="h-4 w-4 mr-2" /> New Meeting
+            </Button>
             </Button>
           )}
         </div>
@@ -405,18 +421,38 @@ export default function Attendance() {
             <div><Label>Title (optional)</Label><Input value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} /></div>
             <div>
               <Label>Type</Label>
-              <Select value={form.session_type} onValueChange={v => setForm(f => ({ ...f, session_type: v }))}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {["Sunday Service", "Midweek Service", "Special Program", "Unit Meeting", "WSF Meeting", "Other"].map(t => (
-                    <SelectItem key={t} value={t}>{t}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {isUnitLeaderOnly ? (
+                <div className="h-9 flex items-center px-3 rounded-md border border-input bg-muted text-sm font-medium text-foreground">Unit Meeting</div>
+              ) : (
+                <Select value={form.session_type} onValueChange={v => setForm(f => ({ ...f, session_type: v }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {["Sunday Service", "Midweek Service", "Special Program", "Unit Meeting", "WSF Meeting", "Other"].map(t => (
+                      <SelectItem key={t} value={t}>{t}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
             <div><Label>Date</Label><Input type="date" value={form.session_date} onChange={e => setForm(f => ({ ...f, session_date: e.target.value }))} /></div>
-            {form.session_type === "Unit Meeting" && (
-              <div><Label>Unit</Label><Input value={form.unit} onChange={e => setForm(f => ({ ...f, unit: e.target.value }))} placeholder="e.g. Choir, Ushering" /></div>
+            {(form.session_type === "Unit Meeting" || isUnitLeaderOnly) && (
+              <div>
+                <Label>Unit</Label>
+                {isUnitLeaderOnly ? (
+                  leaderUnits.length === 1 ? (
+                    <div className="h-9 flex items-center px-3 rounded-md border border-input bg-muted text-sm font-medium text-foreground">{leaderUnits[0]}</div>
+                  ) : (
+                    <Select value={form.unit} onValueChange={v => setForm(f => ({ ...f, unit: v }))}>
+                      <SelectTrigger><SelectValue placeholder="Select your unit" /></SelectTrigger>
+                      <SelectContent>
+                        {leaderUnits.map(u => <SelectItem key={u} value={u}>{u}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  )
+                ) : (
+                  <Input value={form.unit} onChange={e => setForm(f => ({ ...f, unit: e.target.value }))} placeholder="e.g. Choir, Ushering" />
+                )}
+              </div>
             )}
             <div><Label>Notes</Label><Textarea value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} rows={2} /></div>
             <Button onClick={() => createSessionMutation.mutate(form)} disabled={createSessionMutation.isPending || !form.session_date} className="w-full bg-primary">
