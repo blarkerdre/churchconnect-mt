@@ -42,9 +42,14 @@ export default function Attendance() {
     return sessions.filter(s => {
       if (dateFrom && s.session_date < dateFrom) return false;
       if (dateTo && s.session_date > dateTo) return false;
+      // Unit leaders only see their unit meetings
+      if (isUnitLeaderOnly) {
+        if (s.session_type !== "Unit Meeting") return false;
+        if (!leaderUnits.some(u => u.toLowerCase() === (s.unit || "").toLowerCase())) return false;
+      }
       return true;
     });
-  }, [sessions, dateFrom, dateTo]);
+  }, [sessions, dateFrom, dateTo, isUnitLeaderOnly, leaderUnits]);
 
   const selectedSession = filteredSessions.find(s => s.id === selectedSessionId) || filteredSessions[0];
 
