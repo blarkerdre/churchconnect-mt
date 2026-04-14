@@ -1,24 +1,28 @@
 
 
-## Data Cleanup: Deduplicate Church Unit Assignments
+## Data Cleanup: Rename "WSF Leader" to "Home Cell Leader" in Member Data
 
 ### Problem
-Several members have duplicate church units in their `church_unit` field caused by inconsistent casing (e.g. `Follow-Up` and `FOLLOW-UP` treated as separate entries). Three members are affected:
+Six members have "WSF Leader" (or the variant "WSF Leaders") in their `church_unit` field. The `church_units` table also has a row named "WSF Leader". All need renaming to "Home Cell Leader" for consistency with the earlier UI rename.
+
+### Affected Members
 
 | Member | Current Value | Cleaned Value |
 |--------|--------------|---------------|
-| Loveth Osho | `Follow-Up, FOLLOW-UP` | `Follow-Up` |
-| Favour Igbineweka | `Follow-Up, FOLLOW-UP, Kingdom Care Covenant` | `Follow-Up, Kingdom Care Covenant` |
-| Odunsi Temitayo Ezekiel | `Follow-Up, DEACON'S ASSEMBLY, FIRE MARSHALS AND WARDEN, TECHNICAL & MEDIA, FOLLOW-UP, Deacon's Assembly, Technical & Media` | `Follow-Up, Deacon's Assembly, Fire Marshals and Warden, Technical & Media` |
+| Akaninyene Umo | `Altar Minister, Follow-Up, WSF Leaders` | `Altar Minister, Follow-Up, Home Cell Leader` |
+| Oyinkansola Akinmolayan | `Children Church, Transport Unit, WSF Leaders, Evangelism, WSF Leader` | `Children Church, Transport Unit, Home Cell Leader, Evangelism` |
+| Olutodimu Basanya | `Ordained Ministers, CMC, Project Team, WSF Leader` | `Ordained Ministers, CMC, Project Team, Home Cell Leader` |
+| Collins Okoyomon | `WSF Leader` | `Home Cell Leader` |
+| Treasure Ejodamen Omotade | `Choir, Kingdom Care Covenant, WSF Leader` | `Choir, Kingdom Care Covenant, Home Cell Leader` |
+| Adenya(Tayo) Selormey-Rotibi | `Choir, Communion Stewards, CSR, Evangelism, Fire Marshals and Warden, Safeguading Team, WSF Leader` | `Choir, Communion Stewards, CSR, Evangelism, Fire Marshals and Warden, Safeguading Team, Home Cell Leader` |
 
 ### Implementation
 
-1. **Run three UPDATE statements** via the data insert tool to fix each member's `church_unit` value, deduplicating and normalizing casing to match the canonical unit names.
-
-2. **Add frontend validation** in `MemberFormDialog.jsx` to prevent duplicate units from being saved in the future — deduplicate (case-insensitive) when joining selected units back into the comma-separated string.
+1. **Update `church_units` table** — rename "WSF Leader" to "Home Cell Leader" (via migration since it's a data update on a reference table)
+2. **Update 6 member records** — fix each member's `church_unit` string, deduplicating where needed (Oyinkansola has both "WSF Leaders" and "WSF Leader")
+3. Both steps use the data insert tool
 
 ### Technical Details
-- Use the database insert tool (not a migration) since this is a data update
-- The canonical casing will match what exists in the `church_units` table
-- The form-level dedup will normalize on save: convert to a Set using lowercase keys, keeping the first-seen casing
+- Oyinkansola's record has both plural and singular variants — both get collapsed into one "Home Cell Leader"
+- The `church_units` row rename ensures future form selections show the correct name
 
