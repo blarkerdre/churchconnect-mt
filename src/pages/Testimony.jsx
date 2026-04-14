@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Loader2, Send, MessageSquareHeart, Search, ChevronDown, ChevronUp } from "lucide-react";
+import { Loader2, Send, MessageSquareHeart, Search, ChevronDown, ChevronUp, Share2, Lock } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
@@ -58,6 +59,7 @@ export default function Testimony() {
     situation: "",
     action: "",
     god_did: "",
+    share_publicly: false,
   });
 
   React.useEffect(() => {
@@ -88,13 +90,14 @@ export default function Testimony() {
           situation: form.situation.trim(),
           action: form.action.trim(),
           god_did: form.god_did.trim(),
+          share_publicly: form.share_publicly,
           sender_email: myMember?.email || null,
           user_id: user?.id || null,
         },
       });
       if (error) throw error;
       toast({ title: "Testimony shared!", description: "Thank you for sharing what the Lord has done." });
-      setForm({ name: myMember ? `${myMember.first_name} ${myMember.last_name}` : "", title: "", situation: "", action: "", god_did: "" });
+      setForm({ name: myMember ? `${myMember.first_name} ${myMember.last_name}` : "", title: "", situation: "", action: "", god_did: "", share_publicly: false });
       queryClient.invalidateQueries({ queryKey: ["my-testimonies"] });
     } catch (err) {
       toast({ title: "Error sending testimony", description: err.message, variant: "destructive" });
@@ -158,6 +161,16 @@ export default function Testimony() {
                   <Label className="text-sm font-medium">What has the Lord done?</Label>
                   <Textarea value={form.god_did} onChange={set("god_did")} placeholder="Share how God moved in your situation..." rows={4} maxLength={2000} required />
                 </div>
+                <div className="flex items-start space-x-2 pt-1">
+                  <Checkbox
+                    id="share_publicly"
+                    checked={form.share_publicly}
+                    onCheckedChange={(checked) => setForm((f) => ({ ...f, share_publicly: !!checked }))}
+                  />
+                  <Label htmlFor="share_publicly" className="text-sm leading-snug cursor-pointer">
+                    I would like my testimony to be shared in church
+                  </Label>
+                </div>
                 <Button type="submit" disabled={saving} className="w-full">
                   {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Send className="h-4 w-4 mr-2" />}
                   Submit Testimony
@@ -203,7 +216,14 @@ export default function Testimony() {
                     >
                       <div className="min-w-0">
                         <p className="font-medium text-sm text-foreground truncate">{t.title}</p>
-                        <p className="text-xs text-muted-foreground">{format(new Date(t.created_at), "dd MMM yyyy")}</p>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <span>{format(new Date(t.created_at), "dd MMM yyyy")}</span>
+                          {t.share_publicly ? (
+                            <span className="inline-flex items-center gap-0.5 text-primary"><Share2 className="h-3 w-3" /> Shared</span>
+                          ) : (
+                            <span className="inline-flex items-center gap-0.5"><Lock className="h-3 w-3" /> Private</span>
+                          )}
+                        </div>
                       </div>
                       {isExpanded ? <ChevronUp className="h-4 w-4 shrink-0 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />}
                     </button>
