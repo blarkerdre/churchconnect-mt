@@ -421,7 +421,7 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
                       <SelectContent>
                         <SelectItem value="member">Member</SelectItem>
                         <SelectItem value="unit_leader">Unit Leader</SelectItem>
-                        <SelectItem value="wsf_leader">WSF Leader</SelectItem>
+                        <SelectItem value="wsf_leader">Home Cell Leader</SelectItem>
                         {isSuperAdmin && <SelectItem value="admin">Admin</SelectItem>}
                         {isSuperAdmin && <SelectItem value="super_admin">Super Admin</SelectItem>}
                       </SelectContent>
@@ -583,7 +583,8 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
                         <Badge className="bg-muted text-muted-foreground border-0 gap-1"><User className="h-3 w-3" /> member (default)</Badge>
                       ) : userRoles.map(r => {
                         const RoleIcon = roleIcons[r] || User;
-                        return <Badge key={r} className={`${roleColors[r]} border-0 gap-1`}><RoleIcon className="h-3 w-3" />{r.replace("_", " ")}</Badge>;
+                        const label = r === "wsf_leader" ? "Home Cell Leader" : r.replace("_", " ");
+                        return <Badge key={r} className={`${roleColors[r]} border-0 gap-1`}><RoleIcon className="h-3 w-3" />{label}</Badge>;
                       })}
                     </div>
                     {canChange ? (
@@ -599,7 +600,7 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
                                 }}
                                 disabled={toggleRoleMutation.isPending}
                               />
-                              <span className="capitalize">{r.replace("_", " ")}</span>
+                              <span className="capitalize">{r === "wsf_leader" ? "Home Cell Leader" : r.replace("_", " ")}</span>
                             </label>
                           );
                         })}
