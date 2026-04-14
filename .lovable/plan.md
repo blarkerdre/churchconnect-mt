@@ -1,50 +1,52 @@
 
 
-## Restrict Unit Leaders to Their Own Unit Attendance
+## Restrict Home Cell Leaders to Their Own Cell Attendance
 
 ### Problem
-Unit leaders can currently create meetings of any type and see all attendance sessions across the tenant. They should only be able to create "Unit Meeting" sessions for their assigned units and only see sessions belonging to their units.
+Home Cell (WSF) leaders currently have no specific access to the Attendance page — they can't create or see WSF Meeting sessions for their cell. They should be able to create "WSF Meeting" sessions only for their assigned centre(s) and only see those sessions.
 
 ### Changes
 
-#### 1. Frontend — `src/pages/Attendance.jsx`
-- **Session list filtering**: When `isUnitLeader && !isAdmin`, filter `sessions` to only show sessions where `session_type === "Unit Meeting"` AND `unit` matches one of the user's `leaderUnits`
-- **Session creation dialog**: For unit leaders, lock the type to "Unit Meeting", auto-populate unit from `leaderUnits`, and restrict unit selection to only their assigned units (use the same pattern as `SessionFormDialog.jsx`)
-- Import `leaderUnits` from `useAuth()`
+#### 1. Database — Helper function + RLS policies
 
-#### 2. RLS — New migration on `attendance_sessions`
-Replace the broad `"Admins/leaders can manage sessions"` ALL policy with:
-- **Admins can manage all sessions** — `is_admin(auth.uid(), tenant_id)`
-- **Unit leaders can manage their unit sessions** — checks that `session_type = 'Unit Meeting'` AND the session's `unit` field matches one of the user's `unit_leader_assignments`
+Create a `is_wsf_leader_for_session` function that checks if a user is the `leader_id` of a `wsf_centres` row matching the session's `unit` field:
 
-Create a helper function:
 ```sql
-CREATE OR REPLACE FUNCTION public.is_unit_leader_for_session(
+CREATE OR REPLACE FUNCTION public.is_wsf_leader_for_session(
   _user_id uuid, _unit text, _tenant_id uuid
 ) RETURNS boolean
-LANGUAGE sql STABLE SECURITY DEFINER
-SET search_path = public
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public
 AS $$
   SELECT EXISTS (
-    SELECT 1 FROM public.unit_leader_assignments ula
-    WHERE ula.user_id = _user_id
-      AND ula.tenant_id = _tenant_id
-      AND lower(ula.unit_name) = lower(COALESCE(_unit, ''))
+    SELECT 1 FROM public.wsf_centres wc
+    WHERE wc.leader_id = _user_id
+      AND wc.tenant_id = _tenant_id
+      AND lower(wc.name) = lower(COALESCE(_unit, ''))
   )
 $$;
 ```
 
-New policies:
-- `"Admins can manage sessions"` ALL — `is_admin(auth.uid(), tenant_id)`
-- `"Unit leaders can manage unit sessions"` ALL — `is_unit_leader_for_session(auth.uid(), unit, tenant_id) AND session_type = 'Unit Meeting'`
-- Keep the existing `"Authenticated can view sessions"` SELECT policy (members need to see sessions for self-check-in)
+Add new RLS policies on `attendance_sessions`:
+- **WSF leaders can manage WSF sessions** — `session_type = 'WSF Meeting' AND is_wsf_leader_for_session(auth.uid(), unit, tenant_id)`
 
-#### 3. RLS — Scope `attendance_records` similarly
-The current policy lets unit leaders view/manage ALL attendance records. Add unit scoping by joining through `attendance_sessions`:
-- Drop `"Admins and leaders can view all attendance records"` and `"Admins/leaders can manage records"`
-- Replace with admin-only full access and unit-leader scoped access (where the parent session's unit matches their assignment)
+Add new RLS policies on `attendance_records`:
+- **WSF leaders can manage WSF session records** — join through `attendance_sessions` to verify `session_type = 'WSF Meeting'` and centre match
+
+#### 2. Frontend — `src/hooks/useAuth.jsx`
+
+Fetch the user's WSF centre names (where `leader_id = userId`) and expose as `leaderCentres` array, similar to `leaderUnits`.
+
+#### 3. Frontend — `src/pages/Attendance.jsx`
+
+- Import `isWSFLeader` and `leaderCentres` from `useAuth()`
+- Update `canManage` to include `isWSFLeader`
+- Add `isWSFLeaderOnly = isWSFLeader && !isAdmin && !isUnitLeader` flag
+- **Session filtering**: WSF-only leaders see only sessions where `session_type === "WSF Meeting"` AND `unit` matches one of their `leaderCentres`
+- **Session creation**: Lock type to "WSF Meeting" for WSF-only leaders, restrict unit/centre selection to their assigned centres
+- Combined leaders (both unit + WSF) see both their unit meetings and WSF meetings
 
 ### Files Changed
-- `src/pages/Attendance.jsx` — filter sessions, lock creation form for unit leaders
-- New migration — helper function + replacement RLS policies on `attendance_sessions` and `attendance_records`
+- **New migration** — `is_wsf_leader_for_session` function + RLS policies
+- `src/hooks/useAuth.jsx` — fetch and expose `leaderCentres`
+- `src/pages/Attendance.jsx` — filtering and creation restrictions for WSF leaders
 
