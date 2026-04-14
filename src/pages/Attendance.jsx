@@ -48,15 +48,15 @@ export default function Attendance() {
         if (s.session_type !== "Unit Meeting") return false;
         if (!leaderUnits.some(u => u.toLowerCase() === (s.unit || "").toLowerCase())) return false;
       }
-      // WSF leaders only see their WSF meetings
+      // Home Cell leaders only see their Home Cell meetings
       if (isWSFLeaderOnly) {
-        if (s.session_type !== "WSF Meeting") return false;
+        if (s.session_type !== "Home Cell Meeting") return false;
         if (!leaderCentres.some(c => c.toLowerCase() === (s.unit || "").toLowerCase())) return false;
       }
-      // Combined unit + WSF leader (not admin): see both their unit and WSF meetings
+      // Combined unit + Home Cell leader (not admin): see both their unit and Home Cell meetings
       if (isUnitLeader && isWSFLeader && !isAdmin) {
         const isMyUnit = s.session_type === "Unit Meeting" && leaderUnits.some(u => u.toLowerCase() === (s.unit || "").toLowerCase());
-        const isMyCentre = s.session_type === "WSF Meeting" && leaderCentres.some(c => c.toLowerCase() === (s.unit || "").toLowerCase());
+        const isMyCentre = s.session_type === "Home Cell Meeting" && leaderCentres.some(c => c.toLowerCase() === (s.unit || "").toLowerCase());
         if (!isMyUnit && !isMyCentre) return false;
       }
       return true;
@@ -253,7 +253,7 @@ export default function Attendance() {
           )}
           {canManage && (
             <Button onClick={() => {
-              const defaultType = isWSFLeaderOnly ? "WSF Meeting" : isUnitLeaderOnly ? "Unit Meeting" : "Sunday Service";
+              const defaultType = isWSFLeaderOnly ? "Home Cell Meeting" : isUnitLeaderOnly ? "Unit Meeting" : "Sunday Service";
               const defaultUnit = isWSFLeaderOnly && leaderCentres.length === 1 ? leaderCentres[0]
                 : isUnitLeaderOnly && leaderUnits.length === 1 ? leaderUnits[0] : "";
               setForm({
@@ -438,12 +438,12 @@ export default function Attendance() {
               {isUnitLeaderOnly ? (
                 <div className="h-9 flex items-center px-3 rounded-md border border-input bg-muted text-sm font-medium text-foreground">Unit Meeting</div>
               ) : isWSFLeaderOnly ? (
-                <div className="h-9 flex items-center px-3 rounded-md border border-input bg-muted text-sm font-medium text-foreground">WSF Meeting</div>
+                <div className="h-9 flex items-center px-3 rounded-md border border-input bg-muted text-sm font-medium text-foreground">Home Cell Meeting</div>
               ) : (
                 <Select value={form.session_type} onValueChange={v => setForm(f => ({ ...f, session_type: v }))}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {["Sunday Service", "Midweek Service", "Special Program", "Unit Meeting", "WSF Meeting", "Other"].map(t => (
+                    {["Sunday Service", "Midweek Service", "Special Program", "Unit Meeting", "Home Cell Meeting", "Other"].map(t => (
                       <SelectItem key={t} value={t}>{t}</SelectItem>
                     ))}
                   </SelectContent>
@@ -470,7 +470,7 @@ export default function Attendance() {
                 )}
               </div>
             )}
-            {(form.session_type === "WSF Meeting" || isWSFLeaderOnly) && (
+            {(form.session_type === "Home Cell Meeting" || isWSFLeaderOnly) && (
               <div>
                 <Label>Home Cell Centre</Label>
                 {isWSFLeaderOnly ? (
