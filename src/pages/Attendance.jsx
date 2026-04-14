@@ -437,6 +437,8 @@ export default function Attendance() {
               <Label>Type</Label>
               {isUnitLeaderOnly ? (
                 <div className="h-9 flex items-center px-3 rounded-md border border-input bg-muted text-sm font-medium text-foreground">Unit Meeting</div>
+              ) : isWSFLeaderOnly ? (
+                <div className="h-9 flex items-center px-3 rounded-md border border-input bg-muted text-sm font-medium text-foreground">WSF Meeting</div>
               ) : (
                 <Select value={form.session_type} onValueChange={v => setForm(f => ({ ...f, session_type: v }))}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
@@ -465,6 +467,25 @@ export default function Attendance() {
                   )
                 ) : (
                   <Input value={form.unit} onChange={e => setForm(f => ({ ...f, unit: e.target.value }))} placeholder="e.g. Choir, Ushering" />
+                )}
+              </div>
+            )}
+            {(form.session_type === "WSF Meeting" || isWSFLeaderOnly) && (
+              <div>
+                <Label>Home Cell Centre</Label>
+                {isWSFLeaderOnly ? (
+                  leaderCentres.length === 1 ? (
+                    <div className="h-9 flex items-center px-3 rounded-md border border-input bg-muted text-sm font-medium text-foreground">{leaderCentres[0]}</div>
+                  ) : (
+                    <Select value={form.unit} onValueChange={v => setForm(f => ({ ...f, unit: v }))}>
+                      <SelectTrigger><SelectValue placeholder="Select your centre" /></SelectTrigger>
+                      <SelectContent>
+                        {leaderCentres.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  )
+                ) : (
+                  <Input value={form.unit} onChange={e => setForm(f => ({ ...f, unit: e.target.value }))} placeholder="e.g. Cardiff Central" />
                 )}
               </div>
             )}
