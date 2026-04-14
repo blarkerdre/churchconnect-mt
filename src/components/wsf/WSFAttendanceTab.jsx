@@ -128,27 +128,21 @@ export default function WSFAttendanceTab({ centres }) {
   });
 
   const downloadReport = () => {
-    const lines = [
-      "WSF ATTENDANCE REPORT",
-      "=====================",
-      "",
+    const esc = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+    const rows = [
+      ["Date","Centre","Male","Female","Adults","Children","Total","First Timers","Testimonies","Notes"].join(","),
       ...filteredReports.map(r => {
         const adults = r.male + r.female;
         const total = adults + r.children;
         return [
-          `Date: ${r.meeting_date} | Centre: ${r.wsf_centres?.name || "—"}`,
-          `  Male: ${r.male} | Female: ${r.female} | Adults: ${adults}`,
-          `  Children: ${r.children} | Total: ${total}`,
-          `  First Timers: ${r.first_timers} | Testimonies: ${r.testimonies}`,
-          r.notes ? `  Notes: ${r.notes}` : "",
-          "",
-        ].filter(Boolean).join("\n");
+          r.meeting_date, esc(r.wsf_centres?.name || ""), r.male, r.female, adults, r.children, total, r.first_timers, r.testimonies, esc(r.notes || "")
+        ].join(",");
       }),
     ];
-    const blob = new Blob([lines.join("\n")], { type: "text/plain" });
+    const blob = new Blob([rows.join("\n")], { type: "text/csv" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
-    a.download = `wsf-attendance-report.txt`;
+    a.download = `wsf-attendance-report.csv`;
     a.click();
   };
 
