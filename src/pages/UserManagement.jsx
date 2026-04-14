@@ -14,6 +14,7 @@ import { toast } from "@/components/ui/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { logAudit } from "@/lib/audit";
 import UnitLeaderAssignments from "@/components/users/UnitLeaderAssignments";
+import WSFLeaderAssignments from "@/components/users/WSFLeaderAssignments";
 import BulkUnitAssignDialog from "@/components/users/BulkUnitAssignDialog";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
 
@@ -272,7 +273,7 @@ export default function UserManagement() {
                    <th className="text-left p-3 sm:p-4 font-medium text-muted-foreground">User</th>
                    <th className="text-left p-3 sm:p-4 font-medium text-muted-foreground hidden md:table-cell">Email</th>
                    <th className="text-left p-3 sm:p-4 font-medium text-muted-foreground">Roles</th>
-                   <th className={`text-left p-3 sm:p-4 font-medium text-muted-foreground ${roleFilter === "unit_leader" ? "" : "hidden lg:table-cell"}`}>Led Units</th>
+                   <th className={`text-left p-3 sm:p-4 font-medium text-muted-foreground ${(roleFilter === "unit_leader" || roleFilter === "wsf_leader") ? "" : "hidden lg:table-cell"}`}>Assignments</th>
                    <th className="text-left p-3 sm:p-4 font-medium text-muted-foreground hidden md:table-cell">Manage Roles</th>
                    <th className="text-right p-3 sm:p-4 font-medium text-muted-foreground">Actions</th>
                  </tr>
@@ -326,12 +327,18 @@ export default function UserManagement() {
                           })}
                         </div>
                       </td>
-                      <td className={`p-3 sm:p-4 ${roleFilter === "unit_leader" ? "" : "hidden lg:table-cell"}`}>
-                        {userRoles.includes("unit_leader") ? (
-                          <UnitLeaderAssignments userId={p.user_id} />
-                        ) : (
-                          <span className="text-xs text-muted-foreground">—</span>
-                        )}
+                      <td className={`p-3 sm:p-4 ${(roleFilter === "unit_leader" || roleFilter === "wsf_leader") ? "" : "hidden lg:table-cell"}`}>
+                        <div className="space-y-1.5">
+                          {userRoles.includes("unit_leader") && (
+                            <UnitLeaderAssignments userId={p.user_id} />
+                          )}
+                          {userRoles.includes("wsf_leader") && (
+                            <WSFLeaderAssignments userId={p.user_id} />
+                          )}
+                          {!userRoles.includes("unit_leader") && !userRoles.includes("wsf_leader") && (
+                            <span className="text-xs text-muted-foreground">—</span>
+                          )}
+                        </div>
                       </td>
                       <td className="p-3 sm:p-4 hidden md:table-cell">
                         {canChange ? (
