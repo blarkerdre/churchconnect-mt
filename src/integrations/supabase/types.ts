@@ -3229,6 +3229,10 @@ export type Database = {
         Args: { _tenant_id: string; _user_id: string }
         Returns: boolean
       }
+      is_unit_leader_for_member: {
+        Args: { _church_unit: string; _tenant_id: string; _user_id: string }
+        Returns: boolean
+      }
       is_wsf_leader_for_centre: {
         Args: { _centre_id: string; _user_id: string }
         Returns: boolean
