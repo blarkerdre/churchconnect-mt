@@ -72,11 +72,11 @@ export default function WSFCentreFormDialog({ open, onOpenChange, centre, onSave
               </Select>
             </div>
             <div className="space-y-1.5">
-              <Label>WSF Leader Name</Label>
+              <Label>Home Cell Leader Name</Label>
               <Input value={form.leader_name} onChange={e => set("leader_name", e.target.value)} placeholder="Leader's full name" />
             </div>
             <div className="space-y-1.5">
-              <Label>WSF Leader Email</Label>
+              <Label>Home Cell Leader Email</Label>
               <Input type="email" value={form.leader_email} onChange={e => set("leader_email", e.target.value)} placeholder="leader@email.com" />
             </div>
             <div className="space-y-1.5 sm:col-span-2">
