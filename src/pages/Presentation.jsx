@@ -67,7 +67,7 @@ const SLIDES = [
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5 max-w-5xl w-full mt-2">
           {[
             { title: "Admin Dashboard", items: ["Total members & growth stats", "Recent activity feed", "Quick action cards", "Growth indices & trends"], color: "hsl(42,68%,54%)" },
-            { title: "WSF Leader View", items: ["Centre-specific stats", "Member attendance", "Meeting management", "Centre performance"], color: "hsl(160,50%,50%)" },
+            { title: "Home Cell Leader View", items: ["Centre-specific stats", "Member attendance", "Meeting management", "Centre performance"], color: "hsl(160,50%,50%)" },
             { title: "Member Dashboard", items: ["Personal welcome banner", "Self check-in widget", "Growth milestones", "Announcements feed"], color: "hsl(280,40%,60%)" },
           ].map(({ title, items, color }) => (
             <div key={title} className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/10">
@@ -268,7 +268,7 @@ const SLIDES = [
       </div>
     ),
   },
-  // 10 — WSF Centres
+  // 10 — Home Cell Centres
   {
     bg: "from-[hsl(42,30%,18%)] to-[hsl(215,53%,22%)]",
     content: (
@@ -276,16 +276,16 @@ const SLIDES = [
         <div className="flex items-center gap-3">
           <Church className="h-10 w-10 text-[hsl(42,68%,54%)]" />
           <h2 className="text-4xl md:text-5xl font-bold text-white" style={{ fontFamily: "'Playfair Display', serif" }}>
-            WSF Centres
+            Home Cell Centres
           </h2>
         </div>
         <p className="text-white/60 text-lg max-w-2xl text-center">Home Cell Fellowship — extending the church into communities</p>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl w-full mt-2">
           {[
-            { icon: Globe, title: "Centre Management", desc: "Create and manage WSF centres with location, meeting day/time, coverage postcodes, and assigned leaders." },
-            { icon: Users, title: "Member Assignment", desc: "Auto-suggest nearest centre based on member postcode. Assign and track WSF membership." },
+            { icon: Globe, title: "Centre Management", desc: "Create and manage Home Cell centres with location, meeting day/time, coverage postcodes, and assigned leaders." },
+            { icon: Users, title: "Member Assignment", desc: "Auto-suggest nearest centre based on member postcode. Assign and track Home Cell membership." },
             { icon: ClipboardList, title: "Attendance Reports", desc: "Record meeting attendance with male/female/children counts, first timers, and testimonies." },
-            { icon: BarChart3, title: "Leader Dashboard", desc: "WSF leaders see their centre's performance, members, and attendance history at a glance." },
+            { icon: BarChart3, title: "Leader Dashboard", desc: "Home Cell leaders see their centre's performance, members, and attendance history at a glance." },
           ].map(({ icon: Icon, title, desc }) => (
             <div key={title} className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/10">
               <Icon className="h-8 w-8 text-[hsl(42,68%,54%)] mb-3" />
@@ -338,7 +338,7 @@ const SLIDES = [
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5 max-w-5xl w-full mt-2">
           {[
-            { icon: Lock, title: "Role-Based Access", desc: "Super Admin, Admin, Unit Leader, WSF Leader, Member — granular permissions for every feature." },
+            { icon: Lock, title: "Role-Based Access", desc: "Super Admin, Admin, Unit Leader, Home Cell Leader, Member — granular permissions for every feature." },
             { icon: FileText, title: "Audit Logging", desc: "Every significant action is logged with user ID, timestamp, entity type, and details for full accountability." },
             { icon: Users, title: "User Management", desc: "Create, invite, and manage user accounts. Assign roles and unit leader responsibilities." },
           ].map(({ icon: Icon, title, desc }) => (

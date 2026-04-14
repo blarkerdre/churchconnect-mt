@@ -453,9 +453,9 @@ export default function MyProfile() {
                           }} />
                           {form.winners_satellite && (
                             <div className="space-y-1.5 pl-4">
-                              <Label>WSF Centre</Label>
-                              <Select value={form.wsf_centre_id || ""} onValueChange={v => set("wsf_centre_id", v)}>
-                                <SelectTrigger><SelectValue placeholder="Select WSF Centre" /></SelectTrigger>
+                               <Label>Home Cell Centre</Label>
+                               <Select value={form.wsf_centre_id || ""} onValueChange={v => set("wsf_centre_id", v)}>
+                                 <SelectTrigger><SelectValue placeholder="Select Home Cell Centre" /></SelectTrigger>
                                 <SelectContent>{wsfCentres.map(c => <SelectItem key={c.id} value={c.id}>{c.name}{c.location ? ` — ${c.location}` : ""}</SelectItem>)}</SelectContent>
                               </Select>
                             </div>
@@ -575,7 +575,7 @@ export default function MyProfile() {
               <BoolBadge value={member.winners_satellite} label="Home Cell" />
             </div>
             {member.wsf_centres?.name && (
-              <p className="text-sm text-muted-foreground mt-3">WSF Centre: <span className="text-foreground font-medium">{member.wsf_centres.name}</span></p>
+              <p className="text-sm text-muted-foreground mt-3">Home Cell Centre: <span className="text-foreground font-medium">{member.wsf_centres.name}</span></p>
             )}
           </CardContent>
         </Card>
@@ -816,9 +816,9 @@ function CreateMemberProfile({ user, onCreated, wsfCentres, churchUnits }) {
               <SwitchRow id="winners_satellite" label="Home Cell Fellowship" checked={form.winners_satellite} onChange={v => set("winners_satellite", v)} />
               {form.winners_satellite && (
                 <div className="space-y-1.5 pl-4">
-                  <Label>WSF Centre</Label>
-                  <Select value={form.wsf_centre_id || ""} onValueChange={v => set("wsf_centre_id", v)}>
-                    <SelectTrigger><SelectValue placeholder="Select WSF Centre" /></SelectTrigger>
+                   <Label>Home Cell Centre</Label>
+                   <Select value={form.wsf_centre_id || ""} onValueChange={v => set("wsf_centre_id", v)}>
+                     <SelectTrigger><SelectValue placeholder="Select Home Cell Centre" /></SelectTrigger>
                     <SelectContent>{wsfCentres.map(c => <SelectItem key={c.id} value={c.id}>{c.name}{c.location ? ` — ${c.location}` : ""}</SelectItem>)}</SelectContent>
                   </Select>
                 </div>

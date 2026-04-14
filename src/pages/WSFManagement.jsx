@@ -40,7 +40,7 @@ export default function WSFManagement() {
     return (
       <Card className="border-0 shadow-sm">
         <CardContent className="p-8 text-center text-muted-foreground">
-          You don't have access to WSF management.
+          You don't have access to Home Cell management.
         </CardContent>
       </Card>
     );
@@ -49,8 +49,8 @@ export default function WSFManagement() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-lg font-display font-bold text-foreground">WSF Attendance</h2>
-        <p className="text-sm text-muted-foreground">Track attendance for WSF meetings</p>
+        <h2 className="text-lg font-display font-bold text-foreground">Home Cell Attendance</h2>
+        <p className="text-sm text-muted-foreground">Track attendance for Home Cell meetings</p>
       </div>
       <WSFAttendanceTab centres={visibleCentres} />
     </div>

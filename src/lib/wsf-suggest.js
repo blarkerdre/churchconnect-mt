@@ -1,5 +1,5 @@
 /**
- * Score WSF centres by proximity to a member's address/postcode.
+ * Score Home Cell centres by proximity to a member's address/postcode.
  * Uses coverage_postcodes, postcode, address, city, and location fields.
  * Returns the best matching centre or null.
  */
