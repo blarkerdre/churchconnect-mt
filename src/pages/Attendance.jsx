@@ -17,9 +17,10 @@ import { useTenantQuery } from "@/hooks/useTenantQuery";
 import ReportAttachments from "@/components/reports/ReportAttachments";
 
 export default function Attendance() {
-  const { isAdmin, isUnitLeader } = useAuth();
+  const { isAdmin, isUnitLeader, leaderUnits = [] } = useAuth();
   const { tenantId, scopeQuery, withTenant } = useTenantQuery();
   const canManage = isAdmin || isUnitLeader;
+  const isUnitLeaderOnly = isUnitLeader && !isAdmin;
   const queryClient = useQueryClient();
   const [selectedSessionId, setSelectedSessionId] = useState(null);
   const [dialogOpen, setDialogOpen] = useState(false);
