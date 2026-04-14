@@ -253,12 +253,15 @@ export default function Attendance() {
           )}
           {canManage && (
             <Button onClick={() => {
+              const defaultType = isWSFLeaderOnly ? "WSF Meeting" : isUnitLeaderOnly ? "Unit Meeting" : "Sunday Service";
+              const defaultUnit = isWSFLeaderOnly && leaderCentres.length === 1 ? leaderCentres[0]
+                : isUnitLeaderOnly && leaderUnits.length === 1 ? leaderUnits[0] : "";
               setForm({
                 title: "",
-                session_type: isUnitLeaderOnly ? "Unit Meeting" : "Sunday Service",
+                session_type: defaultType,
                 session_date: "",
                 notes: "",
-                unit: isUnitLeaderOnly && leaderUnits.length === 1 ? leaderUnits[0] : "",
+                unit: defaultUnit,
               });
               setDialogOpen(true);
             }} className="bg-primary hover:bg-primary/90 w-full sm:w-auto">
