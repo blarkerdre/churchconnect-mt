@@ -8,7 +8,9 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, FileText } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useSubFeature } from "@/hooks/useSubFeature";
+import TrainingGapReport from "@/components/analytics/TrainingGapReport";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
 import { format, subMonths, startOfMonth, endOfMonth, parseISO } from "date-fns";
 
@@ -44,7 +46,7 @@ export default function Analytics() {
   const { data: members = [], isLoading: loadingMembers } = useQuery({
     queryKey: ["analytics-members", tenantId],
     queryFn: async () => {
-      const { data, error } = await scopeQuery(supabase.from("members").select("id, membership_status, church_unit, water_baptism, holy_spirit_baptism, bfc_completed, bcc_completed, lcc_completed, ldc_completed, winners_satellite, created_at"));
+      const { data, error } = await scopeQuery(supabase.from("members").select("id, first_name, last_name, email, phone, membership_status, church_unit, water_baptism, holy_spirit_baptism, bfc_completed, bcc_completed, lcc_completed, ldc_completed, winners_satellite, created_at"));
       if (error) throw error;
       return data;
     },
@@ -205,7 +207,13 @@ export default function Analytics() {
   }
 
   return (
-    <div className="space-y-6">
+    <Tabs defaultValue="overview" className="space-y-6">
+      <TabsList>
+        <TabsTrigger value="overview">Overview</TabsTrigger>
+        <TabsTrigger value="reports">Reports</TabsTrigger>
+      </TabsList>
+
+      <TabsContent value="overview" className="space-y-6">
       {/* Date Filter */}
       <Card className="border-0 shadow-sm">
         <CardContent className="p-4">
@@ -342,6 +350,9 @@ export default function Analytics() {
           </CardContent>
         </Card>
       </div>
-    </div>
-  );
-}
+      </TabsContent>
+
+      <TabsContent value="reports" className="space-y-6">
+        <TrainingGapReport members={members} />
+      </TabsContent>
+    </Tabs>
