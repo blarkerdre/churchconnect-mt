@@ -207,7 +207,13 @@ export default function Analytics() {
   }
 
   return (
-    <div className="space-y-6">
+    <Tabs defaultValue="overview" className="space-y-6">
+      <TabsList>
+        <TabsTrigger value="overview">Overview</TabsTrigger>
+        <TabsTrigger value="reports">Reports</TabsTrigger>
+      </TabsList>
+
+      <TabsContent value="overview" className="space-y-6">
       {/* Date Filter */}
       <Card className="border-0 shadow-sm">
         <CardContent className="p-4">
@@ -344,6 +350,9 @@ export default function Analytics() {
           </CardContent>
         </Card>
       </div>
-    </div>
-  );
-}
+      </TabsContent>
+
+      <TabsContent value="reports" className="space-y-6">
+        <TrainingGapReport members={members} />
+      </TabsContent>
+    </Tabs>
