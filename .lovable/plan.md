@@ -1,25 +1,20 @@
 
 
-## Rename "WSF Leader" to "Home Cell Leader" in All Forms
+## Remove "member" from User Roles Management
 
 ### Problem
-Several UI components still display "WSF Leader" instead of "Home Cell Leader". The internal key `wsf_leader` is correct, but the display labels need updating.
+The `ROLES` array includes `"member"`, but "member" is the implicit default state — any user without elevated roles is already a member. Having it as a toggleable role in User Management is misleading and serves no purpose.
 
 ### Changes
 
+**`src/pages/UserManagement.jsx`**
+- Remove `"member"` from the `ROLES` array (line ~14), leaving only: `["super_admin", "admin", "unit_leader", "wsf_leader"]`
+- Keep the `roleLabels`, `roleIcons`, and `roleColors` entries for `member` since they're used to display "member" as the fallback badge when a user has no roles — that display logic stays
+- In the Add User dialog's role selector, keep "member" as the default initial value but clarify it means "no elevated role" (or change the default to skip role assignment entirely)
+
 **`src/components/members/MemberFormDialog.jsx`**
-- Line 424: Change `<SelectItem value="wsf_leader">WSF Leader</SelectItem>` to `Home Cell Leader`
-- Lines 586 and 602: The role badges/checkboxes use `r.replace("_", " ")` which produces "wsf leader". Add a `roleLabels` map (like UserManagement has) to display proper names, mapping `wsf_leader` → "Home Cell Leader"
+- Also remove `"member"` from the role checkboxes/select items in the member edit form's User Roles section, for consistency
 
-**`src/components/wsf/WSFCentreFormDialog.jsx`**
-- Line 75: Change label from "WSF Leader Name" to "Home Cell Leader Name"
-- Line 79: Change label from "WSF Leader Email" to "Home Cell Leader Email"
-
-**`src/pages/MyProfile.jsx`**
-- Line 142: Change `"Unit & WSF Leader"` to `"Unit & Home Cell Leader"`
-- Line 144: Change `"WSF Leader"` to `"Home Cell Leader"`
-
-**`src/components/AppLayout.jsx`**
-- Line 105: Change `"Unit & WSF Leader"` to `"Unit & Home Cell Leader"`
-- Line 107: Change `"WSF Leader"` to `"Home Cell Leader"`
+### Result
+Admins will only see actionable, privilege-granting roles (Super Admin, Admin, Unit Leader, Home Cell Leader) in the role management UI. Users with no roles still display as "Member" via the existing fallback badge.
 
