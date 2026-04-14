@@ -15,7 +15,7 @@ import DashboardBanner from "@/components/dashboard/DashboardBanner";
 const GROWTH_FIELDS = [
   { key: "water_baptism", label: "Water Baptism" },
   { key: "holy_spirit_baptism", label: "Holy Spirit Baptism" },
-  { key: "winners_satellite", label: "WSF" },
+  { key: "winners_satellite", label: "Home Cell" },
   { key: "bfc_completed", label: "BFC" },
   { key: "bcc_completed", label: "BCC" },
   { key: "lcc_completed", label: "LCC" },

@@ -456,7 +456,7 @@ export default function DangerZoneSection() {
                         <p className="font-medium text-foreground mb-1">What will be preserved:</p>
                         <ul className="list-disc list-inside text-xs text-muted-foreground space-y-0.5">
                           <li>App settings &amp; feature configuration</li>
-                          <li>Church units &amp; WSF centres</li>
+                          <li>Church units &amp; Home Cell centres</li>
                           <li>Certificate templates</li>
                           <li>Exam questions, subjects &amp; courses</li>
                           <li>Pickup locations</li>

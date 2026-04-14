@@ -94,7 +94,7 @@ export default function Events() {
   });
 
   // Build AUDIENCES list
-  const allAudiences = ["All Members", ...churchUnitsData.map(u => u.name), ...myWsfCentres.map(c => c.name), "WSF", "WSF Leaders", "Leaders Only"];
+  const allAudiences = ["All Members", ...churchUnitsData.map(u => u.name), ...myWsfCentres.map(c => c.name), "Home Cell", "Home Cell Leaders", "Leaders Only"];
   const uniqueAudiences = [...new Set(allAudiences)];
 
   // Determine available audiences for the current user

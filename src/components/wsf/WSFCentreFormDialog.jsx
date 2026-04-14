@@ -57,7 +57,7 @@ export default function WSFCentreFormDialog({ open, onOpenChange, centre, onSave
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-        <TenantDialogHeader>{centre ? "Edit WSF Centre" : "Add WSF Centre"}</TenantDialogHeader>
+        <TenantDialogHeader>{centre ? "Edit Home Cell Centre" : "Add Home Cell Centre"}</TenantDialogHeader>
         <div className="space-y-4 py-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1.5 sm:col-span-2">

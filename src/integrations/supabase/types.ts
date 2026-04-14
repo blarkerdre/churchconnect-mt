@@ -3436,7 +3436,7 @@ export type Database = {
         | "Midweek Service"
         | "Special Program"
         | "Unit Meeting"
-        | "WSF Meeting"
+        | "Home Cell Meeting"
         | "Other"
       tenant_role: "owner" | "admin" | "member"
       transport_status: "Pending" | "Confirmed" | "Completed" | "Cancelled"
@@ -3609,7 +3609,7 @@ export const Constants = {
         "Midweek Service",
         "Special Program",
         "Unit Meeting",
-        "WSF Meeting",
+        "Home Cell Meeting",
         "Other",
       ],
       tenant_role: ["owner", "admin", "member"],

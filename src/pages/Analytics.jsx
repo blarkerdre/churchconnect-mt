@@ -232,7 +232,7 @@ export default function Analytics() {
         <Card className="border-0 shadow-sm"><CardContent className="p-4 text-center"><p className="text-2xl font-display font-bold text-foreground">{members.length}</p><p className="text-xs text-muted-foreground">Total Members</p></CardContent></Card>
         <Card className="border-0 shadow-sm"><CardContent className="p-4 text-center"><p className="text-2xl font-display font-bold text-chart-3">{members.filter(m => m.membership_status === "Active").length}</p><p className="text-xs text-muted-foreground">Active</p></CardContent></Card>
         <Card className="border-0 shadow-sm"><CardContent className="p-4 text-center"><p className="text-2xl font-display font-bold text-primary">{sessions.length}</p><p className="text-xs text-muted-foreground">Sessions</p></CardContent></Card>
-        <Card className="border-0 shadow-sm"><CardContent className="p-4 text-center"><p className="text-2xl font-display font-bold text-accent">{wsfAnalytics.activeCentres}</p><p className="text-xs text-muted-foreground">WSF Centres</p></CardContent></Card>
+        <Card className="border-0 shadow-sm"><CardContent className="p-4 text-center"><p className="text-2xl font-display font-bold text-accent">{wsfAnalytics.activeCentres}</p><p className="text-xs text-muted-foreground">Home Cell Centres</p></CardContent></Card>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -304,11 +304,11 @@ export default function Analytics() {
           </CardContent>
         </Card>
 
-        {/* WSF Centre Attendance */}
+        {/* Home Cell Centre Attendance */}
         <Card className="border-0 shadow-sm">
-          <CardHeader><CardTitle className="text-base font-display">WSF Centre Attendance</CardTitle></CardHeader>
+          <CardHeader><CardTitle className="text-base font-display">Home Cell Centre Attendance</CardTitle></CardHeader>
           <CardContent>
-            {wsfAnalytics.centreData.length === 0 ? <p className="text-sm text-muted-foreground text-center py-8">No WSF data in range</p> : (
+            {wsfAnalytics.centreData.length === 0 ? <p className="text-sm text-muted-foreground text-center py-8">No Home Cell data in range</p> : (
               <ResponsiveContainer width="100%" height={280}>
                 <BarChart data={wsfAnalytics.centreData}>
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(40, 20%, 90%)" />
