@@ -302,9 +302,9 @@ export default function PublicRegistration() {
                   }} />
                   {form.winners_satellite && (
                     <div className="space-y-1.5 pl-4">
-                      <Label>WSF Centre {form.wsf_centre_id && wsfCentres.find(c => c.id === form.wsf_centre_id) ? <span className="text-xs text-muted-foreground font-normal ml-1">(auto-suggested by location)</span> : null}</Label>
-                      <Select value={form.wsf_centre_id || ""} onValueChange={v => set("wsf_centre_id", v)}>
-                        <SelectTrigger><SelectValue placeholder="Select WSF Centre" /></SelectTrigger>
+                       <Label>Home Cell Centre {form.wsf_centre_id && wsfCentres.find(c => c.id === form.wsf_centre_id) ? <span className="text-xs text-muted-foreground font-normal ml-1">(auto-suggested by location)</span> : null}</Label>
+                       <Select value={form.wsf_centre_id || ""} onValueChange={v => set("wsf_centre_id", v)}>
+                         <SelectTrigger><SelectValue placeholder="Select Home Cell Centre" /></SelectTrigger>
                         <SelectContent>{wsfCentres.map(c => <SelectItem key={c.id} value={c.id}>{c.name}{c.location ? ` — ${c.location}` : ""}</SelectItem>)}</SelectContent>
                       </Select>
                     </div>
