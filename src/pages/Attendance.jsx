@@ -240,8 +240,18 @@ export default function Attendance() {
             </Button>
           )}
           {canManage && (
-            <Button onClick={() => { setForm({ title: "", session_type: "Sunday Service", session_date: "", notes: "", unit: "" }); setDialogOpen(true); }} className="bg-primary hover:bg-primary/90 w-full sm:w-auto">
+            <Button onClick={() => {
+              setForm({
+                title: "",
+                session_type: isUnitLeaderOnly ? "Unit Meeting" : "Sunday Service",
+                session_date: "",
+                notes: "",
+                unit: isUnitLeaderOnly && leaderUnits.length === 1 ? leaderUnits[0] : "",
+              });
+              setDialogOpen(true);
+            }} className="bg-primary hover:bg-primary/90 w-full sm:w-auto">
               <Plus className="h-4 w-4 mr-2" /> New Meeting
+            </Button>
             </Button>
           )}
         </div>
