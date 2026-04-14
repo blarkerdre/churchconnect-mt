@@ -252,7 +252,6 @@ export default function Attendance() {
             }} className="bg-primary hover:bg-primary/90 w-full sm:w-auto">
               <Plus className="h-4 w-4 mr-2" /> New Meeting
             </Button>
-            </Button>
           )}
         </div>
       </div>
