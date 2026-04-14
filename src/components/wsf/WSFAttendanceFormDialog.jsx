@@ -67,7 +67,7 @@ export default function WSFAttendanceFormDialog({ open, onOpenChange, centre, re
         <div className="space-y-4 py-4 overflow-y-auto flex-1 min-h-0">
           {!centre && allCentres.length > 0 && (
             <div className="space-y-1.5">
-              <Label>WSF Centre *</Label>
+              <Label>Home Cell Centre *</Label>
               <Select value={selectedCentreId} onValueChange={setSelectedCentreId}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select a centre..." />
