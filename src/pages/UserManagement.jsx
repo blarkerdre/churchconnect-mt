@@ -18,7 +18,7 @@ import WSFLeaderAssignments from "@/components/users/WSFLeaderAssignments";
 import BulkUnitAssignDialog from "@/components/users/BulkUnitAssignDialog";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
 
-const ROLES = ["super_admin", "admin", "unit_leader", "wsf_leader", "member"];
+const ROLES = ["super_admin", "admin", "unit_leader", "wsf_leader"];
 
 const roleIcons = {
   super_admin: ShieldCheck,
