@@ -15,26 +15,23 @@ const STATUS_CONFIG = {
 };
 
 function downloadReport(session, eligibleMembers, records) {
+  const esc = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
   const getRecord = (memberId) => records.find(r => r.member_id === memberId);
-  const lines = [
-    `Attendance Report: ${session.title || session.session_type}`,
-    `Date: ${session.session_date}`,
-    `Type: ${session.session_type}`,
-    `---`,
+  const rows = [
+    ["Name", "Status"].join(","),
     ...eligibleMembers.map(m => {
-      const rec = getRecord(m.id);
-      const status = rec ? "Present" : "Absent";
-      return `${m.first_name} ${m.last_name} - ${status}`;
+      const status = getRecord(m.id) ? "Present" : "Absent";
+      return [esc(`${m.first_name} ${m.last_name}`), status].join(",");
     }),
-    `---`,
-    `Total: ${eligibleMembers.length}`,
-    `Present: ${records.length}`,
+    "",
+    ["Total", eligibleMembers.length].join(","),
+    ["Present", records.length].join(","),
   ];
-  const blob = new Blob([lines.join("\n")], { type: "text/plain" });
+  const blob = new Blob([rows.join("\n")], { type: "text/csv" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = `attendance_${session.session_date}.txt`;
+  a.download = `attendance_${session.session_date}.csv`;
   a.click();
   URL.revokeObjectURL(url);
 }
