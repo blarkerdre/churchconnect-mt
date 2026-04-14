@@ -370,9 +370,17 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
                       type="button"
                       onClick={() => {
                         const current = (form.church_unit || "").split(",").map(s => s.trim()).filter(Boolean);
-                        const updated = isSelected
+                        let updated = isSelected
                           ? current.filter(u => u.toLowerCase() !== unit.toLowerCase())
                           : [...current, unit];
+                        // Deduplicate case-insensitively, keeping the first occurrence
+                        const seen = new Set();
+                        updated = updated.filter(u => {
+                          const key = u.toLowerCase();
+                          if (seen.has(key)) return false;
+                          seen.add(key);
+                          return true;
+                        });
                         set("church_unit", updated.join(", "));
                       }}
                       className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
