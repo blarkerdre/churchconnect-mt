@@ -7,7 +7,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { tenant_id, member_name, title, situation, action, god_did, sender_email, user_id } = await req.json();
+    const { tenant_id, member_name, title, situation, action, god_did, share_publicly, sender_email, user_id } = await req.json();
 
     if (!tenant_id) {
       return new Response(JSON.stringify({ error: "tenant_id is required" }), {
@@ -39,6 +39,7 @@ Deno.serve(async (req) => {
         situation: situation.trim(),
         action: action.trim(),
         god_did: god_did.trim(),
+        share_publicly: !!share_publicly,
       });
     }
 
@@ -80,6 +81,9 @@ Deno.serve(async (req) => {
         <h3 style="color:#1a2d4d;font-size:15px;">What has the Lord done?</h3>
         <p style="font-size:14px;color:#333;white-space:pre-wrap;">${escapeHtml(god_did)}</p>
         <hr style="border:none;border-top:1px solid #e5e7eb;margin:16px 0;" />
+        <p style="font-size:14px;color:${share_publicly ? '#16a34a' : '#dc2626'};font-weight:600;">
+          ${share_publicly ? '✅ Member has consented to this testimony being shared publicly.' : '🔒 Member prefers this testimony to remain private.'}
+        </p>
         <p style="font-size:12px;color:#999;">This testimony was submitted via the church app.</p>
       </div>
     `;

@@ -5,6 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Loader2, Send } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
@@ -20,6 +21,7 @@ export default function TestimonyFormDialog({ open, onOpenChange, myMember }) {
     situation: "",
     action: "",
     god_did: "",
+    share_publicly: false,
   });
 
   const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }));
@@ -44,13 +46,14 @@ export default function TestimonyFormDialog({ open, onOpenChange, myMember }) {
           situation: form.situation.trim(),
           action: form.action.trim(),
           god_did: form.god_did.trim(),
+          share_publicly: form.share_publicly,
           sender_email: myMember?.email || null,
           user_id: user?.id || null,
         },
       });
       if (error) throw error;
       toast({ title: "Testimony shared!", description: "Thank you for sharing what the Lord has done." });
-      setForm({ name: myMember ? `${myMember.first_name} ${myMember.last_name}` : "", title: "", situation: "", action: "", god_did: "" });
+      setForm({ name: myMember ? `${myMember.first_name} ${myMember.last_name}` : "", title: "", situation: "", action: "", god_did: "", share_publicly: false });
       onOpenChange(false);
     } catch (err) {
       toast({ title: "Error sending testimony", description: err.message, variant: "destructive" });
@@ -85,6 +88,16 @@ export default function TestimonyFormDialog({ open, onOpenChange, myMember }) {
           <div className="space-y-1.5">
             <Label className="text-sm font-medium">What has the Lord done?</Label>
             <Textarea value={form.god_did} onChange={set("god_did")} placeholder="Share how God moved in your situation..." rows={3} maxLength={2000} required />
+          </div>
+          <div className="flex items-start space-x-2 pt-1">
+            <Checkbox
+              id="dialog_share_publicly"
+              checked={form.share_publicly}
+              onCheckedChange={(checked) => setForm((f) => ({ ...f, share_publicly: !!checked }))}
+            />
+            <Label htmlFor="dialog_share_publicly" className="text-sm leading-snug cursor-pointer">
+              I would like my testimony to be shared in church
+            </Label>
           </div>
           <Button type="submit" disabled={saving} className="w-full">
             {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Send className="h-4 w-4 mr-2" />}
