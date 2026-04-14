@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 const noop = async () => ({ data: null, error: new Error("Auth not initialized") });
 const AuthContext = createContext({
-  user: null, profile: null, roles: [], loading: true, leaderUnits: [], myMember: null,
+  user: null, profile: null, roles: [], loading: true, leaderUnits: [], leaderCentres: [], myMember: null,
   tenantMemberships: [],
   signUp: noop, signIn: noop, signOut: noop, resetPassword: noop, updatePassword: noop,
   isAdmin: false, isUnitLeader: false, isWSFLeader: false, isMember: false,
@@ -15,7 +15,8 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [profile, setProfile] = useState(null);
   const [roles, setRoles] = useState([]);
-  const [leaderUnits, setLeaderUnits] = useState([]);
+   const [leaderUnits, setLeaderUnits] = useState([]);
+   const [leaderCentres, setLeaderCentres] = useState([]);
   const [myMember, setMyMember] = useState(null);
   const [tenantMemberships, setTenantMemberships] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -31,6 +32,7 @@ export function AuthProvider({ children }) {
           setRoles([]);
           setLeaderUnits([]);
           setMyMember(null);
+          setLeaderCentres([]);
           setTenantMemberships([]);
           setLoading(false);
         }
@@ -63,8 +65,18 @@ export function AuthProvider({ children }) {
       setRoles(rolesRes.data?.map((r) => r.role) || []);
       setLeaderUnits(unitsRes.data?.map((u) => u.unit_name) || []);
       setTenantMemberships(tmRes.data || []);
-
       setMyMember(memberRes.data);
+
+      // Fetch WSF centres led by this user (via their member record)
+      if (memberRes.data?.id) {
+        const { data: centres } = await supabase
+          .from("wsf_centres")
+          .select("name")
+          .eq("leader_id", memberRes.data.id);
+        setLeaderCentres(centres?.map((c) => c.name) || []);
+      } else {
+        setLeaderCentres([]);
+      }
     } catch (err) {
       console.error("Error fetching user data:", err);
     } finally {
@@ -97,8 +109,9 @@ export function AuthProvider({ children }) {
     setProfile(null);
     setRoles([]);
     setLeaderUnits([]);
-    setMyMember(null);
-    setTenantMemberships([]);
+     setMyMember(null);
+     setLeaderCentres([]);
+     setTenantMemberships([]);
   };
 
   const resetPassword = async (email, tenantSlug) => {
@@ -128,8 +141,8 @@ export function AuthProvider({ children }) {
 
   return (
     <AuthContext.Provider
-      value={{
-        user, profile, roles, loading, leaderUnits, myMember, tenantMemberships,
+       value={{
+        user, profile, roles, loading, leaderUnits, leaderCentres, myMember, tenantMemberships,
         signUp, signIn, signOut, resetPassword, updatePassword,
         isAdmin, isUnitLeader, isWSFLeader, isMember,
         isTenantOwner, isTenantAdmin,
