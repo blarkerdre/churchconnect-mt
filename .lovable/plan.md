@@ -1,66 +1,45 @@
 
 
-## Rename All UI-Facing "WSF" to "Home Cell"
+## Robust Reporting System with Training Gap Reports
 
-### Scope
-Replace every user-visible "WSF" string with "Home Cell" equivalents across the entire frontend. Database table/column names (e.g. `wsf_centres`, `wsf_zones`, `winners_satellite`) remain unchanged — only UI labels, headings, tooltips, comments, and display text are affected.
+### Overview
+Add a new **Reports** tab/section to the Analytics page that provides actionable member-level reports, starting with a "Training Gaps" report showing members who have not completed specific milestones (BFC, BCC, LCC, LDC, Water Baptism, Holy Spirit Baptism, Home Cell). This is a filterable, downloadable table — not just charts.
 
-**Note**: The `session_type` enum value `'WSF Meeting'` stored in the database will be renamed to `'Home Cell Meeting'` via a migration to keep data consistent with the UI.
+### What Gets Built
 
-### Key Renaming Map
-| Current | New |
-|---------|-----|
-| WSF Meeting | Home Cell Meeting |
-| WSF Attendance | Home Cell Attendance |
-| WSF Centre(s) | Home Cell Centre(s) |
-| WSF Leader(s) | Home Cell Leader(s) |
-| WSF Leader Dashboard | Home Cell Leader Dashboard |
-| WSF Leader View | Home Cell Leader View |
-| WSF data | Home Cell data |
-| wsf-attendance-report.csv | home-cell-attendance-report.csv |
+**A new `src/components/analytics/TrainingGapReport.jsx` component** added as a new section within the Analytics page:
 
-### Files to Update (~20 files)
+1. **Filter controls** at the top:
+   - Multi-select for milestone type (BFC, BCC, LCC, LDC, Water Baptism, HS Baptism, Home Cell)
+   - Membership status filter (Active, All, etc.)
+   - Church unit filter
 
-**Pages:**
-- `src/pages/WSFManagement.jsx` — headings
-- `src/pages/Attendance.jsx` — session type labels, locked type display, comments
-- `src/pages/Analytics.jsx` — chart titles, stat labels, CSV section header
-- `src/pages/Events.jsx` — audience list items ("WSF", "WSF Leaders" → "Home Cell", "Home Cell Leaders"), comments
-- `src/pages/Communications.jsx` — comments
-- `src/pages/Presentation.jsx` — slide titles and descriptions
-- `src/pages/Members.jsx` — comments
-- `src/pages/MyProfile.jsx` — "WSF Centre" label
-- `src/pages/PublicRegistration.jsx` — "WSF Centre" label, placeholder
-- `src/pages/Settings.jsx` — no change needed (already says "Home Cell")
-- `src/pages/TenantAdmin.jsx` — already says "Home Cell" (verify only)
+2. **Results table** showing members who have NOT completed the selected milestone(s):
+   - Columns: Name, Phone, Email, Status, Church Unit, Missing Milestones
+   - Sortable by name
+   - Shows count of matching members
 
-**Components:**
-- `src/components/wsf/WSFAttendanceTab.jsx` — print title, error message, download filename
-- `src/components/wsf/WSFAttendanceFormDialog.jsx` — no WSF strings (already clean)
-- `src/components/wsf/WSFCentreFormDialog.jsx` — dialog titles if any
-- `src/components/wsf/WSFCentreMembersDialog.jsx` — check for WSF strings
-- `src/components/dashboard/WSFLeaderDashboard.jsx` — heading, empty state, fallback text
-- `src/components/dashboard/MemberDashboard.jsx` — milestone label "WSF" → "Home Cell"
-- `src/components/dashboard/GrowthIndices.jsx` — check for WSF label
-- `src/components/events/EventFormDialog.jsx` — audience list
-- `src/components/settings/DangerZoneSection.jsx` — "WSF centres" text
-- `src/components/settings/WSFZonesSection.jsx` — already says "Home Cell Zones" (verify)
-- `src/components/notifications/NotificationBell.jsx` — comment only
-- `src/components/AppLayout.jsx` — comments only (nav label already "Home Cell Report")
-- `src/components/users/WSFLeaderAssignments.jsx` — check labels
+3. **CSV download** button to export the filtered list with headers: `First Name, Last Name, Email, Phone, Status, Church Unit, Missing Milestones`
 
-**Utilities:**
-- `src/lib/wsf-suggest.js` — JSDoc comments
+4. **Summary cards** above the table showing counts per milestone (e.g. "42 members haven't completed BFC")
 
-**Database migration:**
-- Rename the `session_type` enum value from `'WSF Meeting'` to `'Home Cell Meeting'`
-- Update existing `attendance_sessions` rows
-- Update the `is_wsf_leader_for_session` function to match `'Home Cell Meeting'`
+### Changes to Existing Files
 
-### What Stays Unchanged
-- All database table names (`wsf_centres`, `wsf_zones`, `wsf_attendance_reports`)
-- All database column names (`wsf_centre_id`, `winners_satellite`)
-- All JS variable names (`isWSFLeader`, `wsfCentres`, `wsfAnalytics`)
-- File names (component files keep their names)
-- Internal query keys and code identifiers
+**`src/pages/Analytics.jsx`**:
+- Add a Tabs wrapper (Overview / Reports) around the existing content
+- The "Overview" tab contains all current charts
+- The "Reports" tab contains the new `TrainingGapReport` component
+- The member query already fetches all needed fields (`bfc_completed`, `bcc_completed`, etc.) — reuse it
+
+**`src/components/analytics/TrainingGapReport.jsx`** (new file):
+- Receives `members` array as prop from Analytics
+- All filtering is client-side (data already loaded)
+- Milestone mapping: `{ "BFC": "bfc_completed", "BCC": "bcc_completed", "LCC": "lcc_completed", "LDC": "ldc_completed", "Water Baptism": "water_baptism", "Holy Spirit Baptism": "holy_spirit_baptism", "Home Cell": "winners_satellite" }`
+
+### No Database Changes Required
+All member milestone fields already exist in the `members` table and are already queried.
+
+### Files Changed
+- `src/pages/Analytics.jsx` — wrap in Tabs, add Reports tab
+- `src/components/analytics/TrainingGapReport.jsx` — new component
 
