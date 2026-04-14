@@ -3244,6 +3244,10 @@ export type Database = {
         Args: { _centre_id: string; _user_id: string }
         Returns: boolean
       }
+      is_wsf_leader_for_session: {
+        Args: { _tenant_id: string; _unit: string; _user_id: string }
+        Returns: boolean
+      }
       move_to_dlq: {
         Args: {
           dlq_name: string
