@@ -1,20 +1,38 @@
 
 
-## Remove "member" from User Roles Management
+## Fix: Allow Admins to Manage Non-Admin Roles in user_roles
 
 ### Problem
-The `ROLES` array includes `"member"`, but "member" is the implicit default state — any user without elevated roles is already a member. Having it as a toggleable role in User Management is misleading and serves no purpose.
+The `user_roles` table has a `FOR ALL` policy restricted to `super_admin` only. When a regular admin tries to grant `unit_leader` or `wsf_leader`, the INSERT is rejected by RLS.
 
-### Changes
+### Current Policies on user_roles
+- **"Super admins can manage roles"** — `FOR ALL`, requires `has_role(auth.uid(), 'super_admin')` — this is the only write policy (besides invitation self-insert)
+- **"Admins can view all roles"** — `SELECT` only
+- **"Users can view own roles"** — `SELECT` only
 
-**`src/pages/UserManagement.jsx`**
-- Remove `"member"` from the `ROLES` array (line ~14), leaving only: `["super_admin", "admin", "unit_leader", "wsf_leader"]`
-- Keep the `roleLabels`, `roleIcons`, and `roleColors` entries for `member` since they're used to display "member" as the fallback badge when a user has no roles — that display logic stays
-- In the Add User dialog's role selector, keep "member" as the default initial value but clarify it means "no elevated role" (or change the default to skip role assignment entirely)
+### Solution
+Add a new RLS policy that allows tenant admins to INSERT and DELETE `unit_leader` and `wsf_leader` roles within their tenant. Admins should NOT be able to assign `admin` or `super_admin` roles.
 
-**`src/components/members/MemberFormDialog.jsx`**
-- Also remove `"member"` from the role checkboxes/select items in the member edit form's User Roles section, for consistency
+### Database Migration
+```sql
+-- Allow admins to insert non-admin roles within their tenant
+CREATE POLICY "Admins can manage leader roles"
+ON public.user_roles
+FOR ALL
+TO authenticated
+USING (
+  is_admin(auth.uid(), tenant_id)
+  AND role IN ('unit_leader', 'wsf_leader')
+)
+WITH CHECK (
+  is_admin(auth.uid(), tenant_id)
+  AND role IN ('unit_leader', 'wsf_leader')
+);
+```
 
-### Result
-Admins will only see actionable, privilege-granting roles (Super Admin, Admin, Unit Leader, Home Cell Leader) in the role management UI. Users with no roles still display as "Member" via the existing fallback badge.
+This restricts admins to only granting/revoking `unit_leader` and `wsf_leader` — they cannot escalate to `admin` or `super_admin`.
+
+### Files Changed
+- **New migration** — adds the RLS policy above
+- No code changes needed — the UI already correctly limits which roles admins can toggle
 
