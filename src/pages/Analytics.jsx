@@ -161,32 +161,42 @@ export default function Analytics() {
   const isLoading = loadingSessions || loadingMembers;
 
   const generateReport = () => {
-    const lines = [
-      `ANALYTICS REPORT (${dateFrom} to ${dateTo})`,
-      `==========================================`,
-      ``,
-      `MEMBERSHIP SUMMARY`,
-      ...membershipBreakdown.map(m => `  ${m.name}: ${m.value}`),
-      `  Total: ${members.length}`,
-      ``,
-      `ATTENDANCE SUMMARY`,
-      `  Total Sessions: ${sessions.length}`,
-      `  Total Check-ins: ${sessions.reduce((sum, s) => sum + (s.attendance_records?.length || 0), 0)}`,
-      ``,
-      `GROWTH INDICES`,
-      ...growthIndices.map(g => `  ${g.label}: ${g.completed}/${g.total} (${g.total > 0 ? Math.round(g.completed / g.total * 100) : 0}%)`),
-      ``,
-      `CHURCH UNITS`,
-      ...unitBreakdown.map(u => `  ${u.name}: ${u.value} members`),
-      ``,
-      `WSF CENTRES`,
-      `  Active Centres: ${wsfAnalytics.activeCentres}`,
-      `  Total WSF Attendance: ${wsfAnalytics.totalAttendance}`,
+    const esc = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+    const rows = [
+      ["ANALYTICS REPORT", `${dateFrom} to ${dateTo}`].join(","),
+      "",
+      ["Membership Summary"].join(","),
+      ["Status", "Count"].join(","),
+      ...membershipBreakdown.map(m => [esc(m.name), m.value].join(",")),
+      ["Total", members.length].join(","),
+      "",
+      ["Attendance Summary"].join(","),
+      ["Metric", "Value"].join(","),
+      ["Total Sessions", sessions.length].join(","),
+      ["Total Check-ins", sessions.reduce((sum, s) => sum + (s.attendance_records?.length || 0), 0)].join(","),
+      "",
+      ["Growth Indices"].join(","),
+      ["Milestone", "Completed", "Total", "Percentage"].join(","),
+      ...growthIndices.map(g => [esc(g.label), g.completed, g.total, g.total > 0 ? Math.round(g.completed / g.total * 100) + "%" : "0%"].join(",")),
+      "",
+      ["Church Units"].join(","),
+      ["Unit", "Members"].join(","),
+      ...unitBreakdown.map(u => [esc(u.name), u.value].join(",")),
+      "",
+      ["Home Cell Centres"].join(","),
+      ["Metric", "Value"].join(","),
+      ["Active Centres", wsfAnalytics.activeCentres].join(","),
+      ["Total Attendance", wsfAnalytics.totalAttendance].join(","),
+      ["Male", wsfAnalytics.totalMale].join(","),
+      ["Female", wsfAnalytics.totalFemale].join(","),
+      ["Children", wsfAnalytics.totalChildren].join(","),
+      ["First Timers", wsfAnalytics.totalFirstTimers].join(","),
+      ["Testimonies", wsfAnalytics.totalTestimonies].join(","),
     ];
-    const blob = new Blob([lines.join("\n")], { type: "text/plain" });
+    const blob = new Blob([rows.join("\n")], { type: "text/csv" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
-    a.download = `analytics-report-${dateFrom}-to-${dateTo}.txt`;
+    a.download = `analytics-report-${dateFrom}-to-${dateTo}.csv`;
     a.click();
   };
 
