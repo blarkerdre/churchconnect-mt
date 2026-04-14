@@ -2597,6 +2597,7 @@ export type Database = {
           god_did: string
           id: string
           member_name: string | null
+          share_publicly: boolean
           situation: string
           tenant_id: string
           title: string
@@ -2608,6 +2609,7 @@ export type Database = {
           god_did: string
           id?: string
           member_name?: string | null
+          share_publicly?: boolean
           situation: string
           tenant_id: string
           title: string
@@ -2619,6 +2621,7 @@ export type Database = {
           god_did?: string
           id?: string
           member_name?: string | null
+          share_publicly?: boolean
           situation?: string
           tenant_id?: string
           title?: string
