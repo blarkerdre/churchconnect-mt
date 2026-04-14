@@ -118,7 +118,7 @@ export default function WSFAttendanceTab({ centres }) {
   );
 
   const buildPrintRows = () => ({
-    title: "WSF Attendance Report",
+    title: "Home Cell Attendance Report",
     headers: ["Date", "Centre", "Male", "Female", "Adults", "Children", "Total", "1st Timers", "Testimonies"],
     rows: filteredReports.map(r => {
       const adults = r.male + r.female;
@@ -142,7 +142,7 @@ export default function WSFAttendanceTab({ centres }) {
     const blob = new Blob([rows.join("\n")], { type: "text/csv" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
-    a.download = `wsf-attendance-report.csv`;
+    a.download = `home-cell-attendance-report.csv`;
     a.click();
   };
 
@@ -150,7 +150,7 @@ export default function WSFAttendanceTab({ centres }) {
     return (
       <Card className="border-0 shadow-sm">
         <CardContent className="p-8 text-center text-muted-foreground">
-          You don't have access to WSF attendance reporting.
+          You don't have access to Home Cell attendance reporting.
         </CardContent>
       </Card>
     );
