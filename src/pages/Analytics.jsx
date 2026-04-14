@@ -356,3 +356,5 @@ export default function Analytics() {
         <TrainingGapReport members={members} />
       </TabsContent>
     </Tabs>
+  );
+}
