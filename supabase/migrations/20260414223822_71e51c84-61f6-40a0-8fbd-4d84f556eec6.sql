@@ -1,0 +1,1 @@
+ALTER TABLE public.testimonies ADD COLUMN share_publicly boolean NOT NULL DEFAULT false;
