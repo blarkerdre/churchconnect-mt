@@ -17,10 +17,11 @@ import { useTenantQuery } from "@/hooks/useTenantQuery";
 import ReportAttachments from "@/components/reports/ReportAttachments";
 
 export default function Attendance() {
-  const { isAdmin, isUnitLeader, leaderUnits = [] } = useAuth();
+  const { isAdmin, isUnitLeader, isWSFLeader, leaderUnits = [], leaderCentres = [] } = useAuth();
   const { tenantId, scopeQuery, withTenant } = useTenantQuery();
-  const canManage = isAdmin || isUnitLeader;
+  const canManage = isAdmin || isUnitLeader || isWSFLeader;
   const isUnitLeaderOnly = isUnitLeader && !isAdmin;
+  const isWSFLeaderOnly = isWSFLeader && !isAdmin && !isUnitLeader;
   const queryClient = useQueryClient();
   const [selectedSessionId, setSelectedSessionId] = useState(null);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -43,13 +44,24 @@ export default function Attendance() {
       if (dateFrom && s.session_date < dateFrom) return false;
       if (dateTo && s.session_date > dateTo) return false;
       // Unit leaders only see their unit meetings
-      if (isUnitLeaderOnly) {
+      if (isUnitLeaderOnly && !isWSFLeader) {
         if (s.session_type !== "Unit Meeting") return false;
         if (!leaderUnits.some(u => u.toLowerCase() === (s.unit || "").toLowerCase())) return false;
       }
+      // WSF leaders only see their WSF meetings
+      if (isWSFLeaderOnly) {
+        if (s.session_type !== "WSF Meeting") return false;
+        if (!leaderCentres.some(c => c.toLowerCase() === (s.unit || "").toLowerCase())) return false;
+      }
+      // Combined unit + WSF leader (not admin): see both their unit and WSF meetings
+      if (isUnitLeader && isWSFLeader && !isAdmin) {
+        const isMyUnit = s.session_type === "Unit Meeting" && leaderUnits.some(u => u.toLowerCase() === (s.unit || "").toLowerCase());
+        const isMyCentre = s.session_type === "WSF Meeting" && leaderCentres.some(c => c.toLowerCase() === (s.unit || "").toLowerCase());
+        if (!isMyUnit && !isMyCentre) return false;
+      }
       return true;
     });
-  }, [sessions, dateFrom, dateTo, isUnitLeaderOnly, leaderUnits]);
+  }, [sessions, dateFrom, dateTo, isUnitLeaderOnly, isWSFLeaderOnly, isUnitLeader, isWSFLeader, isAdmin, leaderUnits, leaderCentres]);
 
   const selectedSession = filteredSessions.find(s => s.id === selectedSessionId) || filteredSessions[0];
 
