@@ -29,7 +29,26 @@ const GROWTH_FIELDS = [
 
 export default function MemberDashboard({ currentUser, myMember }) {
   const { currentTenant, tenantRole } = useTenant();
+  const { session } = useAuth();
+  const { tenantId } = useTenantQuery();
   const roleLabel = tenantRole ? tenantRole.charAt(0).toUpperCase() + tenantRole.slice(1) : "";
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
+  const userId = session?.user?.id;
+
+  const { data: existingFeedback } = useQuery({
+    queryKey: ["app-feedback-own", tenantId, userId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("app_feedback")
+        .select("id")
+        .eq("user_id", userId)
+        .eq("tenant_id", tenantId)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!userId && !!tenantId,
+  });
 
   const statusColors = {
     Active: "bg-chart-3/10 text-chart-3",
