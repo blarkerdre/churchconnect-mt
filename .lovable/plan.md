@@ -1,55 +1,21 @@
 
 
-## App Rating & Feedback Feature
+## Fix Truncated Progress Note in Follow-up Detail Panel
 
-### Overview
-Add an in-app rating and feedback system where members can rate the app (1–5 stars) and submit optional text feedback. Admins can view aggregated ratings and individual feedback entries.
+### Problem
+On mobile (384px viewport), the "Add progress note" textarea and button at the bottom of the follow-up detail panel are overlapped by the mobile bottom navigation bar. Both use `z-50` and `fixed` positioning, causing the nav bar to cover the input area.
 
-### Database
+### Solution
+Add bottom padding to the progress note container to account for the mobile bottom nav bar height (64px + safe area inset), ensuring the textarea and "Add Note" button are fully visible and tappable.
 
-**New table: `app_feedback`**
-- `id` (uuid, PK)
-- `user_id` (uuid, references auth.users, not null)
-- `tenant_id` (uuid, references tenants, not null)
-- `rating` (integer, 1–5, not null)
-- `comment` (text, nullable)
-- `created_at` (timestamptz, default now)
-- Unique constraint on `(user_id, tenant_id)` — one rating per user per tenant (can update)
+### Changes
 
-RLS policies:
-- Members can insert/update their own row
-- Members can select their own row
-- Admins can select all rows in their tenant
+**`src/components/followups/FollowupDetailPanel.jsx`** (line 457):
+- Add `pb-20 lg:pb-4` to the progress note container div (replacing `p-4`) so it clears the mobile bottom nav
+- Alternatively, bump the detail panel's z-index above the bottom nav (`z-[55]` on line 167) so the panel sits above the nav entirely
 
-### New Components
+The cleaner fix is raising the z-index of the detail panel overlay from `z-50` to `z-[55]` (line 167), since the entire panel should sit above the bottom nav when open. This is a single-character change that fixes the overlap for all content, not just the note area.
 
-**`src/components/feedback/AppFeedbackDialog.jsx`**
-- Star rating selector (1–5 with hover preview)
-- Optional comment textarea
-- Upserts to `app_feedback` (so users can update their rating)
-- Triggered from a button on the Dashboard or My Profile page
-
-**`src/components/feedback/FeedbackSummary.jsx`**
-- Admin-only card showing: average rating, total responses, rating distribution bar chart
-- Scrollable list of recent feedback with comment text
-- Displayed on the Analytics Reports tab
-
-### Page Changes
-
-**`src/pages/Dashboard.jsx`** (or `MemberDashboard.jsx`)
-- Add a subtle "Rate this app" prompt card that appears for members who haven't submitted feedback yet
-
-**`src/pages/MyProfile.jsx`**
-- Add a small "App Feedback" section where the user can see/edit their rating
-
-**`src/pages/Analytics.jsx`**
-- Add `FeedbackSummary` to the Reports tab alongside the Training Gap Report
-
-### Files Changed/Created
-- New migration for `app_feedback` table + RLS
-- `src/components/feedback/AppFeedbackDialog.jsx` (new)
-- `src/components/feedback/FeedbackSummary.jsx` (new)
-- `src/pages/Dashboard.jsx` or `src/components/dashboard/MemberDashboard.jsx` (edit)
-- `src/pages/MyProfile.jsx` (edit)
-- `src/pages/Analytics.jsx` (edit)
+### Files Changed
+- `src/components/followups/FollowupDetailPanel.jsx` — raise z-index from `z-50` to `z-[55]` on the outer container
 
