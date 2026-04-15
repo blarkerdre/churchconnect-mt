@@ -113,7 +113,7 @@ export default function AppFeedbackDialog({ open, onOpenChange }) {
             />
             <Button
               className="w-full"
-              disabled={rating === 0 || mutation.isPending}
+              disabled={rating === 0 || mutation.isPending || !userId || !tenantId}
               onClick={() => mutation.mutate()}
             >
               {mutation.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
