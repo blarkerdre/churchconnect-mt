@@ -1,45 +1,55 @@
 
 
-## Robust Reporting System with Training Gap Reports
+## App Rating & Feedback Feature
 
 ### Overview
-Add a new **Reports** tab/section to the Analytics page that provides actionable member-level reports, starting with a "Training Gaps" report showing members who have not completed specific milestones (BFC, BCC, LCC, LDC, Water Baptism, Holy Spirit Baptism, Home Cell). This is a filterable, downloadable table — not just charts.
+Add an in-app rating and feedback system where members can rate the app (1–5 stars) and submit optional text feedback. Admins can view aggregated ratings and individual feedback entries.
 
-### What Gets Built
+### Database
 
-**A new `src/components/analytics/TrainingGapReport.jsx` component** added as a new section within the Analytics page:
+**New table: `app_feedback`**
+- `id` (uuid, PK)
+- `user_id` (uuid, references auth.users, not null)
+- `tenant_id` (uuid, references tenants, not null)
+- `rating` (integer, 1–5, not null)
+- `comment` (text, nullable)
+- `created_at` (timestamptz, default now)
+- Unique constraint on `(user_id, tenant_id)` — one rating per user per tenant (can update)
 
-1. **Filter controls** at the top:
-   - Multi-select for milestone type (BFC, BCC, LCC, LDC, Water Baptism, HS Baptism, Home Cell)
-   - Membership status filter (Active, All, etc.)
-   - Church unit filter
+RLS policies:
+- Members can insert/update their own row
+- Members can select their own row
+- Admins can select all rows in their tenant
 
-2. **Results table** showing members who have NOT completed the selected milestone(s):
-   - Columns: Name, Phone, Email, Status, Church Unit, Missing Milestones
-   - Sortable by name
-   - Shows count of matching members
+### New Components
 
-3. **CSV download** button to export the filtered list with headers: `First Name, Last Name, Email, Phone, Status, Church Unit, Missing Milestones`
+**`src/components/feedback/AppFeedbackDialog.jsx`**
+- Star rating selector (1–5 with hover preview)
+- Optional comment textarea
+- Upserts to `app_feedback` (so users can update their rating)
+- Triggered from a button on the Dashboard or My Profile page
 
-4. **Summary cards** above the table showing counts per milestone (e.g. "42 members haven't completed BFC")
+**`src/components/feedback/FeedbackSummary.jsx`**
+- Admin-only card showing: average rating, total responses, rating distribution bar chart
+- Scrollable list of recent feedback with comment text
+- Displayed on the Analytics Reports tab
 
-### Changes to Existing Files
+### Page Changes
 
-**`src/pages/Analytics.jsx`**:
-- Add a Tabs wrapper (Overview / Reports) around the existing content
-- The "Overview" tab contains all current charts
-- The "Reports" tab contains the new `TrainingGapReport` component
-- The member query already fetches all needed fields (`bfc_completed`, `bcc_completed`, etc.) — reuse it
+**`src/pages/Dashboard.jsx`** (or `MemberDashboard.jsx`)
+- Add a subtle "Rate this app" prompt card that appears for members who haven't submitted feedback yet
 
-**`src/components/analytics/TrainingGapReport.jsx`** (new file):
-- Receives `members` array as prop from Analytics
-- All filtering is client-side (data already loaded)
-- Milestone mapping: `{ "BFC": "bfc_completed", "BCC": "bcc_completed", "LCC": "lcc_completed", "LDC": "ldc_completed", "Water Baptism": "water_baptism", "Holy Spirit Baptism": "holy_spirit_baptism", "Home Cell": "winners_satellite" }`
+**`src/pages/MyProfile.jsx`**
+- Add a small "App Feedback" section where the user can see/edit their rating
 
-### No Database Changes Required
-All member milestone fields already exist in the `members` table and are already queried.
+**`src/pages/Analytics.jsx`**
+- Add `FeedbackSummary` to the Reports tab alongside the Training Gap Report
 
-### Files Changed
-- `src/pages/Analytics.jsx` — wrap in Tabs, add Reports tab
-- `src/components/analytics/TrainingGapReport.jsx` — new component
+### Files Changed/Created
+- New migration for `app_feedback` table + RLS
+- `src/components/feedback/AppFeedbackDialog.jsx` (new)
+- `src/components/feedback/FeedbackSummary.jsx` (new)
+- `src/pages/Dashboard.jsx` or `src/components/dashboard/MemberDashboard.jsx` (edit)
+- `src/pages/MyProfile.jsx` (edit)
+- `src/pages/Analytics.jsx` (edit)
 
