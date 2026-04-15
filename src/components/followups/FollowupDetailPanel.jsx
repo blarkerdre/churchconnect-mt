@@ -164,7 +164,7 @@ export default function FollowupDetailPanel({ followup, onClose, onUpdate, curre
     new Date(followup.due_date) < new Date();
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-end">
+    <div className="fixed inset-0 z-[55] flex justify-end">
       <div className="fixed inset-0 bg-black/30" onClick={onClose} />
       <div className="relative w-full max-w-md bg-card shadow-2xl flex flex-col h-full overflow-hidden">
         {/* Header */}
