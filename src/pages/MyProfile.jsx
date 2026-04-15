@@ -1,5 +1,6 @@
 import React, { useState, useRef } from "react";
 import { useParams } from "react-router-dom";
+import AppFeedbackDialog from "@/components/feedback/AppFeedbackDialog";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -593,6 +594,9 @@ export default function MyProfile() {
 
       {/* Certificates */}
       {!editing && <MyCertificates memberId={member.id} hiddenCourseNames={hiddenCourseNames} />}
+
+      {/* App Feedback */}
+      {!editing && <AppFeedbackSection />}
 
       {/* Take Exams */}
       {!editing && <DynamicExamButtons memberId={member.id} onSelect={setExamSelection} tenantId={tenantId} />}
