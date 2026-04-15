@@ -11,6 +11,7 @@ import { Loader2, FileText } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useSubFeature } from "@/hooks/useSubFeature";
 import TrainingGapReport from "@/components/analytics/TrainingGapReport";
+import FeedbackSummary from "@/components/feedback/FeedbackSummary";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
 import { format, subMonths, startOfMonth, endOfMonth, parseISO } from "date-fns";
 
@@ -354,6 +355,7 @@ export default function Analytics() {
 
       <TabsContent value="reports" className="space-y-6">
         <TrainingGapReport members={members} />
+        <FeedbackSummary />
       </TabsContent>
     </Tabs>
   );

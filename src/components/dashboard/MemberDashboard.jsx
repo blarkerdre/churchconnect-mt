@@ -1,8 +1,8 @@
-import React from "react";
+import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { CheckCircle2, XCircle, UserCircle, ChevronRight } from "lucide-react";
+import { CheckCircle2, XCircle, UserCircle, ChevronRight, Star } from "lucide-react";
 import { Link } from "react-router-dom";
 import MemberFeed from "@/components/profile/MemberFeed";
 import SelfCheckInWidget from "@/components/attendance/SelfCheckInWidget";
@@ -11,6 +11,11 @@ import { BirthdayBanner } from "@/components/dashboard/BirthdayCelebration";
 import { useTenant } from "@/contexts/TenantContext";
 import ImageLightbox from "@/components/ui/ImageLightbox";
 import DashboardBanner from "@/components/dashboard/DashboardBanner";
+import AppFeedbackDialog from "@/components/feedback/AppFeedbackDialog";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { useTenantQuery } from "@/hooks/useTenantQuery";
 
 const GROWTH_FIELDS = [
   { key: "water_baptism", label: "Water Baptism" },
@@ -24,7 +29,26 @@ const GROWTH_FIELDS = [
 
 export default function MemberDashboard({ currentUser, myMember }) {
   const { currentTenant, tenantRole } = useTenant();
+  const { session } = useAuth();
+  const { tenantId } = useTenantQuery();
   const roleLabel = tenantRole ? tenantRole.charAt(0).toUpperCase() + tenantRole.slice(1) : "";
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
+  const userId = session?.user?.id;
+
+  const { data: existingFeedback } = useQuery({
+    queryKey: ["app-feedback-own", tenantId, userId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("app_feedback")
+        .select("id")
+        .eq("user_id", userId)
+        .eq("tenant_id", tenantId)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!userId && !!tenantId,
+  });
 
   const statusColors = {
     Active: "bg-chart-3/10 text-chart-3",
@@ -135,6 +159,26 @@ export default function MemberDashboard({ currentUser, myMember }) {
           </CardContent>
         </Card>
       )}
+
+      {/* Rate this app prompt */}
+      {!existingFeedback && (
+        <Card className="border border-accent/20 bg-accent/5 shadow-sm cursor-pointer hover:shadow-md transition-shadow" onClick={() => setFeedbackOpen(true)}>
+          <CardContent className="p-4 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-xl bg-accent/10 flex items-center justify-center shrink-0">
+                <Star className="h-5 w-5 text-accent" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-foreground">Enjoying the app?</p>
+                <p className="text-xs text-muted-foreground">Tap to rate and share your feedback</p>
+              </div>
+            </div>
+            <ChevronRight className="h-5 w-5 text-accent shrink-0" />
+          </CardContent>
+        </Card>
+      )}
+
+      <AppFeedbackDialog open={feedbackOpen} onOpenChange={setFeedbackOpen} />
     </div>
   );
 }
