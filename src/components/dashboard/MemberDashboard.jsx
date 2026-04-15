@@ -159,6 +159,26 @@ export default function MemberDashboard({ currentUser, myMember }) {
           </CardContent>
         </Card>
       )}
+
+      {/* Rate this app prompt */}
+      {!existingFeedback && (
+        <Card className="border border-accent/20 bg-accent/5 shadow-sm cursor-pointer hover:shadow-md transition-shadow" onClick={() => setFeedbackOpen(true)}>
+          <CardContent className="p-4 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-xl bg-accent/10 flex items-center justify-center shrink-0">
+                <Star className="h-5 w-5 text-accent" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-foreground">Enjoying the app?</p>
+                <p className="text-xs text-muted-foreground">Tap to rate and share your feedback</p>
+              </div>
+            </div>
+            <ChevronRight className="h-5 w-5 text-accent shrink-0" />
+          </CardContent>
+        </Card>
+      )}
+
+      <AppFeedbackDialog open={feedbackOpen} onOpenChange={setFeedbackOpen} />
     </div>
   );
 }
