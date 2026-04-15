@@ -10,10 +10,10 @@ import { useTenantQuery } from "@/hooks/useTenantQuery";
 import { toast } from "@/components/ui/use-toast";
 
 export default function AppFeedbackDialog({ open, onOpenChange }) {
-  const { session } = useAuth();
+  const { user } = useAuth();
   const { tenantId } = useTenantQuery();
   const queryClient = useQueryClient();
-  const userId = session?.user?.id;
+  const userId = user?.id;
 
   const [rating, setRating] = useState(0);
   const [hoveredRating, setHoveredRating] = useState(0);
