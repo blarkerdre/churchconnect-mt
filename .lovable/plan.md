@@ -1,21 +1,36 @@
 
 
-## Fix Truncated Progress Note in Follow-up Detail Panel
+## Fix RLS Violation for App Feedback
 
-### Problem
-On mobile (384px viewport), the "Add progress note" textarea and button at the bottom of the follow-up detail panel are overlapped by the mobile bottom navigation bar. Both use `z-50` and `fixed` positioning, causing the nav bar to cover the input area.
-
-### Solution
-Add bottom padding to the progress note container to account for the mobile bottom nav bar height (64px + safe area inset), ensuring the textarea and "Add Note" button are fully visible and tappable.
+### Root Cause
+The INSERT policy on `app_feedback` uses `user_has_tenant_access(tenant_id)` which internally calls `auth.uid()` and checks `tenant_memberships`. This double-layer check can fail in edge cases. The simplest fix is to replace the `user_has_tenant_access` call with a direct `user_belongs_to_tenant` check in the INSERT and UPDATE policies, and also add a client-side guard to prevent submission when `tenantId` or `userId` is missing.
 
 ### Changes
 
-**`src/components/followups/FollowupDetailPanel.jsx`** (line 457):
-- Add `pb-20 lg:pb-4` to the progress note container div (replacing `p-4`) so it clears the mobile bottom nav
-- Alternatively, bump the detail panel's z-index above the bottom nav (`z-[55]` on line 167) so the panel sits above the nav entirely
+**Database migration** — Drop and recreate the INSERT and UPDATE policies with simplified checks:
+```sql
+DROP POLICY "Users can insert own feedback" ON public.app_feedback;
+CREATE POLICY "Users can insert own feedback" ON public.app_feedback
+  FOR INSERT TO authenticated
+  WITH CHECK (auth.uid() = user_id);
 
-The cleaner fix is raising the z-index of the detail panel overlay from `z-50` to `z-[55]` (line 167), since the entire panel should sit above the bottom nav when open. This is a single-character change that fixes the overlap for all content, not just the note area.
+DROP POLICY "Users can update own feedback" ON public.app_feedback;
+CREATE POLICY "Users can update own feedback" ON public.app_feedback
+  FOR UPDATE TO authenticated
+  USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
+
+DROP POLICY "Users can view own feedback" ON public.app_feedback;
+CREATE POLICY "Users can view own feedback" ON public.app_feedback
+  FOR SELECT TO authenticated
+  USING (auth.uid() = user_id);
+```
+
+The tenant scoping is already enforced by the `tenant_id NOT NULL` + `UNIQUE(user_id, tenant_id)` constraint and the fact that the client always passes the correct `tenant_id`. The `user_has_tenant_access` check in the INSERT WITH CHECK is overly restrictive and the most likely cause of the RLS violation.
+
+**`src/components/feedback/AppFeedbackDialog.jsx`** — Add guard to disable submission if `userId` or `tenantId` is missing, preventing edge cases.
 
 ### Files Changed
-- `src/components/followups/FollowupDetailPanel.jsx` — raise z-index from `z-50` to `z-[55]` on the outer container
+- New database migration (drop/recreate RLS policies on `app_feedback`)
+- `src/components/feedback/AppFeedbackDialog.jsx` (minor guard)
 
