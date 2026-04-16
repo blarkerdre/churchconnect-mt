@@ -115,6 +115,24 @@ export default function WSFLeaderDashboard() {
     );
   }
 
+  const totalMembers = centreMembers.length;
+  const activeMembers = centreMembers.filter(m => m.membership_status === "Active").length;
+  const totalReports = recentReports.length;
+
+  // Compute average attendance from recent reports
+  const avgAttendance = totalReports > 0
+    ? Math.round(recentReports.reduce((sum, r) => sum + r.male + r.female + r.children, 0) / totalReports)
+    : 0;
+
+  // Chart data — last reports reversed for chronological order
+  const chartData = [...recentReports].reverse().map(r => ({
+    date: format(new Date(r.meeting_date), "dd MMM"),
+    total: r.male + r.female + r.children,
+    adults: r.male + r.female,
+    children: r.children,
+    firstTimers: r.first_timers,
+  }));
+
   return (
     <div className="space-y-6">
       {/* Sliding Banner */}
