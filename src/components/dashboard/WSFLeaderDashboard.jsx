@@ -13,6 +13,7 @@ import { format, subWeeks, startOfWeek } from "date-fns";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import SelfCheckInWidget from "@/components/attendance/SelfCheckInWidget";
 import MemberFeed from "@/components/profile/MemberFeed";
+import DashboardBanner from "@/components/dashboard/DashboardBanner";
 
 export default function WSFLeaderDashboard() {
   const { user, myMember, profile } = useAuth();
@@ -119,6 +120,9 @@ export default function WSFLeaderDashboard() {
 
   return (
     <div className="space-y-6">
+      {/* Sliding Banner */}
+      <DashboardBanner />
+
       {/* Welcome Banner */}
       <Card className="border-0 shadow-sm bg-gradient-to-r from-primary to-primary/70 text-primary-foreground overflow-hidden">
         <CardContent className="p-6 flex items-center gap-4">
