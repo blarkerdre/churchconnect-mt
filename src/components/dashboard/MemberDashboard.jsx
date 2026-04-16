@@ -29,7 +29,7 @@ const GROWTH_FIELDS = [
 
 export default function MemberDashboard({ currentUser, myMember }) {
   const { currentTenant, tenantRole } = useTenant();
-  const { session, isUnitLeader, isAdmin, leaderUnits } = useAuth();
+  const { session, isUnitLeader, isAdmin, leaderUnits, leaderCentres } = useAuth();
   const { tenantId } = useTenantQuery();
   const roleLabel = tenantRole ? tenantRole.charAt(0).toUpperCase() + tenantRole.slice(1) : "";
   const [feedbackOpen, setFeedbackOpen] = useState(false);
@@ -112,6 +112,16 @@ export default function MemberDashboard({ currentUser, myMember }) {
                 )}
                 {myMember.winners_satellite && (
                   <Badge className="bg-accent/30 text-accent text-xs border-0">WSF — {myMember.wsf_centres?.name || "Member"}</Badge>
+                )}
+                {leaderUnits?.length > 0 && (
+                  <Badge className="bg-accent text-accent-foreground text-xs border-0">
+                    Leads: {leaderUnits.join(", ")}
+                  </Badge>
+                )}
+                {leaderCentres?.length > 0 && (
+                  <Badge className="bg-accent text-accent-foreground text-xs border-0">
+                    Home Cell Leader: {leaderCentres.join(", ")}
+                  </Badge>
                 )}
               </div>
             )}
