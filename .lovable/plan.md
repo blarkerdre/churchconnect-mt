@@ -1,37 +1,34 @@
 
 
-Looking at the request:
-1. Clear textarea after feedback submission/update
-2. Admin acknowledgment of feedback
+The user wants archiving tenants to require password confirmation, like the permanent delete action already does in `archive-tenant/index.ts`.
 
-Let me check current state of feedback files. From context I have `AppFeedbackDialog.jsx` and `FeedbackSummary.jsx` already.
+Currently in `archive-tenant/index.ts`:
+- `action: "archive"` → no password required
+- `action: "restore"` → no password required  
+- `action: "delete"` → password required (re-auths via anon client)
 
-**Issue 1**: After mutation success in `AppFeedbackDialog`, dialog closes but `comment` state isn't reset. When reopening, the `useEffect` reads `existing` and re-populates — but if the user wants a fresh start they can't easily clear. More importantly, after submit the comment stays in state until next open. User wants it cleared.
+Need to add the same password re-auth check to the `archive` action. Restore is less destructive (reversible) — should I include it too? Archiving hides the tenant and locks members out, which is impactful enough to warrant the password. Restore just undoes archive, so safer. I'll require password for archive only, matching user's request literally.
 
-**Issue 2**: Admins viewing `FeedbackSummary` need to acknowledge feedback items so they can track which ones they've reviewed.
+Need to find where archive is called from the frontend to add the password prompt UI.
 
-### Plan
+## Plan: Require Password for Tenant Archival
 
-**1. Database migration** — add acknowledgment columns to `app_feedback`:
-- `acknowledged_at timestamptz`
-- `acknowledged_by uuid`
-- `admin_response text` (optional reply)
+### Backend
+**`supabase/functions/archive-tenant/index.ts`**:
+- In the `action === "archive"` block, add the same password re-authentication check used by `delete`:
+  - Require `password` in request body (return 400 if missing)
+  - Use a separate anon client to call `signInWithPassword({ email: caller.email, password })`
+  - Return 403 "Invalid password. Archive aborted." on failure
+  - Only proceed with the archive update if auth succeeds
+- Restore action remains password-free (reversible, low risk)
 
-Update RLS: admins can UPDATE these fields (currently only own-user UPDATE allowed). Add admin update policy.
-
-**2. `src/components/feedback/AppFeedbackDialog.jsx`**:
-- After successful submit/update mutation, reset `comment` and `rating` to empty before closing dialog.
-- Show acknowledgment status if `existing.acknowledged_at` is set ("Acknowledged by admin on [date]" + optional response).
-
-**3. `src/components/feedback/FeedbackSummary.jsx`**:
-- Add "Acknowledge" button next to each comment (and each rating row in the recent list).
-- Show acknowledged state with checkmark + acknowledger name.
-- Optional inline textarea for admin response.
-- Add a tab/filter: "All / Pending / Acknowledged".
-- Mutation to update `acknowledged_at`, `acknowledged_by`, `admin_response`.
+### Frontend
+Locate the UI that triggers archive (likely in `src/pages/TenantAdmin.jsx` or a related dialog) and:
+- Add a password input field to the archive confirmation dialog (mirroring the delete confirmation pattern)
+- Pass `password` in the `supabase.functions.invoke("archive-tenant", { body: { tenant_id, action: "archive", password } })` call
+- Show error toast if backend returns 403
 
 ### Files Changed
-- New migration: add columns + admin UPDATE RLS policy on `app_feedback`
-- `src/components/feedback/AppFeedbackDialog.jsx` — reset state on success, show ack status
-- `src/components/feedback/FeedbackSummary.jsx` — acknowledge button, filter, response field
+- `supabase/functions/archive-tenant/index.ts` — add password verification to archive branch (~15 lines)
+- `src/pages/TenantAdmin.jsx` (or the dialog component currently handling archive) — add password input + pass it through (~20 lines)
 
