@@ -1,6 +1,6 @@
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Star, MessageSquare, Users } from "lucide-react";
+import { Star, MessageSquare } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
@@ -22,6 +22,29 @@ export default function FeedbackSummary() {
     },
     enabled: !!tenantId,
   });
+
+  const userIds = [...new Set(feedback.map((f) => f.user_id).filter(Boolean))];
+
+  const { data: nameMap = {} } = useQuery({
+    queryKey: ["feedback-member-names", tenantId, userIds.join(",")],
+    queryFn: async () => {
+      if (userIds.length === 0) return {};
+      const { data, error } = await supabase
+        .from("members")
+        .select("user_id, first_name, last_name")
+        .eq("tenant_id", tenantId)
+        .in("user_id", userIds);
+      if (error) throw error;
+      const map = {};
+      (data || []).forEach((m) => {
+        map[m.user_id] = `${m.first_name} ${m.last_name}`.trim();
+      });
+      return map;
+    },
+    enabled: !!tenantId && userIds.length > 0,
+  });
+
+  const getName = (userId) => nameMap[userId] || "Anonymous";
 
   if (isLoading) {
     return <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>;
@@ -105,10 +128,13 @@ export default function FeedbackSummary() {
               <CardContent className="space-y-3 max-h-64 overflow-y-auto">
                 {withComments.slice(0, 20).map((f) => (
                   <div key={f.id} className="border-b border-border last:border-0 pb-2">
-                    <div className="flex items-center gap-1 mb-0.5">
-                      {Array.from({ length: 5 }).map((_, i) => (
-                        <Star key={i} className={`h-3 w-3 ${i < f.rating ? "fill-accent text-accent" : "text-muted-foreground/20"}`} />
-                      ))}
+                    <div className="flex items-center justify-between mb-0.5">
+                      <div className="flex items-center gap-1">
+                        {Array.from({ length: 5 }).map((_, i) => (
+                          <Star key={i} className={`h-3 w-3 ${i < f.rating ? "fill-accent text-accent" : "text-muted-foreground/20"}`} />
+                        ))}
+                      </div>
+                      <span className="text-xs font-medium text-foreground">{getName(f.user_id)}</span>
                     </div>
                     <p className="text-sm text-foreground">{f.comment}</p>
                     <p className="text-xs text-muted-foreground mt-0.5">
