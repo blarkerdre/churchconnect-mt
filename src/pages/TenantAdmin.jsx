@@ -78,6 +78,7 @@ export default function TenantAdmin() {
   const { tenantId, switchTenant, tenantMemberships, currentTenant, tenantRole, refreshTenantContext } = useTenant();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [createOpen, setCreateOpen] = useState(false);
   const [editTenant, setEditTenant] = useState(null);
   const [usersTenant, setUsersTenant] = useState(null);
@@ -94,6 +95,9 @@ export default function TenantAdmin() {
   const [viewDataTenant, setViewDataTenant] = useState(null);
   const [onboardOpen, setOnboardOpen] = useState(false);
   const [onboardEmail, setOnboardEmail] = useState("");
+  const [switchTarget, setSwitchTarget] = useState(null); // { id, name, slug }
+  const [switchPassword, setSwitchPassword] = useState("");
+  const [switchLoading, setSwitchLoading] = useState(false);
 
   const onboardUrl = `${window.location.origin}/onboard`;
 
