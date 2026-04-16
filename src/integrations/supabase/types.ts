@@ -118,6 +118,9 @@ export type Database = {
       }
       app_feedback: {
         Row: {
+          acknowledged_at: string | null
+          acknowledged_by: string | null
+          admin_response: string | null
           comment: string | null
           created_at: string
           id: string
@@ -127,6 +130,9 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          admin_response?: string | null
           comment?: string | null
           created_at?: string
           id?: string
@@ -136,6 +142,9 @@ export type Database = {
           user_id: string
         }
         Update: {
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          admin_response?: string | null
           comment?: string | null
           created_at?: string
           id?: string
