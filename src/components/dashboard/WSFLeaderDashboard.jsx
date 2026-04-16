@@ -115,6 +115,25 @@ export default function WSFLeaderDashboard() {
   }));
 
 
+  // Compute upcoming birthdays (next 7 days) from centre members
+  const upcomingBirthdays = useMemo(() => {
+    const today = new Date();
+    return centreMembers.filter(m => {
+      if (!m.date_of_birth) return false;
+      const dob = new Date(m.date_of_birth);
+      for (let i = 0; i <= 7; i++) {
+        const check = new Date(today);
+        check.setDate(check.getDate() + i);
+        if (dob.getMonth() === check.getMonth() && dob.getDate() === check.getDate()) return true;
+      }
+      return false;
+    }).sort((a, b) => {
+      const todayY = new Date().getFullYear();
+      const getNext = (d) => { const x = new Date(d); x.setFullYear(todayY); if (x < new Date()) x.setFullYear(todayY + 1); return x; };
+      return getNext(a.date_of_birth) - getNext(b.date_of_birth);
+    });
+  }, [centreMembers]);
+
   return (
     <div className="space-y-6">
       {/* Sliding Banner */}
@@ -173,6 +192,23 @@ export default function WSFLeaderDashboard() {
           </Card>
         ))}
       </div>
+
+      {/* Upcoming Birthdays */}
+      {upcomingBirthdays.length > 0 && (
+        <Card className="border-0 shadow-sm">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-2">
+              <Cake className="h-4 w-4 text-accent" />
+              Upcoming Birthdays
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="px-5 pb-4">
+            {upcomingBirthdays.map(m => (
+              <UpcomingBirthdayItem key={m.id} member={m} />
+            ))}
+          </CardContent>
+        </Card>
+      )}
 
 
       {/* Attendance Trends Chart */}
