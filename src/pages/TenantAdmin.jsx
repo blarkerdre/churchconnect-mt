@@ -695,7 +695,7 @@ export default function TenantAdmin() {
                                       <Trash2 className="h-3 w-3" />
                                     </Button>
                                     {isMember && !isActive && (
-                                      <Button size="sm" variant="outline" onClick={() => handleSwitch(t.id)}>
+                                      <Button size="sm" variant="outline" onClick={() => handleSwitch(t)}>
                                         <ArrowRightLeft className="h-3 w-3 mr-1" /> Switch
                                       </Button>
                                     )}
