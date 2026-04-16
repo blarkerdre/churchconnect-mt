@@ -11,7 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
 
-export default function WSFCentreMembersDialog({ open, onOpenChange, centre }) {
+export default function WSFCentreMembersDialog({ open, onOpenChange, centre, isReadOnly = false }) {
   const [search, setSearch] = useState("");
   const [addSearch, setAddSearch] = useState("");
   const [showAdd, setShowAdd] = useState(false);
@@ -116,9 +116,11 @@ export default function WSFCentreMembersDialog({ open, onOpenChange, centre }) {
                   className="pl-9"
                 />
               </div>
-              <Button size="sm" onClick={() => { setShowAdd(true); setAddSearch(""); }}>
-                <UserPlus className="h-4 w-4 mr-1" /> Add
-              </Button>
+              {!isReadOnly && (
+                <Button size="sm" onClick={() => { setShowAdd(true); setAddSearch(""); }}>
+                  <UserPlus className="h-4 w-4 mr-1" /> Add
+                </Button>
+              )}
             </div>
 
             {isLoading ? (
@@ -135,19 +137,22 @@ export default function WSFCentreMembersDialog({ open, onOpenChange, centre }) {
                       <div>
                         <p className="text-sm font-medium">{m.first_name} {m.last_name}</p>
                         {m.email && <p className="text-xs text-muted-foreground">{m.email}</p>}
+                        {m.phone && <p className="text-xs text-muted-foreground">{m.phone}</p>}
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
-                        onClick={() => {
-                          if (window.confirm(`Remove ${m.first_name} ${m.last_name} from this centre?`))
-                            removeMutation.mutate(m.id);
-                        }}
-                        disabled={removeMutation.isPending}
-                      >
-                        <UserMinus className="h-4 w-4 text-destructive" />
-                      </Button>
+                      {!isReadOnly && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
+                          onClick={() => {
+                            if (window.confirm(`Remove ${m.first_name} ${m.last_name} from this centre?`))
+                              removeMutation.mutate(m.id);
+                          }}
+                          disabled={removeMutation.isPending}
+                        >
+                          <UserMinus className="h-4 w-4 text-destructive" />
+                        </Button>
+                      )}
                     </div>
                   ))}
                 </div>
