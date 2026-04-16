@@ -808,6 +808,53 @@ export default function TenantAdmin() {
         </DialogContent>
       </Dialog>
 
+      {/* ============ ARCHIVE CONFIRMATION DIALOG ============ */}
+      <Dialog open={!!archiveTenant} onOpenChange={(open) => { if (!open) { setArchiveTenant(null); setArchivePassword(""); } }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Archive className="h-5 w-5 text-amber-600" />
+              Archive Tenant
+            </DialogTitle>
+            <DialogDescription>
+              Archive <strong>{archiveTenant?.name}</strong>. Members will lose access until restored.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <Alert>
+              <ShieldAlert className="h-4 w-4" />
+              <AlertTitle>Verify your identity</AlertTitle>
+              <AlertDesc>Enter your account password to confirm archival.</AlertDesc>
+            </Alert>
+            <div className="space-y-2">
+              <Label>Your Password</Label>
+              <Input
+                type="password"
+                value={archivePassword}
+                onChange={(e) => setArchivePassword(e.target.value)}
+                placeholder="Enter your password"
+                autoFocus
+              />
+            </div>
+            <div className="flex gap-2 justify-end">
+              <Button variant="outline" onClick={() => { setArchiveTenant(null); setArchivePassword(""); }}>Cancel</Button>
+              <Button
+                disabled={!archivePassword || archiveMutation.isPending}
+                onClick={() => archiveMutation.mutate({
+                  tenantId: archiveTenant.id,
+                  action: "archive",
+                  password: archivePassword,
+                })}
+              >
+                {archiveMutation.isPending ? "Archiving..." : (
+                  <><Archive className="h-4 w-4 mr-1" /> Archive Tenant</>
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* ============ RESTORE CONFIRMATION DIALOG ============ */}
       <Dialog open={!!restoreTenant} onOpenChange={(open) => { if (!open) setRestoreTenant(null); }}>
         <DialogContent className="max-w-sm">
