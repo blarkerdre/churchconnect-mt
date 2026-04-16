@@ -1,20 +1,31 @@
 
 
-## Fix: Show Dashboard Banner for Unit Leaders and Home Cell Leaders
+## Allow Home Cell Leaders to View Their Centre Members (Read-Only)
 
-### Root Cause
-The `Dashboard.jsx` routing logic sends:
-- **Home Cell (WSF) leaders** → `WSFLeaderDashboard` component, which does NOT render `<DashboardBanner />`
-- **Unit leaders** (who are not also WSF leaders) → `MemberDashboard`, which DOES render the banner — so they should already see it
+### Problem
+Home Cell leaders have a "Manage Members" quick action on their dashboard, but it navigates to `/wsf` which only shows attendance. The actual member management dialog (`WSFCentreMembersDialog`) is only available in Settings (admin-only). Leaders cannot see who is in their centre.
 
-The fix is simply adding `<DashboardBanner />` to `WSFLeaderDashboard`.
+### Solution
+Add a read-only member list to the WSF Management page for Home Cell leaders, while keeping add/remove capabilities admin-only.
 
 ### Changes
 
-**`src/components/dashboard/WSFLeaderDashboard.jsx`**
-- Import `DashboardBanner` from `@/components/dashboard/DashboardBanner`
-- Add `<DashboardBanner />` at the top of the returned JSX (before the welcome/stats section), matching the same placement used in `MemberDashboard`
+**1. `src/components/wsf/WSFCentreMembersDialog.jsx`**
+- Accept an `isReadOnly` prop (default `false`)
+- When `isReadOnly` is true: hide the "Add" button, hide the remove (UserMinus) button on each member row
+- Show phone number alongside email for leader visibility
+
+**2. `src/pages/WSFManagement.jsx`**
+- Import `WSFCentreMembersDialog`
+- For WSF leaders (non-admin), add a "Members" section below attendance showing their led centres as cards with member count
+- Clicking a centre card opens `WSFCentreMembersDialog` with `isReadOnly={true}`
+- Admins continue to manage members via Settings as before
+
+**3. `src/components/dashboard/WSFLeaderDashboard.jsx`**
+- Update the "Manage Members" quick action label to "View Members" to reflect the read-only nature
 
 ### Files Changed
-- `src/components/dashboard/WSFLeaderDashboard.jsx` (2-line addition: import + render)
+- `src/components/wsf/WSFCentreMembersDialog.jsx` — add `isReadOnly` prop to hide add/remove controls
+- `src/pages/WSFManagement.jsx` — add centre member cards with view dialog for leaders
+- `src/components/dashboard/WSFLeaderDashboard.jsx` — rename quick action label
 
