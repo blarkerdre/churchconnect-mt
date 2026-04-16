@@ -57,6 +57,23 @@ Deno.serve(async (req) => {
     }
 
     if (action === "archive") {
+      if (!password) {
+        return new Response(JSON.stringify({ error: "Password required to archive tenant" }), {
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+      const anonClient = createClient(supabaseUrl, anonKey);
+      const { error: authError } = await anonClient.auth.signInWithPassword({
+        email: caller.email!,
+        password,
+      });
+      if (authError) {
+        return new Response(JSON.stringify({ error: "Invalid password. Archive aborted." }), {
+          status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
       const { error } = await supabase.from("tenants").update({
         is_archived: true,
         archived_at: new Date().toISOString(),
