@@ -291,19 +291,18 @@ export default function Layout({ children }) {
               <span>Backend mismatch detected — connected to <code className="bg-destructive/10 px-1 rounded">{getBackendHost()}</code></span>
             </div>
           )}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setSidebarOpen(true)}>
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-3 min-w-0 flex-1">
+              <Button variant="ghost" size="icon" className="lg:hidden shrink-0" onClick={() => setSidebarOpen(true)}>
                 <Menu className="h-5 w-5" />
               </Button>
-              <div>
-                <h2 className="text-lg font-display font-bold text-foreground leading-tight">
+              <div className="min-w-0">
+                <h2 className="text-lg font-display font-bold text-foreground leading-tight truncate">
                   {currentNav.name}
                 </h2>
-                <p className="text-[10px] text-muted-foreground sm:hidden">{getRoleTitle()}</p>
               </div>
             </div>
-            <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap justify-end">
+            <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap justify-end min-w-0 shrink-0">
               {isAdmin && (
                 <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
                   isPreviewEnvironment()
@@ -314,7 +313,7 @@ export default function Layout({ children }) {
                 </span>
               )}
               {currentTenant && (
-                <span className="text-[10px] font-medium text-primary bg-primary/10 border border-primary/20 px-2 py-0.5 rounded-full flex items-center gap-1 max-w-[160px]">
+                <span className="text-[10px] font-medium text-primary bg-primary/10 border border-primary/20 px-2 py-0.5 rounded-full hidden sm:flex items-center gap-1 max-w-[140px]">
                   {currentTenant.logo_url && <img src={currentTenant.logo_url} alt="" className="h-3.5 w-3.5 rounded object-contain shrink-0" />}
                   <span className="truncate">{currentTenant.name}</span>
                 </span>
@@ -327,6 +326,18 @@ export default function Layout({ children }) {
                 <LogOut className="h-4 w-4" />
               </Button>
             </div>
+          </div>
+          {/* Mobile-only second row: role + tenant badges */}
+          <div className="flex sm:hidden items-center gap-1.5 mt-2 flex-wrap">
+            <span className="text-[10px] font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
+              {getRoleTitle()}
+            </span>
+            {currentTenant && (
+              <span className="text-[10px] font-medium text-primary bg-primary/10 border border-primary/20 px-2 py-0.5 rounded-full flex items-center gap-1 max-w-[200px]">
+                {currentTenant.logo_url && <img src={currentTenant.logo_url} alt="" className="h-3 w-3 rounded object-contain shrink-0" />}
+                <span className="truncate">{currentTenant.name}</span>
+              </span>
+            )}
           </div>
         </header>
 
