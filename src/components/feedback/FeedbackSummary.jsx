@@ -1,13 +1,22 @@
-import React from "react";
+import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Star, MessageSquare } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { Star, MessageSquare, Loader2, CheckCircle2, Clock } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
-import { Loader2 } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { toast } from "@/components/ui/use-toast";
 
 export default function FeedbackSummary() {
   const { tenantId } = useTenantQuery();
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const [responseDrafts, setResponseDrafts] = useState({});
+  const [pendingId, setPendingId] = useState(null);
 
   const { data: feedback = [], isLoading } = useQuery({
     queryKey: ["app-feedback-all", tenantId],
@@ -23,7 +32,7 @@ export default function FeedbackSummary() {
     enabled: !!tenantId,
   });
 
-  const userIds = [...new Set(feedback.map((f) => f.user_id).filter(Boolean))];
+  const userIds = [...new Set(feedback.flatMap((f) => [f.user_id, f.acknowledged_by]).filter(Boolean))];
 
   const { data: nameMap = {} } = useQuery({
     queryKey: ["feedback-member-names", tenantId, userIds.join(",")],
@@ -44,6 +53,35 @@ export default function FeedbackSummary() {
     enabled: !!tenantId && userIds.length > 0,
   });
 
+  const acknowledgeMutation = useMutation({
+    mutationFn: async ({ id, response }) => {
+      const { error } = await supabase
+        .from("app_feedback")
+        .update({
+          acknowledged_at: new Date().toISOString(),
+          acknowledged_by: user.id,
+          admin_response: response?.trim() || null,
+        })
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onMutate: ({ id }) => setPendingId(id),
+    onSettled: () => setPendingId(null),
+    onSuccess: (_, { id }) => {
+      queryClient.invalidateQueries({ queryKey: ["app-feedback-all"] });
+      queryClient.invalidateQueries({ queryKey: ["app-feedback-own"] });
+      setResponseDrafts((prev) => {
+        const next = { ...prev };
+        delete next[id];
+        return next;
+      });
+      toast({ title: "Acknowledged", description: "Feedback marked as reviewed." });
+    },
+    onError: (err) => {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    },
+  });
+
   const getName = (userId) => nameMap[userId] || "Anonymous";
 
   if (isLoading) {
@@ -56,7 +94,69 @@ export default function FeedbackSummary() {
     rating: r,
     count: feedback.filter((f) => f.rating === r).length,
   }));
-  const withComments = feedback.filter((f) => f.comment);
+  const acknowledgedCount = feedback.filter((f) => f.acknowledged_at).length;
+  const pendingCount = total - acknowledgedCount;
+
+  const renderItem = (f) => {
+    const isAck = !!f.acknowledged_at;
+    const draft = responseDrafts[f.id] ?? "";
+    return (
+      <div key={f.id} className="border-b border-border last:border-0 pb-3 last:pb-0">
+        <div className="flex items-center justify-between mb-1 gap-2">
+          <div className="flex items-center gap-1">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <Star key={i} className={`h-3 w-3 ${i < f.rating ? "fill-accent text-accent" : "text-muted-foreground/20"}`} />
+            ))}
+          </div>
+          <span className="text-xs font-medium text-foreground truncate">{getName(f.user_id)}</span>
+        </div>
+        {f.comment && <p className="text-sm text-foreground">{f.comment}</p>}
+        <p className="text-xs text-muted-foreground mt-0.5">{new Date(f.updated_at).toLocaleDateString()}</p>
+
+        {isAck ? (
+          <div className="mt-2 rounded-md bg-muted/40 p-2 space-y-1">
+            <div className="flex items-center gap-1.5 text-xs font-medium text-foreground">
+              <CheckCircle2 className="h-3.5 w-3.5 text-accent" />
+              Acknowledged by {getName(f.acknowledged_by)} on {new Date(f.acknowledged_at).toLocaleDateString()}
+            </div>
+            {f.admin_response && (
+              <p className="text-sm text-muted-foreground italic">"{f.admin_response}"</p>
+            )}
+          </div>
+        ) : (
+          <div className="mt-2 space-y-2">
+            <Textarea
+              placeholder="Optional response to the member..."
+              value={draft}
+              onChange={(e) => setResponseDrafts((p) => ({ ...p, [f.id]: e.target.value }))}
+              rows={2}
+              maxLength={500}
+              className="text-sm"
+            />
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={pendingId === f.id}
+              onClick={() => acknowledgeMutation.mutate({ id: f.id, response: draft })}
+            >
+              {pendingId === f.id ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />
+              ) : (
+                <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" />
+              )}
+              Acknowledge
+            </Button>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const filterFeedback = (mode) => {
+    if (mode === "pending") return feedback.filter((f) => !f.acknowledged_at);
+    if (mode === "acknowledged") return feedback.filter((f) => f.acknowledged_at);
+    return feedback;
+  };
 
   return (
     <div className="space-y-4">
@@ -74,26 +174,38 @@ export default function FeedbackSummary() {
       ) : (
         <>
           {/* Summary cards */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <Card className="border-0 shadow-sm">
               <CardContent className="p-4 text-center">
                 <div className="flex items-center justify-center gap-1 mb-1">
                   <Star className="h-5 w-5 fill-accent text-accent" />
                   <span className="text-2xl font-bold text-foreground">{avg}</span>
                 </div>
-                <p className="text-xs text-muted-foreground">Average Rating</p>
+                <p className="text-xs text-muted-foreground">Average</p>
               </CardContent>
             </Card>
             <Card className="border-0 shadow-sm">
               <CardContent className="p-4 text-center">
                 <p className="text-2xl font-bold text-foreground">{total}</p>
-                <p className="text-xs text-muted-foreground">Total Responses</p>
+                <p className="text-xs text-muted-foreground">Total</p>
               </CardContent>
             </Card>
-            <Card className="border-0 shadow-sm col-span-2 sm:col-span-1">
+            <Card className="border-0 shadow-sm">
               <CardContent className="p-4 text-center">
-                <p className="text-2xl font-bold text-foreground">{withComments.length}</p>
-                <p className="text-xs text-muted-foreground">With Comments</p>
+                <div className="flex items-center justify-center gap-1 mb-1">
+                  <Clock className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-2xl font-bold text-foreground">{pendingCount}</span>
+                </div>
+                <p className="text-xs text-muted-foreground">Pending</p>
+              </CardContent>
+            </Card>
+            <Card className="border-0 shadow-sm">
+              <CardContent className="p-4 text-center">
+                <div className="flex items-center justify-center gap-1 mb-1">
+                  <CheckCircle2 className="h-4 w-4 text-accent" />
+                  <span className="text-2xl font-bold text-foreground">{acknowledgedCount}</span>
+                </div>
+                <p className="text-xs text-muted-foreground">Acknowledged</p>
               </CardContent>
             </Card>
           </div>
@@ -119,32 +231,37 @@ export default function FeedbackSummary() {
             </CardContent>
           </Card>
 
-          {/* Recent comments */}
-          {withComments.length > 0 && (
-            <Card className="border-0 shadow-sm">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Recent Comments</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3 max-h-64 overflow-y-auto">
-                {withComments.slice(0, 20).map((f) => (
-                  <div key={f.id} className="border-b border-border last:border-0 pb-2">
-                    <div className="flex items-center justify-between mb-0.5">
-                      <div className="flex items-center gap-1">
-                        {Array.from({ length: 5 }).map((_, i) => (
-                          <Star key={i} className={`h-3 w-3 ${i < f.rating ? "fill-accent text-accent" : "text-muted-foreground/20"}`} />
-                        ))}
-                      </div>
-                      <span className="text-xs font-medium text-foreground">{getName(f.user_id)}</span>
-                    </div>
-                    <p className="text-sm text-foreground">{f.comment}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      {new Date(f.updated_at).toLocaleDateString()}
-                    </p>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
-          )}
+          {/* Feedback list with tabs */}
+          <Card className="border-0 shadow-sm">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Feedback</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Tabs defaultValue="pending" className="w-full">
+                <TabsList className="grid w-full grid-cols-3 h-auto">
+                  <TabsTrigger value="pending" className="text-xs">
+                    Pending {pendingCount > 0 && <Badge variant="secondary" className="ml-1.5 h-4 px-1 text-[10px]">{pendingCount}</Badge>}
+                  </TabsTrigger>
+                  <TabsTrigger value="acknowledged" className="text-xs">Acknowledged</TabsTrigger>
+                  <TabsTrigger value="all" className="text-xs">All</TabsTrigger>
+                </TabsList>
+                {["pending", "acknowledged", "all"].map((mode) => {
+                  const items = filterFeedback(mode);
+                  return (
+                    <TabsContent key={mode} value={mode} className="mt-3">
+                      {items.length === 0 ? (
+                        <p className="text-center text-sm text-muted-foreground py-6">No items.</p>
+                      ) : (
+                        <div className="space-y-3 max-h-80 overflow-y-auto">
+                          {items.slice(0, 50).map(renderItem)}
+                        </div>
+                      )}
+                    </TabsContent>
+                  );
+                })}
+              </Tabs>
+            </CardContent>
+          </Card>
         </>
       )}
     </div>
