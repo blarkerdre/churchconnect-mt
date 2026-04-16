@@ -113,11 +113,6 @@ export default function WSFLeaderDashboard() {
     firstTimers: r.first_timers,
   }));
 
-  // Members by centre breakdown
-  const membersByCentre = ledCentres.map(c => ({
-    ...c,
-    count: centreMembers.filter(m => m.wsf_centre_id === c.id).length,
-  }));
 
   return (
     <div className="space-y-6">
