@@ -1,24 +1,37 @@
 
-## Fix: Unit Leadership Not Showing in Welcome Banner
 
-### Root Cause
-The leader badges (`Leads: ...` and `Home Cell Leader: ...`) live inside the `{myMember && (...)}` block (lines 105–127 of `MemberDashboard.jsx`). If the signed-in leader has no linked `members` row in the current tenant, the entire badges row — including the leadership badges — never renders. Even when `myMember` does exist, on a 384px viewport the row already contains status + church_unit + WSF badges, so the leader badges often wrap below the visible area or get visually buried.
+Looking at the request:
+1. Clear textarea after feedback submission/update
+2. Admin acknowledgment of feedback
 
-### Fix
-**`src/components/dashboard/MemberDashboard.jsx`** (welcome banner, ~lines 105–127):
+Let me check current state of feedback files. From context I have `AppFeedbackDialog.jsx` and `FeedbackSummary.jsx` already.
 
-1. **Move the leader badges OUT of the `myMember &&` block** into their own dedicated row that renders whenever `leaderUnits.length > 0` or `leaderCentres.length > 0`, regardless of whether a member profile exists.
-2. **Style them more prominently** so they stand out on mobile — use a slightly larger pill with a leader icon (e.g. `Shield` or `Crown` from lucide-react) and the bright accent background.
-3. Keep the existing membership status / church unit / WSF badges inside the original `myMember &&` block as-is.
+**Issue 1**: After mutation success in `AppFeedbackDialog`, dialog closes but `comment` state isn't reset. When reopening, the `useEffect` reads `existing` and re-populates — but if the user wants a fresh start they can't easily clear. More importantly, after submit the comment stays in state until next open. User wants it cleared.
 
-### Resulting Layout (mobile)
-```
-[Avatar] Welcome, John!
-         WCI Cardiff   [Owner]
-         [Active] [Choir] [WSF — Cardiff]      ← only if myMember
-         🛡 Leads: Choir, Ushers                ← always if leaderUnits
-         🏠 Home Cell Leader: Cardiff Centre    ← always if leaderCentres
-```
+**Issue 2**: Admins viewing `FeedbackSummary` need to acknowledge feedback items so they can track which ones they've reviewed.
+
+### Plan
+
+**1. Database migration** — add acknowledgment columns to `app_feedback`:
+- `acknowledged_at timestamptz`
+- `acknowledged_by uuid`
+- `admin_response text` (optional reply)
+
+Update RLS: admins can UPDATE these fields (currently only own-user UPDATE allowed). Add admin update policy.
+
+**2. `src/components/feedback/AppFeedbackDialog.jsx`**:
+- After successful submit/update mutation, reset `comment` and `rating` to empty before closing dialog.
+- Show acknowledgment status if `existing.acknowledged_at` is set ("Acknowledged by admin on [date]" + optional response).
+
+**3. `src/components/feedback/FeedbackSummary.jsx`**:
+- Add "Acknowledge" button next to each comment (and each rating row in the recent list).
+- Show acknowledged state with checkmark + acknowledger name.
+- Optional inline textarea for admin response.
+- Add a tab/filter: "All / Pending / Acknowledged".
+- Mutation to update `acknowledged_at`, `acknowledged_by`, `admin_response`.
 
 ### Files Changed
-- `src/components/dashboard/MemberDashboard.jsx` — restructure badge rows (~10 lines)
+- New migration: add columns + admin UPDATE RLS policy on `app_feedback`
+- `src/components/feedback/AppFeedbackDialog.jsx` — reset state on success, show ack status
+- `src/components/feedback/FeedbackSummary.jsx` — acknowledge button, filter, response field
+
