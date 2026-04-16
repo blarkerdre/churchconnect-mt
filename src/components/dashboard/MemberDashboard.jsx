@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { CheckCircle2, XCircle, UserCircle, ChevronRight, Star, Cake } from "lucide-react";
+import { CheckCircle2, XCircle, UserCircle, ChevronRight, Star, Cake, Shield, Home } from "lucide-react";
 import { Link } from "react-router-dom";
 import MemberFeed from "@/components/profile/MemberFeed";
 import SelfCheckInWidget from "@/components/attendance/SelfCheckInWidget";
@@ -113,13 +113,19 @@ export default function MemberDashboard({ currentUser, myMember }) {
                 {myMember.winners_satellite && (
                   <Badge className="bg-accent/30 text-accent text-xs border-0">WSF — {myMember.wsf_centres?.name || "Member"}</Badge>
                 )}
+              </div>
+            )}
+            {(leaderUnits?.length > 0 || leaderCentres?.length > 0) && (
+              <div className="flex items-center gap-2 mt-2 flex-wrap">
                 {leaderUnits?.length > 0 && (
-                  <Badge className="bg-accent text-accent-foreground text-xs border-0">
+                  <Badge className="bg-accent text-accent-foreground text-xs border-0 gap-1 py-1 px-2">
+                    <Shield className="h-3 w-3" />
                     Leads: {leaderUnits.join(", ")}
                   </Badge>
                 )}
                 {leaderCentres?.length > 0 && (
-                  <Badge className="bg-accent text-accent-foreground text-xs border-0">
+                  <Badge className="bg-accent text-accent-foreground text-xs border-0 gap-1 py-1 px-2">
+                    <Home className="h-3 w-3" />
                     Home Cell Leader: {leaderCentres.join(", ")}
                   </Badge>
                 )}
