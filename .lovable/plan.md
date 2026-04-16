@@ -1,28 +1,24 @@
 
-The user wants the welcome banner in `MemberDashboard.jsx` to display the user's role and the unit(s) they lead.
+## Fix: Unit Leadership Not Showing in Welcome Banner
 
-Looking at the current welcome banner (lines 91-122 in MemberDashboard.jsx):
-- It shows the role badge (`roleLabel`) already
-- It shows membership status, church_unit, and WSF centre
-- Missing: explicit "leads X unit" indicator for unit leaders / Home Cell leaders
+### Root Cause
+The leader badges (`Leads: ...` and `Home Cell Leader: ...`) live inside the `{myMember && (...)}` block (lines 105–127 of `MemberDashboard.jsx`). If the signed-in leader has no linked `members` row in the current tenant, the entire badges row — including the leadership badges — never renders. Even when `myMember` does exist, on a 384px viewport the row already contains status + church_unit + WSF badges, so the leader badges often wrap below the visible area or get visually buried.
 
-From `useAuth`, available data: `isUnitLeader`, `isWSFLeader`, `leaderUnits` (array of unit names). For Home Cell leaders, we'd need centre names — but we already query led centres in WSFLeaderDashboard via `wsf_leaders`. For MemberDashboard, the simplest approach is to show `leaderUnits` for unit leaders, and for Home Cell leaders show a "Home Cell Leader" indicator with centre names if easily accessible.
+### Fix
+**`src/components/dashboard/MemberDashboard.jsx`** (welcome banner, ~lines 105–127):
 
-## Plan: Show Role + Led Units in Welcome Banner
+1. **Move the leader badges OUT of the `myMember &&` block** into their own dedicated row that renders whenever `leaderUnits.length > 0` or `leaderCentres.length > 0`, regardless of whether a member profile exists.
+2. **Style them more prominently** so they stand out on mobile — use a slightly larger pill with a leader icon (e.g. `Shield` or `Crown` from lucide-react) and the bright accent background.
+3. Keep the existing membership status / church unit / WSF badges inside the original `myMember &&` block as-is.
 
-### Change
-**`src/components/dashboard/MemberDashboard.jsx`** — enhance welcome banner badges row:
-
-1. For **unit leaders**: add a badge "Leads: [unit names]" showing comma-separated `leaderUnits` from `useAuth`.
-2. For **Home Cell leaders**: add a query to fetch centre names from `wsf_centres` where the user is `leader_user_id`, then show "Home Cell Leader: [centre names]".
-3. Keep the existing `roleLabel` badge in the title row.
-
-### Layout
-Below existing status/unit badges, add a new line (only if leader):
+### Resulting Layout (mobile)
 ```
-[Leads Choir, Ushers]   [Home Cell Leader: Cardiff Centre]
+[Avatar] Welcome, John!
+         WCI Cardiff   [Owner]
+         [Active] [Choir] [WSF — Cardiff]      ← only if myMember
+         🛡 Leads: Choir, Ushers                ← always if leaderUnits
+         🏠 Home Cell Leader: Cardiff Centre    ← always if leaderCentres
 ```
-Styled as accent badges to stand out.
 
 ### Files Changed
-- `src/components/dashboard/MemberDashboard.jsx` — add Home Cell centres query + render leader badges (~15 lines)
+- `src/components/dashboard/MemberDashboard.jsx` — restructure badge rows (~10 lines)
