@@ -156,6 +156,23 @@ export default function MemberDashboard({ currentUser, myMember }) {
       {/* Feed: Announcements + Events tabs */}
       <MemberFeed member={myMember} />
 
+      {/* Upcoming Birthdays for Unit Leaders */}
+      {showBirthdays && unitBirthdays.length > 0 && (
+        <Card className="border-0 shadow-sm">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-2">
+              <Cake className="h-4 w-4 text-accent" />
+              Upcoming Birthdays
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="px-5 pb-4">
+            {unitBirthdays.map(m => (
+              <UpcomingBirthdayItem key={m.id} member={m} />
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
       {/* Growth Milestones (if member profile linked) */}
       {myMember && (
         <Card className="border-0 shadow-sm">
