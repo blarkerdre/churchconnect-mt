@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -13,7 +14,7 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Separator } from "@/components/ui/separator";
@@ -22,7 +23,7 @@ import { Alert, AlertTitle, AlertDescription as AlertDesc } from "@/components/u
 import {
   Building2, Users, UserCheck, Plus, CheckCircle2, ArrowRightLeft, Clock, Pencil, Save,
   Image, Palette, Users2, Archive, ArchiveRestore, Trash2, BarChart3, AlertTriangle,
-  ShieldAlert, Eye, Skull, Link, Copy, ExternalLink, Mail, Share2,
+  ShieldAlert, Eye, Skull, Link, Copy, ExternalLink, Mail, Share2, Lock,
 } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useToast } from "@/components/ui/use-toast";
@@ -77,6 +78,7 @@ export default function TenantAdmin() {
   const { tenantId, switchTenant, tenantMemberships, currentTenant, tenantRole, refreshTenantContext } = useTenant();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [createOpen, setCreateOpen] = useState(false);
   const [editTenant, setEditTenant] = useState(null);
   const [usersTenant, setUsersTenant] = useState(null);
@@ -93,6 +95,9 @@ export default function TenantAdmin() {
   const [viewDataTenant, setViewDataTenant] = useState(null);
   const [onboardOpen, setOnboardOpen] = useState(false);
   const [onboardEmail, setOnboardEmail] = useState("");
+  const [switchTarget, setSwitchTarget] = useState(null); // { id, name, slug }
+  const [switchPassword, setSwitchPassword] = useState("");
+  const [switchLoading, setSwitchLoading] = useState(false);
 
   const onboardUrl = `${window.location.origin}/onboard`;
 
@@ -258,9 +263,37 @@ export default function TenantAdmin() {
     createMutation.mutate(newTenant);
   };
 
-  const handleSwitch = (tid) => {
-    switchTenant(tid);
-    toast({ title: "Switched tenant context" });
+  const handleSwitch = (tenant) => {
+    if (tenant.id === tenantId) {
+      toast({ title: "Already on this tenant" });
+      return;
+    }
+    setSwitchTarget({ id: tenant.id, name: tenant.name, slug: tenant.slug });
+    setSwitchPassword("");
+  };
+
+  const confirmSwitch = async () => {
+    if (!switchTarget || !switchPassword) return;
+    setSwitchLoading(true);
+    try {
+      const email = user?.email;
+      if (!email) throw new Error("No email found");
+      const { error } = await supabase.auth.signInWithPassword({ email, password: switchPassword });
+      if (error) throw error;
+      switchTenant(switchTarget.id);
+      queryClient.clear();
+      const targetSlug = switchTarget.slug;
+      setSwitchTarget(null);
+      setSwitchPassword("");
+      toast({ title: "Switched tenant context" });
+      if (targetSlug) {
+        navigate(`/t/${targetSlug}`, { replace: true });
+      }
+    } catch (err) {
+      toast({ title: "Incorrect password. Please try again.", variant: "destructive" });
+    } finally {
+      setSwitchLoading(false);
+    }
   };
 
   const openEdit = (tenant) => {
@@ -662,7 +695,7 @@ export default function TenantAdmin() {
                                       <Trash2 className="h-3 w-3" />
                                     </Button>
                                     {isMember && !isActive && (
-                                      <Button size="sm" variant="outline" onClick={() => handleSwitch(t.id)}>
+                                      <Button size="sm" variant="outline" onClick={() => handleSwitch(t)}>
                                         <ArrowRightLeft className="h-3 w-3 mr-1" /> Switch
                                       </Button>
                                     )}
@@ -1150,6 +1183,32 @@ export default function TenantAdmin() {
         open={!!usersTenant}
         onOpenChange={(open) => !open && setUsersTenant(null)}
       />
+
+      {/* Password confirmation dialog for tenant switching */}
+      <Dialog open={!!switchTarget} onOpenChange={(open) => { if (!open) { setSwitchTarget(null); setSwitchPassword(""); } }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><Lock className="h-4 w-4" /> Confirm Tenant Switch</DialogTitle>
+            <DialogDescription>
+              Enter your password to switch to <span className="font-semibold">{switchTarget?.name}</span>.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={(e) => { e.preventDefault(); confirmSwitch(); }}>
+            <Input
+              type="password"
+              placeholder="Enter your password"
+              value={switchPassword}
+              onChange={(e) => setSwitchPassword(e.target.value)}
+              autoFocus
+              disabled={switchLoading}
+            />
+            <DialogFooter className="mt-4">
+              <Button type="button" variant="outline" onClick={() => { setSwitchTarget(null); setSwitchPassword(""); }} disabled={switchLoading}>Cancel</Button>
+              <Button type="submit" disabled={!switchPassword || switchLoading}>{switchLoading ? "Verifying..." : "Confirm"}</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
