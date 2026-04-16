@@ -88,6 +88,8 @@ export default function TenantAdmin() {
   const [deleteTenant, setDeleteTenant] = useState(null);
   const [showArchived, setShowArchived] = useState(false);
   const [restoreTenant, setRestoreTenant] = useState(null);
+  const [archiveTenant, setArchiveTenant] = useState(null);
+  const [archivePassword, setArchivePassword] = useState("");
   const [viewDataTenant, setViewDataTenant] = useState(null);
   const [onboardOpen, setOnboardOpen] = useState(false);
   const [onboardEmail, setOnboardEmail] = useState("");
