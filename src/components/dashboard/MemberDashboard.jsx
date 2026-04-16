@@ -29,7 +29,7 @@ const GROWTH_FIELDS = [
 
 export default function MemberDashboard({ currentUser, myMember }) {
   const { currentTenant, tenantRole } = useTenant();
-  const { session, isUnitLeader, isAdmin, leaderUnits } = useAuth();
+  const { session, isUnitLeader, isAdmin, leaderUnits, leaderCentres } = useAuth();
   const { tenantId } = useTenantQuery();
   const roleLabel = tenantRole ? tenantRole.charAt(0).toUpperCase() + tenantRole.slice(1) : "";
   const [feedbackOpen, setFeedbackOpen] = useState(false);
