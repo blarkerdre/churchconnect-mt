@@ -30,6 +30,7 @@ import DangerZoneSection from "@/components/settings/DangerZoneSection";
 
 import ConsentPrivacySection from "@/components/settings/ConsentPrivacySection";
 import DashboardBannerSettings from "@/components/settings/DashboardBannerSettings";
+import ApiKeysSection from "@/components/settings/ApiKeysSection";
 
 /* ─── Notification Preferences section ─── */
 function NotificationPreferencesSection() {
@@ -1479,7 +1480,7 @@ export default function Settings() {
             <TabsTrigger value="links" className="gap-1.5 text-xs"><Link2 className="h-3.5 w-3.5" /><span className="hidden sm:inline"> Links</span></TabsTrigger>
           )}
           <TabsTrigger value="consent" className="gap-1.5 text-xs"><ShieldAlert className="h-3.5 w-3.5" /><span className="hidden sm:inline"> Consent</span></TabsTrigger>
-          
+          <TabsTrigger value="api" className="gap-1.5 text-xs"><Key className="h-3.5 w-3.5" /><span className="hidden sm:inline"> API</span></TabsTrigger>
           {isSuperAdmin && (
             <TabsTrigger value="danger" className="gap-1.5 text-xs text-destructive"><ShieldAlert className="h-3.5 w-3.5" /><span className="hidden sm:inline"> Danger</span></TabsTrigger>
           )}
@@ -1568,6 +1569,9 @@ export default function Settings() {
           <ConsentPrivacySection />
         </TabsContent>
 
+        <TabsContent value="api">
+          <ApiKeysSection />
+        </TabsContent>
 
         {isSuperAdmin && (
           <TabsContent value="danger">
