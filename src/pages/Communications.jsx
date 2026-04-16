@@ -327,7 +327,15 @@ export default function Communications() {
   const wsfLeaderCentres = (!isAdmin && isWSFLeader && myWsfCentres.length > 0)
     ? myWsfCentres.map(c => c.name) : null;
 
-  const { data: myMember } = useQuery({
+  // Compute restricted units for non-admin leaders
+  const leaderRestrictedUnits = isAdmin ? undefined : [
+    ...(unitLeaderUnits || []),
+    ...(wsfLeaderCentres || []),
+  ].length > 0 ? [
+    ...(unitLeaderUnits || []),
+    ...(wsfLeaderCentres || []),
+  ] : undefined;
+
     queryKey: ["my-member-comms", user?.id],
     queryFn: async () => {
       const { data } = await supabase
