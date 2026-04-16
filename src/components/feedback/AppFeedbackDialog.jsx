@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Star, Loader2 } from "lucide-react";
+import { Star, Loader2, CheckCircle2 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -63,6 +63,9 @@ export default function AppFeedbackDialog({ open, onOpenChange }) {
       queryClient.invalidateQueries({ queryKey: ["app-feedback-own"] });
       queryClient.invalidateQueries({ queryKey: ["app-feedback-all"] });
       toast({ title: "Thank you!", description: "Your feedback has been submitted." });
+      setRating(0);
+      setHoveredRating(0);
+      setComment("");
       onOpenChange(false);
     },
     onError: (err) => {
@@ -111,6 +114,17 @@ export default function AppFeedbackDialog({ open, onOpenChange }) {
               maxLength={500}
               rows={3}
             />
+            {existing?.acknowledged_at && (
+              <div className="rounded-md border border-border bg-muted/40 p-3 space-y-1">
+                <div className="flex items-center gap-1.5 text-xs font-medium text-foreground">
+                  <CheckCircle2 className="h-3.5 w-3.5 text-accent" />
+                  Acknowledged by admin on {new Date(existing.acknowledged_at).toLocaleDateString()}
+                </div>
+                {existing.admin_response && (
+                  <p className="text-sm text-muted-foreground italic">"{existing.admin_response}"</p>
+                )}
+              </div>
+            )}
             <Button
               className="w-full"
               disabled={rating === 0 || mutation.isPending || !userId || !tenantId}
