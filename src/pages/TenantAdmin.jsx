@@ -231,6 +231,8 @@ export default function TenantAdmin() {
       toast({ title: `Tenant ${actionLabel} successfully` });
       resetDeleteState();
       setRestoreTenant(null);
+      setArchiveTenant(null);
+      setArchivePassword("");
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["tenants-admin"] }),
         queryClient.invalidateQueries({ queryKey: ["tenant-stats"] }),
