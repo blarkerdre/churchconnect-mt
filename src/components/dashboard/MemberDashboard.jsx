@@ -2,12 +2,12 @@ import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { CheckCircle2, XCircle, UserCircle, ChevronRight, Star } from "lucide-react";
+import { CheckCircle2, XCircle, UserCircle, ChevronRight, Star, Cake } from "lucide-react";
 import { Link } from "react-router-dom";
 import MemberFeed from "@/components/profile/MemberFeed";
 import SelfCheckInWidget from "@/components/attendance/SelfCheckInWidget";
 
-import { BirthdayBanner } from "@/components/dashboard/BirthdayCelebration";
+import { BirthdayBanner, UpcomingBirthdayItem } from "@/components/dashboard/BirthdayCelebration";
 import { useTenant } from "@/contexts/TenantContext";
 import ImageLightbox from "@/components/ui/ImageLightbox";
 import DashboardBanner from "@/components/dashboard/DashboardBanner";
@@ -29,11 +29,12 @@ const GROWTH_FIELDS = [
 
 export default function MemberDashboard({ currentUser, myMember }) {
   const { currentTenant, tenantRole } = useTenant();
-  const { session } = useAuth();
+  const { session, isUnitLeader, isAdmin, leaderUnits } = useAuth();
   const { tenantId } = useTenantQuery();
   const roleLabel = tenantRole ? tenantRole.charAt(0).toUpperCase() + tenantRole.slice(1) : "";
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const userId = session?.user?.id;
+  const showBirthdays = isUnitLeader && !isAdmin;
 
   const { data: existingFeedback } = useQuery({
     queryKey: ["app-feedback-own", tenantId, userId],
@@ -48,6 +49,22 @@ export default function MemberDashboard({ currentUser, myMember }) {
       return data;
     },
     enabled: !!userId && !!tenantId,
+  });
+
+  // Upcoming birthdays for unit leaders
+  const { data: unitBirthdays = [] } = useQuery({
+    queryKey: ["unit-leader-birthdays", tenantId, leaderUnits],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("get_upcoming_birthdays", {
+        _tenant_id: tenantId,
+        _days_ahead: 7,
+      });
+      if (error) throw error;
+      return (data || []).filter(m =>
+        m.church_unit && leaderUnits.some(u => m.church_unit === u)
+      );
+    },
+    enabled: showBirthdays && !!tenantId && leaderUnits.length > 0,
   });
 
   const statusColors = {
@@ -138,6 +155,23 @@ export default function MemberDashboard({ currentUser, myMember }) {
 
       {/* Feed: Announcements + Events tabs */}
       <MemberFeed member={myMember} />
+
+      {/* Upcoming Birthdays for Unit Leaders */}
+      {showBirthdays && unitBirthdays.length > 0 && (
+        <Card className="border-0 shadow-sm">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-2">
+              <Cake className="h-4 w-4 text-accent" />
+              Upcoming Birthdays
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="px-5 pb-4">
+            {unitBirthdays.map(m => (
+              <UpcomingBirthdayItem key={m.id} member={m} />
+            ))}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Growth Milestones (if member profile linked) */}
       {myMember && (
