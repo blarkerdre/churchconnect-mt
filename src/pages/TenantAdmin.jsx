@@ -1183,6 +1183,32 @@ export default function TenantAdmin() {
         open={!!usersTenant}
         onOpenChange={(open) => !open && setUsersTenant(null)}
       />
+
+      {/* Password confirmation dialog for tenant switching */}
+      <Dialog open={!!switchTarget} onOpenChange={(open) => { if (!open) { setSwitchTarget(null); setSwitchPassword(""); } }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><Lock className="h-4 w-4" /> Confirm Tenant Switch</DialogTitle>
+            <DialogDescription>
+              Enter your password to switch to <span className="font-semibold">{switchTarget?.name}</span>.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={(e) => { e.preventDefault(); confirmSwitch(); }}>
+            <Input
+              type="password"
+              placeholder="Enter your password"
+              value={switchPassword}
+              onChange={(e) => setSwitchPassword(e.target.value)}
+              autoFocus
+              disabled={switchLoading}
+            />
+            <DialogFooter className="mt-4">
+              <Button type="button" variant="outline" onClick={() => { setSwitchTarget(null); setSwitchPassword(""); }} disabled={switchLoading}>Cancel</Button>
+              <Button type="submit" disabled={!switchPassword || switchLoading}>{switchLoading ? "Verifying..." : "Confirm"}</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
