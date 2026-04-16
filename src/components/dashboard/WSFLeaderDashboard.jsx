@@ -1,8 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Users, TrendingUp, CalendarDays, FileText, Loader2, ChevronRight, Star } from "lucide-react";
+import { Users, TrendingUp, CalendarDays, FileText, Loader2, ChevronRight, Star, Cake } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -12,6 +12,7 @@ import { format, subWeeks, startOfWeek } from "date-fns";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import SelfCheckInWidget from "@/components/attendance/SelfCheckInWidget";
 import MemberFeed from "@/components/profile/MemberFeed";
+import { UpcomingBirthdayItem } from "@/components/dashboard/BirthdayCelebration";
 import DashboardBanner from "@/components/dashboard/DashboardBanner";
 import AppFeedbackDialog from "@/components/feedback/AppFeedbackDialog";
 
@@ -48,7 +49,7 @@ export default function WSFLeaderDashboard() {
       const { data, error } = await scopeQuery(
         supabase
           .from("members")
-          .select("id, first_name, last_name, membership_status, created_at, wsf_centre_id")
+          .select("id, first_name, last_name, membership_status, created_at, wsf_centre_id, date_of_birth, photo_url, church_unit")
           .in("wsf_centre_id", centreIds)
           .order("first_name")
       );
