@@ -26,10 +26,11 @@ const statusColors = {
 };
 
 export default function Members() {
-  const { isAdmin, isUnitLeader, isWSFLeader, user, loading: authLoading, myMember } = useAuth();
+  const { isAdmin, isUnitLeader, isWSFLeader, user, loading: authLoading, myMember, leaderUnits } = useAuth();
   const { tenantId, scopeQuery } = useTenantQuery();
   const isLeader = isUnitLeader || isWSFLeader;
   const viewOnly = isLeader && !isAdmin;
+  const unitLeaderReadOnly = isUnitLeader && !isAdmin;
   const [search, setSearch] = useState("");
   const [filters, setFilters] = useState({ status: "all", unit: "all", dateFrom: null, dateTo: null, account: "all" });
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -89,7 +90,16 @@ export default function Members() {
     onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
 
-  const filtered = members.filter((m) => {
+  // For unit leaders (non-admin), filter to only members in their units
+  const unitFilteredMembers = unitLeaderReadOnly
+    ? members.filter(m => {
+        if (!m.church_unit) return false;
+        const memberUnits = m.church_unit.split(",").map(u => u.trim().toLowerCase());
+        return leaderUnits.some(lu => memberUnits.includes(lu.toLowerCase()));
+      })
+    : members;
+
+  const filtered = unitFilteredMembers.filter((m) => {
     const matchSearch = `${m.first_name} ${m.last_name} ${m.email || ""} ${m.phone || ""}`.toLowerCase().includes(search.toLowerCase());
     const matchStatus = filters.status === "all" || m.membership_status === filters.status;
     const matchUnit = filters.unit === "all" || (m.church_unit || "").toLowerCase().includes(filters.unit.toLowerCase());
@@ -134,8 +144,8 @@ export default function Members() {
     a.click();
   };
 
-  // Check if current member can edit (own profile or admin; leaders are view-only)
-  const canEditMember = (m) => isAdmin || m.user_id === user?.id;
+  // Check if current member can edit (own profile or admin; unit leaders are view-only)
+  const canEditMember = (m) => !unitLeaderReadOnly && (isAdmin || m.user_id === user?.id);
 
   return (
     <div className="space-y-6">
@@ -149,7 +159,7 @@ export default function Members() {
           
         </div>
         <div className="grid grid-cols-4 sm:flex sm:flex-wrap items-center gap-2">
-          {(isAdmin || isUnitLeader) && (
+          {(isAdmin || (isUnitLeader && !unitLeaderReadOnly)) && (
             <>
               {canQrCode && (
                 <Button variant="outline" size="sm" onClick={() => setQrOpen(true)} className="gap-1.5">
@@ -185,10 +195,10 @@ export default function Members() {
       {/* Stats row - admins and leaders */}
       {(isAdmin || viewOnly) && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <Card className="border-0 shadow-sm"><CardContent className="p-4 text-center"><p className="text-xl sm:text-2xl font-display font-bold text-foreground">{members.length}</p><p className="text-xs text-muted-foreground">Total</p></CardContent></Card>
-          <Card className="border-0 shadow-sm"><CardContent className="p-4 text-center"><p className="text-xl sm:text-2xl font-display font-bold text-chart-3">{members.filter(m => m.membership_status === "Active").length}</p><p className="text-xs text-muted-foreground">Active</p></CardContent></Card>
-          <Card className="border-0 shadow-sm"><CardContent className="p-4 text-center"><p className="text-xl sm:text-2xl font-display font-bold text-accent">{members.filter(m => m.membership_status === "New Convert").length}</p><p className="text-xs text-muted-foreground">New Converts</p></CardContent></Card>
-          <Card className="border-0 shadow-sm"><CardContent className="p-4 text-center"><p className="text-xl sm:text-2xl font-display font-bold text-chart-4">{members.filter(m => m.membership_status === "First Timer").length}</p><p className="text-xs text-muted-foreground">First Timers</p></CardContent></Card>
+          <Card className="border-0 shadow-sm"><CardContent className="p-4 text-center"><p className="text-xl sm:text-2xl font-display font-bold text-foreground">{unitFilteredMembers.length}</p><p className="text-xs text-muted-foreground">Total</p></CardContent></Card>
+          <Card className="border-0 shadow-sm"><CardContent className="p-4 text-center"><p className="text-xl sm:text-2xl font-display font-bold text-chart-3">{unitFilteredMembers.filter(m => m.membership_status === "Active").length}</p><p className="text-xs text-muted-foreground">Active</p></CardContent></Card>
+          <Card className="border-0 shadow-sm"><CardContent className="p-4 text-center"><p className="text-xl sm:text-2xl font-display font-bold text-accent">{unitFilteredMembers.filter(m => m.membership_status === "New Convert").length}</p><p className="text-xs text-muted-foreground">New Converts</p></CardContent></Card>
+          <Card className="border-0 shadow-sm"><CardContent className="p-4 text-center"><p className="text-xl sm:text-2xl font-display font-bold text-chart-4">{unitFilteredMembers.filter(m => m.membership_status === "First Timer").length}</p><p className="text-xs text-muted-foreground">First Timers</p></CardContent></Card>
         </div>
       )}
 
