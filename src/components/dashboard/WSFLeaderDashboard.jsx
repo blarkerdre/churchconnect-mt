@@ -1,8 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Users, TrendingUp, CalendarDays, FileText, Loader2, ChevronRight, Star } from "lucide-react";
+import { Users, TrendingUp, CalendarDays, FileText, Loader2, ChevronRight, Star, Cake } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -12,6 +12,7 @@ import { format, subWeeks, startOfWeek } from "date-fns";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import SelfCheckInWidget from "@/components/attendance/SelfCheckInWidget";
 import MemberFeed from "@/components/profile/MemberFeed";
+import { UpcomingBirthdayItem } from "@/components/dashboard/BirthdayCelebration";
 import DashboardBanner from "@/components/dashboard/DashboardBanner";
 import AppFeedbackDialog from "@/components/feedback/AppFeedbackDialog";
 
@@ -48,7 +49,7 @@ export default function WSFLeaderDashboard() {
       const { data, error } = await scopeQuery(
         supabase
           .from("members")
-          .select("id, first_name, last_name, membership_status, created_at, wsf_centre_id")
+          .select("id, first_name, last_name, membership_status, created_at, wsf_centre_id, date_of_birth, photo_url, church_unit")
           .in("wsf_centre_id", centreIds)
           .order("first_name")
       );
@@ -114,6 +115,25 @@ export default function WSFLeaderDashboard() {
   }));
 
 
+  // Compute upcoming birthdays (next 7 days) from centre members
+  const upcomingBirthdays = useMemo(() => {
+    const today = new Date();
+    return centreMembers.filter(m => {
+      if (!m.date_of_birth) return false;
+      const dob = new Date(m.date_of_birth);
+      for (let i = 0; i <= 7; i++) {
+        const check = new Date(today);
+        check.setDate(check.getDate() + i);
+        if (dob.getMonth() === check.getMonth() && dob.getDate() === check.getDate()) return true;
+      }
+      return false;
+    }).sort((a, b) => {
+      const todayY = new Date().getFullYear();
+      const getNext = (d) => { const x = new Date(d); x.setFullYear(todayY); if (x < new Date()) x.setFullYear(todayY + 1); return x; };
+      return getNext(a.date_of_birth) - getNext(b.date_of_birth);
+    });
+  }, [centreMembers]);
+
   return (
     <div className="space-y-6">
       {/* Sliding Banner */}
@@ -172,6 +192,23 @@ export default function WSFLeaderDashboard() {
           </Card>
         ))}
       </div>
+
+      {/* Upcoming Birthdays */}
+      {upcomingBirthdays.length > 0 && (
+        <Card className="border-0 shadow-sm">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-2">
+              <Cake className="h-4 w-4 text-accent" />
+              Upcoming Birthdays
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="px-5 pb-4">
+            {upcomingBirthdays.map(m => (
+              <UpcomingBirthdayItem key={m.id} member={m} />
+            ))}
+          </CardContent>
+        </Card>
+      )}
 
 
       {/* Attendance Trends Chart */}
