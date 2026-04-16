@@ -2,8 +2,7 @@ import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Users, TrendingUp, CalendarDays, UserPlus, UserMinus, FileText, Loader2, ChevronRight, Star } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Users, TrendingUp, CalendarDays, FileText, Loader2, ChevronRight, Star } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -179,37 +178,6 @@ export default function WSFLeaderDashboard() {
         ))}
       </div>
 
-      {/* Quick Actions */}
-      <div className="grid grid-cols-2 gap-3">
-        <Link to="/wsf">
-          <Card className="border-0 shadow-sm hover:shadow-md transition-shadow cursor-pointer h-full">
-            <CardContent className="p-4 flex items-center gap-3">
-              <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-                <FileText className="h-5 w-5 text-primary" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-foreground">Record Attendance</p>
-                <p className="text-xs text-muted-foreground">Submit meeting report</p>
-              </div>
-              <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
-            </CardContent>
-          </Card>
-        </Link>
-        <Link to="/wsf">
-          <Card className="border-0 shadow-sm hover:shadow-md transition-shadow cursor-pointer h-full">
-            <CardContent className="p-4 flex items-center gap-3">
-              <div className="h-10 w-10 rounded-xl bg-chart-3/10 flex items-center justify-center shrink-0">
-                <Users className="h-5 w-5 text-chart-3" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-foreground">View Members</p>
-                <p className="text-xs text-muted-foreground">See centre members</p>
-              </div>
-              <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
-            </CardContent>
-          </Card>
-        </Link>
-      </div>
 
       {/* Attendance Trends Chart */}
       {chartData.length > 1 && (
@@ -241,29 +209,6 @@ export default function WSFLeaderDashboard() {
         </Card>
       )}
 
-      {/* Members by Centre */}
-      {membersByCentre.length > 0 && (
-        <Card className="border-0 shadow-sm">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-              Members by Centre
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            {membersByCentre.map(c => (
-              <div key={c.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
-                <div>
-                  <p className="text-sm font-semibold text-foreground">{c.name}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {c.meeting_day}{c.meeting_time ? ` at ${c.meeting_time}` : ""}
-                  </p>
-                </div>
-                <Badge variant="outline" className="font-mono text-sm">{c.count}</Badge>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-      )}
 
       {/* Recent Reports */}
       {recentReports.length > 0 && (
