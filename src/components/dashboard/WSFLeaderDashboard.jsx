@@ -78,44 +78,7 @@ export default function WSFLeaderDashboard() {
     enabled: centreIds.length > 0,
   });
 
-  if (centresLoading) {
-    return (
-      <div className="flex justify-center py-20">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
-    );
-  }
-
-  if (ledCentres.length === 0) {
-    return (
-      <Card className="border-0 shadow-sm">
-        <CardContent className="p-8 text-center text-muted-foreground">
-          You are not assigned as a leader to any Home Cell centre yet.
-        </CardContent>
-      </Card>
-    );
-  }
-
-  const totalMembers = centreMembers.length;
-  const activeMembers = centreMembers.filter(m => m.membership_status === "Active").length;
-  const totalReports = recentReports.length;
-
-  // Compute average attendance from recent reports
-  const avgAttendance = totalReports > 0
-    ? Math.round(recentReports.reduce((sum, r) => sum + r.male + r.female + r.children, 0) / totalReports)
-    : 0;
-
-  // Chart data — last reports reversed for chronological order
-  const chartData = [...recentReports].reverse().map(r => ({
-    date: format(new Date(r.meeting_date), "dd MMM"),
-    total: r.male + r.female + r.children,
-    adults: r.male + r.female,
-    children: r.children,
-    firstTimers: r.first_timers,
-  }));
-
-
-  // Compute upcoming birthdays (next 7 days) from centre members
+  // Compute upcoming birthdays (next 7 days) from centre members — must be before early returns
   const upcomingBirthdays = useMemo(() => {
     const today = new Date();
     return centreMembers.filter(m => {
@@ -133,6 +96,24 @@ export default function WSFLeaderDashboard() {
       return getNext(a.date_of_birth) - getNext(b.date_of_birth);
     });
   }, [centreMembers]);
+
+  if (centresLoading) {
+    return (
+      <div className="flex justify-center py-20">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (ledCentres.length === 0) {
+    return (
+      <Card className="border-0 shadow-sm">
+        <CardContent className="p-8 text-center text-muted-foreground">
+          You are not assigned as a leader to any Home Cell centre yet.
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <div className="space-y-6">
