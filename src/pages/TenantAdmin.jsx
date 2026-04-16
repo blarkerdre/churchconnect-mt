@@ -263,9 +263,37 @@ export default function TenantAdmin() {
     createMutation.mutate(newTenant);
   };
 
-  const handleSwitch = (tid) => {
-    switchTenant(tid);
-    toast({ title: "Switched tenant context" });
+  const handleSwitch = (tenant) => {
+    if (tenant.id === tenantId) {
+      toast({ title: "Already on this tenant" });
+      return;
+    }
+    setSwitchTarget({ id: tenant.id, name: tenant.name, slug: tenant.slug });
+    setSwitchPassword("");
+  };
+
+  const confirmSwitch = async () => {
+    if (!switchTarget || !switchPassword) return;
+    setSwitchLoading(true);
+    try {
+      const email = user?.email;
+      if (!email) throw new Error("No email found");
+      const { error } = await supabase.auth.signInWithPassword({ email, password: switchPassword });
+      if (error) throw error;
+      switchTenant(switchTarget.id);
+      queryClient.clear();
+      const targetSlug = switchTarget.slug;
+      setSwitchTarget(null);
+      setSwitchPassword("");
+      toast({ title: "Switched tenant context" });
+      if (targetSlug) {
+        navigate(`/t/${targetSlug}`, { replace: true });
+      }
+    } catch (err) {
+      toast({ title: "Incorrect password. Please try again.", variant: "destructive" });
+    } finally {
+      setSwitchLoading(false);
+    }
   };
 
   const openEdit = (tenant) => {
