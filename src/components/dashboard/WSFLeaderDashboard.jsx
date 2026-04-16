@@ -200,8 +200,8 @@ export default function WSFLeaderDashboard() {
                 <Users className="h-5 w-5 text-chart-3" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-foreground">Manage Members</p>
-                <p className="text-xs text-muted-foreground">Add or remove</p>
+                <p className="text-sm font-semibold text-foreground">View Members</p>
+                <p className="text-xs text-muted-foreground">See centre members</p>
               </div>
               <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
             </CardContent>
