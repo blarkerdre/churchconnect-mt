@@ -649,7 +649,7 @@ export default function TenantAdmin() {
                                     <Button size="sm" variant="ghost" onClick={() => openEdit(t)} title="Edit settings">
                                       <Pencil className="h-3 w-3" />
                                     </Button>
-                                    <Button size="sm" variant="ghost" onClick={() => archiveMutation.mutate({ tenantId: t.id, action: "archive" })} title="Archive">
+                                    <Button size="sm" variant="ghost" onClick={() => { setArchiveTenant(t); setArchivePassword(""); }} title="Archive">
                                       <Archive className="h-3 w-3" />
                                     </Button>
                                     <Button
