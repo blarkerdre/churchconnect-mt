@@ -15,10 +15,11 @@ import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 
-export default function EmailAlertForm({ currentUser, myUnits = [], isAdmin }) {
+export default function EmailAlertForm({ currentUser, myUnits = [], isAdmin, restrictedUnits }) {
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
-  const [filters, setFilters] = useState({ status: "all", unit: "all", dateFrom: null, dateTo: null });
+  const initialUnit = restrictedUnits && restrictedUnits.length === 1 ? restrictedUnits[0] : "all";
+  const [filters, setFilters] = useState({ status: "all", unit: initialUnit, dateFrom: null, dateTo: null });
   const [sending, setSending] = useState(false);
   const [scheduleMode, setScheduleMode] = useState(false);
   const [scheduleDate, setScheduleDate] = useState(null);
@@ -123,7 +124,7 @@ export default function EmailAlertForm({ currentUser, myUnits = [], isAdmin }) {
           </div>
         </div>
 
-        <AudienceFilter filters={filters} onChange={setFilters} />
+        <AudienceFilter filters={filters} onChange={setFilters} restrictedUnits={restrictedUnits} />
 
         <div className="space-y-1.5">
           <label className="text-sm font-medium text-foreground">Subject</label>
