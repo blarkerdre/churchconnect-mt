@@ -1,40 +1,31 @@
 
 
-## Restrict Leader Communications to Their Own Members
+## Add Upcoming Birthdays for Home Cell and Unit Leaders
 
-### Problem
-Currently, Unit leaders and Home Cell leaders can access the communications UI but can send emails/SMS/WhatsApp to ALL members via the audience filters. They should only be able to communicate with members in their assigned unit(s) or Home Cell centre(s).
+### Overview
+Add a birthday section to both the WSF Leader Dashboard (Home Cell leaders) and the Member Dashboard (which unit leaders see), showing upcoming birthdays scoped to only their assigned members.
 
 ### Changes
 
-**1. `src/components/comms/AudienceFilter.jsx` — Restrict unit dropdown for leaders**
-- Accept a `restrictedUnits` prop (array of unit names)
-- When provided, only show those units in the unit dropdown (remove "All Units" option)
-- Auto-select the first restricted unit if only one is available
-- The recipient count query will naturally scope to the selected unit
+**1. `src/components/dashboard/WSFLeaderDashboard.jsx`**
+- Query `members` table for members in `centreIds` (already fetched) with `date_of_birth` set, then filter client-side for birthdays in the next 7 days (same month/day logic)
+- Display using the existing `UpcomingBirthdayItem` component from `BirthdayCelebration.jsx`
+- Place the birthday card after the stats cards, before attendance trends
+- Import `Cake` icon and `UpcomingBirthdayItem`
 
-**2. `src/components/comms/EmailAlertForm.jsx` — Pass leader scope**
-- Accept a `restrictedUnits` prop and forward it to `AudienceFilter`
-- When `restrictedUnits` is provided, auto-set the unit filter to the first unit on mount
+**2. `src/components/dashboard/MemberDashboard.jsx`**
+- For unit leaders: query upcoming birthdays using the existing `get_upcoming_birthdays` RPC, then filter client-side to only members whose `church_unit` matches the leader's `leaderUnits`
+- For regular members: skip the section (they don't need to see other members' birthdays)
+- Display using `UpcomingBirthdayItem` and `Cake` icon
+- Place before the growth milestones section
+- Import `useAuth` to get `isUnitLeader`, `leaderUnits` (already imported)
 
-**3. `src/components/sms/SMSDialog.jsx` — Pass leader scope**
-- Accept a `restrictedUnits` prop and forward it to `AudienceFilter`
-- Auto-set the unit filter similarly
-
-**4. `src/pages/Communications.jsx` — Wire up leader scoping**
-- Compute `leaderRestrictedUnits`: for non-admin unit leaders, use `leaderUnits`; for non-admin WSF leaders, use `wsfLeaderCentres`; combine both if user has both roles
-- Pass `restrictedUnits` to `EmailAlertForm` and both `SMSDialog` instances
-- Admins continue to see all units (no restriction)
-
-### How it works
-- Unit leader for "Choir" → unit dropdown only shows "Choir", sends only to Choir members
-- WSF leader for "Zone A Centre" → unit dropdown only shows "Zone A Centre"
-- Leader with multiple units → dropdown shows only their units
-- Admin → no restriction, sees all units as before
+### Technical detail
+- WSF leaders: fetch `date_of_birth` in the existing `centreMembers` query (add it to select), then compute upcoming birthdays client-side using day/month comparison within 7 days
+- Unit leaders: reuse the `get_upcoming_birthdays` RPC and filter results by `church_unit` matching `leaderUnits`
+- Both use the `UpcomingBirthdayItem` component already built
 
 ### Files Changed
-- `src/components/comms/AudienceFilter.jsx` — add `restrictedUnits` prop
-- `src/components/comms/EmailAlertForm.jsx` — accept and forward `restrictedUnits`
-- `src/components/sms/SMSDialog.jsx` — accept and forward `restrictedUnits`
-- `src/pages/Communications.jsx` — compute and pass leader restrictions
+- `src/components/dashboard/WSFLeaderDashboard.jsx` — add birthday query and card
+- `src/components/dashboard/MemberDashboard.jsx` — add birthday card for unit leaders
 
