@@ -1,31 +1,25 @@
 
 
-## Add Upcoming Birthdays for Home Cell and Unit Leaders
+## Fix: Mobile Header Role Badge Overlap
 
-### Overview
-Add a birthday section to both the WSF Leader Dashboard (Home Cell leaders) and the Member Dashboard (which unit leaders see), showing upcoming birthdays scoped to only their assigned members.
+### Problem
+At 384px viewport, the sticky header in `AppLayout.jsx` lays out two columns with `flex items-center justify-between` and the right side uses `flex-wrap`. With the env label, tenant name pill, notification bell, and sign-out button all crammed in, the right cluster wraps onto two rows and visually overlaps/covers the small role label (`getRoleTitle()`) shown under the page title on the left.
 
-### Changes
+### Fix
 
-**1. `src/components/dashboard/WSFLeaderDashboard.jsx`**
-- Query `members` table for members in `centreIds` (already fetched) with `date_of_birth` set, then filter client-side for birthdays in the next 7 days (same month/day logic)
-- Display using the existing `UpcomingBirthdayItem` component from `BirthdayCelebration.jsx`
-- Place the birthday card after the stats cards, before attendance trends
-- Import `Cake` icon and `UpcomingBirthdayItem`
+**`src/components/AppLayout.jsx` (header, lines 287–331)**
 
-**2. `src/components/dashboard/MemberDashboard.jsx`**
-- For unit leaders: query upcoming birthdays using the existing `get_upcoming_birthdays` RPC, then filter client-side to only members whose `church_unit` matches the leader's `leaderUnits`
-- For regular members: skip the section (they don't need to see other members' birthdays)
-- Display using `UpcomingBirthdayItem` and `Cake` icon
-- Place before the growth milestones section
-- Import `useAuth` to get `isUnitLeader`, `leaderUnits` (already imported)
+Restructure the mobile header so the role label is no longer at risk of being overlapped:
 
-### Technical detail
-- WSF leaders: fetch `date_of_birth` in the existing `centreMembers` query (add it to select), then compute upcoming birthdays client-side using day/month comparison within 7 days
-- Unit leaders: reuse the `get_upcoming_birthdays` RPC and filter results by `church_unit` matching `leaderUnits`
-- Both use the `UpcomingBirthdayItem` component already built
+1. Remove the small role `<p>` under the page title on the left (line 303).
+2. Below the main header row, add a dedicated second row (mobile-only, `sm:hidden`) that shows the role as a small pill badge, sitting cleanly under the title with no overlap risk.
+3. Keep the desktop role pill (`hidden sm:inline`) on the right untouched.
+4. Tighten the right cluster by adding `min-w-0` and reducing pill `max-w` so wrapping is less aggressive.
+
+### Result
+- Mobile: page title on top row (left) + action buttons (right). A clean second row shows the role badge.
+- Desktop: unchanged.
 
 ### Files Changed
-- `src/components/dashboard/WSFLeaderDashboard.jsx` — add birthday query and card
-- `src/components/dashboard/MemberDashboard.jsx` — add birthday card for unit leaders
+- `src/components/AppLayout.jsx` — restructure header role display (~10 lines)
 
