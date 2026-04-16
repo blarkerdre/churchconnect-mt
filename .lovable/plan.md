@@ -1,25 +1,28 @@
 
+The user wants the welcome banner in `MemberDashboard.jsx` to display the user's role and the unit(s) they lead.
 
-## Fix: Mobile Header Role Badge Overlap
+Looking at the current welcome banner (lines 91-122 in MemberDashboard.jsx):
+- It shows the role badge (`roleLabel`) already
+- It shows membership status, church_unit, and WSF centre
+- Missing: explicit "leads X unit" indicator for unit leaders / Home Cell leaders
 
-### Problem
-At 384px viewport, the sticky header in `AppLayout.jsx` lays out two columns with `flex items-center justify-between` and the right side uses `flex-wrap`. With the env label, tenant name pill, notification bell, and sign-out button all crammed in, the right cluster wraps onto two rows and visually overlaps/covers the small role label (`getRoleTitle()`) shown under the page title on the left.
+From `useAuth`, available data: `isUnitLeader`, `isWSFLeader`, `leaderUnits` (array of unit names). For Home Cell leaders, we'd need centre names — but we already query led centres in WSFLeaderDashboard via `wsf_leaders`. For MemberDashboard, the simplest approach is to show `leaderUnits` for unit leaders, and for Home Cell leaders show a "Home Cell Leader" indicator with centre names if easily accessible.
 
-### Fix
+## Plan: Show Role + Led Units in Welcome Banner
 
-**`src/components/AppLayout.jsx` (header, lines 287–331)**
+### Change
+**`src/components/dashboard/MemberDashboard.jsx`** — enhance welcome banner badges row:
 
-Restructure the mobile header so the role label is no longer at risk of being overlapped:
+1. For **unit leaders**: add a badge "Leads: [unit names]" showing comma-separated `leaderUnits` from `useAuth`.
+2. For **Home Cell leaders**: add a query to fetch centre names from `wsf_centres` where the user is `leader_user_id`, then show "Home Cell Leader: [centre names]".
+3. Keep the existing `roleLabel` badge in the title row.
 
-1. Remove the small role `<p>` under the page title on the left (line 303).
-2. Below the main header row, add a dedicated second row (mobile-only, `sm:hidden`) that shows the role as a small pill badge, sitting cleanly under the title with no overlap risk.
-3. Keep the desktop role pill (`hidden sm:inline`) on the right untouched.
-4. Tighten the right cluster by adding `min-w-0` and reducing pill `max-w` so wrapping is less aggressive.
-
-### Result
-- Mobile: page title on top row (left) + action buttons (right). A clean second row shows the role badge.
-- Desktop: unchanged.
+### Layout
+Below existing status/unit badges, add a new line (only if leader):
+```
+[Leads Choir, Ushers]   [Home Cell Leader: Cardiff Centre]
+```
+Styled as accent badges to stand out.
 
 ### Files Changed
-- `src/components/AppLayout.jsx` — restructure header role display (~10 lines)
-
+- `src/components/dashboard/MemberDashboard.jsx` — add Home Cell centres query + render leader badges (~15 lines)
