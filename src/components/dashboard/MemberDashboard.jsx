@@ -29,11 +29,12 @@ const GROWTH_FIELDS = [
 
 export default function MemberDashboard({ currentUser, myMember }) {
   const { currentTenant, tenantRole } = useTenant();
-  const { session } = useAuth();
+  const { session, isUnitLeader, isAdmin, leaderUnits } = useAuth();
   const { tenantId } = useTenantQuery();
   const roleLabel = tenantRole ? tenantRole.charAt(0).toUpperCase() + tenantRole.slice(1) : "";
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const userId = session?.user?.id;
+  const showBirthdays = isUnitLeader && !isAdmin;
 
   const { data: existingFeedback } = useQuery({
     queryKey: ["app-feedback-own", tenantId, userId],
@@ -48,6 +49,22 @@ export default function MemberDashboard({ currentUser, myMember }) {
       return data;
     },
     enabled: !!userId && !!tenantId,
+  });
+
+  // Upcoming birthdays for unit leaders
+  const { data: unitBirthdays = [] } = useQuery({
+    queryKey: ["unit-leader-birthdays", tenantId, leaderUnits],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("get_upcoming_birthdays", {
+        _tenant_id: tenantId,
+        _days_ahead: 7,
+      });
+      if (error) throw error;
+      return (data || []).filter(m =>
+        m.church_unit && leaderUnits.some(u => m.church_unit === u)
+      );
+    },
+    enabled: showBirthdays && !!tenantId && leaderUnits.length > 0,
   });
 
   const statusColors = {
