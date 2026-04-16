@@ -336,6 +336,7 @@ export default function Communications() {
     ...(wsfLeaderCentres || []),
   ] : undefined;
 
+  const { data: myMember } = useQuery({
     queryKey: ["my-member-comms", user?.id],
     queryFn: async () => {
       const { data } = await supabase
