@@ -27,9 +27,15 @@ const ACCOUNT_OPTIONS = [
   { value: "unlinked", label: "Unlinked" },
 ];
 
-export default function AudienceFilter({ filters, onChange, className }) {
+export default function AudienceFilter({ filters, onChange, className, restrictedUnits }) {
   const { status = "all", unit = "all", dateFrom = null, dateTo = null, account = "all" } = filters || {};
   const { data: churchUnits = [] } = useChurchUnits();
+
+  // When restrictedUnits is provided, only show those units
+  const availableUnits = restrictedUnits && restrictedUnits.length > 0
+    ? churchUnits.filter(u => restrictedUnits.includes(u.name))
+    : churchUnits;
+  const showAllUnitsOption = !restrictedUnits || restrictedUnits.length === 0;
   const { tenantId, scopeQuery } = useTenantQuery();
 
   const update = (patch) => onChange({ status, unit, dateFrom, dateTo, account, ...patch });
@@ -99,11 +105,11 @@ export default function AudienceFilter({ filters, onChange, className }) {
           <label className="text-xs text-muted-foreground">Church Unit</label>
           <Select value={unit} onValueChange={(v) => update({ unit: v })}>
             <SelectTrigger className="h-9">
-              <SelectValue placeholder="All Units" />
+              <SelectValue placeholder={showAllUnitsOption ? "All Units" : "Select Unit"} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Units</SelectItem>
-              {churchUnits.map((u) => (
+              {showAllUnitsOption && <SelectItem value="all">All Units</SelectItem>}
+              {availableUnits.map((u) => (
                 <SelectItem key={u.id} value={u.name}>{u.name}</SelectItem>
               ))}
             </SelectContent>

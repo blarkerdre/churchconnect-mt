@@ -31,12 +31,14 @@ export default function SMSDialog({
   title = "Send Message",
   defaultChannel = "sms",
   unitAudiences = [],
+  restrictedUnits,
 }) {
   const { user } = useAuth();
   const { tenantId, scopeQuery, withTenant } = useTenantQuery();
   const { toast } = useToast();
   const [message, setMessage] = useState(prefillMessage);
-  const [filters, setFilters] = useState({ status: "all", unit: "all", dateFrom: null, dateTo: null });
+  const initialUnit = restrictedUnits && restrictedUnits.length === 1 ? restrictedUnits[0] : "all";
+  const [filters, setFilters] = useState({ status: "all", unit: initialUnit, dateFrom: null, dateTo: null });
   const [sending, setSending] = useState(false);
   const [result, setResult] = useState(null);
   const [channel, setChannel] = useState(defaultChannel);
@@ -47,7 +49,7 @@ export default function SMSDialog({
   React.useEffect(() => {
     if (open) {
       setMessage(prefillMessage);
-      setFilters({ status: "all", unit: "all", dateFrom: null, dateTo: null });
+      setFilters({ status: "all", unit: restrictedUnits && restrictedUnits.length === 1 ? restrictedUnits[0] : "all", dateFrom: null, dateTo: null });
       setResult(null);
       setChannel(defaultChannel);
       setScheduleMode(false);
@@ -259,7 +261,7 @@ export default function SMSDialog({
         ) : (
           <div className="space-y-4 mt-2">
             {!directRecipients && (
-              <AudienceFilter filters={filters} onChange={setFilters} />
+              <AudienceFilter filters={filters} onChange={setFilters} restrictedUnits={restrictedUnits} />
             )}
 
             <div>

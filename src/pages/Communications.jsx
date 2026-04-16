@@ -271,7 +271,7 @@ function MemberEmailList({ memberId, memberEmail, tenantId, onSelect }) {
 }
 
 export default function Communications() {
-  const { user, isAdmin, isUnitLeader, isWSFLeader, leaderUnits } = useAuth();
+  const { user, isAdmin, isUnitLeader, isWSFLeader, leaderUnits, leaderCentres } = useAuth();
   const { tenantId, scopeQuery, withTenant } = useTenantQuery();
   const { data: churchUnitsData = [] } = useChurchUnits();
   const { toast } = useToast();
@@ -645,7 +645,7 @@ export default function Communications() {
           <TabsContent value="email">
             {canManageComms ? (
               <div className="space-y-4">
-                <EmailAlertForm currentUser={user} myUnits={leaderUnits} isAdmin={isAdmin} />
+                <EmailAlertForm currentUser={user} myUnits={leaderUnits} isAdmin={isAdmin} restrictedUnits={leaderRestrictedUnits} />
                 <ScheduledList channel="email" tenantId={tenantId} />
               </div>
             ) : (
@@ -713,6 +713,7 @@ export default function Communications() {
         referenceId={smsAnnouncement?.id || null}
         title={smsAnnouncement ? "Send as SMS" : "Bulk SMS"}
         unitAudiences={AUDIENCES}
+        restrictedUnits={leaderRestrictedUnits}
       />
 
       <SMSDialog
@@ -724,6 +725,7 @@ export default function Communications() {
         title="Send Bulk WhatsApp"
         defaultChannel="whatsapp"
         unitAudiences={AUDIENCES}
+        restrictedUnits={leaderRestrictedUnits}
       />
 
       {/* Announcement Detail Dialog */}
