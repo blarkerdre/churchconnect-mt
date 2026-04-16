@@ -88,6 +88,8 @@ export default function TenantAdmin() {
   const [deleteTenant, setDeleteTenant] = useState(null);
   const [showArchived, setShowArchived] = useState(false);
   const [restoreTenant, setRestoreTenant] = useState(null);
+  const [archiveTenant, setArchiveTenant] = useState(null);
+  const [archivePassword, setArchivePassword] = useState("");
   const [viewDataTenant, setViewDataTenant] = useState(null);
   const [onboardOpen, setOnboardOpen] = useState(false);
   const [onboardEmail, setOnboardEmail] = useState("");
@@ -229,6 +231,8 @@ export default function TenantAdmin() {
       toast({ title: `Tenant ${actionLabel} successfully` });
       resetDeleteState();
       setRestoreTenant(null);
+      setArchiveTenant(null);
+      setArchivePassword("");
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["tenants-admin"] }),
         queryClient.invalidateQueries({ queryKey: ["tenant-stats"] }),
@@ -645,7 +649,7 @@ export default function TenantAdmin() {
                                     <Button size="sm" variant="ghost" onClick={() => openEdit(t)} title="Edit settings">
                                       <Pencil className="h-3 w-3" />
                                     </Button>
-                                    <Button size="sm" variant="ghost" onClick={() => archiveMutation.mutate({ tenantId: t.id, action: "archive" })} title="Archive">
+                                    <Button size="sm" variant="ghost" onClick={() => { setArchiveTenant(t); setArchivePassword(""); }} title="Archive">
                                       <Archive className="h-3 w-3" />
                                     </Button>
                                     <Button
@@ -801,6 +805,53 @@ export default function TenantAdmin() {
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* ============ ARCHIVE CONFIRMATION DIALOG ============ */}
+      <Dialog open={!!archiveTenant} onOpenChange={(open) => { if (!open) { setArchiveTenant(null); setArchivePassword(""); } }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Archive className="h-5 w-5 text-amber-600" />
+              Archive Tenant
+            </DialogTitle>
+            <DialogDescription>
+              Archive <strong>{archiveTenant?.name}</strong>. Members will lose access until restored.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <Alert>
+              <ShieldAlert className="h-4 w-4" />
+              <AlertTitle>Verify your identity</AlertTitle>
+              <AlertDesc>Enter your account password to confirm archival.</AlertDesc>
+            </Alert>
+            <div className="space-y-2">
+              <Label>Your Password</Label>
+              <Input
+                type="password"
+                value={archivePassword}
+                onChange={(e) => setArchivePassword(e.target.value)}
+                placeholder="Enter your password"
+                autoFocus
+              />
+            </div>
+            <div className="flex gap-2 justify-end">
+              <Button variant="outline" onClick={() => { setArchiveTenant(null); setArchivePassword(""); }}>Cancel</Button>
+              <Button
+                disabled={!archivePassword || archiveMutation.isPending}
+                onClick={() => archiveMutation.mutate({
+                  tenantId: archiveTenant.id,
+                  action: "archive",
+                  password: archivePassword,
+                })}
+              >
+                {archiveMutation.isPending ? "Archiving..." : (
+                  <><Archive className="h-4 w-4 mr-1" /> Archive Tenant</>
+                )}
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
 
