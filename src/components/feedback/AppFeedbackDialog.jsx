@@ -63,6 +63,9 @@ export default function AppFeedbackDialog({ open, onOpenChange }) {
       queryClient.invalidateQueries({ queryKey: ["app-feedback-own"] });
       queryClient.invalidateQueries({ queryKey: ["app-feedback-all"] });
       toast({ title: "Thank you!", description: "Your feedback has been submitted." });
+      setRating(0);
+      setHoveredRating(0);
+      setComment("");
       onOpenChange(false);
     },
     onError: (err) => {
