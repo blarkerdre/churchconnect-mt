@@ -1,30 +1,20 @@
 
 
-## Show Feedback Author Names
+## Fix: Show Dashboard Banner for Unit Leaders and Home Cell Leaders
 
-### Problem
-The feedback summary shows comments without identifying who submitted them.
+### Root Cause
+The `Dashboard.jsx` routing logic sends:
+- **Home Cell (WSF) leaders** → `WSFLeaderDashboard` component, which does NOT render `<DashboardBanner />`
+- **Unit leaders** (who are not also WSF leaders) → `MemberDashboard`, which DOES render the banner — so they should already see it
 
-### Solution
-Join `app_feedback` with `members` (via `user_id`) to retrieve the submitter's name, and display it alongside each feedback entry.
+The fix is simply adding `<DashboardBanner />` to `WSFLeaderDashboard`.
 
 ### Changes
 
-**`src/components/feedback/FeedbackSummary.jsx`**
-
-1. Update the query to fetch member name by doing a second query or a manual join:
-   - After fetching feedback, fetch members for those `user_id`s from the `members` table (since there's no FK relationship for a direct Supabase join)
-   - Build a `user_id → name` map
-
-2. Display the name in two places:
-   - In the **Recent Comments** section: show the person's name below each comment
-   - In the full feedback list: add a name column/label next to each rating
-
-### Technical Detail
-- Query `members` table filtered by `tenant_id` and `user_id IN (feedback user_ids)` to get `first_name`, `last_name`
-- Fall back to "Anonymous" if no member record is found
-- The admin SELECT policy on `app_feedback` already allows admins to see all tenant feedback; the `members` table is also accessible to admins
+**`src/components/dashboard/WSFLeaderDashboard.jsx`**
+- Import `DashboardBanner` from `@/components/dashboard/DashboardBanner`
+- Add `<DashboardBanner />` at the top of the returned JSX (before the welcome/stats section), matching the same placement used in `MemberDashboard`
 
 ### Files Changed
-- `src/components/feedback/FeedbackSummary.jsx` — add member name lookup and display
+- `src/components/dashboard/WSFLeaderDashboard.jsx` (2-line addition: import + render)
 
