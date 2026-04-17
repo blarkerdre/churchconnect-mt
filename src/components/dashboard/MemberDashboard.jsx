@@ -30,24 +30,8 @@ export default function MemberDashboard({ currentUser, myMember }) {
   const { session, isUnitLeader, isAdmin, leaderUnits, leaderCentres } = useAuth();
   const { tenantId } = useTenantQuery();
   const roleLabel = tenantRole ? tenantRole.charAt(0).toUpperCase() + tenantRole.slice(1) : "";
-  const [feedbackOpen, setFeedbackOpen] = useState(false);
   const userId = session?.user?.id;
   const showBirthdays = isUnitLeader && !isAdmin;
-
-  const { data: existingFeedback } = useQuery({
-    queryKey: ["app-feedback-own", tenantId, userId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("app_feedback")
-        .select("id")
-        .eq("user_id", userId)
-        .eq("tenant_id", tenantId)
-        .maybeSingle();
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!userId && !!tenantId,
-  });
 
   // Upcoming birthdays for unit leaders
   const { data: unitBirthdays = [] } = useQuery({
