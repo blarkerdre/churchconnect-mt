@@ -110,6 +110,7 @@ export default function TenantBillingTab({ tenant }) {
       currency: subscription?.currency || "GBP",
       next_due_date: subscription?.next_due_date || new Date().toISOString().split("T")[0],
       grace_period_days: subscription?.grace_period_days || 7,
+      setup_fee_amount: subscription?.setup_fee_amount || 0,
     });
   };
 
