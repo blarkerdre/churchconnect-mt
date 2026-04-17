@@ -6,8 +6,9 @@ import {
   LayoutDashboard, Users, CalendarDays, HeartHandshake,
   Heart, Megaphone, Menu, LogOut,
   ClipboardList, Car, BarChart2, ChevronLeft, Globe, Shield, FileText, TrendingUp, Settings, Mail, AlertTriangle,
-  BookOpen, ChevronsUpDown, Check, Lock, MessageSquareHeart
+  BookOpen, ChevronsUpDown, Check, Lock, MessageSquareHeart, Star
 } from "lucide-react";
+import AppFeedbackDialog from "@/components/feedback/AppFeedbackDialog";
 import winnersLogo from "@/assets/winners-chapel-logo.png";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
