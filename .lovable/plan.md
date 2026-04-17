@@ -1,55 +1,43 @@
 
+The user wants to include one-time setup fees in the tenant subscription/billing flow. I need to understand the current billing setup before planning.
 
-## Root Cause
+Let me check the relevant files: `TenantBillingTab.jsx`, `create-tenant-checkout/index.ts`, the tenant_subscriptions schema, and the Plan tab in TenantAdmin.
 
-The Plan tab "Save" appears successful but doesn't persist for WCI Cardiff because of a Row Level Security gap on the `tenants` table.
+Key questions I need answered before planning:
+1. Is the setup fee per-tenant configurable, or fixed by plan tier?
+2. Should it be charged once on first checkout, or as a separate invoice?
+3. Should super admins set the amount, or should it be tied to the plan tier (free/starter/pro)?
 
-Current policies on `public.tenants`:
-- `INSERT` — super admins ✓
-- `SELECT` — super admins or tenant members ✓
-- `UPDATE` — **only tenant owner/admin** (no super-admin clause)
+Rather than ask 3 questions, I'll make sensible defaults and flag them in the plan so the user can correct.
 
-When a super admin who is not personally listed as owner/admin of WCI Cardiff clicks Save in `TenantAdmin.jsx`, the `update()` call returns no error but matches **zero rows** (RLS silently filters it out). The mutation in `updateMutation` doesn't call `.select()`, so it can't tell that nothing was written — it shows the success toast and closes the dialog while the DB is unchanged.
+## Plan
 
-This affects every tenant the super admin doesn't directly belong to as owner/admin, not just Cardiff. Cardiff is just where you noticed it (you appear to be a `member`, not `owner`, there).
+### Approach
+Add an optional **one-time setup fee** that's billed alongside the first subscription payment via Stripe Checkout (single session, two line items: recurring + one-time).
 
-## Fix
+### Where it lives
+1. **`tenant_subscriptions` table** — add columns:
+   - `setup_fee_amount` (numeric, default 0)
+   - `setup_fee_paid` (boolean, default false)
+   - `setup_fee_paid_at` (timestamptz)
 
-### 1. Database — add a super-admin UPDATE policy on `tenants`
+2. **Tenant Admin → Plan tab** (`src/pages/TenantAdmin.jsx`) — Super admin can set the setup fee amount per tenant when configuring the plan. Shows whether it's been paid.
 
-New migration:
-```sql
-CREATE POLICY "Super admins can update any tenant"
-ON public.tenants FOR UPDATE TO authenticated
-USING (has_role(auth.uid(), 'super_admin'::app_role))
-WITH CHECK (has_role(auth.uid(), 'super_admin'::app_role));
-```
+3. **`create-tenant-checkout` edge function** — if `setup_fee_amount > 0` and `setup_fee_paid = false`, add a second `line_items` entry as a one-time charge alongside the recurring subscription line.
 
-Also add a matching DELETE policy for consistency (currently relies on edge function bypass):
-```sql
-CREATE POLICY "Super admins can delete any tenant"
-ON public.tenants FOR DELETE TO authenticated
-USING (has_role(auth.uid(), 'super_admin'::app_role));
-```
+4. **`stripe-subscription-webhook`** — on `checkout.session.completed` or `invoice.paid` for the first invoice, mark `setup_fee_paid = true` so it's not charged again on renewal.
 
-### 2. Code — make silent no-op updates loud
-
-In `src/pages/TenantAdmin.jsx` `updateMutation`, change the update to return rows so we detect zero-row writes:
-```js
-const { data, error } = await supabase
-  .from("tenants")
-  .update(updates)
-  .eq("id", id)
-  .select();
-if (error) throw error;
-if (!data || data.length === 0) {
-  throw new Error("Update did not affect any rows. You may not have permission to edit this tenant.");
-}
-```
-
-This way, if RLS ever blocks an update again, the user sees a clear error instead of a fake success.
+5. **`TenantBillingTab.jsx`** — display the setup fee line and its paid status to tenant owners.
 
 ### Files Changed
-- New migration: super-admin UPDATE/DELETE policies on `tenants`
-- `src/pages/TenantAdmin.jsx` — surface zero-row updates as errors (~5 lines in `updateMutation`)
+- New migration: add 3 columns to `tenant_subscriptions`
+- `supabase/functions/create-tenant-checkout/index.ts` — add setup fee line item conditionally (~15 lines)
+- `supabase/functions/stripe-subscription-webhook/index.ts` — flag `setup_fee_paid` on first payment (~10 lines)
+- `src/pages/TenantAdmin.jsx` — setup fee input on Plan tab (~20 lines)
+- `src/components/tenants/TenantBillingTab.jsx` — show setup fee row (~15 lines)
 
+### Defaults / assumptions (correct me if wrong)
+- Setup fee is **per-tenant**, set by super admin (not tied to plan tier preset).
+- Charged **once with the first subscription payment** in the same Stripe Checkout session.
+- Currency matches the existing subscription currency.
+- If you'd rather have setup fee presets per plan tier (free/starter/pro), or bill it as a standalone invoice before subscription starts, say so and I'll adjust.
