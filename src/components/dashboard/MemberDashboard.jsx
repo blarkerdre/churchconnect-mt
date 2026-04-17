@@ -1,8 +1,7 @@
-import React, { useState } from "react";
+import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { CheckCircle2, XCircle, UserCircle, ChevronRight, Star, Cake, Shield, Home } from "lucide-react";
+import { CheckCircle2, XCircle, UserCircle, ChevronRight, Cake, Shield, Home } from "lucide-react";
 import { Link } from "react-router-dom";
 import MemberFeed from "@/components/profile/MemberFeed";
 import SelfCheckInWidget from "@/components/attendance/SelfCheckInWidget";
@@ -11,7 +10,6 @@ import { BirthdayBanner, UpcomingBirthdayItem } from "@/components/dashboard/Bir
 import { useTenant } from "@/contexts/TenantContext";
 import ImageLightbox from "@/components/ui/ImageLightbox";
 import DashboardBanner from "@/components/dashboard/DashboardBanner";
-import AppFeedbackDialog from "@/components/feedback/AppFeedbackDialog";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
