@@ -1,45 +1,25 @@
 
-The user wants to:
-1. Move the "Rate this app" prompt out of the dashboard (currently in `MemberDashboard.jsx`) into the sidebar
-2. Allow members to see their feedback history (currently `app_feedback` table allows users to view their own — already supported by RLS)
+## Diagnosis
 
-Let me check the sidebar structure and existing feedback dialog.
+The preview "not rendering" is **not a code issue**:
 
-I need to look at:
-- `src/components/AppLayout.jsx` — sidebar location
-- `src/components/feedback/AppFeedbackDialog.jsx` — current feedback dialog
-- `src/components/dashboard/MemberDashboard.jsx` — current rate prompt to remove
+- Production build completes cleanly (3422 modules, no errors)
+- Dev server is running fine (latest log: HMR updates succeeding, no errors)
+- No runtime errors or console errors reported
+- All recent edits (`AppLayout.jsx`, `AppFeedbackDialog.jsx`, `MemberDashboard.jsx`) are syntactically valid — verified leftover refs (`feedbackOpen`, `existingFeedback`, `Star`) are fully removed from `MemberDashboard.jsx`
+- `toast` import shape matches the exported API
 
-The feedback dialog likely only handles one submission. I'll need to enhance it (or create a new component) to show history + allow new submissions.
+The browser is currently sitting on `/index` — a non-existent route. `src/main.jsx` rewrites `/index` → `/` only on initial mount, so if the iframe is in a stale state (e.g. service worker cached old bundle, or iframe got stuck mid-HMR), the page can appear blank.
 
 ## Plan
 
-### 1. Sidebar entry (`src/components/AppLayout.jsx`)
-Add a "Feedback" item in the sidebar footer area (near Sign Out / Profile) with a Star icon, visible to all authenticated members. Clicking opens a feedback dialog with two tabs: **Submit** and **History**.
+No code changes needed. Recommend the user try the following in order:
 
-### 2. Enhance `AppFeedbackDialog.jsx`
-Convert the dialog to use tabs:
-- **Submit / Edit tab** — existing rating + comment form. If user has prior feedback, prefill latest one (already has update permission via RLS).
-- **History tab** — list of all the user's past submissions (rating, comment, date, admin response if any) ordered newest first. Read-only.
+1. **Hard reload the preview** (the most common fix after multiple HMR updates): click the refresh icon in the preview toolbar.
+2. **If still blank after refresh**: unregister the service worker for the preview origin (DevTools → Application → Service Workers → Unregister), then reload. The project has a `public/sw.js` which can serve stale shells.
+3. **If still blank**: navigate explicitly to `/` (or `/auth` if signed out) instead of `/index`.
 
-Query: `supabase.from("app_feedback").select("*").eq("user_id", userId).eq("tenant_id", tenantId).order("created_at", { ascending: false })`
-
-If admin has responded (`admin_response` field), show it inline beneath each entry as a quoted reply.
-
-### 3. Remove from dashboard (`src/components/dashboard/MemberDashboard.jsx`)
-- Remove the "Enjoying the app?" Card block
-- Remove `feedbackOpen` state, `existingFeedback` query, `AppFeedbackDialog` import and instance
-- Remove the unused `Star` import
-
-### 4. Mobile bottom nav consideration
-The mobile bottom nav (`MobileBottomNav.jsx`) is full (5 tabs). We'll keep feedback sidebar-only; on mobile users open the sidebar sheet to access it. No changes to bottom nav.
-
-### Why this works
-- `app_feedback` RLS already allows `Users can view own feedback` and `Users can update own feedback` — no DB changes needed.
-- `admin_response` column already exists, so showing admin replies in history is free.
-- Sidebar is the natural home for app-level utilities (feedback, settings, sign out).
+If after these steps the preview is still blank, share the browser console output (red errors) so I can diagnose the actual runtime failure — at present no errors are reaching me.
 
 ### Files Changed
-- `src/components/AppLayout.jsx` — add Feedback button in sidebar footer (~10 lines)
-- `src/components/feedback/AppFeedbackDialog.jsx` — add Tabs with Submit + History views (~60 lines)
-- `src/components/dashboard/MemberDashboard.jsx` — remove rate-app card and related state/imports (~20 lines removed)
+None.
