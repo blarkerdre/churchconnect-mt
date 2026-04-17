@@ -6,8 +6,9 @@ import {
   LayoutDashboard, Users, CalendarDays, HeartHandshake,
   Heart, Megaphone, Menu, LogOut,
   ClipboardList, Car, BarChart2, ChevronLeft, Globe, Shield, FileText, TrendingUp, Settings, Mail, AlertTriangle,
-  BookOpen, ChevronsUpDown, Check, Lock, MessageSquareHeart
+  BookOpen, ChevronsUpDown, Check, Lock, MessageSquareHeart, Star
 } from "lucide-react";
+import AppFeedbackDialog from "@/components/feedback/AppFeedbackDialog";
 import winnersLogo from "@/assets/winners-chapel-logo.png";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
@@ -55,6 +56,7 @@ export default function Layout({ children }) {
   const [pendingTenantSwitch, setPendingTenantSwitch] = useState(null);
   const [switchPassword, setSwitchPassword] = useState("");
   const [switchLoading, setSwitchLoading] = useState(false);
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   const { signOut, user, profile, isAdmin, isUnitLeader, isWSFLeader, roles, leaderUnits, isTenantOwner, isTenantAdmin } = useAuth();
@@ -266,6 +268,14 @@ export default function Layout({ children }) {
             </div>
           )}
           <button
+            onClick={() => { setFeedbackOpen(true); setSidebarOpen(false); }}
+            title={collapsed ? "Feedback" : undefined}
+            className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium bg-accent/10 text-accent hover:bg-accent/20 transition-colors ${collapsed ? "justify-center" : ""}`}
+          >
+            <Star className="h-4 w-4 shrink-0" />
+            {!collapsed && "Feedback"}
+          </button>
+          <button
             onClick={signOut}
             className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors ${collapsed ? "justify-center" : ""}`}
           >
@@ -372,6 +382,7 @@ export default function Layout({ children }) {
           </form>
         </DialogContent>
       </Dialog>
+      <AppFeedbackDialog open={feedbackOpen} onOpenChange={setFeedbackOpen} />
     </div>
   );
 }
