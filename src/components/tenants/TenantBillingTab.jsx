@@ -135,6 +135,17 @@ export default function TenantBillingTab({ tenant }) {
           <div className="p-3 bg-muted/50 rounded-lg space-y-1.5 text-sm">
             <div className="flex justify-between"><span className="text-muted-foreground">Cycle</span><Badge variant="outline" className="capitalize">{subscription.billing_cycle}</Badge></div>
             <div className="flex justify-between"><span className="text-muted-foreground">Amount</span><span className="font-medium">{subscription.currency} {Number(subscription.amount).toFixed(2)}</span></div>
+            {Number(subscription.setup_fee_amount) > 0 && (
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Setup Fee (one-time)</span>
+                <span className="flex items-center gap-2">
+                  <span className="font-medium">{subscription.currency} {Number(subscription.setup_fee_amount).toFixed(2)}</span>
+                  <Badge variant={subscription.setup_fee_paid ? "default" : "secondary"} className="text-[10px]">
+                    {subscription.setup_fee_paid ? "Paid" : "Unpaid"}
+                  </Badge>
+                </span>
+              </div>
+            )}
             <div className="flex justify-between"><span className="text-muted-foreground">Next Due</span><span>{subscription.next_due_date}</span></div>
             <div className="flex justify-between"><span className="text-muted-foreground">Grace Period</span><span>{subscription.grace_period_days} days</span></div>
           {subscription.stripe_customer_id && (
