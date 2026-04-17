@@ -382,6 +382,7 @@ export default function Layout({ children }) {
           </form>
         </DialogContent>
       </Dialog>
+      <AppFeedbackDialog open={feedbackOpen} onOpenChange={setFeedbackOpen} />
     </div>
   );
 }
