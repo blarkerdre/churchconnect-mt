@@ -198,8 +198,11 @@ export default function TenantAdmin() {
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, ...updates }) => {
-      const { error } = await supabase.from("tenants").update(updates).eq("id", id);
+      const { data, error } = await supabase.from("tenants").update(updates).eq("id", id).select();
       if (error) throw error;
+      if (!data || data.length === 0) {
+        throw new Error("Update did not affect any rows. You may not have permission to edit this tenant.");
+      }
     },
     onSuccess: () => {
       toast({ title: "Tenant updated successfully" });
