@@ -204,9 +204,25 @@ export default function TenantBillingTab({ tenant }) {
               <Label className="text-xs">Next Due Date</Label>
               <Input type="date" value={subForm.next_due_date} onChange={(e) => setSubForm({ ...subForm, next_due_date: e.target.value })} />
             </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Setup Fee (one-time, charged with first payment)</Label>
+              <Input
+                type="number"
+                step="0.01"
+                min="0"
+                value={subForm.setup_fee_amount}
+                onChange={(e) => setSubForm({ ...subForm, setup_fee_amount: e.target.value })}
+                placeholder="0.00"
+              />
+              {subscription?.setup_fee_paid && (
+                <p className="text-[10px] text-muted-foreground">
+                  Setup fee already paid on {subscription.setup_fee_paid_at ? format(new Date(subscription.setup_fee_paid_at), "PP") : "an earlier date"}. Changing this will not re-charge.
+                </p>
+              )}
+            </div>
             <div className="flex gap-2 justify-end">
               <Button size="sm" variant="outline" onClick={() => setSubForm(null)}>Cancel</Button>
-              <Button size="sm" disabled={!subForm.amount || upsertSubMutation.isPending} onClick={() => upsertSubMutation.mutate(subForm)}>
+              <Button size="sm" disabled={!subForm.amount || upsertSubMutation.isPending} onClick={() => upsertSubMutation.mutate({ ...subForm, setup_fee_amount: Number(subForm.setup_fee_amount) || 0 })}>
                 {upsertSubMutation.isPending ? "Saving..." : "Save Subscription"}
               </Button>
             </div>
