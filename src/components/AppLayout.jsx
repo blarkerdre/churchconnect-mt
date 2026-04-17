@@ -268,6 +268,14 @@ export default function Layout({ children }) {
             </div>
           )}
           <button
+            onClick={() => { setFeedbackOpen(true); setSidebarOpen(false); }}
+            title={collapsed ? "Feedback" : undefined}
+            className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium bg-accent/10 text-accent hover:bg-accent/20 transition-colors ${collapsed ? "justify-center" : ""}`}
+          >
+            <Star className="h-4 w-4 shrink-0" />
+            {!collapsed && "Feedback"}
+          </button>
+          <button
             onClick={signOut}
             className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors ${collapsed ? "justify-center" : ""}`}
           >
