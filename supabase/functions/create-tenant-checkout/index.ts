@@ -86,23 +86,41 @@ serve(async (req) => {
 
     // Create checkout session with recurring subscription
     const origin = req.headers.get("origin") || "https://churchconnect-mt.lovable.app";
+
+    const lineItems: any[] = [
+      {
+        price_data: {
+          currency: sub.currency.toLowerCase(),
+          product_data: {
+            name: `Church Management - ${sub.billing_cycle === "yearly" ? "Annual" : "Monthly"} Subscription`,
+          },
+          unit_amount: Math.round(Number(sub.amount) * 100),
+          recurring: {
+            interval: sub.billing_cycle === "yearly" ? "year" : "month",
+          },
+        },
+        quantity: 1,
+      },
+    ];
+
+    // Add one-time setup fee if configured and not yet paid
+    const setupFeeAmount = Number(sub.setup_fee_amount || 0);
+    if (setupFeeAmount > 0 && !sub.setup_fee_paid) {
+      lineItems.push({
+        price_data: {
+          currency: sub.currency.toLowerCase(),
+          product_data: {
+            name: "One-Time Setup Fee",
+          },
+          unit_amount: Math.round(setupFeeAmount * 100),
+        },
+        quantity: 1,
+      });
+    }
+
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
-      line_items: [
-        {
-          price_data: {
-            currency: sub.currency.toLowerCase(),
-            product_data: {
-              name: `Church Management - ${sub.billing_cycle === "yearly" ? "Annual" : "Monthly"} Subscription`,
-            },
-            unit_amount: Math.round(Number(sub.amount) * 100),
-            recurring: {
-              interval: sub.billing_cycle === "yearly" ? "year" : "month",
-            },
-          },
-          quantity: 1,
-        },
-      ],
+      line_items: lineItems,
       mode: "subscription",
       success_url: `${origin}/settings?payment=success`,
       cancel_url: `${origin}/settings?payment=cancelled`,
@@ -111,6 +129,7 @@ serve(async (req) => {
           tenant_id,
           subscription_id: sub.id,
           billing_cycle: sub.billing_cycle,
+          setup_fee_charged: setupFeeAmount > 0 && !sub.setup_fee_paid ? "true" : "false",
         },
       },
     });
