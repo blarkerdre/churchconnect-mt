@@ -82,6 +82,12 @@ serve(async (req) => {
           updatePayload.stripe_price_id = stripeSub.items.data[0].price.id;
         }
 
+        // Mark setup fee as paid if it was included in this checkout
+        if (stripeSub.metadata?.setup_fee_charged === "true") {
+          updatePayload.setup_fee_paid = true;
+          updatePayload.setup_fee_paid_at = new Date().toISOString();
+        }
+
         if (subscriptionId) {
           await supabaseAdmin
             .from("tenant_subscriptions")
@@ -95,7 +101,7 @@ serve(async (req) => {
             .eq("is_active", true);
         }
 
-        logStep("Stored stripe_subscription_id", { tenantId, stripeSubscriptionId });
+        logStep("Stored stripe_subscription_id", { tenantId, stripeSubscriptionId, setupFeePaid: stripeSub.metadata?.setup_fee_charged === "true" });
         break;
       }
 

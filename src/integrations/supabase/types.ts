@@ -2566,6 +2566,9 @@ export type Database = {
           id: string
           is_active: boolean
           next_due_date: string
+          setup_fee_amount: number
+          setup_fee_paid: boolean
+          setup_fee_paid_at: string | null
           stripe_customer_id: string | null
           stripe_price_id: string | null
           stripe_subscription_id: string | null
@@ -2581,6 +2584,9 @@ export type Database = {
           id?: string
           is_active?: boolean
           next_due_date: string
+          setup_fee_amount?: number
+          setup_fee_paid?: boolean
+          setup_fee_paid_at?: string | null
           stripe_customer_id?: string | null
           stripe_price_id?: string | null
           stripe_subscription_id?: string | null
@@ -2596,6 +2602,9 @@ export type Database = {
           id?: string
           is_active?: boolean
           next_due_date?: string
+          setup_fee_amount?: number
+          setup_fee_paid?: boolean
+          setup_fee_paid_at?: string | null
           stripe_customer_id?: string | null
           stripe_price_id?: string | null
           stripe_subscription_id?: string | null

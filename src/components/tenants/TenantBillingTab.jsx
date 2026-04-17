@@ -110,6 +110,7 @@ export default function TenantBillingTab({ tenant }) {
       currency: subscription?.currency || "GBP",
       next_due_date: subscription?.next_due_date || new Date().toISOString().split("T")[0],
       grace_period_days: subscription?.grace_period_days || 7,
+      setup_fee_amount: subscription?.setup_fee_amount || 0,
     });
   };
 
@@ -134,6 +135,17 @@ export default function TenantBillingTab({ tenant }) {
           <div className="p-3 bg-muted/50 rounded-lg space-y-1.5 text-sm">
             <div className="flex justify-between"><span className="text-muted-foreground">Cycle</span><Badge variant="outline" className="capitalize">{subscription.billing_cycle}</Badge></div>
             <div className="flex justify-between"><span className="text-muted-foreground">Amount</span><span className="font-medium">{subscription.currency} {Number(subscription.amount).toFixed(2)}</span></div>
+            {Number(subscription.setup_fee_amount) > 0 && (
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Setup Fee (one-time)</span>
+                <span className="flex items-center gap-2">
+                  <span className="font-medium">{subscription.currency} {Number(subscription.setup_fee_amount).toFixed(2)}</span>
+                  <Badge variant={subscription.setup_fee_paid ? "default" : "secondary"} className="text-[10px]">
+                    {subscription.setup_fee_paid ? "Paid" : "Unpaid"}
+                  </Badge>
+                </span>
+              </div>
+            )}
             <div className="flex justify-between"><span className="text-muted-foreground">Next Due</span><span>{subscription.next_due_date}</span></div>
             <div className="flex justify-between"><span className="text-muted-foreground">Grace Period</span><span>{subscription.grace_period_days} days</span></div>
           {subscription.stripe_customer_id && (
@@ -192,9 +204,25 @@ export default function TenantBillingTab({ tenant }) {
               <Label className="text-xs">Next Due Date</Label>
               <Input type="date" value={subForm.next_due_date} onChange={(e) => setSubForm({ ...subForm, next_due_date: e.target.value })} />
             </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Setup Fee (one-time, charged with first payment)</Label>
+              <Input
+                type="number"
+                step="0.01"
+                min="0"
+                value={subForm.setup_fee_amount}
+                onChange={(e) => setSubForm({ ...subForm, setup_fee_amount: e.target.value })}
+                placeholder="0.00"
+              />
+              {subscription?.setup_fee_paid && (
+                <p className="text-[10px] text-muted-foreground">
+                  Setup fee already paid on {subscription.setup_fee_paid_at ? format(new Date(subscription.setup_fee_paid_at), "PP") : "an earlier date"}. Changing this will not re-charge.
+                </p>
+              )}
+            </div>
             <div className="flex gap-2 justify-end">
               <Button size="sm" variant="outline" onClick={() => setSubForm(null)}>Cancel</Button>
-              <Button size="sm" disabled={!subForm.amount || upsertSubMutation.isPending} onClick={() => upsertSubMutation.mutate(subForm)}>
+              <Button size="sm" disabled={!subForm.amount || upsertSubMutation.isPending} onClick={() => upsertSubMutation.mutate({ ...subForm, setup_fee_amount: Number(subForm.setup_fee_amount) || 0 })}>
                 {upsertSubMutation.isPending ? "Saving..." : "Save Subscription"}
               </Button>
             </div>
