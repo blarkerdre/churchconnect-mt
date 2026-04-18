@@ -14,7 +14,7 @@ import { Separator } from "@/components/ui/separator";
 import { UserPlus, Trash2, Shield, Crown, User, Mail, Clock, CheckCircle2, XCircle, ShieldCheck } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 
 const ROLE_CONFIG = {
   owner: { label: "Owner", icon: Crown, color: "text-amber-600 bg-amber-50 border-amber-200" },
@@ -173,6 +173,7 @@ export default function TenantUsersDialog({ tenant, open, onOpenChange }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+        <TooltipProvider>
         <TenantDialogHeader>
             Users — {tenant.name}
             {isSuperAdmin && (
@@ -384,6 +385,7 @@ export default function TenantUsersDialog({ tenant, open, onOpenChange }) {
         <p className="text-xs text-muted-foreground">
           {memberships.length} user{memberships.length !== 1 ? "s" : ""} in this tenant
         </p>
+        </TooltipProvider>
       </DialogContent>
     </Dialog>
   );
