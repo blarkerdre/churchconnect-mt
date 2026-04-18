@@ -408,6 +408,8 @@ export type Database = {
           call_type: string | null
           caller_id: string | null
           created_at: string
+          delivery_status: string | null
+          delivery_updated_at: string | null
           duration_seconds: number | null
           id: string
           member_id: string | null
@@ -419,11 +421,14 @@ export type Database = {
           reference_type: string | null
           status: string | null
           tenant_id: string
+          updated_at: string
         }
         Insert: {
           call_type?: string | null
           caller_id?: string | null
           created_at?: string
+          delivery_status?: string | null
+          delivery_updated_at?: string | null
           duration_seconds?: number | null
           id?: string
           member_id?: string | null
@@ -435,11 +440,14 @@ export type Database = {
           reference_type?: string | null
           status?: string | null
           tenant_id: string
+          updated_at?: string
         }
         Update: {
           call_type?: string | null
           caller_id?: string | null
           created_at?: string
+          delivery_status?: string | null
+          delivery_updated_at?: string | null
           duration_seconds?: number | null
           id?: string
           member_id?: string | null
@@ -451,6 +459,7 @@ export type Database = {
           reference_type?: string | null
           status?: string | null
           tenant_id?: string
+          updated_at?: string
         }
         Relationships: [
           {
