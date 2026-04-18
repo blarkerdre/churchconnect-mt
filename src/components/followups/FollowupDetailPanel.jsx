@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { X, Clock, User, Calendar, Flag, Send, CheckCircle2, AlertCircle, TimerReset, Loader2, Phone, Mail, Lightbulb, UserCheck, RefreshCw, MessageSquare, PhoneCall, Sparkles } from "lucide-react";
+import { X, Clock, User, Calendar, Flag, Send, CheckCircle2, AlertCircle, TimerReset, Loader2, Phone, Mail, Lightbulb, UserCheck, RefreshCw, MessageSquare, PhoneCall, Sparkles, Users, Home } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import TenantDialogHeader from "@/components/ui/TenantDialogHeader";
 import { format } from "date-fns";
@@ -55,6 +55,7 @@ export default function FollowupDetailPanel({ followup, onClose, onUpdate, curre
   const [selectedMessage, setSelectedMessage] = useState(null);
   const [callingPhone, setCallingPhone] = useState(false);
   const [signPostOpen, setSignPostOpen] = useState(false);
+  const [signPostType, setSignPostType] = useState("unit_leader");
   const { tenantId, scopeQuery } = useTenantQuery();
   const queryClient = useQueryClient();
 
@@ -329,17 +330,25 @@ export default function FollowupDetailPanel({ followup, onClose, onUpdate, curre
           {/* Sign-Post (refer to leader) */}
           {followup.member_id && ["First Timer", "New Convert", "Visitor"].includes(followup.category) && (
             <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
-                  <Sparkles className="h-3.5 w-3.5 text-accent" /> Sign-Post
-                </p>
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
+                <Sparkles className="h-3.5 w-3.5 text-accent" /> Sign-Post
+              </p>
+              <div className="flex flex-col sm:flex-row gap-2">
                 <Button
                   size="sm"
                   variant="outline"
-                  className="h-7 text-xs"
-                  onClick={() => setSignPostOpen(true)}
+                  className="h-8 text-xs flex-1"
+                  onClick={() => { setSignPostType("unit_leader"); setSignPostOpen(true); }}
                 >
-                  Refer to Leader
+                  <Users className="h-3.5 w-3.5" /> Refer to Unit Leader
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-8 text-xs flex-1"
+                  onClick={() => { setSignPostType("home_cell_leader"); setSignPostOpen(true); }}
+                >
+                  <Home className="h-3.5 w-3.5" /> Refer to Home Cell Leader
                 </Button>
               </div>
               <ReferralTimeline followupId={followup.id} profileMap={profileMap} />
@@ -597,6 +606,7 @@ export default function FollowupDetailPanel({ followup, onClose, onUpdate, curre
         onOpenChange={setSignPostOpen}
         followup={followup}
         member={memberRecord}
+        defaultType={signPostType}
         onCreated={() => {
           queryClient.invalidateQueries({ queryKey: ["followup-referrals", followup.id] });
         }}
