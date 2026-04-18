@@ -8,6 +8,7 @@ import { Separator } from "@/components/ui/separator";
 import { Loader2, MessageSquare, AlertTriangle, Info } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useTenantQuery } from "@/hooks/useTenantQuery";
 import { format } from "date-fns";
 
 const DELIVERY_STATUS_CONFIG = {
@@ -40,13 +41,16 @@ function getTrialAccountHint(errorMessage) {
 export default function SMSHistoryDialog({ open, onOpenChange, defaultFilter = "All", channelFilter = null }) {
   const [typeFilter, setTypeFilter] = useState(defaultFilter);
   const [selectedLog, setSelectedLog] = useState(null);
+  const { tenantId } = useTenantQuery();
 
-  const { data: logs = [], isLoading } = useQuery({
-    queryKey: ["sms-logs", typeFilter, channelFilter],
+  const { data: logs = [], isLoading, error } = useQuery({
+    queryKey: ["sms-logs", tenantId, typeFilter, channelFilter],
     queryFn: async () => {
+      if (!tenantId) return [];
       let query = supabase
         .from("sms_log")
         .select("*")
+        .eq("tenant_id", tenantId)
         .order("created_at", { ascending: false })
         .limit(100);
       if (typeFilter !== "All") {
@@ -59,7 +63,7 @@ export default function SMSHistoryDialog({ open, onOpenChange, defaultFilter = "
       if (error) throw error;
       return data;
     },
-    enabled: open,
+    enabled: open && !!tenantId,
   });
 
   const sentCount = logs.filter(l => l.status === "sent" || l.status === "delivered").length;
@@ -102,6 +106,13 @@ export default function SMSHistoryDialog({ open, onOpenChange, defaultFilter = "
         <div className="flex-1 overflow-y-auto space-y-2 mt-3">
           {isLoading ? (
             <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+          ) : error ? (
+            <Alert variant="destructive">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription className="text-xs">
+                Failed to load SMS logs: {error.message}
+              </AlertDescription>
+            </Alert>
           ) : logs.length === 0 ? (
             <p className="text-center text-muted-foreground py-8">No SMS logs found</p>
           ) : (
