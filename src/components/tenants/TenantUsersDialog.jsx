@@ -385,6 +385,7 @@ export default function TenantUsersDialog({ tenant, open, onOpenChange }) {
         <p className="text-xs text-muted-foreground">
           {memberships.length} user{memberships.length !== 1 ? "s" : ""} in this tenant
         </p>
+        </TooltipProvider>
       </DialogContent>
     </Dialog>
   );
