@@ -3453,6 +3453,10 @@ export type Database = {
       is_admin:
         | { Args: { _user_id: string }; Returns: boolean }
         | { Args: { _tenant_id: string; _user_id: string }; Returns: boolean }
+      is_assigned_referral_leader_for_member: {
+        Args: { _member_id: string; _tenant_id: string; _user_id: string }
+        Returns: boolean
+      }
       is_followup_team_member: {
         Args: { _tenant_id: string; _user_id: string }
         Returns: boolean
