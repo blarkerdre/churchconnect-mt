@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { X, Clock, User, Calendar, Flag, Send, CheckCircle2, AlertCircle, TimerReset, Loader2, Phone, Mail, Lightbulb, UserCheck, RefreshCw, MessageSquare, PhoneCall } from "lucide-react";
+import { X, Clock, User, Calendar, Flag, Send, CheckCircle2, AlertCircle, TimerReset, Loader2, Phone, Mail, Lightbulb, UserCheck, RefreshCw, MessageSquare, PhoneCall, Sparkles } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import TenantDialogHeader from "@/components/ui/TenantDialogHeader";
 import { format } from "date-fns";
@@ -11,6 +11,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
+import SignPostDialog from "./SignPostDialog";
+import ReferralTimeline from "./ReferralTimeline";
 
 const NEXT_STEPS = {
   "First Timer": [
@@ -52,8 +54,25 @@ export default function FollowupDetailPanel({ followup, onClose, onUpdate, curre
   const [showReassign, setShowReassign] = useState(false);
   const [selectedMessage, setSelectedMessage] = useState(null);
   const [callingPhone, setCallingPhone] = useState(false);
+  const [signPostOpen, setSignPostOpen] = useState(false);
   const { tenantId, scopeQuery } = useTenantQuery();
   const queryClient = useQueryClient();
+
+  // Fetch member record for sign-post (need postcode/address)
+  const { data: memberRecord } = useQuery({
+    queryKey: ["member-for-signpost", followup.member_id, tenantId],
+    enabled: !!followup.member_id && !!tenantId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("members")
+        .select("id, first_name, last_name, postcode, address, city")
+        .eq("id", followup.member_id)
+        .eq("tenant_id", tenantId)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+  });
 
   // Fetch scheduled messages for this followup
   const { data: scheduledMessages = [] } = useQuery({
@@ -307,6 +326,26 @@ export default function FollowupDetailPanel({ followup, onClose, onUpdate, curre
             )}
           </div>
 
+          {/* Sign-Post (refer to leader) */}
+          {followup.member_id && ["First Timer", "New Convert", "Visitor"].includes(followup.category) && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
+                  <Sparkles className="h-3.5 w-3.5 text-accent" /> Sign-Post
+                </p>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-7 text-xs"
+                  onClick={() => setSignPostOpen(true)}
+                >
+                  Refer to Leader
+                </Button>
+              </div>
+              <ReferralTimeline followupId={followup.id} profileMap={profileMap} />
+            </div>
+          )}
+
           {/* Notes */}
           {followup.notes && (
             <div className="bg-muted/50 rounded-xl p-3">
@@ -551,6 +590,17 @@ export default function FollowupDetailPanel({ followup, onClose, onUpdate, curre
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Sign-Post Dialog */}
+      <SignPostDialog
+        open={signPostOpen}
+        onOpenChange={setSignPostOpen}
+        followup={followup}
+        member={memberRecord}
+        onCreated={() => {
+          queryClient.invalidateQueries({ queryKey: ["followup-referrals", followup.id] });
+        }}
+      />
     </div>
   );
 }
