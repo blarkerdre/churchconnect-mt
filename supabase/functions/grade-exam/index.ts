@@ -75,8 +75,12 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Fetch questions with correct answers (server-side only)
-    let questionsQuery = adminClient.from("exam_questions").select("*");
+    // Fetch questions (without correct_answer) and answer keys separately.
+    // correct_answer column is access-restricted; the answer key lives in
+    // exam_question_answers and is only readable via service role / admins.
+    let questionsQuery = adminClient
+      .from("exam_questions")
+      .select("id, training_type, subject_id, question_text, question_type, option_a, option_b, option_c, option_d, answer_count, points, sort_order, created_at, tenant_id");
     if (subject_id) {
       questionsQuery = questionsQuery.eq("subject_id", subject_id);
     } else {
@@ -90,6 +94,22 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    // Load correct answers from the protected answer-key table
+    const questionIds = questions.map((q: any) => q.id);
+    const { data: answerRowsData, error: aErr } = await adminClient
+      .from("exam_question_answers")
+      .select("question_id, correct_answer")
+      .in("question_id", questionIds);
+    if (aErr) throw aErr;
+    const answerKeyMap: Record<string, string> = {};
+    (answerRowsData || []).forEach((r: any) => {
+      answerKeyMap[r.question_id] = r.correct_answer;
+    });
+    // Attach correct_answer onto each question for the grading loop below
+    questions.forEach((q: any) => {
+      q.correct_answer = answerKeyMap[q.id] ?? null;
+    });
 
     // Get pass threshold and email flags
     let passThreshold = 50;
