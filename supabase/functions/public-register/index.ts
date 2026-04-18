@@ -614,6 +614,9 @@ Deno.serve(async (req) => {
       createPastoralCareForPrayerRequest(supabase, resultMemberId, firstName, lastName, notes, tenantId);
     }
 
+    if (resultMemberId) {
+      await queueJoinRequests(supabase, resultMemberId, tenantId, requestedChurchUnit, requestedWsfCentreId, verifiedUserId);
+    }
 
     return new Response(JSON.stringify({ success: true, mode: "created" }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
