@@ -187,25 +187,40 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
     }
   }, [member, open]);
 
-  const handleSave = async () => {
+  const validateForm = () => {
     if (!form.first_name || !form.last_name) {
       toast({ title: "First name and last name are required", variant: "destructive" });
-      return;
+      return false;
     }
     if (!member && !form.gdpr_consent) {
       toast({ title: "GDPR consent is required", variant: "destructive" });
-      return;
+      return false;
     }
     if (createAccount && !member) {
       if (!form.email) {
         toast({ title: "Email is required when creating a user account", variant: "destructive" });
-        return;
+        return false;
       }
       if (!password || password.length < 6) {
         toast({ title: "Password must be at least 6 characters", variant: "destructive" });
-        return;
+        return false;
       }
     }
+    return true;
+  };
+
+  const handleSubmit = () => {
+    if (!validateForm()) return;
+    // Gate edits of EXISTING member behind password re-auth (skip for self-edits)
+    const isSelfEdit = member && member.user_id && member.user_id === currentUser?.id;
+    if (member && !isSelfEdit) {
+      setConfirmUpdateOpen(true);
+      return;
+    }
+    handleSave();
+  };
+
+  const handleSave = async () => {
 
     setSaving(true);
     try {
