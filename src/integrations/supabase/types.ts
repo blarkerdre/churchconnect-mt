@@ -1144,6 +1144,42 @@ export type Database = {
           },
         ]
       }
+      exam_question_answers: {
+        Row: {
+          correct_answer: string
+          question_id: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          correct_answer: string
+          question_id: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          correct_answer?: string
+          question_id?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exam_question_answers_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: true
+            referencedRelation: "exam_questions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "exam_question_answers_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       exam_questions: {
         Row: {
           answer_count: number
@@ -3394,6 +3430,30 @@ export type Database = {
         Args: { _subject_id?: string; _training_type?: string }
         Returns: {
           answer_count: number
+          id: string
+          option_a: string
+          option_b: string
+          option_c: string
+          option_d: string
+          points: number
+          question_text: string
+          question_type: string
+          sort_order: number
+          subject_id: string
+          tenant_id: string
+          training_type: string
+        }[]
+      }
+      get_exam_questions_with_answers: {
+        Args: {
+          _subject_id?: string
+          _tenant_id: string
+          _training_type?: string
+        }
+        Returns: {
+          answer_count: number
+          correct_answer: string
+          created_at: string
           id: string
           option_a: string
           option_b: string
