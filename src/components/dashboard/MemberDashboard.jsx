@@ -151,6 +151,9 @@ export default function MemberDashboard({ currentUser, myMember }) {
       {/* Self Check-In */}
       <SelfCheckInWidget />
 
+      {/* Sign-posted referrals (visible to anyone assigned as a leader) */}
+      <SignPostedToMeWidget />
+
 
       {/* Feed: Announcements + Events tabs */}
       <MemberFeed member={myMember} />
