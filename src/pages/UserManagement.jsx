@@ -354,7 +354,7 @@ export default function UserManagement() {
                                   <Checkbox
                                     checked={hasRole}
                                     onCheckedChange={(checked) => {
-                                      toggleRoleMutation.mutate({
+                                      setRoleChangeTarget({
                                         userId: p.user_id,
                                         role: r,
                                         add: !!checked,
@@ -384,14 +384,12 @@ export default function UserManagement() {
                               title={isDisabled ? "Enable account" : "Disable account"}
                               disabled={toggleUserMutation.isPending}
                               onClick={() => {
-                                const action = isDisabled ? "enable" : "disable";
-                                if (window.confirm(`${action.charAt(0).toUpperCase() + action.slice(1)} user ${p.full_name || p.email}?`)) {
-                                  toggleUserMutation.mutate({
-                                    userId: p.user_id,
-                                    disabled: !isDisabled,
-                                    targetName: p.full_name || p.email,
-                                  });
-                                }
+                                setToggleTarget({
+                                  userId: p.user_id,
+                                  disabled: !isDisabled,
+                                  targetName: p.full_name || p.email,
+                                  isCurrentlyDisabled: isDisabled,
+                                });
                               }}
                             >
                               {isDisabled ? (
@@ -404,9 +402,7 @@ export default function UserManagement() {
                           {/* Delete - super_admin only */}
                           {isSuperAdmin && !isCurrentUser && (
                             <Button variant="ghost" size="icon" onClick={() => {
-                              if (window.confirm(`Delete user ${p.full_name || p.email}? This cannot be undone.`)) {
-                                deleteUserMutation.mutate({ userId: p.user_id, targetName: p.full_name || p.email });
-                              }
+                              setDeleteTarget({ userId: p.user_id, targetName: p.full_name || p.email });
                             }}>
                               <Trash2 className="h-4 w-4 text-destructive" />
                             </Button>
