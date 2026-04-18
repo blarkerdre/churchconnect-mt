@@ -134,6 +134,104 @@ async function createPastoralCareForPrayerRequest(
 }
 
 
+async function queueJoinRequests(
+  supabase: any,
+  memberId: string,
+  tenantId: string | null,
+  churchUnit: string | null,
+  wsfCentreId: string | null,
+  requestedBy: string | null,
+) {
+  if (!memberId || !tenantId) return;
+  const inserted: Array<{ id: string; request_type: "unit" | "home_cell"; unit_name: string | null; wsf_centre_id: string | null }> = [];
+  try {
+    const unitNames = (churchUnit || "")
+      .split(",")
+      .map((s: string) => s.trim())
+      .filter((s: string) => s && s.toLowerCase() !== "none");
+
+    for (const unit_name of unitNames) {
+      // Skip if a pending or approved request already exists
+      const { data: existing } = await supabase
+        .from("unit_join_requests")
+        .select("id")
+        .eq("tenant_id", tenantId)
+        .eq("member_id", memberId)
+        .eq("request_type", "unit")
+        .ilike("unit_name", unit_name)
+        .in("status", ["pending", "approved"])
+        .limit(1)
+        .maybeSingle();
+      if (existing) continue;
+
+      const { data: row, error } = await supabase
+        .from("unit_join_requests")
+        .insert({
+          tenant_id: tenantId,
+          member_id: memberId,
+          request_type: "unit",
+          unit_name,
+          requested_by: requestedBy,
+          status: "pending",
+        })
+        .select("id")
+        .single();
+      if (!error && row) inserted.push({ id: row.id, request_type: "unit", unit_name, wsf_centre_id: null });
+    }
+
+    if (wsfCentreId) {
+      const { data: existing } = await supabase
+        .from("unit_join_requests")
+        .select("id")
+        .eq("tenant_id", tenantId)
+        .eq("member_id", memberId)
+        .eq("request_type", "home_cell")
+        .eq("wsf_centre_id", wsfCentreId)
+        .in("status", ["pending", "approved"])
+        .limit(1)
+        .maybeSingle();
+      if (!existing) {
+        const { data: row, error } = await supabase
+          .from("unit_join_requests")
+          .insert({
+            tenant_id: tenantId,
+            member_id: memberId,
+            request_type: "home_cell",
+            wsf_centre_id: wsfCentreId,
+            requested_by: requestedBy,
+            status: "pending",
+          })
+          .select("id")
+          .single();
+        if (!error && row) inserted.push({ id: row.id, request_type: "home_cell", unit_name: null, wsf_centre_id: wsfCentreId });
+      }
+    }
+
+    // Fire-and-forget notify per request
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    for (const r of inserted) {
+      fetch(`${supabaseUrl}/functions/v1/notify-join-request`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${serviceRoleKey}`,
+        },
+        body: JSON.stringify({
+          request_id: r.id,
+          tenant_id: tenantId,
+          member_id: memberId,
+          request_type: r.request_type,
+          unit_name: r.unit_name,
+          wsf_centre_id: r.wsf_centre_id,
+        }),
+      }).catch((err) => console.error("notify-join-request error:", err));
+    }
+  } catch (err) {
+    console.error("Failed to queue join requests:", err);
+  }
+}
+
 async function ensureTenantAccess(supabase: any, userId: string | null | undefined, tenantId: string | null | undefined) {
   if (!userId || !tenantId) return;
   try {
@@ -327,14 +425,16 @@ Deno.serve(async (req) => {
       date_of_birth: dateOfBirth || null,
       gender,
       membership_status: membershipStatus,
-      church_unit: churchUnit,
+      // church_unit and wsf_centre_id are routed through unit_join_requests (leader approval)
+      church_unit: null,
       notes,
       emergency_contact_name: emergencyContactName,
       emergency_contact_phone: emergencyContactPhone,
       water_baptism: waterBaptism,
       holy_spirit_baptism: holySpiritBaptism,
-      winners_satellite: winnersSatellite,
-      wsf_centre_id: winnersSatellite ? (wsfCentreId || null) : null,
+      // winners_satellite is set when a home_cell request is approved
+      winners_satellite: false,
+      wsf_centre_id: null,
       bfc_completed: bfcCompleted,
       bcc_completed: bccCompleted,
       lcc_completed: lccCompleted,
@@ -354,6 +454,10 @@ Deno.serve(async (req) => {
       worshipped_at_other_wci: worshippedAtOtherWci,
       ...(tenantId ? { tenant_id: tenantId } : {}),
     };
+
+    // Requested unit/centre selections (queued as pending join requests after member is upserted)
+    const requestedChurchUnit = churchUnit;
+    const requestedWsfCentreId = winnersSatellite ? (wsfCentreId || null) : null;
 
     let resultMemberId: string | null = null;
     let resultMode = "created";
@@ -391,6 +495,8 @@ Deno.serve(async (req) => {
           createPastoralCareForPrayerRequest(supabase, linkedMember.id, firstName, lastName, notes, tenantId);
         }
 
+        // Queue unit/centre selections as pending join requests (leader approval)
+        await queueJoinRequests(supabase, linkedMember.id, tenantId, requestedChurchUnit, requestedWsfCentreId, authenticatedUser.userId);
 
         return new Response(JSON.stringify({ success: true, mode: resultMode }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -437,6 +543,7 @@ Deno.serve(async (req) => {
             createPastoralCareForPrayerRequest(supabase, emailMatches[0].id, firstName, lastName, notes, tenantId);
           }
 
+          await queueJoinRequests(supabase, emailMatches[0].id, tenantId, requestedChurchUnit, requestedWsfCentreId, authenticatedUser.userId);
 
           return new Response(JSON.stringify({ success: true, mode: "claimed" }), {
             headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -474,6 +581,8 @@ Deno.serve(async (req) => {
           createPastoralCareForPrayerRequest(supabase, existingByEmail.id, firstName, lastName, notes, tenantId);
         }
 
+        await queueJoinRequests(supabase, existingByEmail.id, tenantId, requestedChurchUnit, requestedWsfCentreId, verifiedUserId);
+
         return new Response(JSON.stringify({ success: true, mode: resultMode }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
@@ -505,6 +614,9 @@ Deno.serve(async (req) => {
       createPastoralCareForPrayerRequest(supabase, resultMemberId, firstName, lastName, notes, tenantId);
     }
 
+    if (resultMemberId) {
+      await queueJoinRequests(supabase, resultMemberId, tenantId, requestedChurchUnit, requestedWsfCentreId, verifiedUserId);
+    }
 
     return new Response(JSON.stringify({ success: true, mode: "created" }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
