@@ -514,6 +514,29 @@ export default function SignPostDialog({ open, onOpenChange, followup, member, o
               </div>
             )}
 
+            {/* Inline confirmation of who will receive the sign-post */}
+            {(() => {
+              const ready =
+                (type === "unit_leader" && unitName && unitLeaderId) ||
+                (type === "home_cell_leader" && selectedCentre && centreLeader?.linked);
+              if (!ready) return null;
+              const leaderName =
+                type === "unit_leader"
+                  ? (unitLeaders.find(l => l.user_id === unitLeaderId)?.full_name ||
+                     unitLeaders.find(l => l.user_id === unitLeaderId)?.email ||
+                     "Selected leader")
+                  : centreLeader?.name;
+              const target = type === "unit_leader" ? unitName : selectedCentre?.name;
+              return (
+                <div className="rounded-lg border border-primary/40 bg-primary/5 p-2.5 flex items-start gap-2">
+                  <UserCircle2 className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+                  <p className="text-xs text-foreground">
+                    Will be sent to <strong>{leaderName}</strong> for <strong>{target}</strong>.
+                  </p>
+                </div>
+              );
+            })()}
+
             <div className="space-y-1.5">
               <Label className="text-xs">Notes for the leader (optional)</Label>
               <Textarea
@@ -523,17 +546,20 @@ export default function SignPostDialog({ open, onOpenChange, followup, member, o
                 rows={3}
               />
             </div>
-
-            <div className="flex justify-end gap-2 pt-2">
-              <Button variant="ghost" onClick={() => handleOpenChange(false)}>Cancel</Button>
-              <Button onClick={handleSubmit} disabled={saving}>
-                {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
-                Sign-Post
-              </Button>
-            </div>
           </div>
           )}
         </DialogErrorBoundary>
+        </div>
+
+        {/* Sticky footer — always visible */}
+        <div className="shrink-0 border-t border-border bg-background px-6 py-3 flex justify-end gap-2">
+          <Button variant="ghost" onClick={() => handleOpenChange(false)}>Cancel</Button>
+          <Button onClick={handleSubmit} disabled={saving || !tenantId}>
+            {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
+            Sign-Post
+          </Button>
+        </div>
+
         <DialogPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
           <X className="h-4 w-4" />
           <span className="sr-only">Close</span>
