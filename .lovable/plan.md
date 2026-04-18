@@ -1,48 +1,48 @@
 
 ## Issue
-User opened SignPost dialog → "Unit Leader" tab shows nothing, no toast. Session replay shows the unit dropdown opened with "8 units available" once, but on a different tenant/page it's empty with no feedback.
+On 384px viewport, both "Refer to Unit Leader" (church unit dropdown) and "Refer to Home Cell" (centre dropdown) selections inside `SignPostDialog` aren't working. The network logs confirm:
+- `church_units` query DID return data (200 OK with the duplicated `tenant_id` filter — units exist for `demo-test`).
+- Session replay shows the user opened the Church Unit select (`Select unit` placeholder visible) and tapped, then opened the Home Cell select where Canton Centre appeared but selection didn't commit either.
 
-## Investigation
+So units/centres ARE loading. The actual problem is the **Select dropdown is not selecting/closing on tap** in this 384px mobile context.
 
-Let me check the actual data state and RLS for `church_units` against the current tenant.
-<br>
+## Root cause analysis
 
-Checking:
-1. Whether `church_units` rows exist for the current tenant
-2. Whether `scopeQuery` correctly applies `tenant_id`
-3. Whether the query actually errors silently
-<br>
+Looking at the flow:
+1. User opens dialog → both `Select` components render inside a Radix `Dialog`.
+2. Tapping a `SelectItem` should fire `onValueChange` → update local state → render the next step (e.g. show leader info, enable Submit).
+3. Session replay shows after Canton Centre tap, the UI did update to show "Blarker Dre · Canton Centre" — so Home Cell DID select successfully. The user's complaint is likely that **after selecting, nothing visibly progresses** OR the **Submit button stays disabled / no feedback**.
 
-I need to inspect:
-- `useTenantQuery.scopeQuery` — does it inject `tenant_id` filter?
-- The active tenant on `/index` route — replay shows user is on Dashboard, but route is `/index`. The dialog is opened from Dashboard's `SignPostedToMeWidget` or similar.
-- Whether `tenantId` is resolved before the dialog opens (if `tenantId` is undefined, `enabled: open && !!tenantId` blocks the query and shows nothing — no error, no toast).
-<br>
+For the Unit dropdown: the replay shows it opened but no item-tap event was captured before the user moved on — suggesting on a 384px viewport, the `SelectContent` may be opening **off-screen / behind the Dialog** or items are not tappable due to z-index/portal issues common with Radix Select inside Dialog on mobile.
 
-## Likely root cause
-The query is `enabled: open && !!tenantId`. If the user opens the dialog from a context where `tenantId` is briefly null (e.g. on `/index` dashboard before tenant resolves, or from a notification deep-link), the query never fires. UI shows the empty Select with no loading/error state because `unitsLoading=false` and `unitsError=null` — `units=[]` (default).
-
-Also, the previous fix added a "no units configured" warning, but that warning only shows when `!unitsLoading && units.length === 0`. If `tenantId` is null, the query is disabled, `unitsLoading` stays `false`, and we silently render the same warning — but the user reports no warning either, which means the **dialog body itself isn't rendering the unit_leader branch** OR the previous fix wasn't picked up.
-
-I'll re-check the file as it stands now and the path that opens the dialog.
+## Likely culprits (in order)
+1. **Radix Select inside Dialog z-index/portal conflict on mobile** — `SelectContent` portals to body but the Dialog overlay traps pointer events on small viewports. Common fix: ensure `SelectContent` has explicit `z-50` (or higher than dialog overlay `z-50`), or use `position="popper"` + `sideOffset`.
+2. **State not propagating after select** — `onValueChange` may set `selectedUnitId` but the dialog body doesn't re-render the leader-resolution / submit affordance, leaving the user thinking nothing happened.
+3. **No visible "next step" after picking** — after selecting a unit, dialog should clearly show the resolved leader and an enabled Submit button. If that block is below the fold on 384×671, user can't see the result.
 
 ## Plan
 
-1. **Confirm `tenantId` resolution**: add a defensive branch in `SignPostDialog.jsx` — if `!tenantId`, show a clear "Loading tenant context…" state instead of an empty Select, and prevent submission.
+I'll inspect `SignPostDialog.jsx` end-to-end to confirm:
+- The `Select` components for both unit_leader and wsf_centre tabs.
+- The `SelectContent` z-index and portal setup.
+- Whether the resolved leader / Submit button appears visibly after a selection.
+- Whether `onValueChange` correctly updates state used by the submit handler.
 
-2. **Surface query errors loudly**: in addition to the inline alert, fire a `toast.error` once per error so the user sees feedback even if the alert is off-screen on small viewports (user is on 384px width).
+Then fix:
 
-3. **Verify `scopeQuery` behaviour**: read `useTenantQuery.jsx` to confirm it injects `tenant_id`. If it does not auto-inject for `church_units` (e.g. relies on RLS only), add an explicit `.eq("tenant_id", tenantId)` for safety per the multi-tenancy guards memory.
+1. **Mobile dropdown reliability**: ensure both `SelectContent` instances render with `position="popper"` and high `z-index` so they appear above the dialog overlay and accept taps on mobile.
 
-4. **Add a console log** when units load with `0` length and `tenantId` is set, so we can confirm the RLS path in the user's session.
+2. **Auto-scroll into view after select**: when user picks a unit/centre, scroll the resolved-leader / Submit section into view so they see the next step on a 384×671 screen.
 
-5. **Re-render fallback**: when the dialog opens with `defaultType="unit_leader"` but no units exist AND no centres exist either, auto-toast "No leaders configured for sign-posting yet."
+3. **Always-visible sticky Submit footer**: convert the dialog footer (Submit button) into a sticky footer at the bottom of `DialogContent` so the user can always see and tap it without scrolling, regardless of dropdown state.
 
-## Files to edit
-- `src/components/followups/SignPostDialog.jsx` — add tenant-context guard, explicit `.eq("tenant_id", tenantId)`, error toast on query failure, and a one-shot toast when units list resolves empty.
+4. **Visible feedback on selection**: after a unit/centre is picked, render a clear inline confirmation card ("✓ Will be sent to: <Leader name> for <Unit/Centre>") so the user knows the selection registered.
 
-## Files to inspect (read-only, no changes)
-- `src/hooks/useTenantQuery.jsx` — confirm `scopeQuery` injects `tenant_id` filter.
-- The component that opens `SignPostDialog` from the dashboard widget — confirm it passes a valid `followup` and is gated on `tenantId`.
+5. **Fallback empty-state guard**: if a tab has no items (e.g. no centres on a tenant), show a clear inline message + disable that tab rather than presenting an empty dropdown.
 
-After approval I'll inspect `useTenantQuery.jsx` first, then apply the SignPostDialog edits in one pass.
+## Files
+- **Inspect**: `src/components/followups/SignPostDialog.jsx` (full file).
+- **Edit**: `src/components/followups/SignPostDialog.jsx` — apply the 5 fixes above.
+- **Possibly inspect**: `src/components/ui/select.jsx` to confirm `SelectContent` z-index defaults.
+
+After approval I'll read the current `SignPostDialog.jsx` and `select.jsx`, then apply the edits in one pass.
