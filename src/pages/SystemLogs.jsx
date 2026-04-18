@@ -626,11 +626,13 @@ export default function SystemLogs() {
           <TabsTrigger value="email" className="gap-1.5"><Mail className="h-3.5 w-3.5" /> Email</TabsTrigger>
           <TabsTrigger value="sms" className="gap-1.5"><MessageSquare className="h-3.5 w-3.5" /> SMS</TabsTrigger>
           <TabsTrigger value="whatsapp" className="gap-1.5"><WhatsAppIcon className="h-3.5 w-3.5" /> WhatsApp</TabsTrigger>
+          <TabsTrigger value="calls" className="gap-1.5"><Phone className="h-3.5 w-3.5" /> Calls</TabsTrigger>
           {isAdmin && <TabsTrigger value="audit" className="gap-1.5"><Shield className="h-3.5 w-3.5" /> Audit</TabsTrigger>}
         </TabsList>
         <TabsContent value="email"><EmailLogsPanel /></TabsContent>
         <TabsContent value="sms"><SMSLogsPanel /></TabsContent>
         <TabsContent value="whatsapp"><WhatsAppLogsPanel /></TabsContent>
+        <TabsContent value="calls"><CallLogsPanel /></TabsContent>
         {isAdmin && <TabsContent value="audit"><AuditLogsPanel /></TabsContent>}
       </Tabs>
     </div>
