@@ -364,6 +364,7 @@ export default function TenantUsersDialog({ tenant, open, onOpenChange }) {
                           </TableCell>
                           <TableCell>
                             <Select
+                              key={`${m.id}-${m.role}-${selectVersion}`}
                               value={m.role}
                               onValueChange={(newRole) => {
                                 if (newRole === m.role) return;
