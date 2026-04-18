@@ -55,6 +55,7 @@ export default function FollowupDetailPanel({ followup, onClose, onUpdate, curre
   const [selectedMessage, setSelectedMessage] = useState(null);
   const [callingPhone, setCallingPhone] = useState(false);
   const [signPostOpen, setSignPostOpen] = useState(false);
+  const [signPostType, setSignPostType] = useState("unit_leader");
   const { tenantId, scopeQuery } = useTenantQuery();
   const queryClient = useQueryClient();
 
