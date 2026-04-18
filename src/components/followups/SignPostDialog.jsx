@@ -168,10 +168,16 @@ export default function SignPostDialog({ open, onOpenChange, followup, member, o
     queryKey: ["centre-leader", selectedCentre?.leader_id, tenantId],
     enabled: type === "home_cell_leader" && !!selectedCentre?.leader_id,
     queryFn: async () => {
+  // Resolve the leader for the currently-selected centre — explicit tenant guard on members
+  const { data: centreLeader } = useQuery({
+    queryKey: ["centre-leader", selectedCentre?.leader_id, tenantId],
+    enabled: type === "home_cell_leader" && !!selectedCentre?.leader_id && !!tenantId,
+    queryFn: async () => {
       const { data: m } = await supabase
         .from("members")
         .select("user_id, first_name, last_name")
         .eq("id", selectedCentre.leader_id)
+        .eq("tenant_id", tenantId)
         .maybeSingle();
       const fallbackName = `${m?.first_name ?? ""} ${m?.last_name ?? ""}`.trim() || null;
       if (!m?.user_id) return { name: fallbackName, linked: false };
