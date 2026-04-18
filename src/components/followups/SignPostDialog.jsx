@@ -98,6 +98,76 @@ export default function SignPostDialog({ open, onOpenChange, followup, member, o
     });
   }, [centres, member]);
 
+  // Resolve the leader for the currently-selected centre (members.id -> profiles)
+  const { data: centreLeader } = useQuery({
+    queryKey: ["centre-leader", selectedCentre?.leader_id, tenantId],
+    enabled: !!selectedCentre?.leader_id,
+    queryFn: async () => {
+      const { data: m } = await supabase
+        .from("members")
+        .select("user_id, first_name, last_name")
+        .eq("id", selectedCentre.leader_id)
+        .maybeSingle();
+      const fallbackName = `${m?.first_name ?? ""} ${m?.last_name ?? ""}`.trim() || null;
+      if (!m?.user_id) return { name: fallbackName, linked: false };
+      const { data: p } = await supabase
+        .from("profiles")
+        .select("full_name, email")
+        .eq("user_id", m.user_id)
+        .maybeSingle();
+      return { name: p?.full_name || fallbackName || p?.email, linked: true };
+    },
+  });
+
+  // Toast guards (fire once per relevant change)
+  const noUnitLeadersToastRef = useRef(null);
+  useEffect(() => {
+    if (type !== "unit_leader" || !unitName) return;
+    const key = `${unitName}:${unitLeaders.length}`;
+    if (noUnitLeadersToastRef.current === key) return;
+    if (unitLeaders.length === 0) {
+      toast({
+        title: "No leaders assigned",
+        description: "This unit has no leaders yet. Ask an admin to assign one.",
+        variant: "destructive",
+      });
+    }
+    noUnitLeadersToastRef.current = key;
+  }, [type, unitName, unitLeaders]);
+
+  const noCentresToastRef = useRef(false);
+  const noSuggestionToastRef = useRef(false);
+  useEffect(() => {
+    if (!open || type !== "home_cell_leader") {
+      noCentresToastRef.current = false;
+      noSuggestionToastRef.current = false;
+      return;
+    }
+    if (centres.length === 0 && !noCentresToastRef.current) {
+      toast({ title: "No home cell centres", description: "No centres are configured yet.", variant: "destructive" });
+      noCentresToastRef.current = true;
+      return;
+    }
+    if (centres.length > 0 && member && !suggestedCentre && !noSuggestionToastRef.current) {
+      toast({ title: "No closest match", description: "Pick a centre manually below." });
+      noSuggestionToastRef.current = true;
+    }
+  }, [open, type, centres, member, suggestedCentre]);
+
+  const noLeaderLinkedToastRef = useRef(null);
+  useEffect(() => {
+    if (!selectedCentre || !centreLeader) return;
+    if (noLeaderLinkedToastRef.current === selectedCentre.id) return;
+    if (!centreLeader.linked) {
+      toast({
+        title: "Centre has no linked leader",
+        description: "This centre's leader is not linked to a user account and cannot be notified.",
+        variant: "destructive",
+      });
+    }
+    noLeaderLinkedToastRef.current = selectedCentre.id;
+  }, [selectedCentre, centreLeader]);
+
   const reset = () => {
     setType("unit_leader");
     setUnitName("");
