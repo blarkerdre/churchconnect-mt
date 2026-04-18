@@ -254,6 +254,28 @@ export default function Layout({ children }) {
               </Link>
             );
           })}
+
+          {/* Sign-Post Inbox (leaders only) */}
+          {showSignpostInbox && (
+            <button
+              onClick={() => { setSignpostInboxOpen(true); setSidebarOpen(false); }}
+              title={collapsed ? "Sign-Post Inbox" : undefined}
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all text-sidebar-foreground/60 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground ${collapsed ? "justify-center" : ""}`}
+            >
+              <div className="relative shrink-0">
+                <Inbox className="h-4 w-4" />
+                {signpostPendingCount > 0 && (
+                  <span className="absolute -top-1.5 -right-1.5 h-4 min-w-4 px-1 rounded-full bg-accent text-accent-foreground text-[9px] font-bold flex items-center justify-center">
+                    {signpostPendingCount > 9 ? "9+" : signpostPendingCount}
+                  </span>
+                )}
+              </div>
+              {!collapsed && (
+                <span className="flex-1 text-left">Sign-Post Inbox</span>
+              )}
+            </button>
+          )}
+
           {/* External Links */}
           {externalLinks.length > 0 && (
             <>
