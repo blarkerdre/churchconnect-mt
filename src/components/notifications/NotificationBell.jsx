@@ -240,7 +240,7 @@ export default function NotificationBell() {
             <div className="flex items-center gap-2 mb-1">
               <Icon className="h-5 w-5 text-primary" />
               <Badge variant="secondary" className="text-[10px]">
-                {typeLabels[selected?.type] || selected?.type || "Notification"}
+                {selectedLabel}
               </Badge>
             </div>
             <DialogTitle className="text-base">{selected?.title}</DialogTitle>
