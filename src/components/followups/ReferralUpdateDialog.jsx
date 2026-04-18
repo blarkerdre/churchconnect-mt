@@ -68,7 +68,7 @@ export default function ReferralUpdateDialog({ open, onOpenChange, referral, onS
             <Label className="text-xs">Status (optional)</Label>
             <Select value={status} onValueChange={setStatus}>
               <SelectTrigger><SelectValue placeholder="Keep current status" /></SelectTrigger>
-              <SelectContent>
+              <SelectContent className="z-[80]" position="popper" sideOffset={4}>
                 {STATUSES.map(s => (
                   <SelectItem key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</SelectItem>
                 ))}
