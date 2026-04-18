@@ -8,6 +8,7 @@ import { Separator } from "@/components/ui/separator";
 import { Loader2, MessageSquare, AlertTriangle, Info } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useTenantQuery } from "@/hooks/useTenantQuery";
 import { format } from "date-fns";
 
 const DELIVERY_STATUS_CONFIG = {
