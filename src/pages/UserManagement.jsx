@@ -17,6 +17,7 @@ import UnitLeaderAssignments from "@/components/users/UnitLeaderAssignments";
 import WSFLeaderAssignments from "@/components/users/WSFLeaderAssignments";
 import BulkUnitAssignDialog from "@/components/users/BulkUnitAssignDialog";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
+import DangerConfirmDialog from "@/components/exams/DangerConfirmDialog";
 
 const ROLES = ["super_admin", "admin", "unit_leader", "wsf_leader"];
 
@@ -55,6 +56,9 @@ export default function UserManagement() {
   const [searchQuery, setSearchQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [toggleTarget, setToggleTarget] = useState(null);
+  const [roleChangeTarget, setRoleChangeTarget] = useState(null);
 
   const { data: profiles = [], isLoading } = useQuery({
     queryKey: ["all-profiles", tenantId],
