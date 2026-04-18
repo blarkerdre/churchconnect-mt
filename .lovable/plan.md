@@ -1,40 +1,20 @@
 
-## Root cause (found it)
+## Goal
+Collapse the two separate buttons ("Refer to Unit Leader" and "Refer to Home Cell Leader") in `FollowupDetailPanel.jsx` into a single **"Refer to Leader"** button. The existing `SignPostDialog` already has tabs for both Unit Leader and Home Cell — let it handle the choice.
 
-`FollowupDetailPanel` is a hand-rolled slide-over at `z-[55]` (with its own `bg-black/30` backdrop). `SignPostDialog` uses Radix Dialog whose default overlay AND content are at `z-50`. Both portal to `document.body`, so when the dialog opens it renders **behind** the panel's backdrop:
+## Changes
 
-- The panel's `bg-black/30` (z-55) intercepts clicks → dialog appears unresponsive.
-- The dialog content sits below the panel → invisible.
-- Radix still locks `body` scroll → page becomes unscrollable.
-- `unitLeaders` toast only fires after a unit is picked, which the user can't do → "no toast displayed".
+### `src/components/followups/FollowupDetailPanel.jsx`
+- Replace the two trigger buttons with one labelled **"Refer to Leader"** (icon: `UserCheck` or `HeartHandshake`).
+- Remove the `signPostType` state (no longer needed to pre-select a tab).
+- Open `SignPostDialog` without a `defaultType` prop, so it opens on its built-in default tab (Unit Leader). User can switch tabs inside the dialog.
 
-The Home Cell button "kind of worked" earlier only because its toasts (`No home cell centres`, etc.) fire on `useEffect` mount via Sonner's own higher-z portal — not because the dialog was actually visible.
+### `src/components/followups/SignPostDialog.jsx`
+- Make `defaultType` optional with fallback `"unit_leader"` (already the case — just confirm).
+- No other changes; the tab UI inside already lets the user pick Unit Leader or Home Cell.
 
-## Fix
+## Files Changed
+- `src/components/followups/FollowupDetailPanel.jsx` — merge two buttons into one (~10 lines removed, 5 added).
+- `src/components/followups/SignPostDialog.jsx` — no functional change, just verify default fallback.
 
-**`src/components/followups/SignPostDialog.jsx`** — render the dialog above the panel by using a manual portal + overlay + content with explicit high z-index, instead of the wrapped `DialogContent`:
-
-```jsx
-import { Dialog, DialogPortal, DialogOverlay, DialogDescription } from "@/components/ui/dialog";
-import * as DialogPrimitive from "@radix-ui/react-dialog";
-
-<Dialog open={open} onOpenChange={handleOpenChange}>
-  <DialogPortal>
-    <DialogOverlay className="z-[65] bg-black/60" />
-    <DialogPrimitive.Content
-      className="fixed left-[50%] top-[50%] z-[70] grid w-full max-w-md translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-lg max-h-[90vh] overflow-y-auto sm:rounded-lg data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
-    >
-      {/* TenantDialogHeader, DialogDescription, DialogErrorBoundary, body unchanged */}
-      <DialogPrimitive.Close className="absolute right-4 top-4 ...">
-        <X className="h-4 w-4" />
-      </DialogPrimitive.Close>
-    </DialogPrimitive.Content>
-  </DialogPortal>
-</Dialog>
-```
-
-Net effect: overlay at z-65 sits above the panel backdrop (z-55), content at z-70 sits above everything → clicks land on the dialog, content is visible, toasts work.
-
-No DB changes. No changes to `FollowupDetailPanel.jsx`. ~10 line change to swap `DialogContent` for the explicit portal+overlay+content trio.
-
-After approval, please click **Refer to Unit Leader** again — the dialog should now appear in front of the slide-over and accept clicks. Share any `[SignPost]` console output if it still misbehaves.
+No DB changes. After this lands, the panel shows a single **Refer to Leader** button; clicking it opens the dialog where the user picks the referral type via tabs.
