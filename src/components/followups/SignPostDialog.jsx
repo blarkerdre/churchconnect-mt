@@ -61,18 +61,40 @@ export default function SignPostDialog({ open, onOpenChange, followup, member, o
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
 
-  // Church units
+  // Church units — explicit tenant_id guard for safety per multi-tenancy memory
   const { data: units = [], isLoading: unitsLoading, error: unitsError } = useQuery({
     queryKey: ["church-units-active", tenantId],
     enabled: open && !!tenantId,
     queryFn: async () => {
       const { data, error } = await scopeQuery(
-        supabase.from("church_units").select("id, name").eq("is_active", true).order("name")
+        supabase
+          .from("church_units")
+          .select("id, name")
+          .eq("is_active", true)
+          .eq("tenant_id", tenantId)
+          .order("name")
       );
       if (error) throw error;
+      if (!data || data.length === 0) {
+        console.warn("[SignPost] church_units returned 0 rows for tenant", tenantId);
+      }
       return data || [];
     },
   });
+
+  // Surface query errors as toast (alert may be off-screen on small viewports)
+  const unitsErrorToastRef = useRef(null);
+  useEffect(() => {
+    if (!open || !unitsError) return;
+    const key = unitsError.message || String(unitsError);
+    if (unitsErrorToastRef.current === key) return;
+    toast({
+      title: "Couldn't load church units",
+      description: key,
+      variant: "destructive",
+    });
+    unitsErrorToastRef.current = key;
+  }, [open, unitsError]);
 
   // Unit leaders for the selected unit
   const { data: unitLeaders = [] } = useQuery({
@@ -305,6 +327,12 @@ export default function SignPostDialog({ open, onOpenChange, followup, member, o
         </DialogDescription>
 
         <DialogErrorBoundary onClose={() => handleOpenChange(false)}>
+          {!tenantId ? (
+            <div className="flex items-center gap-2 rounded-md border border-border bg-muted/40 p-3">
+              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+              <p className="text-xs text-muted-foreground">Loading church context…</p>
+            </div>
+          ) : (
           <div className="space-y-4">
             {/* Type toggle */}
             <div className="grid grid-cols-2 gap-2">
@@ -501,6 +529,7 @@ export default function SignPostDialog({ open, onOpenChange, followup, member, o
               </Button>
             </div>
           </div>
+          )}
         </DialogErrorBoundary>
         <DialogPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
           <X className="h-4 w-4" />
