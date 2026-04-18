@@ -323,7 +323,8 @@ export default function FollowupDetailPanel({ followup, onClose, onUpdate, curre
                   </SelectContent>
                 </Select>
               </div>
-          )}
+            )}
+          </div>
 
           {/* Sign-Post (refer to leader) */}
           {followup.member_id && ["First Timer", "New Convert", "Visitor"].includes(followup.category) && (
@@ -344,7 +345,6 @@ export default function FollowupDetailPanel({ followup, onClose, onUpdate, curre
               <ReferralTimeline followupId={followup.id} profileMap={profileMap} />
             </div>
           )}
-          </div>
 
           {/* Notes */}
           {followup.notes && (
