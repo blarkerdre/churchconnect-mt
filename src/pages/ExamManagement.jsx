@@ -817,23 +817,20 @@ function CourseRegistrationsView({ course }) {
         )}
       </CardContent>
 
-      <AlertDialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Remove Registration</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to unregister {deleteTarget?.members?.first_name} {deleteTarget?.members?.last_name} from {course.name}?
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={() => deleteMutation.mutate(deleteTarget.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              {deleteMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-              Remove
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <DangerConfirmDialog
+        open={!!deleteTarget}
+        onOpenChange={(o) => !o && setDeleteTarget(null)}
+        title="Remove Registration"
+        entityName={deleteTarget ? `${deleteTarget.members?.first_name || ""} ${deleteTarget.members?.last_name || ""}`.trim() : ""}
+        confirmText="DELETE"
+        confirmLabel="Remove"
+        impacts={[
+          `${deleteTarget?.members?.first_name || "The member"}'s registration for "${course.name}" will be removed.`,
+          "Existing exam attempts and results are NOT deleted — only the enrolment record.",
+        ]}
+        isPending={deleteMutation.isPending}
+        onConfirm={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)}
+      />
     </Card>
   );
 }
