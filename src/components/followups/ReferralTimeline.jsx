@@ -38,7 +38,7 @@ export default function ReferralTimeline({ followupId, profileMap = {} }) {
       const { data, error } = await scopeQuery(
         supabase
           .from("followup_referrals")
-          .select("*, wsf_centres(name, location, city)")
+          .select("*, wsf_centres(name, location, city, address, postcode)")
           .eq("followup_id", followupId)
           .order("created_at", { ascending: false })
       );
