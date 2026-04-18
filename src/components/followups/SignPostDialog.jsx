@@ -163,11 +163,6 @@ export default function SignPostDialog({ open, onOpenChange, followup, member, o
     });
   }, [type, centres, member]);
 
-  // Resolve the leader for the currently-selected centre (members.id -> profiles)
-  const { data: centreLeader } = useQuery({
-    queryKey: ["centre-leader", selectedCentre?.leader_id, tenantId],
-    enabled: type === "home_cell_leader" && !!selectedCentre?.leader_id,
-    queryFn: async () => {
   // Resolve the leader for the currently-selected centre — explicit tenant guard on members
   const { data: centreLeader } = useQuery({
     queryKey: ["centre-leader", selectedCentre?.leader_id, tenantId],
