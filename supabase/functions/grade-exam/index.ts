@@ -201,6 +201,8 @@ Deno.serve(async (req) => {
       });
     }
 
+    // SECURITY: Do NOT return correct_answer values to the client.
+    // Returning the answer key enables cheating on retakes.
     return new Response(
       JSON.stringify({
         score,
@@ -213,8 +215,6 @@ Deno.serve(async (req) => {
           selected_answer: a.selected_answer,
           is_correct: a.is_correct,
         })),
-        // Include correct answers in the response for review
-        correctAnswers: Object.fromEntries(questions.map((q: any) => [q.id, q.correct_answer])),
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
