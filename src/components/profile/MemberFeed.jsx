@@ -42,7 +42,7 @@ function AnnouncementItem({ a, onRead, onOpen, user, tenantId, withTenant }) {
       if (isLiked) {
         const myReaction = reactions.find(r => r.user_id === user.id);
         if (myReaction) {
-          await supabase.from("announcement_reactions").delete().eq("id", myReaction.id);
+          await supabase.from("announcement_reactions").delete().eq("id", myReaction.id).eq("tenant_id", tenantId);
         }
       } else {
         await supabase.from("announcement_reactions").insert(withTenant({
@@ -138,7 +138,7 @@ function EventItem({ event, member, onRead, onOpen, user, tenantId, withTenant }
       if (isLiked) {
         const myReaction = reactions.find(r => r.user_id === user.id);
         if (myReaction) {
-          await supabase.from("event_reactions").delete().eq("id", myReaction.id);
+          await supabase.from("event_reactions").delete().eq("id", myReaction.id).eq("tenant_id", tenantId);
         }
       } else {
         await supabase.from("event_reactions").insert(withTenant({

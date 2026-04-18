@@ -58,9 +58,7 @@ export default function WSFLeaderAssignments({ userId }) {
 
   const addMutation = useMutation({
     mutationFn: async (centreId) => {
-      let q = supabase.from("wsf_centres").update({ leader_id: memberId }).eq("id", centreId);
-      if (tenantId) q = q.eq("tenant_id", tenantId);
-      const { error } = await q;
+      const { error } = await supabase.from("wsf_centres").update({ leader_id: memberId }).eq("id", centreId).eq("tenant_id", tenantId);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -73,9 +71,7 @@ export default function WSFLeaderAssignments({ userId }) {
 
   const removeMutation = useMutation({
     mutationFn: async (centreId) => {
-      let q = supabase.from("wsf_centres").update({ leader_id: null }).eq("id", centreId);
-      if (tenantId) q = q.eq("tenant_id", tenantId);
-      const { error } = await q;
+      const { error } = await supabase.from("wsf_centres").update({ leader_id: null }).eq("id", centreId).eq("tenant_id", tenantId);
       if (error) throw error;
     },
     onSuccess: () => {
