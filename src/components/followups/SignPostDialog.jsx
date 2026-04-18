@@ -75,19 +75,19 @@ export default function SignPostDialog({ open, onOpenChange, followup, member, o
   const suggestedOnceRef = useRef(false);
   useEffect(() => {
     if (!open) { suggestedOnceRef.current = false; return; }
+    if (type !== "home_cell_leader") return;
     if (suggestedOnceRef.current) return;
-    if (type === "home_cell_leader" && centres.length && !centreId && member) {
-      const suggestion = suggestClosestWSFCentre(centres, {
-        postcode: member.postcode,
-        address: member.address,
-        city: member.city,
-      });
-      if (suggestion) {
-        setCentreId(suggestion.id);
-        suggestedOnceRef.current = true;
-      }
+    if (!centres.length || !member) return;
+    const suggestion = suggestClosestWSFCentre(centres, {
+      postcode: member.postcode,
+      address: member.address,
+      city: member.city,
+    });
+    if (suggestion) {
+      setCentreId(suggestion.id);
     }
-  }, [open, type, centres, member, centreId]);
+    suggestedOnceRef.current = true;
+  }, [open, type, centres, member]);
 
   const selectedCentre = useMemo(() => centres.find(c => c.id === centreId), [centres, centreId]);
   const suggestedCentre = useMemo(() => {
