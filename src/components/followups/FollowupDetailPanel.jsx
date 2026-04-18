@@ -55,7 +55,6 @@ export default function FollowupDetailPanel({ followup, onClose, onUpdate, curre
   const [selectedMessage, setSelectedMessage] = useState(null);
   const [callingPhone, setCallingPhone] = useState(false);
   const [signPostOpen, setSignPostOpen] = useState(false);
-  const [signPostType, setSignPostType] = useState("unit_leader");
   const { tenantId, scopeQuery } = useTenantQuery();
   const queryClient = useQueryClient();
 
@@ -333,24 +332,14 @@ export default function FollowupDetailPanel({ followup, onClose, onUpdate, curre
               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
                 <Sparkles className="h-3.5 w-3.5 text-accent" /> Sign-Post
               </p>
-              <div className="flex flex-col sm:flex-row gap-2">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="h-8 text-xs flex-1"
-                  onClick={() => { setSignPostType("unit_leader"); setSignPostOpen(true); }}
-                >
-                  <Users className="h-3.5 w-3.5" /> Refer to Unit Leader
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="h-8 text-xs flex-1"
-                  onClick={() => { setSignPostType("home_cell_leader"); setSignPostOpen(true); }}
-                >
-                  <Home className="h-3.5 w-3.5" /> Refer to Home Cell Leader
-                </Button>
-              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-8 text-xs w-full"
+                onClick={() => setSignPostOpen(true)}
+              >
+                <Users className="h-3.5 w-3.5" /> Refer to Leader
+              </Button>
               <ReferralTimeline followupId={followup.id} profileMap={profileMap} />
             </div>
           )}
@@ -606,7 +595,6 @@ export default function FollowupDetailPanel({ followup, onClose, onUpdate, curre
         onOpenChange={setSignPostOpen}
         followup={followup}
         member={memberRecord}
-        defaultType={signPostType}
         onCreated={() => {
           queryClient.invalidateQueries({ queryKey: ["followup-referrals", followup.id] });
         }}
