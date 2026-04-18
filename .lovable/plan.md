@@ -1,38 +1,59 @@
 
-The user approved the two follow-ups: (1) route public registration through approval, and (2) surface join-request notifications in the bell with deep links.
+User is on `/index` (Landing) but the issue is about the SMS History dialog. Let me investigate what's actually happening.
 
-## Plan: Finish join-request approval flow
+Looking at `src/components/sms/SMSHistoryDialog.jsx`:
+- Query: `supabase.from("sms_log").select("*").order("created_at", desc).limit(100)` with optional `.eq("sms_type", typeFilter)` and `.eq("channel", channelFilter)`.
+- **It does NOT filter by `tenant_id`**. This is unusual — the project's core rule (per memory `architecture/multi-tenancy/security-guards`) is that ALL queries must include explicit `.eq("tenant_id", tenantId)` guards.
 
-### 1. Public registration → pending instead of auto-join
-Currently `public-register` (and `PublicRegistration.jsx`) writes the selected `church_unit` and `wsf_centre_id` straight onto the new `members` row. Change to: insert the member with **no** unit/centre, then create `unit_join_requests` rows for each requested unit + centre and notify leaders.
+Let me check the `sms_log` table RLS — I need to verify by querying. But based on the codebase pattern and the symptom ("not showing"), the most likely causes are:
 
-**Edit** `supabase/functions/public-register/index.ts`:
-- Strip `church_unit` and `wsf_centre_id` (and `winners_satellite`) from the initial member INSERT.
-- After insert, for each comma-split unit name → insert into `unit_join_requests` (`request_type='unit'`, `requested_by=null`).
-- If a centre was selected → insert one row (`request_type='home_cell'`).
-- Fire `notify-join-request` per inserted row (best-effort).
-- Keep tenant scoping + existing welcome email flow intact.
+1. **Missing tenant_id filter in the React Query** — even if RLS allows reads, the query may be silently failing or returning empty due to RLS denying rows that don't match a tenant access check.
+2. **RLS on `sms_log`** likely requires `user_has_tenant_access(tenant_id)` or `is_admin(...)`. If the current user isn't admin/leader OR the query doesn't hit the right rows, results = `[]`.
+3. The dialog is opened from somewhere (likely Communications/SystemLogs) — need to confirm `open` is true and query is enabled.
 
-**Edit** `src/pages/PublicRegistration.jsx`:
-- Add a small info banner under the unit/centre fields: "Your selection will be sent to the leader for approval after registration."
-- Keep success screen as-is (member is registered; only their unit/centre is pending).
+I should investigate the actual `sms_log` RLS, recent rows, and where `SMSHistoryDialog` is rendered.
 
-### 2. NotificationBell — surface join requests with deep link
-**Edit** `src/components/notifications/NotificationBell.jsx`:
-- Add `unit_join_request` to `typeLabels` → "Join Request".
-- Add icon mapping (`UserPlus` from lucide-react) for `unit_join_request` reference type.
-- Add route mapping: when `reference_type === 'unit_join_request'`, deep-link to `/dashboard` (where `PendingJoinRequests` widget lives) for leaders/admins, and to `/my-profile` for the member receiving approve/decline notifications.
-  - Simple heuristic: if title starts with "Join Request" → leader-side → `/dashboard`; otherwise (title contains "Approved"/"Declined") → `/my-profile`.
+## Investigation steps (read-only)
+1. `supabase--read_query` → check `sms_log` RLS policies + row count for current tenant.
+2. `code--search_files` → find where `SMSHistoryDialog` is opened and confirm filters passed.
+3. Check console/network for errors.
 
-### 3. (Small polish) `notify-join-request` — link in email
-The edge function already exists; verify the email body's CTA points at `/dashboard` (tenant-prefixed). If it currently uses a placeholder, update to use the tenant slug from the request payload.
+## Likely fix
+Add tenant scoping to the query:
+```js
+const { tenantId } = useTenantQuery();
+// ...
+queryKey: ["sms-logs", tenantId, typeFilter, channelFilter],
+queryFn: async () => {
+  if (!tenantId) return [];
+  let query = supabase
+    .from("sms_log")
+    .select("*")
+    .eq("tenant_id", tenantId)
+    .order("created_at", { ascending: false })
+    .limit(100);
+  // ...filters
+}
+enabled: open && !!tenantId,
+```
+
+Also surface query errors to the user (currently `error` from `useQuery` is ignored — show an inline error state so we can debug RLS denials immediately).
+
+## Plan
+
+### Fix
+**Edit** `src/components/sms/SMSHistoryDialog.jsx`:
+1. Import `useTenantQuery`, get `tenantId`.
+2. Add `.eq("tenant_id", tenantId)` to the query.
+3. Include `tenantId` in `queryKey`; gate `enabled: open && !!tenantId`.
+4. Capture `error` from `useQuery` and render an inline error message in the list area so RLS/permission failures are visible instead of silent empty state.
+5. Improve empty state copy to distinguish "no logs yet" vs "loading" vs "error".
+
+### Verify
+After the edit, open SMS History from Communications and System Logs and confirm rows render. If still empty, the RLS on `sms_log` for the calling user's role is the next layer to inspect (would require a migration to adjust policy).
 
 ### Files
-- **Edit**: `supabase/functions/public-register/index.ts`
-- **Edit**: `src/pages/PublicRegistration.jsx`
-- **Edit**: `src/components/notifications/NotificationBell.jsx`
-- **Verify/Edit**: `supabase/functions/notify-join-request/index.ts` (CTA link only)
+- **Edit**: `src/components/sms/SMSHistoryDialog.jsx`
 
 ### Out of scope
-- Email/SMS templates redesign — only CTA URL touched if needed.
-- Bulk approve/decline (still v2).
+- RLS policy changes on `sms_log` (only if the tenant-scope fix doesn't resolve it after testing).
