@@ -284,6 +284,7 @@ Deno.serve(async (req) => {
           idempotency_key: messageId,
           queued_at: new Date().toISOString(),
           tenant_id,
+          unsubscribe_token: unsubscribeToken,
         };
         const { error: enqErr } = await supabase.rpc("enqueue_email", {
           queue_name: "transactional_emails",
