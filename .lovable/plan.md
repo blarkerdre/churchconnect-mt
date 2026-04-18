@@ -1,28 +1,39 @@
 
-## Issue
-Status dropdown in the **Sign-Post update** UI doesn't commit a selection. Replay shows the user opens the status select repeatedly, highlights "Contacted"/"Declined", but the highlight is removed and the dropdown closes without committing — value never persists.
+## Plan: Announcement Engagement Analytics for Admins
 
-## Root cause
-Two components render a status dropdown for sign-post updates:
-1. `SignPostDetailPanel.jsx` (slide-over on the right) — has a `<Select value={statusChange} onValueChange={setStatusChange}>` for "Post Update"
-2. `ReferralUpdateDialog.jsx` — same pattern in a Dialog
+### Scope (per user)
+1. **Inline like counts** on each `AnnouncementCard` so admins see engagement at a glance on the Communications page.
+2. **New "Announcements" tab** in the Analytics page with charts and metrics.
 
-Both use Radix `Select` with `value=""` initial state. Radix Select treats empty string as **no value** AND has a known issue: when `value=""` is passed and the user picks an item, it can fire `onValueChange` but the controlled `value` stays `""` if the parent state update is interrupted by a focus/blur cycle inside a portal.
+### Changes
 
-But the more likely culprit here, given the replay shows the dropdown opening from inside a fixed-position slide-over panel (`SignPostDetailPanel`, `z-[61]`): the `SelectContent` portals to body with the default z-index, which sits **below** the panel's overlay/aside in some stacking contexts → the click hits the overlay, not the SelectItem, so the highlight clears and dropdown closes.
+**1. `AnnouncementCard.jsx`** — when `isAdmin`, fetch and show a small footer:
+- Heart icon + total like count
+- Click reveals popover/inline list of liker names (member full names + avatars)
+- Tenant-scoped query: `announcement_reactions` joined with `members` on `user_id`, explicit `.eq("tenant_id", tenantId)`
 
-This matches the previous fix we made in `SignPostDialog.jsx` (added `z-[80]` and `position="popper"`). The same fix was **not** applied to `SignPostDetailPanel.jsx` or `ReferralUpdateDialog.jsx`.
+**2. `src/pages/Analytics.jsx`** — add a new "Announcements" tab containing a new component `AnnouncementAnalytics`.
 
-## Plan
+**3. `src/components/analytics/AnnouncementAnalytics.jsx`** (new) — admin-only, tenant-scoped:
+- **KPI cards**: Total announcements, Total likes (period), Avg likes per announcement, Most-liked announcement
+- **Bar chart** (Recharts): Top 10 announcements by like count
+- **Line chart**: Likes per day over the selected date range
+- **Audience breakdown**: Likes grouped by `target_audience` (donut/pie)
+- **Table**: All announcements with title, audience, publish date, like count, sortable
+- Date range filter (last 7/30/90 days, all time) — matches existing Analytics patterns
 
-1. **`SignPostDetailPanel.jsx`** — update the status `<SelectContent>` to use `className="z-[80]" position="popper" sideOffset={4}` so it renders above the slide-over panel (`z-[61]`) and overlay (`z-[60]`).
+### Data
+All from existing tables — **no schema changes needed**:
+- `announcements` (title, target_audience, created_at, publish_date, tenant_id)
+- `announcement_reactions` (announcement_id, user_id, created_at, tenant_id)
+- `members` (for resolving liker names in inline popover)
 
-2. **`ReferralUpdateDialog.jsx`** — apply the same `z-[80]` + `position="popper"` to its status `<SelectContent>` for consistency (Dialog overlay is `z-50`/`z-[70]`).
+### Security & multi-tenancy
+- All queries explicitly `.eq("tenant_id", tenantId)` per security guard memory
+- Tab gated on `isAdmin` from `useAuth`
+- Query keys include `tenantId` to prevent cache bleed
 
-3. **Defensive value handling** — in both components, ensure `onValueChange` is the only state setter and the initial `value` is `""` (already correct). No change needed beyond z-index.
-
-## Files
-- Edit: `src/components/followups/SignPostDetailPanel.jsx` (one `SelectContent`)
-- Edit: `src/components/followups/ReferralUpdateDialog.jsx` (one `SelectContent`)
-
-Two-line fix per file.
+### Files
+- Edit: `src/components/comms/AnnouncementCard.jsx` (add admin like count + likers popover)
+- Edit: `src/pages/Analytics.jsx` (add new tab)
+- Create: `src/components/analytics/AnnouncementAnalytics.jsx` (KPIs, charts, table)
