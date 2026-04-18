@@ -13,10 +13,15 @@ import { useAuth } from "@/hooks/useAuth";
 import { toast } from "@/components/ui/use-toast";
 import { suggestClosestWSFCentre } from "@/lib/wsf-suggest";
 
-export default function SignPostDialog({ open, onOpenChange, followup, member, onCreated }) {
+export default function SignPostDialog({ open, onOpenChange, followup, member, onCreated, defaultType = "unit_leader" }) {
   const { tenantId, scopeQuery } = useTenantQuery();
   const { user } = useAuth();
-  const [type, setType] = useState("unit_leader");
+  const [type, setType] = useState(defaultType);
+
+  useEffect(() => {
+    if (open) setType(defaultType);
+  }, [open, defaultType]);
+
   const [unitName, setUnitName] = useState("");
   const [unitLeaderId, setUnitLeaderId] = useState("");
   const [centreId, setCentreId] = useState("");
