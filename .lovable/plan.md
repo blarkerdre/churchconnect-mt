@@ -1,97 +1,115 @@
 
 ## Security Findings Triage
 
-I'll present a focused plan to address each finding. Some require code/SQL changes; one is a false positive worth ignoring with justification.
+### 1. `members_table_privilege_escalation` — **FIX (high priority)**
+Tighten the INSERT policy on `members` so unit leaders can only insert members whose `church_unit` matches a unit they actually lead. Admins remain unrestricted.
 
-### 1. `is_unit_leader_for_member_logic_flaw` — **FIX (high priority)**
-Substring match means leader of unit "A" sees every member whose `church_unit` contains "a". Replace with exact, case-insensitive comparison against each comma-separated unit token.
-
-**Migration**: Replace `is_unit_leader_for_member(_user_id, _church_unit, _tenant_id)`:
 ```sql
-CREATE OR REPLACE FUNCTION public.is_unit_leader_for_member(_user_id uuid, _church_unit text, _tenant_id uuid)
-RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
-  SELECT EXISTS (
-    SELECT 1
-    FROM public.unit_leader_assignments ula
-    JOIN unnest(string_to_array(COALESCE(_church_unit, ''), ',')) AS token(unit) ON true
-    WHERE ula.user_id = _user_id
-      AND ula.tenant_id = _tenant_id
-      AND lower(btrim(token.unit)) = lower(btrim(ula.unit_name))
+DROP POLICY IF EXISTS "Admins can insert members" ON public.members;
+
+CREATE POLICY "Admins or scoped leaders can insert members"
+ON public.members FOR INSERT TO authenticated
+WITH CHECK (
+  user_has_tenant_access(tenant_id) AND (
+    is_admin(auth.uid(), tenant_id)
+    OR (
+      has_role(auth.uid(), 'unit_leader'::app_role, tenant_id)
+      AND is_unit_leader_for_member(auth.uid(), church_unit, tenant_id)
+    )
   )
-$$;
+);
 ```
-Same fix pattern for `is_unit_leader_for_session` if it shares the bug — verify during implementation.
+Relies on the already-fixed exact-match `is_unit_leader_for_member`.
 
-### 2. `register_tenant_noauth` — **IGNORE (intentional public signup)**
-The `register-tenant` endpoint is the **public church-onboarding wizard** at `/onboard`. By design, anyone can register a new church (tenant) just like signing up for SaaS. The "super_admin" role created is **scoped to the new tenant only** (`tenant_id = tenant.id`), not platform-wide super_admin. Platform super_admin requires `tenant_id IS NULL` and is unreachable here.
+### 2. `profile_photos_bucket_public` + `SUPA_public_bucket_allows_listing` — **FIX**
+Switch `profile-photos` to **private**, route reads through signed URLs.
 
-Mitigations already in place: slug uniqueness check, email confirm, Stripe billing gate. Will mark as ignored with this justification.
-
-### 3. `user_roles_self_insert_escalation` — **FIX**
-The current policy lets a user insert a role row matching a pending invitation but doesn't atomically consume the invitation. Fix: replace the self-insert policy with a SECURITY DEFINER RPC `accept_tenant_invitation(_invitation_id uuid)` that, in a single transaction, validates the invitation belongs to the caller's email + is pending, inserts the role + membership, and marks the invitation `accepted`. Then drop the permissive `Users can self-insert role via invitation` policy.
-
-`TenantContext.acceptPendingInvitations` will switch to call the RPC instead of doing client-side inserts.
-
-**Migration**:
 ```sql
-CREATE OR REPLACE FUNCTION public.accept_tenant_invitation(_invitation_id uuid)
-RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
-DECLARE
-  inv record;
-  user_email text;
+UPDATE storage.buckets SET public = false WHERE id = 'profile-photos';
+
+DROP POLICY IF EXISTS "Authenticated read profile photos" ON storage.objects;
+
+CREATE POLICY "Tenant members read profile photos"
+ON storage.objects FOR SELECT TO authenticated
+USING (bucket_id = 'profile-photos');
+```
+Code edits — replace `getPublicUrl` with `createSignedUrl(path, 3600)` in:
+- `src/components/members/MemberFormDialog.jsx`
+- `src/components/members/MemberTable.jsx`
+- `src/pages/MyProfile.jsx`
+- `src/components/profile/MemberFeed.jsx`
+- any other read site found via grep.
+
+For `book-covers` (also flagged): keep public (used on landing/dashboard for unauthenticated viewers via direct URL) but ensure no listing policy exists — already addressed in last migration.
+
+### 3. `church_docs_member_access` — **FIX**
+Restrict `church-documents` storage RLS to admins + unit leaders only (matches `documents` table policy).
+
+```sql
+DROP POLICY IF EXISTS "Tenant members can upload church documents" ON storage.objects;
+DROP POLICY IF EXISTS "Tenant members can delete church documents" ON storage.objects;
+DROP POLICY IF EXISTS "Tenant members can view church documents" ON storage.objects;
+DROP POLICY IF EXISTS "Tenant members can update church documents" ON storage.objects;
+
+-- Path layout: <tenant_id>/<related_table>/<related_id>/<uuid>.<ext>
+CREATE POLICY "Admins/leaders manage church documents"
+ON storage.objects FOR ALL TO authenticated
+USING (
+  bucket_id = 'church-documents' AND
+  (storage.foldername(name))[1]::uuid IN (
+    SELECT t.id FROM public.tenants t
+    WHERE is_admin(auth.uid(), t.id)
+       OR has_role(auth.uid(), 'unit_leader'::app_role, t.id)
+  )
+)
+WITH CHECK (
+  bucket_id = 'church-documents' AND
+  (storage.foldername(name))[1]::uuid IN (
+    SELECT t.id FROM public.tenants t
+    WHERE is_admin(auth.uid(), t.id)
+       OR has_role(auth.uid(), 'unit_leader'::app_role, t.id)
+  )
+);
+```
+
+### 4. `svg_xss_cert_colors` — **FIX**
+In `src/components/certificates/CertificateTemplateSettings.jsx` (and any preview using `dangerouslySetInnerHTML`), validate `background_color` / `accent_color` against `/^#[0-9a-fA-F]{6}$/` before interpolation. Reject (or fall back to default) on invalid input both client-side and via a CHECK constraint or validation trigger on `certificate_templates`.
+
+```sql
+CREATE OR REPLACE FUNCTION public.validate_certificate_colors()
+RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
-  SELECT email INTO user_email FROM auth.users WHERE id = auth.uid();
-  IF user_email IS NULL THEN RAISE EXCEPTION 'unauthenticated'; END IF;
-
-  SELECT * INTO inv FROM tenant_invitations
-   WHERE id = _invitation_id AND status = 'pending'
-     AND lower(email) = lower(user_email)
-   FOR UPDATE;
-  IF NOT FOUND THEN RAISE EXCEPTION 'invitation not found or not pending'; END IF;
-
-  INSERT INTO tenant_memberships (tenant_id, user_id, role)
-  VALUES (inv.tenant_id, auth.uid(), COALESCE(inv.role, 'member'))
-  ON CONFLICT (tenant_id, user_id) DO NOTHING;
-
-  INSERT INTO user_roles (user_id, role, tenant_id)
-  VALUES (auth.uid(), 'member', inv.tenant_id)
-  ON CONFLICT DO NOTHING;
-
-  UPDATE tenant_invitations SET status = 'accepted', accepted_at = now()
-   WHERE id = inv.id;
+  IF NEW.background_color !~ '^#[0-9a-fA-F]{6}$' THEN
+    RAISE EXCEPTION 'Invalid background_color';
+  END IF;
+  IF NEW.accent_color !~ '^#[0-9a-fA-F]{6}$' THEN
+    RAISE EXCEPTION 'Invalid accent_color';
+  END IF;
+  RETURN NEW;
 END $$;
 
-DROP POLICY IF EXISTS "Users can self-insert role via invitation" ON public.user_roles;
+CREATE TRIGGER trg_validate_cert_colors
+BEFORE INSERT OR UPDATE ON public.certificate_templates
+FOR EACH ROW EXECUTE FUNCTION public.validate_certificate_colors();
 ```
 
-### 4. `grade_exam_answers_leak` — **FIX**
-`supabase/functions/grade-exam/index.ts` returns `correct_answer` for each question in the response. Strip it: return only `{question_id, selected, is_correct, points}` per answer, plus aggregate score. Don't echo the correct value back.
-
-### 5. `stripe_webhook_no_sig` — **FIX**
-In `stripe-subscription-webhook/index.ts`, when `STRIPE_WEBHOOK_SECRET` is missing, currently the function falls back to parsing JSON without verification. Change to **reject (500)** when the secret is unset, so misconfiguration fails closed instead of accepting forged events.
-
-### 6. `SUPA_public_bucket_allows_listing` — **NEEDS USER INPUT**
-Likely the `tenant-branding` or `profile-photos` bucket. I need to identify which bucket(s) and whether listing must remain public (e.g., for landing page logos). Default fix: scope SELECT policy to specific path patterns (e.g., only allow `SELECT` on objects whose name matches `<tenant_slug>/logo.*`), not the whole bucket. Will inspect storage policies during implementation and propose per-bucket fixes.
-
-### 7. `exam_questions_correct_answers_exposed` — **FIX**
-Add a RESTRICTIVE SELECT policy denying non-admin/non-leader access, AND additionally remove `correct_answer`, `option_a..d` correctness markers from any member-facing query path. Members already use `take-exam` flows — verify they don't `select("*")` from `exam_questions`. Safe layered fix:
-
+### 5. `SUPA_extension_in_public` — **FIX (low risk)**
+Move common extensions out of `public` into a dedicated `extensions` schema:
 ```sql
-CREATE POLICY "Restrict correct answer reads to staff" ON public.exam_questions
-AS RESTRICTIVE FOR SELECT TO authenticated
-USING (is_admin(auth.uid(), tenant_id) OR has_role(auth.uid(), 'unit_leader'::app_role, tenant_id));
+CREATE SCHEMA IF NOT EXISTS extensions;
+ALTER EXTENSION pg_trgm SET SCHEMA extensions;
+ALTER EXTENSION unaccent SET SCHEMA extensions;
+-- (only those actually present in public; will inspect during implementation)
 ```
-Then audit `TakeExamDialog.jsx` to use a SECURITY DEFINER function `get_exam_questions_for_attempt(...)` that returns rows without `correct_answer`. Will inspect that file during implementation.
+I'll list extensions first and only move safe, non-managed ones (skip `pg_graphql`, `pg_net`, `pgsodium`, `supabase_vault`, `pgjwt`).
+
+### 6. `register_tenant_noauth` — **IGNORE (re-confirm)**
+Already addressed last round: this is the public church-onboarding wizard at `/onboard`. The "super_admin" role is **tenant-scoped** (`tenant_id = tenant.id`), not platform-wide. I'll re-mark as ignored with the same justification.
 
 ## Files / Migrations
-- **Migration 1**: fix `is_unit_leader_for_member` (and sibling session function if affected).
-- **Migration 2**: `accept_tenant_invitation` RPC + drop permissive policy.
-- **Migration 3**: RESTRICTIVE policy on `exam_questions` + `get_exam_questions_for_attempt` RPC.
-- **Migration 4** (after inspection): tighten storage SELECT policies on the offending public bucket.
-- **Edit**: `supabase/functions/grade-exam/index.ts` — strip `correct_answer` from response.
-- **Edit**: `supabase/functions/stripe-subscription-webhook/index.ts` — fail closed when secret missing.
-- **Edit**: `src/contexts/TenantContext.jsx` — call new RPC instead of client-side invitation insert.
-- **Edit**: `src/components/exams/TakeExamDialog.jsx` — switch question fetch to RPC (if needed).
-- **Mark ignored**: `register_tenant_noauth` with justification (public onboarding by design, tenant-scoped role).
+- **Migration**: scoped INSERT policy on `members`; private `profile-photos` bucket + new SELECT policy; tighten `church-documents` storage RLS; certificate color validation trigger; move extensions out of `public`.
+- **Edits**: swap `getPublicUrl` → `createSignedUrl` in member photo read paths (4–5 files).
+- **Edit**: `CertificateTemplateSettings.jsx` — sanitize colors before SVG interpolation.
+- **Mark ignored**: `register_tenant_noauth` (re-justified).
 
-No UI changes required beyond TakeExamDialog and the silent invitation flow. After approval I'll inspect the storage buckets and TakeExamDialog to finalise the last two fixes, then apply everything in one pass.
+After approval I'll inspect the exact extension list and member-photo read sites before applying everything in one pass.
