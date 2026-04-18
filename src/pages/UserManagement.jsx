@@ -450,6 +450,88 @@ export default function UserManagement() {
       </Dialog>
 
       <BulkUnitAssignDialog open={bulkAssignOpen} onOpenChange={setBulkAssignOpen} />
+
+      {/* Delete user confirmation */}
+      <DangerConfirmDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        title="Delete User Account"
+        entityName={deleteTarget?.targetName || ""}
+        confirmLabel="Delete User"
+        impacts={[
+          "The user's auth account, profile, role assignments and tenant memberships will be permanently removed.",
+          "Linked member records remain but will become unlinked.",
+          "This action cannot be undone.",
+        ]}
+        isPending={deleteUserMutation.isPending}
+        onConfirm={async () => {
+          await new Promise((resolve, reject) => {
+            deleteUserMutation.mutate(deleteTarget, {
+              onSuccess: () => resolve(),
+              onError: (err) => reject(err),
+            });
+          });
+          setDeleteTarget(null);
+        }}
+      />
+
+      {/* Disable/Enable user confirmation */}
+      <DangerConfirmDialog
+        open={!!toggleTarget}
+        onOpenChange={(open) => !open && setToggleTarget(null)}
+        title={toggleTarget?.isCurrentlyDisabled ? "Enable User Account" : "Disable User Account"}
+        entityName={toggleTarget?.targetName || ""}
+        confirmText="CONFIRM"
+        confirmLabel={toggleTarget?.isCurrentlyDisabled ? "Enable Account" : "Disable Account"}
+        impacts={
+          toggleTarget?.isCurrentlyDisabled
+            ? ["The user will regain access and be able to sign in immediately."]
+            : [
+                "The user will be immediately signed out and unable to log in.",
+                "Their data and role assignments are retained — they can be re-enabled later.",
+              ]
+        }
+        isPending={toggleUserMutation.isPending}
+        onConfirm={async () => {
+          await new Promise((resolve, reject) => {
+            toggleUserMutation.mutate(
+              {
+                userId: toggleTarget.userId,
+                disabled: toggleTarget.disabled,
+                targetName: toggleTarget.targetName,
+              },
+              { onSuccess: () => resolve(), onError: (err) => reject(err) }
+            );
+          });
+          setToggleTarget(null);
+        }}
+      />
+
+      {/* Role change confirmation */}
+      <DangerConfirmDialog
+        open={!!roleChangeTarget}
+        onOpenChange={(open) => !open && setRoleChangeTarget(null)}
+        title={roleChangeTarget?.add ? "Grant Role" : "Revoke Role"}
+        entityName={roleChangeTarget?.targetName || ""}
+        confirmText="CONFIRM"
+        confirmLabel={roleChangeTarget?.add ? "Grant Role" : "Revoke Role"}
+        impacts={[
+          roleChangeTarget?.add
+            ? `This user will be granted the "${roleLabels[roleChangeTarget?.role] || roleChangeTarget?.role}" role and gain associated privileges.`
+            : `This user will lose the "${roleLabels[roleChangeTarget?.role] || roleChangeTarget?.role}" role and its associated access immediately.`,
+          "This privilege change will be recorded in the audit log.",
+        ]}
+        isPending={toggleRoleMutation.isPending}
+        onConfirm={async () => {
+          await new Promise((resolve, reject) => {
+            toggleRoleMutation.mutate(roleChangeTarget, {
+              onSuccess: () => resolve(),
+              onError: (err) => reject(err),
+            });
+          });
+          setRoleChangeTarget(null);
+        }}
+      />
     </div>
   );
 }
