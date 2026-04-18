@@ -182,11 +182,19 @@ Deno.serve(async (req) => {
         fromNumber = settings.twilio_sms_from as string;
       }
 
+      const callbackUrl = `${supabaseUrl}/functions/v1/twilio-webhook`;
       const params = new URLSearchParams({
         To: phone,
         From: fromNumber,
         Url: "http://demo.twilio.com/docs/voice.xml",
+        StatusCallback: callbackUrl,
+        StatusCallbackMethod: "POST",
       });
+      // URLSearchParams supports repeated keys via append
+      params.append("StatusCallbackEvent", "initiated");
+      params.append("StatusCallbackEvent", "ringing");
+      params.append("StatusCallbackEvent", "answered");
+      params.append("StatusCallbackEvent", "completed");
 
       const response = await fetch(`${TWILIO_GATEWAY_URL}/Calls.json`, {
         method: "POST",
