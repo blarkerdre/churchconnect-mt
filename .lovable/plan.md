@@ -1,4 +1,4 @@
 
-The user wants to move the "Rate this app" entry from the dashboard into the sidebar.
+The user reports that clicking either "Refer to Unit Leader" or "Refer to Home Cell Leader" hangs the app. Earlier we already fixed an infinite-refetch loop in `ReferralTimeline.jsx` by stabilizing query keys. The issue persists after splitting the buttons, so something new is wrong.
 
-Need to find where it currently lives. Likely `AppFeedbackDialog` is triggered from somewhere on the dashboard, and the sidebar lives in `AppLayout.jsx`.
+Let me investigate the actual state of the files now.
