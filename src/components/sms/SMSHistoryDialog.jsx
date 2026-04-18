@@ -106,6 +106,13 @@ export default function SMSHistoryDialog({ open, onOpenChange, defaultFilter = "
         <div className="flex-1 overflow-y-auto space-y-2 mt-3">
           {isLoading ? (
             <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+          ) : error ? (
+            <Alert variant="destructive">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription className="text-xs">
+                Failed to load SMS logs: {error.message}
+              </AlertDescription>
+            </Alert>
           ) : logs.length === 0 ? (
             <p className="text-center text-muted-foreground py-8">No SMS logs found</p>
           ) : (
