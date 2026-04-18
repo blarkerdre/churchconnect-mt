@@ -140,7 +140,7 @@ export default function NotificationBell() {
       if (title.includes("approved") || title.includes("declined")) {
         route = "/my-profile";
       } else {
-        route = "/dashboard";
+        route = "/";
       }
     }
 
