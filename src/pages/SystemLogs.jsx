@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { Mail, MessageSquare, Shield, CheckCircle, XCircle, Clock, AlertTriangle, Loader2, Search, UserCog, Trash2, Plus, Edit, CalendarIcon, Download } from "lucide-react";
+import { Mail, MessageSquare, Shield, CheckCircle, XCircle, Clock, AlertTriangle, Loader2, Search, UserCog, Trash2, Plus, Edit, CalendarIcon, Download, Phone, PhoneIncoming, PhoneOutgoing } from "lucide-react";
 
 const WhatsAppIcon = ({ className }) => (
   <svg className={className} viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
