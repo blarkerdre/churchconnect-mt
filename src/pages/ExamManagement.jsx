@@ -8,6 +8,7 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import DangerConfirmDialog from "@/components/exams/DangerConfirmDialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -438,30 +439,34 @@ export default function ExamManagement() {
       )}
 
       {/* Delete Question */}
-      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader><AlertDialogTitle>Delete Question</AlertDialogTitle><AlertDialogDescription>Are you sure? This cannot be undone.</AlertDialogDescription></AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              {deleteMutation.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />} Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <DangerConfirmDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        title="Delete Question"
+        entityName={deleteTarget ? `Q${(deleteTarget.sort_order ?? 0) + 1}` : ""}
+        confirmText="DELETE"
+        impacts={[
+          "This question and all member answers tied to it will be permanently deleted.",
+          "Existing exam attempts will keep their score but lose this question's record.",
+        ]}
+        isPending={deleteMutation.isPending}
+        onConfirm={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)}
+      />
 
       {/* Delete Course */}
-      <AlertDialog open={!!deleteTitleTarget} onOpenChange={(open) => !open && setDeleteTitleTarget(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader><AlertDialogTitle>Delete Course</AlertDialogTitle><AlertDialogDescription>Delete "{deleteTitleTarget?.name}"? This removes all subjects and questions.</AlertDialogDescription></AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={() => deleteTitleTarget && deleteTitleMutation.mutate(deleteTitleTarget.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              {deleteTitleMutation.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />} Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <DangerConfirmDialog
+        open={!!deleteTitleTarget}
+        onOpenChange={(open) => !open && setDeleteTitleTarget(null)}
+        title="Delete Course"
+        entityName={deleteTitleTarget?.name || ""}
+        impacts={[
+          "All subjects under this course will be permanently deleted.",
+          "All questions, member registrations and exam attempts for this course will be permanently deleted.",
+          "Issued certificates linked to this course may become invalid.",
+        ]}
+        isPending={deleteTitleMutation.isPending}
+        onConfirm={() => deleteTitleTarget && deleteTitleMutation.mutate(deleteTitleTarget.id)}
+      />
 
       {/* Course Dialog */}
       <Dialog open={titleDialogOpen} onOpenChange={setTitleDialogOpen}>
@@ -671,6 +676,7 @@ export default function ExamManagement() {
 
 function CourseRegistrationsView({ course }) {
   const qc = useQueryClient();
+  const { tenantId } = useTenantQuery();
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [sourceFilter, setSourceFilter] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
@@ -811,23 +817,20 @@ function CourseRegistrationsView({ course }) {
         )}
       </CardContent>
 
-      <AlertDialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Remove Registration</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to unregister {deleteTarget?.members?.first_name} {deleteTarget?.members?.last_name} from {course.name}?
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={() => deleteMutation.mutate(deleteTarget.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              {deleteMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-              Remove
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <DangerConfirmDialog
+        open={!!deleteTarget}
+        onOpenChange={(o) => !o && setDeleteTarget(null)}
+        title="Remove Registration"
+        entityName={deleteTarget ? `${deleteTarget.members?.first_name || ""} ${deleteTarget.members?.last_name || ""}`.trim() : ""}
+        confirmText="DELETE"
+        confirmLabel="Remove"
+        impacts={[
+          `${deleteTarget?.members?.first_name || "The member"}'s registration for "${course.name}" will be removed.`,
+          "Existing exam attempts and results are NOT deleted — only the enrolment record.",
+        ]}
+        isPending={deleteMutation.isPending}
+        onConfirm={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)}
+      />
     </Card>
   );
 }
