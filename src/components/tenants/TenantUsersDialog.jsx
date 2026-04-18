@@ -511,36 +511,34 @@ export default function TenantUsersDialog({ tenant, open, onOpenChange }) {
               </AlertDialogTitle>
               <AlertDialogDescription>{actionMeta.description}</AlertDialogDescription>
             </AlertDialogHeader>
-            <div className="space-y-2">
-              <Label htmlFor="confirm-password" className="text-sm">
-                Enter your password to confirm
-              </Label>
-              <Input
-                id="confirm-password"
-                type="password"
-                autoComplete="current-password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="Your account password"
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    handleConfirm();
-                  }
-                }}
-              />
-              <p className="text-xs text-muted-foreground">
-                Signed in as {user?.email}
-              </p>
-            </div>
+            {requiredToken ? (
+              <div className="space-y-2">
+                <Label htmlFor="confirm-token" className="text-sm">
+                  Type <span className="font-mono font-semibold">{requiredToken}</span> to confirm
+                </Label>
+                <Input
+                  id="confirm-token"
+                  autoComplete="off"
+                  value={confirmToken}
+                  onChange={(e) => setConfirmToken(e.target.value)}
+                  placeholder={requiredToken}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      handleConfirm();
+                    }
+                  }}
+                />
+              </div>
+            ) : null}
             <AlertDialogFooter>
-              <AlertDialogCancel disabled={verifying}>Cancel</AlertDialogCancel>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
               <AlertDialogAction
                 onClick={(e) => { e.preventDefault(); handleConfirm(); }}
-                disabled={verifying || !confirmPassword}
+                disabled={requiredToken ? confirmToken.trim().toUpperCase() !== requiredToken : false}
                 className={actionMeta.severity === "destructive" ? "bg-destructive text-destructive-foreground hover:bg-destructive/90" : ""}
               >
-                {verifying ? "Verifying..." : "Confirm"}
+                Confirm
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
