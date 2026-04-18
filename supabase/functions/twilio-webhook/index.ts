@@ -24,8 +24,11 @@ Deno.serve(async (req) => {
     const messageStatus = params["MessageStatus"];
     const errorCode = params["ErrorCode"];
     const errorMessage = params["ErrorMessage"];
+    const callSid = params["CallSid"];
+    const callStatus = params["CallStatus"];
+    const callDuration = params["CallDuration"];
 
-    console.log(`Twilio webhook received: AccountSid=${accountSid}, SID=${messageSid}, Status=${messageStatus}`);
+    console.log(`Twilio webhook: AccountSid=${accountSid}, MessageSID=${messageSid}, MessageStatus=${messageStatus}, CallSID=${callSid}, CallStatus=${callStatus}`);
 
     // Create Supabase client early (needed for fallback validation)
     const supabase = createClient(
@@ -84,73 +87,106 @@ Deno.serve(async (req) => {
     }
 
     if (!signatureValid) {
-      // Fallback: verify MessageSid exists in our sms_log (proves we sent it)
-      console.log("Signature mismatch — trying fallback MessageSid verification");
+      // Fallback: verify SID exists in our logs (proves we sent it)
+      console.log("Signature mismatch — trying fallback SID verification");
 
-      if (!messageSid || !messageStatus) {
-        console.warn("No MessageSid or MessageStatus — rejecting");
-        return new Response("Forbidden", {
-          status: 403,
-          headers: { "Content-Type": "text/plain" },
-        });
+      if (messageSid) {
+        const { data: existingLog } = await supabase
+          .from("sms_log")
+          .select("id")
+          .eq("message_sid", messageSid)
+          .maybeSingle();
+        if (!existingLog) {
+          console.warn("MessageSid not found in sms_log — rejecting");
+          return new Response("Forbidden", { status: 403, headers: { "Content-Type": "text/plain" } });
+        }
+        console.log("Fallback validation passed — MessageSid in sms_log");
+      } else if (callSid) {
+        const { data: existingCall } = await supabase
+          .from("call_log")
+          .select("id")
+          .eq("provider_call_id", callSid)
+          .maybeSingle();
+        if (!existingCall) {
+          console.warn("CallSid not found in call_log — rejecting");
+          return new Response("Forbidden", { status: 403, headers: { "Content-Type": "text/plain" } });
+        }
+        console.log("Fallback validation passed — CallSid in call_log");
+      } else {
+        console.warn("No MessageSid or CallSid — rejecting");
+        return new Response("Forbidden", { status: 403, headers: { "Content-Type": "text/plain" } });
+      }
+    }
+
+    // Branch: SMS status
+    if (messageSid && messageStatus) {
+      const updateData: Record<string, unknown> = {
+        delivery_status: messageStatus,
+        delivery_updated_at: new Date().toISOString(),
+      };
+      if (messageStatus === "delivered") {
+        updateData.status = "delivered";
+      } else if (["failed", "undelivered"].includes(messageStatus)) {
+        updateData.status = "failed";
+        if (errorCode || errorMessage) {
+          updateData.error_message = `${errorCode || ""}: ${errorMessage || "Delivery failed"}`.trim();
+        }
       }
 
-      const { data: existingLog } = await supabase
+      const { error } = await supabase
         .from("sms_log")
-        .select("id")
-        .eq("message_sid", messageSid)
-        .maybeSingle();
+        .update(updateData)
+        .eq("message_sid", messageSid);
 
-      if (!existingLog) {
-        console.warn("MessageSid not found in sms_log — rejecting");
-        return new Response("Forbidden", {
-          status: 403,
-          headers: { "Content-Type": "text/plain" },
-        });
+      if (error) {
+        console.error("Failed to update sms_log:", error);
+      } else {
+        console.log(`sms_log updated for SID=${messageSid} to status=${messageStatus}`);
       }
 
-      console.log("Fallback validation passed — MessageSid exists in sms_log");
-    }
-
-    if (!messageSid || !messageStatus) {
-      return new Response(JSON.stringify({ error: "Missing MessageSid or MessageStatus" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    const updateData: Record<string, unknown> = {
-      delivery_status: messageStatus,
-      delivery_updated_at: new Date().toISOString(),
-    };
-
-    if (messageStatus === "delivered") {
-      updateData.status = "delivered";
-    } else if (["failed", "undelivered"].includes(messageStatus)) {
-      updateData.status = "failed";
-      if (errorCode || errorMessage) {
-        updateData.error_message = `${errorCode || ""}: ${errorMessage || "Delivery failed"}`.trim();
-      }
-    }
-
-    const { error } = await supabase
-      .from("sms_log")
-      .update(updateData)
-      .eq("message_sid", messageSid);
-
-    if (error) {
-      console.error("Failed to update sms_log:", error);
       return new Response("<Response></Response>", {
         status: 200,
-        headers: { "Content-Type": "text/xml" },
+        headers: { ...corsHeaders, "Content-Type": "text/xml" },
       });
     }
 
-    console.log(`sms_log updated for SID=${messageSid} to status=${messageStatus}`);
+    // Branch: Call status
+    if (callSid && callStatus) {
+      const s = callStatus.toLowerCase();
+      // Map Twilio call statuses to our call_log.status
+      let mappedStatus = s;
+      if (s === "in-progress") mappedStatus = "in_progress";
+      if (s === "no-answer") mappedStatus = "no_answer";
 
-    return new Response("<Response></Response>", {
-      status: 200,
-      headers: { ...corsHeaders, "Content-Type": "text/xml" },
+      const updateData: Record<string, unknown> = {
+        status: mappedStatus,
+        delivery_status: s,
+        delivery_updated_at: new Date().toISOString(),
+      };
+      if (callDuration && !isNaN(parseInt(callDuration))) {
+        updateData.duration_seconds = parseInt(callDuration);
+      }
+
+      const { error } = await supabase
+        .from("call_log")
+        .update(updateData)
+        .eq("provider_call_id", callSid);
+
+      if (error) {
+        console.error("Failed to update call_log:", error);
+      } else {
+        console.log(`call_log updated for CallSID=${callSid} to status=${mappedStatus}`);
+      }
+
+      return new Response("<Response></Response>", {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "text/xml" },
+      });
+    }
+
+    return new Response(JSON.stringify({ error: "Missing MessageSid/MessageStatus or CallSid/CallStatus" }), {
+      status: 400,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {
     console.error("twilio-webhook error:", error);
