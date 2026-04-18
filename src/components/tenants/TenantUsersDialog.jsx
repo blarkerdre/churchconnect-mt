@@ -11,7 +11,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
-import { UserPlus, Trash2, Shield, Crown, User, Mail, Clock, CheckCircle2, XCircle, ShieldCheck } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { UserPlus, Trash2, Shield, Crown, User, Mail, Clock, CheckCircle2, XCircle, ShieldCheck, Search, AlertTriangle } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
@@ -22,6 +32,44 @@ const ROLE_CONFIG = {
   member: { label: "Member", icon: User, color: "text-muted-foreground bg-muted border-border" },
 };
 
+const ROLE_LABEL = { owner: "Owner", admin: "Admin", member: "Member" };
+
+function describeAction(action) {
+  if (!action) return { title: "", description: "", severity: "amber" };
+  const name = action.membership?.profiles?.full_name || action.membership?.profiles?.email || "this user";
+  if (action.type === "remove") {
+    return {
+      title: `Remove ${name} from this church?`,
+      description: "They will immediately lose all access to this church's data and dashboards.",
+      severity: "destructive",
+    };
+  }
+  if (action.type === "role") {
+    const from = ROLE_LABEL[action.membership.role];
+    const to = ROLE_LABEL[action.newRole];
+    if (action.newRole === "owner") {
+      return {
+        title: `Promote ${name} to Owner?`,
+        description: `This grants ${name} full control of the church, including the ability to manage other owners.`,
+        severity: "destructive",
+      };
+    }
+    if (action.membership.role === "owner") {
+      return {
+        title: `Demote ${name} from Owner to ${to}?`,
+        description: `${name} will lose church-wide control. Make sure at least one other owner remains.`,
+        severity: "amber",
+      };
+    }
+    return {
+      title: `Change ${name}'s role from ${from} to ${to}?`,
+      description: `This will adjust ${name}'s permissions in this church immediately.`,
+      severity: "amber",
+    };
+  }
+  return { title: "Confirm action", description: "", severity: "amber" };
+}
+
 export default function TenantUsersDialog({ tenant, open, onOpenChange }) {
   const { toast } = useToast();
   const { user, roles: userRoles } = useAuth();
@@ -29,6 +77,10 @@ export default function TenantUsersDialog({ tenant, open, onOpenChange }) {
   const queryClient = useQueryClient();
   const [addEmail, setAddEmail] = useState("");
   const [addRole, setAddRole] = useState("member");
+  const [search, setSearch] = useState("");
+  const [pendingAction, setPendingAction] = useState(null);
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [verifying, setVerifying] = useState(false);
 
   const { data: memberships = [], isLoading } = useQuery({
     queryKey: ["tenant-users", tenant?.id],
@@ -165,8 +217,59 @@ export default function TenantUsersDialog({ tenant, open, onOpenChange }) {
     inviteMutation.mutate({ email: addEmail, role: addRole });
   };
 
+  const requestAction = (action) => {
+    setConfirmPassword("");
+    setPendingAction(action);
+  };
+
+  const closeConfirm = () => {
+    setPendingAction(null);
+    setConfirmPassword("");
+    setVerifying(false);
+  };
+
+  const handleConfirm = async () => {
+    if (!pendingAction) return;
+    if (!confirmPassword) {
+      toast({ title: "Password required", description: "Enter your password to confirm.", variant: "destructive" });
+      return;
+    }
+    if (!user?.email) {
+      toast({ title: "Cannot verify identity", variant: "destructive" });
+      return;
+    }
+    setVerifying(true);
+    const { error } = await supabase.auth.signInWithPassword({
+      email: user.email,
+      password: confirmPassword,
+    });
+    if (error) {
+      setVerifying(false);
+      toast({ title: "Incorrect password", description: "Action cancelled.", variant: "destructive" });
+      return;
+    }
+    if (pendingAction.type === "remove") {
+      removeMutation.mutate(pendingAction.membership.id);
+    } else if (pendingAction.type === "role") {
+      updateRoleMutation.mutate({ membershipId: pendingAction.membership.id, role: pendingAction.newRole });
+    }
+    closeConfirm();
+  };
+
   const ownerCount = memberships.filter(m => m.role === "owner").length;
   const pendingInvitations = invitations.filter(i => i.status === "pending");
+
+  const filteredMemberships = memberships.filter((m) => {
+    if (!search.trim()) return true;
+    const q = search.toLowerCase();
+    return (
+      (m.profiles?.full_name || "").toLowerCase().includes(q) ||
+      (m.profiles?.email || "").toLowerCase().includes(q) ||
+      (m.role || "").toLowerCase().includes(q)
+    );
+  });
+
+  const actionMeta = describeAction(pendingAction);
 
   if (!tenant) return null;
 
@@ -219,10 +322,21 @@ export default function TenantUsersDialog({ tenant, open, onOpenChange }) {
           </TabsList>
 
           <TabsContent value="users">
+            <div className="relative mb-2">
+              <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search users by name, email, or role..."
+                className="pl-8"
+              />
+            </div>
             {isLoading ? (
               <p className="text-sm text-muted-foreground py-4">Loading users...</p>
             ) : memberships.length === 0 ? (
               <p className="text-sm text-muted-foreground py-4">No users in this tenant yet.</p>
+            ) : filteredMemberships.length === 0 ? (
+              <p className="text-sm text-muted-foreground py-4">No users match "{search}".</p>
             ) : (
               <div className="overflow-x-auto">
                 <Table>
@@ -234,7 +348,7 @@ export default function TenantUsersDialog({ tenant, open, onOpenChange }) {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {memberships.map((m) => {
+                    {filteredMemberships.map((m) => {
                       const profile = m.profiles;
                       const isOnlyOwner = m.role === "owner" && ownerCount <= 1;
                       return (
@@ -248,7 +362,10 @@ export default function TenantUsersDialog({ tenant, open, onOpenChange }) {
                           <TableCell>
                             <Select
                               value={m.role}
-                              onValueChange={(newRole) => updateRoleMutation.mutate({ membershipId: m.id, role: newRole })}
+                              onValueChange={(newRole) => {
+                                if (newRole === m.role) return;
+                                requestAction({ type: "role", membership: m, newRole });
+                              }}
                             >
                               <SelectTrigger className="w-28 h-7 text-xs">
                                 <SelectValue />
@@ -268,10 +385,7 @@ export default function TenantUsersDialog({ tenant, open, onOpenChange }) {
                                     size="sm"
                                     variant="ghost"
                                     className="text-amber-600 hover:text-amber-700 hover:bg-amber-50"
-                                    onClick={() => {
-                                      updateRoleMutation.mutate({ membershipId: m.id, role: "owner" });
-                                      toast({ title: `${profile?.full_name || "User"} promoted to Owner` });
-                                    }}
+                                    onClick={() => requestAction({ type: "role", membership: m, newRole: "owner" })}
                                   >
                                     <Crown className="h-3.5 w-3.5" />
                                   </Button>
@@ -286,10 +400,7 @@ export default function TenantUsersDialog({ tenant, open, onOpenChange }) {
                                     size="sm"
                                     variant="ghost"
                                     className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                                    onClick={() => {
-                                      updateRoleMutation.mutate({ membershipId: m.id, role: "admin" });
-                                      toast({ title: `${profile?.full_name || "User"} promoted to Admin` });
-                                    }}
+                                    onClick={() => requestAction({ type: "role", membership: m, newRole: "admin" })}
                                   >
                                     <Shield className="h-3.5 w-3.5" />
                                   </Button>
@@ -302,7 +413,7 @@ export default function TenantUsersDialog({ tenant, open, onOpenChange }) {
                               variant="ghost"
                               className="text-destructive hover:text-destructive"
                               disabled={isOnlyOwner || (isSuperAdmin && m.profiles?.user_id === user?.id) || removeMutation.isPending}
-                              onClick={() => removeMutation.mutate(m.id)}
+                              onClick={() => requestAction({ type: "remove", membership: m })}
                               title={isOnlyOwner ? "Cannot remove the only owner" : "Remove from tenant"}
                             >
                               <Trash2 className="h-3.5 w-3.5" />
@@ -386,6 +497,50 @@ export default function TenantUsersDialog({ tenant, open, onOpenChange }) {
           {memberships.length} user{memberships.length !== 1 ? "s" : ""} in this tenant
         </p>
         </TooltipProvider>
+
+        <AlertDialog open={!!pendingAction} onOpenChange={(o) => { if (!o) closeConfirm(); }}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle className="flex items-center gap-2">
+                <AlertTriangle className={actionMeta.severity === "destructive" ? "h-5 w-5 text-destructive" : "h-5 w-5 text-amber-600"} />
+                {actionMeta.title}
+              </AlertDialogTitle>
+              <AlertDialogDescription>{actionMeta.description}</AlertDialogDescription>
+            </AlertDialogHeader>
+            <div className="space-y-2">
+              <Label htmlFor="confirm-password" className="text-sm">
+                Enter your password to confirm
+              </Label>
+              <Input
+                id="confirm-password"
+                type="password"
+                autoComplete="current-password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Your account password"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    handleConfirm();
+                  }
+                }}
+              />
+              <p className="text-xs text-muted-foreground">
+                Signed in as {user?.email}
+              </p>
+            </div>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={verifying}>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={(e) => { e.preventDefault(); handleConfirm(); }}
+                disabled={verifying || !confirmPassword}
+                className={actionMeta.severity === "destructive" ? "bg-destructive text-destructive-foreground hover:bg-destructive/90" : ""}
+              >
+                {verifying ? "Verifying..." : "Confirm"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </DialogContent>
     </Dialog>
   );
