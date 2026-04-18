@@ -323,7 +323,27 @@ export default function FollowupDetailPanel({ followup, onClose, onUpdate, curre
                   </SelectContent>
                 </Select>
               </div>
-            )}
+          )}
+
+          {/* Sign-Post (refer to leader) */}
+          {followup.member_id && ["First Timer", "New Convert", "Visitor"].includes(followup.category) && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
+                  <Sparkles className="h-3.5 w-3.5 text-accent" /> Sign-Post
+                </p>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-7 text-xs"
+                  onClick={() => setSignPostOpen(true)}
+                >
+                  Refer to Leader
+                </Button>
+              </div>
+              <ReferralTimeline followupId={followup.id} profileMap={profileMap} />
+            </div>
+          )}
           </div>
 
           {/* Notes */}
