@@ -1,42 +1,41 @@
 
-## Plan: Password-protected destructive deletes in Bible School Management
+## Plan: Password protection for sensitive Member/User actions
 
 ### Scope
-Require password re-authentication AND show a strong warning before these destructive actions in `src/pages/ExamManagement.jsx` and `src/components/exams/SubjectManager.jsx`:
+Reuse the existing `DangerConfirmDialog` (built for exam deletes) to gate destructive/sensitive Member and User operations behind password re-auth + type-to-confirm.
 
-1. **Delete Course** (`exam_titles`) — cascades to subjects, questions, registrations, attempts
-2. **Delete Course Registration** (`course_registrations`) — removes a member's enrolment
-3. **Delete Subject** (`exam_subjects`) — cascades to questions
-4. **Delete Question** (`exam_questions`)
+### Actions to protect
 
-### Approach
+**Member side** (`src/pages/Members.jsx` + `MemberFormDialog.jsx` + `MemberTable.jsx`):
+1. **Delete member** — already has a confirm dialog; upgrade to `DangerConfirmDialog`
+   - Impacts: "Member record, attendance history, follow-ups, sign-posts, pastoral cases, and registrations linked to this member will be permanently affected."
+2. **Update member record** (save in `MemberFormDialog`) — gate the final submit behind password confirmation **only when editing an existing member** (not on create). Skip for self-profile edits via `MyProfile` (members editing their own data).
 
-Build a reusable `<DangerConfirmDialog>` component (lightweight, local to the exams folder — `src/components/exams/DangerConfirmDialog.jsx`) that wraps `AlertDialog` and adds:
+**User side** (`src/pages/UserManagement.jsx`):
+3. **Delete user** (calls `admin-delete-user` edge function) — upgrade to `DangerConfirmDialog`
+   - Impacts: "Auth account, profile, role assignments and tenant memberships will be permanently removed. Linked member records remain but become unlinked."
+4. **Update user role / toggle ban / role assignment changes** — gate behind password confirmation (sensitive privilege changes).
 
-- **Red warning header** with `AlertTriangle` icon
-- **Impact list** (props): bullet list of what will also be deleted (e.g. "All subjects, questions, attempts and registrations under this course")
-- **Type-to-confirm** field — user must type the entity name (or `DELETE`) to enable the confirm button
-- **Password input** — re-authenticates via `supabase.auth.signInWithPassword({ email: user.email, password })` before calling the delete mutation (same pattern used in `TenantAdmin.jsx` / `AppLayout.jsx` tenant switching)
-- **Confirm button** disabled until both: type-to-confirm matches AND password is non-empty
-- On submit: verify password → run the supplied `onConfirm()` callback → close
+### Component reuse
+`DangerConfirmDialog` already supports:
+- Custom title, entity name, confirm label, impact list, type-to-confirm, password re-auth via `supabase.auth.signInWithPassword`, async `onConfirm`.
+- For **updates** (non-delete), pass `confirmLabel="Save changes"` and tone the impact list as "review impact" rather than red doom — but the existing red styling is fine since these are admin-privilege actions. Keep as-is for consistency.
 
-### Wiring (4 locations)
+### Edits
 
-| File | Replace existing AlertDialog for… | Impact text |
-|---|---|---|
-| `ExamManagement.jsx` | `deleteTitleTarget` (course) | "All subjects, questions, registrations and attempts for this course will be permanently deleted." |
-| `ExamManagement.jsx` | `deleteTarget` (question) | "This question and all member answers tied to it will be permanently deleted." |
-| `ExamManagement.jsx` (`CourseRegistrationsView`) | `deleteTarget` (registration) | "The member's registration will be removed. Existing exam attempts are NOT deleted." |
-| `SubjectManager.jsx` | `deleteTarget` (subject) | "All questions and member attempts under this subject will be permanently deleted." |
+| File | Change |
+|---|---|
+| `src/pages/Members.jsx` | Replace existing delete confirm with `DangerConfirmDialog` |
+| `src/components/members/MemberFormDialog.jsx` | On submit when editing existing member → open `DangerConfirmDialog` (confirmLabel: "Update member"); on confirm run the existing save mutation |
+| `src/pages/UserManagement.jsx` | Wrap delete-user, role-change, and ban-toggle actions with `DangerConfirmDialog` |
 
-Each call site keeps its existing mutation; we simply gate it behind the new dialog.
-
-### Security notes
-- Password re-auth happens client-side via Supabase Auth — same proven pattern as tenant switching.
-- All deletes already include `.eq("tenant_id", tenantId)` guards (verified). One small fix needed in `CourseRegistrationsView`: `tenantId` isn't currently destructured from `useTenantQuery()` in that sub-component — we'll add it.
+### Security & multi-tenancy
+- All existing `.eq("tenant_id", tenantId)` guards remain.
+- Password re-auth via `supabase.auth.signInWithPassword({ email: user.email, password })` — same proven pattern.
 - No DB migrations needed.
 
 ### Files
-- **Create**: `src/components/exams/DangerConfirmDialog.jsx`
-- **Edit**: `src/pages/ExamManagement.jsx` (3 dialog replacements + add `tenantId` in `CourseRegistrationsView`)
-- **Edit**: `src/components/exams/SubjectManager.jsx` (1 dialog replacement)
+- **Edit**: `src/pages/Members.jsx`
+- **Edit**: `src/components/members/MemberFormDialog.jsx`
+- **Edit**: `src/pages/UserManagement.jsx`
+- **Reuse**: `src/components/exams/DangerConfirmDialog.jsx` (already exists)
