@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
@@ -47,9 +47,10 @@ export default function ReferralTimeline({ followupId, profileMap = {} }) {
     },
   });
 
-  const referralIds = referrals.map(r => r.id);
+  const referralIds = useMemo(() => referrals.map(r => r.id), [referrals]);
+  const referralIdsKey = referralIds.join(",");
   const { data: updates = [] } = useQuery({
-    queryKey: ["referral-updates", referralIds, tenantId],
+    queryKey: ["referral-updates", referralIdsKey, tenantId],
     enabled: referralIds.length > 0 && !!tenantId,
     queryFn: async () => {
       const { data, error } = await scopeQuery(
@@ -64,9 +65,13 @@ export default function ReferralTimeline({ followupId, profileMap = {} }) {
     },
   });
 
-  const leaderIds = [...new Set(referrals.map(r => r.assigned_leader_id).filter(Boolean))];
+  const leaderIds = useMemo(
+    () => [...new Set(referrals.map(r => r.assigned_leader_id).filter(Boolean))],
+    [referrals]
+  );
+  const leaderIdsKey = leaderIds.join(",");
   const { data: leaders = [] } = useQuery({
-    queryKey: ["referral-leaders", leaderIds, tenantId],
+    queryKey: ["referral-leaders", leaderIdsKey, tenantId],
     enabled: leaderIds.length > 0 && !!tenantId,
     queryFn: async () => {
       const { data, error } = await supabase
