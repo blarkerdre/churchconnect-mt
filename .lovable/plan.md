@@ -1,63 +1,68 @@
 
 
-## Root cause
+User wants three additions to the Tenant Users tab in `TenantUsersDialog.jsx`:
 
-`tenant_memberships.user_id` references `auth.users(id)`, NOT `profiles.user_id`. There is no FK between `tenant_memberships` and `profiles`, so PostgREST's embedded select `profiles(user_id, full_name, email)` cannot resolve the relationship — it returns `null` for the embedded object on every row, and in some cases the parent rows get dropped from the result entirely (depending on PostgREST version and hint inference).
+1. **Search** for users in the list
+2. **Password confirmation** before destructive/sensitive actions
+3. **Warning dialog** before delete or role change
 
-DB confirms 5 / 83 / 4 / 1 memberships exist across the four tenants — the data is there, the query just can't join.
+Let me think about scope:
 
-Secondary issue (already-known): `profiles` RLS for non-super-admins filters by the profile's own `tenant_id`, so a tenant admin viewing their own tenant should still see those profiles, but a super-admin viewing any tenant has the `Super admins can view all profiles` policy, so that's covered.
+- "Password" — most likely they mean password re-auth before destructive actions (matches existing pattern from `mem://auth/tenant-switching-security` where password re-auth is required for tenant switching). I'll combine password + warning into a single confirm dialog.
+- Search — simple client-side filter on `full_name` and `email` from the already-fetched memberships.
+- Warning — AlertDialog before role change AND before delete. Password re-auth required inside the warning dialog.
 
-## Fix
+Actions to gate:
+- Role change (member → admin → owner, in either direction)
+- Remove user from tenant
+- Super-admin shortcut buttons (promote to Admin / Owner)
 
-Stop relying on the implicit FK relationship. Fetch memberships and profiles in two steps and merge in JS.
+Existing assets:
+- `alert-dialog.jsx` already exists
+- `supabase.auth.signInWithPassword` for re-auth (matches existing tenant-switching pattern)
+- `Input` component supports `type="password"`
 
-### Edit `src/components/tenants/TenantUsersDialog.jsx` (lines 33-45)
+## Plan
 
-Replace the single embedded query with:
+### Edit `src/components/tenants/TenantUsersDialog.jsx`
 
-1. Query `tenant_memberships` alone, scoped by `tenant_id`.
-2. Collect the `user_id`s.
-3. Query `profiles` with `.in("user_id", userIds)`.
-4. Merge profiles onto memberships in JS (`m.profile = profilesById[m.user_id]`).
-5. Update render: change `m.profiles` reads to `m.profile` (or keep `profiles` key for minimal diff).
+**1. Add search bar** above the Users table
+- New state: `const [search, setSearch] = useState("")`
+- Filter `memberships` by name/email (case-insensitive) before rendering
+- Show "No users match" when filter empties result
+- Place a small `Input` with search icon directly above the `<Table>` in the Users tab
 
-Pseudocode:
-```js
-const { data: memberships = [] } = useQuery({
-  queryKey: ["tenant-users", tenant?.id],
-  queryFn: async () => {
-    const { data: rows, error } = await supabase
-      .from("tenant_memberships")
-      .select("*")
-      .eq("tenant_id", tenant.id)
-      .order("created_at", { ascending: true });
-    if (error) throw error;
-    if (!rows?.length) return [];
-    const userIds = rows.map(r => r.user_id);
-    const { data: profiles } = await supabase
-      .from("profiles")
-      .select("user_id, full_name, email")
-      .in("user_id", userIds);
-    const byId = Object.fromEntries((profiles || []).map(p => [p.user_id, p]));
-    return rows.map(r => ({ ...r, profiles: byId[r.user_id] || null }));
-  },
-  enabled: !!tenant?.id && open,
-});
-```
+**2. Add confirm-and-reauth dialog**
+- New state: `pendingAction` (object: `{ type, membership, newRole?, label }`) and `confirmPassword`
+- New `<AlertDialog>` rendered once at the bottom of the component, opens when `pendingAction` is set
+- Body explains the action in plain English (e.g. "Change Jane Doe's role from Member to Owner. This grants full church control.")
+- Includes a password input — required to proceed
+- "Confirm" button:
+  - Calls `supabase.auth.signInWithPassword({ email: currentUserEmail, password })` to verify
+  - On success, dispatches the original mutation (`updateRoleMutation` or `removeMutation`)
+  - On failure, toast error, keep dialog open
+- "Cancel" closes dialog and clears state
 
-The render code already handles `profiles` being null (`profile?.full_name || "Unknown"`), so no other changes needed.
+**3. Wire all destructive actions through the new dialog**
+- Role `<Select onValueChange>` → instead of mutating directly, set `pendingAction` and revert the visual state (controlled value remains `m.role` until confirmed)
+- Delete `<Button onClick>` → set `pendingAction` of type `"remove"`
+- Super-admin promote-to-admin / promote-to-owner shortcuts → also route through `pendingAction`
 
-## Why not add a FK?
+**4. Severity-aware warning copy**
+- Promotion to Owner → red/destructive styling, "This grants full control of the church"
+- Demotion from Owner → amber, "This user will lose church-wide control"
+- Remove → red, "This user will lose all access to this church"
+- Member ↔ Admin → neutral amber
 
-Adding `tenant_memberships.user_id → profiles.user_id` would require `profiles.user_id` to be unique (it likely is, but adding a cross-table FK to a non-`auth` table for an auth-id column is fragile and breaks if a profile row is missing). Two-step fetch is safer and consistent with how other parts of this codebase (e.g. `WSFLeaderAssignments`) join across `profiles`.
+### No DB / RLS changes
+Existing RLS already protects the operations server-side; this is a UX guardrail only.
 
-## Files
+### Files
 **Edit**
-- `src/components/tenants/TenantUsersDialog.jsx` — lines 33-45
+- `src/components/tenants/TenantUsersDialog.jsx`
 
-## Out of scope
-- Changing FK structure
-- Changing RLS on `profiles` (super-admin policy already covers the tenant-admin dialog case)
-- Auditing other dialogs (none observed using this same broken embed pattern for `tenant_memberships → profiles`)
+### Out of scope
+- Password re-auth on the Invite form (not destructive)
+- Audit logging of role changes (covered in separate suggestion previously)
+- Super_admin grant flow
 
