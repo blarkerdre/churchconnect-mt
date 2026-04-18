@@ -272,6 +272,14 @@ export default function PublicRegistration() {
                     );
                   })}
                 </div>
+                {(form.church_unit || "").trim() && (
+                  <div className="mt-2 flex items-start gap-2 p-2.5 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/60">
+                    <Info className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
+                    <p className="text-xs text-amber-800 dark:text-amber-200">
+                      Your unit selection will be sent to the leader for approval after registration.
+                    </p>
+                  </div>
+                )}
               </div>
             )}
 
