@@ -275,27 +275,9 @@ export default function WSFLeaderDashboard() {
         </Card>
       )}
 
-      {/* Rate This App */}
-      <Card
-        className="border-0 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
-        onClick={() => setFeedbackOpen(true)}
-      >
-        <CardContent className="p-4 flex items-center gap-3">
-          <div className="h-10 w-10 rounded-xl bg-accent/10 flex items-center justify-center shrink-0">
-            <Star className="h-5 w-5 text-accent" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-foreground">Rate This App</p>
-            <p className="text-xs text-muted-foreground">Share your feedback</p>
-          </div>
-          <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
-        </CardContent>
-      </Card>
-
       {/* Announcements & Events Feed */}
       <MemberFeed member={myMember} />
 
-      <AppFeedbackDialog open={feedbackOpen} onOpenChange={setFeedbackOpen} />
     </div>
   );
 }
