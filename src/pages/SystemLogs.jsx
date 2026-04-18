@@ -370,6 +370,129 @@ function WhatsAppLogsPanel() {
   );
 }
 
+/* ── Call Logs Tab ── */
+function formatDuration(seconds) {
+  if (seconds == null || seconds === 0) return "—";
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  if (m === 0) return `${s}s`;
+  return `${m}m ${s}s`;
+}
+
+function getCallStatusDisplay(log) {
+  const status = log.status || "initiated";
+  const ageMs = Date.now() - new Date(log.created_at).getTime();
+  if (["queued", "initiated"].includes(status) && ageMs > 2 * 60 * 1000) {
+    return { label: "initiated", color: "bg-muted text-muted-foreground" };
+  }
+  if (status === "completed") return { label: "completed", color: "bg-chart-3/10 text-chart-3" };
+  if (["failed", "busy", "no-answer", "canceled"].includes(status)) return { label: status, color: "bg-destructive/10 text-destructive" };
+  if (["in-progress", "ringing", "answered"].includes(status)) return { label: status, color: "bg-primary/10 text-primary" };
+  return { label: status, color: "bg-amber-100 text-amber-700" };
+}
+
+const CALL_CSV_HEADERS = [
+  { label: "Phone", fn: r => r.recipient_phone },
+  { label: "Direction", fn: r => r.call_type || "outbound" },
+  { label: "Status", fn: r => r.status || "" },
+  { label: "Duration (s)", fn: r => r.duration_seconds ?? "" },
+  { label: "Provider", fn: r => r.provider || "" },
+  { label: "Notes", fn: r => r.notes || "" },
+  { label: "Time", fn: r => format(new Date(r.created_at), "yyyy-MM-dd HH:mm:ss") },
+];
+
+function CallLogsPanel() {
+  const [statusFilter, setStatusFilter] = useState("All");
+  const [directionFilter, setDirectionFilter] = useState("All");
+  const [fromDate, setFromDate] = useState(() => subDays(new Date(), 7));
+  const [toDate, setToDate] = useState(() => new Date());
+  const { tenantId, scopeQuery } = useTenantQuery();
+
+  const { data: logs = [], isLoading } = useQuery({
+    queryKey: ["call-logs", statusFilter, directionFilter, fromDate?.toISOString(), toDate?.toISOString(), tenantId],
+    queryFn: async () => {
+      let query = supabase.from("call_log").select("*").order("created_at", { ascending: false }).limit(500);
+      if (directionFilter !== "All") query = query.eq("call_type", directionFilter);
+      if (fromDate) query = query.gte("created_at", fromDate.toISOString());
+      if (toDate) query = query.lte("created_at", new Date(toDate.getFullYear(), toDate.getMonth(), toDate.getDate(), 23, 59, 59).toISOString());
+      const { data, error } = await scopeQuery(query);
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  const filtered = useMemo(() => logs.filter(l => statusFilter === "All" || l.status === statusFilter), [logs, statusFilter]);
+
+  const stats = useMemo(() => {
+    const completed = filtered.filter(l => l.status === "completed").length;
+    const failed = filtered.filter(l => ["failed", "busy", "no-answer", "canceled"].includes(l.status)).length;
+    const totalDuration = filtered.reduce((sum, l) => sum + (l.duration_seconds || 0), 0);
+    return { total: filtered.length, completed, failed, totalDuration };
+  }, [filtered]);
+
+  const uniqueStatuses = useMemo(() => ["All", ...Array.from(new Set(logs.map(l => l.status).filter(Boolean)))], [logs]);
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center gap-3">
+        <DateRangePicker from={fromDate} to={toDate} onFromChange={setFromDate} onToChange={setToDate} />
+        <Select value={directionFilter} onValueChange={setDirectionFilter}>
+          <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="All">All Directions</SelectItem>
+            <SelectItem value="outbound">Outbound</SelectItem>
+            <SelectItem value="inbound">Inbound</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            {uniqueStatuses.map(s => <SelectItem key={s} value={s}>{s === "All" ? "All Statuses" : s}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        <Button size="sm" variant="outline" onClick={() => downloadCSV(filtered, CALL_CSV_HEADERS, `call-logs-${format(new Date(), "yyyy-MM-dd")}.csv`)} disabled={filtered.length === 0}>
+          <Download className="h-3.5 w-3.5 mr-1.5" /> CSV
+        </Button>
+      </div>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <EmailMiniStat title="Total" value={stats.total} icon={Phone} color="blue" />
+        <EmailMiniStat title="Completed" value={stats.completed} icon={CheckCircle} color="emerald" />
+        <EmailMiniStat title="Failed" value={stats.failed} icon={XCircle} color="rose" />
+        <EmailMiniStat title="Total Duration" value={formatDuration(stats.totalDuration)} icon={Clock} color="amber" />
+      </div>
+      <div className="space-y-2">
+        {isLoading ? (
+          <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+        ) : filtered.length === 0 ? (
+          <p className="text-center text-muted-foreground py-8">No call logs found</p>
+        ) : filtered.map(log => {
+          const cfg = getCallStatusDisplay(log);
+          const DirIcon = log.call_type === "inbound" ? PhoneIncoming : PhoneOutgoing;
+          return (
+            <div key={log.id} className="border rounded-lg p-3 text-sm space-y-1">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 min-w-0">
+                  <DirIcon className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                  <span className="font-medium truncate">{log.recipient_phone}</span>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  {log.provider && <Badge variant="outline" className="text-xs capitalize">{log.provider}</Badge>}
+                  <Badge className={`border-0 text-xs ${cfg.color}`}>{cfg.label}</Badge>
+                </div>
+              </div>
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <span>{format(new Date(log.created_at), "dd MMM yyyy, h:mm a")}</span>
+                <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> {formatDuration(log.duration_seconds)}</span>
+              </div>
+              {log.notes && <p className="text-xs text-muted-foreground truncate">{log.notes}</p>}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 /* ── Audit Logs Tab ── */
 const actionIcons = { role_change: UserCog, member_delete: Trash2, member_create: Plus, member_update: Edit };
 const actionColors = { role_change: "bg-primary/10 text-primary", member_delete: "bg-destructive/10 text-destructive", member_create: "bg-chart-3/10 text-chart-3", member_update: "bg-accent/10 text-accent" };
