@@ -9,6 +9,9 @@ import {
   BookOpen, ChevronsUpDown, Check, Lock, MessageSquareHeart, Star
 } from "lucide-react";
 import AppFeedbackDialog from "@/components/feedback/AppFeedbackDialog";
+import SignPostInboxDialog from "@/components/followups/SignPostInboxDialog";
+import { useQuery } from "@tanstack/react-query";
+import { Inbox } from "lucide-react";
 import winnersLogo from "@/assets/winners-chapel-logo.png";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
@@ -57,6 +60,7 @@ export default function Layout({ children }) {
   const [switchPassword, setSwitchPassword] = useState("");
   const [switchLoading, setSwitchLoading] = useState(false);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
+  const [signpostInboxOpen, setSignpostInboxOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   const { signOut, user, profile, isAdmin, isUnitLeader, isWSFLeader, roles, leaderUnits, isTenantOwner, isTenantAdmin } = useAuth();
@@ -69,6 +73,24 @@ export default function Layout({ children }) {
   const disabledFeatures = currentTenant?.settings?.disabled_features || [];
   const isFollowupUnit = leaderUnits.includes("Follow-up") || leaderUnits.includes("Follow-Up");
   const isTrainingAccess = isUnitLeader;
+  const showSignpostInbox = isUnitLeader || isWSFLeader;
+
+  // Pending signpost count for leaders (drives sidebar badge)
+  const { data: signpostPendingCount = 0 } = useQuery({
+    queryKey: ["signpost-pending-count", tenantId, user?.id],
+    enabled: !!tenantId && !!user?.id && showSignpostInbox,
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from("followup_referrals")
+        .select("id", { count: "exact", head: true })
+        .eq("tenant_id", tenantId)
+        .eq("assigned_leader_id", user.id)
+        .eq("status", "pending");
+      if (error) return 0;
+      return count || 0;
+    },
+    refetchInterval: 60000,
+  });
 
   // Derive branding from tenant or fall back to defaults
   const tenantName = currentTenant?.name || "Winners Chapel";
@@ -232,6 +254,28 @@ export default function Layout({ children }) {
               </Link>
             );
           })}
+
+          {/* Sign-Post Inbox (leaders only) */}
+          {showSignpostInbox && (
+            <button
+              onClick={() => { setSignpostInboxOpen(true); setSidebarOpen(false); }}
+              title={collapsed ? "Sign-Post Inbox" : undefined}
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all text-sidebar-foreground/60 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground ${collapsed ? "justify-center" : ""}`}
+            >
+              <div className="relative shrink-0">
+                <Inbox className="h-4 w-4" />
+                {signpostPendingCount > 0 && (
+                  <span className="absolute -top-1.5 -right-1.5 h-4 min-w-4 px-1 rounded-full bg-accent text-accent-foreground text-[9px] font-bold flex items-center justify-center">
+                    {signpostPendingCount > 9 ? "9+" : signpostPendingCount}
+                  </span>
+                )}
+              </div>
+              {!collapsed && (
+                <span className="flex-1 text-left">Sign-Post Inbox</span>
+              )}
+            </button>
+          )}
+
           {/* External Links */}
           {externalLinks.length > 0 && (
             <>
@@ -383,6 +427,7 @@ export default function Layout({ children }) {
         </DialogContent>
       </Dialog>
       <AppFeedbackDialog open={feedbackOpen} onOpenChange={setFeedbackOpen} />
+      <SignPostInboxDialog open={signpostInboxOpen} onOpenChange={setSignpostInboxOpen} />
     </div>
   );
 }
