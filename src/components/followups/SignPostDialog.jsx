@@ -17,7 +17,6 @@ export default function SignPostDialog({ open, onOpenChange, followup, member, o
   const { tenantId, scopeQuery } = useTenantQuery();
   const { user } = useAuth();
   const [type, setType] = useState(defaultType);
-  console.log("[SignPostDialog] render", { open, type, defaultType, hasMember: !!member, tenantId });
 
   useEffect(() => {
     if (open) setType(defaultType);
