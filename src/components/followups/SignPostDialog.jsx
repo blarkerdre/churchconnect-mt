@@ -319,13 +319,16 @@ export default function SignPostDialog({ open, onOpenChange, followup, member, o
         <DialogPrimitive.Content
           className="fixed left-[50%] top-[50%] z-[70] flex flex-col w-full max-w-md translate-x-[-50%] translate-y-[-50%] border bg-background shadow-lg max-h-[90vh] sm:rounded-lg data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 overflow-hidden"
         >
-        <TenantDialogHeader>
-          <Sparkles className="h-4 w-4" /> Sign-Post {followup?.person_name || "Member"}
-        </TenantDialogHeader>
-        <DialogDescription className="sr-only">
-          Refer this follow-up to a unit leader or home cell centre.
-        </DialogDescription>
+        <div className="p-6 pb-3 shrink-0">
+          <TenantDialogHeader>
+            <Sparkles className="h-4 w-4" /> Sign-Post {followup?.person_name || "Member"}
+          </TenantDialogHeader>
+          <DialogDescription className="sr-only">
+            Refer this follow-up to a unit leader or home cell centre.
+          </DialogDescription>
+        </div>
 
+        <div className="flex-1 overflow-y-auto px-6 pb-4">
         <DialogErrorBoundary onClose={() => handleOpenChange(false)}>
           {!tenantId ? (
             <div className="flex items-center gap-2 rounded-md border border-border bg-muted/40 p-3">
