@@ -177,7 +177,13 @@ export default function SignPostDialog({ open, onOpenChange, followup, member, o
   };
 
   const handleSubmit = async () => {
-    if (!followup || !tenantId) return;
+    if (!followup || !tenantId) {
+      console.warn("[SignPost] missing followup or tenantId", { followup, tenantId });
+      return toast({ title: "Missing context", description: "Please reopen this follow-up and try again.", variant: "destructive" });
+    }
+    if (!user?.id) {
+      return toast({ title: "Not signed in", description: "Please sign in again.", variant: "destructive" });
+    }
 
     let assignedLeader = null;
     let payload = {
@@ -202,12 +208,15 @@ export default function SignPostDialog({ open, onOpenChange, followup, member, o
       if (!centre?.leader_id) {
         return toast({ title: "This centre has no leader assigned", variant: "destructive" });
       }
-      // centre.leader_id refers to a member id; resolve to user_id
-      const { data: leaderMember } = await supabase
+      const { data: leaderMember, error: leaderErr } = await supabase
         .from("members")
         .select("user_id")
         .eq("id", centre.leader_id)
         .maybeSingle();
+      if (leaderErr) {
+        console.error("[SignPost] leader lookup failed", leaderErr);
+        return toast({ title: "Leader lookup failed", description: leaderErr.message, variant: "destructive" });
+      }
       if (!leaderMember?.user_id) {
         return toast({ title: "Centre leader is not linked to a user account", variant: "destructive" });
       }
@@ -216,16 +225,26 @@ export default function SignPostDialog({ open, onOpenChange, followup, member, o
       payload.assigned_leader_id = assignedLeader;
     }
 
+    console.log("[SignPost] inserting referral", payload);
     setSaving(true);
     try {
-      const { error } = await supabase.from("followup_referrals").insert(payload);
-      if (error) throw error;
+      const { data, error } = await supabase.from("followup_referrals").insert(payload).select().maybeSingle();
+      if (error) {
+        console.error("[SignPost] insert error", error, "payload:", payload);
+        throw error;
+      }
+      console.log("[SignPost] inserted", data);
       toast({ title: "Sign-posted", description: "The leader has been notified." });
       reset();
       onCreated?.();
       onOpenChange(false);
     } catch (err) {
-      toast({ title: "Error", description: err.message, variant: "destructive" });
+      console.error("[SignPost] submit failed", err);
+      toast({
+        title: "Could not sign-post",
+        description: err?.message || err?.hint || err?.code || "Unknown error — check console.",
+        variant: "destructive",
+      });
     } finally {
       setSaving(false);
     }
