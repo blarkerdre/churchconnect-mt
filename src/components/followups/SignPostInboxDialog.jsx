@@ -39,16 +39,24 @@ export default function SignPostInboxDialog({ open, onOpenChange, onCreateFollow
         supabase
           .from("followup_referrals")
           .select(`
-            id, status, referral_type, target_unit_name, created_at, notes, tenant_id,
+            id, status, referral_type, target_unit_name, created_at, notes, tenant_id, referred_by,
             wsf_centres(name),
-            members(first_name, last_name, phone, email),
-            referrer:profiles!followup_referrals_referred_by_fkey(full_name)
+            members(first_name, last_name, phone, email)
           `)
           .eq("assigned_leader_id", user.id)
           .order("created_at", { ascending: false })
       );
       if (error) throw error;
-      return data;
+      const refIds = [...new Set((data || []).map(r => r.referred_by).filter(Boolean))];
+      let pmap = {};
+      if (refIds.length) {
+        const { data: profs } = await supabase
+          .from("profiles")
+          .select("user_id, full_name")
+          .in("user_id", refIds);
+        pmap = Object.fromEntries((profs || []).map(p => [p.user_id, p]));
+      }
+      return (data || []).map(r => ({ ...r, referrer: pmap[r.referred_by] || null }));
     },
   });
 
