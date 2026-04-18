@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import TenantDialogHeader from "@/components/ui/TenantDialogHeader";
 import { Button } from "@/components/ui/button";
@@ -65,17 +65,23 @@ export default function SignPostDialog({ open, onOpenChange, followup, member, o
     },
   });
 
-  // Suggest closest centre when switching to home cell type
+  // Suggest closest centre once when switching to home cell type
+  const suggestedOnceRef = useRef(false);
   useEffect(() => {
+    if (!open) { suggestedOnceRef.current = false; return; }
+    if (suggestedOnceRef.current) return;
     if (type === "home_cell_leader" && centres.length && !centreId && member) {
       const suggestion = suggestClosestWSFCentre(centres, {
         postcode: member.postcode,
         address: member.address,
         city: member.city,
       });
-      if (suggestion) setCentreId(suggestion.id);
+      if (suggestion) {
+        setCentreId(suggestion.id);
+        suggestedOnceRef.current = true;
+      }
     }
-  }, [type, centres, member, centreId]);
+  }, [open, type, centres, member, centreId]);
 
   const selectedCentre = useMemo(() => centres.find(c => c.id === centreId), [centres, centreId]);
   const suggestedCentre = useMemo(() => {
