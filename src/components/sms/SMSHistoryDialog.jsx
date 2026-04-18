@@ -51,7 +51,10 @@ function getTrialAccountHint(errorMessage) {
 export default function SMSHistoryDialog({ open, onOpenChange, defaultFilter = "All", channelFilter = null }) {
   const [typeFilter, setTypeFilter] = useState(defaultFilter);
   const [selectedLog, setSelectedLog] = useState(null);
+  const [refreshing, setRefreshing] = useState(false);
   const { tenantId } = useTenantQuery();
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
 
   const { data: logs = [], isLoading, error } = useQuery({
     queryKey: ["sms-logs", tenantId, typeFilter, channelFilter],
@@ -76,9 +79,35 @@ export default function SMSHistoryDialog({ open, onOpenChange, defaultFilter = "
     enabled: open && !!tenantId,
   });
 
-  const sentCount = logs.filter(l => l.status === "sent" || l.status === "delivered").length;
-  const failedCount = logs.filter(l => l.status === "failed").length;
-  const queuedCount = logs.filter(l => l.delivery_status === "queued" && l.status === "sent").length;
+  const sentCount = logs.filter(l => {
+    const sd = getStatusDisplay(l);
+    return sd.label === "Sent" || sd.label === "Delivered";
+  }).length;
+  const failedCount = logs.filter(l => l.status === "failed" || l.delivery_status === "failed" || l.delivery_status === "undelivered").length;
+
+  async function handleRefreshDelivery() {
+    if (!tenantId) return;
+    setRefreshing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("refresh-sms-status", {
+        body: { tenant_id: tenantId },
+      });
+      if (error) throw error;
+      toast({
+        title: "Delivery status refreshed",
+        description: `${data?.updated ?? 0} updated, ${data?.unchanged ?? 0} unchanged${data?.failed ? `, ${data.failed} failed` : ""}`,
+      });
+      queryClient.invalidateQueries({ queryKey: ["sms-logs", tenantId] });
+    } catch (e) {
+      toast({
+        title: "Refresh failed",
+        description: e?.message || "Could not refresh delivery status",
+        variant: "destructive",
+      });
+    } finally {
+      setRefreshing(false);
+    }
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -97,21 +126,23 @@ export default function SMSHistoryDialog({ open, onOpenChange, defaultFilter = "
               ))}
             </SelectContent>
           </Select>
-          <div className="flex gap-2 text-xs flex-wrap">
-            <Badge className="bg-chart-3/10 text-chart-3 border-0">{sentCount} sent</Badge>
-            {queuedCount > 0 && <Badge className="bg-muted text-muted-foreground border-0">{queuedCount} queued</Badge>}
-            {failedCount > 0 && <Badge className="bg-destructive/10 text-destructive border-0">{failedCount} failed</Badge>}
+          <div className="flex items-center gap-2">
+            <div className="flex gap-1.5 text-xs flex-wrap">
+              <Badge className="bg-chart-3/10 text-chart-3 border-0">{sentCount} sent</Badge>
+              {failedCount > 0 && <Badge className="bg-destructive/10 text-destructive border-0">{failedCount} failed</Badge>}
+            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={handleRefreshDelivery}
+              disabled={refreshing}
+              title="Refresh delivery status"
+            >
+              <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
+            </Button>
           </div>
         </div>
-
-        {queuedCount > 3 && (
-          <Alert className="mt-2">
-            <Info className="h-4 w-4" />
-            <AlertDescription className="text-xs">
-              Multiple messages are stuck in "queued" status. If using a Twilio trial account, ensure recipient numbers are verified in your Twilio console.
-            </AlertDescription>
-          </Alert>
-        )}
 
         <div className="flex-1 overflow-y-auto space-y-2 mt-3">
           {isLoading ? (
