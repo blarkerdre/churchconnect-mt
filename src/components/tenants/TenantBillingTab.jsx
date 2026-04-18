@@ -55,7 +55,7 @@ export default function TenantBillingTab({ tenant }) {
   const upsertSubMutation = useMutation({
     mutationFn: async (payload) => {
       if (subscription) {
-        const { error } = await supabase.from("tenant_subscriptions").update(payload).eq("id", subscription.id);
+        const { error } = await supabase.from("tenant_subscriptions").update(payload).eq("id", subscription.id).eq("tenant_id", tenantId);
         if (error) throw error;
       } else {
         const { error } = await supabase.from("tenant_subscriptions").insert({ tenant_id: tenantId, ...payload });
