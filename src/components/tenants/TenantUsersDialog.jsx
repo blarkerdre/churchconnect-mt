@@ -79,8 +79,8 @@ export default function TenantUsersDialog({ tenant, open, onOpenChange }) {
   const [addRole, setAddRole] = useState("member");
   const [search, setSearch] = useState("");
   const [pendingAction, setPendingAction] = useState(null);
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [verifying, setVerifying] = useState(false);
+  const [confirmToken, setConfirmToken] = useState("");
+  const [selectVersion, setSelectVersion] = useState(0);
 
   const { data: memberships = [], isLoading } = useQuery({
     queryKey: ["tenant-users", tenant?.id],
@@ -218,34 +218,37 @@ export default function TenantUsersDialog({ tenant, open, onOpenChange }) {
   };
 
   const requestAction = (action) => {
-    setConfirmPassword("");
+    setConfirmToken("");
     setPendingAction(action);
   };
 
   const closeConfirm = () => {
     setPendingAction(null);
-    setConfirmPassword("");
-    setVerifying(false);
+    setConfirmToken("");
+    // Force the role Select components to re-mount so they snap back to the actual DB role
+    setSelectVersion((v) => v + 1);
   };
 
-  const handleConfirm = async () => {
+  const getRequiredToken = (action) => {
+    if (!action) return null;
+    if (action.type === "remove") return "REMOVE";
+    if (action.type === "role") {
+      if (action.newRole === "owner") return "PROMOTE";
+      if (action.membership.role === "owner") return "DEMOTE";
+    }
+    return null;
+  };
+
+  const requiredToken = getRequiredToken(pendingAction);
+
+  const handleConfirm = () => {
     if (!pendingAction) return;
-    if (!confirmPassword) {
-      toast({ title: "Password required", description: "Enter your password to confirm.", variant: "destructive" });
-      return;
-    }
-    if (!user?.email) {
-      toast({ title: "Cannot verify identity", variant: "destructive" });
-      return;
-    }
-    setVerifying(true);
-    const { error } = await supabase.auth.signInWithPassword({
-      email: user.email,
-      password: confirmPassword,
-    });
-    if (error) {
-      setVerifying(false);
-      toast({ title: "Incorrect password", description: "Action cancelled.", variant: "destructive" });
+    if (requiredToken && confirmToken.trim().toUpperCase() !== requiredToken) {
+      toast({
+        title: `Type ${requiredToken} to confirm`,
+        description: "The confirmation text does not match.",
+        variant: "destructive",
+      });
       return;
     }
     if (pendingAction.type === "remove") {
@@ -361,6 +364,7 @@ export default function TenantUsersDialog({ tenant, open, onOpenChange }) {
                           </TableCell>
                           <TableCell>
                             <Select
+                              key={`${m.id}-${m.role}-${selectVersion}`}
                               value={m.role}
                               onValueChange={(newRole) => {
                                 if (newRole === m.role) return;
@@ -507,36 +511,34 @@ export default function TenantUsersDialog({ tenant, open, onOpenChange }) {
               </AlertDialogTitle>
               <AlertDialogDescription>{actionMeta.description}</AlertDialogDescription>
             </AlertDialogHeader>
-            <div className="space-y-2">
-              <Label htmlFor="confirm-password" className="text-sm">
-                Enter your password to confirm
-              </Label>
-              <Input
-                id="confirm-password"
-                type="password"
-                autoComplete="current-password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="Your account password"
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    handleConfirm();
-                  }
-                }}
-              />
-              <p className="text-xs text-muted-foreground">
-                Signed in as {user?.email}
-              </p>
-            </div>
+            {requiredToken ? (
+              <div className="space-y-2">
+                <Label htmlFor="confirm-token" className="text-sm">
+                  Type <span className="font-mono font-semibold">{requiredToken}</span> to confirm
+                </Label>
+                <Input
+                  id="confirm-token"
+                  autoComplete="off"
+                  value={confirmToken}
+                  onChange={(e) => setConfirmToken(e.target.value)}
+                  placeholder={requiredToken}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      handleConfirm();
+                    }
+                  }}
+                />
+              </div>
+            ) : null}
             <AlertDialogFooter>
-              <AlertDialogCancel disabled={verifying}>Cancel</AlertDialogCancel>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
               <AlertDialogAction
                 onClick={(e) => { e.preventDefault(); handleConfirm(); }}
-                disabled={verifying || !confirmPassword}
+                disabled={requiredToken ? confirmToken.trim().toUpperCase() !== requiredToken : false}
                 className={actionMeta.severity === "destructive" ? "bg-destructive text-destructive-foreground hover:bg-destructive/90" : ""}
               >
-                {verifying ? "Verifying..." : "Confirm"}
+                Confirm
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
