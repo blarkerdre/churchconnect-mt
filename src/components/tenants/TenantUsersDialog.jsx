@@ -218,34 +218,37 @@ export default function TenantUsersDialog({ tenant, open, onOpenChange }) {
   };
 
   const requestAction = (action) => {
-    setConfirmPassword("");
+    setConfirmToken("");
     setPendingAction(action);
   };
 
   const closeConfirm = () => {
     setPendingAction(null);
-    setConfirmPassword("");
-    setVerifying(false);
+    setConfirmToken("");
+    // Force the role Select components to re-mount so they snap back to the actual DB role
+    setSelectVersion((v) => v + 1);
   };
 
-  const handleConfirm = async () => {
+  const getRequiredToken = (action) => {
+    if (!action) return null;
+    if (action.type === "remove") return "REMOVE";
+    if (action.type === "role") {
+      if (action.newRole === "owner") return "PROMOTE";
+      if (action.membership.role === "owner") return "DEMOTE";
+    }
+    return null;
+  };
+
+  const requiredToken = getRequiredToken(pendingAction);
+
+  const handleConfirm = () => {
     if (!pendingAction) return;
-    if (!confirmPassword) {
-      toast({ title: "Password required", description: "Enter your password to confirm.", variant: "destructive" });
-      return;
-    }
-    if (!user?.email) {
-      toast({ title: "Cannot verify identity", variant: "destructive" });
-      return;
-    }
-    setVerifying(true);
-    const { error } = await supabase.auth.signInWithPassword({
-      email: user.email,
-      password: confirmPassword,
-    });
-    if (error) {
-      setVerifying(false);
-      toast({ title: "Incorrect password", description: "Action cancelled.", variant: "destructive" });
+    if (requiredToken && confirmToken.trim().toUpperCase() !== requiredToken) {
+      toast({
+        title: `Type ${requiredToken} to confirm`,
+        description: "The confirmation text does not match.",
+        variant: "destructive",
+      });
       return;
     }
     if (pendingAction.type === "remove") {
