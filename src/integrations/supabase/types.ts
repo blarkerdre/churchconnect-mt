@@ -1546,6 +1546,134 @@ export type Database = {
           },
         ]
       }
+      followup_referral_updates: {
+        Row: {
+          author_id: string | null
+          created_at: string
+          id: string
+          referral_id: string
+          status_change:
+            | Database["public"]["Enums"]["followup_referral_status"]
+            | null
+          tenant_id: string
+          update_text: string
+        }
+        Insert: {
+          author_id?: string | null
+          created_at?: string
+          id?: string
+          referral_id: string
+          status_change?:
+            | Database["public"]["Enums"]["followup_referral_status"]
+            | null
+          tenant_id: string
+          update_text: string
+        }
+        Update: {
+          author_id?: string | null
+          created_at?: string
+          id?: string
+          referral_id?: string
+          status_change?:
+            | Database["public"]["Enums"]["followup_referral_status"]
+            | null
+          tenant_id?: string
+          update_text?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "followup_referral_updates_referral_id_fkey"
+            columns: ["referral_id"]
+            isOneToOne: false
+            referencedRelation: "followup_referrals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "followup_referral_updates_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      followup_referrals: {
+        Row: {
+          assigned_leader_id: string | null
+          created_at: string
+          followup_id: string
+          id: string
+          member_id: string | null
+          notes: string | null
+          referral_type: Database["public"]["Enums"]["followup_referral_type"]
+          referred_by: string | null
+          status: Database["public"]["Enums"]["followup_referral_status"]
+          target_unit_name: string | null
+          target_wsf_centre_id: string | null
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_leader_id?: string | null
+          created_at?: string
+          followup_id: string
+          id?: string
+          member_id?: string | null
+          notes?: string | null
+          referral_type: Database["public"]["Enums"]["followup_referral_type"]
+          referred_by?: string | null
+          status?: Database["public"]["Enums"]["followup_referral_status"]
+          target_unit_name?: string | null
+          target_wsf_centre_id?: string | null
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_leader_id?: string | null
+          created_at?: string
+          followup_id?: string
+          id?: string
+          member_id?: string | null
+          notes?: string | null
+          referral_type?: Database["public"]["Enums"]["followup_referral_type"]
+          referred_by?: string | null
+          status?: Database["public"]["Enums"]["followup_referral_status"]
+          target_unit_name?: string | null
+          target_wsf_centre_id?: string | null
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "followup_referrals_followup_id_fkey"
+            columns: ["followup_id"]
+            isOneToOne: false
+            referencedRelation: "followups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "followup_referrals_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "followup_referrals_target_wsf_centre_id_fkey"
+            columns: ["target_wsf_centre_id"]
+            isOneToOne: false
+            referencedRelation: "wsf_centres"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "followup_referrals_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       followup_scheduled_messages: {
         Row: {
           channel: Database["public"]["Enums"]["followup_message_channel"]
@@ -3325,6 +3453,10 @@ export type Database = {
       is_admin:
         | { Args: { _user_id: string }; Returns: boolean }
         | { Args: { _tenant_id: string; _user_id: string }; Returns: boolean }
+      is_followup_team_member: {
+        Args: { _tenant_id: string; _user_id: string }
+        Returns: boolean
+      }
       is_tenant_admin: {
         Args: { _tenant_id: string; _user_id: string }
         Returns: boolean
@@ -3503,6 +3635,14 @@ export type Database = {
         | "sent"
         | "failed"
         | "cancelled"
+      followup_referral_status:
+        | "pending"
+        | "contacted"
+        | "engaged"
+        | "joined"
+        | "declined"
+        | "closed"
+      followup_referral_type: "unit_leader" | "home_cell_leader"
       followup_status: "Pending" | "In Progress" | "Completed" | "Overdue"
       followup_type:
         | "First Timer"
@@ -3673,6 +3813,15 @@ export const Constants = {
         "failed",
         "cancelled",
       ],
+      followup_referral_status: [
+        "pending",
+        "contacted",
+        "engaged",
+        "joined",
+        "declined",
+        "closed",
+      ],
+      followup_referral_type: ["unit_leader", "home_cell_leader"],
       followup_status: ["Pending", "In Progress", "Completed", "Overdue"],
       followup_type: [
         "First Timer",
