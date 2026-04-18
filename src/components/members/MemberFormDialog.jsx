@@ -25,6 +25,8 @@ import { useTenantQuery } from "@/hooks/useTenantQuery";
 import { useConsentText, renderConsentText } from "@/hooks/useConsentText";
 import MemberJourneyTimeline from "@/components/members/MemberJourneyTimeline";
 import DangerConfirmDialog from "@/components/exams/DangerConfirmDialog";
+import { diffUnitMembership, submitJoinRequests } from "@/hooks/usePendingJoinRequests";
+import { Info as InfoIcon } from "lucide-react";
 
 const STATUSES = ["Active", "New Convert", "First Timer", "Visitor"];
 const GENDERS = ["Male", "Female"];
@@ -264,9 +266,59 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
       };
 
       if (member) {
-        const { error } = await supabase.from("members").update(payload).eq("id", member.id).eq("tenant_id", tenantId);
-        if (error) throw error;
-        toast({ title: "Member updated" });
+        // Approval gate: non-admin edits queue unit/centre additions as pending requests.
+        // Admins keep direct override behaviour.
+        const isSelfEdit = member.user_id && member.user_id === currentUser?.id;
+        const requiresApproval = !isAdmin || isSelfEdit;
+        let queuedRequests = [];
+        if (requiresApproval && showChurchUnits) {
+          const diff = diffUnitMembership({
+            existingUnits: member.church_unit || "",
+            selectedUnits: payload.church_unit || "",
+            existingCentreId: member.wsf_centre_id || null,
+            selectedCentreId: payload.wsf_centre_id || null,
+          });
+          // Apply removals immediately, but strip additions from the payload —
+          // those become pending join requests.
+          const approvedUnits = (member.church_unit || "")
+            .split(",").map(s => s.trim()).filter(Boolean)
+            .filter(u => !diff.removedUnits.some(r => r.toLowerCase() === u.toLowerCase()));
+          payload.church_unit = approvedUnits.join(", ") || null;
+
+          if (diff.centreToRequest) {
+            // Don't change centre yet; keep existing
+            payload.wsf_centre_id = member.wsf_centre_id || null;
+            // If they switched on Home Cell but request is pending, leave winners_satellite as-is
+            if (!member.winners_satellite) payload.winners_satellite = false;
+          }
+
+          const { error } = await supabase.from("members").update(payload).eq("id", member.id).eq("tenant_id", tenantId);
+          if (error) throw error;
+
+          // Submit pending requests for additions
+          if (diff.unitsToRequest.length > 0 || diff.centreToRequest) {
+            const { inserted } = await submitJoinRequests({
+              tenantId,
+              memberId: member.id,
+              requestedBy: currentUser?.id,
+              unitsToRequest: diff.unitsToRequest,
+              centreToRequest: diff.centreToRequest,
+            });
+            queuedRequests = inserted;
+          }
+          if (queuedRequests.length > 0) {
+            toast({
+              title: "Member updated · approval pending",
+              description: `${queuedRequests.length} join request${queuedRequests.length === 1 ? "" : "s"} sent for leader approval.`,
+            });
+          } else {
+            toast({ title: "Member updated" });
+          }
+        } else {
+          const { error } = await supabase.from("members").update(payload).eq("id", member.id).eq("tenant_id", tenantId);
+          if (error) throw error;
+          toast({ title: "Member updated" });
+        }
       } else if (createAccount) {
         const { data, error } = await supabase.functions.invoke("admin-create-user", {
           body: {
@@ -374,6 +426,19 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
               </div>
             </div>
           </div>
+
+          {/* Approval-required banner — when editing existing member as non-admin OR self-edit */}
+          {member && (!isAdmin || (member.user_id && member.user_id === currentUser?.id)) && (showChurchUnits) && (
+            <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-3 flex gap-2.5 items-start">
+              <InfoIcon className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
+              <div className="text-xs text-amber-900 dark:text-amber-100">
+                <p className="font-medium mb-0.5">Leader approval required</p>
+                <p className="text-amber-800/80 dark:text-amber-100/80">
+                  Adding new units or a Home Cell centre will be sent to the leader for approval before taking effect. You can leave a unit or centre at any time.
+                </p>
+              </div>
+            </div>
+          )}
 
           {/* Church Units — only for Active/Inactive */}
           {showChurchUnits && (

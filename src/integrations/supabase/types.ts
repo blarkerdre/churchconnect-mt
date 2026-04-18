@@ -3083,6 +3083,76 @@ export type Database = {
           },
         ]
       }
+      unit_join_requests: {
+        Row: {
+          created_at: string
+          decline_reason: string | null
+          id: string
+          member_id: string
+          request_type: string
+          requested_by: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          tenant_id: string
+          unit_name: string | null
+          updated_at: string
+          wsf_centre_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          decline_reason?: string | null
+          id?: string
+          member_id: string
+          request_type: string
+          requested_by?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          tenant_id: string
+          unit_name?: string | null
+          updated_at?: string
+          wsf_centre_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          decline_reason?: string | null
+          id?: string
+          member_id?: string
+          request_type?: string
+          requested_by?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          tenant_id?: string
+          unit_name?: string | null
+          updated_at?: string
+          wsf_centre_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "unit_join_requests_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "unit_join_requests_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "unit_join_requests_wsf_centre_id_fkey"
+            columns: ["wsf_centre_id"]
+            isOneToOne: false
+            referencedRelation: "wsf_centres"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       unit_leader_assignments: {
         Row: {
           created_at: string
@@ -3394,14 +3464,26 @@ export type Database = {
         Args: { _invitation_id: string }
         Returns: undefined
       }
+      approve_join_request: {
+        Args: { p_request_id: string }
+        Returns: undefined
+      }
       auto_link_member_by_email:
         | { Args: { _email: string; _user_id: string }; Returns: string }
         | {
             Args: { _email: string; _tenant_id?: string; _user_id: string }
             Returns: string
           }
+      count_pending_join_requests_for_user: {
+        Args: { _tenant_id: string; _user_id: string }
+        Returns: number
+      }
       create_tenant_owner: {
         Args: { p_tenant_id: string; p_user_id: string }
+        Returns: undefined
+      }
+      decline_join_request: {
+        Args: { p_reason?: string; p_request_id: string }
         Returns: undefined
       }
       delete_email: {
@@ -3523,6 +3605,10 @@ export type Database = {
       }
       is_followup_team_member: {
         Args: { _tenant_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_home_cell_leader_for_centre: {
+        Args: { _centre_id: string; _tenant_id: string; _user_id: string }
         Returns: boolean
       }
       is_tenant_admin: {
