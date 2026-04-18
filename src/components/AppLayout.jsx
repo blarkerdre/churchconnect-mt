@@ -427,6 +427,7 @@ export default function Layout({ children }) {
         </DialogContent>
       </Dialog>
       <AppFeedbackDialog open={feedbackOpen} onOpenChange={setFeedbackOpen} />
+      <SignPostInboxDialog open={signpostInboxOpen} onOpenChange={setSignpostInboxOpen} />
     </div>
   );
 }
