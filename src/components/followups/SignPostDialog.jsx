@@ -62,7 +62,7 @@ export default function SignPostDialog({ open, onOpenChange, followup, member, o
   const [saving, setSaving] = useState(false);
 
   // Church units
-  const { data: units = [] } = useQuery({
+  const { data: units = [], isLoading: unitsLoading, error: unitsError } = useQuery({
     queryKey: ["church-units-active", tenantId],
     enabled: open && !!tenantId,
     queryFn: async () => {
@@ -70,7 +70,7 @@ export default function SignPostDialog({ open, onOpenChange, followup, member, o
         supabase.from("church_units").select("id, name").eq("is_active", true).order("name")
       );
       if (error) throw error;
-      return data;
+      return data || [];
     },
   });
 
