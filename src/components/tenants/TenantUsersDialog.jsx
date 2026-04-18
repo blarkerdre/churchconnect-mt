@@ -33,13 +33,20 @@ export default function TenantUsersDialog({ tenant, open, onOpenChange }) {
   const { data: memberships = [], isLoading } = useQuery({
     queryKey: ["tenant-users", tenant?.id],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data: rows, error } = await supabase
         .from("tenant_memberships")
-        .select("*, profiles(user_id, full_name, email)")
+        .select("*")
         .eq("tenant_id", tenant.id)
         .order("created_at", { ascending: true });
       if (error) throw error;
-      return data;
+      if (!rows?.length) return [];
+      const userIds = rows.map((r) => r.user_id);
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("user_id, full_name, email")
+        .in("user_id", userIds);
+      const byId = Object.fromEntries((profiles || []).map((p) => [p.user_id, p]));
+      return rows.map((r) => ({ ...r, profiles: byId[r.user_id] || null }));
     },
     enabled: !!tenant?.id && open,
   });
