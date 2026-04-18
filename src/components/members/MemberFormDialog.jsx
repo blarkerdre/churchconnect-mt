@@ -667,12 +667,27 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={handleSave} disabled={saving || !form.first_name || !form.last_name || (!member && !form.gdpr_consent) || (createAccount && !member && (!form.email || password.length < 6))}>
+          <Button onClick={handleSubmit} disabled={saving || !form.first_name || !form.last_name || (!member && !form.gdpr_consent) || (createAccount && !member && (!form.email || password.length < 6))}>
             {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
             {member ? "Update" : createAccount ? "Register & Create Account" : "Register"}
           </Button>
         </DialogFooter>
       </DialogContent>
+      <DangerConfirmDialog
+        open={confirmUpdateOpen}
+        onOpenChange={setConfirmUpdateOpen}
+        title="Confirm Member Update"
+        entityName={member ? `${member.first_name} ${member.last_name}` : ""}
+        confirmText="UPDATE"
+        confirmLabel="Update Member"
+        impacts={[
+          "You are about to modify this member's record.",
+          "Changes to status, church unit, or spiritual development fields may affect reports and analytics.",
+          "This action will be recorded in the audit log.",
+        ]}
+        isPending={saving}
+        onConfirm={handleSave}
+      />
     </Dialog>
   );
 }
