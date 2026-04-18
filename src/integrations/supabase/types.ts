@@ -3354,6 +3354,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      accept_tenant_invitation: {
+        Args: { _invitation_id: string }
+        Returns: undefined
+      }
       auto_link_member_by_email:
         | { Args: { _email: string; _user_id: string }; Returns: string }
         | {
