@@ -293,7 +293,7 @@ export default function UserManagement() {
 
                   const availableRoles = isSuperAdmin
                     ? ROLES
-                    : ROLES.filter(r => !["super_admin", "admin"].includes(r));
+                    : ROLES.filter(r => r !== "super_admin");
 
                   return (
                     <tr key={p.id} className={`border-b border-border hover:bg-muted/30 transition-colors ${isDisabled ? "opacity-60" : ""}`}>
@@ -434,7 +434,7 @@ export default function UserManagement() {
               <Select value={addForm.role} onValueChange={v => setAddForm(f => ({ ...f, role: v }))}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {(isSuperAdmin ? ROLES : ROLES.filter(r => !["super_admin", "admin"].includes(r))).map(r => (
+                  {(isSuperAdmin ? ROLES : ROLES.filter(r => r !== "super_admin")).map(r => (
                     <SelectItem key={r} value={r}>{roleLabels[r] || r.replace("_", " ")}</SelectItem>
                   ))}
                 </SelectContent>
