@@ -179,6 +179,8 @@ export default function CertificateTemplateSettings() {
   const setPos = (k, v) => setForm(f => ({ ...f, text_positions: { ...f.text_positions, [k]: Number(v) || 0 } }));
 
   const escapeXml = (str) => str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;");
+  const HEX_COLOR_RE = /^#[0-9a-fA-F]{6}$/;
+  const safeColor = (val, fallback) => (typeof val === "string" && HEX_COLOR_RE.test(val.trim()) ? val.trim() : fallback);
 
   const generatePreviewSvg = () => {
     const memberName = "John Doe";
@@ -188,8 +190,8 @@ export default function CertificateTemplateSettings() {
     const churchName = form.church_name || "Winners Chapel International Cardiff";
     const sigName = form.signatory_name || "";
     const sigTitle = form.signatory_title || "";
-    const bgColor = form.background_color || "#1a2d4d";
-    const accentColor = form.accent_color || "#c5a028";
+    const bgColor = safeColor(form.background_color, "#1a2d4d");
+    const accentColor = safeColor(form.accent_color, "#c5a028");
     const customMessage = form.custom_message || "This is to certify that the above named has successfully completed";
 
     if (form.background_image_url && previewUrl) {
