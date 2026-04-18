@@ -41,13 +41,16 @@ function getTrialAccountHint(errorMessage) {
 export default function SMSHistoryDialog({ open, onOpenChange, defaultFilter = "All", channelFilter = null }) {
   const [typeFilter, setTypeFilter] = useState(defaultFilter);
   const [selectedLog, setSelectedLog] = useState(null);
+  const { tenantId } = useTenantQuery();
 
-  const { data: logs = [], isLoading } = useQuery({
-    queryKey: ["sms-logs", typeFilter, channelFilter],
+  const { data: logs = [], isLoading, error } = useQuery({
+    queryKey: ["sms-logs", tenantId, typeFilter, channelFilter],
     queryFn: async () => {
+      if (!tenantId) return [];
       let query = supabase
         .from("sms_log")
         .select("*")
+        .eq("tenant_id", tenantId)
         .order("created_at", { ascending: false })
         .limit(100);
       if (typeFilter !== "All") {
@@ -60,7 +63,7 @@ export default function SMSHistoryDialog({ open, onOpenChange, defaultFilter = "
       if (error) throw error;
       return data;
     },
-    enabled: open,
+    enabled: open && !!tenantId,
   });
 
   const sentCount = logs.filter(l => l.status === "sent" || l.status === "delivered").length;
