@@ -5,7 +5,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
 import { useTenant } from "@/contexts/TenantContext";
 import { useNavigate } from "react-router-dom";
-import { Bell, Check, Trash2, Heart, Megaphone, CalendarDays, Info, ExternalLink } from "lucide-react";
+import { Bell, Check, Trash2, Heart, Megaphone, CalendarDays, Info, ExternalLink, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -22,6 +22,10 @@ const typeIcons = {
   general: Info,
 };
 
+const referenceTypeIcons = {
+  unit_join_request: UserPlus,
+};
+
 const typeLabels = {
   pastoral_care: "Pastoral Care",
   announcement: "Announcement",
@@ -30,6 +34,7 @@ const typeLabels = {
   followup: "Follow-up",
   transport: "Transport",
   meeting: "Meeting",
+  unit_join_request: "Join Request",
 };
 
 const referenceRoutes = {
@@ -126,7 +131,19 @@ export default function NotificationBell() {
       return;
     }
     const refType = selected.reference_type || selected.type;
-    const route = referenceRoutes[refType];
+    let route = referenceRoutes[refType];
+
+    // Join requests: leader-side titles (start with "New Join Request" or "Join Request")
+    // route to dashboard widget; member-side approval/decline notifications route to profile.
+    if (refType === "unit_join_request") {
+      const title = (selected.title || "").toLowerCase();
+      if (title.includes("approved") || title.includes("declined")) {
+        route = "/my-profile";
+      } else {
+        route = "/dashboard";
+      }
+    }
+
     if (route) {
       const fullRoute = tenantSlug ? `/t/${tenantSlug}${route}` : route;
       setSelected(null);
@@ -142,9 +159,18 @@ export default function NotificationBell() {
     }
   };
 
-  const Icon = selected ? (typeIcons[selected.type] || Info) : Info;
-  const refType = selected?.reference_type || selected?.type;
-  const hasRoute = refType && referenceRoutes[refType] && (!selected?.tenant_id || selected.tenant_id === tenantId);
+  const selectedRefType = selected?.reference_type || selected?.type;
+  const Icon = selected
+    ? (referenceTypeIcons[selectedRefType] || typeIcons[selected.type] || Info)
+    : Info;
+  const selectedLabel = selected
+    ? (typeLabels[selectedRefType] || typeLabels[selected.type] || selected.type || "Notification")
+    : "Notification";
+  const hasRoute = selected && (
+    selectedRefType === "unit_join_request"
+      ? (!selected.tenant_id || selected.tenant_id === tenantId)
+      : (selectedRefType && referenceRoutes[selectedRefType] && (!selected.tenant_id || selected.tenant_id === tenantId))
+  );
 
   return (
     <>
@@ -174,7 +200,7 @@ export default function NotificationBell() {
             ) : (
               <div className="divide-y divide-border">
                 {notifications.map(n => {
-                  const NIcon = typeIcons[n.type] || Info;
+                  const NIcon = referenceTypeIcons[n.reference_type] || typeIcons[n.type] || Info;
                   return (
                     <div
                       key={n.id}
@@ -214,7 +240,7 @@ export default function NotificationBell() {
             <div className="flex items-center gap-2 mb-1">
               <Icon className="h-5 w-5 text-primary" />
               <Badge variant="secondary" className="text-[10px]">
-                {typeLabels[selected?.type] || selected?.type || "Notification"}
+                {selectedLabel}
               </Badge>
             </div>
             <DialogTitle className="text-base">{selected?.title}</DialogTitle>
