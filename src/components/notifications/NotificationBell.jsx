@@ -200,7 +200,7 @@ export default function NotificationBell() {
             ) : (
               <div className="divide-y divide-border">
                 {notifications.map(n => {
-                  const NIcon = typeIcons[n.type] || Info;
+                  const NIcon = referenceTypeIcons[n.reference_type] || typeIcons[n.type] || Info;
                   return (
                     <div
                       key={n.id}
