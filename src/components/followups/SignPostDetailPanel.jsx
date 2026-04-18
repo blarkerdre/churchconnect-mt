@@ -349,7 +349,7 @@ export default function SignPostDetailPanel({ open, onClose, referralId, onCreat
                     <SelectTrigger className="h-8 text-xs flex-1">
                       <SelectValue placeholder="Keep current status" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="z-[80]" position="popper" sideOffset={4}>
                       {STATUS_OPTIONS.map(o => (
                         <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
                       ))}
