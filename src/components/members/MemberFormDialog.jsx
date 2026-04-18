@@ -427,6 +427,19 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
             </div>
           </div>
 
+          {/* Approval-required banner — when editing existing member as non-admin OR self-edit */}
+          {member && (!isAdmin || (member.user_id && member.user_id === currentUser?.id)) && (showChurchUnits) && (
+            <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-3 flex gap-2.5 items-start">
+              <InfoIcon className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
+              <div className="text-xs text-amber-900 dark:text-amber-100">
+                <p className="font-medium mb-0.5">Leader approval required</p>
+                <p className="text-amber-800/80 dark:text-amber-100/80">
+                  Adding new units or a Home Cell centre will be sent to the leader for approval before taking effect. You can leave a unit or centre at any time.
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* Church Units — only for Active/Inactive */}
           {showChurchUnits && (
             <div>
