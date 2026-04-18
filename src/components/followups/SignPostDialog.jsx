@@ -471,7 +471,7 @@ export default function SignPostDialog({ open, onOpenChange, followup, member, o
                   </Label>
                   <Select value={centreId} onValueChange={setCentreId}>
                     <SelectTrigger><SelectValue placeholder="Select centre" /></SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="z-[80]" position="popper" sideOffset={4}>
                       {centres.map(c => (
                         <SelectItem key={c.id} value={c.id}>
                           {c.name} {c.location ? `— ${c.location}` : c.city ? `— ${c.city}` : ""}
