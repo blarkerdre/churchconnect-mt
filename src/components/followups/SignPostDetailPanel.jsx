@@ -39,7 +39,7 @@ export default function SignPostDetailPanel({ open, onClose, referralId, onCreat
   const [statusChange, setStatusChange] = useState("");
   const [acting, setActing] = useState(false);
 
-  // Fetch full referral with member + centre + referrer profile
+  // Fetch full referral with member + centre
   const { data: referral, isLoading } = useQuery({
     queryKey: ["signpost-detail", referralId],
     enabled: !!referralId && open,
@@ -53,12 +53,19 @@ export default function SignPostDetailPanel({ open, onClose, referralId, onCreat
             id, first_name, last_name, phone, email, photo_url,
             membership_status, church_unit, wsf_centre_id, preferred_contact_modes,
             address, city, postcode
-          ),
-          referrer:profiles!followup_referrals_referred_by_fkey(full_name, email)
+          )
         `)
         .eq("id", referralId)
         .maybeSingle();
       if (error) throw error;
+      if (data?.referred_by) {
+        const { data: prof } = await supabase
+          .from("profiles")
+          .select("full_name, email")
+          .eq("user_id", data.referred_by)
+          .maybeSingle();
+        data.referrer = prof;
+      }
       return data;
     },
   });
@@ -69,11 +76,20 @@ export default function SignPostDetailPanel({ open, onClose, referralId, onCreat
     queryFn: async () => {
       const { data, error } = await supabase
         .from("followup_referral_updates")
-        .select("*, author:profiles!followup_referral_updates_author_id_fkey(full_name)")
+        .select("*")
         .eq("referral_id", referralId)
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return data;
+      const authorIds = [...new Set((data || []).map(u => u.author_id).filter(Boolean))];
+      let profileMap = {};
+      if (authorIds.length) {
+        const { data: profs } = await supabase
+          .from("profiles")
+          .select("user_id, full_name")
+          .in("user_id", authorIds);
+        profileMap = Object.fromEntries((profs || []).map(p => [p.user_id, p]));
+      }
+      return (data || []).map(u => ({ ...u, author: profileMap[u.author_id] || null }));
     },
   });
 
