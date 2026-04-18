@@ -11,8 +11,10 @@ import { Loader2, FileText } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useSubFeature } from "@/hooks/useSubFeature";
 import TrainingGapReport from "@/components/analytics/TrainingGapReport";
+import AnnouncementAnalytics from "@/components/analytics/AnnouncementAnalytics";
 import FeedbackSummary from "@/components/feedback/FeedbackSummary";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
+import { useAuth } from "@/hooks/useAuth";
 import { format, subMonths, startOfMonth, endOfMonth, parseISO } from "date-fns";
 
 const COLORS = [
@@ -27,6 +29,7 @@ export default function Analytics() {
   const [dateTo, setDateTo] = useState(format(new Date(), "yyyy-MM-dd"));
   const { enabled: canDownloadReport } = useSubFeature("analytics.download_report");
   const { tenantId, scopeQuery } = useTenantQuery();
+  const { isAdmin } = useAuth();
 
   // Attendance sessions + records
   const { data: sessions = [], isLoading: loadingSessions } = useQuery({
@@ -212,6 +215,7 @@ export default function Analytics() {
       <TabsList>
         <TabsTrigger value="overview">Overview</TabsTrigger>
         <TabsTrigger value="reports">Reports</TabsTrigger>
+        {isAdmin && <TabsTrigger value="announcements">Announcements</TabsTrigger>}
       </TabsList>
 
       <TabsContent value="overview" className="space-y-6">
@@ -357,6 +361,12 @@ export default function Analytics() {
         <TrainingGapReport members={members} />
         <FeedbackSummary />
       </TabsContent>
+
+      {isAdmin && (
+        <TabsContent value="announcements" className="space-y-6">
+          <AnnouncementAnalytics />
+        </TabsContent>
+      )}
     </Tabs>
   );
 }
