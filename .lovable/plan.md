@@ -1,59 +1,53 @@
 
-User is on `/index` (Landing) but the issue is about the SMS History dialog. Let me investigate what's actually happening.
+## Plan: Fix "queued" SMS and call statuses
 
-Looking at `src/components/sms/SMSHistoryDialog.jsx`:
-- Query: `supabase.from("sms_log").select("*").order("created_at", desc).limit(100)` with optional `.eq("sms_type", typeFilter)` and `.eq("channel", channelFilter)`.
-- **It does NOT filter by `tenant_id`**. This is unusual — the project's core rule (per memory `architecture/multi-tenancy/security-guards`) is that ALL queries must include explicit `.eq("tenant_id", tenantId)` guards.
-
-Let me check the `sms_log` table RLS — I need to verify by querying. But based on the codebase pattern and the symptom ("not showing"), the most likely causes are:
-
-1. **Missing tenant_id filter in the React Query** — even if RLS allows reads, the query may be silently failing or returning empty due to RLS denying rows that don't match a tenant access check.
-2. **RLS on `sms_log`** likely requires `user_has_tenant_access(tenant_id)` or `is_admin(...)`. If the current user isn't admin/leader OR the query doesn't hit the right rows, results = `[]`.
-3. The dialog is opened from somewhere (likely Communications/SystemLogs) — need to confirm `open` is true and query is enabled.
-
-I should investigate the actual `sms_log` RLS, recent rows, and where `SMSHistoryDialog` is rendered.
-
-## Investigation steps (read-only)
-1. `supabase--read_query` → check `sms_log` RLS policies + row count for current tenant.
-2. `code--search_files` → find where `SMSHistoryDialog` is opened and confirm filters passed.
-3. Check console/network for errors.
-
-## Likely fix
-Add tenant scoping to the query:
-```js
-const { tenantId } = useTenantQuery();
-// ...
-queryKey: ["sms-logs", tenantId, typeFilter, channelFilter],
-queryFn: async () => {
-  if (!tenantId) return [];
-  let query = supabase
-    .from("sms_log")
-    .select("*")
-    .eq("tenant_id", tenantId)
-    .order("created_at", { ascending: false })
-    .limit(100);
-  // ...filters
-}
-enabled: open && !!tenantId,
-```
-
-Also surface query errors to the user (currently `error` from `useQuery` is ignored — show an inline error state so we can debug RLS denials immediately).
-
-## Plan
+### Root causes
+1. **SMS** — Older messages were sent without a `StatusCallback` URL or before the webhook was reachable, so `delivery_status` is stuck at `queued` even though Twilio actually delivered them. Recent sends (Apr 18) update correctly.
+2. **Calls** — `make-call` inserts `status: 'queued'` but never sends a `StatusCallback` to Twilio, and `twilio-webhook` only handles SMS — so calls have no way to ever leave "queued".
 
 ### Fix
-**Edit** `src/components/sms/SMSHistoryDialog.jsx`:
-1. Import `useTenantQuery`, get `tenantId`.
-2. Add `.eq("tenant_id", tenantId)` to the query.
-3. Include `tenantId` in `queryKey`; gate `enabled: open && !!tenantId`.
-4. Capture `error` from `useQuery` and render an inline error message in the list area so RLS/permission failures are visible instead of silent empty state.
-5. Improve empty state copy to distinguish "no logs yet" vs "loading" vs "error".
 
-### Verify
-After the edit, open SMS History from Communications and System Logs and confirm rows render. If still empty, the RLS on `sms_log` for the calling user's role is the next layer to inspect (would require a migration to adjust policy).
+#### A. Display fix (immediate, no waiting on Twilio)
+**Edit** `src/components/sms/SMSHistoryDialog.jsx`:
+- In `getStatusDisplay`: when `status === 'sent'` and `delivery_status` is `queued`/`accepted`/`scheduled`/`null`, label as **"Sent"** (not "Queued"). True queued state only when message was just submitted within last ~2 minutes.
+- Remove the "Multiple messages stuck in queued" alert banner — replace with a **Refresh status** button (next item).
+
+#### B. Manual status refresh for stuck SMS
+**New edge function** `supabase/functions/refresh-sms-status/index.ts`:
+- Auth: tenant admin only.
+- Inputs: `tenant_id`, optional `message_sids[]` or "all stuck in last 30 days".
+- For each row with `status='sent'` AND `delivery_status` IN (`queued`,`accepted`,`sending`,null) AND `message_sid` NOT NULL AND `provider='twilio'`:
+  - GET `https://connector-gateway.lovable.dev/twilio/Messages/{Sid}.json`
+  - Update `sms_log` with the live `status` from Twilio (`delivered`/`failed`/`undelivered`/`sent`) into `delivery_status` + mirror into `status` when terminal.
+- Return `{ updated, unchanged, failed }`.
+
+**Edit** `SMSHistoryDialog.jsx`: add a small **"Refresh delivery"** button (top-right of header) that invokes this function and refetches the list.
+
+#### C. Call status callbacks
+**Edit** `supabase/functions/make-call/index.ts`:
+- For Twilio branch, add `StatusCallback`, `StatusCallbackEvent` (`initiated completed`), `StatusCallbackMethod=POST` to the params, pointing at the existing `twilio-webhook`.
+
+**Edit** `supabase/functions/twilio-webhook/index.ts`:
+- Detect `CallSid` + `CallStatus` in the form params (in addition to `MessageSid`). When present:
+  - Map Twilio statuses (`queued/ringing/in-progress/completed/busy/failed/no-answer/canceled`) → our `call_log.status`.
+  - `UPDATE call_log SET status=?, updated_at=now() WHERE provider_call_id = CallSid AND tenant_id = (resolved via the existing row)`.
+- Keep existing SMS branch untouched.
+
+**Migration**: add `delivery_status text`, `delivery_updated_at timestamptz` columns to `call_log` if not present, plus an `updated_at` column with default `now()` (currently missing — caused our earlier query error). Add an UPDATE trigger to bump `updated_at`.
+
+#### D. Polish: surface in CallHistoryDialog (if exists) the same way
+Quick scan — if a call history dialog exists, apply the same display normalization (`queued` < 2min = Pending, otherwise "Initiated").
 
 ### Files
-- **Edit**: `src/components/sms/SMSHistoryDialog.jsx`
+**New**
+- `supabase/functions/refresh-sms-status/index.ts`
+- `supabase/migrations/<ts>_call_log_delivery_columns.sql`
+
+**Edit**
+- `src/components/sms/SMSHistoryDialog.jsx`
+- `supabase/functions/make-call/index.ts`
+- `supabase/functions/twilio-webhook/index.ts`
 
 ### Out of scope
-- RLS policy changes on `sms_log` (only if the tenant-scope fix doesn't resolve it after testing).
+- Backfilling call statuses for the single existing stuck call (one row, can be done manually if needed).
+- Provider-side status polling for non-Twilio providers (Africa's Talking / Termii) — they have different callback patterns; can be added later if needed.
