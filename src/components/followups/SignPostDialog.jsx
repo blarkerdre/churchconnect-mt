@@ -317,15 +317,18 @@ export default function SignPostDialog({ open, onOpenChange, followup, member, o
       <DialogPortal>
         <DialogOverlay className="z-[65] bg-black/60" />
         <DialogPrimitive.Content
-          className="fixed left-[50%] top-[50%] z-[70] grid w-full max-w-md translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-lg max-h-[90vh] overflow-y-auto sm:rounded-lg data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95"
+          className="fixed left-[50%] top-[50%] z-[70] flex flex-col w-full max-w-md translate-x-[-50%] translate-y-[-50%] border bg-background shadow-lg max-h-[90vh] sm:rounded-lg data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 overflow-hidden"
         >
-        <TenantDialogHeader>
-          <Sparkles className="h-4 w-4" /> Sign-Post {followup?.person_name || "Member"}
-        </TenantDialogHeader>
-        <DialogDescription className="sr-only">
-          Refer this follow-up to a unit leader or home cell centre.
-        </DialogDescription>
+        <div className="p-6 pb-3 shrink-0">
+          <TenantDialogHeader>
+            <Sparkles className="h-4 w-4" /> Sign-Post {followup?.person_name || "Member"}
+          </TenantDialogHeader>
+          <DialogDescription className="sr-only">
+            Refer this follow-up to a unit leader or home cell centre.
+          </DialogDescription>
+        </div>
 
+        <div className="flex-1 overflow-y-auto px-6 pb-4">
         <DialogErrorBoundary onClose={() => handleOpenChange(false)}>
           {!tenantId ? (
             <div className="flex items-center gap-2 rounded-md border border-border bg-muted/40 p-3">
@@ -390,7 +393,7 @@ export default function SignPostDialog({ open, onOpenChange, followup, member, o
                   ) : (
                     <Select value={unitName} onValueChange={(v) => { setUnitName(v); setUnitLeaderId(""); }}>
                       <SelectTrigger><SelectValue placeholder={unitsLoading ? "Loading units…" : "Select unit"} /></SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="z-[80]" position="popper" sideOffset={4}>
                         {units.map(u => <SelectItem key={u.id} value={u.name}>{u.name}</SelectItem>)}
                       </SelectContent>
                     </Select>
@@ -414,7 +417,7 @@ export default function SignPostDialog({ open, onOpenChange, followup, member, o
                     ) : (
                       <Select value={unitLeaderId} onValueChange={setUnitLeaderId}>
                         <SelectTrigger><SelectValue placeholder="Select leader" /></SelectTrigger>
-                        <SelectContent>
+                        <SelectContent className="z-[80]" position="popper" sideOffset={4}>
                           {unitLeaders.map(l => (
                             <SelectItem key={l.user_id} value={l.user_id}>
                               {l.full_name || l.email}
@@ -468,7 +471,7 @@ export default function SignPostDialog({ open, onOpenChange, followup, member, o
                   </Label>
                   <Select value={centreId} onValueChange={setCentreId}>
                     <SelectTrigger><SelectValue placeholder="Select centre" /></SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="z-[80]" position="popper" sideOffset={4}>
                       {centres.map(c => (
                         <SelectItem key={c.id} value={c.id}>
                           {c.name} {c.location ? `— ${c.location}` : c.city ? `— ${c.city}` : ""}
@@ -511,6 +514,29 @@ export default function SignPostDialog({ open, onOpenChange, followup, member, o
               </div>
             )}
 
+            {/* Inline confirmation of who will receive the sign-post */}
+            {(() => {
+              const ready =
+                (type === "unit_leader" && unitName && unitLeaderId) ||
+                (type === "home_cell_leader" && selectedCentre && centreLeader?.linked);
+              if (!ready) return null;
+              const leaderName =
+                type === "unit_leader"
+                  ? (unitLeaders.find(l => l.user_id === unitLeaderId)?.full_name ||
+                     unitLeaders.find(l => l.user_id === unitLeaderId)?.email ||
+                     "Selected leader")
+                  : centreLeader?.name;
+              const target = type === "unit_leader" ? unitName : selectedCentre?.name;
+              return (
+                <div className="rounded-lg border border-primary/40 bg-primary/5 p-2.5 flex items-start gap-2">
+                  <UserCircle2 className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+                  <p className="text-xs text-foreground">
+                    Will be sent to <strong>{leaderName}</strong> for <strong>{target}</strong>.
+                  </p>
+                </div>
+              );
+            })()}
+
             <div className="space-y-1.5">
               <Label className="text-xs">Notes for the leader (optional)</Label>
               <Textarea
@@ -520,17 +546,20 @@ export default function SignPostDialog({ open, onOpenChange, followup, member, o
                 rows={3}
               />
             </div>
-
-            <div className="flex justify-end gap-2 pt-2">
-              <Button variant="ghost" onClick={() => handleOpenChange(false)}>Cancel</Button>
-              <Button onClick={handleSubmit} disabled={saving}>
-                {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
-                Sign-Post
-              </Button>
-            </div>
           </div>
           )}
         </DialogErrorBoundary>
+        </div>
+
+        {/* Sticky footer — always visible */}
+        <div className="shrink-0 border-t border-border bg-background px-6 py-3 flex justify-end gap-2">
+          <Button variant="ghost" onClick={() => handleOpenChange(false)}>Cancel</Button>
+          <Button onClick={handleSubmit} disabled={saving || !tenantId}>
+            {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
+            Sign-Post
+          </Button>
+        </div>
+
         <DialogPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
           <X className="h-4 w-4" />
           <span className="sr-only">Close</span>
