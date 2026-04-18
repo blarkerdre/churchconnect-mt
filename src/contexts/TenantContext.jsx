@@ -67,42 +67,25 @@ export function TenantProvider({ children }) {
   const acceptPendingInvitations = useCallback(async (userId, email) => {
     if (!email) return;
     try {
+      // Look up pending invitations for this user's email
       const { data: invitations } = await supabase
         .from("tenant_invitations")
-        .select("id, tenant_id, role")
+        .select("id")
         .eq("email", email.toLowerCase())
         .eq("status", "pending");
 
       if (!invitations || invitations.length === 0) return;
 
+      // Use the secure RPC that validates and consumes each invitation atomically.
+      // This replaces the previous client-side insert pattern, which was vulnerable
+      // to self-assigning roles by replaying matching invitation rows.
       for (const inv of invitations) {
-        // Check if already a member
-        const { data: existing } = await supabase
-          .from("tenant_memberships")
-          .select("id")
-          .eq("tenant_id", inv.tenant_id)
-          .eq("user_id", userId)
-          .maybeSingle();
-
-        if (!existing) {
-          await supabase.from("tenant_memberships").insert({
-            tenant_id: inv.tenant_id,
-            user_id: userId,
-            role: inv.role || "member",
-          });
-
-          // Also create user_roles entry for tenant access
-          await supabase.from("user_roles").insert({
-            user_id: userId,
-            role: "member",
-            tenant_id: inv.tenant_id,
-          });
+        const { error } = await supabase.rpc("accept_tenant_invitation", {
+          _invitation_id: inv.id,
+        });
+        if (error) {
+          console.warn("accept_tenant_invitation failed:", inv.id, error.message);
         }
-
-        await supabase
-          .from("tenant_invitations")
-          .update({ status: "accepted" })
-          .eq("id", inv.id);
       }
     } catch (err) {
       console.error("Error accepting pending invitations:", err);
