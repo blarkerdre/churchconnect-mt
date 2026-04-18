@@ -121,20 +121,21 @@ export default function ExamManagement() {
     onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
 
-  // Questions — scoped to selected subject
+  // Questions — scoped to selected subject. Uses admin RPC so the
+  // correct_answer column (revoked from authenticated SELECT for security)
+  // is returned for admin authoring/review only.
   const { data: questions = [], isLoading } = useQuery({
     queryKey: ["exam-questions-by-subject", selectedSubject?.id, tenantId],
     queryFn: async () => {
-      const { data, error } = await scopeQuery(supabase
-        .from("exam_questions")
-        .select("*")
-        .eq("subject_id", selectedSubject.id)
-        .order("sort_order")
-        .order("created_at"));
+      const { data, error } = await supabase.rpc("get_exam_questions_with_answers", {
+        _tenant_id: tenantId,
+        _subject_id: selectedSubject.id,
+        _training_type: null,
+      });
       if (error) throw error;
-      return data;
+      return data || [];
     },
-    enabled: !!selectedSubject?.id,
+    enabled: !!selectedSubject?.id && !!tenantId,
   });
 
   const saveMutation = useMutation({
