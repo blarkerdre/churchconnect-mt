@@ -1,45 +1,31 @@
 
 
-## Plan: Lock down remaining tenant-scoping gaps
+## Root cause
 
-After auditing all client-side queries and edge functions, the codebase is already well-scoped via `useTenantQuery`. There are 8 specific gaps where mutations target a row by `id` only (no `.eq("tenant_id", tenantId)` guard). RLS already protects most of these, but defense-in-depth requires explicit guards per the project rule.
+In `NotificationBell.jsx` (line 143), join-request notifications navigate to `/t/:tenantSlug/dashboard`. But `AppPages` in `src/App.jsx` mounts the dashboard at `/`, not `/dashboard`. There is no `/dashboard` route, so it falls through to the catch-all `<Route path="*" element={<Navigate to="/" replace />} />`, which lands on the public **LandingPage** (mounted at `/` outside the auth wrapper).
 
-### Client-side gaps (8 mutations to fix)
+## Fix
 
-| # | File | Line | Issue |
-|---|---|---|---|
-| 1 | `src/pages/ExamManagement.jsx` | 241 | `exam_titles` toggle — update by id only |
-| 2 | `src/components/exams/ExamSessionManager.jsx` | 111 | `exam_sessions` update by id only |
-| 3 | `src/components/profile/MemberFeed.jsx` | 45 | `announcement_reactions` delete by id only |
-| 4 | `src/components/profile/MemberFeed.jsx` | 141 | `event_reactions` delete by id only |
-| 5 | `src/components/users/WSFLeaderAssignments.jsx` | 61 | `wsf_centres` update leader by id only |
-| 6 | `src/components/users/WSFLeaderAssignments.jsx` | 76 | `wsf_centres` clear leader by id only |
-| 7 | `src/components/tenants/TenantBillingTab.jsx` | 58 | `tenant_subscriptions` update — needs `.eq("tenant_id", tenantId)` |
-| 8 | `src/components/tenants/TenantBillingTab.jsx` | 96 | `tenants` update by id — already targets a tenant id, leave as-is (super-admin scope) |
+In `src/components/notifications/NotificationBell.jsx`, change the leader-side join-request route from `/dashboard` to `/` (which is the actual authenticated dashboard inside `AppPages`).
 
-For each, append `.eq("tenant_id", tenantId)` so a misrouted id can never write across tenants.
+```js
+// Line 143 — before:
+route = "/dashboard";
+// after:
+route = "/";
+```
 
-### Intentionally NOT changed
-- `src/pages/TenantAdmin.jsx` `tenants.update` — Super-Admin cross-tenant tool (per `mem://architecture/tenant-scoping-exceptions`).
-- `src/pages/SermonNotes.jsx` `sermon_notes` delete — already scoped by `user_id = auth.uid()`, which is stronger than tenant_id.
+The tenant prefix logic (`tenantSlug ? '/t/${tenantSlug}${route}' : route`) already produces `/t/:slug/` correctly when `route === "/"`.
 
-### Edge-function review
-- `twilio-webhook`, `handle-email-suppression`, `handle-email-unsubscribe`, `admin-delete-user` correctly look up rows by globally-unique provider IDs / auth user IDs. They don't need tenant guards — adding them would break webhook delivery (Twilio doesn't know our tenant). **No changes.**
-- `notify-join-request` (just fixed for unsubscribe tokens) and `refresh-sms-status` (newly added) already filter by `tenant_id` from the validated payload.
-- All `notify-*` / `send-*` functions: already pass `tenant_id` and filter their queries by it.
+## Why not add a `/dashboard` route instead?
 
-### System Logs page (already scoped — no changes)
-All five tabs (Email, SMS, WhatsApp, Calls, Audit) already use `scopeQuery(...)` from `useTenantQuery`. Verified.
+Could also alias `/dashboard → Dashboard` in `AppPages`, but every other piece of the app (sidebar, redirects, login) already treats `/` as the dashboard. Changing the notification route is the smaller, consistent fix.
 
-### Files
+## Files
 **Edit**
-- `src/pages/ExamManagement.jsx`
-- `src/components/exams/ExamSessionManager.jsx`
-- `src/components/profile/MemberFeed.jsx`
-- `src/components/users/WSFLeaderAssignments.jsx`
-- `src/components/tenants/TenantBillingTab.jsx`
+- `src/components/notifications/NotificationBell.jsx` — one-line change on line 143
 
-### Out of scope
-- Refactoring all queries to use `scopeQuery` everywhere (only adding the missing guards).
-- Changing RLS policies — current policies already enforce isolation; this adds belt-and-braces at the query layer.
+## Out of scope
+- Adding `/dashboard` as an alias route
+- Auditing other places that might use `/dashboard` (none found in `App.jsx`)
 
