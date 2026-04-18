@@ -207,6 +207,42 @@ Deno.serve(async (req) => {
       // Email
       if (recipientEmail) {
         const messageId = `join-req-${request_id || crypto.randomUUID()}-${uid}`;
+        const normalizedEmail = recipientEmail.trim().toLowerCase();
+
+        // Get or create unsubscribe token (one per email address)
+        let unsubscribeToken: string | null = null;
+        {
+          const { data: existing } = await supabase
+            .from("email_unsubscribe_tokens")
+            .select("token")
+            .eq("email", normalizedEmail)
+            .is("used_at", null)
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          if (existing?.token) {
+            unsubscribeToken = existing.token;
+          } else {
+            const newToken = crypto.randomUUID();
+            const { error: insErr } = await supabase
+              .from("email_unsubscribe_tokens")
+              .insert({ email: normalizedEmail, token: newToken });
+            if (insErr) {
+              // Race: re-read
+              const { data: again } = await supabase
+                .from("email_unsubscribe_tokens")
+                .select("token")
+                .eq("email", normalizedEmail)
+                .is("used_at", null)
+                .order("created_at", { ascending: false })
+                .limit(1)
+                .maybeSingle();
+              unsubscribeToken = again?.token || newToken;
+            } else {
+              unsubscribeToken = newToken;
+            }
+          }
+        }
         const html = `
 <!DOCTYPE html>
 <html><head><meta charset="utf-8"></head>
@@ -248,6 +284,7 @@ Deno.serve(async (req) => {
           idempotency_key: messageId,
           queued_at: new Date().toISOString(),
           tenant_id,
+          unsubscribe_token: unsubscribeToken,
         };
         const { error: enqErr } = await supabase.rpc("enqueue_email", {
           queue_name: "transactional_emails",
