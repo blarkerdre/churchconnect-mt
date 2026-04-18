@@ -24,6 +24,7 @@ import { logAudit } from "@/lib/audit";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
 import { useConsentText, renderConsentText } from "@/hooks/useConsentText";
 import MemberJourneyTimeline from "@/components/members/MemberJourneyTimeline";
+import DangerConfirmDialog from "@/components/exams/DangerConfirmDialog";
 
 const STATUSES = ["Active", "New Convert", "First Timer", "Visitor"];
 const GENDERS = ["Male", "Female"];
@@ -61,6 +62,7 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
   const [createAccount, setCreateAccount] = useState(false);
   const [password, setPassword] = useState("");
   const [accountRole, setAccountRole] = useState("member");
+  const [confirmUpdateOpen, setConfirmUpdateOpen] = useState(false);
 
   const showChurchUnits = !HIDE_SPIRITUAL_STATUSES.includes(form.membership_status);
   const showSpiritualDev = !HIDE_SPIRITUAL_STATUSES.includes(form.membership_status);
