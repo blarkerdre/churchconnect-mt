@@ -24,8 +24,11 @@ Deno.serve(async (req) => {
     const messageStatus = params["MessageStatus"];
     const errorCode = params["ErrorCode"];
     const errorMessage = params["ErrorMessage"];
+    const callSid = params["CallSid"];
+    const callStatus = params["CallStatus"];
+    const callDuration = params["CallDuration"];
 
-    console.log(`Twilio webhook received: AccountSid=${accountSid}, SID=${messageSid}, Status=${messageStatus}`);
+    console.log(`Twilio webhook: AccountSid=${accountSid}, MessageSID=${messageSid}, MessageStatus=${messageStatus}, CallSID=${callSid}, CallStatus=${callStatus}`);
 
     // Create Supabase client early (needed for fallback validation)
     const supabase = createClient(
