@@ -1,11 +1,12 @@
 import React, { useState, useMemo, useEffect, useRef } from "react";
-import { Dialog, DialogContent, DialogDescription } from "@/components/ui/dialog";
+import { Dialog, DialogPortal, DialogOverlay, DialogDescription } from "@/components/ui/dialog";
+import * as DialogPrimitive from "@radix-ui/react-dialog";
 import TenantDialogHeader from "@/components/ui/TenantDialogHeader";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Users, Home, Sparkles, MapPin, UserCircle2, AlertTriangle } from "lucide-react";
+import { Loader2, Users, Home, Sparkles, MapPin, UserCircle2, AlertTriangle, X } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
