@@ -47,7 +47,7 @@ class DialogErrorBoundary extends React.Component {
 }
 
 export default function SignPostDialog({ open, onOpenChange, followup, member, onCreated, defaultType = "unit_leader" }) {
-  const { tenantId, scopeQuery } = useTenantQuery();
+  const { tenantId, scopeQuery, withTenant } = useTenantQuery();
   const { user } = useAuth();
   const [type, setType] = useState(defaultType);
 
@@ -96,13 +96,17 @@ export default function SignPostDialog({ open, onOpenChange, followup, member, o
     unitsErrorToastRef.current = key;
   }, [open, unitsError]);
 
-  // Unit leaders for the selected unit
+  // Unit leaders for the selected unit — explicit tenant_id guard
   const { data: unitLeaders = [] } = useQuery({
     queryKey: ["unit-leaders", tenantId, unitName],
     enabled: open && !!tenantId && !!unitName && type === "unit_leader",
     queryFn: async () => {
       const { data, error } = await scopeQuery(
-        supabase.from("unit_leader_assignments").select("user_id").eq("unit_name", unitName)
+        supabase
+          .from("unit_leader_assignments")
+          .select("user_id")
+          .eq("unit_name", unitName)
+          .eq("tenant_id", tenantId)
       );
       if (error) throw error;
       const ids = [...new Set((data || []).map(r => r.user_id))];
@@ -112,13 +116,18 @@ export default function SignPostDialog({ open, onOpenChange, followup, member, o
     },
   });
 
-  // Home cell centres
+  // Home cell centres — explicit tenant_id guard
   const { data: centres = [] } = useQuery({
     queryKey: ["wsf-centres-active", tenantId],
     enabled: open && !!tenantId && type === "home_cell_leader",
     queryFn: async () => {
       const { data, error } = await scopeQuery(
-        supabase.from("wsf_centres").select("*").eq("is_active", true).order("name")
+        supabase
+          .from("wsf_centres")
+          .select("*")
+          .eq("is_active", true)
+          .eq("tenant_id", tenantId)
+          .order("name")
       );
       if (error) throw error;
       return data;
@@ -159,10 +168,16 @@ export default function SignPostDialog({ open, onOpenChange, followup, member, o
     queryKey: ["centre-leader", selectedCentre?.leader_id, tenantId],
     enabled: type === "home_cell_leader" && !!selectedCentre?.leader_id,
     queryFn: async () => {
+  // Resolve the leader for the currently-selected centre — explicit tenant guard on members
+  const { data: centreLeader } = useQuery({
+    queryKey: ["centre-leader", selectedCentre?.leader_id, tenantId],
+    enabled: type === "home_cell_leader" && !!selectedCentre?.leader_id && !!tenantId,
+    queryFn: async () => {
       const { data: m } = await supabase
         .from("members")
         .select("user_id, first_name, last_name")
         .eq("id", selectedCentre.leader_id)
+        .eq("tenant_id", tenantId)
         .maybeSingle();
       const fallbackName = `${m?.first_name ?? ""} ${m?.last_name ?? ""}`.trim() || null;
       if (!m?.user_id) return { name: fallbackName, linked: false };
@@ -269,6 +284,7 @@ export default function SignPostDialog({ open, onOpenChange, followup, member, o
         .from("members")
         .select("user_id")
         .eq("id", centre.leader_id)
+        .eq("tenant_id", tenantId)
         .maybeSingle();
       if (leaderErr) {
         console.error("[SignPost] leader lookup failed", leaderErr);
@@ -282,10 +298,12 @@ export default function SignPostDialog({ open, onOpenChange, followup, member, o
       payload.assigned_leader_id = assignedLeader;
     }
 
-    console.log("[SignPost] inserting referral", payload);
+    // Belt-and-braces: ensure tenant_id is present on the insert payload
+    const finalPayload = withTenant(payload);
+    console.log("[SignPost] inserting referral", finalPayload);
     setSaving(true);
     try {
-      const { data, error } = await supabase.from("followup_referrals").insert(payload).select().maybeSingle();
+      const { data, error } = await supabase.from("followup_referrals").insert(finalPayload).select().maybeSingle();
       if (error) {
         console.error("[SignPost] insert error", error, "payload:", payload);
         throw error;
