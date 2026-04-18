@@ -100,6 +100,12 @@ export default function ReferralTimeline({ followupId, profileMap = {} }) {
         const refUpdates = updatesByRef[r.id] || [];
         const isExpanded = expanded[r.id];
         const canUpdate = r.assigned_leader_id === user?.id || r.referred_by === user?.id;
+        const leader = r.assigned_leader_id ? leaderMap[r.assigned_leader_id] : null;
+        const leaderName = leader?.full_name || profileMap[r.assigned_leader_id];
+        const roleLabel = isUnit ? "Unit Leader" : "Home Cell Leader";
+        const centreAddress = !isUnit
+          ? [r.wsf_centres?.address, r.wsf_centres?.postcode].filter(Boolean).join(", ")
+          : "";
 
         return (
           <div key={r.id} className="bg-muted/40 rounded-lg p-3 space-y-2">
@@ -112,12 +118,51 @@ export default function ReferralTimeline({ followupId, profileMap = {} }) {
                   <p className="text-sm font-medium text-foreground truncate">{target}</p>
                   <p className="text-[11px] text-muted-foreground">
                     {sub && <span>{sub} · </span>}
-                    {profileMap[r.assigned_leader_id] || "Leader"}
-                    <span> · {format(new Date(r.created_at), "dd MMM")}</span>
+                    <span>{format(new Date(r.created_at), "dd MMM")}</span>
                   </p>
                 </div>
               </div>
               <Badge className={`text-[10px] border-0 ${statusColors[r.status] || ""}`}>{r.status}</Badge>
+            </div>
+
+            {/* Assigned Leader block */}
+            <div className="bg-background/60 border border-border/50 rounded-md p-2.5 space-y-1.5">
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Assigned Leader</p>
+              {leader || leaderName ? (
+                <div className="flex items-start gap-2.5">
+                  <Avatar className="h-9 w-9 shrink-0">
+                    <AvatarImage src={leader?.avatar_url || undefined} alt={leaderName || "Leader"} />
+                    <AvatarFallback className="text-xs bg-primary/10 text-primary">{getInitials(leaderName)}</AvatarFallback>
+                  </Avatar>
+                  <div className="min-w-0 flex-1 space-y-1">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <p className="text-sm font-semibold text-foreground truncate">{leaderName || "Leader"}</p>
+                      <Badge variant="outline" className="text-[9px] py-0 px-1.5 h-4">{roleLabel}</Badge>
+                    </div>
+                    <div className="flex flex-wrap gap-x-3 gap-y-1 text-[11px]">
+                      {leader?.phone && (
+                        <a href={`tel:${leader.phone}`} className="flex items-center gap-1 text-primary hover:underline">
+                          <Phone className="h-3 w-3" /> {leader.phone}
+                        </a>
+                      )}
+                      {leader?.email && (
+                        <a href={`mailto:${leader.email}`} className="flex items-center gap-1 text-primary hover:underline truncate max-w-full">
+                          <Mail className="h-3 w-3 shrink-0" /> <span className="truncate">{leader.email}</span>
+                        </a>
+                      )}
+                    </div>
+                    {centreAddress && (
+                      <p className="flex items-start gap-1 text-[11px] text-muted-foreground">
+                        <MapPin className="h-3 w-3 mt-0.5 shrink-0" /> <span>{centreAddress}</span>
+                      </p>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <UserX className="h-3.5 w-3.5" /> Leader account not linked
+                </div>
+              )}
             </div>
 
             {r.notes && (
