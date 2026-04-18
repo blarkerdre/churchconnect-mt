@@ -64,6 +64,21 @@ export default function ReferralTimeline({ followupId, profileMap = {} }) {
     },
   });
 
+  const leaderIds = [...new Set(referrals.map(r => r.assigned_leader_id).filter(Boolean))];
+  const { data: leaders = [] } = useQuery({
+    queryKey: ["referral-leaders", leaderIds, tenantId],
+    enabled: leaderIds.length > 0 && !!tenantId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("user_id, full_name, email, phone, avatar_url")
+        .in("user_id", leaderIds);
+      if (error) throw error;
+      return data;
+    },
+  });
+  const leaderMap = leaders.reduce((acc, p) => { acc[p.user_id] = p; return acc; }, {});
+
   if (isLoading) return <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />;
   if (!referrals.length) return null;
 
