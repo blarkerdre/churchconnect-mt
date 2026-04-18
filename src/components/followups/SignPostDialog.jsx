@@ -96,13 +96,17 @@ export default function SignPostDialog({ open, onOpenChange, followup, member, o
     unitsErrorToastRef.current = key;
   }, [open, unitsError]);
 
-  // Unit leaders for the selected unit
+  // Unit leaders for the selected unit — explicit tenant_id guard
   const { data: unitLeaders = [] } = useQuery({
     queryKey: ["unit-leaders", tenantId, unitName],
     enabled: open && !!tenantId && !!unitName && type === "unit_leader",
     queryFn: async () => {
       const { data, error } = await scopeQuery(
-        supabase.from("unit_leader_assignments").select("user_id").eq("unit_name", unitName)
+        supabase
+          .from("unit_leader_assignments")
+          .select("user_id")
+          .eq("unit_name", unitName)
+          .eq("tenant_id", tenantId)
       );
       if (error) throw error;
       const ids = [...new Set((data || []).map(r => r.user_id))];
@@ -112,13 +116,18 @@ export default function SignPostDialog({ open, onOpenChange, followup, member, o
     },
   });
 
-  // Home cell centres
+  // Home cell centres — explicit tenant_id guard
   const { data: centres = [] } = useQuery({
     queryKey: ["wsf-centres-active", tenantId],
     enabled: open && !!tenantId && type === "home_cell_leader",
     queryFn: async () => {
       const { data, error } = await scopeQuery(
-        supabase.from("wsf_centres").select("*").eq("is_active", true).order("name")
+        supabase
+          .from("wsf_centres")
+          .select("*")
+          .eq("is_active", true)
+          .eq("tenant_id", tenantId)
+          .order("name")
       );
       if (error) throw error;
       return data;
