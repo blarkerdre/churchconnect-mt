@@ -108,7 +108,7 @@ export default function ExamSessionManager() {
       const updates = { status, updated_at: new Date().toISOString() };
       if (status === "active") updates.started_at = new Date().toISOString();
       if (status === "closed") updates.ended_at = new Date().toISOString();
-      const { error } = await supabase.from("exam_sessions").update(updates).eq("id", id);
+      const { error } = await supabase.from("exam_sessions").update(updates).eq("id", id).eq("tenant_id", tenantId);
       if (error) throw error;
     },
     onSuccess: () => {
