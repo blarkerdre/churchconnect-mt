@@ -330,17 +330,25 @@ export default function FollowupDetailPanel({ followup, onClose, onUpdate, curre
           {/* Sign-Post (refer to leader) */}
           {followup.member_id && ["First Timer", "New Convert", "Visitor"].includes(followup.category) && (
             <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
-                  <Sparkles className="h-3.5 w-3.5 text-accent" /> Sign-Post
-                </p>
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
+                <Sparkles className="h-3.5 w-3.5 text-accent" /> Sign-Post
+              </p>
+              <div className="flex flex-col sm:flex-row gap-2">
                 <Button
                   size="sm"
                   variant="outline"
-                  className="h-7 text-xs"
-                  onClick={() => setSignPostOpen(true)}
+                  className="h-8 text-xs flex-1"
+                  onClick={() => { setSignPostType("unit_leader"); setSignPostOpen(true); }}
                 >
-                  Refer to Leader
+                  <Users className="h-3.5 w-3.5" /> Refer to Unit Leader
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-8 text-xs flex-1"
+                  onClick={() => { setSignPostType("home_cell_leader"); setSignPostOpen(true); }}
+                >
+                  <Home className="h-3.5 w-3.5" /> Refer to Home Cell Leader
                 </Button>
               </div>
               <ReferralTimeline followupId={followup.id} profileMap={profileMap} />
