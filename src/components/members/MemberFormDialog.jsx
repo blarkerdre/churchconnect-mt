@@ -287,8 +287,10 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
         toast({ title: "Member registered" });
       }
       onSaved();
+      setConfirmUpdateOpen(false);
     } catch (err) {
       toast({ title: "Error", description: err.message, variant: "destructive" });
+      throw err;
     } finally {
       setSaving(false);
     }
