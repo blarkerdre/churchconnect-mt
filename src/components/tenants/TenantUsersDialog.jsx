@@ -35,7 +35,7 @@ export default function TenantUsersDialog({ tenant, open, onOpenChange }) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("tenant_memberships")
-        .select("*, profiles!inner(user_id, full_name, email)")
+        .select("*, profiles(user_id, full_name, email)")
         .eq("tenant_id", tenant.id)
         .order("created_at", { ascending: true });
       if (error) throw error;
