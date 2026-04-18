@@ -327,6 +327,12 @@ export default function SignPostDialog({ open, onOpenChange, followup, member, o
         </DialogDescription>
 
         <DialogErrorBoundary onClose={() => handleOpenChange(false)}>
+          {!tenantId ? (
+            <div className="flex items-center gap-2 rounded-md border border-border bg-muted/40 p-3">
+              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+              <p className="text-xs text-muted-foreground">Loading church context…</p>
+            </div>
+          ) : (
           <div className="space-y-4">
             {/* Type toggle */}
             <div className="grid grid-cols-2 gap-2">
