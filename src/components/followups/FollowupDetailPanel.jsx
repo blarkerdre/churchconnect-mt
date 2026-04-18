@@ -606,6 +606,7 @@ export default function FollowupDetailPanel({ followup, onClose, onUpdate, curre
         onOpenChange={setSignPostOpen}
         followup={followup}
         member={memberRecord}
+        defaultType={signPostType}
         onCreated={() => {
           queryClient.invalidateQueries({ queryKey: ["followup-referrals", followup.id] });
         }}
