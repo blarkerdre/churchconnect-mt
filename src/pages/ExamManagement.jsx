@@ -238,7 +238,7 @@ export default function ExamManagement() {
   // Admin toggle mutations
   const toggleCourseMutation = useMutation({
     mutationFn: async ({ id, field, value }) => {
-      const { error } = await supabase.from("exam_titles").update({ [field]: value }).eq("id", id);
+      const { error } = await supabase.from("exam_titles").update({ [field]: value }).eq("id", id).eq("tenant_id", tenantId);
       if (error) throw error;
     },
     onSuccess: () => {
