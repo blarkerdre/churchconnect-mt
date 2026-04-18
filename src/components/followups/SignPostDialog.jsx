@@ -284,6 +284,7 @@ export default function SignPostDialog({ open, onOpenChange, followup, member, o
         .from("members")
         .select("user_id")
         .eq("id", centre.leader_id)
+        .eq("tenant_id", tenantId)
         .maybeSingle();
       if (leaderErr) {
         console.error("[SignPost] leader lookup failed", leaderErr);
@@ -297,10 +298,12 @@ export default function SignPostDialog({ open, onOpenChange, followup, member, o
       payload.assigned_leader_id = assignedLeader;
     }
 
-    console.log("[SignPost] inserting referral", payload);
+    // Belt-and-braces: ensure tenant_id is present on the insert payload
+    const finalPayload = withTenant(payload);
+    console.log("[SignPost] inserting referral", finalPayload);
     setSaving(true);
     try {
-      const { data, error } = await supabase.from("followup_referrals").insert(payload).select().maybeSingle();
+      const { data, error } = await supabase.from("followup_referrals").insert(finalPayload).select().maybeSingle();
       if (error) {
         console.error("[SignPost] insert error", error, "payload:", payload);
         throw error;
