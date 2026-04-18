@@ -14,10 +14,8 @@ import SelfCheckInWidget from "@/components/attendance/SelfCheckInWidget";
 import MemberFeed from "@/components/profile/MemberFeed";
 import { UpcomingBirthdayItem } from "@/components/dashboard/BirthdayCelebration";
 import DashboardBanner from "@/components/dashboard/DashboardBanner";
-import AppFeedbackDialog from "@/components/feedback/AppFeedbackDialog";
 
 export default function WSFLeaderDashboard() {
-  const [feedbackOpen, setFeedbackOpen] = useState(false);
   const { user, myMember, profile } = useAuth();
   const { currentTenant, tenantRole } = useTenant();
   const { tenantId, scopeQuery } = useTenantQuery();
