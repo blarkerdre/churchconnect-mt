@@ -24,6 +24,8 @@ import { useTenantQuery } from "@/hooks/useTenantQuery";
 import WelcomeQuestions from "@/components/members/WelcomeQuestions";
 import { useTenant, DEFAULT_TENANT_ID } from "@/contexts/TenantContext";
 import { useConsentText, renderConsentText } from "@/hooks/useConsentText";
+import { diffUnitMembership, submitJoinRequests } from "@/hooks/usePendingJoinRequests";
+import { Info as InfoIcon } from "lucide-react";
 
 const GENDERS = ["Male", "Female"];
 const MEMBERSHIP_STATUSES = ["Active", "First Timer", "New Convert", "Visitor"];
@@ -261,13 +263,45 @@ export default function MyProfile() {
     setEditing(true);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!form.first_name || !form.last_name) {
       toast({ title: "First and last name are required", variant: "destructive" });
       return;
     }
     const showUnits = !HIDE_SPIRITUAL_STATUSES.includes(form.membership_status);
     const isFTNC = ["First Timer", "New Convert"].includes(form.membership_status);
+
+    // ------ APPROVAL FLOW ------
+    // Members editing their own profile cannot directly add a unit/centre.
+    // Compute the diff against the member's currently-approved values.
+    let approvedUnits = form.church_unit || "";
+    let approvedCentreId = form.wsf_centre_id || null;
+    let approvedWinnersSatellite = form.winners_satellite;
+    let queuedAdditions = { unitsToRequest: [], centreToRequest: null };
+
+    if (showUnits) {
+      const diff = diffUnitMembership({
+        existingUnits: member.church_unit || "",
+        selectedUnits: form.church_unit || "",
+        existingCentreId: member.wsf_centre_id || null,
+        selectedCentreId: form.wsf_centre_id || null,
+      });
+      // Apply removals immediately; strip additions (queue them)
+      const existing = (member.church_unit || "").split(",").map(s => s.trim()).filter(Boolean);
+      approvedUnits = existing
+        .filter(u => !diff.removedUnits.some(r => r.toLowerCase() === u.toLowerCase()))
+        .join(", ");
+      // Centre: keep existing while a new request is pending; allow removal
+      if (diff.centreToRequest) {
+        approvedCentreId = member.wsf_centre_id || null;
+        approvedWinnersSatellite = !!member.winners_satellite;
+      }
+      queuedAdditions = {
+        unitsToRequest: diff.unitsToRequest,
+        centreToRequest: diff.centreToRequest,
+      };
+    }
+
     updateMutation.mutate({
       first_name: form.first_name,
       last_name: form.last_name,
@@ -283,11 +317,11 @@ export default function MyProfile() {
       emergency_contact_phone: isFTNC ? null : (form.emergency_contact_phone || null),
       notes: form.notes || null,
       photo_url: member.photo_url || null,
-      church_unit: showUnits ? (form.church_unit || null) : null,
+      church_unit: showUnits ? (approvedUnits || null) : null,
       water_baptism: form.water_baptism,
       holy_spirit_baptism: form.holy_spirit_baptism,
-      winners_satellite: form.winners_satellite,
-      wsf_centre_id: form.wsf_centre_id || null,
+      winners_satellite: approvedWinnersSatellite,
+      wsf_centre_id: approvedCentreId,
       bfc_completed: form.bfc_completed,
       bcc_completed: form.bcc_completed,
       lcc_completed: form.lcc_completed,
@@ -302,6 +336,28 @@ export default function MyProfile() {
       wofbi_highest_level: isFTNC ? (form.wofbi_highest_level || null) : null,
       baptized_by_immersion: isFTNC ? form.baptized_by_immersion : null,
       preferred_contact_modes: isFTNC ? (form.preferred_contact_modes || null) : null,
+    }, {
+      onSuccess: async () => {
+        if (queuedAdditions.unitsToRequest.length > 0 || queuedAdditions.centreToRequest) {
+          try {
+            const { inserted } = await submitJoinRequests({
+              tenantId,
+              memberId: member.id,
+              requestedBy: user?.id,
+              unitsToRequest: queuedAdditions.unitsToRequest,
+              centreToRequest: queuedAdditions.centreToRequest,
+            });
+            if (inserted.length > 0) {
+              toast({
+                title: "Approval pending",
+                description: `${inserted.length} request${inserted.length === 1 ? "" : "s"} sent for leader approval.`,
+              });
+            }
+          } catch (e) {
+            console.error("submitJoinRequests failed:", e);
+          }
+        }
+      },
     });
   };
 
@@ -401,6 +457,13 @@ export default function MyProfile() {
                     {/* Church Units — only for Active/Inactive */}
                     {showChurchUnits && (
                       <div>
+                        <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-3 flex gap-2.5 items-start mb-3">
+                          <InfoIcon className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
+                          <div className="text-xs text-amber-900 dark:text-amber-100">
+                            <p className="font-medium mb-0.5">Leader approval required</p>
+                            <p className="text-amber-800/80 dark:text-amber-100/80">Adding a unit or Home Cell centre is sent to the leader for approval. You can leave at any time without approval.</p>
+                          </div>
+                        </div>
                         <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Church Units</h3>
                         <div className="flex flex-wrap gap-2 p-3 rounded-lg border border-border bg-background min-h-[40px]">
                           {CHURCH_UNITS.filter(u => u !== "None").map(unit => {
