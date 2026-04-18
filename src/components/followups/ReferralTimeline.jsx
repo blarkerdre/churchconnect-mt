@@ -5,9 +5,15 @@ import { useTenantQuery } from "@/hooks/useTenantQuery";
 import { useAuth } from "@/hooks/useAuth";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Users, Home, MessageSquarePlus, Loader2, ChevronDown, ChevronUp } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Users, Home, MessageSquarePlus, Loader2, ChevronDown, ChevronUp, Phone, Mail, MapPin, UserX } from "lucide-react";
 import { format } from "date-fns";
 import ReferralUpdateDialog from "./ReferralUpdateDialog";
+
+function getInitials(name) {
+  if (!name) return "?";
+  return name.split(/\s+/).filter(Boolean).slice(0, 2).map(p => p[0].toUpperCase()).join("");
+}
 
 const statusColors = {
   pending: "bg-accent/10 text-accent",
