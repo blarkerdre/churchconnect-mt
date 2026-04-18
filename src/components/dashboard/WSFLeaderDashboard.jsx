@@ -2,7 +2,7 @@ import React, { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Users, TrendingUp, CalendarDays, FileText, Loader2, ChevronRight, Star, Cake } from "lucide-react";
+import { Users, TrendingUp, CalendarDays, FileText, Loader2, ChevronRight, Cake } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -14,10 +14,8 @@ import SelfCheckInWidget from "@/components/attendance/SelfCheckInWidget";
 import MemberFeed from "@/components/profile/MemberFeed";
 import { UpcomingBirthdayItem } from "@/components/dashboard/BirthdayCelebration";
 import DashboardBanner from "@/components/dashboard/DashboardBanner";
-import AppFeedbackDialog from "@/components/feedback/AppFeedbackDialog";
 
 export default function WSFLeaderDashboard() {
-  const [feedbackOpen, setFeedbackOpen] = useState(false);
   const { user, myMember, profile } = useAuth();
   const { currentTenant, tenantRole } = useTenant();
   const { tenantId, scopeQuery } = useTenantQuery();
@@ -277,27 +275,9 @@ export default function WSFLeaderDashboard() {
         </Card>
       )}
 
-      {/* Rate This App */}
-      <Card
-        className="border-0 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
-        onClick={() => setFeedbackOpen(true)}
-      >
-        <CardContent className="p-4 flex items-center gap-3">
-          <div className="h-10 w-10 rounded-xl bg-accent/10 flex items-center justify-center shrink-0">
-            <Star className="h-5 w-5 text-accent" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-foreground">Rate This App</p>
-            <p className="text-xs text-muted-foreground">Share your feedback</p>
-          </div>
-          <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
-        </CardContent>
-      </Card>
-
       {/* Announcements & Events Feed */}
       <MemberFeed member={myMember} />
 
-      <AppFeedbackDialog open={feedbackOpen} onOpenChange={setFeedbackOpen} />
     </div>
   );
 }
