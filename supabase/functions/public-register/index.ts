@@ -543,6 +543,7 @@ Deno.serve(async (req) => {
             createPastoralCareForPrayerRequest(supabase, emailMatches[0].id, firstName, lastName, notes, tenantId);
           }
 
+          await queueJoinRequests(supabase, emailMatches[0].id, tenantId, requestedChurchUnit, requestedWsfCentreId, authenticatedUser.userId);
 
           return new Response(JSON.stringify({ success: true, mode: "claimed" }), {
             headers: { ...corsHeaders, "Content-Type": "application/json" },
