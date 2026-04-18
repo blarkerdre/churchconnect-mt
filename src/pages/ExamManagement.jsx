@@ -439,30 +439,34 @@ export default function ExamManagement() {
       )}
 
       {/* Delete Question */}
-      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader><AlertDialogTitle>Delete Question</AlertDialogTitle><AlertDialogDescription>Are you sure? This cannot be undone.</AlertDialogDescription></AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              {deleteMutation.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />} Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <DangerConfirmDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        title="Delete Question"
+        entityName={deleteTarget ? `Q${(deleteTarget.sort_order ?? 0) + 1}` : ""}
+        confirmText="DELETE"
+        impacts={[
+          "This question and all member answers tied to it will be permanently deleted.",
+          "Existing exam attempts will keep their score but lose this question's record.",
+        ]}
+        isPending={deleteMutation.isPending}
+        onConfirm={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)}
+      />
 
       {/* Delete Course */}
-      <AlertDialog open={!!deleteTitleTarget} onOpenChange={(open) => !open && setDeleteTitleTarget(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader><AlertDialogTitle>Delete Course</AlertDialogTitle><AlertDialogDescription>Delete "{deleteTitleTarget?.name}"? This removes all subjects and questions.</AlertDialogDescription></AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={() => deleteTitleTarget && deleteTitleMutation.mutate(deleteTitleTarget.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              {deleteTitleMutation.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />} Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <DangerConfirmDialog
+        open={!!deleteTitleTarget}
+        onOpenChange={(open) => !open && setDeleteTitleTarget(null)}
+        title="Delete Course"
+        entityName={deleteTitleTarget?.name || ""}
+        impacts={[
+          "All subjects under this course will be permanently deleted.",
+          "All questions, member registrations and exam attempts for this course will be permanently deleted.",
+          "Issued certificates linked to this course may become invalid.",
+        ]}
+        isPending={deleteTitleMutation.isPending}
+        onConfirm={() => deleteTitleTarget && deleteTitleMutation.mutate(deleteTitleTarget.id)}
+      />
 
       {/* Course Dialog */}
       <Dialog open={titleDialogOpen} onOpenChange={setTitleDialogOpen}>
