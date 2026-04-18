@@ -24,6 +24,7 @@ import { logAudit } from "@/lib/audit";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
 import { useConsentText, renderConsentText } from "@/hooks/useConsentText";
 import MemberJourneyTimeline from "@/components/members/MemberJourneyTimeline";
+import DangerConfirmDialog from "@/components/exams/DangerConfirmDialog";
 
 const STATUSES = ["Active", "New Convert", "First Timer", "Visitor"];
 const GENDERS = ["Male", "Female"];
@@ -61,6 +62,7 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
   const [createAccount, setCreateAccount] = useState(false);
   const [password, setPassword] = useState("");
   const [accountRole, setAccountRole] = useState("member");
+  const [confirmUpdateOpen, setConfirmUpdateOpen] = useState(false);
 
   const showChurchUnits = !HIDE_SPIRITUAL_STATUSES.includes(form.membership_status);
   const showSpiritualDev = !HIDE_SPIRITUAL_STATUSES.includes(form.membership_status);
@@ -185,25 +187,40 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
     }
   }, [member, open]);
 
-  const handleSave = async () => {
+  const validateForm = () => {
     if (!form.first_name || !form.last_name) {
       toast({ title: "First name and last name are required", variant: "destructive" });
-      return;
+      return false;
     }
     if (!member && !form.gdpr_consent) {
       toast({ title: "GDPR consent is required", variant: "destructive" });
-      return;
+      return false;
     }
     if (createAccount && !member) {
       if (!form.email) {
         toast({ title: "Email is required when creating a user account", variant: "destructive" });
-        return;
+        return false;
       }
       if (!password || password.length < 6) {
         toast({ title: "Password must be at least 6 characters", variant: "destructive" });
-        return;
+        return false;
       }
     }
+    return true;
+  };
+
+  const handleSubmit = () => {
+    if (!validateForm()) return;
+    // Gate edits of EXISTING member behind password re-auth (skip for self-edits)
+    const isSelfEdit = member && member.user_id && member.user_id === currentUser?.id;
+    if (member && !isSelfEdit) {
+      setConfirmUpdateOpen(true);
+      return;
+    }
+    handleSave();
+  };
+
+  const handleSave = async () => {
 
     setSaving(true);
     try {
@@ -270,8 +287,10 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
         toast({ title: "Member registered" });
       }
       onSaved();
+      setConfirmUpdateOpen(false);
     } catch (err) {
       toast({ title: "Error", description: err.message, variant: "destructive" });
+      throw err;
     } finally {
       setSaving(false);
     }
@@ -648,12 +667,27 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={handleSave} disabled={saving || !form.first_name || !form.last_name || (!member && !form.gdpr_consent) || (createAccount && !member && (!form.email || password.length < 6))}>
+          <Button onClick={handleSubmit} disabled={saving || !form.first_name || !form.last_name || (!member && !form.gdpr_consent) || (createAccount && !member && (!form.email || password.length < 6))}>
             {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
             {member ? "Update" : createAccount ? "Register & Create Account" : "Register"}
           </Button>
         </DialogFooter>
       </DialogContent>
+      <DangerConfirmDialog
+        open={confirmUpdateOpen}
+        onOpenChange={setConfirmUpdateOpen}
+        title="Confirm Member Update"
+        entityName={member ? `${member.first_name} ${member.last_name}` : ""}
+        confirmText="UPDATE"
+        confirmLabel="Update Member"
+        impacts={[
+          "You are about to modify this member's record.",
+          "Changes to status, church unit, or spiritual development fields may affect reports and analytics.",
+          "This action will be recorded in the audit log.",
+        ]}
+        isPending={saving}
+        onConfirm={handleSave}
+      />
     </Dialog>
   );
 }

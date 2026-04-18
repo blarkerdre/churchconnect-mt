@@ -13,6 +13,7 @@ import MemberFormDialog from "@/components/members/MemberFormDialog";
 import RegistrationQRCode from "@/components/members/RegistrationQRCode";
 import BulkImportDialog from "@/components/members/BulkImportDialog";
 import IssueCertificateDialog from "@/components/certificates/IssueCertificateDialog";
+import DangerConfirmDialog from "@/components/exams/DangerConfirmDialog";
 import { logAudit } from "@/lib/audit";
 import { useAuth } from "@/hooks/useAuth";
 import { useSubFeature } from "@/hooks/useSubFeature";
@@ -38,6 +39,7 @@ export default function Members() {
   const [qrOpen, setQrOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const [certMember, setCertMember] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null);
   const queryClient = useQueryClient();
 
   const { enabled: canAddMember } = useSubFeature("members.add_member");
@@ -120,17 +122,23 @@ export default function Members() {
   };
 
   const handleDelete = (member) => {
-    const hasAccount = !!member.user_id;
-    const msg = hasAccount
-      ? `Delete this member AND their login account? They will no longer be able to sign in.`
-      : `Delete this member?`;
-    if (window.confirm(msg)) {
-      deleteMutation.mutate(member);
-      logAudit("member_delete", "members", member.id, {
-        member_name: `${member.first_name} ${member.last_name}`,
-        auth_account_deleted: hasAccount,
-      }, tenantId);
-    }
+    setDeleteTarget(member);
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    const hasAccount = !!deleteTarget.user_id;
+    await new Promise((resolve, reject) => {
+      deleteMutation.mutate(deleteTarget, {
+        onSuccess: () => resolve(),
+        onError: (err) => reject(err),
+      });
+    });
+    logAudit("member_delete", "members", deleteTarget.id, {
+      member_name: `${deleteTarget.first_name} ${deleteTarget.last_name}`,
+      auth_account_deleted: hasAccount,
+    }, tenantId);
+    setDeleteTarget(null);
   };
 
   const handleDownloadCSV = () => {
@@ -320,6 +328,20 @@ export default function Members() {
         open={!!certMember}
         onOpenChange={(open) => !open && setCertMember(null)}
         member={certMember}
+      />
+      <DangerConfirmDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        title="Delete Member"
+        entityName={deleteTarget ? `${deleteTarget.first_name} ${deleteTarget.last_name}` : ""}
+        confirmLabel="Delete Member"
+        impacts={[
+          "This member's record will be permanently deleted.",
+          "Attendance history, follow-ups, sign-posts, pastoral cases and registrations linked to this member will be affected.",
+          ...(deleteTarget?.user_id ? ["The linked login account will also be permanently deleted — they will no longer be able to sign in."] : []),
+        ]}
+        isPending={deleteMutation.isPending}
+        onConfirm={confirmDelete}
       />
     </div>
   );

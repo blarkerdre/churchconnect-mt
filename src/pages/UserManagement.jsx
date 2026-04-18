@@ -17,6 +17,7 @@ import UnitLeaderAssignments from "@/components/users/UnitLeaderAssignments";
 import WSFLeaderAssignments from "@/components/users/WSFLeaderAssignments";
 import BulkUnitAssignDialog from "@/components/users/BulkUnitAssignDialog";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
+import DangerConfirmDialog from "@/components/exams/DangerConfirmDialog";
 
 const ROLES = ["super_admin", "admin", "unit_leader", "wsf_leader"];
 
@@ -55,6 +56,9 @@ export default function UserManagement() {
   const [searchQuery, setSearchQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [toggleTarget, setToggleTarget] = useState(null);
+  const [roleChangeTarget, setRoleChangeTarget] = useState(null);
 
   const { data: profiles = [], isLoading } = useQuery({
     queryKey: ["all-profiles", tenantId],
@@ -350,7 +354,7 @@ export default function UserManagement() {
                                   <Checkbox
                                     checked={hasRole}
                                     onCheckedChange={(checked) => {
-                                      toggleRoleMutation.mutate({
+                                      setRoleChangeTarget({
                                         userId: p.user_id,
                                         role: r,
                                         add: !!checked,
@@ -380,14 +384,12 @@ export default function UserManagement() {
                               title={isDisabled ? "Enable account" : "Disable account"}
                               disabled={toggleUserMutation.isPending}
                               onClick={() => {
-                                const action = isDisabled ? "enable" : "disable";
-                                if (window.confirm(`${action.charAt(0).toUpperCase() + action.slice(1)} user ${p.full_name || p.email}?`)) {
-                                  toggleUserMutation.mutate({
-                                    userId: p.user_id,
-                                    disabled: !isDisabled,
-                                    targetName: p.full_name || p.email,
-                                  });
-                                }
+                                setToggleTarget({
+                                  userId: p.user_id,
+                                  disabled: !isDisabled,
+                                  targetName: p.full_name || p.email,
+                                  isCurrentlyDisabled: isDisabled,
+                                });
                               }}
                             >
                               {isDisabled ? (
@@ -400,9 +402,7 @@ export default function UserManagement() {
                           {/* Delete - super_admin only */}
                           {isSuperAdmin && !isCurrentUser && (
                             <Button variant="ghost" size="icon" onClick={() => {
-                              if (window.confirm(`Delete user ${p.full_name || p.email}? This cannot be undone.`)) {
-                                deleteUserMutation.mutate({ userId: p.user_id, targetName: p.full_name || p.email });
-                              }
+                              setDeleteTarget({ userId: p.user_id, targetName: p.full_name || p.email });
                             }}>
                               <Trash2 className="h-4 w-4 text-destructive" />
                             </Button>
@@ -450,6 +450,88 @@ export default function UserManagement() {
       </Dialog>
 
       <BulkUnitAssignDialog open={bulkAssignOpen} onOpenChange={setBulkAssignOpen} />
+
+      {/* Delete user confirmation */}
+      <DangerConfirmDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        title="Delete User Account"
+        entityName={deleteTarget?.targetName || ""}
+        confirmLabel="Delete User"
+        impacts={[
+          "The user's auth account, profile, role assignments and tenant memberships will be permanently removed.",
+          "Linked member records remain but will become unlinked.",
+          "This action cannot be undone.",
+        ]}
+        isPending={deleteUserMutation.isPending}
+        onConfirm={async () => {
+          await new Promise((resolve, reject) => {
+            deleteUserMutation.mutate(deleteTarget, {
+              onSuccess: () => resolve(),
+              onError: (err) => reject(err),
+            });
+          });
+          setDeleteTarget(null);
+        }}
+      />
+
+      {/* Disable/Enable user confirmation */}
+      <DangerConfirmDialog
+        open={!!toggleTarget}
+        onOpenChange={(open) => !open && setToggleTarget(null)}
+        title={toggleTarget?.isCurrentlyDisabled ? "Enable User Account" : "Disable User Account"}
+        entityName={toggleTarget?.targetName || ""}
+        confirmText="CONFIRM"
+        confirmLabel={toggleTarget?.isCurrentlyDisabled ? "Enable Account" : "Disable Account"}
+        impacts={
+          toggleTarget?.isCurrentlyDisabled
+            ? ["The user will regain access and be able to sign in immediately."]
+            : [
+                "The user will be immediately signed out and unable to log in.",
+                "Their data and role assignments are retained — they can be re-enabled later.",
+              ]
+        }
+        isPending={toggleUserMutation.isPending}
+        onConfirm={async () => {
+          await new Promise((resolve, reject) => {
+            toggleUserMutation.mutate(
+              {
+                userId: toggleTarget.userId,
+                disabled: toggleTarget.disabled,
+                targetName: toggleTarget.targetName,
+              },
+              { onSuccess: () => resolve(), onError: (err) => reject(err) }
+            );
+          });
+          setToggleTarget(null);
+        }}
+      />
+
+      {/* Role change confirmation */}
+      <DangerConfirmDialog
+        open={!!roleChangeTarget}
+        onOpenChange={(open) => !open && setRoleChangeTarget(null)}
+        title={roleChangeTarget?.add ? "Grant Role" : "Revoke Role"}
+        entityName={roleChangeTarget?.targetName || ""}
+        confirmText="CONFIRM"
+        confirmLabel={roleChangeTarget?.add ? "Grant Role" : "Revoke Role"}
+        impacts={[
+          roleChangeTarget?.add
+            ? `This user will be granted the "${roleLabels[roleChangeTarget?.role] || roleChangeTarget?.role}" role and gain associated privileges.`
+            : `This user will lose the "${roleLabels[roleChangeTarget?.role] || roleChangeTarget?.role}" role and its associated access immediately.`,
+          "This privilege change will be recorded in the audit log.",
+        ]}
+        isPending={toggleRoleMutation.isPending}
+        onConfirm={async () => {
+          await new Promise((resolve, reject) => {
+            toggleRoleMutation.mutate(roleChangeTarget, {
+              onSuccess: () => resolve(),
+              onError: (err) => reject(err),
+            });
+          });
+          setRoleChangeTarget(null);
+        }}
+      />
     </div>
   );
 }
