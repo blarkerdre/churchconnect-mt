@@ -339,13 +339,34 @@ export default function SignPostDialog({ open, onOpenChange, followup, member, o
             {type === "unit_leader" && (
               <>
                 <div className="space-y-1.5">
-                  <Label className="text-xs">Church Unit</Label>
-                  <Select value={unitName} onValueChange={(v) => { setUnitName(v); setUnitLeaderId(""); }}>
-                    <SelectTrigger><SelectValue placeholder="Select unit" /></SelectTrigger>
-                    <SelectContent>
-                      {units.map(u => <SelectItem key={u.id} value={u.name}>{u.name}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
+                  <Label className="text-xs flex items-center justify-between">
+                    <span>Church Unit</span>
+                    <span className="text-[10px] text-muted-foreground">
+                      {unitsLoading ? "Loading…" : `${units.length} ${units.length === 1 ? "unit" : "units"}`}
+                    </span>
+                  </Label>
+                  {unitsError ? (
+                    <div className="flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/5 p-2">
+                      <AlertTriangle className="h-3.5 w-3.5 text-destructive mt-0.5 shrink-0" />
+                      <p className="text-xs text-destructive">
+                        Couldn't load units: {unitsError.message}
+                      </p>
+                    </div>
+                  ) : !unitsLoading && units.length === 0 ? (
+                    <div className="flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/5 p-2">
+                      <AlertTriangle className="h-3.5 w-3.5 text-destructive mt-0.5 shrink-0" />
+                      <p className="text-xs text-destructive">
+                        No church units configured yet. Ask an admin to add units in Settings → Church Units.
+                      </p>
+                    </div>
+                  ) : (
+                    <Select value={unitName} onValueChange={(v) => { setUnitName(v); setUnitLeaderId(""); }}>
+                      <SelectTrigger><SelectValue placeholder={unitsLoading ? "Loading units…" : "Select unit"} /></SelectTrigger>
+                      <SelectContent>
+                        {units.map(u => <SelectItem key={u.id} value={u.name}>{u.name}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  )}
                 </div>
                 {unitName && (
                   <div className="space-y-1.5">
