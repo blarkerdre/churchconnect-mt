@@ -1,35 +1,40 @@
 
-## Diagnosis
+## Root cause (found it)
 
-Two symptoms when clicking **Refer to Unit Leader**:
-1. **Button does nothing** — no dialog visible.
-2. **Page becomes unscrollable** — body scroll is locked.
+`FollowupDetailPanel` is a hand-rolled slide-over at `z-[55]` (with its own `bg-black/30` backdrop). `SignPostDialog` uses Radix Dialog whose default overlay AND content are at `z-50`. Both portal to `document.body`, so when the dialog opens it renders **behind** the panel's backdrop:
 
-This combination is the classic symptom of a Radix Dialog whose **overlay/portal mounted but content failed to render** (or rendered off-screen). Radix locks `body` scroll on open; if the content errors during render, the dialog stays "open" but invisible, leaving the page frozen.
+- The panel's `bg-black/30` (z-55) intercepts clicks → dialog appears unresponsive.
+- The dialog content sits below the panel → invisible.
+- Radix still locks `body` scroll → page becomes unscrollable.
+- `unitLeaders` toast only fires after a unit is picked, which the user can't do → "no toast displayed".
 
-Looking at `SignPostDialog.jsx` after the recent edits, the most likely render-time crash points are:
-
-- **`selectedCentre` / `centreLeader` query refs**: `selectedCentre?.leader_id` is referenced inside `useQuery({ enabled: !!selectedCentre?.leader_id })`. When `type === "unit_leader"`, `selectedCentre` is undefined — fine. But the **toast effects** I added run unconditionally and reference `centres`, `suggestedCentre`, `centreLeader` even on the unit path, and the guard refs may misfire and trigger toasts in a render loop.
-- **Toast effect dependency arrays** likely include objects/arrays whose references change every render (`centres`, `unitLeaders`), causing the effect to re-fire → re-toast → re-render → freeze.
-- **Missing `DialogDescription`** (console warns about it) is benign, not the cause.
-
-Since I can't run the app in plan mode, I'll harden the dialog so it cannot freeze the page and add a clear render-error boundary.
+The Home Cell button "kind of worked" earlier only because its toasts (`No home cell centres`, etc.) fire on `useEffect` mount via Sonner's own higher-z portal — not because the dialog was actually visible.
 
 ## Fix
 
-**`src/components/followups/SignPostDialog.jsx`** — three targeted changes:
+**`src/components/followups/SignPostDialog.jsx`** — render the dialog above the panel by using a manual portal + overlay + content with explicit high z-index, instead of the wrapped `DialogContent`:
 
-1. **Gate every "home cell" effect with `type === "home_cell_leader"`** so they don't run when the unit path is active. Currently some toast effects fire regardless of `type`, referencing `centres`/`suggestedCentre` → can produce stale-closure loops.
+```jsx
+import { Dialog, DialogPortal, DialogOverlay, DialogDescription } from "@/components/ui/dialog";
+import * as DialogPrimitive from "@radix-ui/react-dialog";
 
-2. **Stabilize toast-effect dependencies**: depend only on primitive flags (`centres.length`, `!!suggestedCentre`, `centreLeader?.linked`, `unitLeaders.length`, `unitName`, `open`, `type`) — never the array references themselves. Keep the existing `useRef` one-shot guards.
+<Dialog open={open} onOpenChange={handleOpenChange}>
+  <DialogPortal>
+    <DialogOverlay className="z-[65] bg-black/60" />
+    <DialogPrimitive.Content
+      className="fixed left-[50%] top-[50%] z-[70] grid w-full max-w-md translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-lg max-h-[90vh] overflow-y-auto sm:rounded-lg data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
+    >
+      {/* TenantDialogHeader, DialogDescription, DialogErrorBoundary, body unchanged */}
+      <DialogPrimitive.Close className="absolute right-4 top-4 ...">
+        <X className="h-4 w-4" />
+      </DialogPrimitive.Close>
+    </DialogPrimitive.Content>
+  </DialogPortal>
+</Dialog>
+```
 
-3. **Wrap dialog body in a try/catch render guard**: extract the form into a small inner component and wrap its render in an error boundary fallback. If anything throws, the dialog still shows a "Something went wrong, please close" message instead of mounting an empty overlay that locks scroll.
+Net effect: overlay at z-65 sits above the panel backdrop (z-55), content at z-70 sits above everything → clicks land on the dialog, content is visible, toasts work.
 
-4. **Add `DialogDescription`** (silences a11y warning, also forces Radix to flush content).
+No DB changes. No changes to `FollowupDetailPanel.jsx`. ~10 line change to swap `DialogContent` for the explicit portal+overlay+content trio.
 
-5. **Defensive close handler**: `onOpenChange={(o) => { if (!o) { /* reset all local state */ } onOpenChange(o); }}` to ensure scroll lock is always released.
-
-## Files Changed
-- `src/components/followups/SignPostDialog.jsx` — gate effects by `type`, stabilize deps, add `DialogDescription`, add render error boundary, defensive close (~30 lines net).
-
-No DB changes. After this lands, please click **Refer to Unit Leader** again and share any console output starting with `[SignPost]` so we can confirm the unit path now opens cleanly.
+After approval, please click **Refer to Unit Leader** again — the dialog should now appear in front of the slide-over and accept clicks. Share any `[SignPost]` console output if it still misbehaves.
