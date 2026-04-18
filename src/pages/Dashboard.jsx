@@ -15,6 +15,7 @@ import { useSubFeature } from "@/hooks/useSubFeature";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
 import { useTenant } from "@/contexts/TenantContext";
 import { Badge } from "@/components/ui/badge";
+import PendingJoinRequests from "@/components/dashboard/PendingJoinRequests";
 
 export default function Dashboard() {
   const { isAdmin, isUnitLeader, isWSFLeader, profile, myMember, loading: authLoading } = useAuth();
@@ -157,6 +158,7 @@ export default function Dashboard() {
       </div>
       <DashboardBanner />
       <ProfileCompletionBanner />
+      <PendingJoinRequests />
       {selfCheckinEnabled && <SelfCheckInWidget />}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
         {stats.map((stat) => (
