@@ -425,14 +425,16 @@ Deno.serve(async (req) => {
       date_of_birth: dateOfBirth || null,
       gender,
       membership_status: membershipStatus,
-      church_unit: churchUnit,
+      // church_unit and wsf_centre_id are routed through unit_join_requests (leader approval)
+      church_unit: null,
       notes,
       emergency_contact_name: emergencyContactName,
       emergency_contact_phone: emergencyContactPhone,
       water_baptism: waterBaptism,
       holy_spirit_baptism: holySpiritBaptism,
-      winners_satellite: winnersSatellite,
-      wsf_centre_id: winnersSatellite ? (wsfCentreId || null) : null,
+      // winners_satellite is set when a home_cell request is approved
+      winners_satellite: false,
+      wsf_centre_id: null,
       bfc_completed: bfcCompleted,
       bcc_completed: bccCompleted,
       lcc_completed: lccCompleted,
@@ -452,6 +454,10 @@ Deno.serve(async (req) => {
       worshipped_at_other_wci: worshippedAtOtherWci,
       ...(tenantId ? { tenant_id: tenantId } : {}),
     };
+
+    // Requested unit/centre selections (queued as pending join requests after member is upserted)
+    const requestedChurchUnit = churchUnit;
+    const requestedWsfCentreId = winnersSatellite ? (wsfCentreId || null) : null;
 
     let resultMemberId: string | null = null;
     let resultMode = "created";
