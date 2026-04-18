@@ -417,7 +417,7 @@ export default function SignPostDialog({ open, onOpenChange, followup, member, o
                     ) : (
                       <Select value={unitLeaderId} onValueChange={setUnitLeaderId}>
                         <SelectTrigger><SelectValue placeholder="Select leader" /></SelectTrigger>
-                        <SelectContent>
+                        <SelectContent className="z-[80]" position="popper" sideOffset={4}>
                           {unitLeaders.map(l => (
                             <SelectItem key={l.user_id} value={l.user_id}>
                               {l.full_name || l.email}
