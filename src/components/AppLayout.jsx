@@ -9,6 +9,9 @@ import {
   BookOpen, ChevronsUpDown, Check, Lock, MessageSquareHeart, Star
 } from "lucide-react";
 import AppFeedbackDialog from "@/components/feedback/AppFeedbackDialog";
+import SignPostInboxDialog from "@/components/followups/SignPostInboxDialog";
+import { useQuery } from "@tanstack/react-query";
+import { Inbox } from "lucide-react";
 import winnersLogo from "@/assets/winners-chapel-logo.png";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
@@ -57,6 +60,7 @@ export default function Layout({ children }) {
   const [switchPassword, setSwitchPassword] = useState("");
   const [switchLoading, setSwitchLoading] = useState(false);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
+  const [signpostInboxOpen, setSignpostInboxOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   const { signOut, user, profile, isAdmin, isUnitLeader, isWSFLeader, roles, leaderUnits, isTenantOwner, isTenantAdmin } = useAuth();
