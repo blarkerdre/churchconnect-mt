@@ -54,8 +54,25 @@ export default function FollowupDetailPanel({ followup, onClose, onUpdate, curre
   const [showReassign, setShowReassign] = useState(false);
   const [selectedMessage, setSelectedMessage] = useState(null);
   const [callingPhone, setCallingPhone] = useState(false);
+  const [signPostOpen, setSignPostOpen] = useState(false);
   const { tenantId, scopeQuery } = useTenantQuery();
   const queryClient = useQueryClient();
+
+  // Fetch member record for sign-post (need postcode/address)
+  const { data: memberRecord } = useQuery({
+    queryKey: ["member-for-signpost", followup.member_id, tenantId],
+    enabled: !!followup.member_id && !!tenantId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("members")
+        .select("id, first_name, last_name, postcode, address, city")
+        .eq("id", followup.member_id)
+        .eq("tenant_id", tenantId)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+  });
 
   // Fetch scheduled messages for this followup
   const { data: scheduledMessages = [] } = useQuery({
