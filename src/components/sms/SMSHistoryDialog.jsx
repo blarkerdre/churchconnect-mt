@@ -2,13 +2,15 @@ import React, { useState } from "react";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import TenantDialogHeader from "@/components/ui/TenantDialogHeader";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
-import { Loader2, MessageSquare, AlertTriangle, Info } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { Loader2, MessageSquare, AlertTriangle, RefreshCw } from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
+import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 
 const DELIVERY_STATUS_CONFIG = {
@@ -20,10 +22,18 @@ const DELIVERY_STATUS_CONFIG = {
   undelivered: { label: "Undelivered", className: "bg-destructive/10 text-destructive" },
 };
 
+// Treat older "queued/accepted" rows as Sent — Twilio's StatusCallback may not have reached us.
 function getStatusDisplay(log) {
-  const ds = log.delivery_status || log.status;
-  const config = DELIVERY_STATUS_CONFIG[ds] || DELIVERY_STATUS_CONFIG[log.status];
-  return config || { label: ds || "Unknown", className: "bg-muted text-muted-foreground" };
+  const ds = log.delivery_status;
+  const ageMs = Date.now() - new Date(log.created_at).getTime();
+  const isStaleQueued = log.status === "sent"
+    && (ds == null || ["queued", "accepted", "scheduled", "sending"].includes(ds))
+    && ageMs > 2 * 60 * 1000; // older than 2 minutes
+  if (isStaleQueued) return DELIVERY_STATUS_CONFIG.sent;
+
+  const key = ds || log.status;
+  const config = DELIVERY_STATUS_CONFIG[key] || DELIVERY_STATUS_CONFIG[log.status];
+  return config || { label: key || "Unknown", className: "bg-muted text-muted-foreground" };
 }
 
 function getTrialAccountHint(errorMessage) {
