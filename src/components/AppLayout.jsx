@@ -73,6 +73,24 @@ export default function Layout({ children }) {
   const disabledFeatures = currentTenant?.settings?.disabled_features || [];
   const isFollowupUnit = leaderUnits.includes("Follow-up") || leaderUnits.includes("Follow-Up");
   const isTrainingAccess = isUnitLeader;
+  const showSignpostInbox = isUnitLeader || isWSFLeader;
+
+  // Pending signpost count for leaders (drives sidebar badge)
+  const { data: signpostPendingCount = 0 } = useQuery({
+    queryKey: ["signpost-pending-count", tenantId, user?.id],
+    enabled: !!tenantId && !!user?.id && showSignpostInbox,
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from("followup_referrals")
+        .select("id", { count: "exact", head: true })
+        .eq("tenant_id", tenantId)
+        .eq("assigned_leader_id", user.id)
+        .eq("status", "pending");
+      if (error) return 0;
+      return count || 0;
+    },
+    refetchInterval: 60000,
+  });
 
   // Derive branding from tenant or fall back to defaults
   const tenantName = currentTenant?.name || "Winners Chapel";
