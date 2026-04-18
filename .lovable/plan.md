@@ -1,28 +1,28 @@
 
 ## Issue
-User wants to ensure ALL queries in `SignPostDialog.jsx` are explicitly scoped to the current `tenant_id`, per the multi-tenancy security guard memory (`mem://architecture/multi-tenancy/security-guards`). The previous fix only added `.eq("tenant_id", tenantId)` to the `church_units` query — other queries in the dialog (centres, leader resolution, insert payloads) need the same explicit guard.
+Status dropdown in the **Sign-Post update** UI doesn't commit a selection. Replay shows the user opens the status select repeatedly, highlights "Contacted"/"Declined", but the highlight is removed and the dropdown closes without committing — value never persists.
 
-## Investigation needed
-Read the current `SignPostDialog.jsx` to enumerate every Supabase query/mutation and confirm which ones still rely on RLS-only or on `scopeQuery` without an explicit `.eq` guard.
+## Root cause
+Two components render a status dropdown for sign-post updates:
+1. `SignPostDetailPanel.jsx` (slide-over on the right) — has a `<Select value={statusChange} onValueChange={setStatusChange}>` for "Post Update"
+2. `ReferralUpdateDialog.jsx` — same pattern in a Dialog
+
+Both use Radix `Select` with `value=""` initial state. Radix Select treats empty string as **no value** AND has a known issue: when `value=""` is passed and the user picks an item, it can fire `onValueChange` but the controlled `value` stays `""` if the parent state update is interrupted by a focus/blur cycle inside a portal.
+
+But the more likely culprit here, given the replay shows the dropdown opening from inside a fixed-position slide-over panel (`SignPostDetailPanel`, `z-[61]`): the `SelectContent` portals to body with the default z-index, which sits **below** the panel's overlay/aside in some stacking contexts → the click hits the overlay, not the SelectItem, so the highlight clears and dropdown closes.
+
+This matches the previous fix we made in `SignPostDialog.jsx` (added `z-[80]` and `position="popper"`). The same fix was **not** applied to `SignPostDetailPanel.jsx` or `ReferralUpdateDialog.jsx`.
 
 ## Plan
 
-1. **Enumerate every DB call** in `SignPostDialog.jsx`:
-   - `church_units` SELECT (already explicit ✓)
-   - `wsf_centres` (Home Cell) SELECT — needs `.eq("tenant_id", tenantId)`
-   - Leader resolution queries (e.g. `unit_leader_assignments`, `wsf_leader_assignments`, `user_roles`, `members`) — each needs explicit tenant guard where the column exists
-   - The `signposts` / `followup_referrals` INSERT — must include `tenant_id: tenantId` in payload (use `withTenant()` helper)
+1. **`SignPostDetailPanel.jsx`** — update the status `<SelectContent>` to use `className="z-[80]" position="popper" sideOffset={4}` so it renders above the slide-over panel (`z-[61]`) and overlay (`z-[60]`).
 
-2. **Apply explicit `.eq("tenant_id", tenantId)`** to every SELECT that targets a tenant-scoped table, alongside `scopeQuery` (belt-and-braces).
+2. **`ReferralUpdateDialog.jsx`** — apply the same `z-[80]` + `position="popper"` to its status `<SelectContent>` for consistency (Dialog overlay is `z-50`/`z-[70]`).
 
-3. **Use `withTenant(payload)`** from `useTenantQuery` for the INSERT mutation so `tenant_id` is guaranteed in the new row.
-
-4. **Hard-guard the submit handler**: if `!tenantId`, abort with a toast — don't write a row with NULL tenant.
-
-5. **Update query keys** to include `tenantId` so cache doesn't bleed across tenant switches (already done for units; verify centres + leaders).
+3. **Defensive value handling** — in both components, ensure `onValueChange` is the only state setter and the initial `value` is `""` (already correct). No change needed beyond z-index.
 
 ## Files
-- **Inspect**: `src/components/followups/SignPostDialog.jsx` (full file) to enumerate all DB calls.
-- **Edit**: `src/components/followups/SignPostDialog.jsx` — add explicit tenant guards on every query and the insert payload, plus a submit-time `tenantId` guard.
+- Edit: `src/components/followups/SignPostDetailPanel.jsx` (one `SelectContent`)
+- Edit: `src/components/followups/ReferralUpdateDialog.jsx` (one `SelectContent`)
 
-After approval I'll read the current file end-to-end, then apply all guards in one pass.
+Two-line fix per file.
