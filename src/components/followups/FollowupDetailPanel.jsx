@@ -590,6 +590,17 @@ export default function FollowupDetailPanel({ followup, onClose, onUpdate, curre
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Sign-Post Dialog */}
+      <SignPostDialog
+        open={signPostOpen}
+        onOpenChange={setSignPostOpen}
+        followup={followup}
+        member={memberRecord}
+        onCreated={() => {
+          queryClient.invalidateQueries({ queryKey: ["followup-referrals", followup.id] });
+        }}
+      />
     </div>
   );
 }

@@ -5,6 +5,7 @@ import { CheckCircle2, XCircle, UserCircle, ChevronRight, Cake, Shield, Home } f
 import { Link } from "react-router-dom";
 import MemberFeed from "@/components/profile/MemberFeed";
 import SelfCheckInWidget from "@/components/attendance/SelfCheckInWidget";
+import SignPostedToMeWidget from "@/components/dashboard/SignPostedToMeWidget";
 
 import { BirthdayBanner, UpcomingBirthdayItem } from "@/components/dashboard/BirthdayCelebration";
 import { useTenant } from "@/contexts/TenantContext";
