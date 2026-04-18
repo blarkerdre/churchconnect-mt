@@ -317,7 +317,7 @@ export default function SignPostDialog({ open, onOpenChange, followup, member, o
       <DialogPortal>
         <DialogOverlay className="z-[65] bg-black/60" />
         <DialogPrimitive.Content
-          className="fixed left-[50%] top-[50%] z-[70] grid w-full max-w-md translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-lg max-h-[90vh] overflow-y-auto sm:rounded-lg data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95"
+          className="fixed left-[50%] top-[50%] z-[70] flex flex-col w-full max-w-md translate-x-[-50%] translate-y-[-50%] border bg-background shadow-lg max-h-[90vh] sm:rounded-lg data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 overflow-hidden"
         >
         <TenantDialogHeader>
           <Sparkles className="h-4 w-4" /> Sign-Post {followup?.person_name || "Member"}
