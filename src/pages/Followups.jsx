@@ -55,35 +55,45 @@ export default function Followups() {
     return map;
   }, [profiles]);
 
-  // Fetch follow-up unit members for reassignment (leaders + regular members)
+  // Candidates for reassignment: admins/owners + unit leaders + Follow-up unit members.
+  // Falls back gracefully so the dropdown is never empty for an admin.
   const { data: followupUnitMembers = [] } = useQuery({
-    queryKey: ["followup-unit-members", tenantId],
+    queryKey: ["followup-reassign-candidates", tenantId],
+    enabled: !!tenantId,
     queryFn: async () => {
-      // Get unit leaders assigned to Follow-up
-      const { data: leaders = [], error: leadersErr } = await scopeQuery(
+      const [leadersRes, unitMembersRes, rolesRes, tmembersRes] = await Promise.all([
+        scopeQuery(
+          supabase
+            .from("unit_leader_assignments")
+            .select("user_id")
+            .ilike("unit_name", "%follow%")
+        ),
+        scopeQuery(
+          supabase
+            .from("members")
+            .select("user_id")
+            .not("user_id", "is", null)
+            .or("church_unit.ilike.%follow-up%,church_unit.ilike.%follow up%")
+        ),
+        scopeQuery(
+          supabase
+            .from("user_roles")
+            .select("user_id, role")
+            .in("role", ["admin", "unit_leader", "wsf_leader"])
+        ),
         supabase
-          .from("unit_leader_assignments")
-          .select("user_id")
-          .in("unit_name", ["Follow-up", "Follow-Up", "follow-up"])
-      );
-      if (leadersErr) throw leadersErr;
-
-      // Get regular members whose church_unit contains Follow-up
-      const { data: unitMembers = [], error: membersErr } = await scopeQuery(
-        supabase
-          .from("members")
-          .select("user_id")
-          .not("user_id", "is", null)
-          .or("church_unit.ilike.%follow-up%,church_unit.ilike.%follow up%")
-      );
-      if (membersErr) throw membersErr;
-
-      // Deduplicate
-      const allIds = new Set([
-        ...leaders.map(d => d.user_id),
-        ...unitMembers.map(d => d.user_id),
+          .from("tenant_members")
+          .select("user_id, role")
+          .eq("tenant_id", tenantId)
+          .in("role", ["owner", "admin"]),
       ]);
-      return [...allIds];
+
+      const ids = new Set();
+      (leadersRes.data || []).forEach(d => d.user_id && ids.add(d.user_id));
+      (unitMembersRes.data || []).forEach(d => d.user_id && ids.add(d.user_id));
+      (rolesRes.data || []).forEach(d => d.user_id && ids.add(d.user_id));
+      (tmembersRes.data || []).forEach(d => d.user_id && ids.add(d.user_id));
+      return [...ids];
     },
   });
 
