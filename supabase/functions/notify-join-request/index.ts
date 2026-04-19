@@ -165,7 +165,12 @@ Deno.serve(async (req) => {
 
     // 2. Email + SMS each approver
     const senderDomain = "notify.app.churchmanagementsuite.org";
-    const fromAddress = `${churchShortName} <noreply@${senderDomain}>`;
+    // RFC 5322: quote display name if it contains special chars (comma, semicolon, etc.)
+    const needsQuoting = /[",;:<>@()\[\]\\]/.test(churchShortName);
+    const safeDisplayName = needsQuoting
+      ? `"${churchShortName.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`
+      : churchShortName;
+    const fromAddress = `${safeDisplayName} <noreply@${senderDomain}>`;
     const subject = `New Join Request: ${targetLabel}`;
 
     // Fetch contact info for approvers
