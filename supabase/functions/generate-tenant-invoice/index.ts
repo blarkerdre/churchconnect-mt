@@ -68,15 +68,18 @@ Deno.serve(async (req) => {
     // Load tenant for bill-to defaults
     const { data: tenant, error: tenantErr } = await admin
       .from('tenants')
-      .select('id, name, contact_email, contact_phone, settings')
+      .select('id, name, settings')
       .eq('id', tenant_id)
       .maybeSingle()
     if (tenantErr || !tenant) {
-      return new Response(JSON.stringify({ error: 'Tenant not found' }), {
+      console.error('Tenant lookup failed', { tenant_id, tenantErr })
+      return new Response(JSON.stringify({ error: 'Tenant not found', detail: tenantErr?.message }), {
         status: 404,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
+    const tenantSettings = (tenant.settings && typeof tenant.settings === 'object') ? tenant.settings : {}
+    const tenantContactEmail = tenantSettings.contact_email || tenantSettings.billing_email || ''
 
     // Load subscription (for currency / amount defaults)
     let subscription = null
@@ -140,7 +143,7 @@ Deno.serve(async (req) => {
 
     const billTo = providedBillTo || {
       name: tenant.name,
-      email: tenant.contact_email || '',
+      email: tenantContactEmail,
       address: '',
       contact_name: '',
     }
