@@ -1,4 +1,4 @@
 
-The user said "Join request notification dlq" — extremely terse. I need to interpret this. "DLQ" usually means "dead letter queue" — i.e. notifications for join requests are failing / ending up undelivered. Let me investigate.
+The user is reporting that follow-up SMS messages are stuck showing "queued" status in System Logs and never progress to "sent" / "delivered".
 
-Let me check the notify-join-request edge function and recent logs.
+Let me investigate the relevant code paths.
