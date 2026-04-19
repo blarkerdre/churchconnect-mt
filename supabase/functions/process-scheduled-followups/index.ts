@@ -248,10 +248,12 @@ async function sendSms(
       fromNumber = tenantSettings.twilio_sms_from as string;
     }
 
+    const webhookUrl = `${supabaseUrl}/functions/v1/twilio-webhook`;
     const params = new URLSearchParams({
       To: phone,
       From: fromNumber,
       Body: msg.message,
+      StatusCallback: webhookUrl,
     });
 
     const response = await fetch(`${TWILIO_GATEWAY_URL}/Messages.json`, {
@@ -283,6 +285,7 @@ async function sendSms(
     channel: "sms",
     message_sid: messageSid,
     delivery_status: "queued",
+    provider: smsProvider,
     ...(msg.tenant_id ? { tenant_id: msg.tenant_id } : {}),
   });
 }
