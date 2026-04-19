@@ -13,7 +13,6 @@ import { useToast } from "@/components/ui/use-toast";
 import { CreditCard, Plus, Save, Loader2, RefreshCw, Receipt } from "lucide-react";
 import { format } from "date-fns";
 import InvoicesReceiptsList from "./InvoicesReceiptsList";
-import { useMutation as useReceiptMutation } from "@tanstack/react-query";
 
 export default function TenantBillingTab({ tenant }) {
   const { toast } = useToast();
@@ -321,6 +320,7 @@ export default function TenantBillingTab({ tenant }) {
                   <TableHead className="text-xs">Amount</TableHead>
                   <TableHead className="text-xs">Method</TableHead>
                   <TableHead className="text-xs">Status</TableHead>
+                  <TableHead className="text-xs text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
