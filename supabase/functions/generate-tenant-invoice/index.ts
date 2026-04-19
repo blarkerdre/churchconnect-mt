@@ -143,7 +143,7 @@ Deno.serve(async (req) => {
 
     const billTo = providedBillTo || {
       name: tenant.name,
-      email: tenant.contact_email || '',
+      email: tenantContactEmail,
       address: '',
       contact_name: '',
     }
