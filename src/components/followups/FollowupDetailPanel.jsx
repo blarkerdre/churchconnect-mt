@@ -299,31 +299,42 @@ export default function FollowupDetailPanel({ followup, onClose, onUpdate, curre
             <p className="text-sm font-medium text-foreground">
               {followup.assigned_to_name || (followup.assigned_to && profileMap[followup.assigned_to]) || "Unassigned"}
             </p>
-            {showReassign && (
-              <div className="space-y-2 pt-1">
-                <Select
-                  onValueChange={async (userId) => {
-                    setReassigning(true);
-                    await onUpdate(followup.id, { assigned_to: userId });
-                    toast({ title: `Reassigned to ${profileMap[userId] || "member"}` });
-                    setShowReassign(false);
-                    setReassigning(false);
-                  }}
-                  disabled={reassigning}
-                >
-                  <SelectTrigger className="h-8 text-sm">
-                    <SelectValue placeholder={reassigning ? "Reassigning..." : "Select member"} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {followupUnitMembers.map(uid => (
-                      <SelectItem key={uid} value={uid}>
-                        {profileMap[uid] || uid}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
+            {showReassign && (() => {
+              const candidates = (followupUnitMembers || []).filter(
+                uid => uid && uid !== followup.assigned_to
+              );
+              return (
+                <div className="space-y-2 pt-1">
+                  {candidates.length === 0 ? (
+                    <p className="text-xs text-muted-foreground italic px-1">
+                      No other team members available. Add users to the Follow-up unit in User Management.
+                    </p>
+                  ) : (
+                    <Select
+                      onValueChange={async (userId) => {
+                        setReassigning(true);
+                        await onUpdate(followup.id, { assigned_to: userId });
+                        toast({ title: `Reassigned to ${profileMap[userId] || "member"}` });
+                        setShowReassign(false);
+                        setReassigning(false);
+                      }}
+                      disabled={reassigning}
+                    >
+                      <SelectTrigger className="h-8 text-sm">
+                        <SelectValue placeholder={reassigning ? "Reassigning..." : "Select a team member"} />
+                      </SelectTrigger>
+                      <SelectContent className="z-[60] max-h-64">
+                        {candidates.map(uid => (
+                          <SelectItem key={uid} value={uid}>
+                            {profileMap[uid] || "Team member"}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                </div>
+              );
+            })()}
           </div>
 
           {/* Sign-Post (refer to leader) */}
