@@ -2634,6 +2634,106 @@ export type Database = {
           },
         ]
       }
+      tenant_invoices: {
+        Row: {
+          bill_to: Json
+          created_at: string
+          created_by: string | null
+          currency: string
+          document_type: string
+          due_date: string | null
+          id: string
+          invoice_number: string
+          issue_date: string
+          line_items: Json
+          notes: string | null
+          payment_id: string | null
+          pdf_url: string | null
+          sent_at: string | null
+          sent_to: string | null
+          status: string
+          subscription_id: string | null
+          subtotal: number
+          tax_amount: number
+          tenant_id: string
+          terms: string | null
+          total: number
+          updated_at: string
+        }
+        Insert: {
+          bill_to?: Json
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          document_type: string
+          due_date?: string | null
+          id?: string
+          invoice_number: string
+          issue_date?: string
+          line_items?: Json
+          notes?: string | null
+          payment_id?: string | null
+          pdf_url?: string | null
+          sent_at?: string | null
+          sent_to?: string | null
+          status?: string
+          subscription_id?: string | null
+          subtotal?: number
+          tax_amount?: number
+          tenant_id: string
+          terms?: string | null
+          total?: number
+          updated_at?: string
+        }
+        Update: {
+          bill_to?: Json
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          document_type?: string
+          due_date?: string | null
+          id?: string
+          invoice_number?: string
+          issue_date?: string
+          line_items?: Json
+          notes?: string | null
+          payment_id?: string | null
+          pdf_url?: string | null
+          sent_at?: string | null
+          sent_to?: string | null
+          status?: string
+          subscription_id?: string | null
+          subtotal?: number
+          tax_amount?: number
+          tenant_id?: string
+          terms?: string | null
+          total?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_invoices_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: false
+            referencedRelation: "tenant_payments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenant_invoices_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "tenant_subscriptions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenant_invoices_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tenant_memberships: {
         Row: {
           created_at: string
@@ -3648,6 +3748,10 @@ export type Database = {
           source_queue: string
         }
         Returns: number
+      }
+      next_invoice_number: {
+        Args: { _doc_type: string; _tenant_id: string }
+        Returns: string
       }
       notify_all_users:
         | {

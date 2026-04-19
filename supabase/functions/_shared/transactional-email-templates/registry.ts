@@ -15,6 +15,7 @@ import { template as newTenantNotification } from './new-tenant-notification.tsx
 import { template as tenantInvitation } from './tenant-invitation.tsx'
 import { template as followupReminder } from './followup-reminder.tsx'
 import { template as paymentReceipt } from './payment-receipt.tsx'
+import { template as tenantInvoice } from './tenant-invoice.tsx'
 
 export const TEMPLATES: Record<string, TemplateEntry> = {
   'welcome-member': welcomeMember,
@@ -23,4 +24,5 @@ export const TEMPLATES: Record<string, TemplateEntry> = {
   'tenant-invitation': tenantInvitation,
   'followup-reminder': followupReminder,
   'payment-receipt': paymentReceipt,
+  'tenant-invoice': tenantInvoice,
 }

@@ -10,8 +10,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/components/ui/use-toast";
-import { CreditCard, Plus, Save, Loader2, RefreshCw } from "lucide-react";
+import { CreditCard, Plus, Save, Loader2, RefreshCw, Receipt } from "lucide-react";
 import { format } from "date-fns";
+import InvoicesReceiptsList from "./InvoicesReceiptsList";
 
 export default function TenantBillingTab({ tenant }) {
   const { toast } = useToast();
@@ -319,6 +320,7 @@ export default function TenantBillingTab({ tenant }) {
                   <TableHead className="text-xs">Amount</TableHead>
                   <TableHead className="text-xs">Method</TableHead>
                   <TableHead className="text-xs">Status</TableHead>
+                  <TableHead className="text-xs text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -330,6 +332,28 @@ export default function TenantBillingTab({ tenant }) {
                     <TableCell>
                       <Badge variant={p.status === "completed" ? "default" : "secondary"} className="text-[10px] capitalize">{p.status}</Badge>
                     </TableCell>
+                    <TableCell className="text-right">
+                      {p.status === "completed" && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-7 text-[10px]"
+                          onClick={async () => {
+                            const { data, error } = await supabase.functions.invoke("generate-tenant-invoice", {
+                              body: { tenant_id: tenantId, document_type: "receipt", payment_id: p.id },
+                            });
+                            if (error || data?.error) {
+                              toast({ title: "Failed", description: (error?.message || data?.error), variant: "destructive" });
+                            } else {
+                              toast({ title: "Receipt created", description: data.invoice.invoice_number });
+                              queryClient.invalidateQueries({ queryKey: ["tenant-invoices", tenantId] });
+                            }
+                          }}
+                        >
+                          <Receipt className="h-3 w-3 mr-1" /> Receipt
+                        </Button>
+                      )}
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -337,6 +361,11 @@ export default function TenantBillingTab({ tenant }) {
           </div>
         )}
       </div>
+
+      <Separator />
+
+      {/* Invoices & Receipts */}
+      <InvoicesReceiptsList tenant={tenant} payments={payments} />
     </div>
   );
 }
