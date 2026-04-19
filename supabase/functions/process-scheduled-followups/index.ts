@@ -285,7 +285,6 @@ async function sendSms(
     channel: "sms",
     message_sid: messageSid,
     delivery_status: "queued",
-    provider: smsProvider,
     ...(msg.tenant_id ? { tenant_id: msg.tenant_id } : {}),
   });
 }
