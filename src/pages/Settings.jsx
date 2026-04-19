@@ -214,7 +214,26 @@ function BillingSection() {
               <div className="flex justify-between"><span className="text-muted-foreground">Amount</span><span className="font-semibold">{subscription.currency} {Number(subscription.amount).toFixed(2)}</span></div>
               <div className="flex justify-between"><span className="text-muted-foreground">Billing Cycle</span><span className="capitalize">{subscription.billing_cycle}</span></div>
               <div className="flex justify-between"><span className="text-muted-foreground">Next Due Date</span><span className={tenantData?.subscription_status !== "active" ? "text-destructive font-medium" : ""}>{subscription.next_due_date}</span></div>
+              {Number(subscription.setup_fee_amount) > 0 && (
+                <div className="flex justify-between items-center gap-2 flex-wrap">
+                  <span className="text-muted-foreground">Setup Fee (one-time)</span>
+                  <span className="flex items-center gap-2">
+                    <span className="font-semibold">{subscription.currency} {Number(subscription.setup_fee_amount).toFixed(2)}</span>
+                    {subscription.setup_fee_paid ? (
+                      <Badge className="text-[10px] bg-emerald-600 hover:bg-emerald-600 text-white">Paid</Badge>
+                    ) : (
+                      <Badge variant="secondary" className="text-[10px] bg-amber-100 text-amber-800 hover:bg-amber-100 dark:bg-amber-950/40 dark:text-amber-300">Due with first payment</Badge>
+                    )}
+                  </span>
+                </div>
+              )}
             </div>
+
+            {!subscription.stripe_subscription_id && Number(subscription.setup_fee_amount) > 0 && !subscription.setup_fee_paid && (
+              <p className="text-xs text-muted-foreground px-1">
+                Your first payment will include a one-time setup fee of <span className="font-medium text-foreground">{subscription.currency} {Number(subscription.setup_fee_amount).toFixed(2)}</span> plus the recurring <span className="font-medium text-foreground">{subscription.currency} {Number(subscription.amount).toFixed(2)}</span> / {subscription.billing_cycle}.
+              </p>
+            )}
 
             {subscription.stripe_subscription_id && (
               <div className="flex items-center gap-2 p-2 bg-emerald-50 dark:bg-emerald-950/30 rounded-lg text-xs text-emerald-700 dark:text-emerald-400">
