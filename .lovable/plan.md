@@ -1,63 +1,104 @@
 
 
-User says Blarkerdre@yahoo.com (a tenant owner) cannot see "Admin" in the role dropdown. Let me check the dropdown markup.
+## Goal
+Add the ability for Super Admins to **generate, edit, preview, download, and email** invoices and receipts to tenants from the Tenant Billing tab.
 
-Looking at `TenantUsersDialog.jsx` lines 274-289 — the Select has `member`, `admin`, `owner` as options. So Admin IS in the list. Let me think about what they could mean:
+## Context I confirmed
+- `tenant_payments` (existing) tracks completed payments — receipts derive from these.
+- `tenant_subscriptions` (existing) drives recurring amounts — invoices derive from upcoming dues.
+- `payment-receipt.tsx` React Email template already exists and is wired into the registry — usable for receipt emails.
+- `send-transactional-email` edge function already supports arbitrary `templateData` and tenant scoping.
+- `jspdf` + `html2canvas` are already installed → no new deps for PDF generation.
+- No existing "invoice" template, no `tenant_invoices` table, no invoice numbering.
 
-1. The dropdown shows current value but no options when opened? — Unlikely, all three are hardcoded.
-2. On mobile (384px viewport — confirmed by current-viewport), the SelectTrigger has class `w-28 h-7 text-xs` — 112px wide, 28px tall. The dropdown opens but might be clipped.
-3. Most likely: the **SelectContent dropdown is being clipped/hidden** by the Dialog's `max-h-[85vh] overflow-y-auto` container on mobile. Radix SelectContent uses a Portal by default so it should escape, but the trigger sits in a scrollable area and on small viewports the content can render off-screen or behind.
+## Design
 
-Actually — re-reading: the `Select` content has 3 items. They should all render. Let me look harder…
+### 1. New table: `tenant_invoices`
+Stores generated invoices/receipts so they have permanent numbers, can be re-downloaded, re-sent, and edited before send.
 
-The DialogContent has `overflow-y-auto`. Radix Select renders via Portal so it escapes the dialog scroll. That should be fine.
+| Column | Purpose |
+|---|---|
+| `id` | uuid PK |
+| `tenant_id` | FK → tenants |
+| `subscription_id` | FK → tenant_subscriptions (nullable) |
+| `payment_id` | FK → tenant_payments (nullable, set when document_type='receipt') |
+| `document_type` | text: `invoice` or `receipt` |
+| `invoice_number` | text unique per tenant, format `INV-2026-0001` / `RCT-2026-0001` |
+| `status` | text: `draft`, `sent`, `paid`, `void` |
+| `issue_date`, `due_date` | dates |
+| `currency`, `subtotal`, `tax_amount`, `total` | numerics |
+| `line_items` | jsonb array `[{description, quantity, unit_price, amount}]` |
+| `bill_to` | jsonb `{name, email, address, contact_name}` |
+| `notes`, `terms` | text (editable) |
+| `pdf_url` | text (storage path, optional cache) |
+| `sent_at`, `sent_to` | timestamp + email captured at send |
+| `created_by`, `created_at`, `updated_at` | audit |
 
-Wait — could it be that for THIS user's row, the current role IS already "admin", so when they open the dropdown they see Member/Admin/Owner with Admin highlighted, but they're looking at it on a 384px viewport where the dropdown is super narrow and "Admin" might be visually obscured?
+RLS: Super admins full access; tenant admins SELECT only their own.
 
-Or — more likely — the user is looking at OTHER users' rows. Blarker is the owner viewing the list. The dropdown for OTHER users shows current role. He wants to change someone TO admin. The dropdown should show all three options.
+### 2. New invoice email template
+`supabase/functions/_shared/transactional-email-templates/tenant-invoice.tsx`
+Mirrors `payment-receipt.tsx` styling; renders line items, totals, due date, "Pay Now" button (uses Stripe checkout link if subscription has one, else manage URL). Register in `registry.ts`.
 
-Most plausible cause given mobile context: **the SelectTrigger is `w-28` (112px) with `h-7 text-xs`**, and on mobile the SelectContent popover may render but be misaligned or clipped. OR — and I think this is it — the role column is in a `Table` inside `overflow-x-auto`, on a 384px viewport the Actions column pushes the role Select off-screen to the right, or the dropdown content gets clipped at the viewport edge.
+### 3. New edge function: `generate-tenant-invoice`
+- Input: `{ tenant_id, document_type, payment_id?, subscription_id?, line_items?, due_date?, notes? }`
+- Logic:
+  - If `document_type='receipt'` and `payment_id` provided → prefill from payment + subscription.
+  - If `document_type='invoice'` → prefill from subscription (next due date, amount, setup fee if unpaid).
+  - Generate next sequential `invoice_number` per tenant + year.
+  - Insert row in `tenant_invoices` with status `draft`.
+  - Returns the invoice row.
 
-Let me check by looking at the table structure — line 263: `<TableCell>` wraps the Select. With User column + Role column + Actions column, on 384px width the table overflows horizontally. User scrolls right to see Role, but the SelectContent portal opens at the trigger's absolute position which might be off-screen.
+### 4. New edge function: `send-tenant-invoice`
+- Input: `{ invoice_id, recipient_email?, override_subject? }`
+- Loads invoice + tenant. Calls `send-transactional-email` with template `tenant-invoice` (or `payment-receipt` for receipts) and full template data.
+- Updates row to `status='sent'`, `sent_at`, `sent_to`.
 
-Actually a much simpler possibility I should not overlook: **the Select component is rendered inside an `AlertDialog` or another nested portal**, but it's not — it's directly in the Dialog. Radix handles this.
+### 5. UI: extend `TenantBillingTab.jsx`
+Add a third section **"Invoices & Receipts"** below Payment History:
 
-I should ask the user to clarify before fixing the wrong thing. There are too many possibilities:
-- Does he see a dropdown that opens with only 2 options?
-- Does the dropdown open but Admin is cut off?
-- Does the dropdown not open at all?
-- Is he on mobile or desktop?
-- Is he looking at his OWN row (an owner can demote himself to admin)?
+```text
+Invoices & Receipts                       [+ New Invoice] [+ New Receipt]
+─────────────────────────────────────────────────────────────────────────
+INV-2026-0007   Invoice  £55.00   Due 2026-05-05    Sent    [Edit][PDF][Send]
+RCT-2026-0011   Receipt  £50.00   2026-04-05        Sent    [View][PDF][Resend]
+```
 
-## Plan
+- **+ New Receipt** button on each completed Payment row (inline action) → calls `generate-tenant-invoice` with `document_type='receipt'`, opens edit dialog.
+- **+ New Invoice** button → opens blank dialog prefilled from active subscription.
+- **Edit dialog** (`InvoiceEditorDialog.jsx`): editable fields for bill-to, line items (add/remove rows, qty × unit price auto-totals), notes/terms, due date. Live preview pane on the right (desktop) or below (mobile) rendered with the same styling as the email template.
+- **Download PDF**: client-side render using existing `jspdf` + `html2canvas` against the preview pane → `Invoice-INV-2026-0007.pdf`.
+- **Send**: confirms recipient email (defaults to tenant owner's email), calls `send-tenant-invoice`.
 
-Ask one targeted clarifying question, then fix.
+### 6. Tenant-side visibility (small)
+On the existing Settings → Billing area for tenant admins, add a read-only "Invoices & Receipts" list with Download PDF buttons. Reuses the same components.
 
-### Step 1 — Clarify
+## Files
 
-Use `questions--ask_questions` to ask Blarker (via the user) what he actually sees:
-- Dropdown opens but Admin option is missing entirely
-- Dropdown opens but Admin appears cut off / hidden behind something
-- Dropdown does not open at all when tapped
-- He's trying to change his OWN role from Owner to Admin and that option is missing
+**New (DB)**
+- Migration: create `tenant_invoices` table + RLS + sequence helper function `next_invoice_number(tenant_id, doc_type)`
 
-### Step 2 — Fix based on answer
+**New (Edge Functions)**
+- `supabase/functions/generate-tenant-invoice/index.ts`
+- `supabase/functions/send-tenant-invoice/index.ts`
+- `supabase/functions/_shared/transactional-email-templates/tenant-invoice.tsx`
 
-**If "Admin missing entirely"** — likely means he's viewing an old cached build. Add a hard cache-bust note and verify deploy. Also check if any condition gates the option (currently none — all three are always rendered).
+**New (UI)**
+- `src/components/tenants/InvoicesReceiptsList.jsx`
+- `src/components/tenants/InvoiceEditorDialog.jsx`
+- `src/components/tenants/InvoicePreview.jsx` (shared HTML used for both on-screen preview and PDF capture)
 
-**If "Admin appears cut off / hidden"** — mobile clipping of `SelectContent`. Fix by:
-- Widening `SelectTrigger` from `w-28` to `w-full sm:w-28` (or `min-w-[110px]`)
-- Adding `position="popper"` and `sideOffset={4}` to SelectContent so Radix smart-flips it into the viewport
-- Ensure the `Table`'s `overflow-x-auto` wrapper doesn't trap the portal (it shouldn't, but add `className="z-[60]"` to SelectContent to outrank dialog overlay)
+**Edit**
+- `supabase/functions/_shared/transactional-email-templates/registry.ts` (register `tenant-invoice`)
+- `src/components/tenants/TenantBillingTab.jsx` (mount `InvoicesReceiptsList`, add inline "Receipt" action on each payment row)
+- (Optional) `src/pages/Settings.jsx` — add tenant-admin read-only view
 
-**If "Dropdown does not open"** — likely a click-target issue at `h-7` on touch screens (28px is below the 44px iOS minimum). Bump trigger to `h-9` on mobile.
+## Out of scope
+- VAT / tax engine (single optional tax line input only)
+- Multi-currency conversion (uses subscription's currency)
+- Stripe-hosted invoices (these are app-generated; Stripe webhooks remain unchanged)
+- Refund / credit notes
 
-**If "Trying to change own Owner → Admin"** — this IS allowed currently (no guard prevents owner self-demote). If he doesn't see his own row's dropdown enabled, check if the `disabled` logic on the Select is inadvertently triggered. Currently the Select is never disabled — only the Trash button is, when isOnlyOwner. So this should work. If he's the only owner the typed-confirmation `DEMOTE` will protect him.
-
-### Files (likely to edit)
-- `src/components/tenants/TenantUsersDialog.jsx` (mobile dropdown sizing & SelectContent positioning)
-
-### Out of scope
-- Database / RLS changes (verified earlier — owners can update roles)
-- Any change to confirmation flow
+## Mobile considerations (384 px)
+Editor dialog uses single-column stacked layout with collapsible preview; line-item rows render as compact cards instead of a table.
 
