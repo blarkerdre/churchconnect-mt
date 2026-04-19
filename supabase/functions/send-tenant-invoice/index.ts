@@ -53,18 +53,21 @@ Deno.serve(async (req) => {
 
     const { data: invoice, error: invErr } = await admin
       .from('tenant_invoices')
-      .select('*, tenant:tenants(id, name, contact_email, settings)')
+      .select('*, tenant:tenants(id, name, settings)')
       .eq('id', invoice_id)
       .maybeSingle()
     if (invErr || !invoice) {
-      return new Response(JSON.stringify({ error: 'Invoice not found' }), {
+      console.error('Invoice lookup failed', { invoice_id, invErr })
+      return new Response(JSON.stringify({ error: 'Invoice not found', detail: invErr?.message }), {
         status: 404,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
 
     const billTo = invoice.bill_to || {}
-    const recipient = recipient_email || billTo.email || invoice.tenant?.contact_email
+    const tenantSettings = (invoice.tenant?.settings && typeof invoice.tenant.settings === 'object') ? invoice.tenant.settings : {}
+    const tenantContactEmail = tenantSettings.contact_email || tenantSettings.billing_email || ''
+    const recipient = recipient_email || billTo.email || tenantContactEmail
     if (!recipient) {
       return new Response(JSON.stringify({ error: 'No recipient email available' }), {
         status: 400,
