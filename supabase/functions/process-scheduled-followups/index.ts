@@ -248,10 +248,12 @@ async function sendSms(
       fromNumber = tenantSettings.twilio_sms_from as string;
     }
 
+    const webhookUrl = `${supabaseUrl}/functions/v1/twilio-webhook`;
     const params = new URLSearchParams({
       To: phone,
       From: fromNumber,
       Body: msg.message,
+      StatusCallback: webhookUrl,
     });
 
     const response = await fetch(`${TWILIO_GATEWAY_URL}/Messages.json`, {
