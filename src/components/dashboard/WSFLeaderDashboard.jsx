@@ -14,6 +14,7 @@ import SelfCheckInWidget from "@/components/attendance/SelfCheckInWidget";
 import MemberFeed from "@/components/profile/MemberFeed";
 import { UpcomingBirthdayItem } from "@/components/dashboard/BirthdayCelebration";
 import DashboardBanner from "@/components/dashboard/DashboardBanner";
+import PendingJoinRequests from "@/components/dashboard/PendingJoinRequests";
 
 export default function WSFLeaderDashboard() {
   const { user, myMember, profile } = useAuth();
