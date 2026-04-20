@@ -14,9 +14,10 @@ import SelfCheckInWidget from "@/components/attendance/SelfCheckInWidget";
 import MemberFeed from "@/components/profile/MemberFeed";
 import { UpcomingBirthdayItem } from "@/components/dashboard/BirthdayCelebration";
 import DashboardBanner from "@/components/dashboard/DashboardBanner";
+import PendingJoinRequests from "@/components/dashboard/PendingJoinRequests";
 
 export default function WSFLeaderDashboard() {
-  const { user, myMember, profile } = useAuth();
+  const { user, myMember, profile, isUnitLeader } = useAuth();
   const { currentTenant, tenantRole } = useTenant();
   const { tenantId, scopeQuery } = useTenantQuery();
   const roleLabel = tenantRole ? tenantRole.charAt(0).toUpperCase() + tenantRole.slice(1) : "";
@@ -138,6 +139,9 @@ export default function WSFLeaderDashboard() {
 
       {/* Pending Home Cell join requests */}
       <PendingJoinRequests filter="home_cell" />
+
+      {/* Pending Unit join requests (if also a unit leader) */}
+      {isUnitLeader && <PendingJoinRequests filter="unit" />}
 
       {/* Welcome Banner */}
       <Card className="border-0 shadow-sm bg-gradient-to-r from-primary to-primary/70 text-primary-foreground overflow-hidden">

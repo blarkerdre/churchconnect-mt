@@ -93,6 +93,14 @@ export default function Dashboard() {
   if (!authLoading && !isAdmin && isWSFLeader) {
     return <WSFLeaderDashboard />;
   }
+  if (!authLoading && !isAdmin && isUnitLeader) {
+    return (
+      <div className="space-y-6">
+        <PendingJoinRequests filter="unit" />
+        <MemberDashboard currentUser={profile} myMember={myMember} />
+      </div>
+    );
+  }
   if (!authLoading && !isAdmin) {
     return <MemberDashboard currentUser={profile} myMember={myMember} />;
   }
