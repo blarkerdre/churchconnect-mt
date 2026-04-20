@@ -17,7 +17,7 @@ import DashboardBanner from "@/components/dashboard/DashboardBanner";
 import PendingJoinRequests from "@/components/dashboard/PendingJoinRequests";
 
 export default function WSFLeaderDashboard() {
-  const { user, myMember, profile } = useAuth();
+  const { user, myMember, profile, isUnitLeader } = useAuth();
   const { currentTenant, tenantRole } = useTenant();
   const { tenantId, scopeQuery } = useTenantQuery();
   const roleLabel = tenantRole ? tenantRole.charAt(0).toUpperCase() + tenantRole.slice(1) : "";
