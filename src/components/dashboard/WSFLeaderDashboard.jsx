@@ -140,6 +140,9 @@ export default function WSFLeaderDashboard() {
       {/* Pending Home Cell join requests */}
       <PendingJoinRequests filter="home_cell" />
 
+      {/* Pending Unit join requests (if also a unit leader) */}
+      {isUnitLeader && <PendingJoinRequests filter="unit" />}
+
       {/* Welcome Banner */}
       <Card className="border-0 shadow-sm bg-gradient-to-r from-primary to-primary/70 text-primary-foreground overflow-hidden">
         <CardContent className="p-6 flex items-center gap-4">
