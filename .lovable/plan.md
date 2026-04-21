@@ -1,63 +1,78 @@
 
 
-## Why Favour sees "Unknown" on her Follow-up list
+## Why Blarker Dre never gets a "decline" notification
 
-### Root cause (RLS, not a UI bug)
-Favour Igbineweka has the `unit_leader` role for "Follow-Up". As a unit leader, she can read **every** follow-up in the tenant (16 in total). But for the 9 follow-ups that are **not assigned to her**, the `members(...)` join in the query is filtered out by Row Level Security and returns `null` — so the page falls back to the literal string `"Unknown"` (`src/pages/Followups.jsx` line 112).
+### What's happening for Blarker (member ID `465f90c3…`)
 
-The members in question are first-timers / visitors with an **empty `church_unit`**, so the existing `members` SELECT policies all miss for her on those rows:
+She has two join requests in the Cardiff tenant:
 
-| Policy | Result for Favour on a non-her followup's member |
-|---|---|
-| Admins can view all members | ✗ not admin |
-| Unit leaders can view unit members | ✗ member's `church_unit` is empty, no match against "Follow-Up" |
-| WSF leaders can view centre members | ✗ no centre |
-| Assigned followup users can view followup member | ✗ only fires when she IS the assignee |
-| Assigned referral leaders can view referred member | ✗ no referral to her |
+| Request | Status | When |
+|---|---|---|
+| Join **Ushering** unit | approved 18 Apr 20:51 | by Adeniyi |
+| Join **Cathays Centre** (home cell) | declined 21 Apr 11:16 with reason "Please try again next month" | by Adeniyi |
 
-Net effect: she sees the follow-up row, but the embedded member is invisible → "Unknown".
+Both decisions correctly created an **in-app bell notification** for her — they exist in the `notifications` table, addressed to her user id, and are visible in the bell on her profile / dashboard. So if "rejection notification" means the in-app bell, it WAS sent and is sitting there.
 
-Confirmed in DB: 16 follow-ups in the Cardiff tenant, 7 assigned to her (those show the correct name), 9 not assigned to her (those show "Unknown").
+### If the user means email/SMS rejection notification
 
-### Fix — add one RLS policy on `public.members`
+There is **no email or SMS sent on approve/decline anywhere in the codebase**. The decline path (`public.decline_join_request` SQL function) only does three things:
 
-Allow a user who can already read a `followups` row to also read the member it points to. This mirrors the existing follow-ups visibility rule and exposes nothing she can't already see by name in other places (the dashboard widgets, the analytics export, etc.).
+1. Marks the request `declined`
+2. Writes an audit log row
+3. Inserts a single in-app `notifications` row
 
-```sql
-CREATE POLICY "Followup viewers can view followup member"
-ON public.members
-FOR SELECT
-TO authenticated
-USING (
-  user_has_tenant_access(tenant_id)
-  AND EXISTS (
-    SELECT 1
-    FROM public.followups f
-    WHERE f.member_id = members.id
-      AND f.tenant_id = members.tenant_id
-      AND (
-        is_admin(auth.uid(), f.tenant_id)
-        OR has_role(auth.uid(), 'unit_leader'::app_role, f.tenant_id)
-        OR has_role(auth.uid(), 'wsf_leader'::app_role, f.tenant_id)
-      )
-  )
-);
-```
+The same is true for `approve_join_request`. The `notify-join-request` edge function only fires when a member **submits** a request (to alert admins/leaders) — it has no decline/approve branch.
 
-The narrower "Assigned followup users can view followup member" stays in place so members assigned to non-leader users keep working.
+So Blarker has never received an email or SMS about either decision because the feature was never built. The previous fix just made sure the leader-side widget showed pending requests, not that the requester got an email when a decision was made.
 
-### Why this is safe
-- It only widens visibility on members **already referenced by a follow-up the user can read** — a follow-up they were going to act on anyway.
-- It still requires `user_has_tenant_access`, so it's tenant-scoped.
-- It does not let unit leaders read every member in the tenant (the existing `church_unit` rule still governs that).
+### Side issue I noticed (separate problem)
 
-### No code changes needed
-`src/pages/Followups.jsx`, `FollowupDetailPanel`, `OverdueReminder` and the dashboard widgets all use the same embed. Once the policy is added, they will start showing real names automatically.
+When Blarker first submitted her two requests on 18 Apr, the `notify-join-request` function tried to notify the approvers (Adeniyi, plus Blarker herself because she's a tenant admin/leader, which is its own bug — admins are emailed about their own requests). All 16 of those emails went to the dead-letter queue (`email_send_log.status = 'dlq'`) after 5 retries. Worth flagging but not what this fix is about.
+
+### Proposed fix — add member-side email + SMS on approve and decline
+
+Mirror the existing `notify-join-request` pattern but for the requester:
+
+1. Create a new edge function `notify-join-decision` with a payload of `{ request_id, decision: 'approved' | 'declined', reason? }`. It will:
+   - Look up the request, member, target unit / centre, tenant branding
+   - Look up the requester's email + phone from `members` (and `profiles` for fallback email)
+   - Check `app_settings.sms_notifications_enabled` (same toggle the other notifier uses)
+   - Check `suppressed_emails` before sending
+   - Enqueue one email via `enqueue_email` to the `transactional_emails` queue with template label `join-request-decision`, subject "Your request to join {target} was {approved|declined}", branded HTML using the existing tenant header style
+   - Send one SMS via the Twilio gateway when phone + keys exist
+   - Skip silently if no contact info — the in-app notification is still created by the SQL function as a baseline
+
+2. Invoke it from the client right after the RPC succeeds, in `src/hooks/usePendingJoinRequests.jsx`:
+
+   ```text
+   useApproveJoinRequest.onSuccess  →  invoke notify-join-decision { decision: 'approved' }
+   useDeclineJoinRequest.onSuccess  →  invoke notify-join-decision { decision: 'declined', reason }
+   ```
+
+   Fire-and-forget with `.catch(console.error)` so a notification failure never blocks the UI.
+
+3. **Idempotency key**: `join-decision-{request_id}-{decision}` so retries can't duplicate sends.
+
+4. **Permission**: edge function accepts the user's JWT (same pattern as `notify-join-request`) and re-validates internally that the request is actually approved/declined and the caller is admin / unit leader / home cell leader for the request — using the same RPC helpers (`is_admin`, `is_unit_leader_for_session`, `is_home_cell_leader_for_centre`).
+
+5. **No backend table changes** — `email_send_log` and `email_unsubscribe_tokens` already cover this, and the in-app notification is already created by the SQL function. No RLS work needed.
+
+6. **Backfill for Blarker's already-declined Cathays Centre request**: since the decision happened today before the fix existed, after deploying we'll trigger one manual invocation for `1ff3f240-f901-426c-ac80-cec667f4f6bd` so she gets the email she missed.
+
+### What it will look like to Blarker
+
+When her Cathays Centre request was declined with reason "Please try again next month", she'd receive:
+
+- **Email** "Your request to join Cathays Centre was declined" — with church branding, the reason quoted, and a link to view her profile.
+- **SMS** "Hi Blarker, your request to join Cathays Centre was declined. Reason: Please try again next month. — Winners Chapel Cardiff" (only if she had a phone — she currently doesn't).
+- The existing in-app bell notification (already there).
 
 ### Verification
-1. Sign in as Favour.
-2. Open **Follow-ups** → every row now shows a real member name; no more "Unknown".
-3. Open one of the previously-broken rows → Detail panel shows phone, email, status.
-4. Sign in as a regular member with no leader role → they still see only their own follow-ups (no widening).
-5. Sign in as a unit leader in a **different** tenant → they cannot see Cardiff members (tenant guard intact).
+
+1. Sign in as a unit leader, decline a pending request from a test member who has an email → confirm `email_send_log` has a `pending` row with template `join-request-decision`, then `sent`.
+2. Approve a different request → confirm a new email row with subject "approved".
+3. Decline without a reason → email omits the "Reason:" line cleanly.
+4. Member has no email and no phone → function returns success with `notified: 0`, no log rows.
+5. Re-approve / re-decline same request → second invocation no-ops via idempotency key.
+6. Manually invoke once for Blarker's `1ff3f240…` and confirm she receives the email.
 
