@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { CheckCircle2, Clock, Users, CalendarCheck, Plus, Loader2, Lock, FileText, Filter, Download, Printer } from "lucide-react";
+import { CheckCircle2, Clock, Users, CalendarCheck, Plus, Loader2, Lock, FileText, Filter, Download, Printer, UserCog } from "lucide-react";
 import PrintReportButton from "@/components/PrintReportButton";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -15,6 +15,7 @@ import { toast } from "@/components/ui/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
 import ReportAttachments from "@/components/reports/ReportAttachments";
+import CheckInPanel from "@/components/attendance/CheckInPanel";
 
 export default function Attendance() {
   const { isAdmin, isUnitLeader, isWSFLeader, leaderUnits = [], leaderCentres = [] } = useAuth();
@@ -25,6 +26,7 @@ export default function Attendance() {
   const queryClient = useQueryClient();
   const [selectedSessionId, setSelectedSessionId] = useState(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [manageOpen, setManageOpen] = useState(false);
   const [form, setForm] = useState({ title: "", session_type: "Sunday Service", session_date: "", notes: "", unit: "" });
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
@@ -241,6 +243,11 @@ export default function Attendance() {
                 })}
               />
             </>
+          )}
+          {canManage && selectedSession && !isClosed && (
+            <Button variant="outline" size="sm" onClick={() => setManageOpen(true)}>
+              <UserCog className="h-4 w-4" /><span className="hidden sm:inline ml-2">Manage Attendance</span>
+            </Button>
           )}
           {canManage && selectedSession && !isClosed && (
             <Button variant="outline" size="sm" onClick={() => {
@@ -495,6 +502,14 @@ export default function Attendance() {
               Create Meeting
             </Button>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={manageOpen} onOpenChange={setManageOpen}>
+        <DialogContent className="max-w-[95vw] sm:max-w-lg">
+          {selectedSession && !isClosed && (
+            <CheckInPanel session={selectedSession} onClose={() => setManageOpen(false)} />
+          )}
         </DialogContent>
       </Dialog>
     </div>
