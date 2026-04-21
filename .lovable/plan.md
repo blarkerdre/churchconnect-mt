@@ -1,39 +1,69 @@
 
 
-## Make the notifications list scrollable
-
-### Problem
-On the bell dropdown (NotificationBell), once a user has more than ~5–6 notifications the list runs off the bottom of the popover and the items beyond it can't be reached. Scrolling the page doesn't help because the popover is a floating overlay. On a 384px-wide phone viewport the issue is especially obvious — the list just clips.
+## Why "New row violates security policy" when granting admin
 
 ### Root cause
-`NotificationBell.jsx` wraps the list in:
+The `public.user_roles` table has only these write policies:
 
-```text
-<ScrollArea className="max-h-80"> … </ScrollArea>
+| Policy | Who | Which roles it lets them write |
+|---|---|---|
+| Admins can manage leader roles | tenant admin/owner | `unit_leader`, `wsf_leader` only |
+| Super admins can manage roles | platform `super_admin` | any |
+
+There is **no policy that lets a tenant owner/admin grant the `admin` role** (or revoke it). So when a tenant owner clicks the Admin toggle in User Management, the INSERT into `user_roles` is rejected by RLS — exactly the error you're seeing.
+
+A second, smaller hole: the same policy also forbids a tenant admin from removing `member` rows (e.g. when fully deactivating a user), and forbids granting `wsf_leader` via paths that include other roles in a single statement.
+
+### Fix — add a tenant-admin policy that allows tenant-scoped role management
+
+One new `FOR ALL` policy on `public.user_roles`:
+
+- **Who**: `is_admin(auth.uid(), tenant_id)` — tenant owners and admins for that tenant.
+- **What roles they may write**: `admin`, `unit_leader`, `wsf_leader`, `member`.
+- **What they may NOT write**: `super_admin` (still reserved for platform super admins).
+- **Tenant guard**: `tenant_id` on the row must equal a tenant the caller administers (already enforced by `is_admin(uid, tenant_id)`).
+
+```sql
+-- Tenant admins/owners can grant or revoke tenant-scoped roles
+-- (admin, unit_leader, wsf_leader, member). super_admin stays restricted
+-- to the existing "Super admins can manage roles" policy.
+CREATE POLICY "Tenant admins can manage tenant roles"
+ON public.user_roles
+FOR ALL
+TO authenticated
+USING (
+  public.is_admin(auth.uid(), tenant_id)
+  AND role <> 'super_admin'::app_role
+)
+WITH CHECK (
+  public.is_admin(auth.uid(), tenant_id)
+  AND role <> 'super_admin'::app_role
+  AND tenant_id IS NOT NULL
+);
 ```
 
-Radix `ScrollArea` only scrolls when its **Root** element has a *definite* height. `max-h-80` on its own does nothing here because the Root has no parent constraining it, so it just grows to fit the children and the inner viewport (`h-full w-full`) ends up the full content height. Result: nothing ever overflows, nothing ever scrolls.
+The existing "Admins can manage leader roles" policy becomes redundant once this is in place — drop it in the same migration to keep the policy list clean:
 
-The dialog that opens when you tap a single notification has the same risk for very long messages — the message uses `whitespace-pre-wrap` with no scroll container, so a long message can push the action buttons off-screen on small phones.
+```sql
+DROP POLICY IF EXISTS "Admins can manage leader roles" ON public.user_roles;
+```
 
-### Fix
+The two SELECT policies and the super-admin policy stay untouched.
 
-1. **Bell popover list — make it actually scroll**
-   - Change `<ScrollArea className="max-h-80">` to `<ScrollArea className="h-[60vh] max-h-96">`.
-     - `h-[60vh]` gives the Root a definite height (60% of viewport) so the inner viewport can overflow and the scrollbar appears.
-     - `max-h-96` caps it at 384px on tall desktop screens so it doesn't dominate the screen.
-   - Keeps `w-80` popover width unchanged.
-
-2. **Notification detail dialog — scroll long messages**
-   - In the same file, give the message paragraph a max height + overflow:
-     - Wrap the `{selected?.message}` paragraph in a container with `max-h-[50vh] overflow-y-auto pr-1` so very long announcements/decline-reason notifications don't push the Delete / View buttons off the screen on a 671px-tall phone viewport.
+### Why this is safe
+- `is_admin(uid, tid)` only returns true for `tenant_memberships.role IN ('owner','admin')` for that exact tenant, or for platform super_admins. So a tenant owner of Cardiff cannot grant admin in another tenant.
+- `role <> 'super_admin'` keeps platform-level escalation impossible — only existing super admins can mint a new super admin.
+- `tenant_id IS NOT NULL` in `WITH CHECK` prevents creating an unscoped (global) role row by accident.
+- No client code changes required — `UserManagement.jsx` already inserts `{ user_id, role, tenant_id }`.
 
 ### Files touched
-- `src/components/notifications/NotificationBell.jsx` — two small className changes (lines ~197 and ~254-258). No logic, query, RLS, or dependency changes.
+- New migration: `supabase/migrations/<ts>_user_roles_tenant_admin_policy.sql` — the two SQL statements above.
 
 ### Verification
-1. Sign in as a user with 10+ notifications, open the bell on the 384×671 mobile preview → list shows a scrollbar and you can scroll all the way to the oldest notification.
-2. Same on desktop — list caps at 384px tall, scrollbar appears past that.
-3. Open a notification with a very long message (e.g. an announcement) → message area scrolls inside the dialog, Delete and View buttons remain visible at the bottom.
-4. Mark-all-read, delete-from-row, and click-to-open-dialog behaviour all still work.
+1. Sign in as a tenant owner (e.g. Adeniyi for Cardiff) → toggle Admin on a user in **User Management** → no error, badge appears, audit log row written.
+2. Toggle Admin off → row removed cleanly.
+3. As the same tenant owner, toggling `unit_leader` / `wsf_leader` still works (regression check).
+4. As a tenant owner, attempt to insert `super_admin` via console → still rejected by RLS.
+5. As a regular member, attempt to insert any role → still rejected.
+6. As a tenant owner of tenant A, attempt to insert a role with `tenant_id` of tenant B → still rejected (`is_admin` returns false for the other tenant).
 
