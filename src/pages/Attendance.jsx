@@ -245,6 +245,11 @@ export default function Attendance() {
             </>
           )}
           {canManage && selectedSession && !isClosed && (
+            <Button variant="outline" size="sm" onClick={() => setManageOpen(true)}>
+              <UserCog className="h-4 w-4" /><span className="hidden sm:inline ml-2">Manage Attendance</span>
+            </Button>
+          )}
+          {canManage && selectedSession && !isClosed && (
             <Button variant="outline" size="sm" onClick={() => {
               if (window.confirm("Close this meeting? No more check-ins will be allowed.")) {
                 closeSessionMutation.mutate(selectedSession.id);
