@@ -504,6 +504,14 @@ export default function Attendance() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <Dialog open={manageOpen} onOpenChange={setManageOpen}>
+        <DialogContent className="max-w-[95vw] sm:max-w-lg">
+          {selectedSession && !isClosed && (
+            <CheckInPanel session={selectedSession} onClose={() => setManageOpen(false)} />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
