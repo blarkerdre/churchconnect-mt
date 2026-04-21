@@ -194,7 +194,7 @@ export default function NotificationBell() {
               </Button>
             )}
           </div>
-          <ScrollArea className="max-h-80">
+          <ScrollArea className="h-[60vh] max-h-96">
             {notifications.length === 0 ? (
               <p className="text-sm text-muted-foreground text-center py-8">No notifications</p>
             ) : (
@@ -252,9 +252,11 @@ export default function NotificationBell() {
           </DialogHeader>
 
           {selected?.message && (
-            <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">
-              {selected.message}
-            </p>
+            <div className="max-h-[50vh] overflow-y-auto pr-1">
+              <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">
+                {selected.message}
+              </p>
+            </div>
           )}
 
           <DialogFooter className="flex-row gap-2 sm:justify-between">
