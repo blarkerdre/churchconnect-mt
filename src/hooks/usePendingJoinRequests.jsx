@@ -60,13 +60,20 @@ export function useApproveJoinRequest() {
     mutationFn: async (requestId) => {
       const { error } = await supabase.rpc("approve_join_request", { p_request_id: requestId });
       if (error) throw error;
+      return requestId;
     },
-    onSuccess: () => {
+    onSuccess: (requestId) => {
       toast({ title: "Request approved" });
       qc.invalidateQueries({ queryKey: ["pending-join-requests"] });
       qc.invalidateQueries({ queryKey: ["pending-join-request-count"] });
       qc.invalidateQueries({ queryKey: ["members"] });
       qc.invalidateQueries({ queryKey: ["dashboard-members"] });
+      // Notify member (email + SMS) — fire and forget
+      supabase.functions
+        .invoke("notify-join-decision", {
+          body: { request_id: requestId, decision: "approved" },
+        })
+        .catch((e) => console.error("notify-join-decision invoke error:", e));
     },
     onError: (err) => toast({ title: "Approval failed", description: err.message, variant: "destructive" }),
   });
@@ -81,11 +88,18 @@ export function useDeclineJoinRequest() {
         p_reason: reason || null,
       });
       if (error) throw error;
+      return { requestId, reason };
     },
-    onSuccess: () => {
+    onSuccess: ({ requestId, reason }) => {
       toast({ title: "Request declined" });
       qc.invalidateQueries({ queryKey: ["pending-join-requests"] });
       qc.invalidateQueries({ queryKey: ["pending-join-request-count"] });
+      // Notify member (email + SMS) — fire and forget
+      supabase.functions
+        .invoke("notify-join-decision", {
+          body: { request_id: requestId, decision: "declined", reason: reason || null },
+        })
+        .catch((e) => console.error("notify-join-decision invoke error:", e));
     },
     onError: (err) => toast({ title: "Decline failed", description: err.message, variant: "destructive" }),
   });
