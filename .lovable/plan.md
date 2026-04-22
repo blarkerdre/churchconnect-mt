@@ -1,37 +1,64 @@
 
 
-## Add "Unassigned (no unit)" filter to the Milestone Report
+## Harden tenant guards in the Milestone Report flow
 
-The Unit dropdown in the Milestone Report currently lets admins pick **All Units** or any named unit — but there's no way to isolate members who belong to **no unit at all**. The plumbing is already there (`memberInUnit(m, "__unassigned")` returns members with empty `church_unit`, and the grouped "Download Unit Members" export already emits an "Unassigned" section). This change exposes that slice as a first-class filter so admins can report on, download, and message unit-less members.
+The Milestone Report and its messaging dialog are already tenant-scoped via RLS and the `useTenantQuery` helper, but the guards are **implicit** — `scopeQuery` silently no-ops if `tenantId` is null, and the messaging dialog will happily build payloads with `tenant_id: null` and let the server reject them. This change makes every query, insert, and edge-function call **fail closed** when no tenant is resolved, and replaces every implicit `scopeQuery` call with an explicit `.eq("tenant_id", tenantId)` for defense in depth.
 
-### What changes
+### Files & changes
 
-Single file: `src/components/analytics/MemberMilestoneReport.jsx`.
+#### 1. `src/components/analytics/MemberMilestoneReport.jsx`
 
-1. **Unit dropdown** (around the existing `<Select value={unitFilter}>`): add a new option directly under "All Units":
-   ```
-   All Units
-   Unassigned (no unit)   ← new
-   ──────────────
-   <named units…>
-   ```
-   Value: `__unassigned` (matches the sentinel already used by `memberInUnit`).
+Replace both `scopeQuery(...)` query bodies with explicit `.eq("tenant_id", tenantId)` and add a runtime guard.
 
-2. **Milestone filter logic** (`filtered` useMemo, ~line 127): when `unitFilter === "__unassigned"`, keep only members whose `church_unit` is empty/whitespace. Otherwise behave as today.
+```js
+// members query
+queryFn: async () => {
+  if (!tenantId) throw new Error("No tenant context");
+  const { data, error } = await supabase
+    .from("members")
+    .select("*")
+    .eq("tenant_id", tenantId);
+  ...
+}
 
-3. **Roster derivation** (`unitRoster` useMemo, ~line 319): already calls `memberInUnit(m, unitFilter)` — when `unitFilter === "__unassigned"` this Just Works. No change needed beyond making sure the early-return for `"all"` isn't accidentally hit.
+// wsf_centres query — same pattern
+.from("wsf_centres").select("id, name, is_active").eq("tenant_id", tenantId).order("name")
+```
 
-4. **Roster export** (`exportUnitMembers`, ~line 332): the existing single-unit branch (`unitFilter !== "all"`) handles `__unassigned` correctly via `memberInUnit`. Tweak the filename to `member-roster-unassigned-…csv` when `unitFilter === "__unassigned"` (currently it would slugify the literal `__unassigned`).
+`scopeQuery` import can be dropped; keep `tenantId`. The `enabled: !!tenantId` flag stays.
 
-5. **Audience labels** (`unitAudienceLabel`, milestone label suffix ~line 401, 403): when `unitFilter === "__unassigned"`, render the human label `Unassigned (no unit)` instead of the raw sentinel — both in the messaging dialog audience and in the milestone report header context.
+#### 2. `src/components/analytics/MessageFilteredMembersDialog.jsx`
 
-6. **Buttons + roster-action visibility**: the existing **Download Unit Members** and **Message Unit Members** buttons remain visible and now operate on the unassigned slice when that option is chosen. No new buttons.
+Add an early guard at the top of each send handler — `sendEmail`, `sendSmsLike`, `sendInApp`:
+
+```js
+if (!tenantId) {
+  toast({ title: "No church context", description: "Reload the page and try again.", variant: "destructive" });
+  return;
+}
+```
+
+For the in-app `notifications` insert, also add a defensive `.eq("tenant_id", tenantId)` is N/A on insert — but include a per-row sanity check that every row's `tenant_id` matches the resolved `tenantId` before insert (single line: `if (rows.some(r => r.tenant_id !== tenantId)) throw new Error("Tenant mismatch")`).
+
+For the SMS/email edge function calls: no body change needed beyond the early guard, since both already pass `tenant_id: tenantId`.
+
+#### 3. (Optional, kept in scope) — disable the report's roster/message buttons when `tenantId` is missing
+
+Add `disabled={!tenantId || …existing}` to:
+- Export CSV
+- Print Report
+- Message Members
+- Download / Message Unit Members
+- Download / Message Centre Members
+
+This way the UI never even tries to act on a tenantless context.
 
 ### Acceptance checks
 
-1. Opening the **Unit** filter shows a new **Unassigned (no unit)** option just under "All Units".
-2. Selecting it filters the on-screen milestone results to only members with no `church_unit` value.
-3. **Download Unit Members** produces a CSV named `member-roster-unassigned-YYYY-MM-DD.csv` containing exactly those members, using the standard 18-column export layout.
-4. **Message Unit Members** opens the messaging dialog pre-loaded with the unassigned roster; audience label reads `Unit roster: Unassigned (no unit) · …`.
-5. Other unit selections, "All Units" grouped export (which still includes the existing "Unassigned" section at the bottom), centre roster actions, milestone CSV, and print report behave exactly as before.
+1. Loading the Milestone Report when `tenantId` resolves: behaves exactly as today (members + centres load, filters, exports, and messaging all work).
+2. If `tenantId` is null (e.g. during tenant-switch race): queries don't fire (existing `enabled` flag), and all roster/message/export buttons are disabled.
+3. Calling any send handler in the message dialog with no tenant resolved shows a "No church context" toast and aborts before any network call.
+4. Both Supabase queries in the report visibly include `.eq("tenant_id", tenantId)` in source — no implicit `scopeQuery` indirection.
+5. Bulk in-app insert refuses to run if any row's `tenant_id` doesn't match the resolved tenant (guards against a future refactor regression).
+6. CSV exports, print report, and audit-log payloads are unchanged in shape.
 
