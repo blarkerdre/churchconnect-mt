@@ -67,11 +67,7 @@ export default function MemberMilestoneReport() {
     queryKey: ["milestone-report-members", tenantId],
     queryFn: async () => {
       const { data, error } = await scopeQuery(
-        supabase
-          .from("members")
-          .select(
-            "id, user_id, first_name, last_name, email, phone, gender, membership_status, church_unit, created_at, water_baptism, holy_spirit_baptism, bfc_completed, bcc_completed, lcc_completed, ldc_completed, winners_satellite"
-          )
+        supabase.from("members").select("*")
       );
       if (error) throw error;
       return data || [];
@@ -124,28 +120,62 @@ export default function MemberMilestoneReport() {
 
   const exportCsv = () => {
     const esc = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
-    const headers = [
-      "First Name",
-      "Last Name",
-      "Email",
-      "Phone",
-      "Gender",
-      "Status",
-      "Church Unit",
-      "Joined",
-      ...MILESTONES.map((m) => m.label),
-      mode === "missing" ? "Missing" : "Completed",
+    const formatVal = (v) => {
+      if (v === null || v === undefined) return "";
+      if (typeof v === "boolean") return v ? "Yes" : "No";
+      if (v instanceof Date) return format(v, "yyyy-MM-dd");
+      if (typeof v === "string") {
+        // ISO-like date string → keep as yyyy-MM-dd if it parses cleanly
+        if (/^\d{4}-\d{2}-\d{2}(T|$)/.test(v)) {
+          const d = new Date(v);
+          if (!isNaN(d.getTime())) return format(d, "yyyy-MM-dd");
+        }
+        return v;
+      }
+      if (typeof v === "object") return JSON.stringify(v);
+      return String(v);
+    };
+
+    // Hide internal/noisy columns
+    const HIDDEN_KEYS = new Set(["tenant_id"]);
+    // Pinned identity columns first (in this order)
+    const PINNED = [
+      "first_name",
+      "last_name",
+      "email",
+      "phone",
+      "gender",
+      "membership_status",
+      "church_unit",
+      "created_at",
     ];
+    const PINNED_LABELS = {
+      first_name: "First Name",
+      last_name: "Last Name",
+      email: "Email",
+      phone: "Phone",
+      gender: "Gender",
+      membership_status: "Status",
+      church_unit: "Church Unit",
+      created_at: "Joined",
+    };
+
+    // Collect every key present across the filtered members
+    const keySet = new Set();
+    filtered.forEach((m) => Object.keys(m || {}).forEach((k) => keySet.add(k)));
+    HIDDEN_KEYS.forEach((k) => keySet.delete(k));
+    PINNED.forEach((k) => keySet.delete(k));
+    const remainingKeys = [...keySet].sort();
+
+    const orderedKeys = [...PINNED.filter((k) => true), ...remainingKeys];
+    const summaryHeader = mode === "missing" ? "Missing" : "Completed";
+    const headers = [
+      ...orderedKeys.map((k) => PINNED_LABELS[k] || k),
+      summaryHeader,
+    ];
+
     const rows = filtered.map((m) => [
-      esc(m.first_name),
-      esc(m.last_name),
-      esc(m.email),
-      esc(m.phone),
-      esc(m.gender),
-      esc(m.membership_status),
-      esc(m.church_unit),
-      esc(m.created_at ? format(new Date(m.created_at), "yyyy-MM-dd") : ""),
-      ...MILESTONES.map((ms) => (m[ms.key] ? "Yes" : "No")),
+      ...orderedKeys.map((k) => esc(formatVal(m[k]))),
       esc(labelsFor(m).join("; ")),
     ]);
     const csv = [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
