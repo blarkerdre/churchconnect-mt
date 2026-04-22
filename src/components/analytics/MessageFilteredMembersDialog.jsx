@@ -69,6 +69,10 @@ export default function MessageFilteredMembersDialog({
   };
 
   const sendEmail = async () => {
+    if (!tenantId) {
+      toast({ title: "No church context", description: "Reload the page and try again.", variant: "destructive" });
+      return;
+    }
     if (!subject.trim() || !message.trim()) {
       toast({ title: "Subject and message are required", variant: "destructive" });
       return;
@@ -116,6 +120,10 @@ export default function MessageFilteredMembersDialog({
   };
 
   const sendSmsLike = async (smsChannel) => {
+    if (!tenantId) {
+      toast({ title: "No church context", description: "Reload the page and try again.", variant: "destructive" });
+      return;
+    }
     if (!message.trim()) {
       toast({ title: "Message is required", variant: "destructive" });
       return;
@@ -171,6 +179,10 @@ export default function MessageFilteredMembersDialog({
   };
 
   const sendInApp = async () => {
+    if (!tenantId) {
+      toast({ title: "No church context", description: "Reload the page and try again.", variant: "destructive" });
+      return;
+    }
     if (!subject.trim() || !message.trim()) {
       toast({ title: "Title and message are required", variant: "destructive" });
       return;
@@ -189,6 +201,7 @@ export default function MessageFilteredMembersDialog({
         type: "admin_message",
         reference_type: source,
       }));
+      if (rows.some((r) => r.tenant_id !== tenantId)) throw new Error("Tenant mismatch");
       // Insert in chunks of 200 to stay well within row limits
       const chunkSize = 200;
       let inserted = 0;
