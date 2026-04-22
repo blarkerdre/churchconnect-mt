@@ -84,7 +84,7 @@ Deno.serve(async (req) => {
 
   const serviceClient = createClient(supabaseUrl, supabaseServiceKey)
 
-  const { subject, body, audience, filters, tenant_id } = await req.json()
+  const { subject, body, audience, filters, tenant_id, member_ids, audience_label } = await req.json()
 
   if (!subject?.trim() || !body?.trim()) {
     return new Response(JSON.stringify({ error: 'subject and body are required' }), {
@@ -140,13 +140,23 @@ Deno.serve(async (req) => {
     }
   }
 
-  // Build member query based on filters or legacy audience
+  // Build member query based on explicit IDs, filters, or legacy audience
   let query = serviceClient.from('members').select('email, first_name, last_name')
     .not('email', 'is', null)
     .neq('email', '')
     .eq('tenant_id', tenant_id)
 
-  if (filters && (filters.status || filters.unit || filters.dateFrom || filters.dateTo)) {
+  if (Array.isArray(member_ids) && member_ids.length > 0) {
+    // Explicit member-id targeting (used by report-driven sends)
+    const safeIds = member_ids.filter((id: unknown) => typeof id === 'string').slice(0, 5000)
+    if (safeIds.length === 0) {
+      return new Response(JSON.stringify({ error: 'No valid member_ids provided', sent: 0 }), {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+    query = query.in('id', safeIds)
+  } else if (filters && (filters.status || filters.unit || filters.dateFrom || filters.dateTo)) {
     // New filters-based approach
     if (filters.status) {
       query = query.eq('membership_status', filters.status)
@@ -193,7 +203,9 @@ Deno.serve(async (req) => {
 
   const suppressedSet = new Set((suppressed || []).map(s => s.email.toLowerCase()))
 
-  const audienceLabel = buildAudienceLabel(filters, audience)
+  const audienceLabel = (typeof audience_label === 'string' && audience_label.trim())
+    ? audience_label.trim()
+    : buildAudienceLabel(filters, audience)
 
   // Build and enqueue emails
   const senderDomain = 'notify.app.churchmanagementsuite.org'

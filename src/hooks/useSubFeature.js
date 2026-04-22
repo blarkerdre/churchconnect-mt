@@ -35,6 +35,8 @@ export const SUB_FEATURES = {
   ],
   "/analytics": [
     { key: "analytics.download_report", name: "Download Report" },
+    { key: "analytics.milestone_report", name: "Member Milestones Report" },
+    { key: "analytics.conversion_report", name: "Status Conversion Report" },
   ],
   "/training-reports": [
     { key: "training.record_session", name: "Record Session" },
