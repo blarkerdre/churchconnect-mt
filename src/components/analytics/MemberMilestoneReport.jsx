@@ -136,9 +136,8 @@ export default function MemberMilestoneReport() {
       return String(v);
     };
 
-    // Hide internal/noisy columns + raw milestone bools (we render them as Completed/Missing instead)
-    const MILESTONE_KEYS = MILESTONES.map((m) => m.key);
-    const HIDDEN_KEYS = new Set(["tenant_id", ...MILESTONE_KEYS]);
+    // Hide internal/noisy columns
+    const HIDDEN_KEYS = new Set(["tenant_id"]);
     // Pinned identity columns first (in this order)
     const PINNED = [
       "first_name",
@@ -161,25 +160,22 @@ export default function MemberMilestoneReport() {
       created_at: "Joined",
     };
 
-    // Collect every key present across the filtered members (excluding milestone bools + hidden)
+    // Collect every key present across the filtered members
     const keySet = new Set();
     filtered.forEach((m) => Object.keys(m || {}).forEach((k) => keySet.add(k)));
     HIDDEN_KEYS.forEach((k) => keySet.delete(k));
     PINNED.forEach((k) => keySet.delete(k));
     const remainingKeys = [...keySet].sort();
 
+    const orderedKeys = [...PINNED.filter((k) => true), ...remainingKeys];
     const summaryHeader = mode === "missing" ? "Missing" : "Completed";
     const headers = [
-      ...PINNED.map((k) => PINNED_LABELS[k] || k),
-      ...MILESTONES.map((ms) => ms.label),
-      ...remainingKeys,
+      ...orderedKeys.map((k) => PINNED_LABELS[k] || k),
       summaryHeader,
     ];
 
     const rows = filtered.map((m) => [
-      ...PINNED.map((k) => esc(formatVal(m[k]))),
-      ...MILESTONES.map((ms) => esc(m[ms.key] ? "Completed" : "Missing")),
-      ...remainingKeys.map((k) => esc(formatVal(m[k]))),
+      ...orderedKeys.map((k) => esc(formatVal(m[k]))),
       esc(labelsFor(m).join("; ")),
     ]);
     const csv = [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
