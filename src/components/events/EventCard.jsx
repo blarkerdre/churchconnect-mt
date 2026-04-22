@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Calendar, MapPin, Clock, Users, Pencil, Trash2, ClipboardList } from "lucide-react";
 import { format } from "date-fns";
+import { renderTextWithLinks } from "@/lib/linkify";
 
 const statusColors = {
   Upcoming: "bg-blue-50 text-blue-700 border-blue-200",
@@ -39,7 +40,7 @@ export default function EventCard({ event, registrationCount, onEdit, onDelete, 
             <Badge variant="secondary" className={`text-xs border ${statusColors[event.status] || statusColors.Upcoming}`}>{event.status}</Badge>
             <Badge variant="secondary" className={`text-xs ${categoryColors[event.category] || "bg-slate-50 text-slate-600"}`}>{event.category}</Badge>
           </div>
-          {event.description && <p className="text-sm text-slate-500 mb-3 leading-relaxed line-clamp-2">{event.description}</p>}
+          {event.description && <p className="text-sm text-slate-500 mb-3 leading-relaxed line-clamp-2">{renderTextWithLinks(event.description)}</p>}
           <div className="flex flex-wrap gap-x-4 gap-y-1.5 text-xs text-slate-500">
             <span className="flex items-center gap-1.5"><Calendar className="h-3.5 w-3.5 text-[#1e3a5f]" />{dateStr}{endDateStr}</span>
             {(event.start_time || event.end_time) && (
