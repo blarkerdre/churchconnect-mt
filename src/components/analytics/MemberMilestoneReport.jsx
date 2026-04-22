@@ -159,10 +159,14 @@ export default function MemberMilestoneReport() {
     a.click();
   };
 
+  const dateRangeLabel = (fromDate || toDate)
+    ? ` · Joined ${fromDate ? format(fromDate, "yyyy-MM-dd") : "any"} → ${toDate ? format(toDate, "yyyy-MM-dd") : "any"}`
+    : "";
+
   const buildPrintRows = () => ({
     title: `Member Milestone Report (${mode === "missing" ? "Missing" : "Completed"}: ${selected
       .map((k) => MILESTONES.find((m) => m.key === k)?.label)
-      .join(", ")})`,
+      .join(", ")})${dateRangeLabel}`,
     headers: ["Name", "Status", "Church Unit", "Phone", mode === "missing" ? "Missing" : "Completed"],
     rows: filtered.map((m) => [
       `${m.first_name} ${m.last_name}`,
@@ -175,7 +179,7 @@ export default function MemberMilestoneReport() {
 
   const audienceLabel = `${mode === "missing" ? "Missing" : "Completed"} ${selected
     .map((k) => MILESTONES.find((m) => m.key === k)?.label)
-    .join(" + ")}${statusFilter !== "all" ? ` · ${statusFilter}` : ""}${unitFilter !== "all" ? ` · ${unitFilter}` : ""}`;
+    .join(" + ")}${statusFilter !== "all" ? ` · ${statusFilter}` : ""}${unitFilter !== "all" ? ` · ${unitFilter}` : ""}${dateRangeLabel}`;
 
   return (
     <Card className="border-0 shadow-sm">
