@@ -125,8 +125,12 @@ export default function MemberMilestoneReport() {
     return members.filter((m) => {
       if (statusFilter !== "all" && m.membership_status !== statusFilter) return false;
       if (unitFilter !== "all") {
-        const ms = (m.church_unit || "").split(",").map((u) => u.trim());
-        if (!ms.includes(unitFilter)) return false;
+        if (unitFilter === "__unassigned") {
+          if ((m.church_unit || "").trim()) return false;
+        } else {
+          const ms = (m.church_unit || "").split(",").map((u) => u.trim());
+          if (!ms.includes(unitFilter)) return false;
+        }
       }
       if (centreFilter !== "all") {
         if (centreFilter === "unassigned") {
@@ -239,8 +243,12 @@ export default function MemberMilestoneReport() {
     const baseFiltered = members.filter((m) => {
       if (statusFilter !== "all" && m.membership_status !== statusFilter) return false;
       if (unitFilter !== "all") {
-        const ms = (m.church_unit || "").split(",").map((u) => u.trim());
-        if (!ms.includes(unitFilter)) return false;
+        if (unitFilter === "__unassigned") {
+          if ((m.church_unit || "").trim()) return false;
+        } else {
+          const ms = (m.church_unit || "").split(",").map((u) => u.trim());
+          if (!ms.includes(unitFilter)) return false;
+        }
       }
       if (fromMs || toMs) {
         const created = m.created_at ? new Date(m.created_at).getTime() : null;
@@ -336,8 +344,9 @@ export default function MemberMilestoneReport() {
       if (list.length === 0) return;
       const { headers, rows } = buildMemberCsvBlock(list);
       const csv = [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
+      const slug = unitFilter === "__unassigned" ? "unassigned" : slugify(unitFilter);
       downloadCsv(
-        `member-roster-unit-${slugify(unitFilter)}-${format(new Date(), "yyyy-MM-dd")}.csv`,
+        `member-roster-unit-${slug}-${format(new Date(), "yyyy-MM-dd")}.csv`,
         csv
       );
       return;
@@ -396,11 +405,13 @@ export default function MemberMilestoneReport() {
     ]),
   });
 
+  const unitFilterLabel = unitFilter === "__unassigned" ? "Unassigned (no unit)" : unitFilter;
+
   const milestoneAudienceLabel = `${mode === "missing" ? "Missing" : "Completed"} ${selected
     .map((k) => MILESTONES.find((m) => m.key === k)?.label)
-    .join(" + ")}${statusFilter !== "all" ? ` · ${statusFilter}` : ""}${unitFilter !== "all" ? ` · ${unitFilter}` : ""}${centreLabelSuffix}${dateRangeLabel}`;
+    .join(" + ")}${statusFilter !== "all" ? ` · ${statusFilter}` : ""}${unitFilter !== "all" ? ` · ${unitFilterLabel}` : ""}${centreLabelSuffix}${dateRangeLabel}`;
 
-  const unitAudienceLabel = `Unit roster: ${unitFilter === "all" ? "All units" : unitFilter}${statusFilter !== "all" ? ` · ${statusFilter}` : ""}${dateRangeLabel}`;
+  const unitAudienceLabel = `Unit roster: ${unitFilter === "all" ? "All units" : unitFilterLabel}${statusFilter !== "all" ? ` · ${statusFilter}` : ""}${dateRangeLabel}`;
   const centreAudienceLabel = `Centre roster: ${selectedCentreLabel || "All centres"}${statusFilter !== "all" ? ` · ${statusFilter}` : ""}${dateRangeLabel}`;
 
   const dialogMembers =
@@ -469,6 +480,7 @@ export default function MemberMilestoneReport() {
               <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Units</SelectItem>
+                <SelectItem value="__unassigned">Unassigned (no unit)</SelectItem>
                 {units.map((u) => <SelectItem key={u} value={u}>{u}</SelectItem>)}
               </SelectContent>
             </Select>
