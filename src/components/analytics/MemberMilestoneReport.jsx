@@ -392,6 +392,8 @@ export default function MemberMilestoneReport() {
     setMessageMode(modeKey);
     setMessageOpen(true);
   };
+
+  const dateRangeLabel = (fromDate || toDate)
     ? ` · Joined ${fromDate ? format(fromDate, "yyyy-MM-dd") : "any"} → ${toDate ? format(toDate, "yyyy-MM-dd") : "any"}`
     : "";
 
@@ -412,9 +414,21 @@ export default function MemberMilestoneReport() {
     ]),
   });
 
-  const audienceLabel = `${mode === "missing" ? "Missing" : "Completed"} ${selected
+  const milestoneAudienceLabel = `${mode === "missing" ? "Missing" : "Completed"} ${selected
     .map((k) => MILESTONES.find((m) => m.key === k)?.label)
     .join(" + ")}${statusFilter !== "all" ? ` · ${statusFilter}` : ""}${unitFilter !== "all" ? ` · ${unitFilter}` : ""}${centreLabelSuffix}${dateRangeLabel}`;
+
+  const unitAudienceLabel = `Unit roster: ${unitFilter === "all" ? "All units" : unitFilter}${statusFilter !== "all" ? ` · ${statusFilter}` : ""}${dateRangeLabel}`;
+  const centreAudienceLabel = `Centre roster: ${selectedCentreLabel || "All centres"}${statusFilter !== "all" ? ` · ${statusFilter}` : ""}${dateRangeLabel}`;
+
+  const dialogMembers =
+    messageMode === "unit" ? unitRoster
+    : messageMode === "centre" ? centreRoster
+    : filtered;
+  const dialogAudienceLabel =
+    messageMode === "unit" ? unitAudienceLabel
+    : messageMode === "centre" ? centreAudienceLabel
+    : milestoneAudienceLabel;
 
   return (
     <Card className="border-0 shadow-sm">
