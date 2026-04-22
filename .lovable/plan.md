@@ -1,64 +1,76 @@
 
 
-## Harden tenant guards in the Milestone Report flow
+## Eliminate duplicated `correct_answer` column on `exam_questions`
 
-The Milestone Report and its messaging dialog are already tenant-scoped via RLS and the `useTenantQuery` helper, but the guards are **implicit** — `scopeQuery` silently no-ops if `tenantId` is null, and the messaging dialog will happily build payloads with `tenant_id: null` and let the server reject them. This change makes every query, insert, and edge-function call **fail closed** when no tenant is resolved, and replaces every implicit `scopeQuery` call with an explicit `.eq("tenant_id", tenantId)` for defense in depth.
+The exam answer key currently lives in **two** places:
+- `exam_questions.correct_answer` (legacy column, exposed via the admin/leader manage policy)
+- `exam_question_answers.correct_answer` (the intended hardened, admin-only home)
 
-### Files & changes
+The grading edge function and the safe RPC already use the right sources, but the duplicate column on `exam_questions` is still readable by any admin/unit_leader and by any future view/join built on that table. Removing it closes the finding by making `exam_question_answers` the **single source of truth** for answer keys.
 
-#### 1. `src/components/analytics/MemberMilestoneReport.jsx`
+### Changes
 
-Replace both `scopeQuery(...)` query bodies with explicit `.eq("tenant_id", tenantId)` and add a runtime guard.
+#### 1. Database migration
 
-```js
-// members query
-queryFn: async () => {
-  if (!tenantId) throw new Error("No tenant context");
-  const { data, error } = await supabase
-    .from("members")
-    .select("*")
-    .eq("tenant_id", tenantId);
-  ...
-}
+- **Backfill** any rows in `exam_questions` that have a `correct_answer` but no matching row in `exam_question_answers`:
+  ```sql
+  INSERT INTO public.exam_question_answers (question_id, tenant_id, correct_answer)
+  SELECT eq.id, eq.tenant_id, eq.correct_answer
+  FROM public.exam_questions eq
+  LEFT JOIN public.exam_question_answers eqa ON eqa.question_id = eq.id
+  WHERE eqa.question_id IS NULL
+    AND eq.correct_answer IS NOT NULL
+    AND eq.correct_answer <> '';
+  ```
+- **Drop** the column:
+  ```sql
+  ALTER TABLE public.exam_questions DROP COLUMN correct_answer;
+  ```
+- The existing restrictive `Restrict exam questions to staff` policy and the permissive admin/leader policy stay as-is — they no longer protect a sensitive column, just question text and options (which is fine).
 
-// wsf_centres query — same pattern
-.from("wsf_centres").select("id, name, is_active").eq("tenant_id", tenantId).order("name")
-```
+#### 2. Admin write path — `src/pages/ExamManagement.jsx`
 
-`scopeQuery` import can be dropped; keep `tenantId`. The `enabled: !!tenantId` flag stays.
+When admins create or edit a question, the `correct_answer` value must be written to `exam_question_answers` (upsert) instead of `exam_questions`:
 
-#### 2. `src/components/analytics/MessageFilteredMembersDialog.jsx`
+- Strip `correct_answer` from the `exam_questions` insert/update payload.
+- After the question insert/update succeeds, upsert into `exam_question_answers`:
+  ```js
+  await supabase
+    .from("exam_question_answers")
+    .upsert(
+      { question_id, tenant_id: tenantId, correct_answer },
+      { onConflict: "question_id" }
+    );
+  ```
+- When loading a question into the edit form, fetch the current correct answer from `exam_question_answers` (admin RLS already permits this) and merge it into the form state.
+- When deleting a question, rely on the existing FK cascade (or add an explicit delete from `exam_question_answers` if no cascade exists — to be confirmed during implementation).
 
-Add an early guard at the top of each send handler — `sendEmail`, `sendSmsLike`, `sendInApp`:
+#### 3. Edge function — `supabase/functions/grade-exam/index.ts`
 
-```js
-if (!tenantId) {
-  toast({ title: "No church context", description: "Reload the page and try again.", variant: "destructive" });
-  return;
-}
-```
+- Remove the `correct_answer` field from the `exam_questions` SELECT list (it no longer exists).
+- The function already loads correct answers from `exam_question_answers` and attaches them onto each question — no logic change needed beyond the column removal.
 
-For the in-app `notifications` insert, also add a defensive `.eq("tenant_id", tenantId)` is N/A on insert — but include a per-row sanity check that every row's `tenant_id` matches the resolved `tenantId` before insert (single line: `if (rows.some(r => r.tenant_id !== tenantId)) throw new Error("Tenant mismatch")`).
+#### 4. Safe RPC — `get_exam_questions_safe`
 
-For the SMS/email edge function calls: no body change needed beyond the early guard, since both already pass `tenant_id: tenantId`.
+- No change required. It already omits `correct_answer` from its return signature.
 
-#### 3. (Optional, kept in scope) — disable the report's roster/message buttons when `tenantId` is missing
+#### 5. Other consumers
 
-Add `disabled={!tenantId || …existing}` to:
-- Export CSV
-- Print Report
-- Message Members
-- Download / Message Unit Members
-- Download / Message Centre Members
-
-This way the UI never even tries to act on a tenantless context.
+- `TakeExamDialog.jsx` only reads via the safe RPC — no change.
+- Bulk import / question import flows (if any) need the same redirection: confirm during implementation by searching for any remaining writers of `correct_answer` to `exam_questions`.
 
 ### Acceptance checks
 
-1. Loading the Milestone Report when `tenantId` resolves: behaves exactly as today (members + centres load, filters, exports, and messaging all work).
-2. If `tenantId` is null (e.g. during tenant-switch race): queries don't fire (existing `enabled` flag), and all roster/message/export buttons are disabled.
-3. Calling any send handler in the message dialog with no tenant resolved shows a "No church context" toast and aborts before any network call.
-4. Both Supabase queries in the report visibly include `.eq("tenant_id", tenantId)` in source — no implicit `scopeQuery` indirection.
-5. Bulk in-app insert refuses to run if any row's `tenant_id` doesn't match the resolved tenant (guards against a future refactor regression).
-6. CSV exports, print report, and audit-log payloads are unchanged in shape.
+1. `\d exam_questions` no longer lists a `correct_answer` column.
+2. Every existing question still has a corresponding `exam_question_answers` row (no answer keys lost).
+3. Admin "Add question" and "Edit question" in `ExamManagement` save and reload the correct answer correctly (round-trip works).
+4. Members taking an exam still see questions and options (via `get_exam_questions_safe`) and grading still produces the same scores.
+5. Querying `select * from exam_questions` as an admin returns no answer-key field — the only surface for answer keys is `exam_question_answers`, which is admin/super-admin only.
+6. The Lovable security finding `exam_questions_correct_answer_exposure` can be marked fixed.
+
+### Technical notes
+
+- The single source of truth becomes `exam_question_answers.correct_answer`. Defense-in-depth: even if a future bug exposes `exam_questions` to members, no answer keys leak.
+- Backfill is safe to re-run (idempotent via the `LEFT JOIN ... WHERE NULL` guard).
+- `exam_question_answers` already has tenant scoping and a restrictive admin-only policy — no RLS changes needed.
 
