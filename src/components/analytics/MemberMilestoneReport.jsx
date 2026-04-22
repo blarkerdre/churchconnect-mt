@@ -46,7 +46,22 @@ export default function MemberMilestoneReport() {
   const [mode, setMode] = useState("missing"); // missing | completed
   const [statusFilter, setStatusFilter] = useState("all");
   const [unitFilter, setUnitFilter] = useState("all");
+  const [fromDate, setFromDate] = useState(null);
+  const [toDate, setToDate] = useState(null);
+  const [datePreset, setDatePreset] = useState("all");
   const [messageOpen, setMessageOpen] = useState(false);
+
+  const applyPreset = (preset) => {
+    setDatePreset(preset);
+    const today = new Date();
+    if (preset === "all") { setFromDate(null); setToDate(null); }
+    else if (preset === "30d") { setFromDate(subDays(today, 30)); setToDate(today); }
+    else if (preset === "90d") { setFromDate(subDays(today, 90)); setToDate(today); }
+    else if (preset === "ytd") { setFromDate(startOfYear(today)); setToDate(today); }
+    // "custom" leaves dates as-is
+  };
+
+  const clearDates = () => { setFromDate(null); setToDate(null); setDatePreset("all"); };
 
   const { data: members = [], isLoading } = useQuery({
     queryKey: ["milestone-report-members", tenantId],
