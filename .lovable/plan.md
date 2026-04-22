@@ -1,38 +1,36 @@
+## 2. New "Home Cell Centre Members" section in Reports
 
+In **Analytics → Reports** (admin-only), add a new card below `MemberMilestoneReport`:
 
-## Remove duplicate "Training Gap" report and expand CSV to full member record
+```text
+Home Cell Centre Members
+[ Centre: All Centres ▾ ] [ Status: All ▾ ]   42 members across 6 centres
+[ ⬇ Export Centre Members CSV ]   [ 🖨 Print ]
 
-### What changes
+▸ North Cardiff (12 members)
+▸ East Cardiff (8 members)
+▸ Unassigned (3 members)
+```
 
-**1. Remove duplicate report**
-The `TrainingGapReport` component (Analytics → Reports tab) is a near-duplicate of `MemberMilestoneReport` — both let you pick milestones and list members missing them. The newer `MemberMilestoneReport` already does everything Training Gap does plus mode toggle, date range, messaging, and printing.
+- Lists every member grouped by their assigned Home Cell centre (`members.wsf_centre_id` joined to `wsf_centres.name`), plus an "Unassigned" group for members with `winners_satellite = true` but no centre.
+- Centre and Status filters narrow the view.
+- **Export Centre Members CSV** downloads a single CSV with all listed members and these columns:  
+`Centre, Centre Leader, First Name, Last Name, Email, Phone, Gender, Status, Church Unit, Joined`  
+Rows are ordered by Centre then Last Name. Filename: `home-cell-centre-members-YYYY-MM-DD.csv`.
+- Print uses the existing `PrintReportButton` pattern with a grouped layout.
+- Only visible to admins (gated the same way as the other Reports tab cards).
 
-- In `src/pages/Analytics.jsx`:
-  - Remove the `import TrainingGapReport from "@/components/analytics/TrainingGapReport";` line.
-  - Remove `<TrainingGapReport members={members} />` from the Reports `TabsContent`.
-- Delete `src/components/analytics/TrainingGapReport.jsx`.
+### Files
 
-**2. Include full member record in CSV download**
-Currently the CSV only exports a subset of fields. Expand the milestone report's `exportCsv` to include every meaningful column on the `members` table for each filtered member.
+- **Edit** `src/components/analytics/MemberMilestoneReport.jsx` — extend `exportCsv` with the 7 milestone Completed/Missing columns and exclude raw milestone bools from auto-collected keys.
+- **Create** `src/components/analytics/HomeCellCentreMembersReport.jsx` — new card with centre/status filters, grouped list, CSV export, print.
+- **Edit** `src/pages/Analytics.jsx` — render `<HomeCellCentreMembersReport />` inside the Reports tab, admin-gated.
 
-In `src/components/analytics/MemberMilestoneReport.jsx`:
+### Acceptance criteria
 
-- **Expand the Supabase select** in the `useQuery` from the current narrow column list to `select("*")` so all columns are fetched (DOB, address, marital status, occupation, profession, emergency contact, pastoral notes, baptism dates, etc.).
-- **Rewrite `exportCsv`** to dynamically build headers from the union of all keys present across the filtered members (skipping internal noise like `tenant_id` and very large JSON blobs if any). The order will be: a pinned set of human-friendly identity columns first (`First Name`, `Last Name`, `Email`, `Phone`, `Gender`, `Status`, `Church Unit`, `Joined`), followed by every remaining column in alphabetical order, then the trailing `Missing`/`Completed` summary column.
-- Booleans render as `Yes`/`No`. Dates render as `yyyy-MM-dd`. Objects/arrays render as JSON strings. `null`/`undefined` render as empty.
-- Filename, date-range suffix, and the on-screen table stay as they are today — only the CSV payload widens.
-
-### Files touched
-
-- `src/pages/Analytics.jsx` — remove import + JSX usage of `TrainingGapReport`.
-- `src/components/analytics/TrainingGapReport.jsx` — delete.
-- `src/components/analytics/MemberMilestoneReport.jsx` — widen `select`, rewrite `exportCsv` to include the full member record.
-
-### Acceptance checks
-
-1. Analytics → Reports tab no longer shows the "Training Gap" / "Select milestones to check" card; only Member Milestones, Status Conversion, and Feedback Summary remain (admin-only ones still admin-gated).
-2. App still compiles — no leftover references to `TrainingGapReport`.
-3. Click **Export CSV** on Member Milestones → downloaded file contains all member fields (DOB, address, marital status, occupation, all baptism/training dates, etc.) for every filtered row, with booleans as Yes/No.
-4. CSV still respects current filters (mode, status, unit, joined date range).
-5. Print Report and Message Members continue to work unchanged.
-
+1. Export the milestone CSV → between the identity columns and the rest of the fields you see 7 new columns (BFC, BCC, LCC, LDC, Water Baptism, HS Baptism, Home Cell), each cell `Completed` or `Missing`. Raw Yes/No duplicates of those fields no longer appear.
+2. The trailing summary column (`Missing` / `Completed` per active mode) still shows the matched-milestone list.
+3. All current filters (mode, status, unit, joined date range) and full member record columns are preserved; filename still carries the date range suffix.
+4. New "Home Cell Centre Members" card appears in Analytics → Reports for admins; centre + status filters work; member counts per centre match the table.
+5. Export Centre Members CSV downloads a file with all visible members grouped by centre, including an "Unassigned" group for Home-Cell members with no centre selected.
+6. Non-admins (regular member or unit leader) do not see either the Milestone or Home Cell Centre Members reports.
