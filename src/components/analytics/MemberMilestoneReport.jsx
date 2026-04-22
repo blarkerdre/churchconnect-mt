@@ -244,7 +244,77 @@ export default function MemberMilestoneReport() {
           </div>
         </div>
 
-        {/* Actions */}
+        {/* Date range filter */}
+        <div className="space-y-2">
+          <p className="text-xs font-medium text-muted-foreground">Joined date range</p>
+          <div className="flex flex-wrap gap-2">
+            {[
+              { key: "all", label: "All time" },
+              { key: "30d", label: "Last 30 days" },
+              { key: "90d", label: "Last 90 days" },
+              { key: "ytd", label: "This year" },
+              { key: "custom", label: "Custom" },
+            ].map((p) => (
+              <Badge
+                key={p.key}
+                variant={datePreset === p.key ? "default" : "outline"}
+                className="cursor-pointer select-none"
+                onClick={() => applyPreset(p.key)}
+              >
+                {p.label}
+              </Badge>
+            ))}
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className={cn("h-9 justify-start text-left font-normal", !fromDate && "text-muted-foreground")}
+                >
+                  <CalendarIcon className="h-4 w-4 mr-2" />
+                  {fromDate ? format(fromDate, "PPP") : "From date"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={fromDate}
+                  onSelect={(d) => { setFromDate(d || null); setDatePreset("custom"); }}
+                  initialFocus
+                  className={cn("p-3 pointer-events-auto")}
+                />
+              </PopoverContent>
+            </Popover>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className={cn("h-9 justify-start text-left font-normal", !toDate && "text-muted-foreground")}
+                >
+                  <CalendarIcon className="h-4 w-4 mr-2" />
+                  {toDate ? format(toDate, "PPP") : "To date"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={toDate}
+                  onSelect={(d) => { setToDate(d || null); setDatePreset("custom"); }}
+                  initialFocus
+                  className={cn("p-3 pointer-events-auto")}
+                />
+              </PopoverContent>
+            </Popover>
+            {(fromDate || toDate) && (
+              <Button variant="ghost" size="sm" onClick={clearDates} className="h-9">
+                <X className="h-4 w-4 mr-1" /> Clear
+              </Button>
+            )}
+          </div>
+        </div>
         <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
           <span className="text-sm font-medium">
             {filtered.length} member{filtered.length !== 1 ? "s" : ""} match
