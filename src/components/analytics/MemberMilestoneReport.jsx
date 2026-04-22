@@ -344,8 +344,9 @@ export default function MemberMilestoneReport() {
       if (list.length === 0) return;
       const { headers, rows } = buildMemberCsvBlock(list);
       const csv = [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
+      const slug = unitFilter === "__unassigned" ? "unassigned" : slugify(unitFilter);
       downloadCsv(
-        `member-roster-unit-${slugify(unitFilter)}-${format(new Date(), "yyyy-MM-dd")}.csv`,
+        `member-roster-unit-${slug}-${format(new Date(), "yyyy-MM-dd")}.csv`,
         csv
       );
       return;
