@@ -169,52 +169,34 @@ export default function MemberMilestoneReport() {
     return String(v);
   };
 
-  const HIDDEN_KEYS = new Set(["tenant_id"]);
-  const PINNED = [
-    "first_name",
-    "last_name",
-    "email",
-    "phone",
-    "gender",
-    "membership_status",
-    "church_unit",
-    "wsf_centre_id",
-    "created_at",
+  // Fixed export columns: pinned member fields only (no raw record dump),
+  // followed by the 7 labeled milestone columns and the summary column.
+  const EXPORT_COLUMNS = [
+    { key: "first_name", label: "First Name" },
+    { key: "last_name", label: "Last Name" },
+    { key: "email", label: "Email" },
+    { key: "phone", label: "Phone" },
+    { key: "gender", label: "Gender" },
+    { key: "membership_status", label: "Status" },
+    { key: "church_unit", label: "Church Unit" },
+    { key: "wsf_centre_id", label: "Home Cell Centre" },
+    { key: "created_at", label: "Joined" },
   ];
-  const PINNED_LABELS = {
-    first_name: "First Name",
-    last_name: "Last Name",
-    email: "Email",
-    phone: "Phone",
-    gender: "Gender",
-    membership_status: "Status",
-    church_unit: "Church Unit",
-    wsf_centre_id: "Home Cell Centre",
-    created_at: "Joined",
-  };
 
-  // Build CSV rows for an arbitrary member list. Includes all 7 milestone columns
-  // (Missing/Completed) plus full member record + summary column.
   const buildMemberCsvBlock = (list) => {
-    const keySet = new Set();
-    list.forEach((m) => Object.keys(m || {}).forEach((k) => keySet.add(k)));
-    HIDDEN_KEYS.forEach((k) => keySet.delete(k));
-    PINNED.forEach((k) => keySet.delete(k));
-    const remainingKeys = [...keySet].sort();
-    const orderedKeys = [...PINNED, ...remainingKeys];
-
-    const milestoneHeaders = MILESTONES.map((ms) => ms.label);
     const summaryHeader = mode === "missing" ? "Missing" : "Completed";
     const headers = [
-      ...orderedKeys.map((k) => PINNED_LABELS[k] || k),
-      ...milestoneHeaders,
+      ...EXPORT_COLUMNS.map((c) => c.label),
+      ...MILESTONES.map((ms) => ms.label),
       summaryHeader,
     ];
 
     const rows = list.map((m) => [
-      ...orderedKeys.map((k) => {
-        if (k === "wsf_centre_id") return esc(centreNameById[m.wsf_centre_id] || (m.wsf_centre_id ? "" : "Unassigned"));
-        return esc(formatVal(m[k]));
+      ...EXPORT_COLUMNS.map((c) => {
+        if (c.key === "wsf_centre_id") {
+          return esc(centreNameById[m.wsf_centre_id] || (m.wsf_centre_id ? "" : "Unassigned"));
+        }
+        return esc(formatVal(m[c.key]));
       }),
       ...MILESTONES.map((ms) => esc(m[ms.key] ? "Completed" : "Missing")),
       esc(labelsFor(m).join("; ")),
