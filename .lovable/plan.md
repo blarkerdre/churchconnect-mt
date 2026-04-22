@@ -1,74 +1,37 @@
 
 
-## Slim down all Milestone Report CSV exports
+## Add "Unassigned (no unit)" filter to the Milestone Report
 
-Reduce every CSV produced by the Member Milestone Report to a focused, easy-to-read column set. Stop dumping every member record column — keep only the essentials plus the 7 labeled milestone columns and the summary column.
+The Unit dropdown in the Milestone Report currently lets admins pick **All Units** or any named unit — but there's no way to isolate members who belong to **no unit at all**. The plumbing is already there (`memberInUnit(m, "__unassigned")` returns members with empty `church_unit`, and the grouped "Download Unit Members" export already emits an "Unassigned" section). This change exposes that slice as a first-class filter so admins can report on, download, and message unit-less members.
 
 ### What changes
 
-Single file: `src/components/analytics/MemberMilestoneReport.jsx` — modify `buildMemberCsvBlock(list)` so its output is shared by every export path (main "Export CSV", "Download Centre Members" single + grouped, "Download Unit Members" single + grouped).
+Single file: `src/components/analytics/MemberMilestoneReport.jsx`.
 
-#### New CSV column order (left → right)
+1. **Unit dropdown** (around the existing `<Select value={unitFilter}>`): add a new option directly under "All Units":
+   ```
+   All Units
+   Unassigned (no unit)   ← new
+   ──────────────
+   <named units…>
+   ```
+   Value: `__unassigned` (matches the sentinel already used by `memberInUnit`).
 
-1. First Name
-2. Last Name
-3. Email
-4. Phone
-5. Gender
-6. Status (membership_status)
-7. Church Unit
-8. Home Cell Centre (resolved name, or "Unassigned")
-9. Joined (created_at, formatted yyyy-MM-dd)
-10. BFC — Completed / Missing
-11. BCC — Completed / Missing
-12. LCC — Completed / Missing
-13. LDC — Completed / Missing
-14. Water Baptism — Completed / Missing
-15. HS Baptism — Completed / Missing
-16. Home Cell — Completed / Missing
-17. Missing *(or "Completed" when mode = completed)* — semicolon-joined labels of the milestones the row matches based on the active milestone selection
+2. **Milestone filter logic** (`filtered` useMemo, ~line 127): when `unitFilter === "__unassigned"`, keep only members whose `church_unit` is empty/whitespace. Otherwise behave as today.
 
-That's the entire column set. No more raw boolean milestone columns (`bfc_completed`, `water_baptism`, etc.), no more dump of every other member field (DOB, address, notes, ids, timestamps, etc.).
+3. **Roster derivation** (`unitRoster` useMemo, ~line 319): already calls `memberInUnit(m, unitFilter)` — when `unitFilter === "__unassigned"` this Just Works. No change needed beyond making sure the early-return for `"all"` isn't accidentally hit.
 
-#### Implementation detail
+4. **Roster export** (`exportUnitMembers`, ~line 332): the existing single-unit branch (`unitFilter !== "all"`) handles `__unassigned` correctly via `memberInUnit`. Tweak the filename to `member-roster-unassigned-…csv` when `unitFilter === "__unassigned"` (currently it would slugify the literal `__unassigned`).
 
-Replace the current "all keys minus hidden" logic in `buildMemberCsvBlock` with a fixed `EXPORT_COLUMNS` array that drives both headers and row values. Reuse the existing `esc`, `formatVal`, `centreNameById`, `MILESTONES`, and `labelsFor` helpers.
+5. **Audience labels** (`unitAudienceLabel`, milestone label suffix ~line 401, 403): when `unitFilter === "__unassigned"`, render the human label `Unassigned (no unit)` instead of the raw sentinel — both in the messaging dialog audience and in the milestone report header context.
 
-```text
-EXPORT_COLUMNS = [
-  { key: "first_name",         label: "First Name" },
-  { key: "last_name",          label: "Last Name" },
-  { key: "email",              label: "Email" },
-  { key: "phone",              label: "Phone" },
-  { key: "gender",             label: "Gender" },
-  { key: "membership_status",  label: "Status" },
-  { key: "church_unit",        label: "Church Unit" },
-  { key: "wsf_centre_id",      label: "Home Cell Centre", resolve: centre name },
-  { key: "created_at",         label: "Joined" },
-]
-```
-
-Then append the 7 milestone Completed/Missing columns and the summary column exactly as today.
-
-`HIDDEN_KEYS` and the `PINNED` / `PINNED_LABELS` arrays become unused and are removed.
-
-#### Scope
-
-Every export path that currently calls `buildMemberCsvBlock` automatically inherits the new column set:
-
-- `exportCsv` — main milestone export
-- `exportCentreMembers` — single centre + grouped "all centres"
-- `exportUnitMembers` — single unit + grouped "all units"
-
-The grouped exports keep their `Centre: <name>` / `Unit: <name>` section headers and per-section header rows — only the columns inside each section change.
-
-Print Report and the messaging dialogs are unaffected.
+6. **Buttons + roster-action visibility**: the existing **Download Unit Members** and **Message Unit Members** buttons remain visible and now operate on the unassigned slice when that option is chosen. No new buttons.
 
 ### Acceptance checks
 
-1. Main **Export CSV** produces a CSV with exactly the 9 pinned columns + 7 milestone status columns + 1 summary column — nothing else.
-2. **Download Centre Members** (single centre) and grouped "all centres" use the same column set; centre name appears in the "Home Cell Centre" column, or "Unassigned" when missing.
-3. **Download Unit Members** (single unit) and grouped "all units" use the same column set.
-4. Boolean fields like `bfc_completed`, `water_baptism`, `holy_spirit_baptism`, `winners_satellite` no longer appear as raw `Yes/No` columns — they're represented only as the labeled "Completed/Missing" columns.
-5. No member record column outside the 9 pinned ones (no `address`, `dob`, `id`, `user_id`, `notes`, `created_at` duplicates, etc.) appears in any export.
+1. Opening the **Unit** filter shows a new **Unassigned (no unit)** option just under "All Units".
+2. Selecting it filters the on-screen milestone results to only members with no `church_unit` value.
+3. **Download Unit Members** produces a CSV named `member-roster-unassigned-YYYY-MM-DD.csv` containing exactly those members, using the standard 18-column export layout.
+4. **Message Unit Members** opens the messaging dialog pre-loaded with the unassigned roster; audience label reads `Unit roster: Unassigned (no unit) · …`.
+5. Other unit selections, "All Units" grouped export (which still includes the existing "Unassigned" section at the bottom), centre roster actions, milestone CSV, and print report behave exactly as before.
 
