@@ -577,6 +577,33 @@ export default function MemberMilestoneReport() {
             )}
           </div>
         </div>
+
+        {/* Roster actions — act on full unit/centre roster, independent of milestone selection */}
+        <div className="rounded-lg border bg-muted/30 p-3 space-y-2">
+          <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Roster actions</p>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" size="sm" onClick={exportUnitMembers} disabled={unitRoster.length === 0}>
+              <Users className="h-4 w-4 mr-2" />
+              {unitFilter === "all" ? "Download All Units" : "Download Unit Members"}
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => openMessage("unit")} disabled={unitRoster.length === 0}>
+              <Send className="h-4 w-4 mr-2" />
+              {unitFilter === "all" ? "Message All Units" : "Message Unit Members"}
+            </Button>
+            <Button variant="outline" size="sm" onClick={exportCentreMembers} disabled={centreRoster.length === 0}>
+              <Home className="h-4 w-4 mr-2" />
+              {centreFilter === "all" ? "Download All Centres" : "Download Centre Members"}
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => openMessage("centre")} disabled={centreRoster.length === 0}>
+              <Send className="h-4 w-4 mr-2" />
+              {centreFilter === "all" ? "Message All Centres" : "Message Centre Members"}
+            </Button>
+          </div>
+          <p className="text-[11px] text-muted-foreground">
+            Acts on the {unitFilter === "all" ? "all-units" : `"${unitFilter}"`} unit roster and the {selectedCentreLabel ? `"${selectedCentreLabel}"` : "all-centres"} centre roster (respects Status & Joined date; ignores milestone selection).
+          </p>
+        </div>
+
         <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
           <span className="text-sm font-medium">
             {filtered.length} member{filtered.length !== 1 ? "s" : ""} match
@@ -585,12 +612,8 @@ export default function MemberMilestoneReport() {
             <Button variant="outline" size="sm" onClick={exportCsv} disabled={filtered.length === 0}>
               <Download className="h-4 w-4 mr-2" /> Export CSV
             </Button>
-            <Button variant="outline" size="sm" onClick={exportCentreMembers}>
-              <Home className="h-4 w-4 mr-2" />
-              {centreFilter === "all" ? "Download All Centres" : "Download Centre Members"}
-            </Button>
             <PrintReportButton buildRows={buildPrintRows} label="Print Report" />
-            <Button size="sm" onClick={() => setMessageOpen(true)} disabled={filtered.length === 0}>
+            <Button size="sm" onClick={() => openMessage("milestone")} disabled={filtered.length === 0}>
               <Send className="h-4 w-4 mr-2" /> Message Members
             </Button>
           </div>
