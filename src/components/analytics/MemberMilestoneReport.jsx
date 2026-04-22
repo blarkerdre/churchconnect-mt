@@ -97,17 +97,25 @@ export default function MemberMilestoneReport() {
 
   const filtered = useMemo(() => {
     if (selected.length === 0) return [];
+    const fromMs = fromDate ? startOfDay(fromDate).getTime() : null;
+    const toMs = toDate ? endOfDay(toDate).getTime() : null;
     return members.filter((m) => {
       if (statusFilter !== "all" && m.membership_status !== statusFilter) return false;
       if (unitFilter !== "all") {
         const ms = (m.church_unit || "").split(",").map((u) => u.trim());
         if (!ms.includes(unitFilter)) return false;
       }
+      if (fromMs || toMs) {
+        const created = m.created_at ? new Date(m.created_at).getTime() : null;
+        if (created == null) return false;
+        if (fromMs && created < fromMs) return false;
+        if (toMs && created > toMs) return false;
+      }
       return mode === "missing"
         ? selected.some((k) => !m[k])
         : selected.every((k) => m[k]);
     });
-  }, [members, selected, statusFilter, unitFilter, mode]);
+  }, [members, selected, statusFilter, unitFilter, mode, fromDate, toDate]);
 
   const labelsFor = (m) =>
     MILESTONES.filter((ms) => selected.includes(ms.key) && (mode === "missing" ? !m[ms.key] : m[ms.key])).map(
