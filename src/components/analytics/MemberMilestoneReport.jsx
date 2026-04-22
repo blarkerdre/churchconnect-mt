@@ -47,7 +47,7 @@ const slugify = (s) =>
     .replace(/(^-|-$)/g, "") || "all";
 
 export default function MemberMilestoneReport() {
-  const { tenantId, scopeQuery } = useTenantQuery();
+  const { tenantId } = useTenantQuery();
   const [selected, setSelected] = useState(["bfc_completed"]);
   const [mode, setMode] = useState("missing"); // missing | completed
   const [statusFilter, setStatusFilter] = useState("all");
@@ -73,9 +73,11 @@ export default function MemberMilestoneReport() {
   const { data: members = [], isLoading } = useQuery({
     queryKey: ["milestone-report-members", tenantId],
     queryFn: async () => {
-      const { data, error } = await scopeQuery(
-        supabase.from("members").select("*")
-      );
+      if (!tenantId) throw new Error("No tenant context");
+      const { data, error } = await supabase
+        .from("members")
+        .select("*")
+        .eq("tenant_id", tenantId);
       if (error) throw error;
       return data || [];
     },
@@ -85,9 +87,12 @@ export default function MemberMilestoneReport() {
   const { data: centres = [] } = useQuery({
     queryKey: ["milestone-report-centres", tenantId],
     queryFn: async () => {
-      const { data, error } = await scopeQuery(
-        supabase.from("wsf_centres").select("id, name, is_active").order("name")
-      );
+      if (!tenantId) throw new Error("No tenant context");
+      const { data, error } = await supabase
+        .from("wsf_centres")
+        .select("id, name, is_active")
+        .eq("tenant_id", tenantId)
+        .order("name");
       if (error) throw error;
       return data || [];
     },
@@ -576,19 +581,19 @@ export default function MemberMilestoneReport() {
         <div className="rounded-lg border bg-muted/30 p-3 space-y-2">
           <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Roster actions</p>
           <div className="flex flex-wrap gap-2">
-            <Button variant="outline" size="sm" onClick={exportUnitMembers} disabled={unitRoster.length === 0}>
+            <Button variant="outline" size="sm" onClick={exportUnitMembers} disabled={!tenantId || unitRoster.length === 0}>
               <Users className="h-4 w-4 mr-2" />
               {unitFilter === "all" ? "Download All Units" : "Download Unit Members"}
             </Button>
-            <Button variant="outline" size="sm" onClick={() => openMessage("unit")} disabled={unitRoster.length === 0}>
+            <Button variant="outline" size="sm" onClick={() => openMessage("unit")} disabled={!tenantId || unitRoster.length === 0}>
               <Send className="h-4 w-4 mr-2" />
               {unitFilter === "all" ? "Message All Units" : "Message Unit Members"}
             </Button>
-            <Button variant="outline" size="sm" onClick={exportCentreMembers} disabled={centreRoster.length === 0}>
+            <Button variant="outline" size="sm" onClick={exportCentreMembers} disabled={!tenantId || centreRoster.length === 0}>
               <Home className="h-4 w-4 mr-2" />
               {centreFilter === "all" ? "Download All Centres" : "Download Centre Members"}
             </Button>
-            <Button variant="outline" size="sm" onClick={() => openMessage("centre")} disabled={centreRoster.length === 0}>
+            <Button variant="outline" size="sm" onClick={() => openMessage("centre")} disabled={!tenantId || centreRoster.length === 0}>
               <Send className="h-4 w-4 mr-2" />
               {centreFilter === "all" ? "Message All Centres" : "Message Centre Members"}
             </Button>
@@ -603,11 +608,11 @@ export default function MemberMilestoneReport() {
             {filtered.length} member{filtered.length !== 1 ? "s" : ""} match
           </span>
           <div className="flex flex-wrap gap-2">
-            <Button variant="outline" size="sm" onClick={exportCsv} disabled={filtered.length === 0}>
+            <Button variant="outline" size="sm" onClick={exportCsv} disabled={!tenantId || filtered.length === 0}>
               <Download className="h-4 w-4 mr-2" /> Export CSV
             </Button>
             <PrintReportButton buildRows={buildPrintRows} label="Print Report" />
-            <Button size="sm" onClick={() => openMessage("milestone")} disabled={filtered.length === 0}>
+            <Button size="sm" onClick={() => openMessage("milestone")} disabled={!tenantId || filtered.length === 0}>
               <Send className="h-4 w-4 mr-2" /> Message Members
             </Button>
           </div>
