@@ -21,6 +21,7 @@ import { useAppSetting } from "@/hooks/useAppSetting";
 import { useChurchUnits } from "@/hooks/useChurchUnits";
 import { useSubFeature } from "@/hooks/useSubFeature";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
+import { renderTextWithLinks } from "@/lib/linkify";
 
 const statusColors = {
   "Upcoming": "bg-primary/10 text-primary",
@@ -548,7 +549,7 @@ export default function Events() {
 
                 {selectedEvent.description && (
                   <div className="bg-muted/50 rounded-lg p-3">
-                    <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">{selectedEvent.description}</p>
+                    <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">{renderTextWithLinks(selectedEvent.description)}</p>
                   </div>
                 )}
 
