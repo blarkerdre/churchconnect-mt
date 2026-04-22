@@ -16,6 +16,7 @@ import { format, parseISO } from "date-fns";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "@/components/ui/use-toast";
+import { renderTextWithLinks } from "@/lib/linkify";
 
 function AnnouncementItem({ a, onRead, onOpen, user, tenantId, withTenant }) {
   const [expanded, setExpanded] = useState(false);
@@ -81,7 +82,7 @@ function AnnouncementItem({ a, onRead, onOpen, user, tenantId, withTenant }) {
             )}
           </div>
           {expanded && a.content && (
-            <p className="text-xs text-muted-foreground mt-2 leading-relaxed border-t border-border pt-2">{a.content}</p>
+            <p className="text-xs text-muted-foreground mt-2 leading-relaxed border-t border-border pt-2 whitespace-pre-wrap">{renderTextWithLinks(a.content)}</p>
           )}
           <div className="flex items-center gap-3 mt-2">
             <button
@@ -203,7 +204,7 @@ function EventItem({ event, member, onRead, onOpen, user, tenantId, withTenant }
           {expanded && (
             <div className="mt-2 border-t border-border pt-2 space-y-1.5">
               {event.description && (
-                <p className="text-xs text-muted-foreground leading-relaxed">{event.description}</p>
+                <p className="text-xs text-muted-foreground leading-relaxed whitespace-pre-wrap">{renderTextWithLinks(event.description)}</p>
               )}
               <div className="flex flex-wrap gap-2 text-[10px] text-muted-foreground">
                 {event.end_time && (
@@ -445,7 +446,7 @@ export default function MemberFeed({ member }) {
                   <span className="text-xs text-muted-foreground">{format(new Date(selectedAnnouncement.publish_date), "d MMM yyyy")}</span>
                 )}
               </div>
-              <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">{selectedAnnouncement?.content}</p>
+              <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">{renderTextWithLinks(selectedAnnouncement?.content)}</p>
             </div>
           </DialogContent>
         </Dialog>
@@ -481,7 +482,7 @@ export default function MemberFeed({ member }) {
               </div>
               {selectedEvent?.category && <Badge variant="secondary" className="text-xs">{selectedEvent.category}</Badge>}
               {selectedEvent?.description && (
-                <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap border-t border-border pt-3">{selectedEvent.description}</p>
+                <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap border-t border-border pt-3">{renderTextWithLinks(selectedEvent.description)}</p>
               )}
               {selectedEvent?.requires_registration && (
                 <div className="pt-2">

@@ -27,6 +27,7 @@ import SMSDialog from "@/components/sms/SMSDialog";
 
 import { useSubFeature } from "@/hooks/useSubFeature";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
+import { renderTextWithLinks } from "@/lib/linkify";
 
 const STATIC_AUDIENCES = ["All Members", "Leaders Only"];
 
@@ -753,7 +754,7 @@ export default function Communications() {
           </DialogHeader>
           {selectedAnnouncement && (
             <div className="space-y-4">
-              <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">{selectedAnnouncement.body}</p>
+              <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">{renderTextWithLinks(selectedAnnouncement.body)}</p>
               <Separator />
               <div className="flex items-center gap-3 text-xs text-muted-foreground">
                 <span className="flex items-center gap-1"><User className="h-3 w-3" />{selectedAnnouncement.author_name}</span>
