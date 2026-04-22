@@ -57,6 +57,7 @@ export default function MemberMilestoneReport() {
   const [toDate, setToDate] = useState(null);
   const [datePreset, setDatePreset] = useState("all");
   const [messageOpen, setMessageOpen] = useState(false);
+  const [messageMode, setMessageMode] = useState("milestone"); // "milestone" | "unit" | "centre"
 
   const applyPreset = (preset) => {
     setDatePreset(preset);
