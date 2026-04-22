@@ -395,6 +395,8 @@ export default function MemberMilestoneReport() {
             mode,
             status: statusFilter,
             unit: unitFilter,
+            from_date: fromDate ? format(fromDate, "yyyy-MM-dd") : null,
+            to_date: toDate ? format(toDate, "yyyy-MM-dd") : null,
           }}
         />
       </CardContent>
