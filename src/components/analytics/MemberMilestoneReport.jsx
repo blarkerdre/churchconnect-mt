@@ -405,11 +405,13 @@ export default function MemberMilestoneReport() {
     ]),
   });
 
+  const unitFilterLabel = unitFilter === "__unassigned" ? "Unassigned (no unit)" : unitFilter;
+
   const milestoneAudienceLabel = `${mode === "missing" ? "Missing" : "Completed"} ${selected
     .map((k) => MILESTONES.find((m) => m.key === k)?.label)
-    .join(" + ")}${statusFilter !== "all" ? ` · ${statusFilter}` : ""}${unitFilter !== "all" ? ` · ${unitFilter}` : ""}${centreLabelSuffix}${dateRangeLabel}`;
+    .join(" + ")}${statusFilter !== "all" ? ` · ${statusFilter}` : ""}${unitFilter !== "all" ? ` · ${unitFilterLabel}` : ""}${centreLabelSuffix}${dateRangeLabel}`;
 
-  const unitAudienceLabel = `Unit roster: ${unitFilter === "all" ? "All units" : unitFilter}${statusFilter !== "all" ? ` · ${statusFilter}` : ""}${dateRangeLabel}`;
+  const unitAudienceLabel = `Unit roster: ${unitFilter === "all" ? "All units" : unitFilterLabel}${statusFilter !== "all" ? ` · ${statusFilter}` : ""}${dateRangeLabel}`;
   const centreAudienceLabel = `Centre roster: ${selectedCentreLabel || "All centres"}${statusFilter !== "all" ? ` · ${statusFilter}` : ""}${dateRangeLabel}`;
 
   const dialogMembers =
