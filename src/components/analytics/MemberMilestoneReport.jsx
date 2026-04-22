@@ -17,13 +17,16 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Download, Send, Target, CheckCircle2, XCircle, Loader2 } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { Download, Send, Target, CheckCircle2, XCircle, Loader2, CalendarIcon, X } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
 import PrintReportButton from "@/components/PrintReportButton";
 import MessageFilteredMembersDialog from "./MessageFilteredMembersDialog";
-import { format } from "date-fns";
+import { format, startOfDay, endOfDay, subDays, startOfYear } from "date-fns";
+import { cn } from "@/lib/utils";
 
 const MILESTONES = [
   { key: "bfc_completed", label: "BFC" },
