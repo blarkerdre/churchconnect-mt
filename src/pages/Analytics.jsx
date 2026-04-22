@@ -15,7 +15,6 @@ import AnnouncementAnalytics from "@/components/analytics/AnnouncementAnalytics"
 import FeedbackSummary from "@/components/feedback/FeedbackSummary";
 import MemberMilestoneReport from "@/components/analytics/MemberMilestoneReport";
 import StatusConversionReport from "@/components/analytics/StatusConversionReport";
-import HomeCellCentreMembersReport from "@/components/analytics/HomeCellCentreMembersReport";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
 import { useAuth } from "@/hooks/useAuth";
 import { format, subMonths, startOfMonth, endOfMonth, parseISO } from "date-fns";
@@ -363,7 +362,6 @@ export default function Analytics() {
       <TabsContent value="reports" className="space-y-6">
         {isAdmin && <MemberMilestoneReport />}
         {isAdmin && <StatusConversionReport />}
-        {isAdmin && <HomeCellCentreMembersReport />}
         <FeedbackSummary />
       </TabsContent>
 
