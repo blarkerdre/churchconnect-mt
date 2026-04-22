@@ -680,12 +680,13 @@ export default function MemberMilestoneReport() {
         <MessageFilteredMembersDialog
           open={messageOpen}
           onOpenChange={setMessageOpen}
-          members={filtered}
-          source="milestone_report"
-          audienceLabel={audienceLabel}
+          members={dialogMembers}
+          source={messageMode === "unit" ? "unit_roster" : messageMode === "centre" ? "centre_roster" : "milestone_report"}
+          audienceLabel={dialogAudienceLabel}
           filterContext={{
-            milestones: selected,
-            mode,
+            mode: messageMode,
+            milestones: messageMode === "milestone" ? selected : null,
+            milestone_mode: messageMode === "milestone" ? mode : null,
             status: statusFilter,
             unit: unitFilter,
             centre: selectedCentreLabel || "all",
