@@ -1,45 +1,67 @@
 
 
-## Add Home Cell Centre member download + messaging to Milestone Report
+## Add per-Unit + per-Centre download & messaging in the Milestone Report
 
-Integrate Home Cell centre filtering, CSV export per centre, and messaging directly into the **Member Milestones Report** card so admins can quickly act on a single centre's roster — without leaving the report.
+The report already lets admins filter by Unit and by Home Cell Centre, export a milestone CSV, and message the filtered set. This adds **roster-level actions** so admins can download or message *every* member of a unit (or every member of a centre) in one click — independent of milestone selection.
 
-### What changes
+### What changes (single file: `src/components/analytics/MemberMilestoneReport.jsx`)
 
-In `src/components/analytics/MemberMilestoneReport.jsx`:
+#### 1. New "Roster actions" row
 
-**1. New "Home Cell Centre" filter dropdown**
-Add a 4th filter (next to Mode / Status / Unit) listing all active Home Cell centres plus "All centres" and "Unassigned". When set, the report filters members by `wsf_centre_id` (or no centre when "Unassigned" is selected). Centres are loaded via a new query against `wsf_centres` (id, name, is_active).
+A new compact row appears under the existing Mode / Status / Unit / Home Cell Centre filter grid, with two action groups:
 
-**2. Resolve centre name in CSV**
-Add a "Home Cell Centre" pinned column to the CSV (right after Church Unit) using a centre-id → name lookup. Members with no centre show "Unassigned".
+**Unit roster**
+- **Download Unit Members** — mirrors the existing centre button:
+  - With a specific Unit selected → CSV of just that unit's members (respecting Status + Joined date filters).
+  - With "All Units" → one CSV grouped by unit (section header + rows per unit), with an "Unassigned" group for members whose `church_unit` is empty.
+- **Message Unit Members** — opens the existing `MessageFilteredMembersDialog` pre-loaded with the unit roster (or the full multi-unit roster when "All Units" is selected). Audience label reflects the unit (e.g. *"Unit roster: Ushers · Active"*).
 
-**3. Per-milestone Missing/Completed columns** (from the previously approved plan)
-Always include 7 fixed columns — BFC, BCC, LCC, LDC, Water Baptism, HS Baptism, Home Cell — each cell `Missing` or `Completed`, placed right after the pinned identity columns.
+**Home Cell Centre roster**
+- **Download Centre Members** — the existing button, kept and relabelled for symmetry ("Download Centre Members" / "Download All Centres").
+- **Message Centre Members** — new button, opens the messaging dialog pre-loaded with the centre roster (or all centres flattened when "All Centres" is selected). Audience label reflects the centre (e.g. *"Centre roster: Cardiff Bay · Active"*).
 
-**4. New "Download Centre Members" button**
-Sits next to **Export CSV**. When a specific centre is selected, downloads a CSV of just that centre's members (respecting current Mode/Status/Unit/date filters). When "All centres" is selected, downloads a single CSV with members **grouped by centre** (centre name as a section header row, then that centre's rows; "Unassigned" group last).
+The existing **Export CSV** + **Message Members** + **Print Report** buttons in the bottom action row stay exactly as they are — those continue to act on the milestone-filtered list.
 
-**5. Message Members already works**
-The existing **Message Members** button already messages whatever is in `filtered`, so when the centre filter is active it will message that centre's members. The audience label is extended to include the centre name (e.g. *"Missing BFC · Active · Centre: Cardiff Bay"*).
+#### 2. Roster builder (shared logic)
 
-### Filename conventions
+Add two memoised helpers in the component:
 
-- Main export: `member-milestone-report-YYYY-MM-DD[-range][-centre-<slug>].csv`
-- Centre members export: `home-cell-centre-members-<slug>-YYYY-MM-DD.csv` (or `home-cell-centres-all-YYYY-MM-DD.csv` for grouped export)
+- `buildUnitRoster(unit)` — applies the same Status + Joined-date filters as the table, splits `church_unit` on commas, returns members where `unit` matches (or members with no unit when `unit === "__unassigned"`).
+- `buildCentreRoster(centreId)` — same Status + Joined-date filters, returns members with `wsf_centre_id === centreId` (or `!wsf_centre_id` for unassigned).
 
-### Files touched
+These are reused by both the download and messaging buttons so the roster is always consistent.
 
-- `src/components/analytics/MemberMilestoneReport.jsx` — add centre query + filter state, centre dropdown UI, centre name in CSV, 7 milestone columns, "Download Centre Members" button, extend audience label.
+#### 3. Dialog wiring
+
+Reuse a single `MessageFilteredMembersDialog` instance but switch the `members` prop and `audienceLabel` based on which trigger opened it. New local state:
+
+```text
+messageMode: "milestone" | "unit" | "centre"
+messageRosterUnit: string | null
+messageRosterCentreId: string | null
+```
+
+The existing `messageOpen` flag is reused; the dialog reads `messageMode` to pick the correct member array and label.
+
+#### 4. CSV filename conventions
+
+- Unit single: `member-roster-unit-<slug>-YYYY-MM-DD.csv`
+- Unit grouped: `member-roster-units-all-YYYY-MM-DD.csv`
+- Centre single (existing): `home-cell-centre-members-<slug>-YYYY-MM-DD.csv`
+- Centre grouped (existing): `home-cell-centres-all-YYYY-MM-DD.csv`
+
+All CSVs continue to use the existing `buildMemberCsvBlock` so they include the full member record + 7 milestone status columns + Home Cell Centre name column.
+
+#### 5. Mobile (384px viewport)
+
+The new buttons sit in a `flex flex-wrap gap-2` row so they stack cleanly on narrow screens, matching the existing button row pattern.
 
 ### Acceptance checks
 
-1. New "Home Cell Centre" dropdown appears in the filters row with All / each active centre / Unassigned.
-2. Selecting a centre narrows the table, CSV export, and Message Members audience to just that centre's members.
-3. Main CSV export includes a "Home Cell Centre" column and 7 milestone status columns (Missing/Completed) in addition to the full member record.
-4. **Download Centre Members** button:
-   - With a specific centre selected → downloads only that centre's filtered members.
-   - With "All centres" → downloads one CSV grouped by centre with "Unassigned" last.
-5. **Message Members** dialog title/audience reflects the active centre.
-6. Mobile (384px viewport): the new dropdown and button wrap cleanly without clipping.
+1. With a specific **Unit** selected, **Download Unit Members** downloads a CSV of just that unit's members (respecting Status + date filters).
+2. With **All Units** selected, **Download Unit Members** downloads one CSV grouped by unit with an "Unassigned" section last.
+3. **Message Unit Members** opens the messaging dialog with the unit roster pre-loaded; audience label shows the unit name.
+4. With a specific **Centre** selected, **Message Centre Members** opens the dialog with that centre's roster; "All Centres" loads every centre's members flattened.
+5. Existing **Export CSV**, **Message Members**, **Print Report**, **Download Centre Members** continue to behave exactly as before.
+6. New buttons wrap cleanly at 384px without clipping or horizontal scroll.
 
