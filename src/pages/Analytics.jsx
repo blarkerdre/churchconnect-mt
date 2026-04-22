@@ -10,7 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Loader2, FileText } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useSubFeature } from "@/hooks/useSubFeature";
-import TrainingGapReport from "@/components/analytics/TrainingGapReport";
+
 import AnnouncementAnalytics from "@/components/analytics/AnnouncementAnalytics";
 import FeedbackSummary from "@/components/feedback/FeedbackSummary";
 import MemberMilestoneReport from "@/components/analytics/MemberMilestoneReport";
@@ -360,7 +360,6 @@ export default function Analytics() {
       </TabsContent>
 
       <TabsContent value="reports" className="space-y-6">
-        <TrainingGapReport members={members} />
         {isAdmin && <MemberMilestoneReport />}
         {isAdmin && <StatusConversionReport />}
         <FeedbackSummary />
