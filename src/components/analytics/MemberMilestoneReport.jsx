@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/table";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { Download, Send, Target, CheckCircle2, XCircle, Loader2, CalendarIcon, X } from "lucide-react";
+import { Download, Send, Target, CheckCircle2, XCircle, Loader2, CalendarIcon, X, Home } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
@@ -40,12 +40,19 @@ const MILESTONES = [
 
 const STATUS_OPTIONS = ["all", "Active", "Inactive", "First Timer", "New Convert", "Visitor"];
 
+const slugify = (s) =>
+  String(s || "all")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "") || "all";
+
 export default function MemberMilestoneReport() {
   const { tenantId, scopeQuery } = useTenantQuery();
   const [selected, setSelected] = useState(["bfc_completed"]);
   const [mode, setMode] = useState("missing"); // missing | completed
   const [statusFilter, setStatusFilter] = useState("all");
   const [unitFilter, setUnitFilter] = useState("all");
+  const [centreFilter, setCentreFilter] = useState("all"); // "all" | "unassigned" | <centre_id>
   const [fromDate, setFromDate] = useState(null);
   const [toDate, setToDate] = useState(null);
   const [datePreset, setDatePreset] = useState("all");
@@ -58,7 +65,6 @@ export default function MemberMilestoneReport() {
     else if (preset === "30d") { setFromDate(subDays(today, 30)); setToDate(today); }
     else if (preset === "90d") { setFromDate(subDays(today, 90)); setToDate(today); }
     else if (preset === "ytd") { setFromDate(startOfYear(today)); setToDate(today); }
-    // "custom" leaves dates as-is
   };
 
   const clearDates = () => { setFromDate(null); setToDate(null); setDatePreset("all"); };
@@ -74,6 +80,26 @@ export default function MemberMilestoneReport() {
     },
     enabled: !!tenantId,
   });
+
+  const { data: centres = [] } = useQuery({
+    queryKey: ["milestone-report-centres", tenantId],
+    queryFn: async () => {
+      const { data, error } = await scopeQuery(
+        supabase.from("wsf_centres").select("id, name, is_active").order("name")
+      );
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!tenantId,
+  });
+
+  const centreNameById = useMemo(() => {
+    const map = {};
+    centres.forEach((c) => { map[c.id] = c.name; });
+    return map;
+  }, [centres]);
+
+  const activeCentres = useMemo(() => centres.filter((c) => c.is_active !== false), [centres]);
 
   const units = useMemo(() => {
     const set = new Set();
@@ -101,6 +127,13 @@ export default function MemberMilestoneReport() {
         const ms = (m.church_unit || "").split(",").map((u) => u.trim());
         if (!ms.includes(unitFilter)) return false;
       }
+      if (centreFilter !== "all") {
+        if (centreFilter === "unassigned") {
+          if (m.wsf_centre_id) return false;
+        } else if (m.wsf_centre_id !== centreFilter) {
+          return false;
+        }
+      }
       if (fromMs || toMs) {
         const created = m.created_at ? new Date(m.created_at).getTime() : null;
         if (created == null) return false;
@@ -111,97 +144,188 @@ export default function MemberMilestoneReport() {
         ? selected.some((k) => !m[k])
         : selected.every((k) => m[k]);
     });
-  }, [members, selected, statusFilter, unitFilter, mode, fromDate, toDate]);
+  }, [members, selected, statusFilter, unitFilter, centreFilter, mode, fromDate, toDate]);
 
   const labelsFor = (m) =>
     MILESTONES.filter((ms) => selected.includes(ms.key) && (mode === "missing" ? !m[ms.key] : m[ms.key])).map(
       (ms) => ms.label
     );
 
-  const exportCsv = () => {
-    const esc = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
-    const formatVal = (v) => {
-      if (v === null || v === undefined) return "";
-      if (typeof v === "boolean") return v ? "Yes" : "No";
-      if (v instanceof Date) return format(v, "yyyy-MM-dd");
-      if (typeof v === "string") {
-        // ISO-like date string → keep as yyyy-MM-dd if it parses cleanly
-        if (/^\d{4}-\d{2}-\d{2}(T|$)/.test(v)) {
-          const d = new Date(v);
-          if (!isNaN(d.getTime())) return format(d, "yyyy-MM-dd");
-        }
-        return v;
+  // Shared CSV helpers
+  const esc = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+  const formatVal = (v) => {
+    if (v === null || v === undefined) return "";
+    if (typeof v === "boolean") return v ? "Yes" : "No";
+    if (v instanceof Date) return format(v, "yyyy-MM-dd");
+    if (typeof v === "string") {
+      if (/^\d{4}-\d{2}-\d{2}(T|$)/.test(v)) {
+        const d = new Date(v);
+        if (!isNaN(d.getTime())) return format(d, "yyyy-MM-dd");
       }
-      if (typeof v === "object") return JSON.stringify(v);
-      return String(v);
-    };
+      return v;
+    }
+    if (typeof v === "object") return JSON.stringify(v);
+    return String(v);
+  };
 
-    // Hide internal/noisy columns
-    const HIDDEN_KEYS = new Set(["tenant_id"]);
-    // Pinned identity columns first (in this order)
-    const PINNED = [
-      "first_name",
-      "last_name",
-      "email",
-      "phone",
-      "gender",
-      "membership_status",
-      "church_unit",
-      "created_at",
-    ];
-    const PINNED_LABELS = {
-      first_name: "First Name",
-      last_name: "Last Name",
-      email: "Email",
-      phone: "Phone",
-      gender: "Gender",
-      membership_status: "Status",
-      church_unit: "Church Unit",
-      created_at: "Joined",
-    };
+  const HIDDEN_KEYS = new Set(["tenant_id"]);
+  const PINNED = [
+    "first_name",
+    "last_name",
+    "email",
+    "phone",
+    "gender",
+    "membership_status",
+    "church_unit",
+    "wsf_centre_id",
+    "created_at",
+  ];
+  const PINNED_LABELS = {
+    first_name: "First Name",
+    last_name: "Last Name",
+    email: "Email",
+    phone: "Phone",
+    gender: "Gender",
+    membership_status: "Status",
+    church_unit: "Church Unit",
+    wsf_centre_id: "Home Cell Centre",
+    created_at: "Joined",
+  };
 
-    // Collect every key present across the filtered members
+  // Build CSV rows for an arbitrary member list. Includes all 7 milestone columns
+  // (Missing/Completed) plus full member record + summary column.
+  const buildMemberCsvBlock = (list) => {
     const keySet = new Set();
-    filtered.forEach((m) => Object.keys(m || {}).forEach((k) => keySet.add(k)));
+    list.forEach((m) => Object.keys(m || {}).forEach((k) => keySet.add(k)));
     HIDDEN_KEYS.forEach((k) => keySet.delete(k));
     PINNED.forEach((k) => keySet.delete(k));
     const remainingKeys = [...keySet].sort();
+    const orderedKeys = [...PINNED, ...remainingKeys];
 
-    const orderedKeys = [...PINNED.filter((k) => true), ...remainingKeys];
+    const milestoneHeaders = MILESTONES.map((ms) => ms.label);
     const summaryHeader = mode === "missing" ? "Missing" : "Completed";
     const headers = [
       ...orderedKeys.map((k) => PINNED_LABELS[k] || k),
+      ...milestoneHeaders,
       summaryHeader,
     ];
 
-    const rows = filtered.map((m) => [
-      ...orderedKeys.map((k) => esc(formatVal(m[k]))),
+    const rows = list.map((m) => [
+      ...orderedKeys.map((k) => {
+        if (k === "wsf_centre_id") return esc(centreNameById[m.wsf_centre_id] || (m.wsf_centre_id ? "" : "Unassigned"));
+        return esc(formatVal(m[k]));
+      }),
+      ...MILESTONES.map((ms) => esc(m[ms.key] ? "Completed" : "Missing")),
       esc(labelsFor(m).join("; ")),
     ]);
-    const csv = [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
-    const blob = new Blob([csv], { type: "text/csv" });
+    return { headers, rows };
+  };
+
+  const downloadCsv = (filename, content) => {
+    const blob = new Blob([content], { type: "text/csv" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
-    const rangeSuffix = fromDate || toDate
-      ? `-${fromDate ? format(fromDate, "yyyy-MM-dd") : "any"}_to_${toDate ? format(toDate, "yyyy-MM-dd") : "any"}`
-      : "";
-    a.download = `member-milestone-report-${format(new Date(), "yyyy-MM-dd")}${rangeSuffix}.csv`;
+    a.download = filename;
     a.click();
+  };
+
+  const rangeSuffix = fromDate || toDate
+    ? `-${fromDate ? format(fromDate, "yyyy-MM-dd") : "any"}_to_${toDate ? format(toDate, "yyyy-MM-dd") : "any"}`
+    : "";
+
+  const selectedCentreLabel =
+    centreFilter === "all" ? null
+    : centreFilter === "unassigned" ? "Unassigned"
+    : centreNameById[centreFilter] || "Centre";
+
+  const exportCsv = () => {
+    const { headers, rows } = buildMemberCsvBlock(filtered);
+    const csv = [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
+    const centreSuffix = selectedCentreLabel ? `-centre-${slugify(selectedCentreLabel)}` : "";
+    downloadCsv(
+      `member-milestone-report-${format(new Date(), "yyyy-MM-dd")}${rangeSuffix}${centreSuffix}.csv`,
+      csv
+    );
+  };
+
+  // Download Centre Members — respects current filters but ignores milestone selection
+  // so it returns the full roster of the centre (or grouped roster if "All centres").
+  const exportCentreMembers = () => {
+    const fromMs = fromDate ? startOfDay(fromDate).getTime() : null;
+    const toMs = toDate ? endOfDay(toDate).getTime() : null;
+    const baseFiltered = members.filter((m) => {
+      if (statusFilter !== "all" && m.membership_status !== statusFilter) return false;
+      if (unitFilter !== "all") {
+        const ms = (m.church_unit || "").split(",").map((u) => u.trim());
+        if (!ms.includes(unitFilter)) return false;
+      }
+      if (fromMs || toMs) {
+        const created = m.created_at ? new Date(m.created_at).getTime() : null;
+        if (created == null) return false;
+        if (fromMs && created < fromMs) return false;
+        if (toMs && created > toMs) return false;
+      }
+      return true;
+    });
+
+    if (centreFilter !== "all") {
+      const list = baseFiltered.filter((m) =>
+        centreFilter === "unassigned" ? !m.wsf_centre_id : m.wsf_centre_id === centreFilter
+      );
+      if (list.length === 0) return;
+      const { headers, rows } = buildMemberCsvBlock(list);
+      const csv = [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
+      downloadCsv(
+        `home-cell-centre-members-${slugify(selectedCentreLabel)}-${format(new Date(), "yyyy-MM-dd")}.csv`,
+        csv
+      );
+      return;
+    }
+
+    // Grouped export: one section per active centre + Unassigned at the end
+    const groups = [];
+    activeCentres.forEach((c) => {
+      const list = baseFiltered.filter((m) => m.wsf_centre_id === c.id);
+      groups.push({ name: c.name, list });
+    });
+    const unassigned = baseFiltered.filter((m) => !m.wsf_centre_id);
+    groups.push({ name: "Unassigned", list: unassigned });
+
+    const lines = [];
+    lines.push(`Home Cell Centre Members — generated ${format(new Date(), "yyyy-MM-dd HH:mm")}`);
+    lines.push("");
+    let firstSection = true;
+    groups.forEach((g) => {
+      if (g.list.length === 0) return;
+      if (!firstSection) lines.push("");
+      firstSection = false;
+      lines.push(`Centre: ${g.name} (${g.list.length} member${g.list.length !== 1 ? "s" : ""})`);
+      const { headers, rows } = buildMemberCsvBlock(g.list);
+      lines.push(headers.join(","));
+      rows.forEach((r) => lines.push(r.join(",")));
+    });
+    downloadCsv(
+      `home-cell-centres-all-${format(new Date(), "yyyy-MM-dd")}.csv`,
+      lines.join("\n")
+    );
   };
 
   const dateRangeLabel = (fromDate || toDate)
     ? ` · Joined ${fromDate ? format(fromDate, "yyyy-MM-dd") : "any"} → ${toDate ? format(toDate, "yyyy-MM-dd") : "any"}`
     : "";
 
+  const centreLabelSuffix = selectedCentreLabel ? ` · Centre: ${selectedCentreLabel}` : "";
+
   const buildPrintRows = () => ({
     title: `Member Milestone Report (${mode === "missing" ? "Missing" : "Completed"}: ${selected
       .map((k) => MILESTONES.find((m) => m.key === k)?.label)
-      .join(", ")})${dateRangeLabel}`,
-    headers: ["Name", "Status", "Church Unit", "Phone", mode === "missing" ? "Missing" : "Completed"],
+      .join(", ")})${dateRangeLabel}${centreLabelSuffix}`,
+    headers: ["Name", "Status", "Church Unit", "Home Cell Centre", "Phone", mode === "missing" ? "Missing" : "Completed"],
     rows: filtered.map((m) => [
       `${m.first_name} ${m.last_name}`,
       m.membership_status || "",
       m.church_unit || "—",
+      centreNameById[m.wsf_centre_id] || (m.wsf_centre_id ? "—" : "Unassigned"),
       m.phone || "—",
       labelsFor(m).join(", "),
     ]),
@@ -209,7 +333,7 @@ export default function MemberMilestoneReport() {
 
   const audienceLabel = `${mode === "missing" ? "Missing" : "Completed"} ${selected
     .map((k) => MILESTONES.find((m) => m.key === k)?.label)
-    .join(" + ")}${statusFilter !== "all" ? ` · ${statusFilter}` : ""}${unitFilter !== "all" ? ` · ${unitFilter}` : ""}${dateRangeLabel}`;
+    .join(" + ")}${statusFilter !== "all" ? ` · ${statusFilter}` : ""}${unitFilter !== "all" ? ` · ${unitFilter}` : ""}${centreLabelSuffix}${dateRangeLabel}`;
 
   return (
     <Card className="border-0 shadow-sm">
@@ -218,7 +342,7 @@ export default function MemberMilestoneReport() {
           <Target className="h-4 w-4 text-primary" /> Member Milestones Report
         </CardTitle>
         <p className="text-xs text-muted-foreground">
-          Filter members by spiritual milestones, then export or message them directly.
+          Filter by milestones or Home Cell centre, then export or message members directly.
         </p>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -240,7 +364,7 @@ export default function MemberMilestoneReport() {
         </div>
 
         {/* Filters */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <div className="space-y-1">
             <p className="text-[11px] text-muted-foreground">Mode</p>
             <Select value={mode} onValueChange={setMode}>
@@ -269,6 +393,19 @@ export default function MemberMilestoneReport() {
               <SelectContent>
                 <SelectItem value="all">All Units</SelectItem>
                 {units.map((u) => <SelectItem key={u} value={u}>{u}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1">
+            <p className="text-[11px] text-muted-foreground">Home Cell Centre</p>
+            <Select value={centreFilter} onValueChange={setCentreFilter}>
+              <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Centres</SelectItem>
+                <SelectItem value="unassigned">Unassigned</SelectItem>
+                {activeCentres.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -353,6 +490,10 @@ export default function MemberMilestoneReport() {
             <Button variant="outline" size="sm" onClick={exportCsv} disabled={filtered.length === 0}>
               <Download className="h-4 w-4 mr-2" /> Export CSV
             </Button>
+            <Button variant="outline" size="sm" onClick={exportCentreMembers}>
+              <Home className="h-4 w-4 mr-2" />
+              {centreFilter === "all" ? "Download All Centres" : "Download Centre Members"}
+            </Button>
             <PrintReportButton buildRows={buildPrintRows} label="Print Report" />
             <Button size="sm" onClick={() => setMessageOpen(true)} disabled={filtered.length === 0}>
               <Send className="h-4 w-4 mr-2" /> Message Members
@@ -375,6 +516,7 @@ export default function MemberMilestoneReport() {
                   <TableHead>Name</TableHead>
                   <TableHead className="hidden sm:table-cell">Status</TableHead>
                   <TableHead className="hidden md:table-cell">Unit</TableHead>
+                  <TableHead className="hidden lg:table-cell">Home Cell Centre</TableHead>
                   <TableHead className="hidden md:table-cell">Contact</TableHead>
                   <TableHead>{mode === "missing" ? "Missing" : "Completed"}</TableHead>
                 </TableRow>
@@ -385,6 +527,9 @@ export default function MemberMilestoneReport() {
                     <TableCell className="text-xs font-medium">{m.first_name} {m.last_name}</TableCell>
                     <TableCell className="hidden sm:table-cell text-xs">{m.membership_status}</TableCell>
                     <TableCell className="hidden md:table-cell text-xs">{m.church_unit || "—"}</TableCell>
+                    <TableCell className="hidden lg:table-cell text-xs">
+                      {centreNameById[m.wsf_centre_id] || (m.wsf_centre_id ? "—" : <span className="text-muted-foreground">Unassigned</span>)}
+                    </TableCell>
                     <TableCell className="hidden md:table-cell text-[11px] text-muted-foreground">
                       {m.email || m.phone || "—"}
                     </TableCell>
@@ -425,6 +570,7 @@ export default function MemberMilestoneReport() {
             mode,
             status: statusFilter,
             unit: unitFilter,
+            centre: selectedCentreLabel || "all",
             from_date: fromDate ? format(fromDate, "yyyy-MM-dd") : null,
             to_date: toDate ? format(toDate, "yyyy-MM-dd") : null,
           }}
