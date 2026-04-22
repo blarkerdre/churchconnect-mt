@@ -1192,7 +1192,6 @@ export type Database = {
       exam_questions: {
         Row: {
           answer_count: number
-          correct_answer: string
           created_at: string
           created_by: string | null
           id: string
@@ -1210,7 +1209,6 @@ export type Database = {
         }
         Insert: {
           answer_count?: number
-          correct_answer: string
           created_at?: string
           created_by?: string | null
           id?: string
@@ -1228,7 +1226,6 @@ export type Database = {
         }
         Update: {
           answer_count?: number
-          correct_answer?: string
           created_at?: string
           created_by?: string | null
           id?: string
