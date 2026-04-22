@@ -311,7 +311,87 @@ export default function MemberMilestoneReport() {
     );
   };
 
-  const dateRangeLabel = (fromDate || toDate)
+  // Shared base filter (Status + Joined date) used by roster actions —
+  // intentionally ignores milestone & unit/centre filters so the caller picks the slice.
+  const applyBaseFilters = (list) => {
+    const fromMs = fromDate ? startOfDay(fromDate).getTime() : null;
+    const toMs = toDate ? endOfDay(toDate).getTime() : null;
+    return list.filter((m) => {
+      if (statusFilter !== "all" && m.membership_status !== statusFilter) return false;
+      if (fromMs || toMs) {
+        const created = m.created_at ? new Date(m.created_at).getTime() : null;
+        if (created == null) return false;
+        if (fromMs && created < fromMs) return false;
+        if (toMs && created > toMs) return false;
+      }
+      return true;
+    });
+  };
+
+  const memberInUnit = (m, unit) => {
+    if (unit === "__unassigned") return !m.church_unit || !m.church_unit.trim();
+    const ms = (m.church_unit || "").split(",").map((u) => u.trim()).filter(Boolean);
+    return ms.includes(unit);
+  };
+
+  const unitRoster = useMemo(() => {
+    if (unitFilter === "all") return applyBaseFilters(members);
+    return applyBaseFilters(members).filter((m) => memberInUnit(m, unitFilter));
+  }, [members, unitFilter, statusFilter, fromDate, toDate]);
+
+  const centreRoster = useMemo(() => {
+    if (centreFilter === "all") return applyBaseFilters(members);
+    return applyBaseFilters(members).filter((m) =>
+      centreFilter === "unassigned" ? !m.wsf_centre_id : m.wsf_centre_id === centreFilter
+    );
+  }, [members, centreFilter, statusFilter, fromDate, toDate]);
+
+  // Download Unit Members — single unit or grouped by unit when "All Units".
+  const exportUnitMembers = () => {
+    const base = applyBaseFilters(members);
+    if (unitFilter !== "all") {
+      const list = base.filter((m) => memberInUnit(m, unitFilter));
+      if (list.length === 0) return;
+      const { headers, rows } = buildMemberCsvBlock(list);
+      const csv = [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
+      downloadCsv(
+        `member-roster-unit-${slugify(unitFilter)}-${format(new Date(), "yyyy-MM-dd")}.csv`,
+        csv
+      );
+      return;
+    }
+
+    // Grouped: one section per known unit + Unassigned at end
+    const groups = units.map((u) => ({
+      name: u,
+      list: base.filter((m) => memberInUnit(m, u)),
+    }));
+    const unassigned = base.filter((m) => !m.church_unit || !m.church_unit.trim());
+    groups.push({ name: "Unassigned", list: unassigned });
+
+    const lines = [];
+    lines.push(`Unit Members — generated ${format(new Date(), "yyyy-MM-dd HH:mm")}`);
+    lines.push("");
+    let firstSection = true;
+    groups.forEach((g) => {
+      if (g.list.length === 0) return;
+      if (!firstSection) lines.push("");
+      firstSection = false;
+      lines.push(`Unit: ${g.name} (${g.list.length} member${g.list.length !== 1 ? "s" : ""})`);
+      const { headers, rows } = buildMemberCsvBlock(g.list);
+      lines.push(headers.join(","));
+      rows.forEach((r) => lines.push(r.join(",")));
+    });
+    downloadCsv(
+      `member-roster-units-all-${format(new Date(), "yyyy-MM-dd")}.csv`,
+      lines.join("\n")
+    );
+  };
+
+  const openMessage = (modeKey) => {
+    setMessageMode(modeKey);
+    setMessageOpen(true);
+  };
     ? ` · Joined ${fromDate ? format(fromDate, "yyyy-MM-dd") : "any"} → ${toDate ? format(toDate, "yyyy-MM-dd") : "any"}`
     : "";
 
