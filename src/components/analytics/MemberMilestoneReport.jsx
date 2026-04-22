@@ -243,8 +243,12 @@ export default function MemberMilestoneReport() {
     const baseFiltered = members.filter((m) => {
       if (statusFilter !== "all" && m.membership_status !== statusFilter) return false;
       if (unitFilter !== "all") {
-        const ms = (m.church_unit || "").split(",").map((u) => u.trim());
-        if (!ms.includes(unitFilter)) return false;
+        if (unitFilter === "__unassigned") {
+          if ((m.church_unit || "").trim()) return false;
+        } else {
+          const ms = (m.church_unit || "").split(",").map((u) => u.trim());
+          if (!ms.includes(unitFilter)) return false;
+        }
       }
       if (fromMs || toMs) {
         const created = m.created_at ? new Date(m.created_at).getTime() : null;
