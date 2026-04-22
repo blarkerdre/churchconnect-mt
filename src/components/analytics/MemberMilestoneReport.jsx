@@ -17,13 +17,16 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Download, Send, Target, CheckCircle2, XCircle, Loader2 } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { Download, Send, Target, CheckCircle2, XCircle, Loader2, CalendarIcon, X } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
 import PrintReportButton from "@/components/PrintReportButton";
 import MessageFilteredMembersDialog from "./MessageFilteredMembersDialog";
-import { format } from "date-fns";
+import { format, startOfDay, endOfDay, subDays, startOfYear } from "date-fns";
+import { cn } from "@/lib/utils";
 
 const MILESTONES = [
   { key: "bfc_completed", label: "BFC" },
@@ -43,7 +46,22 @@ export default function MemberMilestoneReport() {
   const [mode, setMode] = useState("missing"); // missing | completed
   const [statusFilter, setStatusFilter] = useState("all");
   const [unitFilter, setUnitFilter] = useState("all");
+  const [fromDate, setFromDate] = useState(null);
+  const [toDate, setToDate] = useState(null);
+  const [datePreset, setDatePreset] = useState("all");
   const [messageOpen, setMessageOpen] = useState(false);
+
+  const applyPreset = (preset) => {
+    setDatePreset(preset);
+    const today = new Date();
+    if (preset === "all") { setFromDate(null); setToDate(null); }
+    else if (preset === "30d") { setFromDate(subDays(today, 30)); setToDate(today); }
+    else if (preset === "90d") { setFromDate(subDays(today, 90)); setToDate(today); }
+    else if (preset === "ytd") { setFromDate(startOfYear(today)); setToDate(today); }
+    // "custom" leaves dates as-is
+  };
+
+  const clearDates = () => { setFromDate(null); setToDate(null); setDatePreset("all"); };
 
   const { data: members = [], isLoading } = useQuery({
     queryKey: ["milestone-report-members", tenantId],
@@ -79,17 +97,25 @@ export default function MemberMilestoneReport() {
 
   const filtered = useMemo(() => {
     if (selected.length === 0) return [];
+    const fromMs = fromDate ? startOfDay(fromDate).getTime() : null;
+    const toMs = toDate ? endOfDay(toDate).getTime() : null;
     return members.filter((m) => {
       if (statusFilter !== "all" && m.membership_status !== statusFilter) return false;
       if (unitFilter !== "all") {
         const ms = (m.church_unit || "").split(",").map((u) => u.trim());
         if (!ms.includes(unitFilter)) return false;
       }
+      if (fromMs || toMs) {
+        const created = m.created_at ? new Date(m.created_at).getTime() : null;
+        if (created == null) return false;
+        if (fromMs && created < fromMs) return false;
+        if (toMs && created > toMs) return false;
+      }
       return mode === "missing"
         ? selected.some((k) => !m[k])
         : selected.every((k) => m[k]);
     });
-  }, [members, selected, statusFilter, unitFilter, mode]);
+  }, [members, selected, statusFilter, unitFilter, mode, fromDate, toDate]);
 
   const labelsFor = (m) =>
     MILESTONES.filter((ms) => selected.includes(ms.key) && (mode === "missing" ? !m[ms.key] : m[ms.key])).map(
@@ -126,14 +152,21 @@ export default function MemberMilestoneReport() {
     const blob = new Blob([csv], { type: "text/csv" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
-    a.download = `member-milestone-report-${format(new Date(), "yyyy-MM-dd")}.csv`;
+    const rangeSuffix = fromDate || toDate
+      ? `-${fromDate ? format(fromDate, "yyyy-MM-dd") : "any"}_to_${toDate ? format(toDate, "yyyy-MM-dd") : "any"}`
+      : "";
+    a.download = `member-milestone-report-${format(new Date(), "yyyy-MM-dd")}${rangeSuffix}.csv`;
     a.click();
   };
+
+  const dateRangeLabel = (fromDate || toDate)
+    ? ` · Joined ${fromDate ? format(fromDate, "yyyy-MM-dd") : "any"} → ${toDate ? format(toDate, "yyyy-MM-dd") : "any"}`
+    : "";
 
   const buildPrintRows = () => ({
     title: `Member Milestone Report (${mode === "missing" ? "Missing" : "Completed"}: ${selected
       .map((k) => MILESTONES.find((m) => m.key === k)?.label)
-      .join(", ")})`,
+      .join(", ")})${dateRangeLabel}`,
     headers: ["Name", "Status", "Church Unit", "Phone", mode === "missing" ? "Missing" : "Completed"],
     rows: filtered.map((m) => [
       `${m.first_name} ${m.last_name}`,
@@ -146,7 +179,7 @@ export default function MemberMilestoneReport() {
 
   const audienceLabel = `${mode === "missing" ? "Missing" : "Completed"} ${selected
     .map((k) => MILESTONES.find((m) => m.key === k)?.label)
-    .join(" + ")}${statusFilter !== "all" ? ` · ${statusFilter}` : ""}${unitFilter !== "all" ? ` · ${unitFilter}` : ""}`;
+    .join(" + ")}${statusFilter !== "all" ? ` · ${statusFilter}` : ""}${unitFilter !== "all" ? ` · ${unitFilter}` : ""}${dateRangeLabel}`;
 
   return (
     <Card className="border-0 shadow-sm">
@@ -211,7 +244,77 @@ export default function MemberMilestoneReport() {
           </div>
         </div>
 
-        {/* Actions */}
+        {/* Date range filter */}
+        <div className="space-y-2">
+          <p className="text-xs font-medium text-muted-foreground">Joined date range</p>
+          <div className="flex flex-wrap gap-2">
+            {[
+              { key: "all", label: "All time" },
+              { key: "30d", label: "Last 30 days" },
+              { key: "90d", label: "Last 90 days" },
+              { key: "ytd", label: "This year" },
+              { key: "custom", label: "Custom" },
+            ].map((p) => (
+              <Badge
+                key={p.key}
+                variant={datePreset === p.key ? "default" : "outline"}
+                className="cursor-pointer select-none"
+                onClick={() => applyPreset(p.key)}
+              >
+                {p.label}
+              </Badge>
+            ))}
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className={cn("h-9 justify-start text-left font-normal", !fromDate && "text-muted-foreground")}
+                >
+                  <CalendarIcon className="h-4 w-4 mr-2" />
+                  {fromDate ? format(fromDate, "PPP") : "From date"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={fromDate}
+                  onSelect={(d) => { setFromDate(d || null); setDatePreset("custom"); }}
+                  initialFocus
+                  className={cn("p-3 pointer-events-auto")}
+                />
+              </PopoverContent>
+            </Popover>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className={cn("h-9 justify-start text-left font-normal", !toDate && "text-muted-foreground")}
+                >
+                  <CalendarIcon className="h-4 w-4 mr-2" />
+                  {toDate ? format(toDate, "PPP") : "To date"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={toDate}
+                  onSelect={(d) => { setToDate(d || null); setDatePreset("custom"); }}
+                  initialFocus
+                  className={cn("p-3 pointer-events-auto")}
+                />
+              </PopoverContent>
+            </Popover>
+            {(fromDate || toDate) && (
+              <Button variant="ghost" size="sm" onClick={clearDates} className="h-9">
+                <X className="h-4 w-4 mr-1" /> Clear
+              </Button>
+            )}
+          </div>
+        </div>
         <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
           <span className="text-sm font-medium">
             {filtered.length} member{filtered.length !== 1 ? "s" : ""} match
@@ -292,6 +395,8 @@ export default function MemberMilestoneReport() {
             mode,
             status: statusFilter,
             unit: unitFilter,
+            from_date: fromDate ? format(fromDate, "yyyy-MM-dd") : null,
+            to_date: toDate ? format(toDate, "yyyy-MM-dd") : null,
           }}
         />
       </CardContent>
