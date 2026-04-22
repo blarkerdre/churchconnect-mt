@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/table";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { Download, Send, Target, CheckCircle2, XCircle, Loader2, CalendarIcon, X, Home } from "lucide-react";
+import { Download, Send, Target, CheckCircle2, XCircle, Loader2, CalendarIcon, X, Home, Users } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
