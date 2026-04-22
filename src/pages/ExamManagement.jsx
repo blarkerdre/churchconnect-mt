@@ -140,14 +140,26 @@ export default function ExamManagement() {
   });
 
   const saveMutation = useMutation({
-    mutationFn: async (payload) => {
+    mutationFn: async ({ correct_answer, ...payload }) => {
+      if (!tenantId) throw new Error("No tenant context");
+      let questionId;
       if (editingQuestion) {
         const { error } = await supabase.from("exam_questions").update(payload).eq("id", editingQuestion.id).eq("tenant_id", tenantId);
         if (error) throw error;
+        questionId = editingQuestion.id;
       } else {
-        const { error } = await supabase.from("exam_questions").insert(withTenant(payload));
+        const { data, error } = await supabase.from("exam_questions").insert(withTenant(payload)).select("id").single();
         if (error) throw error;
+        questionId = data.id;
       }
+      // Answer key lives only in exam_question_answers (admin-only RLS)
+      const { error: aErr } = await supabase
+        .from("exam_question_answers")
+        .upsert(
+          { question_id: questionId, tenant_id: tenantId, correct_answer },
+          { onConflict: "question_id" }
+        );
+      if (aErr) throw aErr;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["exam-questions-by-subject"] });
