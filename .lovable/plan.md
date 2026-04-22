@@ -1,86 +1,48 @@
 
 
-## Member Milestone Reports + Targeted Messaging (Admin)
+## Add date range filter to Member Milestone Report
 
-### What you'll get
+### What changes
 
-A new **"Member Milestones"** report tab inside Analytics → Reports (admin-only), with two sub-reports and a built-in "Message These Members" action that sends Email / SMS / WhatsApp / In-App notification to whoever is currently filtered on screen.
+Add a "Joined between" date range filter to the **Member Milestones Report** (Analytics → Reports). Filters members by their `members.created_at` (join date) so admins can scope reports to e.g. "members who joined in the last 90 days who still haven't completed BFC".
+
+### UI
+
+In `MemberMilestoneReport.jsx`, add two new inputs to the existing filter grid (alongside Mode / Status / Unit), using the shadcn Popover + Calendar pattern:
 
 ```text
-Analytics ▸ Reports
- ├─ Training Gap Report                 (already exists)
- ├─ Member Milestones Report            ← NEW
- │   ├─ Filters: status, unit, milestones (BFC, BCC, LCC, LDC,
- │   │           Water Bap, HS Bap, Home Cell, WoFBI), date range,
- │   │           gender, missing/completed toggle
- │   ├─ Member list with milestone badges
- │   ├─ Export CSV  ·  Print Report
- │   └─ [Message Filtered Members] →  Email | SMS | WhatsApp | In-App
- └─ Status Conversion Report            ← NEW
-     ├─ "From → To" filter (e.g. First Timer → Member,
-     │   New Convert → Member, Visitor → Member, any → any)
-     ├─ Date-range filter on the change date
-     ├─ Table: Name · Previous · New · Changed On · Days to convert · Changed by
-     ├─ Summary cards: # converted, avg days to convert, conversion rate
-     ├─ Export CSV  ·  Print Report
-     └─ [Message Filtered Members]
+[ Mode ▾ ] [ Status ▾ ] [ Unit ▾ ]
+[ Joined from: 📅 dd MMM yyyy ] [ Joined to: 📅 dd MMM yyyy ] [ Clear dates ]
 ```
 
-Both reports live behind an `isAdmin` guard (admins/owners and super admins only). Existing `useSubFeature` toggle `analytics.download_report` keeps controlling export visibility.
+- "From" and "To" each open a calendar popover (single-date picker, `pointer-events-auto`).
+- Quick presets above the grid: **All time · Last 30 days · Last 90 days · This year · Custom**. Selecting a preset fills the from/to dates; choosing Custom leaves them user-editable.
+- Defaults to "All time" so existing behaviour is unchanged on first load.
 
-### Status Conversion Report — data source
+### Filtering logic
 
-Already in place: every status change writes a row to `member_status_history` (member_id, previous_status, new_status, changed_at, changed_by, tenant_id). We query that table joined to `members` for the names/contact details, scoped by `tenant_id`. No schema changes required.
+Extend the `filtered` useMemo to also check `m.created_at`:
+- if `fromDate` is set → keep only members where `created_at >= fromDate` (start of day)
+- if `toDate` is set → keep only members where `created_at <= toDate` (end of day)
 
-A status counts as a "conversion to member" when `previous_status ∈ {First Timer, New Convert, Visitor}` and `new_status = Active`. Filter chips let admins also pick custom from→to combinations.
+### CSV / Print / Audience label
 
-### Targeted messaging from a report
-
-A single **MessageFilteredMembersDialog** that the user opens from either report. It receives the currently-filtered member list (id + name + email + phone + user_id) and exposes one tab per channel:
-
-| Channel | Backend used (already exists) | Notes |
-|---|---|---|
-| Email   | `send-email-alert` edge function | Subject + body, supports `{first_name}` token |
-| SMS     | `send-sms` edge function (existing SMSDialog flow) | Honours per-tenant SMS toggle / quota |
-| WhatsApp| same `send-sms` function with channel=`whatsapp` | Honours WhatsApp tenant toggle |
-| In-App  | direct insert into `notifications` (only for members with linked `user_id`) | Title + message, optional link to `/members/:id` |
-
-The dialog reuses the existing recipient-validation UI (`InvalidRecipientsPreview`) so admins can see who lacks email/phone/account before sending. Tokens supported: `{first_name}`, `{last_name}`, `{church_unit}`, `{previous_status}`, `{new_status}` (last two only on the Conversion report).
-
-A confirmation step shows: "Sending to X members via [channel]" before dispatch, and writes an audit_log entry `entity_type=bulk_message`, `action=sent`, `details={ source: 'milestone_report' | 'conversion_report', channel, recipient_count, filters }`.
-
-### CSV / Print output
-
-CSV columns for milestones report: `First Name, Last Name, Email, Phone, Status, Church Unit, Gender, BFC, BCC, LCC, LDC, Water Baptism, HS Baptism, Home Cell, WoFBI Level, Joined`.
-
-CSV columns for conversion report: `First Name, Last Name, Email, Phone, Previous Status, New Status, Changed On, Days Since Joining, Changed By`.
-
-Print uses the existing `PrintReportButton` for branded layout.
-
-### Files to add
-
-- `src/components/analytics/MemberMilestoneReport.jsx` — filters + table + CSV/print + "Message" button
-- `src/components/analytics/StatusConversionReport.jsx` — joins `member_status_history` with `members`, filters, summary cards, CSV/print + "Message" button
-- `src/components/analytics/MessageFilteredMembersDialog.jsx` — 4-tab channel picker; calls `send-email-alert`, `send-sms`, or inserts into `notifications`
+- The existing CSV already includes a `Joined` column — no schema change needed.
+- Print title and the `audienceLabel` passed to `MessageFilteredMembersDialog` get a suffix like `· Joined 2026-01-01 → 2026-04-22` when a range is active, so the dialog and audit log capture the date scope.
+- CSV filename includes the range, e.g. `member-milestone-report-2026-01-01_to_2026-04-22.csv`.
 
 ### Files to edit
 
-- `src/pages/Analytics.jsx` — under the existing `<TabsContent value="reports">`, add the two new reports below `<TrainingGapReport>`; both wrapped in `{isAdmin && (...)}`.
-- `src/hooks/useSubFeature.js` — add two sub-features under `/analytics`: `analytics.milestone_report` and `analytics.conversion_report` so super admins can toggle them per tenant.
+- `src/components/analytics/MemberMilestoneReport.jsx` — add date state, preset chips, two date popovers, extend `filtered`, update `audienceLabel`, print title, and CSV filename.
 
-### Security / scoping
-
-- All queries pass through `useTenantQuery().scopeQuery` so reports only show the current tenant's members and history rows.
-- Report tabs are gated on `useAuth().isAdmin`.
-- In-app notifications inserted only for members whose `user_id` is non-null and whose tenant matches.
-- Existing RLS on `notifications`, `member_status_history`, `email_send_log`, and `sms_log` already enforces tenant scoping — no migrations needed.
+No backend, RLS, or schema changes required — `created_at` is already selected by the existing query.
 
 ### Verification
 
-1. As tenant admin → Analytics → Reports → Member Milestones, filter "Missing BFC" + Active members → list shows only those, CSV downloads, Print opens branded preview.
-2. Click **Message Filtered Members → Email**, send subject "BFC reminder" with body using `{first_name}` → recipients receive email; `email_send_log` rows appear.
-3. Switch to In-App → confirm only members with linked accounts get notifications and the bell badge updates for them in real time.
-4. Open Status Conversion Report, filter "First Timer → Active" in the last 90 days → table shows the right people (cross-check with `member_status_history`); summary cards show count, avg days, conversion rate.
-5. As a non-admin (regular member or unit leader) → both new report tabs are hidden.
-6. Switch tenants → reports recompute against the new tenant only; messaging only targets that tenant.
+1. Open Analytics → Reports → Member Milestones as admin → date controls appear under existing filters; defaults to All time and current results unchanged.
+2. Select "Last 90 days" → list shrinks to members joined in the last 90 days who match milestone filters; counter updates.
+3. Pick a custom From/To range across a quarter → only members with `created_at` inside the range appear; CSV downloads with the date range in the filename and `Joined` column.
+4. Click **Message Filtered Members** → confirmation summary and audit log entry include the date range in the audience label.
+5. Clear dates → returns to All time.
+6. On the 384px mobile viewport, the date popovers open above/below the trigger and remain interactive (no overflow clipping).
 
