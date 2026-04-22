@@ -13,6 +13,8 @@ import { useSubFeature } from "@/hooks/useSubFeature";
 import TrainingGapReport from "@/components/analytics/TrainingGapReport";
 import AnnouncementAnalytics from "@/components/analytics/AnnouncementAnalytics";
 import FeedbackSummary from "@/components/feedback/FeedbackSummary";
+import MemberMilestoneReport from "@/components/analytics/MemberMilestoneReport";
+import StatusConversionReport from "@/components/analytics/StatusConversionReport";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
 import { useAuth } from "@/hooks/useAuth";
 import { format, subMonths, startOfMonth, endOfMonth, parseISO } from "date-fns";
@@ -359,6 +361,8 @@ export default function Analytics() {
 
       <TabsContent value="reports" className="space-y-6">
         <TrainingGapReport members={members} />
+        {isAdmin && <MemberMilestoneReport />}
+        {isAdmin && <StatusConversionReport />}
         <FeedbackSummary />
       </TabsContent>
 
