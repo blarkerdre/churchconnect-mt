@@ -152,7 +152,10 @@ export default function MemberMilestoneReport() {
     const blob = new Blob([csv], { type: "text/csv" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
-    a.download = `member-milestone-report-${format(new Date(), "yyyy-MM-dd")}.csv`;
+    const rangeSuffix = fromDate || toDate
+      ? `-${fromDate ? format(fromDate, "yyyy-MM-dd") : "any"}_to_${toDate ? format(toDate, "yyyy-MM-dd") : "any"}`
+      : "";
+    a.download = `member-milestone-report-${format(new Date(), "yyyy-MM-dd")}${rangeSuffix}.csv`;
     a.click();
   };
 
