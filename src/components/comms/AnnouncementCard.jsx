@@ -8,18 +8,7 @@ import { format } from "date-fns";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
-
-const renderBodyWithLinks = (text) => {
-  const urlRegex = /(https?:\/\/[^\s]+)/g;
-  const parts = text.split(urlRegex);
-  return parts.map((part, i) => 
-    urlRegex.test(part) ? 
-      <a key={i} href={part} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
-        {part}
-      </a> : 
-      part
-  );
-};
+import { renderTextWithLinks } from "@/lib/linkify";
 
 function AdminLikesPopover({ announcementId }) {
   const { tenantId } = useTenantQuery();
@@ -106,7 +95,7 @@ export default function AnnouncementCard({ announcement, onEdit, onDelete, isAdm
               <Users className="h-3 w-3 mr-1" />{announcement.audience}
             </Badge>
           </div>
-          <p className="text-sm text-slate-600 whitespace-pre-wrap leading-relaxed">{renderBodyWithLinks(announcement.body)}</p>
+          <p className="text-sm text-slate-600 whitespace-pre-wrap leading-relaxed">{renderTextWithLinks(announcement.body)}</p>
           <div className="flex items-center gap-3 mt-3 text-xs text-slate-400 flex-wrap">
             <span className="flex items-center gap-1"><User className="h-3 w-3" />{announcement.author_name || announcement.created_by || "Admin"}</span>
             {announcement.created_date && (
