@@ -477,6 +477,7 @@ export default function MemberMilestoneReport() {
               <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Units</SelectItem>
+                <SelectItem value="__unassigned">Unassigned (no unit)</SelectItem>
                 {units.map((u) => <SelectItem key={u} value={u}>{u}</SelectItem>)}
               </SelectContent>
             </Select>
