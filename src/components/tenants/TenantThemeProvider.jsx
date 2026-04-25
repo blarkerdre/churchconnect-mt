@@ -131,7 +131,7 @@ export default function TenantThemeProvider({ children }) {
   useEffect(() => {
     const pwaIconUrl = currentTenant?.settings?.pwa_icon_url;
     const iconUrl = pwaIconUrl || currentTenant?.logo_url || null;
-    const tenantName = currentTenant?.name || "Winners Chapel Cardiff";
+    const tenantName = currentTenant?.name || "Church Management Suite";
 
     // Build manifest JSON
     const manifest = {
