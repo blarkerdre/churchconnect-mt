@@ -29,3 +29,7 @@ project_id = "qfordhikmtgedfybktjg"
     verify_jwt = false
   [functions.make-call]
     verify_jwt = false
+  [functions.domifort-bookings-ingest]
+    verify_jwt = false
+  [functions.domifort-token-create]
+    verify_jwt = false

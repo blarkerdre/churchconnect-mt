@@ -727,6 +727,179 @@ export type Database = {
           },
         ]
       }
+      domifort_api_tokens: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          is_active: boolean
+          label: string
+          last_used_at: string | null
+          request_count: number
+          revoked_at: string | null
+          signing_secret_hash: string
+          signing_secret_prefix: string
+          token_hash: string
+          token_prefix: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          label: string
+          last_used_at?: string | null
+          request_count?: number
+          revoked_at?: string | null
+          signing_secret_hash: string
+          signing_secret_prefix: string
+          token_hash: string
+          token_prefix: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          label?: string
+          last_used_at?: string | null
+          request_count?: number
+          revoked_at?: string | null
+          signing_secret_hash?: string
+          signing_secret_prefix?: string
+          token_hash?: string
+          token_prefix?: string
+        }
+        Relationships: []
+      }
+      domifort_bookings: {
+        Row: {
+          amount_minor: number | null
+          booking_end: string | null
+          booking_start: string | null
+          created_at: string
+          currency: string | null
+          customer_email: string | null
+          customer_name: string | null
+          customer_phone: string | null
+          external_ref: string
+          id: string
+          location: string | null
+          payload: Json
+          received_at: string
+          service_type: string | null
+          source_token_id: string | null
+          status: string | null
+          tenant_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          amount_minor?: number | null
+          booking_end?: string | null
+          booking_start?: string | null
+          created_at?: string
+          currency?: string | null
+          customer_email?: string | null
+          customer_name?: string | null
+          customer_phone?: string | null
+          external_ref: string
+          id?: string
+          location?: string | null
+          payload: Json
+          received_at?: string
+          service_type?: string | null
+          source_token_id?: string | null
+          status?: string | null
+          tenant_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          amount_minor?: number | null
+          booking_end?: string | null
+          booking_start?: string | null
+          created_at?: string
+          currency?: string | null
+          customer_email?: string | null
+          customer_name?: string | null
+          customer_phone?: string | null
+          external_ref?: string
+          id?: string
+          location?: string | null
+          payload?: Json
+          received_at?: string
+          service_type?: string | null
+          source_token_id?: string | null
+          status?: string | null
+          tenant_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "domifort_bookings_source_token_id_fkey"
+            columns: ["source_token_id"]
+            isOneToOne: false
+            referencedRelation: "domifort_api_tokens"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "domifort_bookings_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      domifort_ingest_log: {
+        Row: {
+          auth_valid: boolean
+          error: string | null
+          external_ref: string | null
+          id: string
+          ip: string | null
+          payload_size: number | null
+          received_at: string
+          signature_valid: boolean
+          status_code: number
+          token_id: string | null
+          user_agent: string | null
+        }
+        Insert: {
+          auth_valid?: boolean
+          error?: string | null
+          external_ref?: string | null
+          id?: string
+          ip?: string | null
+          payload_size?: number | null
+          received_at?: string
+          signature_valid?: boolean
+          status_code: number
+          token_id?: string | null
+          user_agent?: string | null
+        }
+        Update: {
+          auth_valid?: boolean
+          error?: string | null
+          external_ref?: string | null
+          id?: string
+          ip?: string | null
+          payload_size?: number | null
+          received_at?: string
+          signature_valid?: boolean
+          status_code?: number
+          token_id?: string | null
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "domifort_ingest_log_token_id_fkey"
+            columns: ["token_id"]
+            isOneToOne: false
+            referencedRelation: "domifort_api_tokens"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       email_send_log: {
         Row: {
           created_at: string
