@@ -1,7 +1,7 @@
 {
-  "name": "Winners Chapel Cardiff",
-  "short_name": "WCI Cardiff",
-  "description": "Church Management Suite for Winners Chapel Cardiff",
+  "name": "Church Management Suite",
+  "short_name": "Church MS",
+  "description": "Multi-tenant Church Management Suite",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
