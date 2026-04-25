@@ -30,6 +30,7 @@ import { useToast } from "@/components/ui/use-toast";
 import TenantUsersDialog from "@/components/tenants/TenantUsersDialog";
 import TenantAnalyticsTab from "@/components/tenants/TenantAnalyticsTab";
 import TenantBillingTab from "@/components/tenants/TenantBillingTab";
+import DomifortIntegrationSection from "@/components/tenants/DomifortIntegrationSection";
 
 const FEATURE_MODULES = [
   { key: "members", label: "Members", description: "Member directory and management" },
@@ -456,6 +457,7 @@ export default function TenantAdmin() {
         <TabsList>
           <TabsTrigger value="tenants">Tenants</TabsTrigger>
           <TabsTrigger value="analytics"><BarChart3 className="h-3.5 w-3.5 mr-1" />Analytics</TabsTrigger>
+          <TabsTrigger value="integrations"><Link className="h-3.5 w-3.5 mr-1" />Integrations</TabsTrigger>
         </TabsList>
 
         <TabsContent value="tenants">
@@ -719,6 +721,10 @@ export default function TenantAdmin() {
 
         <TabsContent value="analytics">
           <TenantAnalyticsTab tenants={tenants} />
+        </TabsContent>
+
+        <TabsContent value="integrations">
+          <DomifortIntegrationSection />
         </TabsContent>
       </Tabs>
 
