@@ -1,46 +1,82 @@
+## Fix: Croydon PWA showing "WCI Cardiff" name
 
+### Root cause recap
 
-## Fix duplicate-key error when creating a Course
+Three places hardcode `Winners Chapel Cardiff` / `WCI Cardiff` and run **before** the per-tenant `TenantThemeProvider` resolves the active tenant. Whichever one the browser sees first is what gets installed onto the home screen — and on install, the OS freezes that name.
 
-### Root cause
+1. `public/manifest.json` — static, served at `/manifest.json`, referenced from `index.html` line 12.
+2. `index.html` line 10 — `<title>Church Connect - MT</title>` (not Cardiff but also not neutral; harmless but tightening for consistency).
+3. `src/components/tenants/TenantThemeProvider.jsx` line ~152 — `const tenantName = currentTenant?.name || "Winners Chapel Cardiff";` falls back to Cardiff when tenant context is still loading.
 
-`exam_titles` has a **global** `UNIQUE (name)` constraint (`exam_titles_name_key`). In a multi-tenant app this means: as soon as one church creates "Foundation Class", **no other tenant** can ever create a course with that name — Postgres rejects it with `duplicate key value violates unique constraint "exam_titles_name_key"`.
+The dynamic per-tenant manifest blob still works correctly **after** the tenant resolves, but installs and cold-tab titles fired during that ~200–800ms window get the Cardiff fallback.
 
-That violates our multi-tenancy isolation rule (each tenant should be free to use whatever course names it wants).
+A separate, deeper limitation: all tenants share `app.churchmanagementsuite.org`, so the OS treats them as one PWA per device. That's not fixed here — see "Out of scope" below.
 
-### The fix — one migration
+### Changes
 
-Replace the global unique constraint with a **per-tenant** unique index:
+#### 1. `public/manifest.json` — neutralise
 
-```sql
--- Drop the global unique constraint
-ALTER TABLE public.exam_titles DROP CONSTRAINT exam_titles_name_key;
+Replace Cardiff-specific name, short_name, description, and icons with generic Church Management Suite branding. Use the existing generic `/icon-192.png` and `/icon-512.png` placeholders (these are already neutral PNGs in `public/`).
 
--- Replace it with a tenant-scoped unique index (case-insensitive
--- so "Foundation Class" and "foundation class" are still treated as duplicates
--- WITHIN the same tenant, but never across tenants)
-CREATE UNIQUE INDEX exam_titles_tenant_name_unique
-  ON public.exam_titles (tenant_id, lower(name));
+```json
+{
+  "name": "Church Management Suite",
+  "short_name": "Church MS",
+  "description": "Multi-tenant Church Management Suite",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#1e3a5f",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
 ```
 
-That's the only schema change needed. No code changes — `ExamManagement.jsx` already inserts with `tenant_id` via `withTenant(...)`.
+This is the static fallback. The dynamic per-tenant manifest in `TenantThemeProvider` continues to overwrite this once the tenant resolves.
 
-### What changes for users
+#### 2. `index.html` — neutralise hardcoded title and confirm icon
 
-- WCI Croydon (and every other tenant) can now create a course with any name, even if another church already uses that name.
-- Within a single church, you still can't create two courses with the same name (the per-tenant index enforces that, case-insensitively).
-- Existing courses are unaffected — no data is moved or deleted.
+- `<title>Church Connect - MT</title>` → `<title>Church Management Suite</title>` (already neutral wording, but removing "MT" project codename leak).
+- `<link rel="apple-touch-icon" href="/icon-192.png" />` is already neutral — leave as-is. `TenantThemeProvider` already overwrites it dynamically per tenant.
 
-### Acceptance checks
+#### 3. `src/components/tenants/TenantThemeProvider.jsx` — remove Cardiff fallback
 
-1. As a WCI Croydon admin, create a course named "Foundation Class" (or any name already used by another tenant) — succeeds.
-2. As the same Croydon admin, try to create a second "Foundation Class" in Croydon — fails with the existing duplicate error (correct behaviour, scoped to the tenant).
-3. Renaming an existing course to a name used by another tenant — succeeds.
-4. Renaming an existing course to a name already used in your own tenant — fails (correct).
-5. The four pre-existing course rows still load on the Course Management page.
+In the dynamic-manifest `useEffect` (~line 152):
+
+```jsx
+// Before:
+const tenantName = currentTenant?.name || "Winners Chapel Cardiff";
+
+// After:
+const tenantName = currentTenant?.name || "Church Management Suite";
+```
+
+Same effect: if the tenant hasn't resolved yet, the manifest blob and PWA name show neutral branding instead of Cardiff. Once the tenant resolves, the correct tenant name (Croydon, Cardiff, etc.) replaces it.
+
+### Verification
+
+After deploy:
+
+1. **Cold visit to `/t/croydon`** in an incognito window → tap "Add to Home Screen" → shortcut should read "Croydon" (the tenant's `name` field) — never "WCI Cardiff".
+2. **Cold visit to `/`** (no tenant context) → shortcut reads "Church Management Suite", not "WCI Cardiff".
+3. **In-browser tab title** during initial load shows "Church Management Suite", then updates to the tenant name once resolved.
+4. **Cardiff users**: still see "Winners Chapel Cardiff" because that's their tenant's `tenants.name` field — unchanged behaviour.
+
+### Migration notes for already-installed Croydon users
+
+PWAs freeze the manifest at install time. **Existing Croydon users who installed when the manifest still said "WCI Cardiff" must uninstall and reinstall** to pick up the new name. There's no programmatic way to update an installed PWA's home-screen label — this is an OS limitation, not a code issue. We should mention this to Croydon admins.
+
+### Out of scope (intentionally)
+
+- **Per-tenant subdomains** (e.g. `croydon.churchmanagementsuite.org`). This would give each tenant a fully distinct PWA identity (different installed app per tenant on the same device). It's the only way to truly isolate PWA installs across tenants on iOS/Android. Requires DNS, a separate Lovable project per the `mem://architecture/domain-mapping` rule (one custom domain per project), and significantly more setup. Park for later if the shared-origin install-collision becomes a real complaint.
+- **`public/sw.js`**: confirmed it's a push-only SW with no caching, so it's not contributing to the bug. No change needed.
 
 ### Files touched
 
-- **New migration**: drops `exam_titles_name_key`, creates `exam_titles_tenant_name_unique`.
-- No frontend or edge-function changes.
+- `public/manifest.json` — replace contents.
+- `index.html` — change `<title>`.
+- `src/components/tenants/TenantThemeProvider.jsx` — change Cardiff string fallback.
 
+No DB, RLS, or edge function changes.
