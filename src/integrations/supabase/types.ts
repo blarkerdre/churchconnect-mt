@@ -2565,11 +2565,50 @@ export type Database = {
           },
         ]
       }
+      sermon_note_folders: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          sort_order: number
+          tenant_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          sort_order?: number
+          tenant_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          sort_order?: number
+          tenant_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sermon_note_folders_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sermon_notes: {
         Row: {
           category: string | null
           content: string
           created_at: string
+          folder_id: string | null
           id: string
           service_date: string
           speaker: string | null
@@ -2582,6 +2621,7 @@ export type Database = {
           category?: string | null
           content: string
           created_at?: string
+          folder_id?: string | null
           id?: string
           service_date?: string
           speaker?: string | null
@@ -2594,6 +2634,7 @@ export type Database = {
           category?: string | null
           content?: string
           created_at?: string
+          folder_id?: string | null
           id?: string
           service_date?: string
           speaker?: string | null
@@ -2603,6 +2644,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "sermon_notes_folder_id_fkey"
+            columns: ["folder_id"]
+            isOneToOne: false
+            referencedRelation: "sermon_note_folders"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "sermon_notes_tenant_id_fkey"
             columns: ["tenant_id"]
