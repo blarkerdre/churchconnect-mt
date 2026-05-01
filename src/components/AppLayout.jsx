@@ -395,7 +395,7 @@ export default function Layout({ children }) {
           </div>
         </header>
 
-        {subscriptionStatus === "past_due" && !isSuperAdmin && (
+        {subscriptionStatus === "past_due" && !isSuperAdmin && (isTenantAdmin || isTenantOwner) && (
           <PaymentWarningBanner />
         )}
         <main className="flex-1 p-3 lg:p-8 pb-20 lg:pb-8">
