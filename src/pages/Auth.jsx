@@ -164,7 +164,7 @@ export default function Auth() {
           {tenant?.logo_url ? (
             <img src={tenant.logo_url} alt={churchName} className="h-16 w-auto mb-3 object-contain" />
           ) : (
-            <img src="/lovable-uploads/church-connect-logo.png" alt="Church Connect" className="h-16 w-auto mb-3 object-contain" />
+            <img src="/lovable-uploads/church-connect-logo-transparent.png" alt="Church Connect" className="h-20 w-auto mb-3 object-contain" />
           )}
           <h1 className="font-display text-2xl font-bold text-foreground">{churchName}</h1>
         </div>
