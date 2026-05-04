@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -6,23 +6,31 @@ import { useTenantQuery } from "@/hooks/useTenantQuery";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CheckCircle2, CalendarCheck, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "@/components/ui/use-toast";
+
+function parseUnits(churchUnit) {
+  return (churchUnit || "")
+    .split(",")
+    .map((u) => u.trim())
+    .filter(Boolean);
+}
 
 export default function SelfCheckInWidget() {
   const { user } = useAuth();
   const { tenantId, withTenant, scopeQuery } = useTenantQuery();
   const queryClient = useQueryClient();
   const today = format(new Date(), "yyyy-MM-dd");
+  const [unitFilter, setUnitFilter] = useState("all");
 
-  // Get the member record linked to this user
   const { data: myMember } = useQuery({
     queryKey: ["my-member", user?.id, tenantId],
     queryFn: async () => {
       let query = supabase
         .from("members")
-        .select("id, first_name, last_name")
+        .select("id, first_name, last_name, church_unit")
         .eq("user_id", user.id);
       if (tenantId) query = query.eq("tenant_id", tenantId);
       const { data, error } = await query.maybeSingle();
@@ -32,14 +40,16 @@ export default function SelfCheckInWidget() {
     enabled: !!user?.id,
   });
 
-  // Get today's sessions
+  const myUnits = useMemo(() => parseUnits(myMember?.church_unit), [myMember?.church_unit]);
+  const myUnitsLower = useMemo(() => myUnits.map((u) => u.toLowerCase()), [myUnits]);
+
   const { data: sessions = [], isLoading: sessionsLoading } = useQuery({
     queryKey: ["today-sessions", today, tenantId],
     queryFn: async () => {
       const { data, error } = await scopeQuery(
         supabase
           .from("attendance_sessions")
-          .select("id, title, session_type, session_date")
+          .select("id, title, session_type, session_date, unit")
           .eq("session_date", today)
           .order("created_at")
       );
@@ -48,8 +58,23 @@ export default function SelfCheckInWidget() {
     },
   });
 
-  // Get my check-in records for today's sessions
-  const sessionIds = sessions.map((s) => s.id);
+  // Eligibility: Unit Meeting only visible if member belongs to that unit
+  const eligibleSessions = useMemo(() => {
+    return sessions.filter((s) => {
+      if (s.session_type !== "Unit Meeting") return true;
+      if (!s.unit) return true;
+      return myUnitsLower.includes(s.unit.toLowerCase());
+    });
+  }, [sessions, myUnitsLower]);
+
+  const visibleSessions = useMemo(() => {
+    if (unitFilter === "all") return eligibleSessions;
+    return eligibleSessions.filter(
+      (s) => (s.unit || "").toLowerCase() === unitFilter.toLowerCase()
+    );
+  }, [eligibleSessions, unitFilter]);
+
+  const sessionIds = visibleSessions.map((s) => s.id);
   const { data: myRecords = [] } = useQuery({
     queryKey: ["my-checkins", sessionIds],
     queryFn: async () => {
@@ -86,7 +111,16 @@ export default function SelfCheckInWidget() {
     },
   });
 
-  if (!myMember || sessions.length === 0) return null;
+  if (!myMember || eligibleSessions.length === 0) return null;
+
+  // Build filter options from units present in the eligible sessions
+  const unitOptions = Array.from(
+    new Set(
+      eligibleSessions
+        .filter((s) => s.session_type === "Unit Meeting" && s.unit)
+        .map((s) => s.unit)
+    )
+  );
 
   return (
     <Card className="border-0 shadow-sm">
@@ -97,30 +131,49 @@ export default function SelfCheckInWidget() {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
+        {unitOptions.length > 1 && (
+          <Select value={unitFilter} onValueChange={setUnitFilter}>
+            <SelectTrigger className="h-9 text-xs">
+              <SelectValue placeholder="Filter by unit" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All my meetings</SelectItem>
+              {unitOptions.map((u) => (
+                <SelectItem key={u} value={u}>{u}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+
         {sessionsLoading ? (
           <div className="flex justify-center py-4">
             <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
           </div>
+        ) : visibleSessions.length === 0 ? (
+          <p className="text-xs text-muted-foreground text-center py-2">No meetings match this filter.</p>
         ) : (
-          sessions.map((session) => {
+          visibleSessions.map((session) => {
             const isCheckedIn = checkedSessionIds.has(session.id);
             return (
               <div
                 key={session.id}
                 className={`flex items-center justify-between p-3 rounded-xl border transition-colors ${
-                  isCheckedIn
-                    ? "bg-chart-3/5 border-chart-3/20"
-                    : "bg-muted/50 border-border"
+                  isCheckedIn ? "bg-chart-3/5 border-chart-3/20" : "bg-muted/50 border-border"
                 }`}
               >
                 <div className="min-w-0">
                   <p className="text-sm font-medium text-foreground">
                     {session.title || session.session_type}
                   </p>
-                  <div className="flex items-center gap-2 mt-0.5">
+                  <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                     <Badge variant="outline" className="text-[10px] px-1.5 py-0">
                       {session.session_type}
                     </Badge>
+                    {session.unit && (
+                      <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                        {session.unit}
+                      </Badge>
+                    )}
                     <span className="text-xs text-muted-foreground">{session.session_date}</span>
                   </div>
                 </div>

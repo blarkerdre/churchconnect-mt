@@ -1,22 +1,25 @@
-## Use Transparent Logo Across the App
+## Fix Self Check-In Eligibility + Add Unit Filter
 
-### What changes
-1. Add the transparent logo as a new asset: `public/lovable-uploads/church-connect-logo-transparent.png` (copied from the previously generated `/mnt/documents/logo-transparent.png`).
-2. Update the two files that reference the logo to use the transparent version and render it so it fits its containers properly (no cropping, no stretching, transparent background showing through).
+### 1. `SelfCheckInWidget.jsx` (Dashboard "Today's Attendance")
+- Fetch member's `church_unit` alongside name.
+- Also fetch `unit` field on sessions.
+- Filter rendered sessions: for `session_type === "Unit Meeting"`, only show if `member.church_unit` (comma-split, trimmed, case-insensitive) includes `session.unit`. Non-unit sessions remain visible to all.
+- Add a unit filter dropdown above the list (populated from the member's units + "All"). Defaults to "All". Useful for members in multiple units.
 
-### Files to update
+### 2. `SelfCheckIn.jsx` (QR / direct self check-in page)
+- Add a defensive eligibility guard: if `session.session_type === "Unit Meeting"` and member is not in `session.unit`, show a "Not eligible for this unit meeting" message instead of the check-in button.
 
-**`src/pages/LandingPage.jsx`** (3 spots)
-- **Navbar**: swap to transparent logo, drop the `rounded` class (no bg to round), keep `h-8 w-8` with `object-contain`.
-- **Hero badge**: the navy `bg-white/10` rounded-2xl tile currently wraps the logo. With a transparent logo we can either:
-  - Keep the tile and place the logo inside at `h-12 w-12 object-contain` (recommended — looks like an app-icon badge), or
-  - Remove the tile and show the logo at `h-20 w-20 object-contain` directly on the hero gradient.
-  Default to option A unless you tell me otherwise.
-- **Footer**: swap to transparent logo, `h-6 w-6 object-contain`, no `rounded`.
+### 3. Data Cleanup
+Delete the two stray Kelechi records via the insert tool:
+- `e4f79b40-2882-4691-ac12-ecd8a96abbdc`
+- `70b05caa-7f7c-478f-a738-367fb65662f5`
 
-**`src/pages/Auth.jsx`**
-- Swap the same logo reference to the transparent version with `object-contain` sizing (will inspect exact spot during implementation).
+### 4. RLS Hardening
+Update the "Members can self check-in" policy on `attendance_records` so INSERT requires: for Unit Meeting sessions, the inserting member's `church_unit` must contain the session's `unit` (case-insensitive substring/array match). Implement via a `SECURITY DEFINER` helper `public.member_eligible_for_session(member_id, session_id)` to keep the policy clean and avoid recursion.
 
-### Notes
-- Keep the original `church-connect-logo.png` in place (still referenced by manifest/PWA flows that expect a solid background). Only swap in-app UI usages to the transparent variant.
-- No favicon/PWA icon changes — those still need a solid background.
+### Technical Notes
+- Unit comparison normalizes whitespace and lowercases on both sides.
+- Helper returns true for non-Unit-Meeting sessions automatically.
+- No schema changes beyond the new function + policy update.
+
+Approve to implement.
