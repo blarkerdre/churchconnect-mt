@@ -49,6 +49,29 @@ export default function SelfCheckIn({ session, member, onClose }) {
     );
   }
 
+  // Eligibility guard for Unit Meetings
+  const memberUnits = (member.church_unit || "")
+    .split(",")
+    .map((u) => u.trim().toLowerCase())
+    .filter(Boolean);
+  const isUnitMeeting = session.session_type === "Unit Meeting";
+  const requiresUnit = isUnitMeeting && !!session.unit;
+  const isEligible = !requiresUnit || memberUnits.includes(session.unit.toLowerCase());
+
+  if (!isEligible) {
+    return (
+      <div className="max-w-sm mx-auto mt-8">
+        <Card className="border-0 shadow-sm p-8 text-center space-y-4">
+          <h2 className="text-lg font-bold text-foreground">{session.title || session.session_type}</h2>
+          <p className="text-sm text-muted-foreground">
+            This is a {session.unit} unit meeting. You are not registered as a member of this unit, so you cannot check in here.
+          </p>
+          <Button variant="outline" onClick={onClose} className="w-full">Back</Button>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-sm mx-auto mt-8">
       <Card className="border-0 shadow-sm p-8 text-center space-y-6 relative">
