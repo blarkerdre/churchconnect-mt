@@ -49,14 +49,13 @@ export default function SelfCheckIn({ session, member, onClose }) {
     );
   }
 
-  // Eligibility guard for Unit Meetings
+  // Eligibility guard: members can only self check-in to Unit Meetings for units they belong to
   const memberUnits = (member.church_unit || "")
     .split(",")
     .map((u) => u.trim().toLowerCase())
     .filter(Boolean);
-  const isUnitMeeting = session.session_type === "Unit Meeting";
-  const requiresUnit = isUnitMeeting && !!session.unit;
-  const isEligible = !requiresUnit || memberUnits.includes(session.unit.toLowerCase());
+  const isUnitMeeting = session.session_type === "Unit Meeting" && !!session.unit;
+  const isEligible = isUnitMeeting && memberUnits.includes(session.unit.toLowerCase());
 
   if (!isEligible) {
     return (
@@ -64,7 +63,9 @@ export default function SelfCheckIn({ session, member, onClose }) {
         <Card className="border-0 shadow-sm p-8 text-center space-y-4">
           <h2 className="text-lg font-bold text-foreground">{session.title || session.session_type}</h2>
           <p className="text-sm text-muted-foreground">
-            This is a {session.unit} unit meeting. You are not registered as a member of this unit, so you cannot check in here.
+            {isUnitMeeting
+              ? `This is a ${session.unit} unit meeting. You are not registered as a member of this unit, so you cannot check in here.`
+              : "Self check-in is only available for unit meetings you belong to. Please see an administrator to record attendance for this session."}
           </p>
           <Button variant="outline" onClick={onClose} className="w-full">Back</Button>
         </Card>
