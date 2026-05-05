@@ -240,6 +240,22 @@ export default function ChurchAttendance() {
                     <Label className="text-xs">Teens</Label>
                     <Input type="number" min="0" value={form.teens} onChange={(e) => set("teens", e.target.value)} />
                   </div>
+                  <div>
+                    <Label className="text-xs">Converts</Label>
+                    <Input type="number" min="0" value={form.converts} onChange={(e) => set("converts", e.target.value)} />
+                  </div>
+                  <div>
+                    <Label className="text-xs">First Timers</Label>
+                    <Input type="number" min="0" value={form.first_timers} onChange={(e) => set("first_timers", e.target.value)} />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Testimonies</Label>
+                    <Input type="number" min="0" value={form.testimonies} onChange={(e) => set("testimonies", e.target.value)} />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Cars</Label>
+                    <Input type="number" min="0" value={form.cars} onChange={(e) => set("cars", e.target.value)} />
+                  </div>
                 </div>
                 <div className="pt-2 border-t">
                   <div className="flex items-center justify-between">
