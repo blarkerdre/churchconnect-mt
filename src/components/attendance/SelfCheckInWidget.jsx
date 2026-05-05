@@ -58,11 +58,10 @@ export default function SelfCheckInWidget() {
     },
   });
 
-  // Eligibility: Unit Meeting only visible if member belongs to that unit
+  // Eligibility: members can only self check-in to Unit Meetings for units they belong to
   const eligibleSessions = useMemo(() => {
     return sessions.filter((s) => {
-      if (s.session_type !== "Unit Meeting") return true;
-      if (!s.unit) return true;
+      if (s.session_type !== "Unit Meeting" || !s.unit) return false;
       return myUnitsLower.includes(s.unit.toLowerCase());
     });
   }, [sessions, myUnitsLower]);
