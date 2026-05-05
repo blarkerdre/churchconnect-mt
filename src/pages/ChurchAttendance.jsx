@@ -89,6 +89,10 @@ export default function ChurchAttendance() {
     const adultFemale = parseInt(form.adult_female) || 0;
     const children = parseInt(form.children) || 0;
     const teens = parseInt(form.teens) || 0;
+    const converts = parseInt(form.converts) || 0;
+    const first_timers = parseInt(form.first_timers) || 0;
+    const testimonies = parseInt(form.testimonies) || 0;
+    const cars = parseInt(form.cars) || 0;
     saveMutation.mutate({
       service_type: form.service_type,
       service_date: form.service_date,
@@ -97,6 +101,10 @@ export default function ChurchAttendance() {
       adult_female: adultFemale,
       children,
       teens,
+      converts,
+      first_timers,
+      testimonies,
+      cars,
       total_attendance: adultMale + adultFemale + children + teens,
       notes: form.notes || null,
       recorded_by: user?.id,
