@@ -31,6 +31,10 @@ const emptyForm = {
   adult_female: "",
   children: "",
   teens: "",
+  converts: "",
+  first_timers: "",
+  testimonies: "",
+  cars: "",
   notes: "",
 };
 
