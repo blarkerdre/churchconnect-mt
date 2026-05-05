@@ -396,6 +396,10 @@ export default function ChurchAttendance() {
                         <TableCell className="text-center">{r.adult_female}</TableCell>
                         <TableCell className="text-center">{r.children}</TableCell>
                         <TableCell className="text-center">{r.teens}</TableCell>
+                        <TableCell className="text-center">{r.converts || 0}</TableCell>
+                        <TableCell className="text-center">{r.first_timers || 0}</TableCell>
+                        <TableCell className="text-center">{r.testimonies || 0}</TableCell>
+                        <TableCell className="text-center">{r.cars || 0}</TableCell>
                         <TableCell className="text-center font-semibold">{r.total_attendance}</TableCell>
                         <TableCell>
                           <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setExpandedRow(expandedRow === r.id ? null : r.id)}>
@@ -405,7 +409,7 @@ export default function ChurchAttendance() {
                       </TableRow>
                       {expandedRow === r.id && (
                         <TableRow>
-                          <TableCell colSpan={8} className="bg-muted/20 p-3">
+                          <TableCell colSpan={12} className="bg-muted/20 p-3">
                             <ReportAttachments relatedTable="church_attendance_reports" relatedId={r.id} />
                           </TableCell>
                         </TableRow>
