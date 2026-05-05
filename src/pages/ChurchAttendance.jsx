@@ -131,6 +131,10 @@ export default function ChurchAttendance() {
   const totalAdultFemale = filteredReports.reduce((s, r) => s + r.adult_female, 0);
   const totalChildren = filteredReports.reduce((s, r) => s + r.children, 0);
   const totalTeens = filteredReports.reduce((s, r) => s + r.teens, 0);
+  const totalConverts = filteredReports.reduce((s, r) => s + (r.converts || 0), 0);
+  const totalFirstTimers = filteredReports.reduce((s, r) => s + (r.first_timers || 0), 0);
+  const totalTestimonies = filteredReports.reduce((s, r) => s + (r.testimonies || 0), 0);
+  const totalCars = filteredReports.reduce((s, r) => s + (r.cars || 0), 0);
 
   // Chart data — sorted chronologically, last 20 services
   const chartData = useMemo(() => {
