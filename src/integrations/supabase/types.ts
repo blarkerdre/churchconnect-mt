@@ -541,8 +541,11 @@ export type Database = {
         Row: {
           adult_female: number
           adult_male: number
+          cars: number
           children: number
+          converts: number
           created_at: string
+          first_timers: number
           id: string
           notes: string | null
           recorded_by: string | null
@@ -550,6 +553,7 @@ export type Database = {
           service_type: string
           teens: number
           tenant_id: string | null
+          testimonies: number
           title: string | null
           total_attendance: number
           updated_at: string
@@ -557,8 +561,11 @@ export type Database = {
         Insert: {
           adult_female?: number
           adult_male?: number
+          cars?: number
           children?: number
+          converts?: number
           created_at?: string
+          first_timers?: number
           id?: string
           notes?: string | null
           recorded_by?: string | null
@@ -566,6 +573,7 @@ export type Database = {
           service_type?: string
           teens?: number
           tenant_id?: string | null
+          testimonies?: number
           title?: string | null
           total_attendance?: number
           updated_at?: string
@@ -573,8 +581,11 @@ export type Database = {
         Update: {
           adult_female?: number
           adult_male?: number
+          cars?: number
           children?: number
+          converts?: number
           created_at?: string
+          first_timers?: number
           id?: string
           notes?: string | null
           recorded_by?: string | null
@@ -582,6 +593,7 @@ export type Database = {
           service_type?: string
           teens?: number
           tenant_id?: string | null
+          testimonies?: number
           title?: string | null
           total_attendance?: number
           updated_at?: string
