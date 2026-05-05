@@ -375,6 +375,10 @@ export default function ChurchAttendance() {
                     <TableHead className="text-center">Adult F</TableHead>
                     <TableHead className="text-center">Children</TableHead>
                     <TableHead className="text-center">Teens</TableHead>
+                    <TableHead className="text-center">Converts</TableHead>
+                    <TableHead className="text-center">First Timers</TableHead>
+                    <TableHead className="text-center">Testimonies</TableHead>
+                    <TableHead className="text-center">Cars</TableHead>
                      <TableHead className="text-center">Total</TableHead>
                      <TableHead className="w-10"></TableHead>
                    </TableRow>
