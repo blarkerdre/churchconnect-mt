@@ -31,6 +31,10 @@ const emptyForm = {
   adult_female: "",
   children: "",
   teens: "",
+  converts: "",
+  first_timers: "",
+  testimonies: "",
+  cars: "",
   notes: "",
 };
 
@@ -85,6 +89,10 @@ export default function ChurchAttendance() {
     const adultFemale = parseInt(form.adult_female) || 0;
     const children = parseInt(form.children) || 0;
     const teens = parseInt(form.teens) || 0;
+    const converts = parseInt(form.converts) || 0;
+    const first_timers = parseInt(form.first_timers) || 0;
+    const testimonies = parseInt(form.testimonies) || 0;
+    const cars = parseInt(form.cars) || 0;
     saveMutation.mutate({
       service_type: form.service_type,
       service_date: form.service_date,
@@ -93,6 +101,10 @@ export default function ChurchAttendance() {
       adult_female: adultFemale,
       children,
       teens,
+      converts,
+      first_timers,
+      testimonies,
+      cars,
       total_attendance: adultMale + adultFemale + children + teens,
       notes: form.notes || null,
       recorded_by: user?.id,
@@ -119,6 +131,10 @@ export default function ChurchAttendance() {
   const totalAdultFemale = filteredReports.reduce((s, r) => s + r.adult_female, 0);
   const totalChildren = filteredReports.reduce((s, r) => s + r.children, 0);
   const totalTeens = filteredReports.reduce((s, r) => s + r.teens, 0);
+  const totalConverts = filteredReports.reduce((s, r) => s + (r.converts || 0), 0);
+  const totalFirstTimers = filteredReports.reduce((s, r) => s + (r.first_timers || 0), 0);
+  const totalTestimonies = filteredReports.reduce((s, r) => s + (r.testimonies || 0), 0);
+  const totalCars = filteredReports.reduce((s, r) => s + (r.cars || 0), 0);
 
   // Chart data — sorted chronologically, last 20 services
   const chartData = useMemo(() => {
@@ -134,9 +150,11 @@ export default function ChurchAttendance() {
   }, [filteredReports]);
 
   const downloadCSV = () => {
-    const headers = ["Date", "Service Type", "Title", "Adult Male", "Adult Female", "Children", "Teens", "Total", "Notes"];
+    const headers = ["Date", "Service Type", "Title", "Adult Male", "Adult Female", "Children", "Teens", "Converts", "First Timers", "Testimonies", "Cars", "Total", "Notes"];
     const rows = filteredReports.map(r => [
-      r.service_date, r.service_type, r.title || "", r.adult_male, r.adult_female, r.children, r.teens, r.total_attendance, r.notes || ""
+      r.service_date, r.service_type, r.title || "", r.adult_male, r.adult_female, r.children, r.teens,
+      r.converts || 0, r.first_timers || 0, r.testimonies || 0, r.cars || 0,
+      r.total_attendance, r.notes || ""
     ]);
     const csv = [headers.join(","), ...rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(","))].join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
@@ -148,10 +166,12 @@ export default function ChurchAttendance() {
 
   const buildPrintRows = () => ({
     title: "Church Attendance Report",
-    headers: ["Date", "Service Type", "Title", "Adult M", "Adult F", "Children", "Teens", "Total"],
+    headers: ["Date", "Service Type", "Title", "Adult M", "Adult F", "Children", "Teens", "Converts", "First Timers", "Testimonies", "Cars", "Total"],
     rows: filteredReports.map(r => [
       format(parseISO(r.service_date), "dd MMM yyyy"), r.service_type, r.title || "—",
-      r.adult_male, r.adult_female, r.children, r.teens, r.total_attendance
+      r.adult_male, r.adult_female, r.children, r.teens,
+      r.converts || 0, r.first_timers || 0, r.testimonies || 0, r.cars || 0,
+      r.total_attendance
     ]),
   });
 
@@ -220,6 +240,22 @@ export default function ChurchAttendance() {
                     <Label className="text-xs">Teens</Label>
                     <Input type="number" min="0" value={form.teens} onChange={(e) => set("teens", e.target.value)} />
                   </div>
+                  <div>
+                    <Label className="text-xs">Converts</Label>
+                    <Input type="number" min="0" value={form.converts} onChange={(e) => set("converts", e.target.value)} />
+                  </div>
+                  <div>
+                    <Label className="text-xs">First Timers</Label>
+                    <Input type="number" min="0" value={form.first_timers} onChange={(e) => set("first_timers", e.target.value)} />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Testimonies</Label>
+                    <Input type="number" min="0" value={form.testimonies} onChange={(e) => set("testimonies", e.target.value)} />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Cars</Label>
+                    <Input type="number" min="0" value={form.cars} onChange={(e) => set("cars", e.target.value)} />
+                  </div>
                 </div>
                 <div className="pt-2 border-t">
                   <div className="flex items-center justify-between">
@@ -245,13 +281,17 @@ export default function ChurchAttendance() {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
         <Card className="border-0 shadow-sm"><CardContent className="p-4 text-center"><p className="text-2xl font-display font-bold text-foreground">{totalServices}</p><p className="text-xs text-muted-foreground">Services</p></CardContent></Card>
         <Card className="border-0 shadow-sm"><CardContent className="p-4 text-center"><p className="text-2xl font-display font-bold text-primary">{totalAttendance}</p><p className="text-xs text-muted-foreground">Total</p></CardContent></Card>
         <Card className="border-0 shadow-sm"><CardContent className="p-4 text-center"><p className="text-2xl font-display font-bold text-chart-3">{totalAdultMale}</p><p className="text-xs text-muted-foreground">Adult Male</p></CardContent></Card>
         <Card className="border-0 shadow-sm"><CardContent className="p-4 text-center"><p className="text-2xl font-display font-bold text-accent">{totalAdultFemale}</p><p className="text-xs text-muted-foreground">Adult Female</p></CardContent></Card>
         <Card className="border-0 shadow-sm"><CardContent className="p-4 text-center"><p className="text-2xl font-display font-bold text-orange-500">{totalChildren}</p><p className="text-xs text-muted-foreground">Children</p></CardContent></Card>
         <Card className="border-0 shadow-sm"><CardContent className="p-4 text-center"><p className="text-2xl font-display font-bold text-violet-500">{totalTeens}</p><p className="text-xs text-muted-foreground">Teens</p></CardContent></Card>
+        <Card className="border-0 shadow-sm"><CardContent className="p-4 text-center"><p className="text-2xl font-display font-bold text-emerald-600">{totalConverts}</p><p className="text-xs text-muted-foreground">Converts</p></CardContent></Card>
+        <Card className="border-0 shadow-sm"><CardContent className="p-4 text-center"><p className="text-2xl font-display font-bold text-sky-600">{totalFirstTimers}</p><p className="text-xs text-muted-foreground">First Timers</p></CardContent></Card>
+        <Card className="border-0 shadow-sm"><CardContent className="p-4 text-center"><p className="text-2xl font-display font-bold text-pink-600">{totalTestimonies}</p><p className="text-xs text-muted-foreground">Testimonies</p></CardContent></Card>
+        <Card className="border-0 shadow-sm"><CardContent className="p-4 text-center"><p className="text-2xl font-display font-bold text-slate-600">{totalCars}</p><p className="text-xs text-muted-foreground">Cars</p></CardContent></Card>
       </div>
 
       {/* Attendance Trend Chart */}
@@ -335,6 +375,10 @@ export default function ChurchAttendance() {
                     <TableHead className="text-center">Adult F</TableHead>
                     <TableHead className="text-center">Children</TableHead>
                     <TableHead className="text-center">Teens</TableHead>
+                    <TableHead className="text-center">Converts</TableHead>
+                    <TableHead className="text-center">First Timers</TableHead>
+                    <TableHead className="text-center">Testimonies</TableHead>
+                    <TableHead className="text-center">Cars</TableHead>
                      <TableHead className="text-center">Total</TableHead>
                      <TableHead className="w-10"></TableHead>
                    </TableRow>
@@ -352,6 +396,10 @@ export default function ChurchAttendance() {
                         <TableCell className="text-center">{r.adult_female}</TableCell>
                         <TableCell className="text-center">{r.children}</TableCell>
                         <TableCell className="text-center">{r.teens}</TableCell>
+                        <TableCell className="text-center">{r.converts || 0}</TableCell>
+                        <TableCell className="text-center">{r.first_timers || 0}</TableCell>
+                        <TableCell className="text-center">{r.testimonies || 0}</TableCell>
+                        <TableCell className="text-center">{r.cars || 0}</TableCell>
                         <TableCell className="text-center font-semibold">{r.total_attendance}</TableCell>
                         <TableCell>
                           <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setExpandedRow(expandedRow === r.id ? null : r.id)}>
@@ -361,7 +409,7 @@ export default function ChurchAttendance() {
                       </TableRow>
                       {expandedRow === r.id && (
                         <TableRow>
-                          <TableCell colSpan={8} className="bg-muted/20 p-3">
+                          <TableCell colSpan={12} className="bg-muted/20 p-3">
                             <ReportAttachments relatedTable="church_attendance_reports" relatedId={r.id} />
                           </TableCell>
                         </TableRow>

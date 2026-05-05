@@ -1,33 +1,23 @@
 ## Goal
-Members should only see and self check-in to **Unit Meetings for units they belong to**. All other session types (Sunday Service, Bible Study, etc.) will no longer appear in the member self check-in widget or QR self check-in page.
+Add four new fields to the Record Church Attendance breakdown: **Converts**, **First Timers**, **Testimonies**, and **Cars**.
 
-Admin/leader-driven check-in (`CheckInPanel.jsx`) is unchanged — admins continue to manage attendance for all session types.
+## Database
+New migration adding nullable integer columns to `church_attendance_reports` (default 0):
+- `converts`
+- `first_timers`
+- `testimonies`
+- `cars`
 
-## Changes
+## UI changes (`src/pages/ChurchAttendance.jsx`)
+1. **Form (`emptyForm` + Attendance Breakdown grid)** — add four numeric inputs alongside the existing Adult M/F, Children, Teens fields.
+2. **Submit handler** — include the four new fields in the insert payload. Note: these are **not** added to `total_attendance` (Converts/First Timers are usually a subset of adults; Cars are vehicles, not people) to avoid double-counting.
+3. **Summary cards** — extend the grid to show totals for the four new metrics (expand from 6 to up to 10 cards, responsive).
+4. **Table** — add four new columns (Converts, First Timers, Testimonies, Cars) before Total.
+5. **CSV export & Print rows** — include the four new columns in headers/rows.
+6. **Chart** — leave chart focused on demographic breakdown (Adult M/F, Children, Teens) since the new metrics are different units; no change.
 
-### 1. `src/components/attendance/SelfCheckInWidget.jsx`
-Tighten the eligibility filter so it returns only Unit Meetings the member belongs to:
-```js
-const eligibleSessions = sessions.filter((s) => {
-  if (s.session_type !== "Unit Meeting" || !s.unit) return false;
-  return myUnitsLower.includes(s.unit.toLowerCase());
-});
-```
-Non-unit sessions are dropped entirely. Unit filter dropdown behavior is preserved.
-
-### 2. `src/components/attendance/SelfCheckIn.jsx` (QR/direct check-in page)
-Update the eligibility guard so any non-Unit-Meeting session shows the "not eligible" message and hides the check-in button. Only Unit Meetings matching the member's units pass.
-
-### 3. RLS hardening — update `member_eligible_for_session` SQL function
-Currently the function returns `true` for non-Unit-Meeting sessions for self check-ins. Change it to:
-- Unit Meeting + member belongs to that unit → allowed
-- Anything else (non-Unit-Meeting, or wrong unit) → denied
-
-This blocks self check-ins to Sunday Service / Bible Study at the database layer. Admin manual check-ins are unaffected because they use the separate "Admins can manage attendance" policy, not "Members can self check-in".
-
-## Out of scope
-- `CheckInPanel.jsx` (admin tool) — unchanged
-- Reporting / CSV exports — unchanged
-- No data cleanup needed
+## Notes
+- Existing rows will read `0` for the new columns thanks to defaults.
+- No RLS changes needed.
 
 Approve to implement.
