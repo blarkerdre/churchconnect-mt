@@ -150,9 +150,11 @@ export default function ChurchAttendance() {
   }, [filteredReports]);
 
   const downloadCSV = () => {
-    const headers = ["Date", "Service Type", "Title", "Adult Male", "Adult Female", "Children", "Teens", "Total", "Notes"];
+    const headers = ["Date", "Service Type", "Title", "Adult Male", "Adult Female", "Children", "Teens", "Converts", "First Timers", "Testimonies", "Cars", "Total", "Notes"];
     const rows = filteredReports.map(r => [
-      r.service_date, r.service_type, r.title || "", r.adult_male, r.adult_female, r.children, r.teens, r.total_attendance, r.notes || ""
+      r.service_date, r.service_type, r.title || "", r.adult_male, r.adult_female, r.children, r.teens,
+      r.converts || 0, r.first_timers || 0, r.testimonies || 0, r.cars || 0,
+      r.total_attendance, r.notes || ""
     ]);
     const csv = [headers.join(","), ...rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(","))].join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
@@ -164,10 +166,12 @@ export default function ChurchAttendance() {
 
   const buildPrintRows = () => ({
     title: "Church Attendance Report",
-    headers: ["Date", "Service Type", "Title", "Adult M", "Adult F", "Children", "Teens", "Total"],
+    headers: ["Date", "Service Type", "Title", "Adult M", "Adult F", "Children", "Teens", "Converts", "First Timers", "Testimonies", "Cars", "Total"],
     rows: filteredReports.map(r => [
       format(parseISO(r.service_date), "dd MMM yyyy"), r.service_type, r.title || "—",
-      r.adult_male, r.adult_female, r.children, r.teens, r.total_attendance
+      r.adult_male, r.adult_female, r.children, r.teens,
+      r.converts || 0, r.first_timers || 0, r.testimonies || 0, r.cars || 0,
+      r.total_attendance
     ]),
   });
 
