@@ -801,6 +801,7 @@ function CourseRegistrationsView({ course }) {
                   <TableHead className="font-semibold">Email</TableHead>
                   <TableHead className="font-semibold">Phone</TableHead>
                   <TableHead className="font-semibold">Source</TableHead>
+                  <TableHead className="font-semibold">Session</TableHead>
                   <TableHead className="font-semibold">Registered</TableHead>
                   <TableHead className="font-semibold text-right">Actions</TableHead>
                 </TableRow>
