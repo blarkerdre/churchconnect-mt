@@ -649,6 +649,7 @@ export type Database = {
           id: string
           member_id: string
           registered_at: string
+          session_id: string | null
           tenant_id: string | null
         }
         Insert: {
@@ -656,6 +657,7 @@ export type Database = {
           id?: string
           member_id: string
           registered_at?: string
+          session_id?: string | null
           tenant_id?: string | null
         }
         Update: {
@@ -663,6 +665,7 @@ export type Database = {
           id?: string
           member_id?: string
           registered_at?: string
+          session_id?: string | null
           tenant_id?: string | null
         }
         Relationships: [
@@ -678,6 +681,13 @@ export type Database = {
             columns: ["member_id"]
             isOneToOne: false
             referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "course_registrations_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "exam_sessions"
             referencedColumns: ["id"]
           },
           {
