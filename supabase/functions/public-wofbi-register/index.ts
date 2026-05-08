@@ -183,6 +183,14 @@ Deno.serve(async (req) => {
       });
     }
 
+    const sessionId = sanitize(body.session_id, 36);
+    if (!sessionId) {
+      return new Response(JSON.stringify({ error: "Please select a session." }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     // Verify course exists, is active, open, and belongs to tenant
     const { data: course, error: courseError } = await supabase
       .from("exam_titles")
@@ -195,6 +203,36 @@ Deno.serve(async (req) => {
 
     if (!course || !course.is_active || !course.registration_open) {
       return new Response(JSON.stringify({ error: "This course is not currently accepting registrations." }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Verify session belongs to tenant and is open (draft or active)
+    const { data: session, error: sessionError } = await supabase
+      .from("exam_sessions")
+      .select("id, name, status")
+      .eq("id", sessionId)
+      .eq("tenant_id", tenantId)
+      .maybeSingle();
+    if (sessionError) throw sessionError;
+    if (!session || !["draft", "active"].includes(session.status)) {
+      return new Response(JSON.stringify({ error: "This session is not currently accepting registrations." }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Verify the course is included in this session
+    const { data: sessionCourse } = await supabase
+      .from("exam_session_courses")
+      .select("id")
+      .eq("session_id", sessionId)
+      .eq("exam_title", course.name)
+      .eq("tenant_id", tenantId)
+      .maybeSingle();
+    if (!sessionCourse) {
+      return new Response(JSON.stringify({ error: "This course is not part of the selected session." }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -236,25 +274,26 @@ Deno.serve(async (req) => {
       isNewMember = true;
     }
 
-    // Check for duplicate registration
+    // Check for duplicate registration in this same session
     const { data: existingReg } = await supabase
       .from("course_registrations")
       .select("id")
       .eq("member_id", memberId)
       .eq("course_id", courseId)
+      .eq("session_id", sessionId)
       .maybeSingle();
 
     if (existingReg) {
-      return new Response(JSON.stringify({ error: "You are already registered for this course." }), {
+      return new Response(JSON.stringify({ error: "You are already registered for this course in this session." }), {
         status: 409,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Insert course registration with tenant_id
+    // Insert course registration with tenant_id and session_id
     const { error: regError } = await supabase
       .from("course_registrations")
-      .insert({ member_id: memberId, course_id: courseId, tenant_id: tenantId });
+      .insert({ member_id: memberId, course_id: courseId, session_id: sessionId, tenant_id: tenantId });
 
     if (regError) throw regError;
 
