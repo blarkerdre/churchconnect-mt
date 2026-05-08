@@ -31,7 +31,9 @@ export default function PublicWoFBIRegistration() {
   const [saving, setSaving] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [courseName, setCourseName] = useState("");
-  const [courses, setCourses] = useState([]);
+  const [sessions, setSessions] = useState([]);
+  const [sessionCourses, setSessionCourses] = useState([]); // exam_session_courses rows
+  const [allCourses, setAllCourses] = useState([]); // exam_titles for tenant
   const [loadingCourses, setLoadingCourses] = useState(true);
   const [resolvedTenantId, setResolvedTenantId] = useState(tenantSlug ? null : DEFAULT_TENANT_ID);
   const [tenantName, setTenantName] = useState("");
@@ -50,22 +52,46 @@ export default function PublicWoFBIRegistration() {
     }
   }, [tenantSlug]);
 
-  // Load courses scoped by tenant
+  // Load open sessions, their course mappings, and active courses
   useEffect(() => {
     if (!resolvedTenantId) return;
     setLoadingCourses(true);
-    supabase
-      .from("exam_titles")
-      .select("id, name, description")
-      .eq("is_active", true)
-      .eq("registration_open", true)
-      .eq("tenant_id", resolvedTenantId)
-      .order("name")
-      .then(({ data, error }) => {
-        if (!error) setCourses(data || []);
-        setLoadingCourses(false);
-      });
+    Promise.all([
+      supabase
+        .from("exam_sessions")
+        .select("id, name, description, status")
+        .eq("tenant_id", resolvedTenantId)
+        .in("status", ["draft", "active"])
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("exam_session_courses")
+        .select("session_id, exam_title, sort_order")
+        .eq("tenant_id", resolvedTenantId)
+        .order("sort_order"),
+      supabase
+        .from("exam_titles")
+        .select("id, name, description")
+        .eq("is_active", true)
+        .eq("registration_open", true)
+        .eq("tenant_id", resolvedTenantId)
+        .order("name"),
+    ]).then(([s, sc, c]) => {
+      setSessions(s.data || []);
+      setSessionCourses(sc.data || []);
+      setAllCourses(c.data || []);
+      setLoadingCourses(false);
+    });
   }, [resolvedTenantId]);
+
+  // Courses available in the chosen session (filter exam_titles by names listed in exam_session_courses)
+  const courses = React.useMemo(() => {
+    if (!form.session_id) return [];
+    const names = new Set(
+      sessionCourses.filter((r) => r.session_id === form.session_id).map((r) => r.exam_title)
+    );
+    return allCourses.filter((c) => names.has(c.name));
+  }, [form.session_id, sessionCourses, allCourses]);
+
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
 
