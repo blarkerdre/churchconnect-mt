@@ -19,6 +19,7 @@ const emptyForm = {
   last_name: "",
   email: "",
   phone: "",
+  session_id: "",
   course_id: "",
   gdpr_consent: false,
   website: "", // honeypot
