@@ -93,7 +93,8 @@ export default function PublicWoFBIRegistration() {
   }, [form.session_id, sessionCourses, allCourses]);
 
 
-  const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
+  const set = (k, v) =>
+    setForm((f) => (k === "session_id" ? { ...f, session_id: v, course_id: "" } : { ...f, [k]: v }));
 
   const handleSubmit = async (e) => {
     e.preventDefault();
