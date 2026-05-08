@@ -264,14 +264,40 @@ export default function PublicWoFBIRegistration() {
             </div>
 
             <div className="space-y-1">
-              <Label>Select Course *</Label>
+              <Label>Select Session *</Label>
               {loadingCourses ? (
                 <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
-                  <Loader2 className="h-4 w-4 animate-spin" /> Loading courses...
+                  <Loader2 className="h-4 w-4 animate-spin" /> Loading sessions...
                 </div>
+              ) : sessions.length === 0 ? (
+                <p className="text-sm text-muted-foreground py-2">
+                  No sessions are currently open for registration.
+                </p>
+              ) : (
+                <Select value={form.session_id} onValueChange={(v) => set("session_id", v)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Choose a session" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {sessions.map((s) => (
+                      <SelectItem key={s.id} value={s.id}>
+                        {s.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
+
+            <div className="space-y-1">
+              <Label>Select Course *</Label>
+              {!form.session_id ? (
+                <p className="text-sm text-muted-foreground py-2">
+                  Please select a session first.
+                </p>
               ) : courses.length === 0 ? (
                 <p className="text-sm text-muted-foreground py-2">
-                  No courses are currently open for registration.
+                  No courses available in this session.
                 </p>
               ) : (
                 <Select value={form.course_id} onValueChange={(v) => set("course_id", v)}>
@@ -294,7 +320,7 @@ export default function PublicWoFBIRegistration() {
             <Button
               type="submit"
               className="w-full"
-              disabled={saving || courses.length === 0}
+              disabled={saving || sessions.length === 0 || !form.session_id || courses.length === 0}
             >
               {saving ? (
                 <>
