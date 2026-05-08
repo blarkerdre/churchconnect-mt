@@ -1,23 +1,34 @@
-## Goal
-Add four new fields to the Record Church Attendance breakdown: **Converts**, **First Timers**, **Testimonies**, and **Cars**.
+## Problem
 
-## Database
-New migration adding nullable integer columns to `church_attendance_reports` (default 0):
-- `converts`
-- `first_timers`
-- `testimonies`
-- `cars`
+In `src/components/dashboard/DashboardBanner.jsx`, each banner image is rendered as:
 
-## UI changes (`src/pages/ChurchAttendance.jsx`)
-1. **Form (`emptyForm` + Attendance Breakdown grid)** — add four numeric inputs alongside the existing Adult M/F, Children, Teens fields.
-2. **Submit handler** — include the four new fields in the insert payload. Note: these are **not** added to `total_attendance` (Converts/First Timers are usually a subset of adults; Cars are vehicles, not people) to avoid double-counting.
-3. **Summary cards** — extend the grid to show totals for the four new metrics (expand from 6 to up to 10 cards, responsive).
-4. **Table** — add four new columns (Converts, First Timers, Testimonies, Cars) before Total.
-5. **CSV export & Print rows** — include the four new columns in headers/rows.
-6. **Chart** — leave chart focused on demographic breakdown (Adult M/F, Children, Teens) since the new metrics are different units; no change.
+```jsx
+<img className="w-full object-cover rounded-xl" style={{ height }} />
+```
 
-## Notes
-- Existing rows will read `0` for the new columns thanks to defaults.
-- No RLS changes needed.
+- `w-full` stretches the image to the full carousel width (which on desktop/tablet can be 900–1200px+).
+- `height` is a fixed pixel value from settings (default 200px).
+- `object-cover` then crops the image to fill that wide-but-short box.
 
-Approve to implement.
+Result: on phones (~360px wide × 200px tall ≈ 1.8:1) the image looks roughly correct, but on tablet/desktop the container becomes very wide with the same fixed height (e.g. 1200×200 = 6:1), so images appear stretched/cropped and lose their natural proportion. The same fixed-height issue applies to the "Book of the Month" slide via `minHeight`.
+
+The uploaded asset itself is fine — it's the container's aspect ratio that changes with viewport while height stays constant.
+
+## Fix
+
+Make the slide container preserve a sensible aspect ratio across breakpoints instead of locking to a fixed pixel height, and let images render to their natural proportions.
+
+### Options to choose from
+
+1. **Aspect-ratio container (recommended)** — Wrap each slide in an `AspectRatio` (e.g. 21:9 on desktop, 16:9 on tablet, 2:1 on mobile) and keep `object-cover`. Image always fills correctly and scales proportionally with width. The "height" slider in settings becomes a max-height cap rather than a forced height.
+
+2. **`object-contain` with neutral background** — Keep the configurable height but switch to `object-contain` so the full image is always visible (letterboxed on wide screens). No cropping, but adds bars on the sides.
+
+3. **Responsive heights** — Keep `object-cover` but use Tailwind responsive heights (e.g. `h-48 sm:h-64 md:h-80 lg:h-96`) so taller containers on bigger screens reduce the extreme width:height ratio. Simplest change, still crops a bit.
+
+### Files to change
+
+- `src/components/dashboard/DashboardBanner.jsx` — update `BannerSlide` and `BookSlide` containers.
+- Optionally `src/components/settings/DashboardBannerSettings.jsx` — relabel the height slider (e.g. "Max height" or remove if option 1 is chosen).
+
+Please pick option 1, 2, or 3 (or describe the look you want) and I'll implement it.
