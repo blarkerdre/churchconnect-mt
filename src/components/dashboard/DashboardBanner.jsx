@@ -86,24 +86,28 @@ export default function DashboardBanner() {
 }
 
 function BannerSlide({ slide, index }) {
-  const height = slide.height || 200;
+  const maxHeight = slide.height || 200;
   const img = (
-    <img
-      src={slide.image_url}
-      alt={slide.alt_text || `Banner ${index + 1}`}
-      className="w-full object-cover rounded-xl"
-      style={{ height }}
-      loading="lazy"
-    />
+    <div
+      className="w-full overflow-hidden rounded-xl bg-muted aspect-[2/1] sm:aspect-[16/9] md:aspect-[21/9]"
+      style={{ maxHeight: Math.max(maxHeight, 240) }}
+    >
+      <img
+        src={slide.image_url}
+        alt={slide.alt_text || `Banner ${index + 1}`}
+        className="w-full h-full object-cover"
+        loading="lazy"
+      />
+    </div>
   );
   return slide.link_url ? (
-    <a href={slide.link_url} target="_blank" rel="noopener noreferrer">{img}</a>
+    <a href={slide.link_url} target="_blank" rel="noopener noreferrer" className="block">{img}</a>
   ) : img;
 }
 
 function BookSlide({ slide }) {
   return (
-    <div className="flex items-center gap-4 sm:gap-6 p-4 sm:p-6 bg-gradient-to-r from-primary/5 to-accent/10 rounded-xl" style={{ minHeight: slide.height || 140 }}>
+    <div className="flex items-center gap-4 sm:gap-6 p-4 sm:p-6 bg-gradient-to-r from-primary/5 to-accent/10 rounded-xl">
       {slide.image_url && (
         <img
           src={slide.image_url}
