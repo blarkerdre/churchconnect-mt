@@ -106,6 +106,10 @@ export default function PublicWoFBIRegistration() {
       toast({ title: "Email is required", variant: "destructive" });
       return;
     }
+    if (!form.session_id) {
+      toast({ title: "Please select a session", variant: "destructive" });
+      return;
+    }
     if (!form.course_id) {
       toast({ title: "Please select a course", variant: "destructive" });
       return;
