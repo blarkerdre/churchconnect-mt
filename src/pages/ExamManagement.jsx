@@ -817,6 +817,7 @@ function CourseRegistrationsView({ course }) {
                         {r.members?.user_id ? "Member" : "QR / Public"}
                       </Badge>
                     </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">{r.exam_sessions?.name || "—"}</TableCell>
                     <TableCell className="text-sm text-muted-foreground">{new Date(r.registered_at).toLocaleDateString()}</TableCell>
                     <TableCell className="text-right">
                       <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setDeleteTarget(r)}>
