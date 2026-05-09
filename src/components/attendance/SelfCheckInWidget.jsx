@@ -79,14 +79,15 @@ export default function SelfCheckInWidget() {
   //  - Home Cell Meetings for the centre they're assigned to
   const eligibleSessions = useMemo(() => {
     return sessions.filter((s) => {
+      const unit = (s.unit || "").trim();
       if (s.session_type === "Unit Meeting") {
-        return s.unit && myUnitsLower.includes(s.unit.toLowerCase());
+        return unit && myUnitsLower.includes(unit.toLowerCase());
       }
       if (s.session_type === "Home Cell Meeting") {
-        return s.unit && myCentreLower && s.unit.toLowerCase() === myCentreLower;
+        return unit && myCentreLower && unit.toLowerCase() === myCentreLower;
       }
-      // General sessions (no unit/centre scoping)
-      return !s.unit;
+      // General sessions (no unit/centre scoping) — visible to all tenant members
+      return !unit;
     });
   }, [sessions, myUnitsLower, myCentreLower]);
 
@@ -134,7 +135,12 @@ export default function SelfCheckInWidget() {
     },
   });
 
-  if (!myMember) return null;
+  // Diagnostic: account exists but no member profile is linked for this tenant
+  if (user?.id && !myMember) {
+    // eslint-disable-next-line no-console
+    console.warn("[SelfCheckInWidget] No linked member profile for user", user.id, "tenant", tenantId);
+  }
+
 
   // Build filter options from units/centres present in the eligible sessions
   const unitOptions = Array.from(
@@ -154,29 +160,39 @@ export default function SelfCheckInWidget() {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
-        {unitOptions.length > 1 && (
-          <Select value={unitFilter} onValueChange={setUnitFilter}>
-            <SelectTrigger className="h-9 text-xs">
-              <SelectValue placeholder="Filter by unit" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All my meetings</SelectItem>
-              {unitOptions.map((u) => (
-                <SelectItem key={u} value={u}>{u}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        )}
-
-        {sessionsLoading ? (
-          <div className="flex justify-center py-4">
-            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-          </div>
-        ) : visibleSessions.length === 0 ? (
-          <p className="text-xs text-muted-foreground text-center py-2">
-            {eligibleSessions.length === 0 ? "No meetings open for check-in today." : "No meetings match this filter."}
+        {!myMember ? (
+          <p className="text-xs text-muted-foreground text-center py-3">
+            Your account isn't linked to a member profile yet. Please ask an admin to link your profile so you can check in.
           </p>
         ) : (
+          <>
+            {unitOptions.length > 1 && (
+              <Select value={unitFilter} onValueChange={setUnitFilter}>
+                <SelectTrigger className="h-9 text-xs">
+                  <SelectValue placeholder="Filter by unit" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All my meetings</SelectItem>
+                  {unitOptions.map((u) => (
+                    <SelectItem key={u} value={u}>{u}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+
+            {sessionsLoading ? (
+              <div className="flex justify-center py-4">
+                <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+              </div>
+            ) : visibleSessions.length === 0 ? (
+              <p className="text-xs text-muted-foreground text-center py-2">
+                {sessions.length === 0
+                  ? "No meetings open for check-in today."
+                  : eligibleSessions.length === 0
+                    ? "No meetings open to your unit or Home Cell today."
+                    : "No meetings match this filter."}
+              </p>
+            ) : (
           visibleSessions.map((session) => {
             const isCheckedIn = checkedSessionIds.has(session.id);
             return (
@@ -227,6 +243,8 @@ export default function SelfCheckInWidget() {
               </div>
             );
           })
+        )}
+          </>
         )}
       </CardContent>
     </Card>
