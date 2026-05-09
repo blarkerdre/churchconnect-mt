@@ -295,23 +295,48 @@ export default function ExamSessionManager() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-1.5">
               <Label>Session Name *</Label>
-              <Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="e.g. March 2026 BFC Cohort" />
+              <Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="e.g. March 2026 BFC Cohort" disabled={editingActive} />
+              {editingActive && <p className="text-[10px] text-muted-foreground">Name is locked while session is active.</p>}
             </div>
             <div className="space-y-1.5">
               <Label>Description</Label>
               <Input value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} placeholder="Optional" />
             </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label>Starts on</Label>
+                <Input type="date" value={form.starts_on} onChange={e => setForm(f => ({ ...f, starts_on: e.target.value }))} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Ends on</Label>
+                <Input type="date" value={form.ends_on} onChange={e => setForm(f => ({ ...f, ends_on: e.target.value }))} />
+              </div>
+            </div>
             <div className="space-y-1.5">
               <Label>Aggregate Pass Mark (%)</Label>
               <Input type="number" min="0" max="100" value={form.pass_mark_percentage} onChange={e => setForm(f => ({ ...f, pass_mark_percentage: e.target.value }))} className="w-28" />
             </div>
+            <div className="flex items-center justify-between rounded-lg border border-border p-3">
+              <div className="pr-3">
+                <Label className="text-sm">Auto-open exams while active</Label>
+                <p className="text-[11px] text-muted-foreground">Members registered to this session can take included course exams without per-course toggle.</p>
+              </div>
+              <Switch checked={form.auto_open_exams} onCheckedChange={v => setForm(f => ({ ...f, auto_open_exams: v }))} />
+            </div>
+            <div className="flex items-center justify-between rounded-lg border border-border p-3">
+              <div className="pr-3">
+                <Label className="text-sm">Allow re-registration</Label>
+                <p className="text-[11px] text-muted-foreground">Members who took the course in a previous session may register again.</p>
+              </div>
+              <Switch checked={form.allow_reregistration} onCheckedChange={v => setForm(f => ({ ...f, allow_reregistration: v }))} />
+            </div>
             <div className="space-y-2">
               <Label>Course Exams *</Label>
-              <p className="text-xs text-muted-foreground">Select which exams members must take in this session.</p>
+              <p className="text-xs text-muted-foreground">{editingActive ? "Course list is locked while session is active." : "Select which exams members must take in this session."}</p>
               <div className="space-y-2 max-h-48 overflow-y-auto">
                 {examTitles.map(t => (
-                  <label key={t.id} className="flex items-center gap-2 p-2 rounded-lg hover:bg-muted/50 cursor-pointer">
-                    <Checkbox checked={form.courses.includes(t.name)} onCheckedChange={() => toggleCourse(t.name)} />
+                  <label key={t.id} className={`flex items-center gap-2 p-2 rounded-lg ${editingActive ? "opacity-60" : "hover:bg-muted/50 cursor-pointer"}`}>
+                    <Checkbox checked={form.courses.includes(t.name)} onCheckedChange={() => !editingActive && toggleCourse(t.name)} disabled={editingActive} />
                     <span className="text-sm">{t.name}</span>
                     {t.description && <span className="text-xs text-muted-foreground">— {t.description}</span>}
                   </label>
@@ -328,6 +353,16 @@ export default function ExamSessionManager() {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Bulk Enrol */}
+      {enrolTarget && (
+        <SessionEnrolDialog
+          session={enrolTarget}
+          sessionCourses={sessionCourses.filter(c => c.session_id === enrolTarget.id)}
+          open={!!enrolTarget}
+          onOpenChange={(v) => !v && setEnrolTarget(null)}
+        />
+      )}
 
       {/* Delete Confirmation */}
       <AlertDialog open={!!deleteTarget} onOpenChange={(v) => !v && setDeleteTarget(null)}>
