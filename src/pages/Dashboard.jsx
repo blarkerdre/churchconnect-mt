@@ -88,6 +88,29 @@ export default function Dashboard() {
     enabled: isLeaderOrAdmin && !!tenantId,
   });
 
+  const { data: followupCounts = { pending: 0, overdue: 0 } } = useQuery({
+    queryKey: ["dashboard-followup-counts", tenantId],
+    queryFn: async () => {
+      const today = new Date().toISOString().split("T")[0];
+      const [pendingRes, overdueRes] = await Promise.all([
+        scopeQuery(
+          supabase.from("followups").select("*", { count: "exact", head: true })
+            .in("status", ["Pending", "In Progress"])
+            .not("member_id", "is", null)
+        ),
+        scopeQuery(
+          supabase.from("followups").select("*", { count: "exact", head: true })
+            .in("status", ["Pending", "In Progress"])
+            .not("member_id", "is", null)
+            .not("due_date", "is", null)
+            .lt("due_date", today)
+        ),
+      ]);
+      return { pending: pendingRes.count || 0, overdue: overdueRes.count || 0 };
+    },
+    enabled: isLeaderOrAdmin && !!tenantId,
+  });
+
   const { data: upcomingBirthdays = [] } = useQuery({
     queryKey: ["dashboard-upcoming-birthdays", tenantId],
     queryFn: async () => {
@@ -126,7 +149,7 @@ export default function Dashboard() {
   const stats = [
     { title: "Total Members", value: total, change: `${activeCount} active · +${newThisMonth} this month`, icon: Users, color: "text-primary" },
     { title: "Upcoming Events", value: events.length, change: events[0] ? `Next: ${events[0].title}` : "No upcoming events", icon: CalendarDays, color: "text-accent" },
-    { title: "First Timers", value: firstTimers, change: "Awaiting follow-up", icon: UserPlus, color: "text-chart-3" },
+    { title: "Awaiting Follow-up", value: followupCounts.pending, change: `${firstTimers} first timers · ${followupCounts.overdue} overdue`, icon: UserPlus, color: "text-chart-3" },
     { title: "Pastoral Cases", value: openPastoral, change: `${pastoralCases.filter(c => c.status === "Open").length} open`, icon: Heart, color: "text-chart-5" },
   ];
 
