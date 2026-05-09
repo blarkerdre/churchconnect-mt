@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from "@/components/ui/select";
-import { Plus, Edit, Trash2, Loader2, FileText } from "lucide-react";
+import { Plus, Edit, Trash2, Loader2, FileText, Home, CheckCircle2, AlertCircle, TrendingUp } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -117,6 +117,30 @@ export default function WSFAttendanceTab({ centres }) {
     (!dateTo || r.meeting_date <= dateTo)
   );
 
+  // Admin summary stats (respects centre + date filters)
+  const summaryStats = (() => {
+    const centresInScope = filterCentreId === "all" ? availableCentres.length : 1;
+    const held = filteredReports.length;
+    const totalAttendance = filteredReports.reduce((sum, r) => sum + r.male + r.female + r.children, 0);
+    const avgAttendance = held > 0 ? Math.round(totalAttendance / held) : 0;
+
+    let weeks = 0;
+    let hasRange = false;
+    if (dateFrom && dateTo) {
+      const days = Math.floor((new Date(dateTo) - new Date(dateFrom)) / 86400000) + 1;
+      weeks = Math.max(1, Math.ceil(days / 7));
+      hasRange = true;
+    } else if (filteredReports.length > 0) {
+      const dates = filteredReports.map(r => new Date(r.meeting_date).getTime());
+      const days = Math.floor((Math.max(...dates) - Math.min(...dates)) / 86400000) + 1;
+      weeks = Math.max(1, Math.ceil(days / 7));
+    }
+    const expected = weeks * centresInScope;
+    const notHeld = weeks > 0 ? Math.max(0, expected - held) : null;
+
+    return { centresInScope, held, notHeld, avgAttendance, hasRange };
+  })();
+
   const buildPrintRows = () => ({
     title: "Home Cell Attendance Report",
     headers: ["Date", "Centre", "Male", "Female", "Adults", "Children", "Total", "1st Timers", "Testimonies"],
@@ -210,6 +234,33 @@ export default function WSFAttendanceTab({ centres }) {
           <Plus className="h-5 w-5 mr-2" /> Record Attendance
         </Button>
       </div>
+
+      {isAdmin && (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {[
+            { title: "Cell Centres", value: summaryStats.centresInScope, sub: filterCentreId === "all" ? "All centres" : "Filtered", icon: Home, color: "text-primary" },
+            { title: "Meetings Held", value: summaryStats.held, sub: `${filteredReports.length} report${filteredReports.length === 1 ? "" : "s"}`, icon: CheckCircle2, color: "text-accent" },
+            { title: "Meetings Not Held", value: summaryStats.notHeld ?? "—", sub: summaryStats.hasRange ? "Weekly cadence" : (summaryStats.notHeld === null ? "Set a date range" : "Estimated from reports"), icon: AlertCircle, color: "text-destructive" },
+            { title: "Avg Attendance", value: summaryStats.avgAttendance, sub: "Per meeting", icon: TrendingUp, color: "text-chart-3" },
+          ].map(stat => (
+            <Card key={stat.title} className="border-0 shadow-sm">
+              <CardContent className="p-4">
+                <div className="flex items-start justify-between">
+                  <div className="min-w-0">
+                    <p className="text-xs font-medium text-muted-foreground truncate">{stat.title}</p>
+                    <p className="text-2xl font-display font-bold text-foreground mt-1">{stat.value}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5 truncate">{stat.sub}</p>
+                  </div>
+                  <div className={`h-9 w-9 rounded-xl bg-muted flex items-center justify-center ${stat.color} shrink-0`}>
+                    <stat.icon className="h-4 w-4" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
 
       {isLoading ? (
         <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>
