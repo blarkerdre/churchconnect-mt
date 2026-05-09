@@ -2,6 +2,17 @@ import { createContext, useContext, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 const noop = async () => ({ data: null, error: new Error("Auth not initialized") });
+const SESSION_RESTORE_TIMEOUT_MS = 6000;
+
+const withTimeout = (promise, timeoutMs, message) => {
+  let timeoutId;
+  const timeout = new Promise((_, reject) => {
+    timeoutId = setTimeout(() => reject(new Error(message)), timeoutMs);
+  });
+
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timeoutId));
+};
+
 const AuthContext = createContext({
   user: null, profile: null, roles: [], loading: true, leaderUnits: [], leaderCentres: [], myMember: null,
   tenantMemberships: [],
@@ -43,16 +54,33 @@ export function AuthProvider({ children }) {
       }
     );
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
-      setLoading(false);
-      if (session?.user) {
-        setDataLoaded(false);
-        fetchUserData(session.user.id, session.user.email);
-      } else {
+    withTimeout(
+      supabase.auth.getSession(),
+      SESSION_RESTORE_TIMEOUT_MS,
+      "Session restore timed out"
+    )
+      .then(({ data: { session } }) => {
+        setUser(session?.user ?? null);
+        setLoading(false);
+        if (session?.user) {
+          setDataLoaded(false);
+          fetchUserData(session.user.id, session.user.email);
+        } else {
+          setDataLoaded(true);
+        }
+      })
+      .catch((err) => {
+        console.warn("Unable to restore auth session:", err?.message || err);
+        setUser(null);
+        setProfile(null);
+        setRoles([]);
+        setLeaderUnits([]);
+        setMyMember(null);
+        setLeaderCentres([]);
+        setTenantMemberships([]);
+        setLoading(false);
         setDataLoaded(true);
-      }
-    });
+      });
 
     return () => subscription.unsubscribe();
   }, []);
