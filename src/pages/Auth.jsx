@@ -15,6 +15,12 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Info } from "lucide-react";
 
 export default function Auth() {
+  // Prefetch the Dashboard chunk while the user types credentials so the
+  // post-login navigation feels instant.
+  useEffect(() => {
+    import("@/pages/Dashboard").catch(() => {});
+  }, []);
+
   const { user, loading, signIn, signUp, resetPassword } = useAuth();
   const { toast } = useToast();
   const { tenantSlug } = useParams();
