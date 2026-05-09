@@ -1,26 +1,28 @@
-## Problem
+## Goal
+Let an admin create one attendance session that **every member in the tenant** can self-check-in to today (e.g. Sunday Service).
 
-When an admin creates an attendance session (e.g. Sunday Service, Home Cell Meeting, or a Unit Meeting), members don't see it on their dashboard. The "Today's Attendance" widget on the member dashboard only surfaces **Unit Meetings whose `unit` matches one of the member's `church_unit` values**. Everything else — Sunday Service, Bible School, Home Cell, Special Service, Other — is silently filtered out, so members think nothing was created.
+## Current state
+- `SelfCheckInWidget` already shows a "Check In" button to every member for any session **without a `unit`** dated today (Sunday Service, Midweek Service, Special Event, Prayer Meeting).
+- `SessionFormDialog` already supports those types — but the audience behaviour is implicit, so admins can't tell who will see the session.
 
-RLS already allows any authenticated tenant member to `SELECT` from `attendance_sessions`, so this is purely a UI-eligibility bug in `SelfCheckInWidget.jsx`.
+## What changes
+Make the audience choice **explicit and obvious** in `SessionFormDialog`, without changing the data model.
 
-## Fix
+1. **Add an "Audience" section** to `SessionFormDialog` with two options:
+   - **All members** (default) — clears `unit`/centre, session shows for every tenant member.
+   - **Specific unit / Home Cell** — only shown when the type is *Unit Meeting* or *Home Cell Meeting*.
+2. **Add the missing session types** so the form matches what the widget understands:
+   - Add `Special Service`, `Bible School`, `Home Cell Meeting`, `Other` to `SESSION_TYPES`.
+3. **Show a live audience badge** under the Audience picker, e.g.
+   - "Visible to all members in this church" or
+   - "Visible to members of *Choir* unit" / "Visible to members of *Cardiff Central* Home Cell".
+4. **Empty-state copy** in `SessionFormDialog` when admin picks Home Cell Meeting but no centres exist — link to settings.
+5. **No DB / RLS changes.** The widget logic already covers this case correctly.
 
-Broaden eligibility in `src/components/attendance/SelfCheckInWidget.jsx` so members see every session created for today that is relevant to them:
-
-1. **Sunday Service / Special Service / Bible School / Other (no `unit` set)** → visible to every member of the tenant.
-2. **Unit Meeting** → visible only to members whose `church_unit` includes the session's `unit` (current behaviour).
-3. **Home Cell Meeting** → visible to members assigned to that Home Cell centre. Look up the member's centre membership via `wsf_centre_members` (the existing Home Cell member table) and match against `session.unit` (which stores the centre name) case-insensitively.
-4. Keep the unit/centre filter dropdown, but build it from the new wider eligible set.
-5. Empty state: instead of `return null` when there are no eligible sessions, render a small "No meetings open for check-in today" message inside the card so members know the widget is working.
-
-No DB or RLS changes needed. Behaviour for admin-side check-in (`CheckInPanel`) and `MyProfile → Recent Attendance` is unchanged.
-
-## Files to touch
-
-- `src/components/attendance/SelfCheckInWidget.jsx` — add Home Cell membership query, broaden `eligibleSessions` filter, add empty-state message.
+## Files touched
+- `src/components/attendance/SessionFormDialog.jsx` — audience UI, expanded types, helper text.
 
 ## Out of scope
-
-- Changing RLS, session creation flow, or admin check-in panel.
-- Adding push/email notifications when a session opens (separate request).
+- Bulk "mark all present" on an existing session.
+- Recurring/auto-generated sessions.
+- Notifications when a session opens (separate request).
