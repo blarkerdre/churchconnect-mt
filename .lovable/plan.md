@@ -1,77 +1,61 @@
-## Problem
+## What the profiler shows
 
-The "Check In failed" toast appears because the RLS policy `Members can self check-in` calls `member_eligible_for_session(...)`, and that function **only returns true for Unit Meetings**. Any general session (Sunday Service, Special Service, Bible School, Prayer Meeting, Other) or Home Cell Meeting is rejected by RLS even though the UI offers a Check In button.
+On `/` (LandingPage) in the preview:
 
-Current `member_eligible_for_session`:
-```
-WHERE s.session_type = 'Unit Meeting'
-  AND s.unit IS NOT NULL
-  AND lower(btrim(u)) = lower(btrim(s.unit))
-```
+- **First Contentful Paint: 8.5s**, DOMContentLoaded: 8.4s
+- **TTFB: 970ms** (network OK)
+- **95 script requests, ~1MB total** — Vite dev server is serving each dependency individually
+- Slowest deps: `lucide-react` (1.8s, 166KB), shadcn chunk (1.7s, 140KB), `@supabase/supabase-js` (1.3s), `react-router-dom` (1.3s)
+- JS heap only 9MB, DOM 285 nodes — runtime is fine, **the bottleneck is module loading on first paint**
 
-This contradicts the new audience model in `SelfCheckInWidget` and `SessionFormDialog`, where a session with no `unit` should be visible to all members.
+Routing is already lazy-loaded, so the issue is what's eagerly imported by `main.jsx` / `App.jsx` / `LandingPage.jsx` before first paint.
 
-## Fix
+## Important context
 
-Update the `member_eligible_for_session` SECURITY DEFINER function so a member is eligible when **any** of these is true:
+The preview runs the **Vite dev server** (unbundled ES modules, no minification, cold cache). This is dramatically slower than the published build.
 
-1. **General session** — `s.unit IS NULL` and the member belongs to the same tenant as the session.
-2. **Unit Meeting** — `s.session_type = 'Unit Meeting'`, `s.unit` set, and the unit appears in the member's `church_unit` CSV (case/whitespace-insensitive — current logic).
-3. **Home Cell Meeting** — `s.session_type = 'Home Cell Meeting'`, `s.unit` set, and the member's `wsf_centre_id` resolves to a `wsf_centres.name` matching `s.unit` (case-insensitive). Also accept members in the same tenant where the centre name matches the unit string, in case the member is linked by name only.
+**Step 1 — confirm it's a real problem, not just dev preview overhead:**
+Open the **published URL** (`https://app.churchmanagementsuite.org/`). If it loads in 1–2s there, no code change is needed — the dev preview is just slow by nature. If it's still slow on production, proceed with the optimizations below.
 
-All three branches must enforce `m.tenant_id = s.tenant_id` to keep tenant isolation strict.
+## If production is also slow — proposed optimizations
 
-## Implementation
+### A. Trim what loads before first paint (biggest win)
 
-Single migration that replaces the function:
+`App.jsx` eagerly imports `LandingPage`, `Auth`, `useUnitMembership`, `AuthProvider`, `TenantProvider`, `TenantThemeProvider`, `AppLayout`. The landing page only needs `LandingPage`.
 
-```sql
-CREATE OR REPLACE FUNCTION public.member_eligible_for_session(_member_id uuid, _session_id uuid)
-RETURNS boolean
-LANGUAGE sql
-STABLE SECURITY DEFINER
-SET search_path TO 'public'
-AS $$
-  SELECT EXISTS (
-    SELECT 1
-    FROM public.attendance_sessions s
-    JOIN public.members m
-      ON m.id = _member_id
-     AND m.tenant_id = s.tenant_id
-    LEFT JOIN public.wsf_centres c
-      ON c.id = m.wsf_centre_id
-    WHERE s.id = _session_id
-      AND (
-        -- 1. General session: visible to all tenant members
-        s.unit IS NULL
-        -- 2. Unit Meeting matching one of the member's units
-        OR (
-          s.session_type = 'Unit Meeting'
-          AND s.unit IS NOT NULL
-          AND EXISTS (
-            SELECT 1
-            FROM unnest(string_to_array(coalesce(m.church_unit, ''), ',')) AS u
-            WHERE lower(btrim(u)) = lower(btrim(s.unit))
-          )
-        )
-        -- 3. Home Cell Meeting matching the member's assigned centre
-        OR (
-          s.session_type = 'Home Cell Meeting'
-          AND s.unit IS NOT NULL
-          AND lower(btrim(c.name)) = lower(btrim(s.unit))
-        )
-      )
-  );
-$$;
-```
+- Lazy-load `Auth` and `AppLayout` (only needed after login)
+- Keep `LandingPage` eager (it's the LCP for `/`)
+- Audit `LandingPage.jsx` for heavy imports (icons, images, framer-motion). Replace barrel imports with named imports where possible.
 
-No code changes required — the widget and dialog are already aligned. After this migration, members can self check-in to:
+### B. Reduce `lucide-react` cost
 
-- Any general/all-members session (Sunday Service, Special Service, Bible School, Prayer Meeting, Special Event, Other)
-- Unit Meetings for units they belong to
-- Home Cell Meetings for the centre they're assigned to
+`lucide-react` is the single largest module (166KB). Vite already tree-shakes named imports in production, but if any file does `import * as Icons from "lucide-react"` it pulls everything. Audit and fix.
 
-## Files
+### C. Preload critical chunks
 
-- New migration replacing `public.member_eligible_for_session`
-- No frontend changes
+Add `<link rel="modulepreload">` hints in `index.html` for the React + Supabase chunks so the browser fetches them in parallel with the HTML parse.
+
+### D. Image / font optimization on LandingPage
+
+- Ensure hero images use `loading="eager"` + `fetchpriority="high"` and are properly sized (WebP, responsive `srcset`)
+- Verify Google Fonts use `display=swap` (already in core memory) and only the weights actually used
+
+### E. Code-split `LandingPage` sub-sections
+
+If `LandingPage.jsx` is large, split below-the-fold sections into lazy chunks so the hero paints first.
+
+## Out of scope
+
+- Backend/database performance (no slow queries reported; this is a frontend cold-start issue)
+- Upgrading Lovable Cloud compute (won't help frontend asset loading)
+
+## Files I'd touch (after confirming prod is slow)
+
+- `src/App.jsx` — lazy-load `Auth` + `AppLayout`
+- `src/pages/LandingPage.jsx` — audit imports, split below-the-fold
+- `index.html` — modulepreload hints
+- Any file with `import * as ... from "lucide-react"` — convert to named imports
+
+## Recommended next step
+
+Reload the **published URL** and tell me the load time you see there. That decides whether we ship optimizations or whether the dev preview was just being a dev preview.
