@@ -1,42 +1,75 @@
 ## Problem
 
-On a follow-up's **Reassign** dropdown (FollowupDetailPanel), the list includes people who are not on the Follow-up team — e.g. any admin/owner, any unit leader of any unit, any WSF (Home Cell) leader. That's why the names look wrong.
+Favour Igbineweka is a member of the **Follow-Up** church unit (so the app correctly shows her the *Refer to Leader* button on First Timer / New Convert / Visitor follow-ups), but when she actually tries to sign-post:
 
-## Root cause
+- **Unit Leader path** — after she picks a church unit, the "Leader to assign" dropdown shows *"No leaders assigned"* even though leaders exist.
+- **Home Cell path** — after she picks a centre, she gets *"Centre leader is not linked to a user account"* and the submit is blocked.
 
-In `src/pages/Followups.jsx` (the `followup-reassign-candidates` query, lines ~58–98), the candidate set is the **union** of four queries:
+So the dialog opens, but every selection dead-ends.
 
-1. Leaders of the Follow-up unit (`unit_leader_assignments` where `unit_name ilike '%follow%'`) ✅ correct
-2. Members whose `church_unit` includes "follow-up" / "follow up" ✅ correct
-3. **Anyone with role `admin`, `unit_leader`, or `wsf_leader`** in `user_roles` ❌ too broad — this is what's polluting the list (every unit leader and Home Cell leader gets added, regardless of unit)
-4. **Anyone with tenant role `owner` or `admin`** in `tenant_members` ❌ also too broad — every tenant admin appears
+## Root cause (database RLS)
 
-The comment said this was a "graceful fallback so admins always see something", but in practice it makes the list look incorrect.
+The SignPost dialog (`src/components/followups/SignPostDialog.jsx`) makes two lookups that hit RLS that doesn't include Follow-up team members:
 
-## Fix
+1. **`unit_leader_assignments` SELECT** — current policies:
+   - `Admins can manage unit leader assignments` (admins only)
+   - `Users can view own assignments` (`auth.uid() = user_id`)
+   
+   So Favour can only see *her own* assignment row. The unit-leader dropdown query returns an empty list for any unit other than ones she leads → "No leaders assigned".
 
-Edit `src/pages/Followups.jsx` only.
+2. **`members` SELECT for centre leader** — the dialog reads `members.user_id` for `centre.leader_id`. None of the existing `members` SELECT policies match a Follow-up team member looking up an arbitrary centre leader, so the row returns `null` → "Centre leader is not linked to a user account".
 
-Tighten the `followup-reassign-candidates` query to return **only true Follow-up team members**:
+(The `followup_referrals` INSERT policy itself is fine — `is_followup_team_member` already covers Favour.)
 
-- Keep query 1: Follow-up unit leaders (`unit_leader_assignments` ilike `%follow%`).
-- Keep query 2: Members in the Follow-up church unit.
-- **Remove query 3** (broad `user_roles` lookup).
-- **Remove query 4** (broad `tenant_members` admin/owner lookup).
+## Fix — database migration only
 
-Result: the dropdown only shows users who actually belong to the Follow-up team (leader assignment or `church_unit` contains "Follow-up"), minus the currently-assigned person.
+Add two narrowly-scoped SELECT policies. No code changes.
 
-The existing empty-state message already reads: *"No other team members available. Add users to the Follow-up unit in User Management."* — which now correctly guides the admin if the team is empty.
+### Migration
+
+```sql
+-- Allow Follow-up team to see all unit leader assignments in their tenant,
+-- so they can pick a leader to sign-post to.
+CREATE POLICY "Followup team can view unit leader assignments"
+ON public.unit_leader_assignments
+FOR SELECT
+TO authenticated
+USING (
+  user_has_tenant_access(tenant_id)
+  AND is_followup_team_member(auth.uid(), tenant_id)
+);
+
+-- Allow Follow-up team to see ONLY members who are designated home-cell centre
+-- leaders (not the whole directory), so the centre-leader lookup works.
+CREATE POLICY "Followup team can view centre leader members"
+ON public.members
+FOR SELECT
+TO authenticated
+USING (
+  user_has_tenant_access(tenant_id)
+  AND is_followup_team_member(auth.uid(), tenant_id)
+  AND EXISTS (
+    SELECT 1 FROM public.wsf_centres c
+    WHERE c.tenant_id = members.tenant_id
+      AND c.leader_id = members.id
+  )
+);
+```
+
+Both policies are additive (RLS is permissive), so existing access is unchanged. The `members` policy is intentionally narrow — it exposes only members who are listed as a centre leader, not the rest of the directory.
 
 ## Out of scope
 
-- Reassign UI/permissions in `FollowupDetailPanel.jsx` (unchanged).
-- The `assigned_to` picker in `FollowupFormDialog.jsx` (already uses Follow-up unit members only).
-- Adding a separate "include admins" toggle (can be added later if requested).
+- No changes to `SignPostDialog.jsx`, `FollowupDetailPanel.jsx`, or `Followups.jsx`.
+- No change to who can see the **Refer to Leader** button (already correct).
+- No change to `followup_referrals` policies.
+- The broader question of "should every Follow-up team member also see all unit-leader contact info elsewhere in the app?" — left as-is.
 
 ## Verification
 
-- Open a follow-up as admin → click **Reassign** → dropdown lists only Follow-up unit leaders + members of the Follow-up church unit, excluding the current assignee.
-- A unit leader for a non-Follow-up unit (e.g. Choir) no longer appears.
-- A tenant admin who is not on the Follow-up team no longer appears.
-- If the Follow-up team is empty, the existing italic empty-state message shows.
+Sign in as Favour:
+
+1. Open a First Timer follow-up → click **Refer to Leader**.
+2. **Unit Leader** tab → pick any unit → "Leader to assign" lists real leaders (not empty).
+3. **Home Cell** tab → centre auto-suggested → submit → toast "Sign-posted", referral row inserted, leader notified.
+4. Repeat as a normal `member` (not Follow-up unit) → still gets the existing empty-state messages (policies require `is_followup_team_member`).
