@@ -1002,8 +1002,16 @@ function DynamicExamButtons({ memberId, onSelect, tenantId }) {
 
   if (isLoading || courses.length === 0) return null;
 
-  // Only show registered courses with exams_open
-  const registeredCourses = courses.filter(c => registrations.includes(c.id) && c.exams_open);
+  // Show courses where: (a) registered AND course.exams_open, OR
+  // (b) registered via an active session that has auto_open_exams=true
+  const autoOpenSessionIds = new Set(openSessions.filter(s => s.auto_open_exams !== false).map(s => s.id));
+  const registeredCourseIds = new Set(registrations.map(r => r.course_id));
+  const registeredViaOpenSession = new Set(
+    registrations.filter(r => r.session_id && autoOpenSessionIds.has(r.session_id)).map(r => r.course_id)
+  );
+  const registeredCourses = courses.filter(c =>
+    registeredCourseIds.has(c.id) && (c.exams_open || registeredViaOpenSession.has(c.id))
+  );
   if (registeredCourses.length === 0) return null;
 
   // Build best attempt per subject
