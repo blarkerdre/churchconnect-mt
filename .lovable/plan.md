@@ -1,21 +1,39 @@
-## Problem
+## Why Ejiama and Silver showed up in Demo Church
 
-The Growth Milestones tile shows blank/zero values (Water Baptism, Holy Spirit Baptism, BFC, Home Cell). Root cause: the previous migration calls `public.user_has_tenant_access(auth.uid(), _tenant_id)` with two arguments, but in this database that function only accepts a single `_tenant_id` argument. The RPC throws `function user_has_tenant_access(uuid, uuid) does not exist`, so the dashboard query fails silently and `dashStats` stays empty — every milestone resolves to `0 / activeCount (0%)`.
+Both members exist twice in the database — once in **Demo Church (TEST)** with no `user_id`, and once in **Winners Chapel International, Cardiff** a few minutes later with a real `user_id`. The wci-cardiff rows are their real signups.
+
+Root cause: the public registration flow silently defaults to demo-test whenever it can't resolve a tenant.
+
+- **Backend** (`supabase/functions/public-register/index.ts`, line ~304): hardcoded `DEFAULT_TENANT_ID = "d8bbbdae…884b0"` (demo-test). Any submission without `tenant_id` or `tenant_slug` is dropped into demo-test.
+- **Frontend** (`src/pages/PublicRegistration.jsx`, lines 53 & 143): mirrors the same `DEFAULT_TENANT_ID` constant and explicitly sends `tenant_id: resolvedTenantId || DEFAULT_TENANT_ID`.
+
+So whoever shared a registration link with these two used a URL where the tenant slug wasn't in the path — the form went through, defaulted to demo-test, and created the orphan records you're seeing now. They later registered properly under wci-cardiff. This also contradicts the project's own Signup Restriction rule (block signups lacking valid tenant resolution).
 
 ## Fix
 
-Recreate `public.get_dashboard_stats(_tenant_id uuid)` with the correct single-argument access check, keeping the Active-only milestone filters from the prior fix.
+### 1. Clean up the orphan rows
 
-### Technical detail
+Delete the two unlinked demo-test member records:
 
-```sql
-IF NOT public.user_has_tenant_access(_tenant_id) THEN
-  RAISE EXCEPTION 'access denied for tenant %', _tenant_id;
-END IF;
-```
+- `id = d458dec2-fed4-4517-a4b9-5e498438de7c` (Ejiama, demo-test, no user_id)
+- `id = 2074b780-2fdc-4a2b-b6de-e38b308f3d5f` (Silver, demo-test, no user_id)
 
-Everything else (Active-only `FILTER` clauses for water_baptism, hs_baptism, bfc_completed, winners_satellite) stays as-is. No frontend changes.
+The wci-cardiff records stay untouched.
+
+### 2. Remove the demo-test default from public registration
+
+**Backend** (`supabase/functions/public-register/index.ts`):
+- Remove the `DEFAULT_TENANT_ID` constant and the "always fall back" block.
+- If neither `tenant_id` nor a valid `tenant_slug` resolves, return **400 Bad Request** with `{ error: "Missing tenant context" }` instead of silently writing to demo-test.
+
+**Frontend** (`src/pages/PublicRegistration.jsx`):
+- Remove the `DEFAULT_TENANT_ID` constant and the `|| DEFAULT_TENANT_ID` fallbacks (lines 53 & 143).
+- If `tenantSlug` is missing **and** `resolvedTenantId` cannot be resolved, render an inline error ("This registration link is invalid — please ask your church for the correct link") and disable submit. Already-correct paths like `/t/:tenantSlug/register` are unaffected.
+
+No other files need changes — `/register` (no slug) is already routed through `DefaultTenantRedirect` in `App.jsx`, which sends users to a tenant-prefixed URL when a default exists.
 
 ## Validation
 
-After migration, calling `get_dashboard_stats` for wci-cardiff returns non-zero milestone counts, and the Dashboard renders proper percentages against the Active denominator.
+- After cleanup, `/t/demo-test` member list no longer shows Ejiama or Silver.
+- Submitting the registration form on a URL without tenant context returns a clear error instead of polluting demo-test.
+- wci-cardiff member counts and dashboard stats are unchanged.

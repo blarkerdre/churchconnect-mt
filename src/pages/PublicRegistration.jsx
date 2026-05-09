@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 
-const DEFAULT_TENANT_ID = "95e53cc3-4569-4dd3-a4ad-3489593dce81";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -50,7 +49,8 @@ export default function PublicRegistration() {
   const [saving, setSaving] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [wsfCentres, setWsfCentres] = useState([]);
-  const [resolvedTenantId, setResolvedTenantId] = useState(tenantSlug ? null : DEFAULT_TENANT_ID);
+  const [resolvedTenantId, setResolvedTenantId] = useState(null);
+  const [tenantLookupDone, setTenantLookupDone] = useState(false);
   const [tenantName, setTenantName] = useState("");
 
   useEffect(() => {
@@ -60,7 +60,10 @@ export default function PublicRegistration() {
           const row = Array.isArray(data) ? data[0] : data;
           if (row?.id) setResolvedTenantId(row.id);
           if (row?.name) setTenantName(row.name);
+          setTenantLookupDone(true);
         });
+    } else {
+      setTenantLookupDone(true);
     }
   }, [tenantSlug]);
 
@@ -92,6 +95,10 @@ export default function PublicRegistration() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!resolvedTenantId) {
+      toast({ title: "Invalid registration link", description: "Please ask your church for the correct registration link.", variant: "destructive" });
+      return;
+    }
     if (!form.first_name || !form.last_name) {
       toast({ title: "First and last name are required", variant: "destructive" });
       return;
@@ -140,7 +147,7 @@ export default function PublicRegistration() {
             baptized_by_immersion: form.baptized_by_immersion,
             preferred_contact_modes: form.preferred_contact_modes || null,
           } : {}),
-          tenant_id: resolvedTenantId || DEFAULT_TENANT_ID,
+          ...(resolvedTenantId ? { tenant_id: resolvedTenantId } : {}),
           ...(tenantSlug ? { tenant_slug: tenantSlug } : {}),
         },
       });

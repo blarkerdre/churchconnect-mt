@@ -301,10 +301,12 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Always fall back to DEFAULT_TENANT_ID so every registration is tenant-scoped
-    const DEFAULT_TENANT_ID = "d8bbbdae-d9b3-4999-912d-3aa5999884b0";
+    // Reject registrations that cannot be scoped to a real tenant — never silently default.
     if (!resolvedTenantId) {
-      resolvedTenantId = DEFAULT_TENANT_ID;
+      return new Response(
+        JSON.stringify({ error: "Missing tenant context. This registration link is invalid." }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
     }
 
     const tenantId = resolvedTenantId;
