@@ -2793,7 +2793,7 @@ export type Database = {
           recipient_member_id: string | null
           recipient_phone: string
           reference_id: string | null
-          sender_id: string
+          sender_id: string | null
           sms_type: string
           status: string
           tenant_id: string | null
@@ -2810,7 +2810,7 @@ export type Database = {
           recipient_member_id?: string | null
           recipient_phone: string
           reference_id?: string | null
-          sender_id: string
+          sender_id?: string | null
           sms_type?: string
           status?: string
           tenant_id?: string | null
@@ -2827,7 +2827,7 @@ export type Database = {
           recipient_member_id?: string | null
           recipient_phone?: string
           reference_id?: string | null
-          sender_id?: string
+          sender_id?: string | null
           sms_type?: string
           status?: string
           tenant_id?: string | null
