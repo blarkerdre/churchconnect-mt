@@ -235,6 +235,33 @@ export default function WSFAttendanceTab({ centres }) {
         </Button>
       </div>
 
+      {isAdmin && (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {[
+            { title: "Cell Centres", value: summaryStats.centresInScope, sub: filterCentreId === "all" ? "All centres" : "Filtered", icon: Home, color: "text-primary" },
+            { title: "Meetings Held", value: summaryStats.held, sub: `${filteredReports.length} report${filteredReports.length === 1 ? "" : "s"}`, icon: CheckCircle2, color: "text-accent" },
+            { title: "Meetings Not Held", value: summaryStats.notHeld ?? "—", sub: summaryStats.hasRange ? "Weekly cadence" : (summaryStats.notHeld === null ? "Set a date range" : "Estimated from reports"), icon: AlertCircle, color: "text-destructive" },
+            { title: "Avg Attendance", value: summaryStats.avgAttendance, sub: "Per meeting", icon: TrendingUp, color: "text-chart-3" },
+          ].map(stat => (
+            <Card key={stat.title} className="border-0 shadow-sm">
+              <CardContent className="p-4">
+                <div className="flex items-start justify-between">
+                  <div className="min-w-0">
+                    <p className="text-xs font-medium text-muted-foreground truncate">{stat.title}</p>
+                    <p className="text-2xl font-display font-bold text-foreground mt-1">{stat.value}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5 truncate">{stat.sub}</p>
+                  </div>
+                  <div className={`h-9 w-9 rounded-xl bg-muted flex items-center justify-center ${stat.color} shrink-0`}>
+                    <stat.icon className="h-4 w-4" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
+
       {isLoading ? (
         <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>
       ) : filteredReports.length === 0 ? (
