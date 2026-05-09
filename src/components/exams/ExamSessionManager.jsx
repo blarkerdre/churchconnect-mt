@@ -14,7 +14,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "@/components/ui/use-toast";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
-import { Loader2, Plus, Play, Square, Eye, Trash2, Edit, ClipboardList, Trophy, ChevronDown, ChevronUp } from "lucide-react";
+import { Loader2, Plus, Play, Square, Eye, Trash2, Edit, ClipboardList, Trophy, ChevronDown, ChevronUp, UserPlus, CalendarDays } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import SessionEnrolDialog from "@/components/exams/SessionEnrolDialog";
 
 const STATUS_COLORS = {
   draft: "bg-muted text-muted-foreground",
