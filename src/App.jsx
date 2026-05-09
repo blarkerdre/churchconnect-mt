@@ -2,41 +2,51 @@ import { Toaster } from "@/components/ui/toaster";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClientInstance } from "@/lib/query-client";
 import { BrowserRouter as Router, Route, Routes, Navigate, useParams, useLocation } from "react-router-dom";
+import { lazy, Suspense } from "react";
 import { useUnitMembership } from "@/hooks/useUnitMembership";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import { TenantProvider } from "@/contexts/TenantContext";
 import TenantThemeProvider from "@/components/tenants/TenantThemeProvider";
 import { useTenant } from "@/contexts/TenantContext";
 import Layout from "@/components/AppLayout";
-import Dashboard from "@/pages/Dashboard";
-import Members from "@/pages/Members";
-import Events from "@/pages/Events";
-import Attendance from "@/pages/Attendance";
-import Followups from "@/pages/Followups";
-import PastoralCare from "@/pages/PastoralCare";
-import Communications from "@/pages/Communications";
-import Transportation from "@/pages/Transportation";
-import Analytics from "@/pages/Analytics";
-import WSFManagement from "@/pages/WSFManagement";
-import UserManagement from "@/pages/UserManagement";
-import SystemLogs from "@/pages/SystemLogs";
-import TrainingReports from "@/pages/TrainingReports";
-import ExamManagement from "@/pages/ExamManagement";
-import ChurchAttendance from "@/pages/ChurchAttendance";
-import Settings from "@/pages/Settings";
 import Auth from "@/pages/Auth";
-import ResetPassword from "@/pages/ResetPassword";
-import MyProfile from "@/pages/MyProfile";
-import PublicRegistration from "@/pages/PublicRegistration";
-import PublicWoFBIRegistration from "@/pages/PublicWoFBIRegistration";
-import Onboard from "@/pages/Onboard";
-import TenantAdmin from "@/pages/TenantAdmin";
-import Presentation from "@/pages/Presentation";
-import SermonNotes from "@/pages/SermonNotes";
-import Testimony from "@/pages/Testimony";
-import Unsubscribe from "@/pages/Unsubscribe";
 import LandingPage from "@/pages/LandingPage";
 
+// Lazy-loaded pages — keeps initial bundle small
+const Dashboard = lazy(() => import("@/pages/Dashboard"));
+const Members = lazy(() => import("@/pages/Members"));
+const Events = lazy(() => import("@/pages/Events"));
+const Attendance = lazy(() => import("@/pages/Attendance"));
+const Followups = lazy(() => import("@/pages/Followups"));
+const PastoralCare = lazy(() => import("@/pages/PastoralCare"));
+const Communications = lazy(() => import("@/pages/Communications"));
+const Transportation = lazy(() => import("@/pages/Transportation"));
+const Analytics = lazy(() => import("@/pages/Analytics"));
+const WSFManagement = lazy(() => import("@/pages/WSFManagement"));
+const UserManagement = lazy(() => import("@/pages/UserManagement"));
+const SystemLogs = lazy(() => import("@/pages/SystemLogs"));
+const TrainingReports = lazy(() => import("@/pages/TrainingReports"));
+const ExamManagement = lazy(() => import("@/pages/ExamManagement"));
+const ChurchAttendance = lazy(() => import("@/pages/ChurchAttendance"));
+const Settings = lazy(() => import("@/pages/Settings"));
+const ResetPassword = lazy(() => import("@/pages/ResetPassword"));
+const MyProfile = lazy(() => import("@/pages/MyProfile"));
+const PublicRegistration = lazy(() => import("@/pages/PublicRegistration"));
+const PublicWoFBIRegistration = lazy(() => import("@/pages/PublicWoFBIRegistration"));
+const Onboard = lazy(() => import("@/pages/Onboard"));
+const TenantAdmin = lazy(() => import("@/pages/TenantAdmin"));
+const Presentation = lazy(() => import("@/pages/Presentation"));
+const SermonNotes = lazy(() => import("@/pages/SermonNotes"));
+const Testimony = lazy(() => import("@/pages/Testimony"));
+const Unsubscribe = lazy(() => import("@/pages/Unsubscribe"));
+
+function PageFallback() {
+  return (
+    <div className="min-h-[40vh] flex items-center justify-center">
+      <div className="animate-pulse text-muted-foreground">Loading...</div>
+    </div>
+  );
+}
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
@@ -117,29 +127,31 @@ function FeatureGate({ path, children }) {
 /** Shared set of authenticated app routes — used both at root and under /t/:tenantSlug */
 function AppPages() {
   return (
-    <Routes>
-      <Route path="/" element={<Dashboard />} />
-      <Route path="/my-profile" element={<MyProfile />} />
-      <Route path="/members" element={<FeatureGate path="/members"><Members /></FeatureGate>} />
-      <Route path="/events" element={<FeatureGate path="/events"><Events /></FeatureGate>} />
-      <Route path="/attendance" element={<FeatureGate path="/attendance"><LeaderRoute><Attendance /></LeaderRoute></FeatureGate>} />
-      <Route path="/followups" element={<FeatureGate path="/followups"><FollowupRoute><Followups /></FollowupRoute></FeatureGate>} />
-      <Route path="/pastoral-care" element={<FeatureGate path="/pastoral-care"><PastoralCare /></FeatureGate>} />
-      <Route path="/communications" element={<FeatureGate path="/communications"><Communications /></FeatureGate>} />
-      <Route path="/transportation" element={<FeatureGate path="/transportation"><Transportation /></FeatureGate>} />
-      <Route path="/analytics" element={<FeatureGate path="/analytics"><AdminRoute><Analytics /></AdminRoute></FeatureGate>} />
-      <Route path="/training-reports" element={<FeatureGate path="/training-reports"><TrainingRoute><TrainingReports /></TrainingRoute></FeatureGate>} />
-      <Route path="/exam-management" element={<FeatureGate path="/exam-management"><ProtectedRoute><ExamManagement /></ProtectedRoute></FeatureGate>} />
-      <Route path="/church-attendance" element={<FeatureGate path="/church-attendance"><TrainingRoute><ChurchAttendance /></TrainingRoute></FeatureGate>} />
-      <Route path="/wsf" element={<FeatureGate path="/wsf"><WSFRoute><WSFManagement /></WSFRoute></FeatureGate>} />
-      <Route path="/user-management" element={<AdminRoute><UserManagement /></AdminRoute>} />
-      <Route path="/sermon-notes" element={<FeatureGate path="/sermon-notes"><SermonNotes /></FeatureGate>} />
-      <Route path="/testimony" element={<FeatureGate path="/testimony"><Testimony /></FeatureGate>} />
-      <Route path="/settings" element={<AdminRoute><Settings /></AdminRoute>} />
-      <Route path="/system-logs" element={<AdminRoute><SystemLogs /></AdminRoute>} />
-      <Route path="/tenant-admin" element={<SuperAdminRoute><TenantAdmin /></SuperAdminRoute>} />
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+    <Suspense fallback={<PageFallback />}>
+      <Routes>
+        <Route path="/" element={<Dashboard />} />
+        <Route path="/my-profile" element={<MyProfile />} />
+        <Route path="/members" element={<FeatureGate path="/members"><Members /></FeatureGate>} />
+        <Route path="/events" element={<FeatureGate path="/events"><Events /></FeatureGate>} />
+        <Route path="/attendance" element={<FeatureGate path="/attendance"><LeaderRoute><Attendance /></LeaderRoute></FeatureGate>} />
+        <Route path="/followups" element={<FeatureGate path="/followups"><FollowupRoute><Followups /></FollowupRoute></FeatureGate>} />
+        <Route path="/pastoral-care" element={<FeatureGate path="/pastoral-care"><PastoralCare /></FeatureGate>} />
+        <Route path="/communications" element={<FeatureGate path="/communications"><Communications /></FeatureGate>} />
+        <Route path="/transportation" element={<FeatureGate path="/transportation"><Transportation /></FeatureGate>} />
+        <Route path="/analytics" element={<FeatureGate path="/analytics"><AdminRoute><Analytics /></AdminRoute></FeatureGate>} />
+        <Route path="/training-reports" element={<FeatureGate path="/training-reports"><TrainingRoute><TrainingReports /></TrainingRoute></FeatureGate>} />
+        <Route path="/exam-management" element={<FeatureGate path="/exam-management"><ProtectedRoute><ExamManagement /></ProtectedRoute></FeatureGate>} />
+        <Route path="/church-attendance" element={<FeatureGate path="/church-attendance"><TrainingRoute><ChurchAttendance /></TrainingRoute></FeatureGate>} />
+        <Route path="/wsf" element={<FeatureGate path="/wsf"><WSFRoute><WSFManagement /></WSFRoute></FeatureGate>} />
+        <Route path="/user-management" element={<AdminRoute><UserManagement /></AdminRoute>} />
+        <Route path="/sermon-notes" element={<FeatureGate path="/sermon-notes"><SermonNotes /></FeatureGate>} />
+        <Route path="/testimony" element={<FeatureGate path="/testimony"><Testimony /></FeatureGate>} />
+        <Route path="/settings" element={<AdminRoute><Settings /></AdminRoute>} />
+        <Route path="/system-logs" element={<AdminRoute><SystemLogs /></AdminRoute>} />
+        <Route path="/tenant-admin" element={<SuperAdminRoute><TenantAdmin /></SuperAdminRoute>} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </Suspense>
   );
 }
 
@@ -188,32 +200,34 @@ function DefaultTenantRedirect({ to }) {
 
 function AppRoutes() {
   return (
-    <Routes>
-      {/* Public landing page */}
-      <Route path="/" element={<LandingPage />} />
+    <Suspense fallback={<PageFallback />}>
+      <Routes>
+        {/* Public landing page */}
+        <Route path="/" element={<LandingPage />} />
 
-      {/* Bare public routes → redirect to default tenant */}
-      <Route path="/register" element={<DefaultTenantRedirect to="register" />} />
-      <Route path="/bible-school-register" element={<DefaultTenantRedirect to="bible-school-register" />} />
-      <Route path="/auth" element={<AuthProvider><Auth /></AuthProvider>} />
+        {/* Bare public routes → redirect to default tenant */}
+        <Route path="/register" element={<DefaultTenantRedirect to="register" />} />
+        <Route path="/bible-school-register" element={<DefaultTenantRedirect to="bible-school-register" />} />
+        <Route path="/auth" element={<AuthProvider><Auth /></AuthProvider>} />
 
-      {/* Tenant-independent public routes */}
-      <Route path="/presentation" element={<Presentation />} />
-      <Route path="/onboard" element={<Onboard />} />
-      <Route path="/unsubscribe" element={<Unsubscribe />} />
+        {/* Tenant-independent public routes */}
+        <Route path="/presentation" element={<Presentation />} />
+        <Route path="/onboard" element={<Onboard />} />
+        <Route path="/unsubscribe" element={<Unsubscribe />} />
 
-      {/* Tenant-prefixed public routes */}
-      <Route path="/t/:tenantSlug/auth" element={<AuthProvider><Auth /></AuthProvider>} />
-      <Route path="/t/:tenantSlug/register" element={<PublicRegistration />} />
-      <Route path="/t/:tenantSlug/bible-school-register" element={<PublicWoFBIRegistration />} />
+        {/* Tenant-prefixed public routes */}
+        <Route path="/t/:tenantSlug/auth" element={<AuthProvider><Auth /></AuthProvider>} />
+        <Route path="/t/:tenantSlug/register" element={<PublicRegistration />} />
+        <Route path="/t/:tenantSlug/bible-school-register" element={<PublicWoFBIRegistration />} />
 
-      {/* Public reset-password routes */}
-      <Route path="/reset-password" element={<AuthProvider><ResetPassword /></AuthProvider>} />
-      <Route path="/t/:tenantSlug/reset-password" element={<AuthProvider><ResetPassword /></AuthProvider>} />
+        {/* Public reset-password routes */}
+        <Route path="/reset-password" element={<AuthProvider><ResetPassword /></AuthProvider>} />
+        <Route path="/t/:tenantSlug/reset-password" element={<AuthProvider><ResetPassword /></AuthProvider>} />
 
-      {/* Authenticated routes — current paths */}
-      <Route path="/*" element={<AuthProvider><AuthRoutes /></AuthProvider>} />
-    </Routes>
+        {/* Authenticated routes — current paths */}
+        <Route path="/*" element={<AuthProvider><AuthRoutes /></AuthProvider>} />
+      </Routes>
+    </Suspense>
   );
 }
 
