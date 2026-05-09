@@ -662,6 +662,9 @@ export default function MyProfile() {
       {/* App Feedback */}
       {!editing && <AppFeedbackSection />}
 
+      {/* Open Certificate Course Sessions */}
+      {!editing && <OpenSessionsPanel memberId={member.id} />}
+
       {/* Take Exams */}
       {!editing && <DynamicExamButtons memberId={member.id} onSelect={setExamSelection} tenantId={tenantId} />}
 
