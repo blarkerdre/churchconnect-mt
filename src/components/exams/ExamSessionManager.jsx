@@ -384,20 +384,22 @@ export default function ExamSessionManager() {
 }
 
 function SessionAggregateResults({ session, sessionCourses }) {
+  const { tenantId } = useTenantQuery();
   const courseNames = sessionCourses.map(c => c.exam_title);
 
   const { data: attempts = [], isLoading } = useQuery({
-    queryKey: ["session-attempts", session.id],
+    queryKey: ["session-attempts", tenantId, session.id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("exam_attempts")
         .select("*, members(first_name, last_name)")
+        .eq("tenant_id", tenantId)
         .eq("session_id", session.id)
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data;
     },
-    enabled: !!session.id,
+    enabled: !!session.id && !!tenantId,
   });
 
   // Group by member
