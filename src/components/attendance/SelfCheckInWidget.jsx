@@ -30,7 +30,7 @@ export default function SelfCheckInWidget() {
     queryFn: async () => {
       let query = supabase
         .from("members")
-        .select("id, first_name, last_name, church_unit")
+        .select("id, first_name, last_name, church_unit, wsf_centre_id")
         .eq("user_id", user.id);
       if (tenantId) query = query.eq("tenant_id", tenantId);
       const { data, error } = await query.maybeSingle();
@@ -40,8 +40,23 @@ export default function SelfCheckInWidget() {
     enabled: !!user?.id,
   });
 
+  const { data: myCentre } = useQuery({
+    queryKey: ["my-centre", myMember?.wsf_centre_id],
+    enabled: !!myMember?.wsf_centre_id,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("wsf_centres")
+        .select("id, name")
+        .eq("id", myMember.wsf_centre_id)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+  });
+
   const myUnits = useMemo(() => parseUnits(myMember?.church_unit), [myMember?.church_unit]);
   const myUnitsLower = useMemo(() => myUnits.map((u) => u.toLowerCase()), [myUnits]);
+  const myCentreLower = (myCentre?.name || "").toLowerCase();
 
   const { data: sessions = [], isLoading: sessionsLoading } = useQuery({
     queryKey: ["today-sessions", today, tenantId],
@@ -58,13 +73,22 @@ export default function SelfCheckInWidget() {
     },
   });
 
-  // Eligibility: members can only self check-in to Unit Meetings for units they belong to
+  // Eligibility: members can self check-in to:
+  //  - General services (no `unit` set, e.g. Sunday Service / Special Service / Bible School / Other)
+  //  - Unit Meetings for units they belong to
+  //  - Home Cell Meetings for the centre they're assigned to
   const eligibleSessions = useMemo(() => {
     return sessions.filter((s) => {
-      if (s.session_type !== "Unit Meeting" || !s.unit) return false;
-      return myUnitsLower.includes(s.unit.toLowerCase());
+      if (s.session_type === "Unit Meeting") {
+        return s.unit && myUnitsLower.includes(s.unit.toLowerCase());
+      }
+      if (s.session_type === "Home Cell Meeting") {
+        return s.unit && myCentreLower && s.unit.toLowerCase() === myCentreLower;
+      }
+      // General sessions (no unit/centre scoping)
+      return !s.unit;
     });
-  }, [sessions, myUnitsLower]);
+  }, [sessions, myUnitsLower, myCentreLower]);
 
   const visibleSessions = useMemo(() => {
     if (unitFilter === "all") return eligibleSessions;
@@ -110,13 +134,13 @@ export default function SelfCheckInWidget() {
     },
   });
 
-  if (!myMember || eligibleSessions.length === 0) return null;
+  if (!myMember) return null;
 
-  // Build filter options from units present in the eligible sessions
+  // Build filter options from units/centres present in the eligible sessions
   const unitOptions = Array.from(
     new Set(
       eligibleSessions
-        .filter((s) => s.session_type === "Unit Meeting" && s.unit)
+        .filter((s) => (s.session_type === "Unit Meeting" || s.session_type === "Home Cell Meeting") && s.unit)
         .map((s) => s.unit)
     )
   );
@@ -149,7 +173,9 @@ export default function SelfCheckInWidget() {
             <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
           </div>
         ) : visibleSessions.length === 0 ? (
-          <p className="text-xs text-muted-foreground text-center py-2">No meetings match this filter.</p>
+          <p className="text-xs text-muted-foreground text-center py-2">
+            {eligibleSessions.length === 0 ? "No meetings open for check-in today." : "No meetings match this filter."}
+          </p>
         ) : (
           visibleSessions.map((session) => {
             const isCheckedIn = checkedSessionIds.has(session.id);
