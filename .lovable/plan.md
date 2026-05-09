@@ -1,39 +1,38 @@
-## Why Ejiama and Silver showed up in Demo Church
+## Home Cell admin summary stats
 
-Both members exist twice in the database — once in **Demo Church (TEST)** with no `user_id`, and once in **Winners Chapel International, Cardiff** a few minutes later with a real `user_id`. The wci-cardiff rows are their real signups.
+Add a row of 4 summary stat cards above the existing reports table in the Home Cell Attendance tab, visible to admins only. Stats reflect the currently applied filters (centre + date range).
 
-Root cause: the public registration flow silently defaults to demo-test whenever it can't resolve a tenant.
+### Stats
 
-- **Backend** (`supabase/functions/public-register/index.ts`, line ~304): hardcoded `DEFAULT_TENANT_ID = "d8bbbdae…884b0"` (demo-test). Any submission without `tenant_id` or `tenant_slug` is dropped into demo-test.
-- **Frontend** (`src/pages/PublicRegistration.jsx`, lines 53 & 143): mirrors the same `DEFAULT_TENANT_ID` constant and explicitly sends `tenant_id: resolvedTenantId || DEFAULT_TENANT_ID`.
+1. **Total Cell Centres** — count of centres in scope (all centres if filter = "All", else 1).
+2. **Meetings Held** — count of `filteredReports`.
+3. **Meetings Not Held** — `expected − held`, floored at 0.
+4. **Average Attendance** — mean of `(male + female + children)` across `filteredReports`, rounded.
 
-So whoever shared a registration link with these two used a URL where the tenant slug wasn't in the path — the form went through, defaulted to demo-test, and created the orphan records you're seeing now. They later registered properly under wci-cardiff. This also contradicts the project's own Signup Restriction rule (block signups lacking valid tenant resolution).
+### "Meetings Not Held" calculation (weekly cadence)
 
-## Fix
+```text
+weeks   = max(1, ceil((dateTo - dateFrom + 1) / 7))   when both dates set
+        = number of distinct ISO weeks present in filteredReports' dates, else 1
+centres = 1 if filterCentreId !== "all" else availableCentres.length
+expected = weeks × centres
+notHeld  = max(0, expected − held)
+```
 
-### 1. Clean up the orphan rows
+When no date range is set, fall back to the span between the earliest and latest report dates in scope (or hide the "Not Held" card with an em-dash + tooltip "Set a date range").
 
-Delete the two unlinked demo-test member records:
+### Where
 
-- `id = d458dec2-fed4-4517-a4b9-5e498438de7c` (Ejiama, demo-test, no user_id)
-- `id = 2074b780-2fdc-4a2b-b6de-e38b308f3d5f` (Silver, demo-test, no user_id)
+`src/components/wsf/WSFAttendanceTab.jsx` — insert a `grid grid-cols-2 sm:grid-cols-4 gap-3` of stat cards between the filter bar (line 212) and the table/empty state (line 214). Gate with `isAdmin`.
 
-The wci-cardiff records stay untouched.
+### Visuals
 
-### 2. Remove the demo-test default from public registration
+- Reuse the small stat-card pattern from `WSFLeaderDashboard` (icon chip + title + big number + sub-label).
+- Icons: `Home` (centres), `CheckCircle2` (held), `AlertCircle` (not held), `TrendingUp` (avg).
+- Use semantic tokens: `text-primary`, `text-accent`, `text-destructive`, `text-chart-3`.
 
-**Backend** (`supabase/functions/public-register/index.ts`):
-- Remove the `DEFAULT_TENANT_ID` constant and the "always fall back" block.
-- If neither `tenant_id` nor a valid `tenant_slug` resolves, return **400 Bad Request** with `{ error: "Missing tenant context" }` instead of silently writing to demo-test.
+### Out of scope
 
-**Frontend** (`src/pages/PublicRegistration.jsx`):
-- Remove the `DEFAULT_TENANT_ID` constant and the `|| DEFAULT_TENANT_ID` fallbacks (lines 53 & 143).
-- If `tenantSlug` is missing **and** `resolvedTenantId` cannot be resolved, render an inline error ("This registration link is invalid — please ask your church for the correct link") and disable submit. Already-correct paths like `/t/:tenantSlug/register` are unaffected.
-
-No other files need changes — `/register` (no slug) is already routed through `DefaultTenantRedirect` in `App.jsx`, which sends users to a tenant-prefixed URL when a default exists.
-
-## Validation
-
-- After cleanup, `/t/demo-test` member list no longer shows Ejiama or Silver.
-- Submitting the registration form on a URL without tenant context returns a clear error instead of polluting demo-test.
-- wci-cardiff member counts and dashboard stats are unchanged.
+- No DB/schema changes. No per-centre cadence field.
+- WSF leader view unchanged (still sees their own centres' reports without the admin summary).
+- Print/CSV export contents unchanged.
