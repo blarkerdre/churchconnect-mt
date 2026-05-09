@@ -191,7 +191,7 @@ export default function ExamSessionManager() {
             <CardTitle className="text-base font-display flex items-center gap-2">
               <ClipboardList className="h-4 w-4 text-primary" /> Exam Sessions
             </CardTitle>
-            <Button size="sm" variant="outline" className="gap-1.5" onClick={() => { setEditingSession(null); setForm({ name: "", description: "", pass_mark_percentage: 50, courses: [] }); setDialogOpen(true); }}>
+            <Button size="sm" variant="outline" className="gap-1.5" onClick={() => { setEditingSession(null); setForm({ name: "", description: "", pass_mark_percentage: 50, courses: [], starts_on: "", ends_on: "", auto_open_exams: true, allow_reregistration: true }); setDialogOpen(true); }}>
               <Plus className="h-3.5 w-3.5" /> New Session
             </Button>
           </div>
