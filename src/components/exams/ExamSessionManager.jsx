@@ -221,9 +221,16 @@ export default function ExamSessionManager() {
                           ))}
                           {courses.length === 0 && <span className="text-xs text-muted-foreground">No courses assigned</span>}
                         </div>
-                        <div className="flex gap-2 text-[10px] text-muted-foreground mt-2">
+                        <div className="flex flex-wrap gap-x-3 gap-y-1 text-[10px] text-muted-foreground mt-2">
+                          {(s.starts_on || s.ends_on) && (
+                            <span className="flex items-center gap-1"><CalendarDays className="h-3 w-3" />
+                              {s.starts_on ? new Date(s.starts_on).toLocaleDateString() : "?"} – {s.ends_on ? new Date(s.ends_on).toLocaleDateString() : "?"}
+                            </span>
+                          )}
                           {s.started_at && <span>Started: {new Date(s.started_at).toLocaleDateString()}</span>}
                           {s.ended_at && <span>Ended: {new Date(s.ended_at).toLocaleDateString()}</span>}
+                          {s.auto_open_exams && s.status === "active" && <span className="text-chart-3">Exams auto-open</span>}
+                          {s.allow_reregistration === false && <span>No re-registration</span>}
                         </div>
                       </div>
                       <div className="flex items-center gap-1 shrink-0">
@@ -237,26 +244,34 @@ export default function ExamSessionManager() {
                           </Button>
                         )}
                         {s.status === "active" && (
-                          <Button
-                            variant="outline" size="sm" className="gap-1 text-destructive border-destructive/30 hover:bg-destructive/10 h-7 text-xs"
-                            disabled={statusMutation.isPending}
-                            onClick={() => statusMutation.mutate({ id: s.id, status: "closed" })}
-                          >
-                            <Square className="h-3 w-3" /> Stop
-                          </Button>
+                          <>
+                            <Button
+                              variant="outline" size="sm" className="gap-1 h-7 text-xs"
+                              onClick={() => setEnrolTarget(s)}
+                            >
+                              <UserPlus className="h-3 w-3" /> Enrol
+                            </Button>
+                            <Button
+                              variant="outline" size="sm" className="gap-1 text-destructive border-destructive/30 hover:bg-destructive/10 h-7 text-xs"
+                              disabled={statusMutation.isPending}
+                              onClick={() => statusMutation.mutate({ id: s.id, status: "closed" })}
+                            >
+                              <Square className="h-3 w-3" /> Stop
+                            </Button>
+                          </>
                         )}
                         <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setViewingSession(viewingSession?.id === s.id ? null : s)}>
                           <Eye className="h-3.5 w-3.5" />
                         </Button>
+                        {(s.status === "draft" || s.status === "active") && (
+                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(s)}>
+                            <Edit className="h-3.5 w-3.5" />
+                          </Button>
+                        )}
                         {s.status === "draft" && (
-                          <>
-                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(s)}>
-                              <Edit className="h-3.5 w-3.5" />
-                            </Button>
-                            <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => setDeleteTarget(s)}>
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </Button>
-                          </>
+                          <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => setDeleteTarget(s)}>
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
                         )}
                       </div>
                     </div>
