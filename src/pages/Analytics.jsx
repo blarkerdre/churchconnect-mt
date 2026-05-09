@@ -292,7 +292,10 @@ export default function Analytics() {
 
         {/* Growth Indices */}
         <Card className="border-0 shadow-sm">
-          <CardHeader><CardTitle className="text-base font-display">Spiritual Development</CardTitle></CardHeader>
+          <CardHeader>
+            <CardTitle className="text-base font-display">Spiritual Development</CardTitle>
+            <p className="text-xs text-muted-foreground mt-0.5">% of Active members ({activeMembers.length})</p>
+          </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={280}>
               <BarChart data={growthIndices} layout="vertical">
