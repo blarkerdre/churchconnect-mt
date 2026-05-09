@@ -184,7 +184,7 @@ export default function Attendance() {
     <div className="space-y-6">
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <Card className="border-0 shadow-sm"><CardContent className="p-3 sm:p-4 text-center"><p className="text-xl sm:text-2xl font-display font-bold text-chart-3">{presentCount}</p><p className="text-xs text-muted-foreground">Checked In</p></CardContent></Card>
-        <Card className="border-0 shadow-sm"><CardContent className="p-3 sm:p-4 text-center"><p className="text-xl sm:text-2xl font-display font-bold text-foreground">{totalMembers}</p><p className="text-xs text-muted-foreground">Total</p></CardContent></Card>
+        <Card className="border-0 shadow-sm"><CardContent className="p-3 sm:p-4 text-center"><p className="text-xl sm:text-2xl font-display font-bold text-foreground">{totalMembers}</p><p className="text-xs text-muted-foreground">Active</p></CardContent></Card>
         <Card className="border-0 shadow-sm"><CardContent className="p-3 sm:p-4 text-center"><p className="text-xl sm:text-2xl font-display font-bold text-primary">{attendanceRate}%</p><p className="text-xs text-muted-foreground">Rate</p></CardContent></Card>
         <Card className="border-0 shadow-sm"><CardContent className="p-3 sm:p-4 text-center"><p className="text-xl sm:text-2xl font-display font-bold text-accent">{filteredSessions.length}</p><p className="text-xs text-muted-foreground">Meetings</p></CardContent></Card>
       </div>

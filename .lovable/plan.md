@@ -1,24 +1,43 @@
-## Problem
+## Goal
+Fix the metric inconsistencies and dead code identified in the audit of Dashboard, Unit Attendance, and Analytics.
 
-You're signed in and sitting on `/auth`, but the page is stuck on "Loading…".
+## Changes
 
-The recent fix added a gate: when `user` exists but `dataLoaded` is still `false`, render "Loading…" instead of redirecting. `dataLoaded` only flips `true` inside `fetchUserData`'s `finally` block, which depends on five parallel Supabase queries resolving. In the Lovable Preview, Supabase REST calls have been intermittently failing/hanging ("Failed to fetch" earlier in this thread). When `Promise.all` never resolves and never rejects, the `finally` never runs, so `dataLoaded` stays `false` forever and `/auth` never redirects.
+### 1. Align "Total Members" definition across pages
+- **Dashboard (`Dashboard.jsx` / `get_dashboard_stats` consumer)**: keep "Total Members" = all members (current), and add a secondary "Active" line/sub-label so the number context is clear.
+- **Analytics (`Analytics.jsx`)**: same — label the headline tile "Total Members" (all) with an "Active: N" sub-label.
+- **Attendance (`Attendance.jsx`)**: rename the "Total" column/tile to "Active" (or "Eligible") so it no longer collides with Dashboard's "Total Members".
 
-## Fix (frontend only, no backend changes)
+Net effect: the number labelled "Total Members" is the same everywhere; "Active" is shown as a clearly distinct, secondary metric.
 
-### `src/hooks/useAuth.jsx`
-1. Wrap each query in `fetchUserData` so a single failure can't strand the whole batch — replace `Promise.all` with `Promise.allSettled`, and read `.value` per result. This guarantees the `finally` runs and `dataLoaded` becomes `true`.
-2. Add a hard safety net: when starting `fetchUserData`, also schedule a `setTimeout(..., 5000)` that calls `setDataLoaded(true)` if it's still `false` (covers true network hangs where the fetch never resolves at all). Clear the timer in `finally`.
-3. Special-case the membership query: if it fails, `tenantMemberships` stays `[]` (already the default) — that's fine, redirect logic already handles "no slug" by sending the user to `/`.
+### 2. Switch Growth Indices denominator to Active members
+- **`src/components/dashboard/GrowthIndices.jsx`**: change `total = members.length` to `total = members.filter(m => m.status === "Active").length` (with a fallback of 1 to avoid divide-by-zero), and only count completions among Active members in the numerator too, so percentages reflect discipleship progress of the active congregation.
+- Apply the identical change to the Analytics page's "Growth Milestones" / "Spiritual Development" section so Dashboard and Analytics stay in sync.
+- Add a small caption under the section title: "% of Active members".
 
-### `src/pages/Auth.jsx`
-1. Keep the existing `dataLoaded` gate, but cap it: track a local `waited` flag with a `setTimeout` of ~4s after `user` becomes truthy. Once either `dataLoaded` is true OR `waited` is true, perform the redirect using whatever `tenantMemberships` we have (falling back to `/` if empty).
-2. While waiting, keep the current "Loading…" placeholder, but after the timeout the user is moved off `/auth` instead of being stranded.
+### 3. Delete dead analytics components
+Remove (no imports anywhere in the app):
+- `src/components/analytics/AttendanceTrends.jsx`
+- `src/components/analytics/MemberConsistency.jsx`
+
+Both reference non-existent columns (`attendance_records.status`, `session_date`, `member_name`) and would silently render zeros if re-imported.
+
+### 4. Attendance Trend fallback to reported `total_count`
+- **`src/pages/Analytics.jsx` "Attendance Trend"**: per session, use `MAX(digital_checkins_count, attendance_sessions.total_count)` as the per-session attendance figure, then aggregate by month/type.
+- This makes Home Cell and demographic-only sessions (where leaders type a head-count instead of digital check-in) appear in the trend instead of being dropped.
 
 ## Out of scope
-- TenantContext, RLS, Supabase queries themselves.
-- The underlying preview "Failed to fetch" — that's a Lovable Preview environment issue; this plan only makes the UI resilient to it.
+- The 2026-05-03 Unit Meetings discrepancy between manual `total_count` (12/1/19) and digital check-ins (15/15/18) is data-entry, not a code bug. Not changing now; can add a side-by-side comparison in a follow-up if you want.
+- No DB schema changes. No RLS changes. No changes to `get_dashboard_stats` RPC.
 
-## Verification
-- On the published URL, signing in should still redirect to `/t/<slug>` immediately (fast path: `dataLoaded` flips true before the 4s timer).
-- In preview, even if Supabase queries hang, `/auth` will redirect within ~4s instead of looping on "Loading…".
+## Files touched
+- `src/pages/Dashboard.jsx` (label/sub-label)
+- `src/pages/Analytics.jsx` (label, denominator, trend fallback)
+- `src/pages/Attendance.jsx` (rename Total → Active)
+- `src/components/dashboard/GrowthIndices.jsx` (denominator)
+- delete `src/components/analytics/AttendanceTrends.jsx`
+- delete `src/components/analytics/MemberConsistency.jsx`
+
+## Validation
+- Visual check on `/t/wci-cardiff/dashboard`, `/analytics`, `/attendance`: numbers consistent, Growth Indices % higher (Active denominator), Attendance Trend now includes Home Cell sessions.
+- Build passes (auto-run).
