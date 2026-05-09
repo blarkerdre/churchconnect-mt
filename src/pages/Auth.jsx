@@ -32,6 +32,15 @@ export default function Auth() {
   const [signupCooldown, setSignupCooldown] = useState(false);
   const [cooldownSeconds, setCooldownSeconds] = useState(0);
   const [signupSuccess, setSignupSuccess] = useState(false);
+  const [waitedForData, setWaitedForData] = useState(false);
+
+  // Fallback: if dataLoaded never flips (e.g., preview proxy hangs Supabase
+  // calls), unblock the redirect after 4s so the user isn't stranded on /auth.
+  useEffect(() => {
+    if (!user || dataLoaded) return;
+    const t = setTimeout(() => setWaitedForData(true), 4000);
+    return () => clearTimeout(t);
+  }, [user, dataLoaded]);
 
   useEffect(() => {
     if (!signupCooldown) return;
@@ -96,7 +105,7 @@ export default function Auth() {
     if (tenantSlug) {
       return <Navigate to={`/t/${tenantSlug}`} replace />;
     }
-    if (!dataLoaded) {
+    if (!dataLoaded && !waitedForData) {
       return (
         <div className="min-h-screen bg-background flex items-center justify-center">
           <div className="animate-pulse text-muted-foreground">Loading...</div>
