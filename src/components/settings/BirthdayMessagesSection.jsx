@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Cake, Loader2, Send } from "lucide-react";
-import { toast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 
 const CHANNELS = [
   { id: "in_app", label: "In-app notification" },
@@ -77,10 +77,10 @@ export default function BirthdayMessagesSection() {
       if (error) throw error;
     },
     onSuccess: () => {
-      toast({ title: "Birthday settings saved" });
+      toast.success("Birthday settings saved");
       qc.invalidateQueries({ queryKey: ["birthday_message_settings", tenantId] });
     },
-    onError: (err) => toast({ title: "Save failed", description: err.message, variant: "destructive" }),
+    onError: (err) => toast.error("Save failed", { description: err.message }),
   });
 
   if (!isTenantAdmin) return null;
@@ -115,7 +115,7 @@ export default function BirthdayMessagesSection() {
         .eq("tenant_id", tenantId)
         .maybeSingle();
       if (!me) {
-        toast({ title: "Couldn't find your member profile", variant: "destructive" });
+        toast.error("Couldn't find your member profile");
         return;
       }
       // Save first so test reflects edits
@@ -124,12 +124,11 @@ export default function BirthdayMessagesSection() {
         body: { tenant_id: tenantId, member_id: me.id, channels: current.channels },
       });
       if (error) throw error;
-      toast({
-        title: "Test dispatched",
+      toast.success("Test dispatched", {
         description: `${data?.sent ?? 0} sent · ${data?.failed ?? 0} failed`,
       });
     } catch (err) {
-      toast({ title: "Test failed", description: err.message, variant: "destructive" });
+      toast.error("Test failed", { description: err.message });
     } finally {
       setSendingTest(false);
     }
