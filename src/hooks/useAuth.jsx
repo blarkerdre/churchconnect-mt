@@ -28,6 +28,7 @@ export function AuthProvider({ children }) {
         setUser(session?.user ?? null);
         if (session?.user) {
           setLoading(false);
+          setDataLoaded(false);
           setTimeout(() => fetchUserData(session.user.id, session.user.email), 0);
         } else {
           setProfile(null);
@@ -37,6 +38,7 @@ export function AuthProvider({ children }) {
           setLeaderCentres([]);
           setTenantMemberships([]);
           setLoading(false);
+          setDataLoaded(true);
         }
       }
     );
@@ -45,7 +47,10 @@ export function AuthProvider({ children }) {
       setUser(session?.user ?? null);
       setLoading(false);
       if (session?.user) {
+        setDataLoaded(false);
         fetchUserData(session.user.id, session.user.email);
+      } else {
+        setDataLoaded(true);
       }
     });
 
