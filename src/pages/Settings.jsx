@@ -780,75 +780,94 @@ function FaviconOgImageSection() {
     <Card className="border-0 shadow-sm">
       <CardHeader className="pb-3">
         <CardTitle className="text-base font-display flex items-center gap-2">
-          <Globe className="h-4 w-4 text-accent" /> Favicon & Social Image
+          <Globe className="h-4 w-4 text-accent" /> Branding Images
         </CardTitle>
         <p className="text-xs text-muted-foreground mt-1">
-          Custom favicon for the browser tab and social/OG image for link previews when your church URL is shared.
-          If left empty, your church logo is used automatically — fitted to the required size.
+          Your church logo is used automatically for the favicon, app icon, and social/link preview image — fitted to the right size for each.
         </p>
       </CardHeader>
-      <CardContent className="space-y-6">
-        {/* Favicon */}
-        <div className="space-y-2">
-          <Label className="text-sm font-medium">Favicon (Browser Tab Icon)</Label>
-          <div className="flex flex-col sm:flex-row items-center gap-4">
-            <div className="h-16 w-16 rounded-lg bg-muted/50 border-2 border-dashed border-border flex items-center justify-center overflow-hidden shrink-0">
-              {faviconUrl ? (
-                <img src={faviconUrl} alt="Favicon" className="h-full w-full object-contain" />
-              ) : (
-                <ImageIcon className="h-6 w-6 text-muted-foreground" />
-              )}
-            </div>
-            <div className="flex flex-col gap-2 w-full sm:w-auto">
-              <input ref={faviconInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => handleUpload(e.target.files?.[0], "favicon")} />
-              <Button size="sm" onClick={() => faviconInputRef.current?.click()} disabled={uploadingFavicon} className="gap-1.5">
-                {uploadingFavicon ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-                {faviconUrl ? "Change Favicon" : "Upload Favicon"}
-              </Button>
-              {faviconUrl && (
-                <Button size="sm" variant="outline" onClick={() => handleRemove("favicon")} disabled={uploadingFavicon} className="gap-1.5 text-destructive hover:text-destructive">
-                  <X className="h-4 w-4" /> Remove
-                </Button>
-              )}
-              <p className="text-[11px] text-muted-foreground">PNG, ICO or SVG. Max 1MB. Recommended: 32×32 or 64×64 px.</p>
-            </div>
-          </div>
-        </div>
-
-        {/* OG Image */}
-        <div className="space-y-2">
-          <Label className="text-sm font-medium">Social / Link Preview Image (OG Image)</Label>
-          <div className="flex flex-col sm:flex-row items-center gap-4">
-            <div className="h-20 w-36 rounded-lg bg-muted/50 border-2 border-dashed border-border flex items-center justify-center overflow-hidden shrink-0">
-              {ogImageUrl ? (
-                <img src={ogImageUrl} alt="OG Image" className="h-full w-full object-cover" />
-              ) : (
-                <ImageIcon className="h-6 w-6 text-muted-foreground" />
-              )}
-            </div>
-            <div className="flex flex-col gap-2 w-full sm:w-auto">
-              <input ref={ogInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => handleUpload(e.target.files?.[0], "og-image")} />
-              <Button size="sm" onClick={() => ogInputRef.current?.click()} disabled={uploadingOg} className="gap-1.5">
-                {uploadingOg ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-                {ogImageUrl ? "Change Image" : "Upload Image"}
-              </Button>
-              {ogImageUrl && (
-                <Button size="sm" variant="outline" onClick={() => handleRemove("og-image")} disabled={uploadingOg} className="gap-1.5 text-destructive hover:text-destructive">
-                  <X className="h-4 w-4" /> Remove
-                </Button>
-              )}
-              <p className="text-[11px] text-muted-foreground">PNG or JPG. Max 5MB. Recommended: 1200×630 px.</p>
-            </div>
-          </div>
-        </div>
-
+      <CardContent className="space-y-4">
         {/* PWA App Icon — auto-derived from tenant logo */}
         <div className="space-y-1 rounded-md border border-dashed border-border bg-muted/30 p-3">
           <Label className="text-sm font-medium">App Icon (PWA)</Label>
           <p className="text-[11px] text-muted-foreground">
-            Your church logo and name are automatically used as the app icon and title when members install this app to their home screen. No separate upload needed.
+            Your church logo and name are automatically used as the app icon and title when members install this app to their home screen.
           </p>
         </div>
+
+        <Collapsible>
+          <CollapsibleTrigger asChild>
+            <button
+              type="button"
+              className="flex w-full items-center justify-between rounded-md border border-border bg-background px-3 py-2 text-left text-sm font-medium hover:bg-muted/50 transition-colors group"
+            >
+              <span className="flex items-center gap-2">
+                <SettingsIcon className="h-4 w-4 text-muted-foreground" />
+                Advanced branding — custom favicon & social image
+              </span>
+              <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
+            </button>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="space-y-6 pt-4">
+            <p className="text-[11px] text-muted-foreground">
+              Optional. Upload custom images here only if you want something different from your church logo (for example, a hand-designed social card with photography or a tagline).
+            </p>
+
+            {/* Favicon */}
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">Favicon (Browser Tab Icon)</Label>
+              <div className="flex flex-col sm:flex-row items-center gap-4">
+                <div className="h-16 w-16 rounded-lg bg-muted/50 border-2 border-dashed border-border flex items-center justify-center overflow-hidden shrink-0">
+                  {faviconUrl ? (
+                    <img src={faviconUrl} alt="Favicon" className="h-full w-full object-contain" />
+                  ) : (
+                    <ImageIcon className="h-6 w-6 text-muted-foreground" />
+                  )}
+                </div>
+                <div className="flex flex-col gap-2 w-full sm:w-auto">
+                  <input ref={faviconInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => handleUpload(e.target.files?.[0], "favicon")} />
+                  <Button size="sm" onClick={() => faviconInputRef.current?.click()} disabled={uploadingFavicon} className="gap-1.5">
+                    {uploadingFavicon ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                    {faviconUrl ? "Change Favicon" : "Upload Favicon"}
+                  </Button>
+                  {faviconUrl && (
+                    <Button size="sm" variant="outline" onClick={() => handleRemove("favicon")} disabled={uploadingFavicon} className="gap-1.5 text-destructive hover:text-destructive">
+                      <X className="h-4 w-4" /> Remove
+                    </Button>
+                  )}
+                  <p className="text-[11px] text-muted-foreground">PNG, ICO or SVG. Max 1MB. Recommended: 32×32 or 64×64 px.</p>
+                </div>
+              </div>
+            </div>
+
+            {/* OG Image */}
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">Social / Link Preview Image (OG Image)</Label>
+              <div className="flex flex-col sm:flex-row items-center gap-4">
+                <div className="h-20 w-36 rounded-lg bg-muted/50 border-2 border-dashed border-border flex items-center justify-center overflow-hidden shrink-0">
+                  {ogImageUrl ? (
+                    <img src={ogImageUrl} alt="OG Image" className="h-full w-full object-cover" />
+                  ) : (
+                    <ImageIcon className="h-6 w-6 text-muted-foreground" />
+                  )}
+                </div>
+                <div className="flex flex-col gap-2 w-full sm:w-auto">
+                  <input ref={ogInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => handleUpload(e.target.files?.[0], "og-image")} />
+                  <Button size="sm" onClick={() => ogInputRef.current?.click()} disabled={uploadingOg} className="gap-1.5">
+                    {uploadingOg ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                    {ogImageUrl ? "Change Image" : "Upload Image"}
+                  </Button>
+                  {ogImageUrl && (
+                    <Button size="sm" variant="outline" onClick={() => handleRemove("og-image")} disabled={uploadingOg} className="gap-1.5 text-destructive hover:text-destructive">
+                      <X className="h-4 w-4" /> Remove
+                    </Button>
+                  )}
+                  <p className="text-[11px] text-muted-foreground">PNG or JPG. Max 5MB. Recommended: 1200×630 px.</p>
+                </div>
+              </div>
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
       </CardContent>
     </Card>
   );
