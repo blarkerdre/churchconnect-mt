@@ -50,7 +50,7 @@ export default function SessionEnrolDialog({ session, sessionCourses, open, onOp
 
   // Existing registrations for this session
   const { data: existing = [] } = useQuery({
-    queryKey: ["session-existing-regs", session.id],
+    queryKey: ["session-existing-regs", tenantId, session.id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("course_registrations")
@@ -108,7 +108,7 @@ export default function SessionEnrolDialog({ session, sessionCourses, open, onOp
       return { inserted: rows.length };
     },
     onSuccess: ({ inserted }) => {
-      qc.invalidateQueries({ queryKey: ["session-existing-regs", session.id] });
+      qc.invalidateQueries({ queryKey: ["session-existing-regs", tenantId, session.id] });
       qc.invalidateQueries({ queryKey: ["course-registrations"] });
       qc.invalidateQueries({ queryKey: ["my-course-registrations"] });
       toast({ title: "Enrolled", description: `${inserted} registration(s) added.` });
