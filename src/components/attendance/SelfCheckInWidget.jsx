@@ -160,29 +160,39 @@ export default function SelfCheckInWidget() {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
-        {unitOptions.length > 1 && (
-          <Select value={unitFilter} onValueChange={setUnitFilter}>
-            <SelectTrigger className="h-9 text-xs">
-              <SelectValue placeholder="Filter by unit" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All my meetings</SelectItem>
-              {unitOptions.map((u) => (
-                <SelectItem key={u} value={u}>{u}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        )}
-
-        {sessionsLoading ? (
-          <div className="flex justify-center py-4">
-            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-          </div>
-        ) : visibleSessions.length === 0 ? (
-          <p className="text-xs text-muted-foreground text-center py-2">
-            {eligibleSessions.length === 0 ? "No meetings open for check-in today." : "No meetings match this filter."}
+        {!myMember ? (
+          <p className="text-xs text-muted-foreground text-center py-3">
+            Your account isn't linked to a member profile yet. Please ask an admin to link your profile so you can check in.
           </p>
         ) : (
+          <>
+            {unitOptions.length > 1 && (
+              <Select value={unitFilter} onValueChange={setUnitFilter}>
+                <SelectTrigger className="h-9 text-xs">
+                  <SelectValue placeholder="Filter by unit" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All my meetings</SelectItem>
+                  {unitOptions.map((u) => (
+                    <SelectItem key={u} value={u}>{u}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+
+            {sessionsLoading ? (
+              <div className="flex justify-center py-4">
+                <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+              </div>
+            ) : visibleSessions.length === 0 ? (
+              <p className="text-xs text-muted-foreground text-center py-2">
+                {sessions.length === 0
+                  ? "No meetings open for check-in today."
+                  : eligibleSessions.length === 0
+                    ? "No meetings open to your unit or Home Cell today."
+                    : "No meetings match this filter."}
+              </p>
+            ) : (
           visibleSessions.map((session) => {
             const isCheckedIn = checkedSessionIds.has(session.id);
             return (
