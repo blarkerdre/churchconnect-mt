@@ -76,6 +76,18 @@ export default function Dashboard() {
     enabled: isLeaderOrAdmin,
   });
 
+  const { data: activeCount = 0 } = useQuery({
+    queryKey: ["dashboard-active-count", tenantId],
+    queryFn: async () => {
+      const { count, error } = await scopeQuery(
+        supabase.from("members").select("*", { count: "exact", head: true }).eq("membership_status", "Active")
+      );
+      if (error) throw error;
+      return count || 0;
+    },
+    enabled: isLeaderOrAdmin && !!tenantId,
+  });
+
   const { data: upcomingBirthdays = [] } = useQuery({
     queryKey: ["dashboard-upcoming-birthdays", tenantId],
     queryFn: async () => {
@@ -112,17 +124,18 @@ export default function Dashboard() {
   const openPastoral = pastoralCases.length;
 
   const stats = [
-    { title: "Total Members", value: total, change: `+${newThisMonth} this month`, icon: Users, color: "text-primary" },
+    { title: "Total Members", value: total, change: `${activeCount} active · +${newThisMonth} this month`, icon: Users, color: "text-primary" },
     { title: "Upcoming Events", value: events.length, change: events[0] ? `Next: ${events[0].title}` : "No upcoming events", icon: CalendarDays, color: "text-accent" },
     { title: "First Timers", value: firstTimers, change: "Awaiting follow-up", icon: UserPlus, color: "text-chart-3" },
     { title: "Pastoral Cases", value: openPastoral, change: `${pastoralCases.filter(c => c.status === "Open").length} open`, icon: Heart, color: "text-chart-5" },
   ];
 
+  const growthDenom = activeCount;
   const growthMetrics = [
-    { label: "Water Baptism", value: dashStats?.water_baptism ?? 0, total },
-    { label: "Holy Spirit Baptism", value: dashStats?.hs_baptism ?? 0, total },
-    { label: "BFC Completed", value: dashStats?.bfc_completed ?? 0, total },
-    { label: "Home Cell", value: dashStats?.winners_satellite ?? 0, total },
+    { label: "Water Baptism", value: dashStats?.water_baptism ?? 0, total: growthDenom },
+    { label: "Holy Spirit Baptism", value: dashStats?.hs_baptism ?? 0, total: growthDenom },
+    { label: "BFC Completed", value: dashStats?.bfc_completed ?? 0, total: growthDenom },
+    { label: "Home Cell", value: dashStats?.winners_satellite ?? 0, total: growthDenom },
   ];
 
   const recentActivity = [
@@ -185,22 +198,23 @@ export default function Dashboard() {
               <TrendingUp className="h-4 w-4 text-accent" />
               Growth Milestones
             </CardTitle>
+            <p className="text-xs text-muted-foreground mt-0.5">% of Active members ({activeCount})</p>
           </CardHeader>
           <CardContent className="space-y-4">
-            {growthMetrics.map((m) => (
-              <div key={m.label}>
-                <div className="flex justify-between text-sm mb-1.5">
-                  <span className="font-medium text-foreground">{m.label}</span>
-                  <span className="text-muted-foreground">{m.value} / {m.total} ({m.total > 0 ? Math.round(m.value / m.total * 100) : 0}%)</span>
+            {growthMetrics.map((m) => {
+              const pct = m.total > 0 ? Math.min(100, Math.round((m.value / m.total) * 100)) : 0;
+              return (
+                <div key={m.label}>
+                  <div className="flex justify-between text-sm mb-1.5">
+                    <span className="font-medium text-foreground">{m.label}</span>
+                    <span className="text-muted-foreground">{m.value} / {m.total} ({pct}%)</span>
+                  </div>
+                  <div className="h-2.5 bg-muted rounded-full overflow-hidden">
+                    <div className="h-full bg-accent rounded-full transition-all" style={{ width: `${pct}%` }} />
+                  </div>
                 </div>
-                <div className="h-2.5 bg-muted rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-accent rounded-full transition-all"
-                    style={{ width: `${m.total > 0 ? (m.value / m.total) * 100 : 0}%` }}
-                  />
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </CardContent>
         </Card>
 
