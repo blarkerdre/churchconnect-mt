@@ -134,13 +134,13 @@ export default function SelfCheckInWidget() {
     },
   });
 
-  if (!myMember || eligibleSessions.length === 0) return null;
+  if (!myMember) return null;
 
-  // Build filter options from units present in the eligible sessions
+  // Build filter options from units/centres present in the eligible sessions
   const unitOptions = Array.from(
     new Set(
       eligibleSessions
-        .filter((s) => s.session_type === "Unit Meeting" && s.unit)
+        .filter((s) => (s.session_type === "Unit Meeting" || s.session_type === "Home Cell Meeting") && s.unit)
         .map((s) => s.unit)
     )
   );
