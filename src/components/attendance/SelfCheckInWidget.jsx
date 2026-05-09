@@ -79,14 +79,15 @@ export default function SelfCheckInWidget() {
   //  - Home Cell Meetings for the centre they're assigned to
   const eligibleSessions = useMemo(() => {
     return sessions.filter((s) => {
+      const unit = (s.unit || "").trim();
       if (s.session_type === "Unit Meeting") {
-        return s.unit && myUnitsLower.includes(s.unit.toLowerCase());
+        return unit && myUnitsLower.includes(unit.toLowerCase());
       }
       if (s.session_type === "Home Cell Meeting") {
-        return s.unit && myCentreLower && s.unit.toLowerCase() === myCentreLower;
+        return unit && myCentreLower && unit.toLowerCase() === myCentreLower;
       }
-      // General sessions (no unit/centre scoping)
-      return !s.unit;
+      // General sessions (no unit/centre scoping) — visible to all tenant members
+      return !unit;
     });
   }, [sessions, myUnitsLower, myCentreLower]);
 

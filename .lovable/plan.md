@@ -1,61 +1,50 @@
-## What the profiler shows
+## Root cause
 
-On `/` (LandingPage) in the preview:
+`SelfCheckInWidget` is rendered on the member dashboard, but it does this very early:
 
-- **First Contentful Paint: 8.5s**, DOMContentLoaded: 8.4s
-- **TTFB: 970ms** (network OK)
-- **95 script requests, ~1MB total** — Vite dev server is serving each dependency individually
-- Slowest deps: `lucide-react` (1.8s, 166KB), shadcn chunk (1.7s, 140KB), `@supabase/supabase-js` (1.3s), `react-router-dom` (1.3s)
-- JS heap only 9MB, DOM 285 nodes — runtime is fine, **the bottleneck is module loading on first paint**
+```jsx
+if (!myMember) return null;
+```
 
-Routing is already lazy-loaded, so the issue is what's eagerly imported by `main.jsx` / `App.jsx` / `LandingPage.jsx` before first paint.
+That `myMember` query looks for a row in `members` where `user_id = auth.uid()` and `tenant_id = currentTenant`. **22 of 105 members in WCI Cardiff have `user_id = NULL`** (and 7 auth users have no member row at all). For every one of those people the widget is silently hidden — no card, no button, no message. To them it just looks like the feature doesn't exist.
 
-## Important context
+A few are also affected by:
 
-The preview runs the **Vite dev server** (unbundled ES modules, no minification, cold cache). This is dramatically slower than the published build.
+- **Today's sessions exist** (e.g. *LEADERSHIP EMPOWERMENT SUMMIT MAY 2026* with `unit = NULL`) so eligibility is fine; the issue isn't sessions.
+- The widget renders the entire card only when at least one eligible session is found — even when `myMember` is loaded, if all today's sessions are scoped to a unit the member doesn't belong to, they see nothing.
 
-**Step 1 — confirm it's a real problem, not just dev preview overhead:**
-Open the **published URL** (`https://app.churchmanagementsuite.org/`). If it loads in 1–2s there, no code change is needed — the dev preview is just slow by nature. If it's still slow on production, proceed with the optimizations below.
+So there are really two bugs to fix:
 
-## If production is also slow — proposed optimizations
+1. **Silent null-member hide** → users with broken/missing member linkage see nothing.
+2. **Empty-state invisibility** → when there are no eligible sessions, the widget should still tell the user what's going on.
 
-### A. Trim what loads before first paint (biggest win)
+## Fix
 
-`App.jsx` eagerly imports `LandingPage`, `Auth`, `useUnitMembership`, `AuthProvider`, `TenantProvider`, `TenantThemeProvider`, `AppLayout`. The landing page only needs `LandingPage`.
+Edit only `src/components/attendance/SelfCheckInWidget.jsx` (frontend-only, no DB changes).
 
-- Lazy-load `Auth` and `AppLayout` (only needed after login)
-- Keep `LandingPage` eager (it's the LCP for `/`)
-- Audit `LandingPage.jsx` for heavy imports (icons, images, framer-motion). Replace barrel imports with named imports where possible.
+### 1. Always render the card
 
-### B. Reduce `lucide-react` cost
+Remove `if (!myMember) return null;`. Always render the "Today's Attendance" card so members know the feature exists. Inside the card, branch on state:
 
-`lucide-react` is the single largest module (166KB). Vite already tree-shakes named imports in production, but if any file does `import * as Icons from "lucide-react"` it pulls everything. Audit and fix.
+- **No member profile linked** → small notice: *"Your account isn't linked to a member profile yet. Please ask an admin to link your profile so you can check in."*
+- **Member loaded, no sessions today** → keep current text: *"No meetings open for check-in today."*
+- **Sessions today but none eligible** → *"No meetings open to your unit/Home Cell today."*
+- **Sessions eligible** → existing list with Check In buttons.
 
-### C. Preload critical chunks
+### 2. Defensive eligibility
 
-Add `<link rel="modulepreload">` hints in `index.html` for the React + Supabase chunks so the browser fetches them in parallel with the HTML parse.
+Treat `s.unit` as null when it is an empty string (`s.unit?.trim()`), so an admin who once saved an empty unit doesn't accidentally hide the session from everyone.
 
-### D. Image / font optimization on LandingPage
+### 3. Tiny diagnostic aid
 
-- Ensure hero images use `loading="eager"` + `fetchpriority="high"` and are properly sized (WebP, responsive `srcset`)
-- Verify Google Fonts use `display=swap` (already in core memory) and only the weights actually used
-
-### E. Code-split `LandingPage` sub-sections
-
-If `LandingPage.jsx` is large, split below-the-fold sections into lazy chunks so the hero paints first.
+When `!myMember` and `user?.id` is set, log a single console warning so an admin tailing logs can spot un-linked accounts. No PII beyond user id.
 
 ## Out of scope
 
-- Backend/database performance (no slow queries reported; this is a frontend cold-start issue)
-- Upgrading Lovable Cloud compute (won't help frontend asset loading)
+- Backfilling the 22 unlinked member rows (data fix, not in scope of this UI bug).
+- Changing PWA `start_url` or LandingPage redirect (the user clarified this is about the button itself, not the route).
+- Database / RLS changes — RLS already permits the relevant inserts after the previous migration.
 
-## Files I'd touch (after confirming prod is slow)
+## Files
 
-- `src/App.jsx` — lazy-load `Auth` + `AppLayout`
-- `src/pages/LandingPage.jsx` — audit imports, split below-the-fold
-- `index.html` — modulepreload hints
-- Any file with `import * as ... from "lucide-react"` — convert to named imports
-
-## Recommended next step
-
-Reload the **published URL** and tell me the load time you see there. That decides whether we ship optimizations or whether the dev preview was just being a dev preview.
+- `src/components/attendance/SelfCheckInWidget.jsx` (only file touched)
