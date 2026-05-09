@@ -20,6 +20,7 @@ export function AuthProvider({ children }) {
   const [myMember, setMyMember] = useState(null);
   const [tenantMemberships, setTenantMemberships] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [dataLoaded, setDataLoaded] = useState(false);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -27,6 +28,7 @@ export function AuthProvider({ children }) {
         setUser(session?.user ?? null);
         if (session?.user) {
           setLoading(false);
+          setDataLoaded(false);
           setTimeout(() => fetchUserData(session.user.id, session.user.email), 0);
         } else {
           setProfile(null);
@@ -36,6 +38,7 @@ export function AuthProvider({ children }) {
           setLeaderCentres([]);
           setTenantMemberships([]);
           setLoading(false);
+          setDataLoaded(true);
         }
       }
     );
@@ -44,7 +47,10 @@ export function AuthProvider({ children }) {
       setUser(session?.user ?? null);
       setLoading(false);
       if (session?.user) {
+        setDataLoaded(false);
         fetchUserData(session.user.id, session.user.email);
+      } else {
+        setDataLoaded(true);
       }
     });
 
@@ -81,6 +87,7 @@ export function AuthProvider({ children }) {
       console.error("Error fetching user data:", err);
     } finally {
       setLoading(false);
+      setDataLoaded(true);
     }
   }
 
@@ -142,7 +149,7 @@ export function AuthProvider({ children }) {
   return (
     <AuthContext.Provider
        value={{
-        user, profile, roles, loading, leaderUnits, leaderCentres, myMember, tenantMemberships,
+        user, profile, roles, loading, dataLoaded, leaderUnits, leaderCentres, myMember, tenantMemberships,
         signUp, signIn, signOut, resetPassword, updatePassword,
         isAdmin, isUnitLeader, isWSFLeader, isMember,
         isTenantOwner, isTenantAdmin,

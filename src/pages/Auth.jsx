@@ -21,7 +21,7 @@ export default function Auth() {
     import("@/pages/Dashboard").catch(() => {});
   }, []);
 
-  const { user, loading, signIn, signUp, resetPassword, tenantMemberships } = useAuth();
+  const { user, loading, dataLoaded, signIn, signUp, resetPassword, tenantMemberships } = useAuth();
   const { toast } = useToast();
   const { tenantSlug } = useParams();
   const canSignup = !!tenantSlug;
@@ -95,6 +95,13 @@ export default function Auth() {
   if (user) {
     if (tenantSlug) {
       return <Navigate to={`/t/${tenantSlug}`} replace />;
+    }
+    if (!dataLoaded) {
+      return (
+        <div className="min-h-screen bg-background flex items-center justify-center">
+          <div className="animate-pulse text-muted-foreground">Loading...</div>
+        </div>
+      );
     }
     const slug = tenantMemberships?.[0]?.tenants?.slug;
     const redirectTo = slug ? `/t/${slug}` : "/";
