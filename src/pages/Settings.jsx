@@ -1500,6 +1500,7 @@ export default function Settings() {
 
         <TabsContent value="comms" className="space-y-4">
           <CommunicationsSection />
+          <BirthdayMessagesSection />
           <TestimonyEmailSection />
         </TabsContent>
 
