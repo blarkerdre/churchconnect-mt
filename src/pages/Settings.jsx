@@ -696,14 +696,11 @@ function FaviconOgImageSection() {
   const { currentTenant, tenantId, isTenantAdmin } = useTenant();
   const [uploadingFavicon, setUploadingFavicon] = useState(false);
   const [uploadingOg, setUploadingOg] = useState(false);
-  const [uploadingPwa, setUploadingPwa] = useState(false);
   const faviconInputRef = React.useRef(null);
   const ogInputRef = React.useRef(null);
-  const pwaInputRef = React.useRef(null);
 
   const faviconUrl = currentTenant?.settings?.favicon_url || null;
   const ogImageUrl = currentTenant?.settings?.og_image_url || null;
-  const pwaIconUrl = currentTenant?.settings?.pwa_icon_url || null;
 
   const updateSettings = async (key, value) => {
     const mergedSettings = {
