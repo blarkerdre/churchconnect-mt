@@ -77,10 +77,10 @@ export default function BirthdayMessagesSection() {
       if (error) throw error;
     },
     onSuccess: () => {
-      toast({ title: "Birthday settings saved" });
+      toast.success("Birthday settings saved");
       qc.invalidateQueries({ queryKey: ["birthday_message_settings", tenantId] });
     },
-    onError: (err) => toast({ title: "Save failed", description: err.message, variant: "destructive" }),
+    onError: (err) => toast.error("Save failed", { description: err.message }),
   });
 
   if (!isTenantAdmin) return null;
