@@ -353,6 +353,104 @@ export type Database = {
           },
         ]
       }
+      birthday_message_log: {
+        Row: {
+          channel: string
+          created_at: string
+          error: string | null
+          id: string
+          member_id: string
+          sent_on: string
+          status: string
+          tenant_id: string
+        }
+        Insert: {
+          channel: string
+          created_at?: string
+          error?: string | null
+          id?: string
+          member_id: string
+          sent_on?: string
+          status?: string
+          tenant_id: string
+        }
+        Update: {
+          channel?: string
+          created_at?: string
+          error?: string | null
+          id?: string
+          member_id?: string
+          sent_on?: string
+          status?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "birthday_message_log_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "birthday_message_log_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      birthday_message_settings: {
+        Row: {
+          channels: string[]
+          created_at: string
+          email_body: string
+          email_subject: string
+          enabled: boolean
+          in_app_template: string
+          send_hour_local: number
+          sms_template: string
+          tenant_id: string
+          updated_at: string
+          whatsapp_template: string
+        }
+        Insert: {
+          channels?: string[]
+          created_at?: string
+          email_body?: string
+          email_subject?: string
+          enabled?: boolean
+          in_app_template?: string
+          send_hour_local?: number
+          sms_template?: string
+          tenant_id: string
+          updated_at?: string
+          whatsapp_template?: string
+        }
+        Update: {
+          channels?: string[]
+          created_at?: string
+          email_body?: string
+          email_subject?: string
+          enabled?: boolean
+          in_app_template?: string
+          send_hour_local?: number
+          sms_template?: string
+          tenant_id?: string
+          updated_at?: string
+          whatsapp_template?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "birthday_message_settings_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       books_of_the_month: {
         Row: {
           author: string
