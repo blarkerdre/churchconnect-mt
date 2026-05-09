@@ -58,8 +58,15 @@ export function AuthProvider({ children }) {
   }, []);
 
   async function fetchUserData(userId, userEmail) {
+    // Hard safety net: if Supabase calls hang (e.g., preview proxy issues),
+    // unblock the UI after 5s so /auth can redirect instead of stalling.
+    const safetyTimer = setTimeout(() => {
+      setLoading(false);
+      setDataLoaded(true);
+    }, 5000);
+
     try {
-      const [profileRes, rolesRes, unitsRes, memberRes, tmRes] = await Promise.all([
+      const [profileRes, rolesRes, unitsRes, memberRes, tmRes] = await Promise.allSettled([
         supabase.from("profiles").select("*").eq("user_id", userId).maybeSingle(),
         supabase.from("user_roles").select("role").eq("user_id", userId),
         supabase.from("unit_leader_assignments").select("unit_name").eq("user_id", userId),
@@ -67,25 +74,36 @@ export function AuthProvider({ children }) {
         supabase.from("tenant_memberships").select("tenant_id, role, tenants(slug)").eq("user_id", userId),
       ]);
 
-      setProfile(profileRes.data);
-      setRoles(rolesRes.data?.map((r) => r.role) || []);
-      setLeaderUnits(unitsRes.data?.map((u) => u.unit_name) || []);
-      setTenantMemberships(tmRes.data || []);
-      setMyMember(memberRes.data);
+      const profileData = profileRes.status === "fulfilled" ? profileRes.value.data : null;
+      const rolesData = rolesRes.status === "fulfilled" ? rolesRes.value.data : null;
+      const unitsData = unitsRes.status === "fulfilled" ? unitsRes.value.data : null;
+      const memberData = memberRes.status === "fulfilled" ? memberRes.value.data : null;
+      const tmData = tmRes.status === "fulfilled" ? tmRes.value.data : null;
+
+      setProfile(profileData);
+      setRoles(rolesData?.map((r) => r.role) || []);
+      setLeaderUnits(unitsData?.map((u) => u.unit_name) || []);
+      setTenantMemberships(tmData || []);
+      setMyMember(memberData);
 
       // Fetch WSF centres led by this user (via their member record)
-      if (memberRes.data?.id) {
-        const { data: centres } = await supabase
-          .from("wsf_centres")
-          .select("name")
-          .eq("leader_id", memberRes.data.id);
-        setLeaderCentres(centres?.map((c) => c.name) || []);
+      if (memberData?.id) {
+        try {
+          const { data: centres } = await supabase
+            .from("wsf_centres")
+            .select("name")
+            .eq("leader_id", memberData.id);
+          setLeaderCentres(centres?.map((c) => c.name) || []);
+        } catch {
+          setLeaderCentres([]);
+        }
       } else {
         setLeaderCentres([]);
       }
     } catch (err) {
       console.error("Error fetching user data:", err);
     } finally {
+      clearTimeout(safetyTimer);
       setLoading(false);
       setDataLoaded(true);
     }
