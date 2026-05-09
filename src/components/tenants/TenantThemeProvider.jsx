@@ -130,7 +130,7 @@ export default function TenantThemeProvider({ children }) {
   // Dynamic PWA manifest & apple-touch-icon
   useEffect(() => {
     const pwaIconUrl = currentTenant?.settings?.pwa_icon_url;
-    const iconUrl = pwaIconUrl || currentTenant?.logo_url || null;
+    const iconUrl = currentTenant?.logo_url || pwaIconUrl || null;
     const tenantName = currentTenant?.name || "Church Management Suite";
 
     // Build manifest JSON
