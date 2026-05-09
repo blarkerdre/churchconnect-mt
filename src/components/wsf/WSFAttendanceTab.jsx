@@ -117,6 +117,8 @@ export default function WSFAttendanceTab({ centres }) {
     (!dateTo || r.meeting_date <= dateTo)
   );
 
+  const availableCentres = isAdmin ? centres : ledCentres;
+
   // Admin summary stats (respects centre + date filters)
   const summaryStats = (() => {
     const centresInScope = filterCentreId === "all" ? availableCentres.length : 1;
@@ -179,8 +181,6 @@ export default function WSFAttendanceTab({ centres }) {
       </Card>
     );
   }
-
-  const availableCentres = isAdmin ? centres : ledCentres;
 
   return (
     <div className="space-y-4">
