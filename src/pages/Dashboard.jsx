@@ -76,6 +76,18 @@ export default function Dashboard() {
     enabled: isLeaderOrAdmin,
   });
 
+  const { data: activeCount = 0 } = useQuery({
+    queryKey: ["dashboard-active-count", tenantId],
+    queryFn: async () => {
+      const { count, error } = await scopeQuery(
+        supabase.from("members").select("*", { count: "exact", head: true }).eq("membership_status", "Active")
+      );
+      if (error) throw error;
+      return count || 0;
+    },
+    enabled: isLeaderOrAdmin && !!tenantId,
+  });
+
   const { data: upcomingBirthdays = [] } = useQuery({
     queryKey: ["dashboard-upcoming-birthdays", tenantId],
     queryFn: async () => {
