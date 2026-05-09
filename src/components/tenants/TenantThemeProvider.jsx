@@ -27,6 +27,101 @@ function hexToHsl(hex) {
   return `${Math.round(h * 360)} ${Math.round(s * 100)}% ${Math.round(l * 100)}%`;
 }
 
+/** Load an image with CORS enabled so canvas isn't tainted. */
+function loadImage(url) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = url;
+  });
+}
+
+/** Render a logo onto a square canvas with white background, contained & centered. */
+async function renderSquareIcon(logoUrl, size, bg = "#ffffff") {
+  try {
+    const img = await loadImage(logoUrl);
+    const canvas = document.createElement("canvas");
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext("2d");
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, size, size);
+    const pad = Math.round(size * 0.08);
+    const avail = size - pad * 2;
+    const scale = Math.min(avail / img.width, avail / img.height);
+    const w = img.width * scale;
+    const h = img.height * scale;
+    ctx.drawImage(img, (size - w) / 2, (size - h) / 2, w, h);
+    return canvas.toDataURL("image/png");
+  } catch {
+    return null;
+  }
+}
+
+/** Render an OG card (1200x630) with brand bg, centered logo, and tenant name. */
+async function renderOgCard(logoUrl, name, primaryHex) {
+  try {
+    const W = 1200, H = 630;
+    const canvas = document.createElement("canvas");
+    canvas.width = W;
+    canvas.height = H;
+    const ctx = canvas.getContext("2d");
+
+    // Background gradient using primary color
+    const bg = primaryHex && /^#([0-9a-f]{6})$/i.test(primaryHex) ? primaryHex : "#1e3a5f";
+    const grad = ctx.createLinearGradient(0, 0, W, H);
+    grad.addColorStop(0, bg);
+    grad.addColorStop(1, "#0b1a2e");
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, W, H);
+
+    // Logo
+    let logoBottom = H / 2;
+    if (logoUrl) {
+      const img = await loadImage(logoUrl).catch(() => null);
+      if (img) {
+        const maxLogo = 320;
+        const scale = Math.min(maxLogo / img.width, maxLogo / img.height);
+        const w = img.width * scale;
+        const h = img.height * scale;
+        const x = (W - w) / 2;
+        const y = H / 2 - h / 2 - 40;
+        // White rounded plate behind logo for contrast
+        const plate = Math.max(w, h) + 48;
+        const px = (W - plate) / 2;
+        const py = y + h / 2 - plate / 2;
+        ctx.fillStyle = "rgba(255,255,255,0.96)";
+        const r = 32;
+        ctx.beginPath();
+        ctx.moveTo(px + r, py);
+        ctx.arcTo(px + plate, py, px + plate, py + plate, r);
+        ctx.arcTo(px + plate, py + plate, px, py + plate, r);
+        ctx.arcTo(px, py + plate, px, py, r);
+        ctx.arcTo(px, py, px + plate, py, r);
+        ctx.closePath();
+        ctx.fill();
+        ctx.drawImage(img, x, y, w, h);
+        logoBottom = py + plate;
+      }
+    }
+
+    // Tenant name
+    if (name) {
+      ctx.fillStyle = "#ffffff";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "top";
+      ctx.font = "700 56px 'Playfair Display', Georgia, serif";
+      ctx.fillText(name, W / 2, Math.min(logoBottom + 32, H - 100));
+    }
+
+    return canvas.toDataURL("image/png");
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Given HSL string "H S% L%", returns a lighter/darker variant.
  */
@@ -103,9 +198,12 @@ export default function TenantThemeProvider({ children }) {
     };
   }, [currentTenant?.settings?.primary_color]);
 
-  // Dynamic favicon
+  // Dynamic favicon (uses tenant logo as fallback, fitted to 64x64)
   useEffect(() => {
     const faviconUrl = currentTenant?.settings?.favicon_url;
+    const logoUrl = currentTenant?.logo_url;
+    let cancelled = false;
+
     const link = document.querySelector('link[rel="icon"]') || (() => {
       const el = document.createElement("link");
       el.rel = "icon";
@@ -113,77 +211,103 @@ export default function TenantThemeProvider({ children }) {
       return el;
     })();
 
+    const apply = (href, type) => {
+      if (cancelled) return;
+      link.href = href;
+      link.type = type;
+    };
+
     if (faviconUrl) {
-      link.href = faviconUrl;
-      link.type = faviconUrl.endsWith(".png") ? "image/png" : faviconUrl.endsWith(".svg") ? "image/svg+xml" : "image/jpeg";
+      apply(faviconUrl, faviconUrl.endsWith(".png") ? "image/png" : faviconUrl.endsWith(".svg") ? "image/svg+xml" : "image/jpeg");
+    } else if (logoUrl) {
+      // Fit logo onto a 64x64 square (white bg) for a clean tab icon
+      renderSquareIcon(logoUrl, 64).then((dataUrl) => {
+        if (dataUrl) apply(dataUrl, "image/png");
+        else apply("/favicon.jpg", "image/jpeg");
+      });
     } else {
-      link.href = "/favicon.jpg";
-      link.type = "image/jpeg";
+      apply("/favicon.jpg", "image/jpeg");
     }
 
     return () => {
+      cancelled = true;
       link.href = "/favicon.jpg";
       link.type = "image/jpeg";
     };
-  }, [currentTenant?.settings?.favicon_url]);
+  }, [currentTenant?.settings?.favicon_url, currentTenant?.logo_url]);
 
-  // Dynamic PWA manifest & apple-touch-icon
+  // Dynamic PWA manifest & apple-touch-icon (logo fitted to 512x512)
   useEffect(() => {
     const pwaIconUrl = currentTenant?.settings?.pwa_icon_url;
-    const iconUrl = currentTenant?.logo_url || pwaIconUrl || null;
+    const rawIcon = currentTenant?.logo_url || pwaIconUrl || null;
     const tenantName = currentTenant?.name || "Church Management Suite";
+    let cancelled = false;
+    let blobUrl;
 
-    // Build manifest JSON
-    const manifest = {
-      name: tenantName,
-      short_name: tenantName.length > 12 ? tenantName.slice(0, 12).trim() : tenantName,
-      description: `Church Management Suite for ${tenantName}`,
-      start_url: "/",
-      display: "standalone",
-      background_color: "#ffffff",
-      theme_color: "#1e3a5f",
-      icons: iconUrl
-        ? [
-            { src: iconUrl, sizes: "192x192", type: "image/png" },
-            { src: iconUrl, sizes: "512x512", type: "image/png" },
-          ]
-        : [
-            { src: "/icon-192.png", sizes: "192x192", type: "image/png" },
-            { src: "/icon-512.png", sizes: "512x512", type: "image/png" },
-          ],
+    const buildAndApply = (iconUrl) => {
+      if (cancelled) return;
+      const manifest = {
+        name: tenantName,
+        short_name: tenantName.length > 12 ? tenantName.slice(0, 12).trim() : tenantName,
+        description: `Church Management Suite for ${tenantName}`,
+        start_url: "/",
+        display: "standalone",
+        background_color: "#ffffff",
+        theme_color: "#1e3a5f",
+        icons: iconUrl
+          ? [
+              { src: iconUrl, sizes: "192x192", type: "image/png" },
+              { src: iconUrl, sizes: "512x512", type: "image/png" },
+            ]
+          : [
+              { src: "/icon-192.png", sizes: "192x192", type: "image/png" },
+              { src: "/icon-512.png", sizes: "512x512", type: "image/png" },
+            ],
+      };
+
+      const blob = new Blob([JSON.stringify(manifest)], { type: "application/json" });
+      blobUrl = URL.createObjectURL(blob);
+
+      let manifestLink = document.querySelector('link[rel="manifest"]');
+      if (!manifestLink) {
+        manifestLink = document.createElement("link");
+        manifestLink.rel = "manifest";
+        document.head.appendChild(manifestLink);
+      }
+      manifestLink.href = blobUrl;
+
+      let appleIcon = document.querySelector('link[rel="apple-touch-icon"]');
+      if (!appleIcon) {
+        appleIcon = document.createElement("link");
+        appleIcon.rel = "apple-touch-icon";
+        document.head.appendChild(appleIcon);
+      }
+      appleIcon.href = iconUrl || "/icon-192.png";
     };
 
-    const blob = new Blob([JSON.stringify(manifest)], { type: "application/json" });
-    const blobUrl = URL.createObjectURL(blob);
-
-    // Update or create <link rel="manifest">
-    let manifestLink = document.querySelector('link[rel="manifest"]');
-    if (!manifestLink) {
-      manifestLink = document.createElement("link");
-      manifestLink.rel = "manifest";
-      document.head.appendChild(manifestLink);
+    if (rawIcon) {
+      renderSquareIcon(rawIcon, 512).then((dataUrl) => buildAndApply(dataUrl || rawIcon));
+    } else {
+      buildAndApply(null);
     }
-    manifestLink.href = blobUrl;
-
-    // Update or create <link rel="apple-touch-icon">
-    let appleIcon = document.querySelector('link[rel="apple-touch-icon"]');
-    if (!appleIcon) {
-      appleIcon = document.createElement("link");
-      appleIcon.rel = "apple-touch-icon";
-      document.head.appendChild(appleIcon);
-    }
-    appleIcon.href = iconUrl || "/icon-192.png";
 
     return () => {
-      URL.revokeObjectURL(blobUrl);
-      manifestLink.href = "/manifest.json";
-      appleIcon.href = "/icon-192.png";
+      cancelled = true;
+      if (blobUrl) URL.revokeObjectURL(blobUrl);
+      const manifestLink = document.querySelector('link[rel="manifest"]');
+      if (manifestLink) manifestLink.href = "/manifest.json";
+      const appleIcon = document.querySelector('link[rel="apple-touch-icon"]');
+      if (appleIcon) appleIcon.href = "/icon-192.png";
     };
   }, [currentTenant?.settings?.pwa_icon_url, currentTenant?.logo_url, currentTenant?.name]);
 
-  // Dynamic OG image meta tags
+  // Dynamic OG image meta tags (generates 1200x630 card from logo as fallback)
   useEffect(() => {
     const ogImageUrl = currentTenant?.settings?.og_image_url;
+    const logoUrl = currentTenant?.logo_url;
+    const tenantName = currentTenant?.name;
+    const primaryColor = currentTenant?.settings?.primary_color;
+    let cancelled = false;
 
     const setMeta = (selector, attr, value) => {
       let el = document.querySelector(selector);
@@ -196,18 +320,32 @@ export default function TenantThemeProvider({ children }) {
       if (el) el.setAttribute("content", value || "");
     };
 
+    const applyOg = (url) => {
+      if (cancelled || !url) return;
+      setMeta('meta[property="og:image"]', { property: "og:image" }, url);
+      setMeta('meta[name="twitter:image"]', { name: "twitter:image" }, url);
+    };
+
     if (ogImageUrl) {
-      setMeta('meta[property="og:image"]', { property: "og:image" }, ogImageUrl);
-      setMeta('meta[name="twitter:image"]', { name: "twitter:image" }, ogImageUrl);
+      applyOg(ogImageUrl);
+    } else if (logoUrl) {
+      renderOgCard(logoUrl, tenantName, primaryColor).then((dataUrl) => {
+        if (dataUrl) applyOg(dataUrl);
+      });
     }
 
     return () => {
-      // Restore defaults
+      cancelled = true;
       const defaultOg = "https://storage.googleapis.com/gpt-engineer-file-uploads/dSCGfUp63RcMNJCUiPXsrrXGnlr2/social-images/social-1773439127872-1000559797.webp";
       setMeta('meta[property="og:image"]', { property: "og:image" }, defaultOg);
       setMeta('meta[name="twitter:image"]', { name: "twitter:image" }, defaultOg);
     };
-  }, [currentTenant?.settings?.og_image_url]);
+  }, [
+    currentTenant?.settings?.og_image_url,
+    currentTenant?.logo_url,
+    currentTenant?.name,
+    currentTenant?.settings?.primary_color,
+  ]);
 
   return children;
 }
