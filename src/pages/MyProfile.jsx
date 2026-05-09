@@ -20,6 +20,7 @@ import { useChurchUnits } from "@/hooks/useChurchUnits";
 import MyCertificates from "@/components/certificates/MyCertificates";
 import MemberJourneyTimeline from "@/components/members/MemberJourneyTimeline";
 import TakeExamDialog from "@/components/exams/TakeExamDialog";
+import OpenSessionsPanel from "@/components/exams/OpenSessionsPanel";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
 import WelcomeQuestions from "@/components/members/WelcomeQuestions";
 import { useTenant, DEFAULT_TENANT_ID } from "@/contexts/TenantContext";
@@ -661,6 +662,9 @@ export default function MyProfile() {
       {/* App Feedback */}
       {!editing && <AppFeedbackSection />}
 
+      {/* Open Certificate Course Sessions */}
+      {!editing && <OpenSessionsPanel memberId={member.id} />}
+
       {/* Take Exams */}
       {!editing && <DynamicExamButtons memberId={member.id} onSelect={setExamSelection} tenantId={tenantId} />}
 
@@ -953,13 +957,23 @@ function DynamicExamButtons({ memberId, onSelect, tenantId }) {
   });
 
   const { data: registrations = [] } = useQuery({
-    queryKey: ["my-course-registrations", memberId, tenantId],
+    queryKey: ["my-course-registrations-v2", memberId, tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("course_registrations").select("course_id").eq("member_id", memberId).eq("tenant_id", tenantId);
+      const { data, error } = await supabase.from("course_registrations").select("course_id, session_id").eq("member_id", memberId).eq("tenant_id", tenantId);
       if (error) throw error;
-      return data.map(r => r.course_id);
+      return data;
     },
     enabled: !!memberId && !!tenantId,
+  });
+
+  const { data: openSessions = [] } = useQuery({
+    queryKey: ["my-open-sessions", tenantId],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("exam_sessions").select("id, auto_open_exams").eq("tenant_id", tenantId).eq("status", "active");
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!tenantId,
   });
 
   const { data: allSubjects = [] } = useQuery({
@@ -988,8 +1002,16 @@ function DynamicExamButtons({ memberId, onSelect, tenantId }) {
 
   if (isLoading || courses.length === 0) return null;
 
-  // Only show registered courses with exams_open
-  const registeredCourses = courses.filter(c => registrations.includes(c.id) && c.exams_open);
+  // Show courses where: (a) registered AND course.exams_open, OR
+  // (b) registered via an active session that has auto_open_exams=true
+  const autoOpenSessionIds = new Set(openSessions.filter(s => s.auto_open_exams !== false).map(s => s.id));
+  const registeredCourseIds = new Set(registrations.map(r => r.course_id));
+  const registeredViaOpenSession = new Set(
+    registrations.filter(r => r.session_id && autoOpenSessionIds.has(r.session_id)).map(r => r.course_id)
+  );
+  const registeredCourses = courses.filter(c =>
+    registeredCourseIds.has(c.id) && (c.exams_open || registeredViaOpenSession.has(c.id))
+  );
   if (registeredCourses.length === 0) return null;
 
   // Build best attempt per subject
