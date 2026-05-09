@@ -20,6 +20,7 @@ import { useChurchUnits } from "@/hooks/useChurchUnits";
 import MyCertificates from "@/components/certificates/MyCertificates";
 import MemberJourneyTimeline from "@/components/members/MemberJourneyTimeline";
 import TakeExamDialog from "@/components/exams/TakeExamDialog";
+import OpenSessionsPanel from "@/components/exams/OpenSessionsPanel";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
 import WelcomeQuestions from "@/components/members/WelcomeQuestions";
 import { useTenant, DEFAULT_TENANT_ID } from "@/contexts/TenantContext";
