@@ -1,16 +1,35 @@
-I found the issue: the new course session components exist, but they are only shown on **My Profile** and the admin session manager is not mounted anywhere on the **Bible School** page.
+## Tenant Scoping Audit — Exam Sessions
 
-Plan:
+### Findings
 
-1. **Add sessions to admin Bible School Management**
-   - Import and render `ExamSessionManager` on `src/pages/ExamManagement.jsx`.
-   - Place it near the top of the admin Bible School page, before the course/subject question management area, so admins can create, edit, start, stop, enrol, and view sessions from Bible School directly.
+**RLS (server-side)** — solid:
+- `exam_sessions`, `exam_session_courses`, `course_registrations`, `exam_attempts` all have admin-manage + member-view policies gated by `is_admin(auth.uid(), tenant_id)` / `user_has_tenant_access(tenant_id)`. Cross-tenant reads/writes are blocked even without client filters.
 
-2. **Add open sessions to member Bible School**
-   - Import and render `OpenSessionsPanel` inside the member Bible School view.
-   - Place it above the existing course list so members can see active Certificate Course Sessions and register from the Bible School page, not only My Profile.
+**Client-side (defense in depth)** — mostly correct, three gaps:
 
-3. **Keep existing behaviour intact**
-   - Do not change database logic or permissions.
-   - Keep the existing per-course registration/exam cards underneath, so members can still take exams after registering.
-   - Preserve tenant scoping and existing `memberId` usage.
+1. `SessionAggregateResults` (in `ExamSessionManager.jsx`, line ~389) queries `exam_attempts` by `session_id` only — no `tenant_id` filter and no tenantId in cache key. RLS blocks cross-tenant data, but the cache key can collide if a session id is reused after tenant switch (extremely unlikely with UUIDs, but still: cache hygiene).
+
+2. `SessionEnrolDialog` query key `["session-existing-regs", session.id]` — same issue: missing `tenantId` in cache key.
+
+3. `OpenSessionsPanel.registerMutation` and `SessionEnrolDialog.enrolMutation` — both correctly use `withTenant(...)` for inserts ✓. Filters on read queries all use `.eq("tenant_id", tenantId)` ✓.
+
+**All other writes/reads verified correct:**
+- `ExamSessionManager` mutations: every `update`/`delete` chains `.eq("tenant_id", tenantId)`, every `insert` uses `withTenant(...)`. ✓
+- `OpenSessionsPanel` reads: scopeQuery / explicit tenant_id ✓
+- `MyProfile` session-related queries: explicit tenant_id ✓
+
+### Changes to make
+
+**Edit `src/components/exams/ExamSessionManager.jsx`:**
+- In `SessionAggregateResults`: add `tenantId` from `useTenantQuery`, add `.eq("tenant_id", tenantId)` to the `exam_attempts` query, include `tenantId` in the queryKey, and gate with `enabled: !!session.id && !!tenantId`.
+
+**Edit `src/components/exams/SessionEnrolDialog.jsx`:**
+- Add `tenantId` to the `["session-existing-regs", session.id]` query key (already filtered by tenant_id in the SQL).
+- Add `tenantId` to the invalidation call after enrol.
+
+No database migration needed — RLS already enforces isolation correctly.
+
+### Out of scope
+
+- No changes to server policies, no changes to schema.
+- No behaviour changes for users; purely hardening cache keys and adding belt-and-braces tenant filter on one read.
