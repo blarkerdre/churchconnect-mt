@@ -25,6 +25,8 @@ import { useSubFeature } from "@/hooks/useSubFeature";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
 import { getGradeClassification, DEFAULT_GRADE_CLASSIFICATIONS } from "@/lib/grade-utils";
 import StatementOfResult from "@/components/exams/StatementOfResult";
+import ExamSessionManager from "@/components/exams/ExamSessionManager";
+import OpenSessionsPanel from "@/components/exams/OpenSessionsPanel";
 
 const OPTION_LETTERS = ["a", "b", "c", "d"];
 const QUESTION_TYPES = [
