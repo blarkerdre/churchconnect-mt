@@ -30,9 +30,10 @@ export default function ExamSessionManager() {
   const qc = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingSession, setEditingSession] = useState(null);
-  const [form, setForm] = useState({ name: "", description: "", pass_mark_percentage: 50, courses: [] });
+  const [form, setForm] = useState({ name: "", description: "", pass_mark_percentage: 50, courses: [], starts_on: "", ends_on: "", auto_open_exams: true, allow_reregistration: true });
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [viewingSession, setViewingSession] = useState(null);
+  const [enrolTarget, setEnrolTarget] = useState(null);
 
   const { data: sessions = [], isLoading } = useQuery({
     queryKey: ["exam-sessions", tenantId],
