@@ -46,7 +46,7 @@ export default function FollowupFormDialog({ open, onOpenChange, followup, onSav
   }));
 
   const assignees = members
-    .filter((m) => (m.church_units || []).includes("Follow-up"))
+    .filter((m) => (m.church_unit || "").toLowerCase().includes("follow"))
     .map((m) => ({ id: m.id, name: `${m.first_name} ${m.last_name}` }));
 
   return (
