@@ -244,6 +244,8 @@ export default function SelfCheckInWidget() {
             );
           })
         )}
+          </>
+        )}
       </CardContent>
     </Card>
   );
