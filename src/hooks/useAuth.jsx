@@ -87,6 +87,7 @@ export function AuthProvider({ children }) {
       console.error("Error fetching user data:", err);
     } finally {
       setLoading(false);
+      setDataLoaded(true);
     }
   }
 
