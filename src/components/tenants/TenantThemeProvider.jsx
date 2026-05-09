@@ -198,9 +198,12 @@ export default function TenantThemeProvider({ children }) {
     };
   }, [currentTenant?.settings?.primary_color]);
 
-  // Dynamic favicon
+  // Dynamic favicon (uses tenant logo as fallback, fitted to 64x64)
   useEffect(() => {
     const faviconUrl = currentTenant?.settings?.favicon_url;
+    const logoUrl = currentTenant?.logo_url;
+    let cancelled = false;
+
     const link = document.querySelector('link[rel="icon"]') || (() => {
       const el = document.createElement("link");
       el.rel = "icon";
@@ -208,77 +211,103 @@ export default function TenantThemeProvider({ children }) {
       return el;
     })();
 
+    const apply = (href, type) => {
+      if (cancelled) return;
+      link.href = href;
+      link.type = type;
+    };
+
     if (faviconUrl) {
-      link.href = faviconUrl;
-      link.type = faviconUrl.endsWith(".png") ? "image/png" : faviconUrl.endsWith(".svg") ? "image/svg+xml" : "image/jpeg";
+      apply(faviconUrl, faviconUrl.endsWith(".png") ? "image/png" : faviconUrl.endsWith(".svg") ? "image/svg+xml" : "image/jpeg");
+    } else if (logoUrl) {
+      // Fit logo onto a 64x64 square (white bg) for a clean tab icon
+      renderSquareIcon(logoUrl, 64).then((dataUrl) => {
+        if (dataUrl) apply(dataUrl, "image/png");
+        else apply("/favicon.jpg", "image/jpeg");
+      });
     } else {
-      link.href = "/favicon.jpg";
-      link.type = "image/jpeg";
+      apply("/favicon.jpg", "image/jpeg");
     }
 
     return () => {
+      cancelled = true;
       link.href = "/favicon.jpg";
       link.type = "image/jpeg";
     };
-  }, [currentTenant?.settings?.favicon_url]);
+  }, [currentTenant?.settings?.favicon_url, currentTenant?.logo_url]);
 
-  // Dynamic PWA manifest & apple-touch-icon
+  // Dynamic PWA manifest & apple-touch-icon (logo fitted to 512x512)
   useEffect(() => {
     const pwaIconUrl = currentTenant?.settings?.pwa_icon_url;
-    const iconUrl = currentTenant?.logo_url || pwaIconUrl || null;
+    const rawIcon = currentTenant?.logo_url || pwaIconUrl || null;
     const tenantName = currentTenant?.name || "Church Management Suite";
+    let cancelled = false;
+    let blobUrl;
 
-    // Build manifest JSON
-    const manifest = {
-      name: tenantName,
-      short_name: tenantName.length > 12 ? tenantName.slice(0, 12).trim() : tenantName,
-      description: `Church Management Suite for ${tenantName}`,
-      start_url: "/",
-      display: "standalone",
-      background_color: "#ffffff",
-      theme_color: "#1e3a5f",
-      icons: iconUrl
-        ? [
-            { src: iconUrl, sizes: "192x192", type: "image/png" },
-            { src: iconUrl, sizes: "512x512", type: "image/png" },
-          ]
-        : [
-            { src: "/icon-192.png", sizes: "192x192", type: "image/png" },
-            { src: "/icon-512.png", sizes: "512x512", type: "image/png" },
-          ],
+    const buildAndApply = (iconUrl) => {
+      if (cancelled) return;
+      const manifest = {
+        name: tenantName,
+        short_name: tenantName.length > 12 ? tenantName.slice(0, 12).trim() : tenantName,
+        description: `Church Management Suite for ${tenantName}`,
+        start_url: "/",
+        display: "standalone",
+        background_color: "#ffffff",
+        theme_color: "#1e3a5f",
+        icons: iconUrl
+          ? [
+              { src: iconUrl, sizes: "192x192", type: "image/png" },
+              { src: iconUrl, sizes: "512x512", type: "image/png" },
+            ]
+          : [
+              { src: "/icon-192.png", sizes: "192x192", type: "image/png" },
+              { src: "/icon-512.png", sizes: "512x512", type: "image/png" },
+            ],
+      };
+
+      const blob = new Blob([JSON.stringify(manifest)], { type: "application/json" });
+      blobUrl = URL.createObjectURL(blob);
+
+      let manifestLink = document.querySelector('link[rel="manifest"]');
+      if (!manifestLink) {
+        manifestLink = document.createElement("link");
+        manifestLink.rel = "manifest";
+        document.head.appendChild(manifestLink);
+      }
+      manifestLink.href = blobUrl;
+
+      let appleIcon = document.querySelector('link[rel="apple-touch-icon"]');
+      if (!appleIcon) {
+        appleIcon = document.createElement("link");
+        appleIcon.rel = "apple-touch-icon";
+        document.head.appendChild(appleIcon);
+      }
+      appleIcon.href = iconUrl || "/icon-192.png";
     };
 
-    const blob = new Blob([JSON.stringify(manifest)], { type: "application/json" });
-    const blobUrl = URL.createObjectURL(blob);
-
-    // Update or create <link rel="manifest">
-    let manifestLink = document.querySelector('link[rel="manifest"]');
-    if (!manifestLink) {
-      manifestLink = document.createElement("link");
-      manifestLink.rel = "manifest";
-      document.head.appendChild(manifestLink);
+    if (rawIcon) {
+      renderSquareIcon(rawIcon, 512).then((dataUrl) => buildAndApply(dataUrl || rawIcon));
+    } else {
+      buildAndApply(null);
     }
-    manifestLink.href = blobUrl;
-
-    // Update or create <link rel="apple-touch-icon">
-    let appleIcon = document.querySelector('link[rel="apple-touch-icon"]');
-    if (!appleIcon) {
-      appleIcon = document.createElement("link");
-      appleIcon.rel = "apple-touch-icon";
-      document.head.appendChild(appleIcon);
-    }
-    appleIcon.href = iconUrl || "/icon-192.png";
 
     return () => {
-      URL.revokeObjectURL(blobUrl);
-      manifestLink.href = "/manifest.json";
-      appleIcon.href = "/icon-192.png";
+      cancelled = true;
+      if (blobUrl) URL.revokeObjectURL(blobUrl);
+      const manifestLink = document.querySelector('link[rel="manifest"]');
+      if (manifestLink) manifestLink.href = "/manifest.json";
+      const appleIcon = document.querySelector('link[rel="apple-touch-icon"]');
+      if (appleIcon) appleIcon.href = "/icon-192.png";
     };
   }, [currentTenant?.settings?.pwa_icon_url, currentTenant?.logo_url, currentTenant?.name]);
 
-  // Dynamic OG image meta tags
+  // Dynamic OG image meta tags (generates 1200x630 card from logo as fallback)
   useEffect(() => {
     const ogImageUrl = currentTenant?.settings?.og_image_url;
+    const logoUrl = currentTenant?.logo_url;
+    const tenantName = currentTenant?.name;
+    const primaryColor = currentTenant?.settings?.primary_color;
+    let cancelled = false;
 
     const setMeta = (selector, attr, value) => {
       let el = document.querySelector(selector);
@@ -291,18 +320,32 @@ export default function TenantThemeProvider({ children }) {
       if (el) el.setAttribute("content", value || "");
     };
 
+    const applyOg = (url) => {
+      if (cancelled || !url) return;
+      setMeta('meta[property="og:image"]', { property: "og:image" }, url);
+      setMeta('meta[name="twitter:image"]', { name: "twitter:image" }, url);
+    };
+
     if (ogImageUrl) {
-      setMeta('meta[property="og:image"]', { property: "og:image" }, ogImageUrl);
-      setMeta('meta[name="twitter:image"]', { name: "twitter:image" }, ogImageUrl);
+      applyOg(ogImageUrl);
+    } else if (logoUrl) {
+      renderOgCard(logoUrl, tenantName, primaryColor).then((dataUrl) => {
+        if (dataUrl) applyOg(dataUrl);
+      });
     }
 
     return () => {
-      // Restore defaults
+      cancelled = true;
       const defaultOg = "https://storage.googleapis.com/gpt-engineer-file-uploads/dSCGfUp63RcMNJCUiPXsrrXGnlr2/social-images/social-1773439127872-1000559797.webp";
       setMeta('meta[property="og:image"]', { property: "og:image" }, defaultOg);
       setMeta('meta[name="twitter:image"]', { name: "twitter:image" }, defaultOg);
     };
-  }, [currentTenant?.settings?.og_image_url]);
+  }, [
+    currentTenant?.settings?.og_image_url,
+    currentTenant?.logo_url,
+    currentTenant?.name,
+    currentTenant?.settings?.primary_color,
+  ]);
 
   return children;
 }
