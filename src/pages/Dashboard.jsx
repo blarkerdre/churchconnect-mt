@@ -105,13 +105,9 @@ export default function Dashboard() {
     return <MemberDashboard currentUser={profile} myMember={myMember} />;
   }
 
-  const total = members.length;
-  const firstTimers = members.filter(m => m.membership_status === "First Timer").length;
-  const newThisMonth = members.filter(m => {
-    const d = new Date(m.created_at);
-    const now = new Date();
-    return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-  }).length;
+  const total = dashStats?.total ?? 0;
+  const firstTimers = dashStats?.first_timers ?? 0;
+  const newThisMonth = dashStats?.new_this_month ?? 0;
 
   const openPastoral = pastoralCases.length;
 
@@ -122,16 +118,11 @@ export default function Dashboard() {
     { title: "Pastoral Cases", value: openPastoral, change: `${pastoralCases.filter(c => c.status === "Open").length} open`, icon: Heart, color: "text-chart-5" },
   ];
 
-  const waterBaptism = members.filter(m => m.water_baptism).length;
-  const hsBaptism = members.filter(m => m.holy_spirit_baptism).length;
-  const bfcCompleted = members.filter(m => m.bfc_completed).length;
-  const winnersSatellite = members.filter(m => m.winners_satellite).length;
-
   const growthMetrics = [
-    { label: "Water Baptism", value: waterBaptism, total },
-    { label: "Holy Spirit Baptism", value: hsBaptism, total },
-    { label: "BFC Completed", value: bfcCompleted, total },
-    { label: "Home Cell", value: winnersSatellite, total },
+    { label: "Water Baptism", value: dashStats?.water_baptism ?? 0, total },
+    { label: "Holy Spirit Baptism", value: dashStats?.hs_baptism ?? 0, total },
+    { label: "BFC Completed", value: dashStats?.bfc_completed ?? 0, total },
+    { label: "Home Cell", value: dashStats?.winners_satellite ?? 0, total },
   ];
 
   const recentActivity = [
