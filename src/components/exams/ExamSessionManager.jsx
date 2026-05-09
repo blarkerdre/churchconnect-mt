@@ -14,7 +14,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "@/components/ui/use-toast";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
-import { Loader2, Plus, Play, Square, Eye, Trash2, Edit, ClipboardList, Trophy, ChevronDown, ChevronUp } from "lucide-react";
+import { Loader2, Plus, Play, Square, Eye, Trash2, Edit, ClipboardList, Trophy, ChevronDown, ChevronUp, UserPlus, CalendarDays } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import SessionEnrolDialog from "@/components/exams/SessionEnrolDialog";
 
 const STATUS_COLORS = {
   draft: "bg-muted text-muted-foreground",
@@ -28,9 +30,10 @@ export default function ExamSessionManager() {
   const qc = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingSession, setEditingSession] = useState(null);
-  const [form, setForm] = useState({ name: "", description: "", pass_mark_percentage: 50, courses: [] });
+  const [form, setForm] = useState({ name: "", description: "", pass_mark_percentage: 50, courses: [], starts_on: "", ends_on: "", auto_open_exams: true, allow_reregistration: true });
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [viewingSession, setViewingSession] = useState(null);
+  const [enrolTarget, setEnrolTarget] = useState(null);
 
   const { data: sessions = [], isLoading } = useQuery({
     queryKey: ["exam-sessions", tenantId],
@@ -62,14 +65,16 @@ export default function ExamSessionManager() {
   });
 
   const saveMutation = useMutation({
-    mutationFn: async ({ sessionData, courses }) => {
+    mutationFn: async ({ sessionData, courses, coursesLocked }) => {
       let sessionId;
       if (editingSession) {
         const { error } = await supabase.from("exam_sessions").update(sessionData).eq("id", editingSession.id).eq("tenant_id", tenantId);
         if (error) throw error;
         sessionId = editingSession.id;
-        // Delete existing courses and re-insert
-        await supabase.from("exam_session_courses").delete().eq("session_id", sessionId).eq("tenant_id", tenantId);
+        if (!coursesLocked) {
+          // Delete existing courses and re-insert
+          await supabase.from("exam_session_courses").delete().eq("session_id", sessionId).eq("tenant_id", tenantId);
+        }
       } else {
         const { data, error } = await supabase.from("exam_sessions").insert(withTenant(sessionData)).select("id").single();
         if (error) throw error;
@@ -121,29 +126,51 @@ export default function ExamSessionManager() {
   const closeDialog = () => {
     setDialogOpen(false);
     setEditingSession(null);
-    setForm({ name: "", description: "", pass_mark_percentage: 50, courses: [] });
+    setForm({ name: "", description: "", pass_mark_percentage: 50, courses: [], starts_on: "", ends_on: "", auto_open_exams: true, allow_reregistration: true });
   };
 
   const openEdit = (session) => {
     const courses = sessionCourses.filter(c => c.session_id === session.id).map(c => c.exam_title);
     setEditingSession(session);
-    setForm({ name: session.name, description: session.description || "", pass_mark_percentage: session.pass_mark_percentage, courses });
+    setForm({
+      name: session.name,
+      description: session.description || "",
+      pass_mark_percentage: session.pass_mark_percentage,
+      courses,
+      starts_on: session.starts_on || "",
+      ends_on: session.ends_on || "",
+      auto_open_exams: session.auto_open_exams !== false,
+      allow_reregistration: session.allow_reregistration !== false,
+    });
     setDialogOpen(true);
   };
+
+  // While active, name + courses are locked; description/dates/toggles still editable.
+  const editingActive = editingSession?.status === "active";
 
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!form.name.trim()) { toast({ title: "Session name is required", variant: "destructive" }); return; }
-    if (form.courses.length === 0) { toast({ title: "Select at least one course exam", variant: "destructive" }); return; }
+    if (!editingActive && form.courses.length === 0) { toast({ title: "Select at least one course exam", variant: "destructive" }); return; }
+    const sessionData = {
+      description: form.description.trim() || null,
+      pass_mark_percentage: Number(form.pass_mark_percentage) || 50,
+      starts_on: form.starts_on || null,
+      ends_on: form.ends_on || null,
+      auto_open_exams: !!form.auto_open_exams,
+      allow_reregistration: !!form.allow_reregistration,
+      updated_at: new Date().toISOString(),
+    };
+    if (!editingActive) {
+      sessionData.name = form.name.trim();
+    }
+    if (!editingSession) {
+      sessionData.created_by = user?.id;
+    }
     saveMutation.mutate({
-      sessionData: {
-        name: form.name.trim(),
-        description: form.description.trim() || null,
-        pass_mark_percentage: Number(form.pass_mark_percentage) || 50,
-        created_by: user?.id,
-        updated_at: new Date().toISOString(),
-      },
+      sessionData,
       courses: form.courses,
+      coursesLocked: editingActive,
     });
   };
 
@@ -164,7 +191,7 @@ export default function ExamSessionManager() {
             <CardTitle className="text-base font-display flex items-center gap-2">
               <ClipboardList className="h-4 w-4 text-primary" /> Exam Sessions
             </CardTitle>
-            <Button size="sm" variant="outline" className="gap-1.5" onClick={() => { setEditingSession(null); setForm({ name: "", description: "", pass_mark_percentage: 50, courses: [] }); setDialogOpen(true); }}>
+            <Button size="sm" variant="outline" className="gap-1.5" onClick={() => { setEditingSession(null); setForm({ name: "", description: "", pass_mark_percentage: 50, courses: [], starts_on: "", ends_on: "", auto_open_exams: true, allow_reregistration: true }); setDialogOpen(true); }}>
               <Plus className="h-3.5 w-3.5" /> New Session
             </Button>
           </div>
@@ -194,9 +221,16 @@ export default function ExamSessionManager() {
                           ))}
                           {courses.length === 0 && <span className="text-xs text-muted-foreground">No courses assigned</span>}
                         </div>
-                        <div className="flex gap-2 text-[10px] text-muted-foreground mt-2">
+                        <div className="flex flex-wrap gap-x-3 gap-y-1 text-[10px] text-muted-foreground mt-2">
+                          {(s.starts_on || s.ends_on) && (
+                            <span className="flex items-center gap-1"><CalendarDays className="h-3 w-3" />
+                              {s.starts_on ? new Date(s.starts_on).toLocaleDateString() : "?"} – {s.ends_on ? new Date(s.ends_on).toLocaleDateString() : "?"}
+                            </span>
+                          )}
                           {s.started_at && <span>Started: {new Date(s.started_at).toLocaleDateString()}</span>}
                           {s.ended_at && <span>Ended: {new Date(s.ended_at).toLocaleDateString()}</span>}
+                          {s.auto_open_exams && s.status === "active" && <span className="text-chart-3">Exams auto-open</span>}
+                          {s.allow_reregistration === false && <span>No re-registration</span>}
                         </div>
                       </div>
                       <div className="flex items-center gap-1 shrink-0">
@@ -210,26 +244,34 @@ export default function ExamSessionManager() {
                           </Button>
                         )}
                         {s.status === "active" && (
-                          <Button
-                            variant="outline" size="sm" className="gap-1 text-destructive border-destructive/30 hover:bg-destructive/10 h-7 text-xs"
-                            disabled={statusMutation.isPending}
-                            onClick={() => statusMutation.mutate({ id: s.id, status: "closed" })}
-                          >
-                            <Square className="h-3 w-3" /> Stop
-                          </Button>
+                          <>
+                            <Button
+                              variant="outline" size="sm" className="gap-1 h-7 text-xs"
+                              onClick={() => setEnrolTarget(s)}
+                            >
+                              <UserPlus className="h-3 w-3" /> Enrol
+                            </Button>
+                            <Button
+                              variant="outline" size="sm" className="gap-1 text-destructive border-destructive/30 hover:bg-destructive/10 h-7 text-xs"
+                              disabled={statusMutation.isPending}
+                              onClick={() => statusMutation.mutate({ id: s.id, status: "closed" })}
+                            >
+                              <Square className="h-3 w-3" /> Stop
+                            </Button>
+                          </>
                         )}
                         <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setViewingSession(viewingSession?.id === s.id ? null : s)}>
                           <Eye className="h-3.5 w-3.5" />
                         </Button>
+                        {(s.status === "draft" || s.status === "active") && (
+                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(s)}>
+                            <Edit className="h-3.5 w-3.5" />
+                          </Button>
+                        )}
                         {s.status === "draft" && (
-                          <>
-                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(s)}>
-                              <Edit className="h-3.5 w-3.5" />
-                            </Button>
-                            <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => setDeleteTarget(s)}>
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </Button>
-                          </>
+                          <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => setDeleteTarget(s)}>
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
                         )}
                       </div>
                     </div>
@@ -253,23 +295,48 @@ export default function ExamSessionManager() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-1.5">
               <Label>Session Name *</Label>
-              <Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="e.g. March 2026 BFC Cohort" />
+              <Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="e.g. March 2026 BFC Cohort" disabled={editingActive} />
+              {editingActive && <p className="text-[10px] text-muted-foreground">Name is locked while session is active.</p>}
             </div>
             <div className="space-y-1.5">
               <Label>Description</Label>
               <Input value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} placeholder="Optional" />
             </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label>Starts on</Label>
+                <Input type="date" value={form.starts_on} onChange={e => setForm(f => ({ ...f, starts_on: e.target.value }))} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Ends on</Label>
+                <Input type="date" value={form.ends_on} onChange={e => setForm(f => ({ ...f, ends_on: e.target.value }))} />
+              </div>
+            </div>
             <div className="space-y-1.5">
               <Label>Aggregate Pass Mark (%)</Label>
               <Input type="number" min="0" max="100" value={form.pass_mark_percentage} onChange={e => setForm(f => ({ ...f, pass_mark_percentage: e.target.value }))} className="w-28" />
             </div>
+            <div className="flex items-center justify-between rounded-lg border border-border p-3">
+              <div className="pr-3">
+                <Label className="text-sm">Auto-open exams while active</Label>
+                <p className="text-[11px] text-muted-foreground">Members registered to this session can take included course exams without per-course toggle.</p>
+              </div>
+              <Switch checked={form.auto_open_exams} onCheckedChange={v => setForm(f => ({ ...f, auto_open_exams: v }))} />
+            </div>
+            <div className="flex items-center justify-between rounded-lg border border-border p-3">
+              <div className="pr-3">
+                <Label className="text-sm">Allow re-registration</Label>
+                <p className="text-[11px] text-muted-foreground">Members who took the course in a previous session may register again.</p>
+              </div>
+              <Switch checked={form.allow_reregistration} onCheckedChange={v => setForm(f => ({ ...f, allow_reregistration: v }))} />
+            </div>
             <div className="space-y-2">
               <Label>Course Exams *</Label>
-              <p className="text-xs text-muted-foreground">Select which exams members must take in this session.</p>
+              <p className="text-xs text-muted-foreground">{editingActive ? "Course list is locked while session is active." : "Select which exams members must take in this session."}</p>
               <div className="space-y-2 max-h-48 overflow-y-auto">
                 {examTitles.map(t => (
-                  <label key={t.id} className="flex items-center gap-2 p-2 rounded-lg hover:bg-muted/50 cursor-pointer">
-                    <Checkbox checked={form.courses.includes(t.name)} onCheckedChange={() => toggleCourse(t.name)} />
+                  <label key={t.id} className={`flex items-center gap-2 p-2 rounded-lg ${editingActive ? "opacity-60" : "hover:bg-muted/50 cursor-pointer"}`}>
+                    <Checkbox checked={form.courses.includes(t.name)} onCheckedChange={() => !editingActive && toggleCourse(t.name)} disabled={editingActive} />
                     <span className="text-sm">{t.name}</span>
                     {t.description && <span className="text-xs text-muted-foreground">— {t.description}</span>}
                   </label>
@@ -286,6 +353,16 @@ export default function ExamSessionManager() {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Bulk Enrol */}
+      {enrolTarget && (
+        <SessionEnrolDialog
+          session={enrolTarget}
+          sessionCourses={sessionCourses.filter(c => c.session_id === enrolTarget.id)}
+          open={!!enrolTarget}
+          onOpenChange={(v) => !v && setEnrolTarget(null)}
+        />
+      )}
 
       {/* Delete Confirmation */}
       <AlertDialog open={!!deleteTarget} onOpenChange={(v) => !v && setDeleteTarget(null)}>
