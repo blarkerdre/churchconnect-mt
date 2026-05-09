@@ -149,7 +149,7 @@ export function AuthProvider({ children }) {
   return (
     <AuthContext.Provider
        value={{
-        user, profile, roles, loading, leaderUnits, leaderCentres, myMember, tenantMemberships,
+        user, profile, roles, loading, dataLoaded, leaderUnits, leaderCentres, myMember, tenantMemberships,
         signUp, signIn, signOut, resetPassword, updatePassword,
         isAdmin, isUnitLeader, isWSFLeader, isMember,
         isTenantOwner, isTenantAdmin,
