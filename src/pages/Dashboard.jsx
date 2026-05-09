@@ -198,22 +198,23 @@ export default function Dashboard() {
               <TrendingUp className="h-4 w-4 text-accent" />
               Growth Milestones
             </CardTitle>
+            <p className="text-xs text-muted-foreground mt-0.5">% of Active members ({activeCount})</p>
           </CardHeader>
           <CardContent className="space-y-4">
-            {growthMetrics.map((m) => (
-              <div key={m.label}>
-                <div className="flex justify-between text-sm mb-1.5">
-                  <span className="font-medium text-foreground">{m.label}</span>
-                  <span className="text-muted-foreground">{m.value} / {m.total} ({m.total > 0 ? Math.round(m.value / m.total * 100) : 0}%)</span>
+            {growthMetrics.map((m) => {
+              const pct = m.total > 0 ? Math.min(100, Math.round((m.value / m.total) * 100)) : 0;
+              return (
+                <div key={m.label}>
+                  <div className="flex justify-between text-sm mb-1.5">
+                    <span className="font-medium text-foreground">{m.label}</span>
+                    <span className="text-muted-foreground">{m.value} / {m.total} ({pct}%)</span>
+                  </div>
+                  <div className="h-2.5 bg-muted rounded-full overflow-hidden">
+                    <div className="h-full bg-accent rounded-full transition-all" style={{ width: `${pct}%` }} />
+                  </div>
                 </div>
-                <div className="h-2.5 bg-muted rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-accent rounded-full transition-all"
-                    style={{ width: `${m.total > 0 ? (m.value / m.total) * 100 : 0}%` }}
-                  />
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </CardContent>
         </Card>
 
