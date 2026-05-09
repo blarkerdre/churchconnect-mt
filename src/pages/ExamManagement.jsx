@@ -1041,6 +1041,9 @@ function MemberExamsView({ memberId, memberRecord, courses, loading }) {
 
       <WofbiAboutDisplay />
 
+      <OpenSessionsPanel memberId={memberId} />
+
+
       {activeCourses.length === 0 ? (
         <Card className="border-0 shadow-sm">
           <CardContent className="py-8 text-center text-sm text-muted-foreground">No courses available.</CardContent>
