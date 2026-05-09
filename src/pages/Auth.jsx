@@ -96,6 +96,13 @@ export default function Auth() {
     if (tenantSlug) {
       return <Navigate to={`/t/${tenantSlug}`} replace />;
     }
+    if (!dataLoaded) {
+      return (
+        <div className="min-h-screen bg-background flex items-center justify-center">
+          <div className="animate-pulse text-muted-foreground">Loading...</div>
+        </div>
+      );
+    }
     const slug = tenantMemberships?.[0]?.tenants?.slug;
     const redirectTo = slug ? `/t/${slug}` : "/";
     return <Navigate to={redirectTo} replace />;
