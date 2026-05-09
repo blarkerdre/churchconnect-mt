@@ -135,7 +135,12 @@ export default function SelfCheckInWidget() {
     },
   });
 
-  if (!myMember) return null;
+  // Diagnostic: account exists but no member profile is linked for this tenant
+  if (user?.id && !myMember) {
+    // eslint-disable-next-line no-console
+    console.warn("[SelfCheckInWidget] No linked member profile for user", user.id, "tenant", tenantId);
+  }
+
 
   // Build filter options from units/centres present in the eligible sessions
   const unitOptions = Array.from(
