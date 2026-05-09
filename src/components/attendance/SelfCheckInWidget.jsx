@@ -30,7 +30,7 @@ export default function SelfCheckInWidget() {
     queryFn: async () => {
       let query = supabase
         .from("members")
-        .select("id, first_name, last_name, church_unit")
+        .select("id, first_name, last_name, church_unit, wsf_centre_id")
         .eq("user_id", user.id);
       if (tenantId) query = query.eq("tenant_id", tenantId);
       const { data, error } = await query.maybeSingle();
@@ -40,8 +40,23 @@ export default function SelfCheckInWidget() {
     enabled: !!user?.id,
   });
 
+  const { data: myCentre } = useQuery({
+    queryKey: ["my-centre", myMember?.wsf_centre_id],
+    enabled: !!myMember?.wsf_centre_id,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("wsf_centres")
+        .select("id, name")
+        .eq("id", myMember.wsf_centre_id)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+  });
+
   const myUnits = useMemo(() => parseUnits(myMember?.church_unit), [myMember?.church_unit]);
   const myUnitsLower = useMemo(() => myUnits.map((u) => u.toLowerCase()), [myUnits]);
+  const myCentreLower = (myCentre?.name || "").toLowerCase();
 
   const { data: sessions = [], isLoading: sessionsLoading } = useQuery({
     queryKey: ["today-sessions", today, tenantId],
