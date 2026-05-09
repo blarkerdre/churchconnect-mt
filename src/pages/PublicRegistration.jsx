@@ -95,6 +95,10 @@ export default function PublicRegistration() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!resolvedTenantId) {
+      toast({ title: "Invalid registration link", description: "Please ask your church for the correct registration link.", variant: "destructive" });
+      return;
+    }
     if (!form.first_name || !form.last_name) {
       toast({ title: "First and last name are required", variant: "destructive" });
       return;
