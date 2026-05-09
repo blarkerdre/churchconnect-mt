@@ -842,31 +842,12 @@ function FaviconOgImageSection() {
           </div>
         </div>
 
-        {/* PWA App Icon */}
-        <div className="space-y-2">
+        {/* PWA App Icon — auto-derived from tenant logo */}
+        <div className="space-y-1 rounded-md border border-dashed border-border bg-muted/30 p-3">
           <Label className="text-sm font-medium">App Icon (PWA)</Label>
-          <div className="flex flex-col sm:flex-row items-center gap-4">
-            <div className="h-16 w-16 rounded-lg bg-muted/50 border-2 border-dashed border-border flex items-center justify-center overflow-hidden shrink-0">
-              {pwaIconUrl ? (
-                <img src={pwaIconUrl} alt="PWA Icon" className="h-full w-full object-contain" />
-              ) : (
-                <ImageIcon className="h-6 w-6 text-muted-foreground" />
-              )}
-            </div>
-            <div className="flex flex-col gap-2 w-full sm:w-auto">
-              <input ref={pwaInputRef} type="file" accept="image/png" className="hidden" onChange={(e) => handleUpload(e.target.files?.[0], "pwa-icon")} />
-              <Button size="sm" onClick={() => pwaInputRef.current?.click()} disabled={uploadingPwa} className="gap-1.5">
-                {uploadingPwa ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-                {pwaIconUrl ? "Change App Icon" : "Upload App Icon"}
-              </Button>
-              {pwaIconUrl && (
-                <Button size="sm" variant="outline" onClick={() => handleRemove("pwa-icon")} disabled={uploadingPwa} className="gap-1.5 text-destructive hover:text-destructive">
-                  <X className="h-4 w-4" /> Remove
-                </Button>
-              )}
-              <p className="text-[11px] text-muted-foreground">Icon shown when members install the app to their home screen. PNG only, max 2MB. Recommended: 512×512 px.</p>
-            </div>
-          </div>
+          <p className="text-[11px] text-muted-foreground">
+            Your church logo and name are automatically used as the app icon and title when members install this app to their home screen. No separate upload needed.
+          </p>
         </div>
       </CardContent>
     </Card>
