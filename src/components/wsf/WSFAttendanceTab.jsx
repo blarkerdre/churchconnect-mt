@@ -117,6 +117,30 @@ export default function WSFAttendanceTab({ centres }) {
     (!dateTo || r.meeting_date <= dateTo)
   );
 
+  // Admin summary stats (respects centre + date filters)
+  const summaryStats = (() => {
+    const centresInScope = filterCentreId === "all" ? availableCentres.length : 1;
+    const held = filteredReports.length;
+    const totalAttendance = filteredReports.reduce((sum, r) => sum + r.male + r.female + r.children, 0);
+    const avgAttendance = held > 0 ? Math.round(totalAttendance / held) : 0;
+
+    let weeks = 0;
+    let hasRange = false;
+    if (dateFrom && dateTo) {
+      const days = Math.floor((new Date(dateTo) - new Date(dateFrom)) / 86400000) + 1;
+      weeks = Math.max(1, Math.ceil(days / 7));
+      hasRange = true;
+    } else if (filteredReports.length > 0) {
+      const dates = filteredReports.map(r => new Date(r.meeting_date).getTime());
+      const days = Math.floor((Math.max(...dates) - Math.min(...dates)) / 86400000) + 1;
+      weeks = Math.max(1, Math.ceil(days / 7));
+    }
+    const expected = weeks * centresInScope;
+    const notHeld = weeks > 0 ? Math.max(0, expected - held) : null;
+
+    return { centresInScope, held, notHeld, avgAttendance, hasRange };
+  })();
+
   const buildPrintRows = () => ({
     title: "Home Cell Attendance Report",
     headers: ["Date", "Centre", "Male", "Female", "Adults", "Children", "Total", "1st Timers", "Testimonies"],
