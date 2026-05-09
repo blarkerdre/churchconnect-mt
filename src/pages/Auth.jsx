@@ -21,7 +21,7 @@ export default function Auth() {
     import("@/pages/Dashboard").catch(() => {});
   }, []);
 
-  const { user, loading, signIn, signUp, resetPassword } = useAuth();
+  const { user, loading, signIn, signUp, resetPassword, tenantMemberships } = useAuth();
   const { toast } = useToast();
   const { tenantSlug } = useParams();
   const canSignup = !!tenantSlug;
@@ -84,22 +84,6 @@ export default function Auth() {
     }
   }, [tenant?.settings]);
 
-  // Query tenant membership for redirect when no slug in URL
-  const { data: userMembership, isLoading: membershipLoading } = useQuery({
-    queryKey: ["auth-redirect-membership", user?.id],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("tenant_memberships")
-        .select("tenant_id, tenants(slug)")
-        .eq("user_id", user.id)
-        .limit(1)
-        .maybeSingle();
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!user && !tenantSlug,
-  });
-
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -112,15 +96,7 @@ export default function Auth() {
     if (tenantSlug) {
       return <Navigate to={`/t/${tenantSlug}`} replace />;
     }
-    // Wait for membership query before redirecting
-    if (membershipLoading) {
-      return (
-        <div className="min-h-screen bg-background flex items-center justify-center">
-          <div className="animate-pulse text-muted-foreground">Loading...</div>
-        </div>
-      );
-    }
-    const slug = userMembership?.tenants?.slug;
+    const slug = tenantMemberships?.[0]?.tenants?.slug;
     const redirectTo = slug ? `/t/${slug}` : "/";
     return <Navigate to={redirectTo} replace />;
   }

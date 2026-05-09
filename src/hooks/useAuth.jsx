@@ -26,6 +26,7 @@ export function AuthProvider({ children }) {
       async (event, session) => {
         setUser(session?.user ?? null);
         if (session?.user) {
+          setLoading(false);
           setTimeout(() => fetchUserData(session.user.id, session.user.email), 0);
         } else {
           setProfile(null);
@@ -41,10 +42,9 @@ export function AuthProvider({ children }) {
 
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
+      setLoading(false);
       if (session?.user) {
         fetchUserData(session.user.id, session.user.email);
-      } else {
-        setLoading(false);
       }
     });
 
@@ -58,7 +58,7 @@ export function AuthProvider({ children }) {
         supabase.from("user_roles").select("role").eq("user_id", userId),
         supabase.from("unit_leader_assignments").select("unit_name").eq("user_id", userId),
         supabase.from("members").select("*, wsf_centres!fk_members_wsf_centre(name)").eq("user_id", userId).maybeSingle(),
-        supabase.from("tenant_memberships").select("tenant_id, role").eq("user_id", userId),
+        supabase.from("tenant_memberships").select("tenant_id, role, tenants(slug)").eq("user_id", userId),
       ]);
 
       setProfile(profileRes.data);
