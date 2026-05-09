@@ -27,6 +27,101 @@ function hexToHsl(hex) {
   return `${Math.round(h * 360)} ${Math.round(s * 100)}% ${Math.round(l * 100)}%`;
 }
 
+/** Load an image with CORS enabled so canvas isn't tainted. */
+function loadImage(url) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = url;
+  });
+}
+
+/** Render a logo onto a square canvas with white background, contained & centered. */
+async function renderSquareIcon(logoUrl, size, bg = "#ffffff") {
+  try {
+    const img = await loadImage(logoUrl);
+    const canvas = document.createElement("canvas");
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext("2d");
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, size, size);
+    const pad = Math.round(size * 0.08);
+    const avail = size - pad * 2;
+    const scale = Math.min(avail / img.width, avail / img.height);
+    const w = img.width * scale;
+    const h = img.height * scale;
+    ctx.drawImage(img, (size - w) / 2, (size - h) / 2, w, h);
+    return canvas.toDataURL("image/png");
+  } catch {
+    return null;
+  }
+}
+
+/** Render an OG card (1200x630) with brand bg, centered logo, and tenant name. */
+async function renderOgCard(logoUrl, name, primaryHex) {
+  try {
+    const W = 1200, H = 630;
+    const canvas = document.createElement("canvas");
+    canvas.width = W;
+    canvas.height = H;
+    const ctx = canvas.getContext("2d");
+
+    // Background gradient using primary color
+    const bg = primaryHex && /^#([0-9a-f]{6})$/i.test(primaryHex) ? primaryHex : "#1e3a5f";
+    const grad = ctx.createLinearGradient(0, 0, W, H);
+    grad.addColorStop(0, bg);
+    grad.addColorStop(1, "#0b1a2e");
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, W, H);
+
+    // Logo
+    let logoBottom = H / 2;
+    if (logoUrl) {
+      const img = await loadImage(logoUrl).catch(() => null);
+      if (img) {
+        const maxLogo = 320;
+        const scale = Math.min(maxLogo / img.width, maxLogo / img.height);
+        const w = img.width * scale;
+        const h = img.height * scale;
+        const x = (W - w) / 2;
+        const y = H / 2 - h / 2 - 40;
+        // White rounded plate behind logo for contrast
+        const plate = Math.max(w, h) + 48;
+        const px = (W - plate) / 2;
+        const py = y + h / 2 - plate / 2;
+        ctx.fillStyle = "rgba(255,255,255,0.96)";
+        const r = 32;
+        ctx.beginPath();
+        ctx.moveTo(px + r, py);
+        ctx.arcTo(px + plate, py, px + plate, py + plate, r);
+        ctx.arcTo(px + plate, py + plate, px, py + plate, r);
+        ctx.arcTo(px, py + plate, px, py, r);
+        ctx.arcTo(px, py, px + plate, py, r);
+        ctx.closePath();
+        ctx.fill();
+        ctx.drawImage(img, x, y, w, h);
+        logoBottom = py + plate;
+      }
+    }
+
+    // Tenant name
+    if (name) {
+      ctx.fillStyle = "#ffffff";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "top";
+      ctx.font = "700 56px 'Playfair Display', Georgia, serif";
+      ctx.fillText(name, W / 2, Math.min(logoBottom + 32, H - 100));
+    }
+
+    return canvas.toDataURL("image/png");
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Given HSL string "H S% L%", returns a lighter/darker variant.
  */
