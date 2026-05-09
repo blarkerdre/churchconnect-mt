@@ -1592,40 +1592,52 @@ export type Database = {
       }
       exam_sessions: {
         Row: {
+          allow_reregistration: boolean
+          auto_open_exams: boolean
           created_at: string
           created_by: string | null
           description: string | null
           ended_at: string | null
+          ends_on: string | null
           id: string
           name: string
           pass_mark_percentage: number
           started_at: string | null
+          starts_on: string | null
           status: string
           tenant_id: string | null
           updated_at: string
         }
         Insert: {
+          allow_reregistration?: boolean
+          auto_open_exams?: boolean
           created_at?: string
           created_by?: string | null
           description?: string | null
           ended_at?: string | null
+          ends_on?: string | null
           id?: string
           name: string
           pass_mark_percentage?: number
           started_at?: string | null
+          starts_on?: string | null
           status?: string
           tenant_id?: string | null
           updated_at?: string
         }
         Update: {
+          allow_reregistration?: boolean
+          auto_open_exams?: boolean
           created_at?: string
           created_by?: string | null
           description?: string | null
           ended_at?: string | null
+          ends_on?: string | null
           id?: string
           name?: string
           pass_mark_percentage?: number
           started_at?: string | null
+          starts_on?: string | null
           status?: string
           tenant_id?: string | null
           updated_at?: string
