@@ -72,6 +72,42 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
   const isFirstTimerOrNewConvert = ["First Timer", "New Convert"].includes(form.membership_status);
 
   const memberUserId = member?.user_id;
+
+  // Units the current user leads (in this tenant) — used to allow direct assignment
+  // without requiring admin approval.
+  const { data: myLedUnits = [] } = useQuery({
+    queryKey: ["my-led-units", currentUser?.id, tenantId],
+    queryFn: async () => {
+      const { data, error } = await scopeQuery(
+        supabase
+          .from("unit_leader_assignments")
+          .select("unit_name")
+          .eq("user_id", currentUser.id)
+      );
+      if (error) throw error;
+      return (data || []).map((r) => r.unit_name);
+    },
+    enabled: !!currentUser?.id && !!tenantId && !isAdmin,
+  });
+
+  // Home Cell centres the current user leads (in this tenant)
+  const { data: myLedCentreIds = [] } = useQuery({
+    queryKey: ["my-led-centres", currentUser?.id, tenantId],
+    queryFn: async () => {
+      // First find my member id in this tenant
+      const { data: meMember } = await scopeQuery(
+        supabase.from("members").select("id").eq("user_id", currentUser.id).maybeSingle()
+      );
+      if (!meMember?.id) return [];
+      const { data, error } = await scopeQuery(
+        supabase.from("wsf_centres").select("id").eq("leader_id", meMember.id)
+      );
+      if (error) throw error;
+      return (data || []).map((r) => r.id);
+    },
+    enabled: !!currentUser?.id && !!tenantId && !isAdmin,
+  });
+
   const { data: memberRoles = [] } = useQuery({
     queryKey: ["member-roles", memberUserId, tenantId],
     queryFn: async () => {
