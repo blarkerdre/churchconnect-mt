@@ -287,6 +287,9 @@ export default function ExamManagement() {
       {/* WoFBI About Section (Admin Editable) */}
       <WofbiAboutEditor />
 
+      {/* Exam Sessions */}
+      <ExamSessionManager />
+
       {/* Certificate Courses */}
       <Card className="border-0 shadow-sm">
         <CardHeader className="pb-3">
