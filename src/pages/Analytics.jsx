@@ -82,13 +82,16 @@ export default function Analytics() {
     },
   });
 
-  // Attendance trend by month
+  // Attendance trend by month — use MAX(digital check-ins, reported total_count)
+  // so demographic-only sessions (no digital check-ins) still appear in the trend.
   const attendanceTrend = useMemo(() => {
     const map = {};
     sessions.forEach(s => {
       const month = format(parseISO(s.session_date), "MMM yyyy");
       if (!map[month]) map[month] = { month, attendance: 0, sessions: 0 };
-      map[month].attendance += (s.attendance_records?.length || 0);
+      const checkins = s.attendance_records?.length || 0;
+      const reported = s.total_count || 0;
+      map[month].attendance += Math.max(checkins, reported);
       map[month].sessions += 1;
     });
     return Object.values(map);
@@ -101,7 +104,9 @@ export default function Analytics() {
     return Object.entries(counts).map(([name, value], i) => ({ name, value, color: COLORS[i % COLORS.length] }));
   }, [members]);
 
-  // Growth indices
+  const activeMembers = useMemo(() => members.filter(m => m.membership_status === "Active"), [members]);
+
+  // Growth indices — use Active members as denominator and only count Active completions
   const growthIndices = useMemo(() => {
     const indices = [
       { label: "Water Baptism", key: "water_baptism" },
@@ -114,10 +119,10 @@ export default function Analytics() {
     ];
     return indices.map(({ label, key }) => ({
       label,
-      completed: members.filter(m => m[key]).length,
-      total: members.length,
+      completed: activeMembers.filter(m => m[key]).length,
+      total: activeMembers.length,
     }));
-  }, [members]);
+  }, [activeMembers]);
 
   // Church units breakdown
   const unitBreakdown = useMemo(() => {
