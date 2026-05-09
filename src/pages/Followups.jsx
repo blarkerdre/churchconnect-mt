@@ -94,9 +94,9 @@ export default function Followups() {
           .order("created_at", { ascending: false })
       );
       if (error) throw error;
-      return data.map(f => ({
+      return data.filter(f => f.member_id && f.members).map(f => ({
         ...f,
-        person_name: f.members ? `${f.members.first_name} ${f.members.last_name}` : "Unknown",
+        person_name: `${f.members.first_name} ${f.members.last_name}`,
         person_email: f.members?.email,
         person_phone: f.members?.phone,
         person_status: f.members?.membership_status,
