@@ -314,35 +314,64 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
             existingCentreId: member.wsf_centre_id || null,
             selectedCentreId: payload.wsf_centre_id || null,
           });
-          // Apply removals immediately, but strip additions from the payload —
-          // those become pending join requests.
-          const approvedUnits = (member.church_unit || "")
+
+          // Split unit additions into auto-approved (units I lead) vs pending
+          const ledUnitsLc = new Set((myLedUnits || []).map((u) => (u || "").toLowerCase()));
+          const autoApprovedUnits = diff.unitsToRequest.filter((u) =>
+            ledUnitsLc.has(u.toLowerCase())
+          );
+          const pendingUnits = diff.unitsToRequest.filter(
+            (u) => !ledUnitsLc.has(u.toLowerCase())
+          );
+
+          // Centre addition: auto-approve if I lead the requested centre
+          const centreAutoApproved =
+            diff.centreToRequest && (myLedCentreIds || []).includes(diff.centreToRequest)
+              ? diff.centreToRequest
+              : null;
+          const centrePending =
+            diff.centreToRequest && !centreAutoApproved ? diff.centreToRequest : null;
+
+          // Build the final approved unit list = (existing minus removed) + auto-approved adds
+          const remainingExisting = (member.church_unit || "")
             .split(",").map(s => s.trim()).filter(Boolean)
             .filter(u => !diff.removedUnits.some(r => r.toLowerCase() === u.toLowerCase()));
-          payload.church_unit = approvedUnits.join(", ") || null;
+          const finalUnits = [...remainingExisting];
+          for (const u of autoApprovedUnits) {
+            if (!finalUnits.some((x) => x.toLowerCase() === u.toLowerCase())) finalUnits.push(u);
+          }
+          payload.church_unit = finalUnits.join(", ") || null;
 
-          if (diff.centreToRequest) {
+          if (centreAutoApproved) {
+            payload.wsf_centre_id = centreAutoApproved;
+          } else if (centrePending) {
             // Don't change centre yet; keep existing
             payload.wsf_centre_id = member.wsf_centre_id || null;
-            // If they switched on Home Cell but request is pending, leave winners_satellite as-is
             if (!member.winners_satellite) payload.winners_satellite = false;
           }
 
           const { error } = await supabase.from("members").update(payload).eq("id", member.id).eq("tenant_id", tenantId);
           if (error) throw error;
 
-          // Submit pending requests for additions
-          if (diff.unitsToRequest.length > 0 || diff.centreToRequest) {
+          // Submit pending requests for non-auto-approved additions
+          if (pendingUnits.length > 0 || centrePending) {
             const { inserted } = await submitJoinRequests({
               tenantId,
               memberId: member.id,
               requestedBy: currentUser?.id,
-              unitsToRequest: diff.unitsToRequest,
-              centreToRequest: diff.centreToRequest,
+              unitsToRequest: pendingUnits,
+              centreToRequest: centrePending,
             });
             queuedRequests = inserted;
           }
-          if (queuedRequests.length > 0) {
+
+          const directCount = autoApprovedUnits.length + (centreAutoApproved ? 1 : 0);
+          if (queuedRequests.length > 0 && directCount > 0) {
+            toast({
+              title: "Member updated",
+              description: `${directCount} assigned directly · ${queuedRequests.length} pending approval.`,
+            });
+          } else if (queuedRequests.length > 0) {
             toast({
               title: "Member updated · approval pending",
               description: `${queuedRequests.length} join request${queuedRequests.length === 1 ? "" : "s"} sent for leader approval.`,
@@ -350,6 +379,7 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
           } else {
             toast({ title: "Member updated" });
           }
+
         } else {
           const { error } = await supabase.from("members").update(payload).eq("id", member.id).eq("tenant_id", tenantId);
           if (error) throw error;
