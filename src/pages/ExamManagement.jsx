@@ -25,6 +25,8 @@ import { useSubFeature } from "@/hooks/useSubFeature";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
 import { getGradeClassification, DEFAULT_GRADE_CLASSIFICATIONS } from "@/lib/grade-utils";
 import StatementOfResult from "@/components/exams/StatementOfResult";
+import ExamSessionManager from "@/components/exams/ExamSessionManager";
+import OpenSessionsPanel from "@/components/exams/OpenSessionsPanel";
 
 const OPTION_LETTERS = ["a", "b", "c", "d"];
 const QUESTION_TYPES = [
@@ -284,6 +286,9 @@ export default function ExamManagement() {
 
       {/* WoFBI About Section (Admin Editable) */}
       <WofbiAboutEditor />
+
+      {/* Exam Sessions */}
+      <ExamSessionManager />
 
       {/* Certificate Courses */}
       <Card className="border-0 shadow-sm">
@@ -1038,6 +1043,9 @@ function MemberExamsView({ memberId, memberRecord, courses, loading }) {
       </div>
 
       <WofbiAboutDisplay />
+
+      <OpenSessionsPanel memberId={memberId} />
+
 
       {activeCourses.length === 0 ? (
         <Card className="border-0 shadow-sm">
