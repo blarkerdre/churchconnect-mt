@@ -1,33 +1,23 @@
-## Continue Birthday Messaging Feature
+## Use tenant logo for Favicon and Social/OG image (auto-fit)
 
-Two remaining items from the previous implementation:
+### Approach
+Make the tenant logo the default source for favicon and OG image, so admins don't have to upload three separate images. Generate properly-sized variants on the client using a canvas, mirroring how PWA already does it.
 
-### 1. Admin "🎂 Send wishes" button on Dashboard birthday list
+### Behavior
+- **Favicon**: When `currentTenant.settings.favicon_url` is set, use it (current behavior). Otherwise, if `currentTenant.logo_url` exists, render it onto a 64×64 square canvas (white background, contained, centered) and set the favicon to the canvas data URL. Falls back to `/favicon.jpg` only if neither exists.
+- **OG image**: Same priority — explicit `og_image_url` wins; otherwise build a 1200×630 canvas (brand-colored background using the tenant's `primary_color`, logo centered + church name underneath in white), and use it for `og:image` and `twitter:image`. Falls back to current default URL only if no logo either.
+- **PWA icon**: already uses logo. Keep as-is, but render to 512×512 square on a white background so non-square logos look right.
 
-In `src/components/dashboard/BirthdayCelebration.jsx`, extend `UpcomingBirthdayItem` so that when the viewer is an admin AND the member's birthday is today, a small "Send wishes" button is shown inline.
+Canvas generation runs in `TenantThemeProvider` `useEffect`s, generating data URLs (or blob URLs that get revoked on cleanup). Pure client-side — no edge functions, no storage upload.
 
-Behavior:
-- Visible only when `isToday` is true and `isTenantAdmin` (read via `useAuth`).
-- On click, invokes the existing `send-birthday-messages` edge function with `{ tenant_id, member_id, channels: <enabled channels from settings> }`.
-- Disabled + shows "Sent" if today's `birthday_message_log` already has any successful row for that member (queried once per dashboard render via a small TanStack query keyed on `[birthday_message_log, tenant_id, today]`).
-- Uses sonner toasts for success/failure.
-- Respects the `birthday_message_settings.enabled` flag — if disabled, the button is hidden.
-
-No schema changes needed — the table, log, and edge function already exist.
-
-### 2. Memory entry
-
-Add a new memory file `mem://features/birthday-messages` summarising:
-- Tables: `birthday_message_settings`, `birthday_message_log` (idempotency on `tenant_id, member_id, channel, sent_on`).
-- Edge function `send-birthday-messages` (hourly cron + manual invoke for test/send-wishes), service-role aware.
-- Settings UI lives in Settings → Communications, admin-only.
-- Templates support `{first_name}`, `{last_name}`, `{church_name}` placeholders.
-- Channels: in_app, email, sms, whatsapp.
-
-Then update `mem://index.md` to reference the new file under Memories.
+### Settings UI
+In `src/pages/Settings.jsx`'s favicon/OG card, add a small note: "Defaults to your church logo if no custom image is uploaded." No layout changes; the upload buttons remain for users who want a custom image.
 
 ### Files
+- Edited: `src/components/tenants/TenantThemeProvider.jsx` — add `renderSquareIcon()` and `renderOgCard()` helpers, fall back to logo-derived data URLs.
+- Edited: `src/pages/Settings.jsx` — add helper text under the favicon/OG section.
 
-- Edited: `src/components/dashboard/BirthdayCelebration.jsx`
-- Created: `mem://features/birthday-messages`
-- Edited: `mem://index.md`
+### Out of scope
+- Server-side image processing / Sharp.
+- Persisting the generated images to storage (kept ephemeral; regenerated on each load).
+- Changing the existing `pwa_icon_url` field semantics.
