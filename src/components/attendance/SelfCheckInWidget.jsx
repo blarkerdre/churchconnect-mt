@@ -173,7 +173,9 @@ export default function SelfCheckInWidget() {
             <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
           </div>
         ) : visibleSessions.length === 0 ? (
-          <p className="text-xs text-muted-foreground text-center py-2">No meetings match this filter.</p>
+          <p className="text-xs text-muted-foreground text-center py-2">
+            {eligibleSessions.length === 0 ? "No meetings open for check-in today." : "No meetings match this filter."}
+          </p>
         ) : (
           visibleSessions.map((session) => {
             const isCheckedIn = checkedSessionIds.has(session.id);
