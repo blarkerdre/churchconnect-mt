@@ -115,7 +115,7 @@ export default function BirthdayMessagesSection() {
         .eq("tenant_id", tenantId)
         .maybeSingle();
       if (!me) {
-        toast({ title: "Couldn't find your member profile", variant: "destructive" });
+        toast.error("Couldn't find your member profile");
         return;
       }
       // Save first so test reflects edits
@@ -124,12 +124,11 @@ export default function BirthdayMessagesSection() {
         body: { tenant_id: tenantId, member_id: me.id, channels: current.channels },
       });
       if (error) throw error;
-      toast({
-        title: "Test dispatched",
+      toast.success("Test dispatched", {
         description: `${data?.sent ?? 0} sent · ${data?.failed ?? 0} failed`,
       });
     } catch (err) {
-      toast({ title: "Test failed", description: err.message, variant: "destructive" });
+      toast.error("Test failed", { description: err.message });
     } finally {
       setSendingTest(false);
     }
