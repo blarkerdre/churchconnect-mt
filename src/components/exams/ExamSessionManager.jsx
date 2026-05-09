@@ -126,29 +126,51 @@ export default function ExamSessionManager() {
   const closeDialog = () => {
     setDialogOpen(false);
     setEditingSession(null);
-    setForm({ name: "", description: "", pass_mark_percentage: 50, courses: [] });
+    setForm({ name: "", description: "", pass_mark_percentage: 50, courses: [], starts_on: "", ends_on: "", auto_open_exams: true, allow_reregistration: true });
   };
 
   const openEdit = (session) => {
     const courses = sessionCourses.filter(c => c.session_id === session.id).map(c => c.exam_title);
     setEditingSession(session);
-    setForm({ name: session.name, description: session.description || "", pass_mark_percentage: session.pass_mark_percentage, courses });
+    setForm({
+      name: session.name,
+      description: session.description || "",
+      pass_mark_percentage: session.pass_mark_percentage,
+      courses,
+      starts_on: session.starts_on || "",
+      ends_on: session.ends_on || "",
+      auto_open_exams: session.auto_open_exams !== false,
+      allow_reregistration: session.allow_reregistration !== false,
+    });
     setDialogOpen(true);
   };
+
+  // While active, name + courses are locked; description/dates/toggles still editable.
+  const editingActive = editingSession?.status === "active";
 
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!form.name.trim()) { toast({ title: "Session name is required", variant: "destructive" }); return; }
-    if (form.courses.length === 0) { toast({ title: "Select at least one course exam", variant: "destructive" }); return; }
+    if (!editingActive && form.courses.length === 0) { toast({ title: "Select at least one course exam", variant: "destructive" }); return; }
+    const sessionData = {
+      description: form.description.trim() || null,
+      pass_mark_percentage: Number(form.pass_mark_percentage) || 50,
+      starts_on: form.starts_on || null,
+      ends_on: form.ends_on || null,
+      auto_open_exams: !!form.auto_open_exams,
+      allow_reregistration: !!form.allow_reregistration,
+      updated_at: new Date().toISOString(),
+    };
+    if (!editingActive) {
+      sessionData.name = form.name.trim();
+    }
+    if (!editingSession) {
+      sessionData.created_by = user?.id;
+    }
     saveMutation.mutate({
-      sessionData: {
-        name: form.name.trim(),
-        description: form.description.trim() || null,
-        pass_mark_percentage: Number(form.pass_mark_percentage) || 50,
-        created_by: user?.id,
-        updated_at: new Date().toISOString(),
-      },
+      sessionData,
       courses: form.courses,
+      coursesLocked: editingActive,
     });
   };
 
