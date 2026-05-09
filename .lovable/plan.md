@@ -1,38 +1,28 @@
-## Home Cell admin summary stats
+## Goal
+Make the PWA install icon and app name automatically derive from the tenant's existing logo and name — no separate "App Icon (PWA)" upload required.
 
-Add a row of 4 summary stat cards above the existing reports table in the Home Cell Attendance tab, visible to admins only. Stats reflect the currently applied filters (centre + date range).
+## Current behaviour
+- `TenantThemeProvider` already builds the manifest with:
+  - `name` / `short_name` from `currentTenant.name`
+  - `icons` from `settings.pwa_icon_url` → falls back to `logo_url` → falls back to static `/icon-192.png`
+- `Settings → Branding` exposes a separate **App Icon (PWA)** upload (`pwa_icon_url`), which is redundant when a tenant logo is already set.
 
-### Stats
+## Changes
 
-1. **Total Cell Centres** — count of centres in scope (all centres if filter = "All", else 1).
-2. **Meetings Held** — count of `filteredReports`.
-3. **Meetings Not Held** — `expected − held`, floored at 0.
-4. **Average Attendance** — mean of `(male + female + children)` across `filteredReports`, rounded.
+### 1. `src/components/tenants/TenantThemeProvider.jsx`
+- Reorder fallback so the **tenant logo is the primary source**:
+  `iconUrl = currentTenant?.logo_url || currentTenant?.settings?.pwa_icon_url || null`
+- Keep `pwa_icon_url` as a deprecated override (in case a tenant ever uploaded one). No other manifest changes; `name`/`short_name` already use the tenant name.
+- Same fallback applied to `apple-touch-icon`.
 
-### "Meetings Not Held" calculation (weekly cadence)
+### 2. `src/pages/Settings.jsx` (Branding card)
+- Remove the **App Icon (PWA)** uploader block (lines ~845–870) and its supporting state (`pwaInputRef`, `uploadingPwa`, `pwaIconUrl`, the `"pwa-icon"` branch in `handleUpload`/`handleRemove`).
+- Add a small helper line under the Logo uploader: *"Your logo is also used as the install icon when members add the app to their home screen."*
 
-```text
-weeks   = max(1, ceil((dateTo - dateFrom + 1) / 7))   when both dates set
-        = number of distinct ISO weeks present in filteredReports' dates, else 1
-centres = 1 if filterCentreId !== "all" else availableCentres.length
-expected = weeks × centres
-notHeld  = max(0, expected − held)
-```
+### 3. No DB changes
+Existing `pwa_icon_url` settings rows are left untouched (harmless, still honoured as a manual override).
 
-When no date range is set, fall back to the span between the earliest and latest report dates in scope (or hide the "Not Held" card with an em-dash + tooltip "Set a date range").
-
-### Where
-
-`src/components/wsf/WSFAttendanceTab.jsx` — insert a `grid grid-cols-2 sm:grid-cols-4 gap-3` of stat cards between the filter bar (line 212) and the table/empty state (line 214). Gate with `isAdmin`.
-
-### Visuals
-
-- Reuse the small stat-card pattern from `WSFLeaderDashboard` (icon chip + title + big number + sub-label).
-- Icons: `Home` (centres), `CheckCircle2` (held), `AlertCircle` (not held), `TrendingUp` (avg).
-- Use semantic tokens: `text-primary`, `text-accent`, `text-destructive`, `text-chart-3`.
-
-### Out of scope
-
-- No DB/schema changes. No per-centre cadence field.
-- WSF leader view unchanged (still sees their own centres' reports without the admin summary).
-- Print/CSV export contents unchanged.
+## Out of scope
+- Service worker / offline behaviour (none added)
+- `manifest.json` static file
+- Caching / re-install prompts for users who already installed the PWA (manifest fields are pinned at install time on iOS/Android)
