@@ -783,6 +783,7 @@ function FaviconOgImageSection() {
         </CardTitle>
         <p className="text-xs text-muted-foreground mt-1">
           Custom favicon for the browser tab and social/OG image for link previews when your church URL is shared.
+          If left empty, your church logo is used automatically — fitted to the required size.
         </p>
       </CardHeader>
       <CardContent className="space-y-6">
