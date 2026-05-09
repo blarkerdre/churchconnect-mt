@@ -55,13 +55,13 @@ export default function Followups() {
     return map;
   }, [profiles]);
 
-  // Candidates for reassignment: admins/owners + unit leaders + Follow-up unit members.
-  // Falls back gracefully so the dropdown is never empty for an admin.
+  // Candidates for reassignment: actual Follow-up team only
+  // (Follow-up unit leaders + members whose church_unit includes "Follow-up").
   const { data: followupUnitMembers = [] } = useQuery({
     queryKey: ["followup-reassign-candidates", tenantId],
     enabled: !!tenantId,
     queryFn: async () => {
-      const [leadersRes, unitMembersRes, rolesRes, tmembersRes] = await Promise.all([
+      const [leadersRes, unitMembersRes] = await Promise.all([
         scopeQuery(
           supabase
             .from("unit_leader_assignments")
@@ -75,24 +75,11 @@ export default function Followups() {
             .not("user_id", "is", null)
             .or("church_unit.ilike.%follow-up%,church_unit.ilike.%follow up%")
         ),
-        scopeQuery(
-          supabase
-            .from("user_roles")
-            .select("user_id, role")
-            .in("role", ["admin", "unit_leader", "wsf_leader"])
-        ),
-        supabase
-          .from("tenant_members")
-          .select("user_id, role")
-          .eq("tenant_id", tenantId)
-          .in("role", ["owner", "admin"]),
       ]);
 
       const ids = new Set();
       (leadersRes.data || []).forEach(d => d.user_id && ids.add(d.user_id));
       (unitMembersRes.data || []).forEach(d => d.user_id && ids.add(d.user_id));
-      (rolesRes.data || []).forEach(d => d.user_id && ids.add(d.user_id));
-      (tmembersRes.data || []).forEach(d => d.user_id && ids.add(d.user_id));
       return [...ids];
     },
   });
