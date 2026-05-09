@@ -1,32 +1,65 @@
-## Why the dropdown is empty
+# Allow unit_leader / wsf_leader direct member assignment
 
-In `src/components/followups/FollowupFormDialog.jsx` the "Assigned To" list is built like this:
+## Problem
+
+When Favour (a `unit_leader`, not admin) edits a member and changes their **Church Unit** or **Home Cell Centre**, the change does not stick. The form silently converts her additions into **pending join requests** that an admin must approve, because of the gate in `MemberFormDialog.jsx`:
 
 ```js
-const assignees = members
-  .filter((m) => (m.church_units || []).includes("Follow-up"))
-  ...
+const requiresApproval = !isAdmin || isSelfEdit;
 ```
 
-It is reading **`church_units`** (plural, array) — but the `members` table actually stores the unit in **`church_unit`** (singular, text). The page (`src/pages/Followups.jsx` line 125) selects `church_unit`, so `m.church_units` is always `undefined`, the filter returns nothing, and the dropdown is empty — falling back to the manual text input only.
+Any non-admin (including unit/home‑cell leaders) hits the approval path.
 
-WCI Cardiff has 6 members with `church_unit` containing "Follow-up" who should appear in the list, so the data is fine — only the field name is wrong.
+## Goal
 
-(The separate "Reassign" flow inside `FollowupDetailPanel` already queries correctly via `followupUnitMembers` in `Followups.jsx`, so it is not affected by this bug. If that one also looks empty for you, we'll investigate it separately.)
+Unit leaders and Home Cell (WSF) leaders should be able to directly assign members to **units and centres they themselves lead**, without admin approval. All other cases keep the current approval flow.
 
-## Fix
+## Changes
 
-Single-file change in `src/components/followups/FollowupFormDialog.jsx`:
+### 1. `src/components/members/MemberFormDialog.jsx`
 
-1. Change the assignees filter to match the real column and accept any case / "follow up" / "follow-up" variant:
-   ```js
-   const assignees = members
-     .filter((m) => (m.church_unit || "").toLowerCase().includes("follow"))
-     .map((m) => ({ id: m.id, name: `${m.first_name} ${m.last_name}` }));
-   ```
-2. No schema, RLS, or other component changes needed.
+- Pull current user's leader scope:
+  - Units led: from `unit_leader_assignments` for `auth.uid()` in current tenant (already queried via `useUnitMembership` / similar; otherwise add a small `useQuery`).
+  - Centres led: from `wsf_centres` where `leader_id = currentMember.id` in current tenant.
+- Compute the diff (existing logic via `diffUnitMembership`).
+- Split additions into two buckets:
+  - **Auto‑approved** additions → unit names the editor leads, plus centre id the editor leads. Apply directly to `payload.church_unit` / `payload.wsf_centre_id`.
+  - **Needs approval** additions → everything else, queued via `submitJoinRequests` as today.
+- Removals: keep applying immediately (unchanged).
+- Self‑edit case (`isSelfEdit`) keeps requiring approval (unchanged).
+- Toast wording: if some adds applied and some queued, show a combined message ("Assigned X, Y pending approval").
+
+### 2. RLS sanity check (no migration unless needed)
+
+`members` UPDATE policy must allow a `unit_leader` / `wsf_leader` in the same tenant to update unit/centre fields. If it currently restricts to admins, add a tenant‑scoped policy:
+
+```sql
+-- only if missing
+CREATE POLICY "Leaders can update members in their tenant"
+ON public.members FOR UPDATE
+USING (public.user_has_tenant_access(auth.uid(), tenant_id)
+       AND (public.has_role(auth.uid(), 'unit_leader')
+            OR public.has_role(auth.uid(), 'wsf_leader')))
+WITH CHECK (public.user_has_tenant_access(auth.uid(), tenant_id));
+```
+
+I'll verify the existing policy first and only add this if the update is being blocked at the DB layer.
+
+### 3. No changes to
+
+- `unit_join_requests` table or RPCs.
+- `BulkUnitAssignDialog` / `UnitLeaderAssignments` (those are admin‑only screens for assigning *leader roles*, separate concern).
+- Self‑edit approval flow.
+
+## Out of scope
+
+- Granting Favour full `tenant_admin` (rejected option).
+- Changing the Pending Join Requests UI.
 
 ## Verification
 
-- Open Follow-ups → Create / Edit follow-up → "Assigned To" dropdown should now list the 6 WCI Cardiff Follow-up unit members.
-- Manual-name input still works as a fallback when no members match.
+1. As Favour (`unit_leader` of a unit she leads): edit a member, add that unit → saves directly, member shows the unit immediately.
+2. As Favour: edit a member, add a unit she does **not** lead → still creates pending join request.
+3. As Favour (also `wsf_leader` of Centre X): set member's Home Cell Centre to X → saves directly.
+4. As an admin: behaviour unchanged (direct assignment for anything).
+5. Self‑edit: still queues a request even if the user is a leader.
