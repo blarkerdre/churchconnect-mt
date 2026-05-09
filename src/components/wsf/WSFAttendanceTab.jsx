@@ -140,7 +140,7 @@ export default function WSFAttendanceTab({ centres }) {
     const expected = weeks * centresInScope;
     const notHeld = weeks > 0 ? Math.max(0, expected - held) : null;
 
-    return { centresInScope, held, notHeld, avgAttendance, hasRange };
+    return { centresInScope, held, totalAttendance, notHeld, avgAttendance, hasRange };
   })();
 
   const buildPrintRows = () => ({
