@@ -26,6 +26,7 @@ export function AuthProvider({ children }) {
       async (event, session) => {
         setUser(session?.user ?? null);
         if (session?.user) {
+          setLoading(false);
           setTimeout(() => fetchUserData(session.user.id, session.user.email), 0);
         } else {
           setProfile(null);
@@ -41,10 +42,9 @@ export function AuthProvider({ children }) {
 
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
+      setLoading(false);
       if (session?.user) {
         fetchUserData(session.user.id, session.user.email);
-      } else {
-        setLoading(false);
       }
     });
 
