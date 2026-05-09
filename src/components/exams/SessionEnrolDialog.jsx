@@ -112,14 +112,13 @@ export default function SessionEnrolDialog({ session, sessionCourses, open, onOp
       qc.invalidateQueries({ queryKey: ["course-registrations"] });
       qc.invalidateQueries({ queryKey: ["my-course-registrations"] });
       toast({ title: "Enrolled", description: `${inserted} registration(s) added.` });
-      logAudit({
-        userId: user?.id,
+      logAudit(
+        "session_bulk_enrol",
+        "exam_session",
+        session.id,
+        { member_count: selected.size, courses: courseTitles, inserted },
         tenantId,
-        action: "session_bulk_enrol",
-        entityType: "exam_session",
-        entityId: session.id,
-        details: { member_count: selected.size, courses: courseTitles, inserted },
-      });
+      );
       setSelected(new Set());
       onOpenChange(false);
     },
