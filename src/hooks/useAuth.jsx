@@ -58,7 +58,7 @@ export function AuthProvider({ children }) {
         supabase.from("user_roles").select("role").eq("user_id", userId),
         supabase.from("unit_leader_assignments").select("unit_name").eq("user_id", userId),
         supabase.from("members").select("*, wsf_centres!fk_members_wsf_centre(name)").eq("user_id", userId).maybeSingle(),
-        supabase.from("tenant_memberships").select("tenant_id, role").eq("user_id", userId),
+        supabase.from("tenant_memberships").select("tenant_id, role, tenants(slug)").eq("user_id", userId),
       ]);
 
       setProfile(profileRes.data);
