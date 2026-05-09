@@ -3857,6 +3857,7 @@ export type Database = {
           name: string
         }[]
       }
+      get_dashboard_stats: { Args: { _tenant_id: string }; Returns: Json }
       get_exam_questions_safe: {
         Args: { _subject_id?: string; _training_type?: string }
         Returns: {
