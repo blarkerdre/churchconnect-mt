@@ -45,18 +45,27 @@ Deno.serve(async (req) => {
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_ANON_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseKey, {
-      global: { headers: { Authorization: authHeader } },
-    });
+    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    if (userError || !user) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+    // Allow trusted internal callers (other edge functions / cron) to bypass
+    // the user-auth check by presenting the service-role key as bearer.
+    const bearer = authHeader.slice(7).trim();
+    const isInternalServiceCall = bearer === serviceRoleKey;
+
+    let userId: string | null = null;
+    if (!isInternalServiceCall) {
+      const supabase = createClient(supabaseUrl, supabaseKey, {
+        global: { headers: { Authorization: authHeader } },
       });
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError || !user) {
+        return new Response(JSON.stringify({ error: "Unauthorized" }), {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      userId = user.id;
     }
-    const userId = user.id;
 
     const body = await req.json();
     const { recipients, message, sms_type, reference_id, channel, tenant_id } = body;
@@ -69,33 +78,35 @@ Deno.serve(async (req) => {
     }
 
     // Use service client for tenant-scoped auth checks
-    const serviceClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+    const serviceClient = createClient(supabaseUrl, serviceRoleKey);
 
-    // Verify user belongs to this tenant
-    const { data: belongsToTenant } = await serviceClient.rpc("user_belongs_to_tenant", {
-      _user_id: userId,
-      _tenant_id: tenant_id,
-    });
-    if (!belongsToTenant) {
-      return new Response(JSON.stringify({ error: "Forbidden: not a member of this tenant" }), {
-        status: 403,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+    if (!isInternalServiceCall) {
+      // Verify user belongs to this tenant
+      const { data: belongsToTenant } = await serviceClient.rpc("user_belongs_to_tenant", {
+        _user_id: userId,
+        _tenant_id: tenant_id,
       });
-    }
+      if (!belongsToTenant) {
+        return new Response(JSON.stringify({ error: "Forbidden: not a member of this tenant" }), {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
 
-    // Check tenant-scoped admin or unit_leader role
-    const { data: isAdmin } = await serviceClient.rpc("is_admin", { _user_id: userId, _tenant_id: tenant_id });
-    const { data: isLeader } = await serviceClient.rpc("has_role", {
-      _user_id: userId,
-      _role: "unit_leader",
-      _tenant_id: tenant_id,
-    });
-
-    if (!isAdmin && !isLeader) {
-      return new Response(JSON.stringify({ error: "Forbidden" }), {
-        status: 403,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      // Check tenant-scoped admin or unit_leader role
+      const { data: isAdmin } = await serviceClient.rpc("is_admin", { _user_id: userId, _tenant_id: tenant_id });
+      const { data: isLeader } = await serviceClient.rpc("has_role", {
+        _user_id: userId,
+        _role: "unit_leader",
+        _tenant_id: tenant_id,
       });
+
+      if (!isAdmin && !isLeader) {
+        return new Response(JSON.stringify({ error: "Forbidden" }), {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
     }
 
     const msgChannel = channel === "whatsapp" ? "whatsapp" : "sms";
