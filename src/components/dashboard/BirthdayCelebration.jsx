@@ -1,7 +1,13 @@
-import React from "react";
+import React, { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Cake } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Cake, Send, Loader2, Check } from "lucide-react";
 import { format, parseISO } from "date-fns";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { useTenant } from "@/contexts/TenantContext";
+import { toast } from "sonner";
 
 export function BirthdayBanner({ firstName }) {
   return (
@@ -24,6 +30,11 @@ export function BirthdayBanner({ firstName }) {
 }
 
 export function UpcomingBirthdayItem({ member }) {
+  const { isTenantAdmin } = useAuth();
+  const { tenantId } = useTenant();
+  const [sending, setSending] = useState(false);
+  const [justSent, setJustSent] = useState(false);
+
   const dobDisplay = member.date_of_birth
     ? format(parseISO(member.date_of_birth), "dd MMM")
     : "";
@@ -34,6 +45,72 @@ export function UpcomingBirthdayItem({ member }) {
     dob &&
     dob.getMonth() === today.getMonth() &&
     dob.getDate() === today.getDate();
+
+  const showAdminAction = isTenantAdmin && isToday && tenantId;
+
+  const { data: settings } = useQuery({
+    enabled: !!showAdminAction,
+    queryKey: ["birthday_message_settings", tenantId, "mini"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("birthday_message_settings")
+        .select("enabled, channels")
+        .eq("tenant_id", tenantId)
+        .maybeSingle();
+      return data;
+    },
+  });
+
+  const todayStr = today.toISOString().slice(0, 10);
+  const { data: alreadySent, refetch: refetchLog } = useQuery({
+    enabled: !!showAdminAction && !!settings?.enabled,
+    queryKey: ["birthday_message_log", tenantId, member.id, todayStr],
+    queryFn: async () => {
+      const { count } = await supabase
+        .from("birthday_message_log")
+        .select("id", { count: "exact", head: true })
+        .eq("tenant_id", tenantId)
+        .eq("member_id", member.id)
+        .eq("sent_on", todayStr)
+        .eq("status", "sent");
+      return (count ?? 0) > 0;
+    },
+  });
+
+  const handleSend = async () => {
+    setSending(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("send-birthday-messages", {
+        body: {
+          tenant_id: tenantId,
+          member_id: member.id,
+          channels: settings?.channels,
+        },
+      });
+      if (error) throw error;
+      const sent = data?.sent ?? 0;
+      if (sent > 0) {
+        toast.success("Birthday wishes sent", {
+          description: `${sent} message${sent === 1 ? "" : "s"} dispatched`,
+        });
+        setJustSent(true);
+        refetchLog();
+      } else {
+        toast.message("No messages sent", {
+          description: data?.failed
+            ? `${data.failed} failed — check channel settings`
+            : "Already sent today or no enabled channels",
+        });
+      }
+    } catch (err) {
+      toast.error("Failed to send", { description: err.message });
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const sent = alreadySent || justSent;
+  const canSend = showAdminAction && settings?.enabled;
 
   return (
     <div className="flex items-center gap-3 py-2 border-b border-border last:border-0">
@@ -55,6 +132,24 @@ export function UpcomingBirthdayItem({ member }) {
           {member.church_unit && member.church_unit !== "None" && ` · ${member.church_unit}`}
         </p>
       </div>
+      {canSend && (
+        <Button
+          size="sm"
+          variant={sent ? "outline" : "secondary"}
+          className="h-7 px-2 text-xs gap-1 shrink-0"
+          onClick={handleSend}
+          disabled={sending || sent}
+        >
+          {sending ? (
+            <Loader2 className="h-3 w-3 animate-spin" />
+          ) : sent ? (
+            <Check className="h-3 w-3" />
+          ) : (
+            <Send className="h-3 w-3" />
+          )}
+          {sent ? "Sent" : "Send wishes"}
+        </Button>
+      )}
     </div>
   );
 }
