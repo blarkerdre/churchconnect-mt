@@ -20,6 +20,7 @@ export function AuthProvider({ children }) {
   const [myMember, setMyMember] = useState(null);
   const [tenantMemberships, setTenantMemberships] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [dataLoaded, setDataLoaded] = useState(false);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
