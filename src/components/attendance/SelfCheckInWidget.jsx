@@ -73,13 +73,22 @@ export default function SelfCheckInWidget() {
     },
   });
 
-  // Eligibility: members can only self check-in to Unit Meetings for units they belong to
+  // Eligibility: members can self check-in to:
+  //  - General services (no `unit` set, e.g. Sunday Service / Special Service / Bible School / Other)
+  //  - Unit Meetings for units they belong to
+  //  - Home Cell Meetings for the centre they're assigned to
   const eligibleSessions = useMemo(() => {
     return sessions.filter((s) => {
-      if (s.session_type !== "Unit Meeting" || !s.unit) return false;
-      return myUnitsLower.includes(s.unit.toLowerCase());
+      if (s.session_type === "Unit Meeting") {
+        return s.unit && myUnitsLower.includes(s.unit.toLowerCase());
+      }
+      if (s.session_type === "Home Cell Meeting") {
+        return s.unit && myCentreLower && s.unit.toLowerCase() === myCentreLower;
+      }
+      // General sessions (no unit/centre scoping)
+      return !s.unit;
     });
-  }, [sessions, myUnitsLower]);
+  }, [sessions, myUnitsLower, myCentreLower]);
 
   const visibleSessions = useMemo(() => {
     if (unitFilter === "all") return eligibleSessions;
