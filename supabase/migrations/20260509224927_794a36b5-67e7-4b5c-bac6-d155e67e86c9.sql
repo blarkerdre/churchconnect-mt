@@ -1,0 +1,1 @@
+ALTER TABLE public.sms_log ALTER COLUMN sender_id DROP NOT NULL;
