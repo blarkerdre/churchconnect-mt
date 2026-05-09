@@ -25,14 +25,14 @@ export default function Dashboard() {
   const roleLabel = tenantRole ? tenantRole.charAt(0).toUpperCase() + tenantRole.slice(1) : "";
 
   const isLeaderOrAdmin = isAdmin;
-  const { data: members = [], isLoading: membersLoading } = useQuery({
-    queryKey: ["dashboard-members", tenantId],
+  const { data: dashStats, isLoading: membersLoading } = useQuery({
+    queryKey: ["dashboard-stats", tenantId],
     queryFn: async () => {
-      const { data, error } = await scopeQuery(supabase.from("members").select("id, membership_status, water_baptism, holy_spirit_baptism, bfc_completed, winners_satellite, created_at"));
+      const { data, error } = await supabase.rpc("get_dashboard_stats", { _tenant_id: tenantId });
       if (error) throw error;
-      return data;
+      return data || {};
     },
-    enabled: isLeaderOrAdmin,
+    enabled: isLeaderOrAdmin && !!tenantId,
   });
 
   const { data: events = [] } = useQuery({
