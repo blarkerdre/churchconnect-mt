@@ -65,14 +65,16 @@ export default function ExamSessionManager() {
   });
 
   const saveMutation = useMutation({
-    mutationFn: async ({ sessionData, courses }) => {
+    mutationFn: async ({ sessionData, courses, coursesLocked }) => {
       let sessionId;
       if (editingSession) {
         const { error } = await supabase.from("exam_sessions").update(sessionData).eq("id", editingSession.id).eq("tenant_id", tenantId);
         if (error) throw error;
         sessionId = editingSession.id;
-        // Delete existing courses and re-insert
-        await supabase.from("exam_session_courses").delete().eq("session_id", sessionId).eq("tenant_id", tenantId);
+        if (!coursesLocked) {
+          // Delete existing courses and re-insert
+          await supabase.from("exam_session_courses").delete().eq("session_id", sessionId).eq("tenant_id", tenantId);
+        }
       } else {
         const { data, error } = await supabase.from("exam_sessions").insert(withTenant(sessionData)).select("id").single();
         if (error) throw error;
