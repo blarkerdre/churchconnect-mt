@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import FollowupTemplatesSection from "@/components/settings/FollowupTemplatesSection";
+import BirthdayMessagesSection from "@/components/settings/BirthdayMessagesSection";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/hooks/useAuth";
 import { useTenant } from "@/contexts/TenantContext";
@@ -1499,6 +1500,7 @@ export default function Settings() {
 
         <TabsContent value="comms" className="space-y-4">
           <CommunicationsSection />
+          <BirthdayMessagesSection />
           <TestimonyEmailSection />
         </TabsContent>
 
