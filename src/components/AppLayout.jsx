@@ -399,6 +399,7 @@ export default function Layout({ children }) {
         {subscriptionStatus === "past_due" && !isSuperAdmin && (isTenantAdmin || isTenantOwner) && (
           <PaymentWarningBanner />
         )}
+        <PWAUpdateBanner />
         <main className="flex-1 p-3 lg:p-8 pb-20 lg:pb-8">
           {children}
         </main>
