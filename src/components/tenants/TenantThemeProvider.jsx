@@ -241,6 +241,8 @@ export default function TenantThemeProvider({ children }) {
     const pwaIconUrl = currentTenant?.settings?.pwa_icon_url;
     const rawIcon = currentTenant?.logo_url || pwaIconUrl || null;
     const tenantName = currentTenant?.name || "Church Management Suite";
+    const tenantSlug = currentTenant?.slug || null;
+    const primaryColor = currentTenant?.settings?.primary_color || "#1e3a5f";
     let cancelled = false;
     let blobUrl;
 
@@ -250,10 +252,10 @@ export default function TenantThemeProvider({ children }) {
         name: tenantName,
         short_name: tenantName.length > 12 ? tenantName.slice(0, 12).trim() : tenantName,
         description: `Church Management Suite for ${tenantName}`,
-        start_url: "/",
+        start_url: tenantSlug ? `/t/${tenantSlug}` : "/",
         display: "standalone",
         background_color: "#ffffff",
-        theme_color: "#1e3a5f",
+        theme_color: primaryColor,
         icons: iconUrl
           ? [
               { src: iconUrl, sizes: "192x192", type: "image/png" },
@@ -299,7 +301,7 @@ export default function TenantThemeProvider({ children }) {
       const appleIcon = document.querySelector('link[rel="apple-touch-icon"]');
       if (appleIcon) appleIcon.href = "/icon-192.png";
     };
-  }, [currentTenant?.settings?.pwa_icon_url, currentTenant?.logo_url, currentTenant?.name]);
+  }, [currentTenant?.settings?.pwa_icon_url, currentTenant?.logo_url, currentTenant?.name, currentTenant?.slug, currentTenant?.settings?.primary_color]);
 
   // Dynamic OG image meta tags (generates 1200x630 card from logo as fallback)
   useEffect(() => {
