@@ -63,7 +63,9 @@ Deno.serve(async (req) => {
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const apiKey = Deno.env.get("LOVABLE_API_KEY");
 
-    if (!authHeader || authHeader !== `Bearer ${serviceRoleKey}`) {
+    // Accept either a valid user JWT (gateway-verified) or the service role key
+    // (used when invoked server-to-server from other edge functions).
+    if (!authHeader) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
