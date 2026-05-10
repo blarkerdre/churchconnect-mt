@@ -20,6 +20,7 @@ import NotificationBell from "@/components/notifications/NotificationBell";
 import MobileBottomNav from "@/components/navigation/MobileBottomNav";
 import PaymentRequiredScreen from "@/components/tenants/PaymentRequiredScreen";
 import PaymentWarningBanner from "@/components/tenants/PaymentWarningBanner";
+import PWAUpdateBanner from "@/components/PWAUpdateBanner";
 import { getEnvironmentLabel, getBackendHost, isBackendMismatch, isPreviewEnvironment } from "@/lib/environment";
 import { useAppSetting } from "@/hooks/useAppSetting";
 import { getIconComponent } from "@/lib/icon-map";
@@ -398,6 +399,7 @@ export default function Layout({ children }) {
         {subscriptionStatus === "past_due" && !isSuperAdmin && (isTenantAdmin || isTenantOwner) && (
           <PaymentWarningBanner />
         )}
+        <PWAUpdateBanner />
         <main className="flex-1 p-3 lg:p-8 pb-20 lg:pb-8">
           {children}
         </main>
