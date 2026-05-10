@@ -1,35 +1,41 @@
-## Tenant Scoping Audit — Exam Sessions
+## Goal
+Help users with already-installed PWAs see the latest tenant name and icon. iOS/Android pin manifest fields (name, icons, start_url) at install time, so the only reliable refresh is reinstalling. We can't push silent updates — but we can detect staleness and prompt the user.
 
-### Findings
+## Approach
+Add a lightweight "PWA out of date" detector + reinstall banner that appears only inside an installed PWA when the tenant's current branding (name or logo URL) doesn't match what the manifest was when the app was installed.
 
-**RLS (server-side)** — solid:
-- `exam_sessions`, `exam_session_courses`, `course_registrations`, `exam_attempts` all have admin-manage + member-view policies gated by `is_admin(auth.uid(), tenant_id)` / `user_has_tenant_access(tenant_id)`. Cross-tenant reads/writes are blocked even without client filters.
+## Changes
 
-**Client-side (defense in depth)** — mostly correct, three gaps:
+### 1. Track install-time branding fingerprint
+In `TenantThemeProvider.jsx`, when generating the dynamic manifest, also write a fingerprint to `localStorage`:
+- `pwa:installed:tenantSlug` → tenant slug at first standalone launch
+- `pwa:installed:name` → tenant name
+- `pwa:installed:logoUrl` → tenant logo url
+- `pwa:installed:at` → timestamp
 
-1. `SessionAggregateResults` (in `ExamSessionManager.jsx`, line ~389) queries `exam_attempts` by `session_id` only — no `tenant_id` filter and no tenantId in cache key. RLS blocks cross-tenant data, but the cache key can collide if a session id is reused after tenant switch (extremely unlikely with UUIDs, but still: cache hygiene).
+Only set these once (on first standalone launch where they're missing). This becomes the snapshot of what the OS likely cached.
 
-2. `SessionEnrolDialog` query key `["session-existing-regs", session.id]` — same issue: missing `tenantId` in cache key.
+### 2. New component `PWAUpdateBanner.jsx`
+- Detects standalone mode: `window.matchMedia('(display-mode: standalone)').matches` or `navigator.standalone` (iOS).
+- Compares stored fingerprint against current `currentTenant.name` and `currentTenant.logo_url`.
+- If they differ, shows a dismissible banner: "Your installed app shows outdated branding. Reinstall to update the icon and name." with platform-specific instructions:
+  - iOS: "Long-press the home-screen icon → Remove App → reopen in Safari → Share → Add to Home Screen"
+  - Android: "Long-press the icon → App info → Uninstall → reopen in Chrome → Install app"
+- Includes a "Got it" button that updates the stored fingerprint to current values (so banner doesn't reappear unless branding changes again).
+- Only shown to signed-in users (skip on auth/public pages to avoid noise).
 
-3. `OpenSessionsPanel.registerMutation` and `SessionEnrolDialog.enrolMutation` — both correctly use `withTenant(...)` for inserts ✓. Filters on read queries all use `.eq("tenant_id", tenantId)` ✓.
+### 3. Mount the banner
+Render `<PWAUpdateBanner />` once inside `AppLayout.jsx` near the top (above page content, below header).
 
-**All other writes/reads verified correct:**
-- `ExamSessionManager` mutations: every `update`/`delete` chains `.eq("tenant_id", tenantId)`, every `insert` uses `withTenant(...)`. ✓
-- `OpenSessionsPanel` reads: scopeQuery / explicit tenant_id ✓
-- `MyProfile` session-related queries: explicit tenant_id ✓
+### 4. Bonus: keep theme_color/background fresh for new installs
+Update the dynamic manifest in `TenantThemeProvider.jsx` to use the tenant's `primary_color` for `theme_color` (and a near-white for `background_color`). New installs will then pick up tenant-tinted splash screens.
 
-### Changes to make
+## Out of scope
+- No DB / RLS / edge-function changes.
+- No service worker changes (project intentionally has minimal SW).
+- No forced uninstall — OS doesn't allow that.
 
-**Edit `src/components/exams/ExamSessionManager.jsx`:**
-- In `SessionAggregateResults`: add `tenantId` from `useTenantQuery`, add `.eq("tenant_id", tenantId)` to the `exam_attempts` query, include `tenantId` in the queryKey, and gate with `enabled: !!session.id && !!tenantId`.
-
-**Edit `src/components/exams/SessionEnrolDialog.jsx`:**
-- Add `tenantId` to the `["session-existing-regs", session.id]` query key (already filtered by tenant_id in the SQL).
-- Add `tenantId` to the invalidation call after enrol.
-
-No database migration needed — RLS already enforces isolation correctly.
-
-### Out of scope
-
-- No changes to server policies, no changes to schema.
-- No behaviour changes for users; purely hardening cache keys and adding belt-and-braces tenant filter on one read.
+## Files touched
+- `src/components/tenants/TenantThemeProvider.jsx` (fingerprint + theme_color)
+- `src/components/PWAUpdateBanner.jsx` (new)
+- `src/components/AppLayout.jsx` (mount banner)
