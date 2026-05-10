@@ -301,7 +301,7 @@ export default function TenantThemeProvider({ children }) {
       const appleIcon = document.querySelector('link[rel="apple-touch-icon"]');
       if (appleIcon) appleIcon.href = "/icon-192.png";
     };
-  }, [currentTenant?.settings?.pwa_icon_url, currentTenant?.logo_url, currentTenant?.name]);
+  }, [currentTenant?.settings?.pwa_icon_url, currentTenant?.logo_url, currentTenant?.name, currentTenant?.slug, currentTenant?.settings?.primary_color]);
 
   // Dynamic OG image meta tags (generates 1200x630 card from logo as fallback)
   useEffect(() => {
