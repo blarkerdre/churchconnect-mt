@@ -49,7 +49,7 @@ export default function OpenSessionsPanel({ memberId }) {
 
   const courseTitles = Array.from(new Set(sessionCourses.map(c => c.exam_title)));
 
-  const { data: titleRows = [] } = useQuery({
+  const { data: titleRows = [], isLoading: titlesLoading } = useQuery({
     queryKey: ["exam-titles-by-name", tenantId, courseTitles.join("|")],
     queryFn: async () => {
       if (courseTitles.length === 0) return [];
@@ -99,8 +99,13 @@ export default function OpenSessionsPanel({ memberId }) {
     onSuccess: ({ inserted, sessionId }) => {
       qc.invalidateQueries({ queryKey: ["my-session-regs", memberId, tenantId] });
       qc.invalidateQueries({ queryKey: ["my-course-registrations"] });
-      toast({ title: "Registered", description: `Enrolled in ${inserted} course(s).` });
-      if (sessionId) {
+      qc.invalidateQueries({ queryKey: ["my-course-registrations-v2", memberId, tenantId] });
+      if (inserted === 0) {
+        toast({ title: "Already registered", description: "You're already enrolled in this session." });
+      } else {
+        toast({ title: "Registered", description: `Enrolled in ${inserted} course(s).` });
+      }
+      if (sessionId && inserted > 0) {
         logAudit("session_self_register", "exam_session", sessionId, { member_id: memberId, inserted }, tenantId);
       }
     },
@@ -108,6 +113,15 @@ export default function OpenSessionsPanel({ memberId }) {
   });
 
   if (isLoading || sessions.length === 0) return null;
+
+  // Hide auto-open sessions where the member has no existing rows — exam buttons
+  // appear directly via DynamicExamButtons, no manual Register click needed.
+  const visibleSessions = sessions.filter(s => {
+    const isAutoOpen = s.auto_open_exams !== false;
+    const hasRows = myRegs.some(r => r.session_id === s.id);
+    return !isAutoOpen || hasRows;
+  });
+  if (visibleSessions.length === 0) return null;
 
   return (
     <Card className="border-0 shadow-sm">
@@ -117,7 +131,7 @@ export default function OpenSessionsPanel({ memberId }) {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
-        {sessions.map(s => {
+        {visibleSessions.map(s => {
           const courses = sessionCourses.filter(c => c.session_id === s.id);
           const myInSession = myRegs.filter(r => r.session_id === s.id);
           const courseIdsInSession = courses.map(c => titleByName[c.exam_title]).filter(Boolean);
@@ -154,7 +168,7 @@ export default function OpenSessionsPanel({ memberId }) {
                     <Button
                       size="sm"
                       onClick={() => registerMutation.mutate(s)}
-                      disabled={registerMutation.isPending || (tookBefore && s.allow_reregistration === false)}
+                      disabled={registerMutation.isPending || titlesLoading || (tookBefore && s.allow_reregistration === false)}
                     >
                       {registerMutation.isPending && <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />}
                       {partiallyRegistered ? "Complete registration" : tookBefore ? "Register again" : "Register"}
