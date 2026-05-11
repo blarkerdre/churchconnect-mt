@@ -1171,7 +1171,7 @@ function DynamicExamButtons({ memberId, onSelect, tenantId }) {
                       variant={taken ? "secondary" : "outline"}
                       size="sm"
                       disabled={isDisabled}
-                      onClick={() => onSelect({ type: course.name, subjectId: s.id, subjectName: s.name })}
+                      onClick={() => handleSubjectClick(course, s)}
                       className="gap-1.5"
                     >
                       <BookOpen className="h-3.5 w-3.5" />
