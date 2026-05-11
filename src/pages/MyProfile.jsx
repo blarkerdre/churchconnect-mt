@@ -1021,17 +1021,54 @@ function DynamicExamButtons({ memberId, onSelect, tenantId }) {
 
   if (isLoading || courses.length === 0) return null;
 
-  // Show courses where: (a) registered AND course.exams_open, OR
-  // (b) registered via an active session that has auto_open_exams=true
+  // Auto-open: courses in any active session with auto_open_exams !== false
   const autoOpenSessionIds = new Set(openSessions.filter(s => s.auto_open_exams !== false).map(s => s.id));
+  const autoOpenSessionByCourseId = new Map(); // course.id -> session.id (first match)
+  const autoOpenCourseIds = new Set();
+  openSessionCourses.forEach(sc => {
+    if (!autoOpenSessionIds.has(sc.session_id)) return;
+    const course = courses.find(c => c.name === sc.exam_title);
+    if (course) {
+      autoOpenCourseIds.add(course.id);
+      if (!autoOpenSessionByCourseId.has(course.id)) {
+        autoOpenSessionByCourseId.set(course.id, sc.session_id);
+      }
+    }
+  });
+
   const registeredCourseIds = new Set(registrations.map(r => r.course_id));
   const registeredViaOpenSession = new Set(
     registrations.filter(r => r.session_id && autoOpenSessionIds.has(r.session_id)).map(r => r.course_id)
   );
+  // Show if: registered+exams_open, OR registered via auto-open session, OR course is in any auto-open session
   const registeredCourses = courses.filter(c =>
-    registeredCourseIds.has(c.id) && (c.exams_open || registeredViaOpenSession.has(c.id))
+    (registeredCourseIds.has(c.id) && (c.exams_open || registeredViaOpenSession.has(c.id))) ||
+    autoOpenCourseIds.has(c.id)
   );
   if (registeredCourses.length === 0) return null;
+
+  // Auto-enrol the member if they tap a subject in an auto-open session without an existing row
+  const handleSubjectClick = async (course, subject) => {
+    const sessionId = autoOpenSessionByCourseId.get(course.id);
+    const alreadyRegisteredForSession = sessionId
+      ? registrations.some(r => r.course_id === course.id && r.session_id === sessionId)
+      : registrations.some(r => r.course_id === course.id);
+    if (!alreadyRegisteredForSession && sessionId) {
+      const { error } = await supabase.from("course_registrations").insert({
+        member_id: memberId,
+        course_id: course.id,
+        session_id: sessionId,
+        tenant_id: tenantId,
+      });
+      if (error && !String(error.message || "").toLowerCase().includes("duplicate")) {
+        toast({ title: "Could not register for exam", description: error.message, variant: "destructive" });
+        return;
+      }
+      qc.invalidateQueries({ queryKey: ["my-course-registrations-v2", memberId, tenantId] });
+      qc.invalidateQueries({ queryKey: ["my-session-regs", memberId, tenantId] });
+    }
+    onSelect({ type: course.name, subjectId: subject.id, subjectName: subject.name });
+  };
 
   // Build best attempt per subject
   const bestBySubject = {};
