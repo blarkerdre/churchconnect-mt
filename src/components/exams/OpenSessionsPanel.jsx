@@ -49,7 +49,7 @@ export default function OpenSessionsPanel({ memberId }) {
 
   const courseTitles = Array.from(new Set(sessionCourses.map(c => c.exam_title)));
 
-  const { data: titleRows = [] } = useQuery({
+  const { data: titleRows = [], isLoading: titlesLoading } = useQuery({
     queryKey: ["exam-titles-by-name", tenantId, courseTitles.join("|")],
     queryFn: async () => {
       if (courseTitles.length === 0) return [];
