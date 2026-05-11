@@ -168,7 +168,7 @@ export default function OpenSessionsPanel({ memberId }) {
                     <Button
                       size="sm"
                       onClick={() => registerMutation.mutate(s)}
-                      disabled={registerMutation.isPending || (tookBefore && s.allow_reregistration === false)}
+                      disabled={registerMutation.isPending || titlesLoading || (tookBefore && s.allow_reregistration === false)}
                     >
                       {registerMutation.isPending && <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />}
                       {partiallyRegistered ? "Complete registration" : tookBefore ? "Register again" : "Register"}
