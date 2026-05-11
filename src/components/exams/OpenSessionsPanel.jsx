@@ -99,8 +99,13 @@ export default function OpenSessionsPanel({ memberId }) {
     onSuccess: ({ inserted, sessionId }) => {
       qc.invalidateQueries({ queryKey: ["my-session-regs", memberId, tenantId] });
       qc.invalidateQueries({ queryKey: ["my-course-registrations"] });
-      toast({ title: "Registered", description: `Enrolled in ${inserted} course(s).` });
-      if (sessionId) {
+      qc.invalidateQueries({ queryKey: ["my-course-registrations-v2", memberId, tenantId] });
+      if (inserted === 0) {
+        toast({ title: "Already registered", description: "You're already enrolled in this session." });
+      } else {
+        toast({ title: "Registered", description: `Enrolled in ${inserted} course(s).` });
+      }
+      if (sessionId && inserted > 0) {
         logAudit("session_self_register", "exam_session", sessionId, { member_id: memberId, inserted }, tenantId);
       }
     },
