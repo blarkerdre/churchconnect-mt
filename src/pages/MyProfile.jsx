@@ -946,6 +946,8 @@ function CreateMemberProfile({ user, onCreated, wsfCentres, churchUnits }) {
 }
 
 function DynamicExamButtons({ memberId, onSelect, tenantId }) {
+  const qc = useQueryClient();
+
   const { data: courses = [], isLoading } = useQuery({
     queryKey: ["exam-titles", tenantId],
     queryFn: async () => {
@@ -974,6 +976,23 @@ function DynamicExamButtons({ memberId, onSelect, tenantId }) {
       return data;
     },
     enabled: !!tenantId,
+  });
+
+  // Courses included in any active session (used for auto-open)
+  const activeSessionIds = openSessions.map(s => s.id);
+  const { data: openSessionCourses = [] } = useQuery({
+    queryKey: ["my-open-session-courses", tenantId, activeSessionIds.join("|")],
+    queryFn: async () => {
+      if (activeSessionIds.length === 0) return [];
+      const { data, error } = await supabase
+        .from("exam_session_courses")
+        .select("session_id, exam_title")
+        .eq("tenant_id", tenantId)
+        .in("session_id", activeSessionIds);
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!tenantId && activeSessionIds.length > 0,
   });
 
   const { data: allSubjects = [] } = useQuery({
