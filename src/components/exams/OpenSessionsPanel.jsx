@@ -114,6 +114,15 @@ export default function OpenSessionsPanel({ memberId }) {
 
   if (isLoading || sessions.length === 0) return null;
 
+  // Hide auto-open sessions where the member has no existing rows — exam buttons
+  // appear directly via DynamicExamButtons, no manual Register click needed.
+  const visibleSessions = sessions.filter(s => {
+    const isAutoOpen = s.auto_open_exams !== false;
+    const hasRows = myRegs.some(r => r.session_id === s.id);
+    return !isAutoOpen || hasRows;
+  });
+  if (visibleSessions.length === 0) return null;
+
   return (
     <Card className="border-0 shadow-sm">
       <CardHeader className="pb-2">
@@ -122,7 +131,7 @@ export default function OpenSessionsPanel({ memberId }) {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
-        {sessions.map(s => {
+        {visibleSessions.map(s => {
           const courses = sessionCourses.filter(c => c.session_id === s.id);
           const myInSession = myRegs.filter(r => r.session_id === s.id);
           const courseIdsInSession = courses.map(c => titleByName[c.exam_title]).filter(Boolean);
