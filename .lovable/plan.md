@@ -1,41 +1,44 @@
-## Goal
-Help users with already-installed PWAs see the latest tenant name and icon. iOS/Android pin manifest fields (name, icons, start_url) at install time, so the only reliable refresh is reinstalling. We can't push silent updates — but we can detect staleness and prompt the user.
+# Let members register and take exams in open sessions
 
-## Approach
-Add a lightweight "PWA out of date" detector + reinstall banner that appears only inside an installed PWA when the tenant's current branding (name or logo URL) doesn't match what the manifest was when the app was installed.
+## Problem
 
-## Changes
+Blarker sees the active "Test Session" but the Take Exam buttons never appear. DB confirms zero `course_registrations` rows for them, so the existing flow (My Profile → Open Sessions panel → Register → Bible School subjects appear) is breaking down somewhere. For sessions configured with `auto_open_exams=true` the admin's intent is "anyone in the church can sit this exam", so the registration step should be near-frictionless.
 
-### 1. Track install-time branding fingerprint
-In `TenantThemeProvider.jsx`, when generating the dynamic manifest, also write a fingerprint to `localStorage`:
-- `pwa:installed:tenantSlug` → tenant slug at first standalone launch
-- `pwa:installed:name` → tenant name
-- `pwa:installed:logoUrl` → tenant logo url
-- `pwa:installed:at` → timestamp
+## Solution
 
-Only set these once (on first standalone launch where they're missing). This becomes the snapshot of what the OS likely cached.
+Two complementary changes — make registration actually work, and let auto-open sessions skip the manual click entirely.
 
-### 2. New component `PWAUpdateBanner.jsx`
-- Detects standalone mode: `window.matchMedia('(display-mode: standalone)').matches` or `navigator.standalone` (iOS).
-- Compares stored fingerprint against current `currentTenant.name` and `currentTenant.logo_url`.
-- If they differ, shows a dismissible banner: "Your installed app shows outdated branding. Reinstall to update the icon and name." with platform-specific instructions:
-  - iOS: "Long-press the home-screen icon → Remove App → reopen in Safari → Share → Add to Home Screen"
-  - Android: "Long-press the icon → App info → Uninstall → reopen in Chrome → Install app"
-- Includes a "Got it" button that updates the stored fingerprint to current values (so banner doesn't reappear unless branding changes again).
-- Only shown to signed-in users (skip on auth/public pages to avoid noise).
+### 1. Auto-enrol on demand for `auto_open_exams` sessions
 
-### 3. Mount the banner
-Render `<PWAUpdateBanner />` once inside `AppLayout.jsx` near the top (above page content, below header).
+`src/pages/MyProfile.jsx` → `DynamicExamButtons`:
 
-### 4. Bonus: keep theme_color/background fresh for new installs
-Update the dynamic manifest in `TenantThemeProvider.jsx` to use the tenant's `primary_color` for `theme_color` (and a near-white for `background_color`). New installs will then pick up tenant-tinted splash screens.
+- Fetch `exam_session_courses` for the active sessions already loaded in `openSessions`.
+- Build a set of course IDs that belong to any active session with `auto_open_exams === true` (mapping `exam_title` name → course id via `exam_titles`).
+- Update the `registeredCourses` filter so a course is included when:
+  - the member already has a `course_registrations` row AND `c.exams_open` is true, OR
+  - the course is part of an active auto-open session (no row required up-front).
+- When the member clicks a subject button for a course they have no registration for, insert a `course_registrations` row (`member_id`, `course_id`, `session_id`, `tenant_id`) just before opening `TakeExamDialog`. Idempotent — skip insert if a row already exists for that `(member, course, session)`.
+
+This means Blarker will see the Bible School card with BCC subjects immediately, and the registration row is created the moment they actually start the exam.
+
+### 2. Fix the OpenSessionsPanel registration flow
+
+`src/components/exams/OpenSessionsPanel.jsx`:
+
+- Disable the Register button until the `titleRows` query has resolved (so we never call the mutation with an empty `titleByName` and silently insert zero rows).
+- When `inserted === 0` because all rows already existed, show a neutral "Already registered" toast instead of "Enrolled in 0 course(s)".
+- Hide the panel entirely for sessions where `auto_open_exams === true` AND the member has no existing rows — they don't need to click Register, the exam buttons appear directly. Keep the panel for manually-controlled sessions (`auto_open_exams=false`) and for re-registration cases.
+
+### 3. No DB / RLS / edge-function changes
+
+Existing RLS on `course_registrations` already allows a member to insert their own row (`m.user_id = auth.uid()` + `user_has_tenant_access`). No migration required.
+
+## Files
+
+- `src/pages/MyProfile.jsx` — extend `DynamicExamButtons` query set, filter, and on-click auto-enrol
+- `src/components/exams/OpenSessionsPanel.jsx` — guard Register button, fix toast, hide for auto-open sessions
 
 ## Out of scope
-- No DB / RLS / edge-function changes.
-- No service worker changes (project intentionally has minimal SW).
-- No forced uninstall — OS doesn't allow that.
 
-## Files touched
-- `src/components/tenants/TenantThemeProvider.jsx` (fingerprint + theme_color)
-- `src/components/PWAUpdateBanner.jsx` (new)
-- `src/components/AppLayout.jsx` (mount banner)
+- Admin-side `ExamSessionManager` / `SessionEnrolDialog` unchanged
+- No change to grading logic, certificates, or RLS policies
