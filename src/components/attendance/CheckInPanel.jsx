@@ -136,8 +136,8 @@ export default function CheckInPanel({ session, onClose }) {
       <div className="grid grid-cols-3 gap-2">
         {[
           { label: "Total", value: eligibleMembers.length, color: "text-foreground" },
-          { label: "Present", value: records.length, color: "text-chart-3" },
-          { label: "Absent", value: eligibleMembers.length - records.length, color: "text-destructive" },
+          { label: "Present", value: eligibleRecords.length, color: "text-chart-3" },
+          { label: "Absent", value: eligibleMembers.length - eligibleRecords.length, color: "text-destructive" },
         ].map(s => (
           <div key={s.label} className="bg-muted/50 rounded-xl p-2.5 text-center border border-border">
             <p className={`text-lg font-bold ${s.color}`}>{s.value}</p>
