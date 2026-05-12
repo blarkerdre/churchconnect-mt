@@ -78,6 +78,14 @@ export default function CheckInPanel({ session, onClose }) {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["attendance-records", session.id] }),
   });
 
+  const removeRecordMutation = useMutation({
+    mutationFn: async (recordId) => {
+      const { error } = await supabase.from("attendance_records").delete().eq("id", recordId).eq("tenant_id", tenantId);
+      if (error) throw error;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["attendance-records", session.id] }),
+  });
+
   const closeMutation = useMutation({
     mutationFn: async () => {
       const { error } = await supabase.from("attendance_sessions").update({ status: "Closed" }).eq("id", session.id).eq("tenant_id", tenantId);
