@@ -99,10 +99,18 @@ export default function CheckInPanel({ session, onClose }) {
 
   const eligibleMembers = useMemo(() => {
     if (session.session_type === "Unit Meeting" && session.unit) {
-      return allMembers.filter(m => (m.church_unit || "").split(",").map(u => u.trim()).includes(session.unit));
+      const target = session.unit.toLowerCase().trim();
+      return allMembers.filter(m =>
+        (m.church_unit || "").split(",").map(u => u.trim().toLowerCase()).includes(target)
+      );
     }
     return allMembers;
   }, [allMembers, session]);
+
+  const eligibleIds = useMemo(() => new Set(eligibleMembers.map(m => m.id)), [eligibleMembers]);
+  const eligibleRecords = useMemo(() => records.filter(r => eligibleIds.has(r.member_id)), [records, eligibleIds]);
+  const orphanRecords = useMemo(() => records.filter(r => !eligibleIds.has(r.member_id)), [records, eligibleIds]);
+  const memberById = useMemo(() => Object.fromEntries(allMembers.map(m => [m.id, m])), [allMembers]);
 
   const filtered = eligibleMembers.filter(m =>
     `${m.first_name} ${m.last_name}`.toLowerCase().includes(search.toLowerCase())
