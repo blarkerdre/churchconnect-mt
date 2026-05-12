@@ -234,15 +234,19 @@ export default function ExamSessionManager() {
                         </div>
                       </div>
                       <div className="flex items-center gap-1 shrink-0">
-                        {s.status === "draft" && (
-                          <Button
-                            variant="outline" size="sm" className="gap-1 text-chart-3 border-chart-3/30 hover:bg-chart-3/10 h-7 text-xs"
-                            disabled={hasActiveSession || statusMutation.isPending}
-                            onClick={() => statusMutation.mutate({ id: s.id, status: "active" })}
-                          >
-                            <Play className="h-3 w-3" /> Start
-                          </Button>
-                        )}
+                        {s.status === "draft" && (() => {
+                          const noCourses = courses.length === 0;
+                          return (
+                            <Button
+                              variant="outline" size="sm" className="gap-1 text-chart-3 border-chart-3/30 hover:bg-chart-3/10 h-7 text-xs"
+                              disabled={hasActiveSession || statusMutation.isPending || noCourses}
+                              title={noCourses ? "Add at least one course before starting" : hasActiveSession ? "Another session is already active" : ""}
+                              onClick={() => statusMutation.mutate({ id: s.id, status: "active" })}
+                            >
+                              <Play className="h-3 w-3" /> Start
+                            </Button>
+                          );
+                        })()}
                         {s.status === "active" && (
                           <>
                             <Button
