@@ -1,44 +1,35 @@
-# Let members register and take exams in open sessions
+## Why Ian appears
 
-## Problem
+Ian Mutendebvure has `church_unit = NULL` and status `Visitor`, but he has an `attendance_records` row for the **Altar Minister** Unit Meeting on 2026-05-10. That record was likely created when he was previously assigned to Altar Minister; clearing his unit afterwards left the record orphaned.
 
-Blarker sees the active "Test Session" but the Take Exam buttons never appear. DB confirms zero `course_registrations` rows for them, so the existing flow (My Profile → Open Sessions panel → Register → Bible School subjects appear) is breaking down somewhere. For sessions configured with `auto_open_exams=true` the admin's intent is "anyone in the church can sit this exam", so the registration step should be near-frictionless.
+The current `CheckInPanel` only filters the **eligible members list** by `church_unit`. It never checks whether existing attendance records belong to eligible members, so Ian:
+- counts toward the "Present" stat,
+- appears on downloaded/printed reports,
+- but is invisible in the list (you can't un-check him from the UI).
 
-## Solution
+There is also no server-side guard, so a stale or admin-side insert can attach any member to a Unit Meeting.
 
-Two complementary changes — make registration actually work, and let auto-open sessions skip the manual click entirely.
+## Plan
 
-### 1. Auto-enrol on demand for `auto_open_exams` sessions
+### 1. `CheckInPanel.jsx` — fix display + cleanup
+- Compute eligible member IDs once (`memberUnits` includes `session.unit`, case-insensitive).
+- For Unit Meetings, also surface any `attendance_records` whose `member_id` is **not** in the eligible set as a small "Not in this unit" group at the top, each with a one-click **Remove** action so admins can clean stale entries (like Ian).
+- Use only eligible-member records for the Total/Present/Absent stats and CSV export, so the numbers stop including off-unit check-ins.
+- Block the green check button for non-eligible members.
 
-`src/pages/MyProfile.jsx` → `DynamicExamButtons`:
+### 2. `SelfCheckIn.jsx` — already guards eligibility (no change needed beyond reusing the same case-insensitive comparison helper).
 
-- Fetch `exam_session_courses` for the active sessions already loaded in `openSessions`.
-- Build a set of course IDs that belong to any active session with `auto_open_exams === true` (mapping `exam_title` name → course id via `exam_titles`).
-- Update the `registeredCourses` filter so a course is included when:
-  - the member already has a `course_registrations` row AND `c.exams_open` is true, OR
-  - the course is part of an active auto-open session (no row required up-front).
-- When the member clicks a subject button for a course they have no registration for, insert a `course_registrations` row (`member_id`, `course_id`, `session_id`, `tenant_id`) just before opening `TakeExamDialog`. Idempotent — skip insert if a row already exists for that `(member, course, session)`.
+### 3. Server-side guard (DB trigger via migration)
+Add a `BEFORE INSERT` trigger on `attendance_records`: when the linked session is a Unit Meeting with a non-null `unit`, reject the insert if the member's `church_unit` (comma-split, case-insensitive) does not contain that unit. This prevents future orphaned rows regardless of UI path (admin panel, self check-in, imports).
 
-This means Blarker will see the Bible School card with BCC subjects immediately, and the registration row is created the moment they actually start the exam.
-
-### 2. Fix the OpenSessionsPanel registration flow
-
-`src/components/exams/OpenSessionsPanel.jsx`:
-
-- Disable the Register button until the `titleRows` query has resolved (so we never call the mutation with an empty `titleByName` and silently insert zero rows).
-- When `inserted === 0` because all rows already existed, show a neutral "Already registered" toast instead of "Enrolled in 0 course(s)".
-- Hide the panel entirely for sessions where `auto_open_exams === true` AND the member has no existing rows — they don't need to click Register, the exam buttons appear directly. Keep the panel for manually-controlled sessions (`auto_open_exams=false`) and for re-registration cases.
-
-### 3. No DB / RLS / edge-function changes
-
-Existing RLS on `course_registrations` already allows a member to insert their own row (`m.user_id = auth.uid()` + `user_has_tenant_access`). No migration required.
-
-## Files
-
-- `src/pages/MyProfile.jsx` — extend `DynamicExamButtons` query set, filter, and on-click auto-enrol
-- `src/components/exams/OpenSessionsPanel.jsx` — guard Register button, fix toast, hide for auto-open sessions
+### 4. Memory update
+Append a note to `mem://features/unit-attendance` documenting the strict eligibility rule and trigger.
 
 ## Out of scope
+- Home Cell (`wsf`) attendance — same pattern can follow later if desired.
+- Bulk-deleting historical orphan records across all sessions (admins can clean them per-session via the new Remove button, or we can run a one-off cleanup if you confirm).
 
-- Admin-side `ExamSessionManager` / `SessionEnrolDialog` unchanged
-- No change to grading logic, certificates, or RLS policies
+## Files
+- `src/components/attendance/CheckInPanel.jsx`
+- new migration adding `enforce_unit_attendance_eligibility` trigger
+- `mem://features/unit-attendance`
