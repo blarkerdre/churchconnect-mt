@@ -78,6 +78,14 @@ export default function CheckInPanel({ session, onClose }) {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["attendance-records", session.id] }),
   });
 
+  const removeRecordMutation = useMutation({
+    mutationFn: async (recordId) => {
+      const { error } = await supabase.from("attendance_records").delete().eq("id", recordId).eq("tenant_id", tenantId);
+      if (error) throw error;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["attendance-records", session.id] }),
+  });
+
   const closeMutation = useMutation({
     mutationFn: async () => {
       const { error } = await supabase.from("attendance_sessions").update({ status: "Closed" }).eq("id", session.id).eq("tenant_id", tenantId);
@@ -91,10 +99,18 @@ export default function CheckInPanel({ session, onClose }) {
 
   const eligibleMembers = useMemo(() => {
     if (session.session_type === "Unit Meeting" && session.unit) {
-      return allMembers.filter(m => (m.church_unit || "").split(",").map(u => u.trim()).includes(session.unit));
+      const target = session.unit.toLowerCase().trim();
+      return allMembers.filter(m =>
+        (m.church_unit || "").split(",").map(u => u.trim().toLowerCase()).includes(target)
+      );
     }
     return allMembers;
   }, [allMembers, session]);
+
+  const eligibleIds = useMemo(() => new Set(eligibleMembers.map(m => m.id)), [eligibleMembers]);
+  const eligibleRecords = useMemo(() => records.filter(r => eligibleIds.has(r.member_id)), [records, eligibleIds]);
+  const orphanRecords = useMemo(() => records.filter(r => !eligibleIds.has(r.member_id)), [records, eligibleIds]);
+  const memberById = useMemo(() => Object.fromEntries(allMembers.map(m => [m.id, m])), [allMembers]);
 
   const filtered = eligibleMembers.filter(m =>
     `${m.first_name} ${m.last_name}`.toLowerCase().includes(search.toLowerCase())
@@ -110,7 +126,7 @@ export default function CheckInPanel({ session, onClose }) {
           <p className="text-xs text-muted-foreground mt-0.5">{session.session_date} · {session.session_type}</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={() => downloadReport(session, eligibleMembers, records)} className="gap-1.5 text-xs">
+          <Button variant="outline" size="sm" onClick={() => downloadReport(session, eligibleMembers, eligibleRecords)} className="gap-1.5 text-xs">
             <Download className="h-3.5 w-3.5" /> Download
           </Button>
           <Button variant="ghost" size="icon" onClick={onClose}><X className="h-4 w-4" /></Button>
@@ -120,8 +136,8 @@ export default function CheckInPanel({ session, onClose }) {
       <div className="grid grid-cols-3 gap-2">
         {[
           { label: "Total", value: eligibleMembers.length, color: "text-foreground" },
-          { label: "Present", value: records.length, color: "text-chart-3" },
-          { label: "Absent", value: eligibleMembers.length - records.length, color: "text-destructive" },
+          { label: "Present", value: eligibleRecords.length, color: "text-chart-3" },
+          { label: "Absent", value: eligibleMembers.length - eligibleRecords.length, color: "text-destructive" },
         ].map(s => (
           <div key={s.label} className="bg-muted/50 rounded-xl p-2.5 text-center border border-border">
             <p className={`text-lg font-bold ${s.color}`}>{s.value}</p>
@@ -144,6 +160,37 @@ export default function CheckInPanel({ session, onClose }) {
             <p className="text-lg font-bold text-foreground">{session.total_count}</p>
             <p className="text-[11px] text-muted-foreground">Demo Total</p>
           </div>
+        </div>
+      )}
+
+      {session.session_type === "Unit Meeting" && session.unit && orphanRecords.length > 0 && (
+        <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-3 space-y-2">
+          <p className="text-xs font-semibold text-destructive">
+            Not in this unit ({orphanRecords.length}) — stale check-ins, not counted in stats
+          </p>
+          {orphanRecords.map(r => {
+            const m = memberById[r.member_id];
+            return (
+              <div key={r.id} className="flex items-center gap-2">
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate">
+                    {m ? `${m.first_name} ${m.last_name}` : "Unknown member"}
+                  </p>
+                  <p className="text-[11px] text-muted-foreground truncate">
+                    {m?.church_unit || "No unit assigned"}
+                  </p>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => removeRecordMutation.mutate(r.id)}
+                  className="h-8 text-xs gap-1"
+                >
+                  <X className="h-3.5 w-3.5" /> Remove
+                </Button>
+              </div>
+            );
+          })}
         </div>
       )}
 
