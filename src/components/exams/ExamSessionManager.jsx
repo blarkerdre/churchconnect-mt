@@ -234,15 +234,19 @@ export default function ExamSessionManager() {
                         </div>
                       </div>
                       <div className="flex items-center gap-1 shrink-0">
-                        {s.status === "draft" && (
-                          <Button
-                            variant="outline" size="sm" className="gap-1 text-chart-3 border-chart-3/30 hover:bg-chart-3/10 h-7 text-xs"
-                            disabled={hasActiveSession || statusMutation.isPending}
-                            onClick={() => statusMutation.mutate({ id: s.id, status: "active" })}
-                          >
-                            <Play className="h-3 w-3" /> Start
-                          </Button>
-                        )}
+                        {s.status === "draft" && (() => {
+                          const noCourses = courses.length === 0;
+                          return (
+                            <Button
+                              variant="outline" size="sm" className="gap-1 text-chart-3 border-chart-3/30 hover:bg-chart-3/10 h-7 text-xs"
+                              disabled={hasActiveSession || statusMutation.isPending || noCourses}
+                              title={noCourses ? "Add at least one course before starting" : hasActiveSession ? "Another session is already active" : ""}
+                              onClick={() => statusMutation.mutate({ id: s.id, status: "active" })}
+                            >
+                              <Play className="h-3 w-3" /> Start
+                            </Button>
+                          );
+                        })()}
                         {s.status === "active" && (
                           <>
                             <Button
@@ -319,14 +323,14 @@ export default function ExamSessionManager() {
             <div className="flex items-center justify-between rounded-lg border border-border p-3">
               <div className="pr-3">
                 <Label className="text-sm">Auto-open exams while active</Label>
-                <p className="text-[11px] text-muted-foreground">Members registered to this session can take included course exams without per-course toggle.</p>
+                <p className="text-[11px] text-muted-foreground">Anyone in the church can take these exams without admin enrolment. Their registration is recorded the first time they begin.</p>
               </div>
               <Switch checked={form.auto_open_exams} onCheckedChange={v => setForm(f => ({ ...f, auto_open_exams: v }))} />
             </div>
             <div className="flex items-center justify-between rounded-lg border border-border p-3">
               <div className="pr-3">
                 <Label className="text-sm">Allow re-registration</Label>
-                <p className="text-[11px] text-muted-foreground">Members who took the course in a previous session may register again.</p>
+                <p className="text-[11px] text-muted-foreground">Members who took a course in a previous session can register again here.</p>
               </div>
               <Switch checked={form.allow_reregistration} onCheckedChange={v => setForm(f => ({ ...f, allow_reregistration: v }))} />
             </div>

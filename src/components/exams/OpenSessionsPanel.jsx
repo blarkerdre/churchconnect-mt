@@ -114,14 +114,9 @@ export default function OpenSessionsPanel({ memberId }) {
 
   if (isLoading || sessions.length === 0) return null;
 
-  // Hide auto-open sessions where the member has no existing rows — exam buttons
-  // appear directly via DynamicExamButtons, no manual Register click needed.
-  const visibleSessions = sessions.filter(s => {
-    const isAutoOpen = s.auto_open_exams !== false;
-    const hasRows = myRegs.some(r => r.session_id === s.id);
-    return !isAutoOpen || hasRows;
-  });
-  if (visibleSessions.length === 0) return null;
+  // Always show every active session — members must explicitly register so their
+  // row points to the current session (and not a stale closed one).
+  const visibleSessions = sessions;
 
   return (
     <Card className="border-0 shadow-sm">
