@@ -163,6 +163,37 @@ export default function CheckInPanel({ session, onClose }) {
         </div>
       )}
 
+      {session.session_type === "Unit Meeting" && session.unit && orphanRecords.length > 0 && (
+        <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-3 space-y-2">
+          <p className="text-xs font-semibold text-destructive">
+            Not in this unit ({orphanRecords.length}) — stale check-ins, not counted in stats
+          </p>
+          {orphanRecords.map(r => {
+            const m = memberById[r.member_id];
+            return (
+              <div key={r.id} className="flex items-center gap-2">
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate">
+                    {m ? `${m.first_name} ${m.last_name}` : "Unknown member"}
+                  </p>
+                  <p className="text-[11px] text-muted-foreground truncate">
+                    {m?.church_unit || "No unit assigned"}
+                  </p>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => removeRecordMutation.mutate(r.id)}
+                  className="h-8 text-xs gap-1"
+                >
+                  <X className="h-3.5 w-3.5" /> Remove
+                </Button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input placeholder="Search members..." value={search} onChange={e => setSearch(e.target.value)} className="pl-10 h-11 text-base" />
