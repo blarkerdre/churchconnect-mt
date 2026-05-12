@@ -126,7 +126,7 @@ export default function CheckInPanel({ session, onClose }) {
           <p className="text-xs text-muted-foreground mt-0.5">{session.session_date} · {session.session_type}</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={() => downloadReport(session, eligibleMembers, records)} className="gap-1.5 text-xs">
+          <Button variant="outline" size="sm" onClick={() => downloadReport(session, eligibleMembers, eligibleRecords)} className="gap-1.5 text-xs">
             <Download className="h-3.5 w-3.5" /> Download
           </Button>
           <Button variant="ghost" size="icon" onClick={onClose}><X className="h-4 w-4" /></Button>
