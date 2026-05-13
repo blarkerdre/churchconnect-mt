@@ -6,12 +6,45 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
+const SENDER_DOMAIN = "notify.app.churchmanagementsuite.org";
+const FROM_DOMAIN = "app.churchmanagementsuite.org";
+
+function escapeHtml(str: string): string {
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
 
   try {
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+
+    // Validate caller's auth
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const anonClient = createClient(supabaseUrl, anonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+    const { data: userData, error: userErr } = await anonClient.auth.getUser();
+    if (userErr || !userData?.user) {
+      return new Response(JSON.stringify({ error: "Invalid token" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const callerId = userData.user.id;
+
     const { tenant_id, member_name, title, situation, action, god_did, share_publicly, sender_email, user_id } = await req.json();
 
     if (!tenant_id) {
@@ -19,24 +52,28 @@ Deno.serve(async (req) => {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    if (!title?.trim()) {
-      return new Response(JSON.stringify({ error: "Title is required" }), {
-        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-    if (!situation?.trim() || !action?.trim() || !god_did?.trim()) {
-      return new Response(JSON.stringify({ error: "All three testimony fields are required" }), {
+    if (!title?.trim() || !situation?.trim() || !action?.trim() || !god_did?.trim()) {
+      return new Response(JSON.stringify({ error: "All testimony fields are required" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, serviceKey);
 
-    // Save testimony to database
-    if (user_id) {
-      await supabase.from("testimonies").insert({
+    // Confirm caller belongs to tenant
+    const { data: belongs } = await supabase.rpc("user_belongs_to_tenant", {
+      _user_id: callerId,
+      _tenant_id: tenant_id,
+    });
+    if (!belongs) {
+      return new Response(JSON.stringify({ error: "Forbidden: not a member of this tenant" }), {
+        status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Save testimony
+    if (user_id && user_id === callerId) {
+      const { error: insertErr } = await supabase.from("testimonies").insert({
         tenant_id,
         user_id,
         member_name: member_name?.trim() || "Anonymous",
@@ -46,9 +83,15 @@ Deno.serve(async (req) => {
         god_did: god_did.trim(),
         share_publicly: !!share_publicly,
       });
+      if (insertErr) {
+        console.error("Failed to save testimony", insertErr);
+        return new Response(JSON.stringify({ error: "Failed to save testimony" }), {
+          status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
     }
 
-    // Get the testimony recipient email from app_settings
+    // Recipient email
     const { data: setting } = await supabase
       .from("app_settings")
       .select("value")
@@ -57,21 +100,25 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     const recipientEmail = typeof setting?.value === "string" ? setting.value : null;
-
     if (!recipientEmail) {
-      return new Response(JSON.stringify({ error: "Testimony recipient email has not been configured. Please ask your admin to set it in Settings." }), {
-        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      // Testimony is saved; just no email destination configured
+      return new Response(JSON.stringify({ success: true, emailed: false, reason: "no_recipient_configured" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Get tenant name for branding
+    // Tenant for branding
     const { data: tenant } = await supabase
       .from("tenants")
-      .select("name")
+      .select("name, settings")
       .eq("id", tenant_id)
       .single();
 
     const churchName = tenant?.name || "Church";
+    const senderName = (tenant?.settings as Record<string, unknown> | null)?.email_sender_name as string
+      || churchName;
+    const safeName = String(senderName).replace(/[",\\]/g, "");
+    const fromAddress = `"${safeName}" <noreply@${FROM_DOMAIN}>`;
     const name = member_name?.trim() || "Anonymous";
 
     const htmlBody = `
@@ -87,46 +134,77 @@ Deno.serve(async (req) => {
         <p style="font-size:14px;color:#333;white-space:pre-wrap;">${escapeHtml(god_did)}</p>
         <hr style="border:none;border-top:1px solid #e5e7eb;margin:16px 0;" />
         <p style="font-size:14px;color:${share_publicly ? '#16a34a' : '#dc2626'};font-weight:600;">
-          ${share_publicly ? '✅ Member has consented to this testimony being shared publicly.' : '🔒 Member prefers this testimony to remain private.'}
+          ${share_publicly ? 'Member has consented to this testimony being shared publicly.' : 'Member prefers this testimony to remain private.'}
         </p>
-        <p style="font-size:12px;color:#999;">This testimony was submitted via the church app.</p>
       </div>
     `;
+    const textBody = `New Testimony: ${title.trim()}\nFrom: ${name}${sender_email ? ` (${sender_email})` : ""}\n\nSituation:\n${situation}\n\nAction:\n${action}\n\nWhat the Lord did:\n${god_did}\n\n${share_publicly ? "Shared publicly." : "Private."}`;
 
-    // Send via the send-email-alert function (internal call with service role auth)
-    const sendRes = await fetch(`${supabaseUrl}/functions/v1/send-email-alert`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${serviceKey}`,
-        apikey: serviceKey,
-      },
-      body: JSON.stringify({
-        tenant_id,
-        to: recipientEmail,
-        subject: `New Testimony from ${name}: ${title.trim()}`,
-        html: htmlBody,
-      }),
-    });
-    if (!sendRes.ok) {
-      const errText = await sendRes.text();
-      throw new Error(`send-email-alert failed: ${sendRes.status} ${errText}`);
+    // Ensure unsubscribe token exists
+    const normalizedEmail = recipientEmail.trim().toLowerCase();
+    let unsubscribeToken: string | null = null;
+    const { data: existingToken } = await supabase
+      .from("email_unsubscribe_tokens")
+      .select("token")
+      .eq("email", normalizedEmail)
+      .is("used_at", null)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (existingToken?.token) {
+      unsubscribeToken = existingToken.token as string;
+    } else {
+      const newToken = crypto.randomUUID();
+      const { error: tokenErr } = await supabase
+        .from("email_unsubscribe_tokens")
+        .insert({ email: normalizedEmail, token: newToken });
+      if (!tokenErr) unsubscribeToken = newToken;
     }
 
-    return new Response(JSON.stringify({ success: true }), {
+    const messageId = `testimony-${crypto.randomUUID()}`;
+    const subject = `New Testimony from ${name}: ${title.trim()}`;
+
+    const { error: enqueueErr } = await supabase.rpc("enqueue_email", {
+      queue_name: "transactional_emails",
+      payload: {
+        to: recipientEmail,
+        from: fromAddress,
+        sender_domain: SENDER_DOMAIN,
+        subject,
+        html: htmlBody,
+        text: textBody,
+        purpose: "transactional",
+        label: "testimony",
+        message_id: messageId,
+        idempotency_key: messageId,
+        unsubscribe_token: unsubscribeToken,
+        queued_at: new Date().toISOString(),
+        tenant_id,
+      },
+    });
+
+    if (enqueueErr) {
+      console.error("Failed to enqueue testimony email", enqueueErr);
+      return new Response(JSON.stringify({ error: "Failed to queue email" }), {
+        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    await supabase.from("email_send_log").insert({
+      message_id: messageId,
+      template_name: "testimony",
+      recipient_email: recipientEmail,
+      status: "pending",
+      tenant_id,
+    });
+
+    return new Response(JSON.stringify({ success: true, emailed: true }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {
-    return new Response(JSON.stringify({ error: err.message }), {
+    console.error("send-testimony error", err);
+    return new Response(JSON.stringify({ error: (err as Error).message }), {
       status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 });
-
-function escapeHtml(str: string): string {
-  return str
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
-}
