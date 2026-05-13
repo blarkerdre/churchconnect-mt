@@ -93,17 +93,25 @@ Deno.serve(async (req) => {
       </div>
     `;
 
-    // Send via the send-email-alert function (internal call)
-    const { error: sendError } = await supabase.functions.invoke("send-email-alert", {
-      body: {
+    // Send via the send-email-alert function (internal call with service role auth)
+    const sendRes = await fetch(`${supabaseUrl}/functions/v1/send-email-alert`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${serviceKey}`,
+        apikey: serviceKey,
+      },
+      body: JSON.stringify({
         tenant_id,
         to: recipientEmail,
         subject: `New Testimony from ${name}: ${title.trim()}`,
         html: htmlBody,
-      },
+      }),
     });
-
-    if (sendError) throw sendError;
+    if (!sendRes.ok) {
+      const errText = await sendRes.text();
+      throw new Error(`send-email-alert failed: ${sendRes.status} ${errText}`);
+    }
 
     return new Response(JSON.stringify({ success: true }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
