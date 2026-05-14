@@ -241,7 +241,7 @@ Deno.serve(async (req) => {
     );
   } catch (err: any) {
     console.error("grade-exam error:", err);
-    return new Response(JSON.stringify({ error: err.message || "Internal error" }), {
+    return new Response(JSON.stringify({ error: "An unexpected error occurred" }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
