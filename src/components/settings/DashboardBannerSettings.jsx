@@ -76,6 +76,7 @@ export default function DashboardBannerSettings() {
     if (!file || !tenantId) return;
     setUploading(index);
     try {
+      await assertStorageAvailable(tenantId, file.size);
       const ext = file.name.split(".").pop();
       const path = `${tenantId}/banners/${Date.now()}.${ext}`;
       const { error: uploadError } = await supabase.storage
