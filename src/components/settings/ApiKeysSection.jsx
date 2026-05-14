@@ -11,22 +11,22 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
 import { useAuth } from "@/hooks/useAuth";
-import { Key, Plus, Copy, Trash2, Loader2, Eye, EyeOff } from "lucide-react";
+import { Key, Plus, Copy, Trash2, Loader2, AlertTriangle } from "lucide-react";
 
 export default function ApiKeysSection() {
-  const { tenantId, withTenant } = useTenantQuery();
+  const { tenantId } = useTenantQuery();
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [showCreate, setShowCreate] = useState(false);
   const [label, setLabel] = useState("");
-  const [revealedKeys, setRevealedKeys] = useState({});
+  const [newlyCreatedKey, setNewlyCreatedKey] = useState(null);
 
   const { data: keys = [], isLoading } = useQuery({
     queryKey: ["tenant-api-keys", tenantId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("tenant_api_keys")
-        .select("*")
+        .select("id, label, key_prefix, is_active, last_used_at, created_at")
         .eq("tenant_id", tenantId)
         .order("created_at", { ascending: false });
       if (error) throw error;
@@ -37,20 +37,19 @@ export default function ApiKeysSection() {
 
   const createMutation = useMutation({
     mutationFn: async (keyLabel) => {
-      const { data, error } = await supabase
-        .from("tenant_api_keys")
-        .insert(withTenant({ label: keyLabel, created_by: user?.id }))
-        .select()
-        .single();
+      const { data, error } = await supabase.functions.invoke("create-tenant-api-key", {
+        body: { tenant_id: tenantId, label: keyLabel },
+      });
       if (error) throw error;
+      if (data?.error) throw new Error(data.error);
       return data;
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["tenant-api-keys"] });
       setShowCreate(false);
       setLabel("");
-      setRevealedKeys((prev) => ({ ...prev, [data.id]: true }));
-      toast({ title: "API key created", description: "Copy your key now — it won't be shown in full again by default." });
+      setNewlyCreatedKey(data.api_key);
+      toast({ title: "API key created", description: "Copy your key now — it will not be shown again." });
     },
     onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
@@ -84,8 +83,6 @@ export default function ApiKeysSection() {
       toast({ title: "API key deleted" });
     },
   });
-
-  const maskKey = (key) => key.slice(0, 8) + "••••••••" + key.slice(-4);
 
   const copyKey = (key) => {
     navigator.clipboard.writeText(key);
@@ -132,15 +129,7 @@ export default function ApiKeysSection() {
                   <TableRow key={k.id}>
                     <TableCell className="font-medium">{k.label}</TableCell>
                     <TableCell className="font-mono text-xs">
-                      <span className="flex items-center gap-1">
-                        {revealedKeys[k.id] ? k.api_key : maskKey(k.api_key)}
-                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setRevealedKeys((p) => ({ ...p, [k.id]: !p[k.id] }))}>
-                          {revealedKeys[k.id] ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
-                        </Button>
-                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => copyKey(k.api_key)}>
-                          <Copy className="h-3 w-3" />
-                        </Button>
-                      </span>
+                      {k.key_prefix ? `${k.key_prefix}••••••••` : "—"}
                     </TableCell>
                     <TableCell>
                       <Badge variant={k.is_active ? "default" : "secondary"}>
