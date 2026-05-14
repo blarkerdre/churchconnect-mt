@@ -4,7 +4,15 @@ import {
 } from 'npm:@react-email/components@0.0.22'
 import type { TemplateEntry } from './registry.ts'
 
-const SITE_NAME = "churchconnect-mt"
+const ISSUER = {
+  name: "DomiFort Solutions Limited",
+  address: "Flat 9, 2 Oriana Court, Crunden Road, South Croydon, United Kingdom, CR2 6GZ",
+  companyReg: "17169095",
+  email: "info@domifortsolutions.com",
+  website: "www.domifortsolutions.com",
+  sortCode: "04-06-05",
+  accountNumber: "31369676",
+}
 
 interface LineItem {
   description?: string
