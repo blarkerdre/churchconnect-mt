@@ -1,36 +1,19 @@
-## Goal
-Prompt logged-in users to install the PWA so they get the tenant-branded app on their home screen with one tap (Android/Chrome) or clear instructions (iOS).
+## Why no test message arrived
 
-## Components
+The `send-birthday-messages` edge function filters recipients to only members whose `date_of_birth` matches today's UTC month/day (lines 120–126). The "Send test to me" button in Birthday Messages settings passes your `member_id`, but if today isn't your birthday the recipient list is empty — so `processed=0, sent=0, failed=0`, the toast shows "0 sent · 0 failed", and nothing is dispatched. The `birthday_message_log` table is also empty, confirming nothing ran.
 
-### 1. `useInstallPrompt` hook (`src/hooks/useInstallPrompt.jsx`)
-- Captures `beforeinstallprompt` (Chrome/Edge/Android) into a ref.
-- Detects platform: iOS Safari, Android Chrome, desktop, other.
-- Detects already-installed (`display-mode: standalone` or `navigator.standalone`).
-- Exposes: `{ canPrompt, isIOS, isInstalled, promptInstall, dismiss }`.
-- `promptInstall()` calls the saved event's `prompt()` (must be from a user click).
+## Fix
 
-### 2. `InstallAppDialog` (`src/components/pwa/InstallAppDialog.jsx`)
-- Branded modal using `TenantDialogHeader` showing tenant logo + "Install {tenant name}".
-- **Android/Chrome**: primary "Install" button → calls `promptInstall()`. On accept → close + toast.
-- **iOS**: shows step-by-step instructions with Share icon → "Add to Home Screen" (no button can trigger it).
-- **Desktop unsupported browsers**: short "Open this site on your phone to install" message.
-- "Maybe later" button stores a dismissal timestamp in `localStorage` (key includes `tenant_id`).
+In `supabase/functions/send-birthday-messages/index.ts`:
 
-### 3. Auto-trigger logic (in `AppLayout`)
-- On mount for an authenticated member, if:
-  - not already installed,
-  - not dismissed within last 7 days,
-  - tenant is resolved (so manifest has the branded name),
-  - either `beforeinstallprompt` fired OR platform is iOS Safari,
-- → open the dialog after a short delay (3s) on first navigation.
-- Persistent install button in the user dropdown / sidebar footer ("Install app") so users can trigger it any time.
+1. Treat the request as a **test send** when `member_id` is provided (already tracked as `isManual`).
+2. When `isManual` is true:
+   - Skip the today-only DOB filter so the recipient is always included.
+   - Skip the idempotency log insert (or use a `test-` prefixed `sent_on`/separate code path) so repeated tests aren't blocked by the unique constraint, and so they don't pollute real birthday history.
+   - Use a unique `idempotencyKey` per test (e.g. include a timestamp) so the email queue doesn't dedupe successive tests.
+3. Bypass member-not-found when the only member returned has no DOB (still send the test).
+4. Keep the cron path (no `member_id`) unchanged — real sends still require today = DOB.
 
-### 4. Settings opt-out (light)
-- Sidebar/profile menu entry "Install app" only shown when installable or iOS, hidden once installed.
+## Result
 
-## Notes
-- Cannot truly auto-install — `prompt()` requires a user click. We auto-open the dialog; the user clicks Install.
-- iOS will never have a programmatic install — instructions only.
-- Tenant name + icon already wired through the manifest from previous step, so the install dialog (Chrome) shows the right branding.
-- No backend changes.
+Clicking "Send test to me" will deliver the configured channels (in-app / email / SMS / WhatsApp) to your own member record any day, with no impact on the real birthday cron logic.

@@ -117,13 +117,15 @@ Deno.serve(async (req) => {
       continue;
     }
 
-    const recipients = (members || []).filter((m: any) => {
-      if (!m.date_of_birth) return false;
-      const d = new Date(m.date_of_birth + "T00:00:00Z");
-      const mm = String(d.getUTCMonth() + 1).padStart(2, "0");
-      const dd = String(d.getUTCDate()).padStart(2, "0");
-      return mm === todayMM && dd === todayDD;
-    });
+    const recipients = isManual
+      ? (members || [])
+      : (members || []).filter((m: any) => {
+          if (!m.date_of_birth) return false;
+          const d = new Date(m.date_of_birth + "T00:00:00Z");
+          const mm = String(d.getUTCMonth() + 1).padStart(2, "0");
+          const dd = String(d.getUTCDate()).padStart(2, "0");
+          return mm === todayMM && dd === todayDD;
+        });
 
     for (const member of recipients) {
       processed++;
