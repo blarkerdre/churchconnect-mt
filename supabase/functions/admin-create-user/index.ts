@@ -133,7 +133,8 @@ Deno.serve(async (req) => {
           .insert({ user_id: userId, tenant_id, role: "member" });
 
         if (membershipError) {
-          return jsonResponse({ error: membershipError.message }, 400);
+          console.error("admin-create-user membership error:", membershipError);
+          return jsonResponse({ error: "An unexpected error occurred" }, 400);
         }
       }
     }
@@ -178,7 +179,8 @@ Deno.serve(async (req) => {
         .single();
 
       if (memberError) {
-        return jsonResponse({ error: `User created but member creation failed: ${memberError.message}`, user_id: userId }, 207);
+        console.error("admin-create-user member error:", memberError);
+        return jsonResponse({ error: "User created but member creation failed", user_id: userId }, 207);
       }
       memberId = memberRow?.id;
     } else if (userId) {

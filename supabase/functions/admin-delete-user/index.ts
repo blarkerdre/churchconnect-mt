@@ -69,7 +69,10 @@ Deno.serve(async (req) => {
 
     // Finally delete the auth user
     const { error: deleteError } = await supabase.auth.admin.deleteUser(user_id);
-    if (deleteError) return new Response(JSON.stringify({ error: deleteError.message }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    if (deleteError) {
+      console.error("admin-delete-user error:", deleteError);
+      return new Response(JSON.stringify({ error: "An unexpected error occurred" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
 
     return new Response(JSON.stringify({ success: true }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
