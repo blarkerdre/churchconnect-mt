@@ -89,6 +89,7 @@ function ProfilePhotoUpload({ member, user, onUpdated }) {
     if (!file) return;
     setUploading(true);
     try {
+      await assertStorageAvailable(member?.tenant_id, file.size);
       const ext = file.name.split(".").pop();
       const path = `${user.id}/${Date.now()}.${ext}`;
       const { error: uploadError } = await supabase.storage.from("profile-photos").upload(path, file, { upsert: true });
