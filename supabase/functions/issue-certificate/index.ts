@@ -42,27 +42,28 @@ Deno.serve(async (req) => {
     // Use service role for DB operations
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Check caller is admin or unit_leader
-    const { data: isAdminResult } = await supabase.rpc("is_admin", { _user_id: userId });
+    const body = await req.json();
+    const { member_id, training_type, completion_date, notes, tenant_id } = body;
+
+    if (!member_id || !training_type || !tenant_id) {
+      return new Response(
+        JSON.stringify({ error: "member_id, training_type and tenant_id are required" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Tenant-scoped role checks: caller must be admin OR unit_leader within this tenant
+    const { data: isAdminResult } = await supabase.rpc("is_admin", { _user_id: userId, _tenant_id: tenant_id });
     const { data: isLeaderResult } = await supabase.rpc("has_role", {
       _user_id: userId,
       _role: "unit_leader",
+      _tenant_id: tenant_id,
     });
     if (!isAdminResult && !isLeaderResult) {
       return new Response(JSON.stringify({ error: "Forbidden" }), {
         status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
-    }
-
-    const body = await req.json();
-    const { member_id, training_type, completion_date, notes, tenant_id } = body;
-
-    if (!member_id || !training_type) {
-      return new Response(
-        JSON.stringify({ error: "member_id and training_type are required" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
     }
 
     // Check duplicate
