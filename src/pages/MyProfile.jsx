@@ -16,6 +16,7 @@ import { Loader2, User, Mail, Phone, MapPin, Calendar, CheckCircle2, XCircle, Ch
 import { format } from "date-fns";
 import { toast } from "@/components/ui/use-toast";
 import { suggestClosestWSFCentre } from "@/lib/wsf-suggest";
+import { assertStorageAvailable } from "@/lib/storageQuota";
 import { useChurchUnits } from "@/hooks/useChurchUnits";
 import MyCertificates from "@/components/certificates/MyCertificates";
 import { MemberAvatar } from "@/components/members/MemberAvatar";
