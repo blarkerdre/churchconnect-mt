@@ -22,7 +22,8 @@ const TenantContext = createContext({
 const DEFAULT_TENANT_ID = "d8bbbdae-d9b3-4999-912d-3aa5999884b0";
 
 export function TenantProvider({ children }) {
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, roles } = useAuth();
+  const isSuperAdmin = (roles || []).includes("super_admin");
   const [currentTenant, setCurrentTenant] = useState(null);
   const [tenantMemberships, setTenantMemberships] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -135,8 +136,8 @@ export function TenantProvider({ children }) {
   const tenantId = currentTenant?.tenant_id || null;
   const tenantSlug = currentTenant?.tenants?.slug || null;
   const tenantRole = currentTenant?.role || null;
-  const isTenantAdmin = tenantRole === "admin" || tenantRole === "owner";
-  const isTenantOwner = tenantRole === "owner";
+  const isTenantAdmin = tenantRole === "admin" || tenantRole === "owner" || (isSuperAdmin && !!currentTenant);
+  const isTenantOwner = tenantRole === "owner" || (isSuperAdmin && !!currentTenant);
 
   return (
     <TenantContext.Provider
