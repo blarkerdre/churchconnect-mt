@@ -1,4 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import InstallAppDialog, { shouldAutoOpenInstall } from "@/components/pwa/InstallAppDialog";
+import { useInstallPrompt } from "@/hooks/useInstallPrompt";
+import { Download } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { useUnitMembership } from "@/hooks/useUnitMembership";
