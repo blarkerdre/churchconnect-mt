@@ -4,7 +4,15 @@ import {
 } from 'npm:@react-email/components@0.0.22'
 import type { TemplateEntry } from './registry.ts'
 
-const SITE_NAME = "churchconnect-mt"
+const ISSUER = {
+  name: "DomiFort Solutions Limited",
+  address: "Flat 9, 2 Oriana Court, Crunden Road, South Croydon, United Kingdom, CR2 6GZ",
+  companyReg: "17169095",
+  email: "info@domifortsolutions.com",
+  website: "www.domifortsolutions.com",
+  sortCode: "04-06-05",
+  accountNumber: "31369676",
+}
 
 interface LineItem {
   description?: string
@@ -87,6 +95,16 @@ const TenantInvoiceEmail = ({
           <Hr style={hr} />
 
           <Section>
+            <Text style={sectionLabel}>From</Text>
+            <Text style={text}>
+              <strong>{ISSUER.name}</strong>
+              <br />{ISSUER.address}
+              <br />Company Reg: {ISSUER.companyReg}
+              <br />{ISSUER.email} · {ISSUER.website}
+            </Text>
+          </Section>
+
+          <Section>
             <Text style={sectionLabel}>Bill To</Text>
             <Text style={text}>
               <strong>{billToName || churchName}</strong>
@@ -129,6 +147,16 @@ const TenantInvoiceEmail = ({
             </Text>
           </Section>
 
+          {!isReceipt && (
+            <Section style={paymentBox}>
+              <Text style={sectionLabel}>Payment Details</Text>
+              <Text style={detailRow}><strong>Account Name:</strong> {ISSUER.name}</Text>
+              <Text style={detailRow}><strong>Sort Code:</strong> {ISSUER.sortCode}</Text>
+              <Text style={detailRow}><strong>Account Number:</strong> {ISSUER.accountNumber}</Text>
+              <Text style={detailRow}><strong>Reference:</strong> {invoiceNumber}</Text>
+            </Section>
+          )}
+
           {!isReceipt && payUrl && (
             <Section style={{ textAlign: 'center' as const, margin: '30px 0' }}>
               <Button style={button} href={payUrl}>Pay Now</Button>
@@ -152,8 +180,8 @@ const TenantInvoiceEmail = ({
           <Hr style={hr} />
 
           <Text style={footer}>
-            This {heading.toLowerCase()} was issued by {SITE_NAME} on behalf of your church administrator.
-            For questions, please reply to this email.
+            Issued by {ISSUER.name} · Company No. {ISSUER.companyReg} · {ISSUER.email} · {ISSUER.website}
+            <br />For questions, please reply to this email.
           </Text>
         </Container>
       </Body>
@@ -230,3 +258,10 @@ const button = {
 const hr = { borderColor: '#e8e0d4', margin: '20px 0' }
 const hrLight = { borderColor: '#e8e0d4', margin: '12px 0' }
 const footer = { fontSize: '11px', color: '#999999', lineHeight: '1.4', margin: '0' }
+const paymentBox = {
+  backgroundColor: '#f6f8fb',
+  borderRadius: '6px',
+  padding: '12px 16px',
+  border: '1px solid #e0e6ef',
+  margin: '16px 0',
+}
