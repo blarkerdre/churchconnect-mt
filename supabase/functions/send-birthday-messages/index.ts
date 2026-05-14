@@ -29,6 +29,7 @@ Deno.serve(async (req) => {
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
   const svc = createClient(supabaseUrl, serviceKey);
 
   let body: Body = {};
@@ -39,6 +40,25 @@ Deno.serve(async (req) => {
     }
   } catch {
     body = {};
+  }
+
+  // Authorize: either pg_cron with service-role bearer, OR an admin JWT scoped to the tenant being acted on
+  const bearer = (req.headers.get("Authorization") ?? "").replace("Bearer ", "");
+  let authorized = bearer === serviceKey;
+  if (!authorized && bearer) {
+    try {
+      const userClient = createClient(supabaseUrl, anonKey, { global: { headers: { Authorization: `Bearer ${bearer}` } } });
+      const { data: userData } = await userClient.auth.getUser();
+      if (userData?.user && body.tenant_id) {
+        const { data: isAdmin } = await svc.rpc("is_admin", { _user_id: userData.user.id, _tenant_id: body.tenant_id });
+        if (isAdmin) authorized = true;
+      }
+    } catch (_e) { /* ignored */ }
+  }
+  if (!authorized) {
+    return new Response(JSON.stringify({ error: "Forbidden" }), {
+      status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 
   const isManual = Boolean(body.member_id);
