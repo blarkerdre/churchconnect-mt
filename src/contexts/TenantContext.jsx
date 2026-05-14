@@ -136,8 +136,8 @@ export function TenantProvider({ children }) {
   const tenantId = currentTenant?.tenant_id || null;
   const tenantSlug = currentTenant?.tenants?.slug || null;
   const tenantRole = currentTenant?.role || null;
-  const isTenantAdmin = tenantRole === "admin" || tenantRole === "owner";
-  const isTenantOwner = tenantRole === "owner";
+  const isTenantAdmin = tenantRole === "admin" || tenantRole === "owner" || (isSuperAdmin && !!currentTenant);
+  const isTenantOwner = tenantRole === "owner" || (isSuperAdmin && !!currentTenant);
 
   return (
     <TenantContext.Provider
