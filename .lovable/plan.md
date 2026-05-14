@@ -1,55 +1,66 @@
-## Problem
+## Real root cause
 
-The live site at `app.churchmanagementsuite.org` is blank. Console shows:
+The blank live page is **not** a React/createRoot import issue. It's an ASI (Automatic Semicolon Insertion) bug in `src/main.jsx`.
 
-```
-TypeError: createRoot(...).render is not a function
-  at assets/index-BTghYNCR.js
-```
-
-Cause: `src/main.jsx` uses the legacy import:
+The file currently ends like this:
 
 ```js
-import ReactDOM from 'react-dom'
-ReactDOM.createRoot(document.getElementById('root')).render(...)
-```
-
-With React 18+, `createRoot` must be imported from `react-dom/client`. The default `react-dom` export's `createRoot` re-export is unreliable in production builds — combined with the Vite alias that pins `react-dom` but not `react-dom/client`, the two entry points can resolve differently and `createRoot()` returns an object whose `.render` is undefined.
-
-## Fix
-
-### 1. `src/main.jsx` — use the correct entry point
-
-```js
-import { createRoot } from 'react-dom/client'
-// ...
 createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <App />
   </React.StrictMode>,
 )
+
+// Service worker registration with auto-update.
+(() => {
+  if (!('serviceWorker' in navigator)) return;
+  // ...
+})();
 ```
 
-(Keep the SW registration block exactly as it is.)
-
-### 2. `vite.config.js` — also alias `react-dom/client`
-
-Add to the `resolve.alias` block so React/ReactDOM stay a single instance:
+After Vite minifies it, the newline collapses and the IIFE that begins with `(` is fused onto the previous expression:
 
 ```js
-'react-dom/client': path.resolve(__dirname, './node_modules/react-dom/client'),
+createRoot(...).render(<...>)(()=>{...})()
 ```
 
-This matches the existing aliases for `react`, `react-dom`, and `react/jsx-runtime` and is consistent with the project's "Single React instance via Vite aliasing" rule.
+JavaScript parses that as `render(...)(...)` — calling the result of `.render()` (which returns `undefined`) as a function. That throws `TypeError: createRoot(...).render(...) is not a function`, the React tree never mounts, and the page stays blank.
+
+## Fix
+
+Add a single semicolon after the `.render(...)` call in `src/main.jsx`:
+
+```js
+createRoot(document.getElementById('root')).render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>,
+);   // ← this semicolon
+```
+
+Defensive cleanup (same file): also put a leading `;` before the SW IIFE so this class of bug can't reappear if anyone edits the bracketing later:
+
+```js
+;(() => {
+  if (!('serviceWorker' in navigator)) return;
+  // ...
+})();
+```
+
+## Revert the speculative change
+
+In `vite.config.js`, remove the `react-dom/client` alias I added in the previous turn. It wasn't the cause and isn't needed:
+
+```diff
+       'react-dom': path.resolve(__dirname, './node_modules/react-dom'),
+-      'react-dom/client': path.resolve(__dirname, './node_modules/react-dom/client.js'),
+       'react/jsx-runtime': path.resolve(__dirname, './node_modules/react/jsx-runtime'),
+```
+
+The named `import { createRoot } from 'react-dom/client'` in `main.jsx` is correct and stays.
 
 ## Verification
 
-After publishing:
-1. Hard-refresh `https://app.churchmanagementsuite.org/` — landing page should render.
-2. Console should be clean (no `createRoot` TypeError).
-3. The auto-updating service worker we just shipped will then propagate to existing PWA installs as designed.
-
-## Out of scope
-
-- No SW changes needed — `public/sw.js` and the registration logic in `main.jsx` are correct; the SW just couldn't help because the React bootstrap itself was broken.
-- No dependency upgrades.
+1. Run `vite build` locally and grep the output bundle for `render(` — confirm there is a `;` (or a `,` separator) between `.render(...)` and the next statement.
+2. Publish.
+3. Open `https://app.churchmanagementsuite.org/` — landing page must render and console must be clean.
