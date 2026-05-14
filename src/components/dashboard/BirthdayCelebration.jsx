@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useTenant } from "@/contexts/TenantContext";
 import { toast } from "sonner";
+import { MemberAvatar } from "@/components/members/MemberAvatar";
 
 export function BirthdayBanner({ firstName }) {
   return (
@@ -115,13 +116,16 @@ export function UpcomingBirthdayItem({ member }) {
   return (
     <div className="flex items-center gap-3 py-2 border-b border-border last:border-0">
       <div className="h-9 w-9 rounded-full bg-accent/10 flex items-center justify-center text-accent shrink-0 overflow-hidden">
-        {member.photo_url ? (
-          <img src={member.photo_url} alt="" className="h-full w-full object-cover rounded-full" />
-        ) : (
-          <span className="text-xs font-bold">
-            {member.first_name?.[0]}{member.last_name?.[0]}
-          </span>
-        )}
+        <MemberAvatar
+          member={member}
+          alt=""
+          className="h-full w-full object-cover rounded-full"
+          fallback={
+            <span className="text-xs font-bold">
+              {member.first_name?.[0]}{member.last_name?.[0]}
+            </span>
+          }
+        />
       </div>
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium text-foreground leading-tight truncate">

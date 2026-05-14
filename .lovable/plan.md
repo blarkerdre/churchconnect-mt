@@ -1,70 +1,114 @@
-## Findings & disposition
+# Make `profile-photos` private with same-tenant signed reads
 
-### 1. `is_admin_no_tenant_scope` — **fix** (real cross-tenant escalation)
+## The blocker
 
-Three policies use the unscoped overload. Rewrite each to use `is_admin(auth.uid(), <tenant_id>)`:
+Today `profile-photos` is a single public bucket holding **two unrelated kinds of files**:
 
-- `public.user_roles` → policy **"Admins can view all roles"** (SELECT)
-- `public.wsf_zones` → policy **"Admins can manage wsf zones"** (ALL)
-- `storage.objects` → policy **"Admins upload book covers"** (INSERT)
+- Member photos under `<user_id>/...`
+- Tenant branding (logo, favicon, OG image, PWA icon) under `<tenant_id>/tenant-*.ext`, used by `Settings.jsx`, the unauthenticated login page, social-media crawlers, and PWA installs.
 
-For `wsf_zones` and `user_roles` the table already has a `tenant_id` column — swap `is_admin(auth.uid())` for `is_admin(auth.uid(), tenant_id)`. The redundant `user_has_tenant_access(tenant_id)` becomes unnecessary (the scoped `is_admin` already verifies tenant membership) but I'll leave it for defence in depth.
+Flipping the bucket to private breaks every branding asset for anonymous viewers. So step 1 is to split branding off, then we can lock the photos bucket down.
 
-For the storage `book-covers` upload: book covers are stored under `${tenantId}/...` (matches the existing **"Tenant-scoped update/delete book-covers"** policies). Rewrite as:
+## Step 1 — New `tenant-branding` public bucket (migration)
 
-```sql
-(bucket_id = 'book-covers'
- AND (storage.foldername(name))[1] IS NOT NULL
- AND is_admin(auth.uid(), ((storage.foldername(name))[1])::uuid))
+```
+INSERT INTO storage.buckets (id, name, public) VALUES ('tenant-branding','tenant-branding', true);
 ```
 
-Migration: `DROP POLICY` + `CREATE POLICY` for each.
+RLS on `storage.objects`:
 
-### 2. `profile_photos_bucket_cross_tenant_read` — **partial fix + flag**
+- **SELECT** — public (`bucket_id = 'tenant-branding'`).
+- **INSERT / UPDATE / DELETE** — only when `bucket_id = 'tenant-branding'` AND `is_admin(auth.uid(), ((storage.foldername(name))[1])::uuid)` (tenant-scoped admin).
 
-The current SELECT policy lets any tenant member read every file under that tenant's folder prefix. **Fix the policy** (tighten to: own folder, OR tenant admin/leader of the tenant prefix), so the metadata/list API stops leaking other members' personal photos.
+## Step 2 — Migrate existing branding files
 
-New `storage.objects` SELECT policy for `profile-photos`:
-```sql
-bucket_id = 'profile-photos'
-AND (
-  (storage.foldername(name))[1] = auth.uid()::text                             -- own user folder
-  OR (
-    (storage.foldername(name))[1] ~ '^[0-9a-fA-F-]{36}$'                       -- tenant_id folder (logos, OG images)
-    AND (
-      is_admin(auth.uid(), ((storage.foldername(name))[1])::uuid)
-      OR has_role(auth.uid(), 'unit_leader'::app_role, ((storage.foldername(name))[1])::uuid)
-    )
-  )
-)
+A one-shot Edge Function `migrate-tenant-branding` (invoked once by a super_admin from the existing Tenant Admin → Maintenance area, or run via curl):
+
+1. List all objects in `profile-photos` whose name matches `^[0-9a-f-]{36}/tenant-(logo|favicon|og|pwa-icon)\.[a-z0-9]+$`.
+2. For each: download from `profile-photos`, upload to `tenant-branding` at the same path.
+3. Update `tenants.logo_url` and `tenants.settings.{favicon_url,og_image_url,pwa_icon_url}` so the host portion points to the new bucket.
+4. After verification, delete the originals from `profile-photos`.
+
+The function is idempotent and safe to re-run.
+
+## Step 3 — Frontend writes for branding go to the new bucket
+
+Update `src/pages/Settings.jsx` (lines ~589 and ~738): change `.from("profile-photos")` to `.from("tenant-branding")` for logo, favicon, OG image and PWA icon uploads. `getPublicUrl` continues to work because the new bucket is public.
+
+## Step 4 — Lock `profile-photos` down
+
+Migration:
+
+- `UPDATE storage.buckets SET public = false WHERE id = 'profile-photos';`
+- Drop existing SELECT/INSERT/UPDATE/DELETE policies for `profile-photos`.
+- New policies (signed-URL access requires the user to also pass RLS):
+  - **SELECT**: `bucket_id = 'profile-photos'` AND
+    - `(storage.foldername(name))[1] = auth.uid()::text` *(own folder — covers branding-style writes that may have used user folders)*, **OR**
+    - the file's owner shares a tenant with the caller. We resolve "owner" through the `members` table:
+      ```
+      EXISTS (
+        SELECT 1
+        FROM public.members caller
+        JOIN public.members owner
+          ON owner.tenant_id = caller.tenant_id
+        WHERE caller.user_id = auth.uid()
+          AND owner.user_id::text = (storage.foldername(name))[1]
+      )
+      ```
+      This mirrors today's visibility (any member of the same tenant can see peer photos) without leaking across tenants.
+  - **INSERT / UPDATE / DELETE**: only own folder (`(storage.foldername(name))[1] = auth.uid()::text`) — same as the current write rules.
+
+## Step 5 — Stop storing public URLs; switch to on-demand signed URLs
+
+### Schema / data
+
+- Keep `members.photo_url` but redefine its meaning: it now stores the **storage path** (e.g. `8f3a.../1731000000000.jpg`), not a full URL. Add a comment to the column.
+- One-shot SQL migration to rewrite existing values: strip the `…/storage/v1/object/public/profile-photos/` prefix, leaving just the path. Rows that don't match the pattern are left null.
+
+### Frontend
+
+Add `src/hooks/useSignedMemberPhoto.js`:
+
+```text
+useSignedMemberPhoto(path) -> { url, loading }
+  - Returns null if path is null
+  - If path looks like a full http(s) URL (legacy), returns it as-is (transitional)
+  - Otherwise calls supabase.storage.from('profile-photos').createSignedUrl(path, 3600)
+  - Caches by path in a module-level Map keyed (path) -> { url, expiresAt }
+  - Refreshes when within 5 min of expiry
 ```
 
-**Important caveat I'll surface to the user (no code change in this task):** the `profile-photos` bucket is currently `public = true`, so anyone holding a `getPublicUrl()` link can still read the file regardless of RLS. The directory and dashboard code uses `getPublicUrl` for member photos, which is why broad read worked. To fully close the GDPR concern we'd need a follow-up: flip the bucket private, switch every `getPublicUrl` call (Members table, BirthdayCelebration, MemberDashboard, PendingJoinRequests, WSFLeaderDashboard, etc.) to short-lived `createSignedUrl` requests, and add a tenant-membership read policy. That's a separate, bigger refactor — I'll list affected files and recommend it but will not do it here unless you ask.
+Add `src/components/members/MemberAvatar.jsx` that wraps `<img>` / `Avatar` and uses the hook so we can swap implementations in one place.
 
-### 3. `exam_questions_member_read_blocked` — **ignore (false positive)**
+Update read sites (replace direct `member.photo_url` `<img src=…>` with `<MemberAvatar member={…} />`):
 
-Members never read `public.exam_questions` directly. `TakeExamDialog.jsx` calls the SECURITY DEFINER RPC `get_exam_questions_safe(_subject_id, _training_type)` which returns the questions without `correct_answer`. Admin/leader management goes through `get_exam_questions_with_answers` (also SECURITY DEFINER, role-gated). Granting members direct table SELECT would *re-introduce* an answer-leak risk because the column is on the same table.
+- `src/pages/MyProfile.jsx`
+- `src/components/dashboard/MemberDashboard.jsx`
+- `src/components/dashboard/BirthdayCelebration.jsx`
+- `src/components/dashboard/WSFLeaderDashboard.jsx`
+- `src/components/dashboard/PendingJoinRequests.jsx`
+- `src/components/followups/SignPostDetailPanel.jsx`
+- `src/hooks/usePendingJoinRequests.jsx` (consumer renders via the new component)
 
-I'll mark this finding as ignored with that explanation and update the security memory.
+### Upload site
 
-## Files / actions
+`src/pages/MyProfile.jsx` `ProfilePhotoUpload`: stop calling `getPublicUrl`; persist `path` directly into `members.photo_url` via the existing `update_own_member_profile` RPC.
 
-- New migration:
-  - drop + recreate the 3 unscoped `is_admin` policies (tenant-scoped)
-  - drop + recreate the `profile-photos` SELECT policy
-- `manage_security_finding`:
-  - mark `is_admin_no_tenant_scope` fixed
-  - mark `profile_photos_bucket_cross_tenant_read` fixed (with caveat)
-  - ignore `exam_questions_member_read_blocked` (RPC-only access pattern)
-- `update_memory` — record: book-covers/profile-photos use tenant_id folder prefix; exam questions are read via SECURITY DEFINER RPCs; if anyone changes that, restore proper RLS.
+## Step 6 — Security follow-ups
 
-## Verification
+- Mark the `profile_photos_bucket_cross_tenant_read` finding as fixed with a note describing the split + signed-URL approach.
+- Update the security memory to record:
+  - `profile-photos` is private; reads require RLS-validated `createSignedUrl`.
+  - `tenant-branding` is the only public bucket for tenant-wide assets.
+  - `members.photo_url` stores a storage path, not a URL.
 
-- Re-run policy query → no policy expression contains `is_admin(auth.uid())` (single-arg).
-- Sign in as Tenant A admin, attempt SELECT on a Tenant B `wsf_zones` row → blocked.
-- As Member X in Tenant A, list `profile-photos/<member-Y-uuid>/...` via SDK → empty (own folder still works).
-- Member takes an exam via `TakeExamDialog` → questions still load (RPC unchanged).
+## Out of scope
 
-## Out of scope (recommend as follow-up)
+- Caching / CDN tuning for signed URLs (1-hour TTL is acceptable).
+- Reworking how `book-covers` and `church-documents` buckets are accessed (separate findings).
+- Pre-signing photos server-side in batch (we sign per-render; can revisit if performance becomes an issue).
 
-- Make `profile-photos` bucket private and convert all `getPublicUrl` member-photo reads to `createSignedUrl`. Files affected: `MyProfile.jsx`, `Settings.jsx`, `Members*.jsx`, `BirthdayCelebration.jsx`, `MemberDashboard.jsx`, `PendingJoinRequests.jsx`, `WSFLeaderDashboard.jsx`, plus any avatar usage in feeds.
+## Risk / rollback
+
+- The branding migration is the riskiest step because it touches `tenants.logo_url` / `settings`. The migration function writes to the new bucket first and only updates DB rows after successful upload, then deletes originals as a final pass — so a partial failure leaves both copies in place and rows still pointing to the old (still-public) bucket.
+- Flipping `public = false` on `profile-photos` is the point of no return for legacy public photo URLs. Done **after** the path-rewrite data migration so the app is already reading via `createSignedUrl`.
