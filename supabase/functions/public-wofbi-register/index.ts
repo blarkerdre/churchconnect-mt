@@ -5,7 +5,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const DEFAULT_TENANT_ID = "95e53cc3-4569-4dd3-a4ad-3489593dce81";
+
 
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
 const RATE_LIMIT = 5;
@@ -82,7 +82,7 @@ async function resolveTenantId(
   supabase: ReturnType<typeof createClient>,
   bodyTenantId: string | null,
   bodyTenantSlug: string | null
-): Promise<string> {
+): Promise<string | null> {
   // 1. Direct tenant_id from body
   if (bodyTenantId) return bodyTenantId;
 
@@ -93,8 +93,8 @@ async function resolveTenantId(
     if (row?.id) return row.id;
   }
 
-  // 3. Fallback
-  return DEFAULT_TENANT_ID;
+  // 3. No fallback — caller must supply tenant context
+  return null;
 }
 
 Deno.serve(async (req) => {
