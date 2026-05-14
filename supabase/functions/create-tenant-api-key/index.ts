@@ -49,10 +49,8 @@ Deno.serve(async (req) => {
       is_active: true,
     }).select("id, label, key_prefix, created_at").single();
 
-    if (error) return new Response(JSON.stringify({ error: error.message }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    if (error) { console.error("create-tenant-api-key insert error:", error); return new Response(JSON.stringify({ error: "An unexpected error occurred" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }); }
 
     return new Response(JSON.stringify({ ...row, api_key: apiKey }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
-  } catch (err) {
-    return new Response(JSON.stringify({ error: (err as Error).message }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-  }
+  } catch (err) { console.error("create-tenant-api-key error:", err); return new Response(JSON.stringify({ error: "An unexpected error occurred" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }); }
 });

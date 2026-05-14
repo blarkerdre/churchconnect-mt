@@ -189,7 +189,7 @@ Deno.serve(async (req) => {
 
     if (insertErr) {
       console.error('Insert failed', insertErr)
-      return new Response(JSON.stringify({ error: insertErr.message }), {
+      return new Response(JSON.stringify({ error: 'An unexpected error occurred' }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
