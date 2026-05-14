@@ -57,18 +57,22 @@ Deno.serve(async (req) => {
     const { data: { user: caller } } = await supabase.auth.getUser(token);
     if (!caller) return jsonResponse({ error: "Unauthorized" }, 401);
 
-    const { data: isAdmin } = await supabase.rpc("is_admin", { _user_id: caller.id });
-    if (!isAdmin) return jsonResponse({ error: "Admin access required" }, 403);
-
     const { email, password, full_name, role, member_data, tenant_id } = await req.json();
     if (!email || !password) return jsonResponse({ error: "Email and password required" }, 400);
+    if (!tenant_id) return jsonResponse({ error: "tenant_id is required" }, 400);
+
+    // Caller must be an admin OF THIS specific tenant (or super_admin)
+    const [{ data: isTenantAdmin }, { data: isSuperAdmin }] = await Promise.all([
+      supabase.rpc("is_admin", { _user_id: caller.id, _tenant_id: tenant_id }),
+      supabase.rpc("has_role", { _user_id: caller.id, _role: "super_admin" }),
+    ]);
+    if (!isTenantAdmin && !isSuperAdmin) return jsonResponse({ error: "Admin access required for this tenant" }, 403);
 
     const normalizedEmail = String(email).trim().toLowerCase();
     const normalizedFullName = String(full_name || email).trim();
 
     // Only super_admin can assign elevated roles
     if (role && ['admin', 'super_admin'].includes(role)) {
-      const { data: isSuperAdmin } = await supabase.rpc("has_role", { _user_id: caller.id, _role: "super_admin" });
       if (!isSuperAdmin) return jsonResponse({ error: "Super-admin access required to assign elevated roles" }, 403);
     }
 

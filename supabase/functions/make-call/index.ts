@@ -50,13 +50,24 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Verify tenant membership
+    // Verify tenant membership AND admin/leader role (parity with send-sms)
     const { data: belongs } = await serviceClient.rpc("user_belongs_to_tenant", {
       _user_id: user.id,
       _tenant_id: tenant_id,
     });
     if (!belongs) {
       return new Response(JSON.stringify({ error: "Forbidden" }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const [{ data: isAdmin }, { data: isLeader }] = await Promise.all([
+      serviceClient.rpc("is_admin", { _user_id: user.id, _tenant_id: tenant_id }),
+      serviceClient.rpc("has_role", { _user_id: user.id, _role: "unit_leader", _tenant_id: tenant_id }),
+    ]);
+    if (!isAdmin && !isLeader) {
+      return new Response(JSON.stringify({ error: "Only admins or unit leaders can place calls" }), {
         status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
