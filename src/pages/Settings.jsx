@@ -733,6 +733,7 @@ function FaviconOgImageSection() {
     const setUploading = type === "favicon" ? setUploadingFavicon : type === "pwa-icon" ? setUploadingPwa : setUploadingOg;
     setUploading(true);
     try {
+      await assertStorageAvailable(tenantId, file.size);
       const ext = file.name.split(".").pop();
       const path = `${tenantId}/tenant-${type}.${ext}`;
 
