@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/components/ui/use-toast";
+import { MemberAvatar } from "@/components/members/MemberAvatar";
 import { format } from "date-fns";
 import {
   X, Phone, Mail, MapPin, CheckCircle2, MessageSquarePlus, UserPlus, Loader2,
