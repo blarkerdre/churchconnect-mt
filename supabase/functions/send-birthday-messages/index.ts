@@ -137,23 +137,28 @@ Deno.serve(async (req) => {
 
       for (const channel of channels) {
         // Idempotency: insert log row first; on conflict skip.
-        const { error: logInsErr } = await svc
-          .from("birthday_message_log")
-          .insert({
-            tenant_id: t.tenant_id,
-            member_id: member.id,
-            channel,
-            sent_on: todayDate,
-            status: "sent",
-          });
-        if (logInsErr) {
-          if ((logInsErr as any).code === "23505") {
-            // Already sent today
+        // Skip log insert for manual test sends so they aren't blocked by
+        // the unique constraint and don't pollute real birthday history.
+        if (!isManual) {
+          const { error: logInsErr } = await svc
+            .from("birthday_message_log")
+            .insert({
+              tenant_id: t.tenant_id,
+              member_id: member.id,
+              channel,
+              sent_on: todayDate,
+              status: "sent",
+            });
+          if (logInsErr) {
+            if ((logInsErr as any).code === "23505") {
+              // Already sent today
+              continue;
+            }
+            console.error("Log insert failed", logInsErr.message);
             continue;
           }
-          console.error("Log insert failed", logInsErr.message);
-          continue;
         }
+
 
         let ok = false;
         let errMsg: string | null = null;
