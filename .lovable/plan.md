@@ -1,114 +1,79 @@
-# Make `profile-photos` private with same-tenant signed reads
+## Audit summary
 
-## The blocker
+| Limit | Column | Status |
+|---|---|---|
+| SMS monthly | `tenants.sms_limit_monthly` | **Broken** — counter returns 0 |
+| WhatsApp monthly | `tenants.whatsapp_limit_monthly` | **Broken** — same root cause |
+| Storage | `tenants.storage_limit_mb` | **Not enforced** — column unused |
+| Members | `tenants.member_limit` | **Not enforced** — only displayed |
 
-Today `profile-photos` is a single public bucket holding **two unrelated kinds of files**:
+## 1. Fix SMS / WhatsApp quota counter (silent bug)
 
-- Member photos under `<user_id>/...`
-- Tenant branding (logo, favicon, OG image, PWA icon) under `<tenant_id>/tenant-*.ext`, used by `Settings.jsx`, the unauthenticated login page, social-media crawlers, and PWA installs.
+**Bug:** `send-sms/index.ts` (line 218–224) counts `sms_log` rows where `status='sent'`. The Twilio status webhook updates the row to `delivered` (or `failed`), so the count is always 0 once delivery callbacks arrive. Live data confirms: 83 `delivered`, 1 `failed`, 0 `sent` this month → quota effectively unlimited.
 
-Flipping the bucket to private breaks every branding asset for anonymous viewers. So step 1 is to split branding off, then we can lock the photos bucket down.
+**Fix:** Count anything that consumed quota (i.e., not `failed`):
 
-## Step 1 — New `tenant-branding` public bucket (migration)
-
-```
-INSERT INTO storage.buckets (id, name, public) VALUES ('tenant-branding','tenant-branding', true);
-```
-
-RLS on `storage.objects`:
-
-- **SELECT** — public (`bucket_id = 'tenant-branding'`).
-- **INSERT / UPDATE / DELETE** — only when `bucket_id = 'tenant-branding'` AND `is_admin(auth.uid(), ((storage.foldername(name))[1])::uuid)` (tenant-scoped admin).
-
-## Step 2 — Migrate existing branding files
-
-A one-shot Edge Function `migrate-tenant-branding` (invoked once by a super_admin from the existing Tenant Admin → Maintenance area, or run via curl):
-
-1. List all objects in `profile-photos` whose name matches `^[0-9a-f-]{36}/tenant-(logo|favicon|og|pwa-icon)\.[a-z0-9]+$`.
-2. For each: download from `profile-photos`, upload to `tenant-branding` at the same path.
-3. Update `tenants.logo_url` and `tenants.settings.{favicon_url,og_image_url,pwa_icon_url}` so the host portion points to the new bucket.
-4. After verification, delete the originals from `profile-photos`.
-
-The function is idempotent and safe to re-run.
-
-## Step 3 — Frontend writes for branding go to the new bucket
-
-Update `src/pages/Settings.jsx` (lines ~589 and ~738): change `.from("profile-photos")` to `.from("tenant-branding")` for logo, favicon, OG image and PWA icon uploads. `getPublicUrl` continues to work because the new bucket is public.
-
-## Step 4 — Lock `profile-photos` down
-
-Migration:
-
-- `UPDATE storage.buckets SET public = false WHERE id = 'profile-photos';`
-- Drop existing SELECT/INSERT/UPDATE/DELETE policies for `profile-photos`.
-- New policies (signed-URL access requires the user to also pass RLS):
-  - **SELECT**: `bucket_id = 'profile-photos'` AND
-    - `(storage.foldername(name))[1] = auth.uid()::text` *(own folder — covers branding-style writes that may have used user folders)*, **OR**
-    - the file's owner shares a tenant with the caller. We resolve "owner" through the `members` table:
-      ```
-      EXISTS (
-        SELECT 1
-        FROM public.members caller
-        JOIN public.members owner
-          ON owner.tenant_id = caller.tenant_id
-        WHERE caller.user_id = auth.uid()
-          AND owner.user_id::text = (storage.foldername(name))[1]
-      )
-      ```
-      This mirrors today's visibility (any member of the same tenant can see peer photos) without leaking across tenants.
-  - **INSERT / UPDATE / DELETE**: only own folder (`(storage.foldername(name))[1] = auth.uid()::text`) — same as the current write rules.
-
-## Step 5 — Stop storing public URLs; switch to on-demand signed URLs
-
-### Schema / data
-
-- Keep `members.photo_url` but redefine its meaning: it now stores the **storage path** (e.g. `8f3a.../1731000000000.jpg`), not a full URL. Add a comment to the column.
-- One-shot SQL migration to rewrite existing values: strip the `…/storage/v1/object/public/profile-photos/` prefix, leaving just the path. Rows that don't match the pattern are left null.
-
-### Frontend
-
-Add `src/hooks/useSignedMemberPhoto.js`:
-
-```text
-useSignedMemberPhoto(path) -> { url, loading }
-  - Returns null if path is null
-  - If path looks like a full http(s) URL (legacy), returns it as-is (transitional)
-  - Otherwise calls supabase.storage.from('profile-photos').createSignedUrl(path, 3600)
-  - Caches by path in a module-level Map keyed (path) -> { url, expiresAt }
-  - Refreshes when within 5 min of expiry
+```ts
+.from("sms_log")
+.select("*", { count: "exact", head: true })
+.eq("tenant_id", tenant_id)
+.eq("channel", msgChannel)
+.neq("status", "failed")
+.gte("created_at", monthStart.toISOString());
 ```
 
-Add `src/components/members/MemberAvatar.jsx` that wraps `<img>` / `Avatar` and uses the hook so we can swap implementations in one place.
+Also update the post-send `responseBody.remaining` math to use the same definition.
 
-Update read sites (replace direct `member.photo_url` `<img src=…>` with `<MemberAvatar member={…} />`):
+## 2. Storage limit enforcement
 
-- `src/pages/MyProfile.jsx`
-- `src/components/dashboard/MemberDashboard.jsx`
-- `src/components/dashboard/BirthdayCelebration.jsx`
-- `src/components/dashboard/WSFLeaderDashboard.jsx`
-- `src/components/dashboard/PendingJoinRequests.jsx`
-- `src/components/followups/SignPostDetailPanel.jsx`
-- `src/hooks/usePendingJoinRequests.jsx` (consumer renders via the new component)
+**Approach:** Compute live usage from `storage.objects` for buckets owned by the tenant, then gate uploads via a SECURITY DEFINER RPC and surface usage in the UI.
 
-### Upload site
+**Database:**
+- New SQL function `public.get_tenant_storage_usage_mb(_tenant_id uuid)` (SECURITY DEFINER, search_path=public,storage) that sums `(metadata->>'size')::bigint` across `storage.objects` filtered by tenant‑scoped path prefixes:
+  - `profile-photos`: objects whose name starts with `<tenant_id>/`
+  - `church-documents`: same prefix convention (verify; may already use it)
+  - `tenant-branding`: filter by tenant prefix
+  - `book-covers`: filter by tenant prefix
+- New SQL function `public.check_tenant_storage_quota(_tenant_id uuid, _added_bytes bigint)` returning `boolean` — used by client + edge for pre-upload check.
+- Optional materialized convenience: cached column `tenants.storage_used_mb` updated by a trigger on `storage.objects` (insert/delete) — defer; live computation is fine for MVP.
 
-`src/pages/MyProfile.jsx` `ProfilePhotoUpload`: stop calling `getPublicUrl`; persist `path` directly into `members.photo_url` via the existing `update_own_member_profile` RPC.
+**Client gate (frontend pre-flight):**
+- New helper `src/lib/storageQuota.js` exporting `assertStorageAvailable(tenantId, fileSize)` that calls `check_tenant_storage_quota` RPC and throws a friendly error.
+- Wrap every existing upload site (member photo upload in `MemberFormDialog`, profile in `MyProfile`, document uploads, banner/branding uploads, book covers).
 
-## Step 6 — Security follow-ups
+**UI:**
+- Add a **Storage** progress card to `Settings.jsx` (tenant admin section) and to `TenantAnalyticsTab.jsx` showing `<used> / <limit> MB` with the same bar pattern used for `member_limit`.
 
-- Mark the `profile_photos_bucket_cross_tenant_read` finding as fixed with a note describing the split + signed-URL approach.
-- Update the security memory to record:
-  - `profile-photos` is private; reads require RLS-validated `createSignedUrl`.
-  - `tenant-branding` is the only public bucket for tenant-wide assets.
-  - `members.photo_url` stores a storage path, not a URL.
+## 3. Member limit enforcement
+
+**Database:**
+- SECURITY DEFINER function `public.check_tenant_member_quota(_tenant_id uuid)` returning `boolean`.
+- Trigger `members_enforce_member_limit` BEFORE INSERT on `public.members`: if `member_limit > 0` and active member count >= limit, raise `EXCEPTION 'Member limit reached for this tenant'`. Skips when `member_limit = 0` (unlimited).
+
+**Client UX:**
+- `MemberFormDialog.jsx` and `BulkImportDialog.jsx`: catch the new error code and show a clear toast: "Member limit reached. Upgrade plan or raise the limit in Tenant Admin."
+- Public registration paths: surface the same friendly message instead of a generic failure.
+
+**No UI changes needed in TenantAnalytics** — the existing member usage progress bar already exists.
+
+## Technical details
+
+- All edits keep multi-tenancy guards: every new RPC takes `_tenant_id` explicitly; quota checks scoped via `tenant_id`.
+- New trigger uses `SET search_path = public` per project convention.
+- No schema changes to `tenants` table required (limits already exist).
+- Edge function redeploy: `send-sms` only.
+- Files touched:
+  - `supabase/functions/send-sms/index.ts` (quota query fix)
+  - New migration: storage + member quota functions and member trigger
+  - `src/lib/storageQuota.js` (new)
+  - `src/components/members/MemberFormDialog.jsx`, `BulkImportDialog.jsx` (member-limit error handling, profile-photo pre-flight)
+  - `src/pages/MyProfile.jsx` (photo upload pre-flight)
+  - Document/banner/book-cover upload sites (pre-flight)
+  - `src/pages/Settings.jsx` and `src/components/tenants/TenantAnalyticsTab.jsx` (storage usage bar)
+- Memory update: amend `mem://features/messaging-quotas` to reflect the corrected counter, and add a new memory `mem://features/storage-and-member-quotas` describing the enforcement model.
 
 ## Out of scope
 
-- Caching / CDN tuning for signed URLs (1-hour TTL is acceptable).
-- Reworking how `book-covers` and `church-documents` buckets are accessed (separate findings).
-- Pre-signing photos server-side in batch (we sign per-render; can revisit if performance becomes an issue).
-
-## Risk / rollback
-
-- The branding migration is the riskiest step because it touches `tenants.logo_url` / `settings`. The migration function writes to the new bucket first and only updates DB rows after successful upload, then deletes originals as a final pass — so a partial failure leaves both copies in place and rows still pointing to the old (still-public) bucket.
-- Flipping `public = false` on `profile-photos` is the point of no return for legacy public photo URLs. Done **after** the path-rewrite data migration so the app is already reading via `createSignedUrl`.
+- Plan-tier auto-billing changes
+- Hard storage cleanup / pruning policies
+- Per-bucket sub-quotas

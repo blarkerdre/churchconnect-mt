@@ -215,12 +215,15 @@ Deno.serve(async (req) => {
 
     let currentUsage = 0;
     if (quota > 0) {
+      // Count anything that consumed quota — exclude only outright failures.
+      // (Twilio status webhook flips status from 'sent' to 'delivered'/'failed',
+      // so filtering by status='sent' would miss almost all sent messages.)
       const { count } = await serviceClient
         .from("sms_log")
         .select("*", { count: "exact", head: true })
         .eq("tenant_id", tenant_id)
         .eq("channel", msgChannel)
-        .eq("status", "sent")
+        .neq("status", "failed")
         .gte("created_at", monthStart.toISOString());
       currentUsage = count || 0;
 
