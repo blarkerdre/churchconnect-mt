@@ -583,6 +583,7 @@ function ChurchBrandingSection() {
 
     setUploading(true);
     try {
+      await assertStorageAvailable(tenantId, file.size);
       const ext = file.name.split(".").pop();
       const path = `${tenantId}/tenant-logo.${ext}`;
 
