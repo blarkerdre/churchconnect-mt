@@ -455,6 +455,7 @@ export default function Layout({ children }) {
       </Dialog>
       <AppFeedbackDialog open={feedbackOpen} onOpenChange={setFeedbackOpen} />
       <SignPostInboxDialog open={signpostInboxOpen} onOpenChange={setSignpostInboxOpen} />
+      <InstallAppDialog open={installOpen} onOpenChange={setInstallOpen} />
     </div>
   );
 }
