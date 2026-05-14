@@ -84,12 +84,8 @@ export default function PendingJoinRequests({ filter = "all" }) {
                 className="flex flex-col sm:flex-row sm:items-center gap-3 p-3 rounded-xl border border-border bg-muted/30"
               >
                 <div className="flex items-center gap-3 flex-1 min-w-0">
-                  <Avatar className="h-10 w-10 shrink-0">
-                    <AvatarImage src={m.photo_url || ""} alt={`${m.first_name || ""} ${m.last_name || ""}`} />
-                    <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">
-                      {initials || "?"}
-                    </AvatarFallback>
-                  </Avatar>
+                  <SignedJoinRequestAvatar member={m} initials={initials} />
+
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium text-foreground truncate">
                       {m.first_name} {m.last_name}
