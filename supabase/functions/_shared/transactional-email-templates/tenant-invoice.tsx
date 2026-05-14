@@ -147,6 +147,16 @@ const TenantInvoiceEmail = ({
             </Text>
           </Section>
 
+          {!isReceipt && (
+            <Section style={paymentBox}>
+              <Text style={sectionLabel}>Payment Details</Text>
+              <Text style={detailRow}><strong>Account Name:</strong> {ISSUER.name}</Text>
+              <Text style={detailRow}><strong>Sort Code:</strong> {ISSUER.sortCode}</Text>
+              <Text style={detailRow}><strong>Account Number:</strong> {ISSUER.accountNumber}</Text>
+              <Text style={detailRow}><strong>Reference:</strong> {invoiceNumber}</Text>
+            </Section>
+          )}
+
           {!isReceipt && payUrl && (
             <Section style={{ textAlign: 'center' as const, margin: '30px 0' }}>
               <Button style={button} href={payUrl}>Pay Now</Button>
