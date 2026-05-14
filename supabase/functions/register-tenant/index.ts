@@ -173,9 +173,10 @@ Deno.serve(async (req) => {
       .single();
 
     if (tenantError) {
+      console.error("register-tenant: tenant insert failed:", tenantError);
       await admin.auth.admin.deleteUser(userId);
       return new Response(
-        JSON.stringify({ error: `Tenant creation failed: ${tenantError.message}` }),
+        JSON.stringify({ error: "An unexpected error occurred" }),
         {
           status: 500,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
