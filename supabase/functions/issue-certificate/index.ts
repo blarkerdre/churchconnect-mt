@@ -66,12 +66,13 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Check duplicate
+    // Check duplicate (tenant-scoped)
     const { data: existing } = await supabase
       .from("training_completions")
       .select("id")
       .eq("member_id", member_id)
       .eq("training_type", training_type)
+      .eq("tenant_id", tenant_id)
       .maybeSingle();
 
     if (existing) {
@@ -81,11 +82,12 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Get member info
+    // Get member info — must belong to this tenant
     const { data: member, error: memberErr } = await supabase
       .from("members")
       .select("*")
       .eq("id", member_id)
+      .eq("tenant_id", tenant_id)
       .single();
     if (memberErr || !member) {
       return new Response(JSON.stringify({ error: "Member not found" }), {
