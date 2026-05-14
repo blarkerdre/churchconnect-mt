@@ -787,12 +787,12 @@ function CourseRegistrationsView({ course }) {
   return (
     <Card className="border-0 shadow-sm">
       <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <CardTitle className="text-base font-display flex items-center gap-2">
             <Users className="h-4 w-4 text-primary" /> Registrations — {course.name}
             <Badge variant="secondary" className="ml-2">{filteredRegistrations.length}</Badge>
           </CardTitle>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <div className="relative">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
               <Input
@@ -812,6 +812,45 @@ function CourseRegistrationsView({ course }) {
                 <SelectItem value="public">QR / Public</SelectItem>
               </SelectContent>
             </Select>
+            <Select value={sessionFilter} onValueChange={setSessionFilter}>
+              <SelectTrigger className="w-[160px] h-8 text-xs">
+                <SelectValue placeholder="All Sessions" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Sessions</SelectItem>
+                {sessionOptions.map(o => (
+                  <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <div className="flex items-center gap-1">
+              <label className="text-[11px] text-muted-foreground">From</label>
+              <Input
+                type="date"
+                value={dateFrom}
+                onChange={e => setDateFrom(e.target.value)}
+                className="h-8 w-[140px] text-xs"
+              />
+            </div>
+            <div className="flex items-center gap-1">
+              <label className="text-[11px] text-muted-foreground">To</label>
+              <Input
+                type="date"
+                value={dateTo}
+                onChange={e => setDateTo(e.target.value)}
+                className="h-8 w-[140px] text-xs"
+              />
+            </div>
+            {(sessionFilter !== "all" || dateFrom || dateTo) && (
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-8 text-xs"
+                onClick={() => { setSessionFilter("all"); setDateFrom(""); setDateTo(""); }}
+              >
+                Clear
+              </Button>
+            )}
             {filteredRegistrations.length > 0 && (
               <Button size="sm" variant="outline" className="gap-1.5" onClick={downloadCSV}>
                 <Download className="h-3.5 w-3.5" /> Download CSV
