@@ -18,6 +18,7 @@ import { toast } from "@/components/ui/use-toast";
 import { suggestClosestWSFCentre } from "@/lib/wsf-suggest";
 import { useChurchUnits } from "@/hooks/useChurchUnits";
 import MyCertificates from "@/components/certificates/MyCertificates";
+import { MemberAvatar } from "@/components/members/MemberAvatar";
 import MemberJourneyTimeline from "@/components/members/MemberJourneyTimeline";
 import TakeExamDialog from "@/components/exams/TakeExamDialog";
 import OpenSessionsPanel from "@/components/exams/OpenSessionsPanel";
