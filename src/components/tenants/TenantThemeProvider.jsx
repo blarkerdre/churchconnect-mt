@@ -239,72 +239,101 @@ export default function TenantThemeProvider({ children }) {
     };
   }, [currentTenant?.settings?.favicon_url, currentTenant?.logo_url]);
 
-  // Dynamic PWA manifest & apple-touch-icon (logo fitted to 512x512)
+  // Dynamic PWA manifest (served from edge function with real PNG icons in storage)
   useEffect(() => {
-    const pwaIconUrl = currentTenant?.settings?.pwa_icon_url;
-    const rawIcon = currentTenant?.logo_url || pwaIconUrl || null;
-    const tenantName = currentTenant?.name || "Church Management Suite";
+    const tenantId = currentTenant?.id || null;
     const tenantSlug = currentTenant?.slug || null;
-    const primaryColor = currentTenant?.settings?.primary_color || "#1e3a5f";
+    const tenantName = currentTenant?.name || null;
+    const logoUrl = currentTenant?.logo_url || currentTenant?.settings?.pwa_icon_url || null;
     let cancelled = false;
-    let blobUrl;
 
-    const buildAndApply = (iconUrl) => {
-      if (cancelled) return;
-      const manifest = {
-        name: tenantName,
-        short_name: tenantName.length > 12 ? tenantName.slice(0, 12).trim() : tenantName,
-        description: `Church Management Suite for ${tenantName}`,
-        start_url: tenantSlug ? `/t/${tenantSlug}` : "/",
-        display: "standalone",
-        background_color: "#ffffff",
-        theme_color: primaryColor,
-        icons: iconUrl
-          ? [
-              { src: iconUrl, sizes: "192x192", type: "image/png" },
-              { src: iconUrl, sizes: "512x512", type: "image/png" },
-            ]
-          : [
-              { src: "/icon-192.png", sizes: "192x192", type: "image/png" },
-              { src: "/icon-512.png", sizes: "512x512", type: "image/png" },
-            ],
-      };
-
-      const blob = new Blob([JSON.stringify(manifest)], { type: "application/json" });
-      blobUrl = URL.createObjectURL(blob);
-
-      let manifestLink = document.querySelector('link[rel="manifest"]');
-      if (!manifestLink) {
-        manifestLink = document.createElement("link");
-        manifestLink.rel = "manifest";
-        document.head.appendChild(manifestLink);
+    const setLink = (rel, href, attrs = {}) => {
+      let el = document.querySelector(`link[rel="${rel}"]`);
+      if (!el) {
+        el = document.createElement("link");
+        el.rel = rel;
+        document.head.appendChild(el);
       }
-      manifestLink.href = blobUrl;
-
-      let appleIcon = document.querySelector('link[rel="apple-touch-icon"]');
-      if (!appleIcon) {
-        appleIcon = document.createElement("link");
-        appleIcon.rel = "apple-touch-icon";
-        document.head.appendChild(appleIcon);
-      }
-      appleIcon.href = iconUrl || "/icon-192.png";
+      el.href = href;
+      Object.entries(attrs).forEach(([k, v]) => el.setAttribute(k, v));
+      return el;
     };
 
-    if (rawIcon) {
-      renderSquareIcon(rawIcon, 512).then((dataUrl) => buildAndApply(dataUrl || rawIcon));
+    const setAppleTitle = (title) => {
+      let el = document.querySelector('meta[name="apple-mobile-web-app-title"]');
+      if (!el) {
+        el = document.createElement("meta");
+        el.setAttribute("name", "apple-mobile-web-app-title");
+        document.head.appendChild(el);
+      }
+      el.setAttribute("content", title);
+    };
+
+    // Point manifest at the edge function for this tenant (or the static fallback)
+    if (tenantSlug && SUPABASE_URL) {
+      setLink("manifest", `${SUPABASE_URL}/functions/v1/get-manifest?tenant=${encodeURIComponent(tenantSlug)}`);
     } else {
-      buildAndApply(null);
+      setLink("manifest", "/manifest.json");
+    }
+    if (tenantName) setAppleTitle(tenantName);
+
+    // Generate + upload PNG icons for this tenant if we have a logo and they aren't cached yet
+    const uploadIcons = async () => {
+      if (!tenantId || !logoUrl) return;
+      const versionKey = `pwa-icons:${tenantId}:${logoUrl}`;
+      try {
+        if (typeof window !== "undefined" && window.localStorage?.getItem(versionKey)) return;
+      } catch { /* ignore */ }
+
+      const sizes = [
+        { name: "icon-192.png", size: 192 },
+        { name: "icon-512.png", size: 512 },
+        { name: "apple-touch-icon.png", size: 180 },
+      ];
+
+      for (const { name, size } of sizes) {
+        if (cancelled) return;
+        const dataUrl = await renderSquareIcon(logoUrl, size);
+        if (!dataUrl) continue;
+        const blob = await (await fetch(dataUrl)).blob();
+        const path = `${tenantId}/${name}`;
+        const { error } = await supabase.storage
+          .from("tenant-pwa-icons")
+          .upload(path, blob, { upsert: true, contentType: "image/png", cacheControl: "31536000" });
+        if (error) {
+          console.warn("PWA icon upload failed:", name, error.message);
+          return;
+        }
+      }
+
+      try { window.localStorage?.setItem(versionKey, "1"); } catch { /* ignore */ }
+
+      // Point apple-touch-icon at the freshly uploaded public file
+      if (!cancelled && SUPABASE_URL) {
+        setLink(
+          "apple-touch-icon",
+          `${SUPABASE_URL}/storage/v1/object/public/tenant-pwa-icons/${tenantId}/apple-touch-icon.png`
+        );
+      }
+    };
+
+    // If icons already known to be uploaded, point apple-touch-icon at them immediately
+    if (tenantId && SUPABASE_URL) {
+      const versionKey = `pwa-icons:${tenantId}:${logoUrl}`;
+      try {
+        if (window.localStorage?.getItem(versionKey)) {
+          setLink(
+            "apple-touch-icon",
+            `${SUPABASE_URL}/storage/v1/object/public/tenant-pwa-icons/${tenantId}/apple-touch-icon.png`
+          );
+        }
+      } catch { /* ignore */ }
     }
 
-    return () => {
-      cancelled = true;
-      if (blobUrl) URL.revokeObjectURL(blobUrl);
-      const manifestLink = document.querySelector('link[rel="manifest"]');
-      if (manifestLink) manifestLink.href = "/manifest.json";
-      const appleIcon = document.querySelector('link[rel="apple-touch-icon"]');
-      if (appleIcon) appleIcon.href = "/icon-192.png";
-    };
-  }, [currentTenant?.settings?.pwa_icon_url, currentTenant?.logo_url, currentTenant?.name, currentTenant?.slug, currentTenant?.settings?.primary_color]);
+    uploadIcons();
+
+    return () => { cancelled = true; };
+  }, [currentTenant?.id, currentTenant?.slug, currentTenant?.name, currentTenant?.logo_url, currentTenant?.settings?.pwa_icon_url]);
 
   // Dynamic OG image meta tags (generates 1200x630 card from logo as fallback)
   useEffect(() => {
