@@ -67,10 +67,35 @@ Deno.serve(async (req) => {
       serviceClient.rpc("has_role", { _user_id: user.id, _role: "unit_leader", _tenant_id: tenant_id }),
     ]);
     if (!isAdmin && !isLeader) {
-      return new Response(JSON.stringify({ error: "Only admins or unit leaders can place calls" }), {
-        status: 403,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      // Allow Follow-up unit members to place calls for their own followups only.
+      let allowedAsFollowupMember = false;
+      if (reference_type === "followup" && reference_id) {
+        const { data: isFollowupMember } = await serviceClient.rpc(
+          "user_is_followup_unit_member",
+          { _user_id: user.id, _tenant_id: tenant_id }
+        );
+        if (isFollowupMember) {
+          const { data: followupRow } = await serviceClient
+            .from("followups")
+            .select("id, tenant_id, assigned_to, created_by")
+            .eq("id", reference_id)
+            .eq("tenant_id", tenant_id)
+            .maybeSingle();
+          if (
+            followupRow &&
+            (followupRow.assigned_to === user.id || followupRow.created_by === user.id)
+          ) {
+            allowedAsFollowupMember = true;
+          }
+        }
+      }
+
+      if (!allowedAsFollowupMember) {
+        return new Response(JSON.stringify({ error: "Only admins or unit leaders can place calls" }), {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
     }
 
     // Normalize phone
