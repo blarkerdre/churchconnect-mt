@@ -587,12 +587,12 @@ function ChurchBrandingSection() {
       const path = `${tenantId}/tenant-logo.${ext}`;
 
       const { error: uploadError } = await supabase.storage
-        .from("profile-photos")
+        .from("tenant-branding")
         .upload(path, file, { upsert: true });
       if (uploadError) throw uploadError;
 
       const { data: urlData } = supabase.storage
-        .from("profile-photos")
+        .from("tenant-branding")
         .getPublicUrl(path);
 
       const publicUrl = urlData.publicUrl + "?t=" + Date.now();
@@ -736,12 +736,12 @@ function FaviconOgImageSection() {
       const path = `${tenantId}/tenant-${type}.${ext}`;
 
       const { error: uploadError } = await supabase.storage
-        .from("profile-photos")
+        .from("tenant-branding")
         .upload(path, file, { upsert: true });
       if (uploadError) throw uploadError;
 
       const { data: urlData } = supabase.storage
-        .from("profile-photos")
+        .from("tenant-branding")
         .getPublicUrl(path);
       const publicUrl = urlData.publicUrl + "?t=" + Date.now();
 
