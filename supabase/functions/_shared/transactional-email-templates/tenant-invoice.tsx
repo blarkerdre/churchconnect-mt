@@ -95,6 +95,16 @@ const TenantInvoiceEmail = ({
           <Hr style={hr} />
 
           <Section>
+            <Text style={sectionLabel}>From</Text>
+            <Text style={text}>
+              <strong>{ISSUER.name}</strong>
+              <br />{ISSUER.address}
+              <br />Company Reg: {ISSUER.companyReg}
+              <br />{ISSUER.email} · {ISSUER.website}
+            </Text>
+          </Section>
+
+          <Section>
             <Text style={sectionLabel}>Bill To</Text>
             <Text style={text}>
               <strong>{billToName || churchName}</strong>
