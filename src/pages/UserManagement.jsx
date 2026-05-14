@@ -175,7 +175,7 @@ export default function UserManagement() {
   const toggleUserMutation = useMutation({
     mutationFn: async ({ userId, disabled, targetName }) => {
       const { data, error } = await supabase.functions.invoke("admin-toggle-user", {
-        body: { user_id: userId, disabled },
+        body: { user_id: userId, disabled, tenant_id: tenantId },
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
