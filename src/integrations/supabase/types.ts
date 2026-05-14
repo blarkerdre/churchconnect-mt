@@ -2898,31 +2898,34 @@ export type Database = {
       }
       tenant_api_keys: {
         Row: {
-          api_key: string
           created_at: string
           created_by: string | null
           id: string
           is_active: boolean
+          key_hash: string | null
+          key_prefix: string | null
           label: string
           last_used_at: string | null
           tenant_id: string
         }
         Insert: {
-          api_key?: string
           created_at?: string
           created_by?: string | null
           id?: string
           is_active?: boolean
+          key_hash?: string | null
+          key_prefix?: string | null
           label?: string
           last_used_at?: string | null
           tenant_id: string
         }
         Update: {
-          api_key?: string
           created_at?: string
           created_by?: string | null
           id?: string
           is_active?: boolean
+          key_hash?: string | null
+          key_prefix?: string | null
           label?: string
           last_used_at?: string | null
           tenant_id?: string

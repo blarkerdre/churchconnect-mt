@@ -71,11 +71,15 @@ Deno.serve(async (req) => {
 
     const adminClient = createClient(supabaseUrl, serviceRoleKey);
 
+    // Hash the incoming key and look up by hash (plaintext is never stored)
+    const hashBuf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(apiKey));
+    const keyHash = Array.from(new Uint8Array(hashBuf)).map((b) => b.toString(16).padStart(2, "0")).join("");
+
     // Validate API key
     const { data: keyRecord, error: keyError } = await adminClient
       .from("tenant_api_keys")
       .select("id, tenant_id")
-      .eq("api_key", apiKey)
+      .eq("key_hash", keyHash)
       .eq("is_active", true)
       .maybeSingle();
 

@@ -40,15 +40,37 @@ Deno.serve(async (req) => {
     // Use service role client for admin operations
     const supabase = createClient(supabaseUrl, serviceKey);
 
-    const { data: isAdmin } = await supabase.rpc("is_admin", { _user_id: callerId });
-    if (!isAdmin) {
-      return new Response(JSON.stringify({ error: "Admin access required" }), {
-        status: 403,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    // Require tenant_id query param and confirm caller is admin of that tenant (or super_admin)
+    const url = new URL(req.url);
+    const tenantId = url.searchParams.get("tenant_id");
+
+    const { data: callerIsSuperAdmin } = await supabase.rpc("has_role", { _user_id: callerId, _role: "super_admin" });
+
+    if (!callerIsSuperAdmin) {
+      if (!tenantId) {
+        return new Response(JSON.stringify({ error: "tenant_id query param is required" }), {
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const { data: isTenantAdmin } = await supabase.rpc("is_admin", { _user_id: callerId, _tenant_id: tenantId });
+      if (!isTenantAdmin) {
+        return new Response(JSON.stringify({ error: "Admin access required for this tenant" }), {
+          status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
     }
 
-    // Fetch all users and filter banned ones
+    // Build the set of user_ids the caller is allowed to see
+    let allowedIds: Set<string> | null = null;
+    if (!callerIsSuperAdmin && tenantId) {
+      const { data: members } = await supabase
+        .from("tenant_memberships")
+        .select("user_id")
+        .eq("tenant_id", tenantId);
+      allowedIds = new Set((members || []).map((m: { user_id: string }) => m.user_id));
+    }
+
+    // Fetch all users and filter banned ones (scoped to tenant when not super_admin)
     const bannedUserIds: string[] = [];
     let page = 1;
     const perPage = 1000;
@@ -61,7 +83,7 @@ Deno.serve(async (req) => {
       const now = new Date();
       for (const u of users) {
         if (u.banned_until && new Date(u.banned_until) > now) {
-          bannedUserIds.push(u.id);
+          if (!allowedIds || allowedIds.has(u.id)) bannedUserIds.push(u.id);
         }
       }
 
