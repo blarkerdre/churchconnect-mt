@@ -117,13 +117,15 @@ Deno.serve(async (req) => {
       continue;
     }
 
-    const recipients = (members || []).filter((m: any) => {
-      if (!m.date_of_birth) return false;
-      const d = new Date(m.date_of_birth + "T00:00:00Z");
-      const mm = String(d.getUTCMonth() + 1).padStart(2, "0");
-      const dd = String(d.getUTCDate()).padStart(2, "0");
-      return mm === todayMM && dd === todayDD;
-    });
+    const recipients = isManual
+      ? (members || [])
+      : (members || []).filter((m: any) => {
+          if (!m.date_of_birth) return false;
+          const d = new Date(m.date_of_birth + "T00:00:00Z");
+          const mm = String(d.getUTCMonth() + 1).padStart(2, "0");
+          const dd = String(d.getUTCDate()).padStart(2, "0");
+          return mm === todayMM && dd === todayDD;
+        });
 
     for (const member of recipients) {
       processed++;
@@ -135,23 +137,28 @@ Deno.serve(async (req) => {
 
       for (const channel of channels) {
         // Idempotency: insert log row first; on conflict skip.
-        const { error: logInsErr } = await svc
-          .from("birthday_message_log")
-          .insert({
-            tenant_id: t.tenant_id,
-            member_id: member.id,
-            channel,
-            sent_on: todayDate,
-            status: "sent",
-          });
-        if (logInsErr) {
-          if ((logInsErr as any).code === "23505") {
-            // Already sent today
+        // Skip log insert for manual test sends so they aren't blocked by
+        // the unique constraint and don't pollute real birthday history.
+        if (!isManual) {
+          const { error: logInsErr } = await svc
+            .from("birthday_message_log")
+            .insert({
+              tenant_id: t.tenant_id,
+              member_id: member.id,
+              channel,
+              sent_on: todayDate,
+              status: "sent",
+            });
+          if (logInsErr) {
+            if ((logInsErr as any).code === "23505") {
+              // Already sent today
+              continue;
+            }
+            console.error("Log insert failed", logInsErr.message);
             continue;
           }
-          console.error("Log insert failed", logInsErr.message);
-          continue;
         }
+
 
         let ok = false;
         let errMsg: string | null = null;
@@ -189,7 +196,9 @@ Deno.serve(async (req) => {
                     templateName: "birthday-greeting",
                     recipientEmail: member.email,
                     tenant_id: t.tenant_id,
-                    idempotencyKey: `birthday-${member.id}-${todayDate}`,
+                    idempotencyKey: isManual
+                      ? `birthday-test-${member.id}-${Date.now()}`
+                      : `birthday-${member.id}-${todayDate}`,
                     templateData: {
                       firstName: member.first_name,
                       lastName: member.last_name,
@@ -238,13 +247,15 @@ Deno.serve(async (req) => {
           sent++;
         } else {
           failed++;
-          await svc
-            .from("birthday_message_log")
-            .update({ status: "failed", error: errMsg })
-            .eq("tenant_id", t.tenant_id)
-            .eq("member_id", member.id)
-            .eq("channel", channel)
-            .eq("sent_on", todayDate);
+          if (!isManual) {
+            await svc
+              .from("birthday_message_log")
+              .update({ status: "failed", error: errMsg })
+              .eq("tenant_id", t.tenant_id)
+              .eq("member_id", member.id)
+              .eq("channel", channel)
+              .eq("sent_on", todayDate);
+          }
           summary.push({
             tenant_id: t.tenant_id,
             member_id: member.id,
