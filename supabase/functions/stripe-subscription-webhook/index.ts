@@ -307,7 +307,7 @@ serve(async (req) => {
     });
   } catch (error) {
     console.error("[stripe-webhook] Error:", error.message);
-    return new Response(JSON.stringify({ error: error.message }), {
+    return new Response(JSON.stringify({ error: "An unexpected error occurred" }), {
       status: 500,
       headers: corsHeaders,
     });
