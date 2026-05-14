@@ -390,7 +390,7 @@ Deno.serve(async (req) => {
     );
   } catch (err) {
     console.error("issue-certificate error:", err);
-    return new Response(JSON.stringify({ error: err.message }), {
+    return new Response(JSON.stringify({ error: "An unexpected error occurred" }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
