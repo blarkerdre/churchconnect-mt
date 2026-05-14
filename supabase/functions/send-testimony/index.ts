@@ -45,7 +45,9 @@ Deno.serve(async (req) => {
     }
     const callerId = userData.user.id;
 
-    const { tenant_id, member_name, title, situation, action, god_did, share_publicly, sender_email, user_id } = await req.json();
+    const { tenant_id, member_name, title, situation, action, god_did, share_publicly, sender_email } = await req.json();
+    // Always derive user_id from the verified JWT — never trust the client
+    const user_id = callerId;
 
     if (!tenant_id) {
       return new Response(JSON.stringify({ error: "tenant_id is required" }), {
@@ -71,24 +73,22 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Save testimony
-    if (user_id && user_id === callerId) {
-      const { error: insertErr } = await supabase.from("testimonies").insert({
-        tenant_id,
-        user_id,
-        member_name: member_name?.trim() || "Anonymous",
-        title: title.trim(),
-        situation: situation.trim(),
-        action: action.trim(),
-        god_did: god_did.trim(),
-        share_publicly: !!share_publicly,
+    // Save testimony (user_id is always the verified caller)
+    const { error: insertErr } = await supabase.from("testimonies").insert({
+      tenant_id,
+      user_id,
+      member_name: member_name?.trim() || "Anonymous",
+      title: title.trim(),
+      situation: situation.trim(),
+      action: action.trim(),
+      god_did: god_did.trim(),
+      share_publicly: !!share_publicly,
+    });
+    if (insertErr) {
+      console.error("Failed to save testimony", insertErr);
+      return new Response(JSON.stringify({ error: "Failed to save testimony" }), {
+        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
-      if (insertErr) {
-        console.error("Failed to save testimony", insertErr);
-        return new Response(JSON.stringify({ error: "Failed to save testimony" }), {
-          status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
     }
 
     // Recipient email
