@@ -92,11 +92,11 @@ function ProfilePhotoUpload({ member, user, onUpdated }) {
       const path = `${user.id}/${Date.now()}.${ext}`;
       const { error: uploadError } = await supabase.storage.from("profile-photos").upload(path, file, { upsert: true });
       if (uploadError) throw uploadError;
-      const { data: urlData } = supabase.storage.from("profile-photos").getPublicUrl(path);
+      // Store the storage PATH (not a URL). The bucket is private and reads use signed URLs.
       const { error: rpcError } = await supabase.rpc(
         "update_own_member_profile",
         buildOwnMemberProfilePayload(member.id, {
-          photo_url: urlData.publicUrl,
+          photo_url: path,
           workers_in_training: member.workers_in_training,
         })
       );
@@ -113,13 +113,16 @@ function ProfilePhotoUpload({ member, user, onUpdated }) {
 
   return (
     <div className="relative shrink-0 cursor-pointer group" onClick={() => fileRef.current?.click()}>
-      {member.photo_url ? (
-        <img src={member.photo_url} alt="" className="h-12 w-12 sm:h-16 sm:w-16 rounded-full object-cover" />
-      ) : (
-        <div className="h-12 w-12 sm:h-16 sm:w-16 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-lg sm:text-xl">
-          {member.first_name[0]}{member.last_name[0]}
-        </div>
-      )}
+      <MemberAvatar
+        member={member}
+        alt=""
+        className="h-12 w-12 sm:h-16 sm:w-16 rounded-full object-cover"
+        fallback={
+          <div className="h-12 w-12 sm:h-16 sm:w-16 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-lg sm:text-xl">
+            {member.first_name[0]}{member.last_name[0]}
+          </div>
+        }
+      />
       <div className="absolute inset-0 rounded-full bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
         {uploading ? <Loader2 className="h-4 w-4 animate-spin text-white" /> : <Camera className="h-4 w-4 text-white" />}
       </div>
