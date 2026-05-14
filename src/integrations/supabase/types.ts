@@ -4017,6 +4017,14 @@ export type Database = {
           training_type: string
         }[]
       }
+      get_public_courses_for_tenant: {
+        Args: { _tenant_id: string }
+        Returns: {
+          description: string
+          id: string
+          name: string
+        }[]
+      }
       get_tenant_by_slug: {
         Args: { _slug: string }
         Returns: {
@@ -4067,9 +4075,10 @@ export type Database = {
             }
             Returns: boolean
           }
-      is_admin:
-        | { Args: { _user_id: string }; Returns: boolean }
-        | { Args: { _tenant_id: string; _user_id: string }; Returns: boolean }
+      is_admin: {
+        Args: { _tenant_id: string; _user_id: string }
+        Returns: boolean
+      }
       is_assigned_referral_leader_for_member: {
         Args: { _member_id: string; _tenant_id: string; _user_id: string }
         Returns: boolean
