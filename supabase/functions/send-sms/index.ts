@@ -102,10 +102,41 @@ Deno.serve(async (req) => {
       });
 
       if (!isAdmin && !isLeader) {
-        return new Response(JSON.stringify({ error: "Forbidden" }), {
-          status: 403,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        // Allow Follow-up unit members to send SMS for their own followups only.
+        const isFollowupContext =
+          (sms_type === "followup" || (body as any).reference_type === "followup") &&
+          !!reference_id &&
+          Array.isArray(recipients) &&
+          recipients.length === 1;
+
+        let allowedAsFollowupMember = false;
+        if (isFollowupContext) {
+          const { data: isFollowupMember } = await serviceClient.rpc(
+            "user_is_followup_unit_member",
+            { _user_id: userId, _tenant_id: tenant_id }
+          );
+          if (isFollowupMember) {
+            const { data: followupRow } = await serviceClient
+              .from("followups")
+              .select("id, tenant_id, assigned_to, created_by")
+              .eq("id", reference_id)
+              .eq("tenant_id", tenant_id)
+              .maybeSingle();
+            if (
+              followupRow &&
+              (followupRow.assigned_to === userId || followupRow.created_by === userId)
+            ) {
+              allowedAsFollowupMember = true;
+            }
+          }
+        }
+
+        if (!allowedAsFollowupMember) {
+          return new Response(JSON.stringify({ error: "Forbidden" }), {
+            status: 403,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
       }
     }
 
