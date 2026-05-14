@@ -12,7 +12,7 @@ import { usePublicConsentText, renderConsentText } from "@/hooks/useConsentText"
 import { toast } from "@/components/ui/use-toast";
 import { Toaster } from "@/components/ui/toaster";
 
-const DEFAULT_TENANT_ID = "95e53cc3-4569-4dd3-a4ad-3489593dce81";
+
 
 const emptyForm = {
   first_name: "",
@@ -35,7 +35,7 @@ export default function PublicWoFBIRegistration() {
   const [sessionCourses, setSessionCourses] = useState([]); // exam_session_courses rows
   const [allCourses, setAllCourses] = useState([]); // exam_titles for tenant
   const [loadingCourses, setLoadingCourses] = useState(true);
-  const [resolvedTenantId, setResolvedTenantId] = useState(tenantSlug ? null : DEFAULT_TENANT_ID);
+  const [resolvedTenantId, setResolvedTenantId] = useState(null);
   const [tenantName, setTenantName] = useState("");
   const [tenantLogo, setTenantLogo] = useState(null);
 
@@ -68,13 +68,7 @@ export default function PublicWoFBIRegistration() {
         .select("session_id, exam_title, sort_order")
         .eq("tenant_id", resolvedTenantId)
         .order("sort_order"),
-      supabase
-        .from("exam_titles")
-        .select("id, name, description")
-        .eq("is_active", true)
-        .eq("registration_open", true)
-        .eq("tenant_id", resolvedTenantId)
-        .order("name"),
+      supabase.rpc("get_public_courses_for_tenant", { _tenant_id: resolvedTenantId }),
     ]).then(([s, sc, c]) => {
       setSessions(s.data || []);
       setSessionCourses(sc.data || []);

@@ -87,8 +87,9 @@ serve(async (req) => {
 
     throw new Error("Invalid action");
   } catch (error) {
-    console.error("[manage-tenant-subscription] Error:", error.message);
-    return new Response(JSON.stringify({ error: error.message }), {
+    console.error("[manage-tenant-subscription] Error:", error);
+    const safeMessage = error?.message === "Not authenticated" ? "Not authenticated" : "Request failed";
+    return new Response(JSON.stringify({ error: safeMessage }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 400,
     });

@@ -210,6 +210,7 @@ Deno.serve(async (req) => {
 
     return jsonResponse({ success: true, user_id: userId, member_id: memberId, reused_existing_user: reusedExisting });
   } catch (err) {
-    return jsonResponse({ error: err.message }, 500);
+    console.error("admin-create-user error:", err);
+    return jsonResponse({ error: "An unexpected error occurred" }, 500);
   }
 });
