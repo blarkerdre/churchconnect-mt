@@ -317,6 +317,16 @@ export default function Layout({ children }) {
               <p className="text-[10px] text-sidebar-foreground/40">{getRoleTitle()}</p>
             </div>
           )}
+          {installAvailable && !isInstalled && (
+            <button
+              onClick={() => { setInstallOpen(true); setSidebarOpen(false); }}
+              title={collapsed ? "Install app" : undefined}
+              className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium bg-primary/10 text-primary hover:bg-primary/20 transition-colors ${collapsed ? "justify-center" : ""}`}
+            >
+              <Download className="h-4 w-4 shrink-0" />
+              {!collapsed && "Install app"}
+            </button>
+          )}
           <button
             onClick={() => { setFeedbackOpen(true); setSidebarOpen(false); }}
             title={collapsed ? "Feedback" : undefined}
