@@ -10,6 +10,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
 import { toast } from "@/components/ui/use-toast";
+import { assertStorageAvailable } from "@/lib/storageQuota";
 import DashboardBanner from "@/components/dashboard/DashboardBanner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
