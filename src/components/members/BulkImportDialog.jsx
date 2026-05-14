@@ -141,7 +141,16 @@ export default function BulkImportDialog({ open, onOpenChange, onComplete }) {
 
       if (toInsert.length > 0) {
         const { data, error } = await supabase.from("members").insert(toInsert.map(m => withTenant(m))).select("id");
-        if (error) { skipped += toInsert.length; } else { created += data.length; }
+        if (error) {
+          skipped += toInsert.length;
+          if (/MEMBER_LIMIT_REACHED/i.test(error.message || "")) {
+            toast({
+              title: "Member limit reached",
+              description: "Import stopped: this church has reached its member limit. Upgrade the plan or raise the limit in Tenant Admin.",
+              variant: "destructive",
+            });
+          }
+        } else { created += data.length; }
       }
 
       for (const { id, ...updateData } of toUpdate) {
