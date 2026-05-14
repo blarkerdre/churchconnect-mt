@@ -196,7 +196,9 @@ Deno.serve(async (req) => {
                     templateName: "birthday-greeting",
                     recipientEmail: member.email,
                     tenant_id: t.tenant_id,
-                    idempotencyKey: `birthday-${member.id}-${todayDate}`,
+                    idempotencyKey: isManual
+                      ? `birthday-test-${member.id}-${Date.now()}`
+                      : `birthday-${member.id}-${todayDate}`,
                     templateData: {
                       firstName: member.first_name,
                       lastName: member.last_name,
