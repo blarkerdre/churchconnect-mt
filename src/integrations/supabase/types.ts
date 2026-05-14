@@ -3936,6 +3936,10 @@ export type Database = {
             Args: { _email: string; _tenant_id?: string; _user_id: string }
             Returns: string
           }
+      check_tenant_storage_quota: {
+        Args: { _added_bytes?: number; _tenant_id: string }
+        Returns: boolean
+      }
       count_pending_join_requests_for_user: {
         Args: { _tenant_id: string; _user_id: string }
         Returns: number
@@ -4029,6 +4033,10 @@ export type Database = {
           sms_count: number
           whatsapp_count: number
         }[]
+      }
+      get_tenant_storage_usage_mb: {
+        Args: { _tenant_id: string }
+        Returns: number
       }
       get_upcoming_birthdays: {
         Args: { _days_ahead?: number; _tenant_id: string }

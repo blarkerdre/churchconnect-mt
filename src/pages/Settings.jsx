@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { assertStorageAvailable, getTenantStorageUsageMb } from "@/lib/storageQuota";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -307,6 +308,50 @@ function BillingSection() {
   );
 }
 
+/* ─── Storage usage / quota indicator ─── */
+function StorageUsageCard() {
+  const { tenantId } = useTenantQuery();
+  const { data: usedMb = 0 } = useQuery({
+    queryKey: ["tenant-storage-usage", tenantId],
+    queryFn: () => getTenantStorageUsageMb(tenantId),
+    enabled: !!tenantId,
+    staleTime: 30_000,
+  });
+  const { data: tenant } = useQuery({
+    queryKey: ["tenant-storage-limit", tenantId],
+    queryFn: async () => {
+      const { data } = await supabase.from("tenants").select("storage_limit_mb").eq("id", tenantId).maybeSingle();
+      return data;
+    },
+    enabled: !!tenantId,
+  });
+  const limit = tenant?.storage_limit_mb || 0;
+  if (!tenantId) return null;
+  const pct = limit > 0 ? Math.min(Math.round((usedMb / limit) * 100), 100) : 0;
+  const over = limit > 0 && usedMb >= limit;
+  return (
+    <Card className="border-0 shadow-sm">
+      <CardHeader className="pb-3">
+        <CardTitle className="text-base font-display">File storage</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-2">
+        <div className="flex justify-between text-sm">
+          <span className="text-muted-foreground">Used this church</span>
+          <span className={over ? "text-destructive font-medium" : ""}>
+            {Number(usedMb).toFixed(1)} {limit > 0 ? `/ ${limit} MB` : "MB (unlimited)"}
+          </span>
+        </div>
+        {limit > 0 && <Progress value={pct} className="h-2" />}
+        {over && (
+          <p className="text-xs text-destructive">
+            Storage limit reached. Remove old files or contact a tenant admin to raise the allowance.
+          </p>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 /* ─── Reusable list section backed by app_settings ─── */
 function SettingsListSection({ settingsKey, title, icon: Icon, description }) {
   const qc = useQueryClient();
@@ -583,6 +628,7 @@ function ChurchBrandingSection() {
 
     setUploading(true);
     try {
+      await assertStorageAvailable(tenantId, file.size);
       const ext = file.name.split(".").pop();
       const path = `${tenantId}/tenant-logo.${ext}`;
 
@@ -732,6 +778,7 @@ function FaviconOgImageSection() {
     const setUploading = type === "favicon" ? setUploadingFavicon : type === "pwa-icon" ? setUploadingPwa : setUploadingOg;
     setUploading(true);
     try {
+      await assertStorageAvailable(tenantId, file.size);
       const ext = file.name.split(".").pop();
       const path = `${tenantId}/tenant-${type}.${ext}`;
 
@@ -1506,6 +1553,7 @@ export default function Settings() {
         </TabsList>
 
         <TabsContent value="branding" className="space-y-6">
+          <StorageUsageCard />
           <ChurchBrandingSection />
           <FaviconOgImageSection />
           <DashboardBannerSettings />

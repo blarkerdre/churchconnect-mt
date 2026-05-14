@@ -11,6 +11,7 @@ import { Loader2, Award, Plus, Pencil, Trash2, Upload, Image, Eye } from "lucide
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
+import { assertStorageAvailable } from "@/lib/storageQuota";
 import { useAppSetting } from "@/hooks/useAppSetting";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
 
@@ -132,6 +133,7 @@ export default function CertificateTemplateSettings() {
 
     setUploading(true);
     try {
+      await assertStorageAvailable(tenantId, file.size);
       const ext = file.name.split(".").pop();
       const path = `certificate-backgrounds/${Date.now()}.${ext}`;
       const { error } = await supabase.storage

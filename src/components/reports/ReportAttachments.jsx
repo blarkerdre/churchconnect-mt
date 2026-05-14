@@ -5,6 +5,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "@/components/ui/use-toast";
+import { assertStorageAvailable } from "@/lib/storageQuota";
 import { Loader2, Upload, Download, Trash2, FileText, Paperclip } from "lucide-react";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
@@ -54,6 +55,7 @@ export default function ReportAttachments({ relatedTable, relatedId }) {
     }
     setUploading(true);
     try {
+      await assertStorageAvailable(tenantId, file.size);
       const ext = file.name.split(".").pop();
       // Prefix path with tenantId for tenant-scoped storage isolation
       const tenantPrefix = tenantId || "shared";
