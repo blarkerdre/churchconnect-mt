@@ -33,3 +33,5 @@ project_id = "qfordhikmtgedfybktjg"
     verify_jwt = false
   [functions.domifort-token-create]
     verify_jwt = false
+  [functions.get-manifest]
+    verify_jwt = false
