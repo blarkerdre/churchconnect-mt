@@ -247,13 +247,15 @@ Deno.serve(async (req) => {
           sent++;
         } else {
           failed++;
-          await svc
-            .from("birthday_message_log")
-            .update({ status: "failed", error: errMsg })
-            .eq("tenant_id", t.tenant_id)
-            .eq("member_id", member.id)
-            .eq("channel", channel)
-            .eq("sent_on", todayDate);
+          if (!isManual) {
+            await svc
+              .from("birthday_message_log")
+              .update({ status: "failed", error: errMsg })
+              .eq("tenant_id", t.tenant_id)
+              .eq("member_id", member.id)
+              .eq("channel", channel)
+              .eq("sent_on", todayDate);
+          }
           summary.push({
             tenant_id: t.tenant_id,
             member_id: member.id,
