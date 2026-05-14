@@ -24,6 +24,7 @@ export default function TenantAnalyticsTab({ tenants }) {
           { count: followupCount },
           { count: smsCount },
           { count: waCount },
+          { data: storageMb },
         ] = await Promise.all([
           supabase.from("members").select("*", { count: "exact", head: true }).eq("tenant_id", t.id),
           supabase.from("tenant_memberships").select("*", { count: "exact", head: true }).eq("tenant_id", t.id),
@@ -31,8 +32,9 @@ export default function TenantAnalyticsTab({ tenants }) {
           supabase.from("members").select("*", { count: "exact", head: true }).eq("tenant_id", t.id).gte("created_at", thirtyDaysAgo),
           supabase.from("attendance_sessions").select("*", { count: "exact", head: true }).eq("tenant_id", t.id).gte("created_at", thirtyDaysAgo),
           supabase.from("followups").select("*", { count: "exact", head: true }).eq("tenant_id", t.id).eq("status", "Pending"),
-          supabase.from("sms_log").select("*", { count: "exact", head: true }).eq("tenant_id", t.id).eq("channel", "sms").eq("status", "sent").gte("created_at", monthStart.toISOString()),
-          supabase.from("sms_log").select("*", { count: "exact", head: true }).eq("tenant_id", t.id).eq("channel", "whatsapp").eq("status", "sent").gte("created_at", monthStart.toISOString()),
+          supabase.from("sms_log").select("*", { count: "exact", head: true }).eq("tenant_id", t.id).eq("channel", "sms").neq("status", "failed").gte("created_at", monthStart.toISOString()),
+          supabase.from("sms_log").select("*", { count: "exact", head: true }).eq("tenant_id", t.id).eq("channel", "whatsapp").neq("status", "failed").gte("created_at", monthStart.toISOString()),
+          supabase.rpc("get_tenant_storage_usage_mb", { _tenant_id: t.id }),
         ]);
         results[t.id] = {
           members: memberCount || 0,
@@ -43,6 +45,7 @@ export default function TenantAnalyticsTab({ tenants }) {
           pendingFollowups: followupCount || 0,
           smsSent: smsCount || 0,
           whatsappSent: waCount || 0,
+          storageMb: Number(storageMb) || 0,
         };
       }
       return results;
