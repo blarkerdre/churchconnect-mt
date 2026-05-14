@@ -201,7 +201,7 @@ Deno.serve(async (req) => {
     })
   } catch (err) {
     console.error('generate-tenant-invoice error', err)
-    return new Response(JSON.stringify({ error: String(err?.message || err) }), {
+    return new Response(JSON.stringify({ error: 'An unexpected error occurred' }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
