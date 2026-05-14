@@ -407,7 +407,14 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
       onSaved();
       setConfirmUpdateOpen(false);
     } catch (err) {
-      toast({ title: "Error", description: err.message, variant: "destructive" });
+      const isLimit = /MEMBER_LIMIT_REACHED/i.test(err.message || "");
+      toast({
+        title: isLimit ? "Member limit reached" : "Error",
+        description: isLimit
+          ? "This church has reached its member limit. Please upgrade the plan or raise the limit in Tenant Admin."
+          : err.message,
+        variant: "destructive",
+      });
       throw err;
     } finally {
       setSaving(false);
