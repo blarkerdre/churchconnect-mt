@@ -75,7 +75,8 @@ Deno.serve(async (req) => {
   if (body.tenant_id) tenantsQ = tenantsQ.eq("tenant_id", body.tenant_id);
   const { data: tenants, error: tErr } = await tenantsQ;
   if (tErr) {
-    return new Response(JSON.stringify({ error: tErr.message }), {
+    console.error("send-birthday-messages tenant query failed:", tErr);
+    return new Response(JSON.stringify({ error: "An unexpected error occurred" }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

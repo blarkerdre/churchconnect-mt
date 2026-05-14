@@ -26,7 +26,7 @@ Deno.serve(async (req) => {
 
   if (fetchErr) {
     console.error('Failed to fetch scheduled communications', fetchErr)
-    return new Response(JSON.stringify({ error: fetchErr.message }), {
+    return new Response(JSON.stringify({ error: 'An unexpected error occurred' }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
