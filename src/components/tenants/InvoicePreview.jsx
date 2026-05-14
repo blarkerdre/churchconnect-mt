@@ -72,6 +72,17 @@ const InvoicePreview = forwardRef(function InvoicePreview({ invoice, churchName 
 
       <hr style={{ border: "none", borderTop: "1px solid #e8e0d4", margin: "16px 0" }} />
 
+      {/* From */}
+      <div style={{ fontSize: "11px", color: "#999", textTransform: "uppercase", letterSpacing: "1px", marginBottom: "4px" }}>
+        From
+      </div>
+      <div style={{ fontSize: "13px", lineHeight: 1.6, marginBottom: "16px" }}>
+        <strong>{ISSUER.name}</strong>
+        <br />{ISSUER.address}
+        <br />Company Reg: {ISSUER.companyReg}
+        <br />{ISSUER.email} · {ISSUER.website}
+      </div>
+
       {/* Bill To */}
       <div style={{ fontSize: "11px", color: "#999", textTransform: "uppercase", letterSpacing: "1px", marginBottom: "4px" }}>
         Bill To
