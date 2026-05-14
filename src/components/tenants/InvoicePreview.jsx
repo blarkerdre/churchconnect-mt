@@ -14,6 +14,16 @@ const InvoicePreview = forwardRef(function InvoicePreview({ invoice, churchName 
   const lineItems = Array.isArray(invoice.line_items) ? invoice.line_items : [];
   const fmt = (n) => Number(n || 0).toFixed(2);
 
+  const ISSUER = {
+    name: "DomiFort Solutions Limited",
+    address: "Flat 9, 2 Oriana Court, Crunden Road, South Croydon, United Kingdom, CR2 6GZ",
+    companyReg: "17169095",
+    email: "info@domifortsolutions.com",
+    website: "www.domifortsolutions.com",
+    sortCode: "04-06-05",
+    accountNumber: "31369676",
+  };
+
   return (
     <div
       ref={ref}

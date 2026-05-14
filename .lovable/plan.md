@@ -1,66 +1,36 @@
-## Real root cause
+Add issuer/company details (DomiFort Solutions Limited) to the invoice & receipt — both the on-screen/PDF preview and the emailed version — so every invoice clearly shows who is billing the church.
 
-The blank live page is **not** a React/createRoot import issue. It's an ASI (Automatic Semicolon Insertion) bug in `src/main.jsx`.
+## What will appear on every invoice/receipt
 
-The file currently ends like this:
+A new "From" block, shown above the existing "Bill To" block, with:
 
-```js
-createRoot(document.getElementById('root')).render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>,
-)
+- **DomiFort Solutions Limited**
+- Flat 9, 2 Oriana Court, Crunden Road, South Croydon, United Kingdom, CR2 6GZ
+- Company Reg: 17169095
+- Email: info@domifortsolutions.com
+- Web: www.domifortsolutions.com
 
-// Service worker registration with auto-update.
-(() => {
-  if (!('serviceWorker' in navigator)) return;
-  // ...
-})();
-```
+A new "Payment Details" block, shown below the totals (only on **invoices**, not receipts — receipts are already paid):
 
-After Vite minifies it, the newline collapses and the IIFE that begins with `(` is fused onto the previous expression:
+- Bank: (issuer payment instructions)
+- Sort Code: **04-06-05**  *(entered as "O40605" — treated as 04-06-05; please confirm)*
+- Account Number: **31369676**
+- Account Name: DomiFort Solutions Limited
+- Reference: the invoice number
 
-```js
-createRoot(...).render(<...>)(()=>{...})()
-```
+Footer line will be updated from "issued by churchconnect-mt" to "Issued by DomiFort Solutions Limited · Company No. 17169095".
 
-JavaScript parses that as `render(...)(...)` — calling the result of `.render()` (which returns `undefined`) as a function. That throws `TypeError: createRoot(...).render(...) is not a function`, the React tree never mounts, and the page stays blank.
+## Files to change
 
-## Fix
+1. `src/components/tenants/InvoicePreview.jsx` — add From block (top), Payment Details block (invoices only), updated footer. This drives both the on-screen preview and the html2canvas PDF export.
+2. `supabase/functions/_shared/transactional-email-templates/tenant-invoice.tsx` — mirror the same From / Payment Details / footer additions so emailed invoices match. Replace `SITE_NAME = "churchconnect-mt"` with the DomiFort issuer block.
 
-Add a single semicolon after the `.render(...)` call in `src/main.jsx`:
+Constants for the issuer details will be defined once at the top of each file (no DB changes, no new settings UI) so they stay in sync and are easy to update later.
 
-```js
-createRoot(document.getElementById('root')).render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>,
-);   // ← this semicolon
-```
+## Open question
 
-Defensive cleanup (same file): also put a leading `;` before the SW IIFE so this class of bug can't reappear if anyone edits the bracketing later:
+The sort code you provided reads **O40605** (with a letter O). UK sort codes are 6 digits, so I'll render it as **04-06-05**. Confirm this is correct, or send the intended digits.
 
-```js
-;(() => {
-  if (!('serviceWorker' in navigator)) return;
-  // ...
-})();
-```
+## Out of scope
 
-## Revert the speculative change
-
-In `vite.config.js`, remove the `react-dom/client` alias I added in the previous turn. It wasn't the cause and isn't needed:
-
-```diff
-       'react-dom': path.resolve(__dirname, './node_modules/react-dom'),
--      'react-dom/client': path.resolve(__dirname, './node_modules/react-dom/client.js'),
-       'react/jsx-runtime': path.resolve(__dirname, './node_modules/react/jsx-runtime'),
-```
-
-The named `import { createRoot } from 'react-dom/client'` in `main.jsx` is correct and stays.
-
-## Verification
-
-1. Run `vite build` locally and grep the output bundle for `render(` — confirm there is a `;` (or a `,` separator) between `.render(...)` and the next statement.
-2. Publish.
-3. Open `https://app.churchmanagementsuite.org/` — landing page must render and console must be clean.
+- No database migration, no editable issuer settings UI, no logo upload — just the static issuer details on the document. Can be promoted to settings later if multiple issuers are ever needed.
