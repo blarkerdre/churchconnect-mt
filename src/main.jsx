@@ -11,11 +11,11 @@ createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <App />
   </React.StrictMode>,
-)
+);
 
 // Service worker registration with auto-update.
 // Disabled inside iframes and Lovable preview hosts to keep the editor preview clean.
-(() => {
+;(() => {
   if (!('serviceWorker' in navigator)) return;
 
   const isInIframe = (() => {
