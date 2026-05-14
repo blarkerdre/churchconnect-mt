@@ -696,6 +696,9 @@ function CourseRegistrationsView({ course }) {
   const { tenantId } = useTenantQuery();
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [sourceFilter, setSourceFilter] = useState("all");
+  const [sessionFilter, setSessionFilter] = useState("all");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
 
   const { data: registrations = [], isLoading } = useQuery({
