@@ -136,12 +136,18 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Resolve tenant
+    // Resolve tenant — must be supplied via slug or id
     const tenantId = await resolveTenantId(
       supabase,
       sanitize(body.tenant_id, 36),
       sanitize(body.tenant_slug, 100)
     );
+    if (!tenantId) {
+      return new Response(JSON.stringify({ error: "Missing tenant context. This registration link is invalid." }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     const firstName = sanitize(body.first_name, 100);
     const lastName = sanitize(body.last_name, 100);
