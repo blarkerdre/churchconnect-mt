@@ -1,19 +1,55 @@
-## Why no test message arrived
+## Problem
 
-The `send-birthday-messages` edge function filters recipients to only members whose `date_of_birth` matches today's UTC month/day (lines 120–126). The "Send test to me" button in Birthday Messages settings passes your `member_id`, but if today isn't your birthday the recipient list is empty — so `processed=0, sent=0, failed=0`, the toast shows "0 sent · 0 failed", and nothing is dispatched. The `birthday_message_log` table is also empty, confirming nothing ran.
+The live site at `app.churchmanagementsuite.org` is blank. Console shows:
+
+```
+TypeError: createRoot(...).render is not a function
+  at assets/index-BTghYNCR.js
+```
+
+Cause: `src/main.jsx` uses the legacy import:
+
+```js
+import ReactDOM from 'react-dom'
+ReactDOM.createRoot(document.getElementById('root')).render(...)
+```
+
+With React 18+, `createRoot` must be imported from `react-dom/client`. The default `react-dom` export's `createRoot` re-export is unreliable in production builds — combined with the Vite alias that pins `react-dom` but not `react-dom/client`, the two entry points can resolve differently and `createRoot()` returns an object whose `.render` is undefined.
 
 ## Fix
 
-In `supabase/functions/send-birthday-messages/index.ts`:
+### 1. `src/main.jsx` — use the correct entry point
 
-1. Treat the request as a **test send** when `member_id` is provided (already tracked as `isManual`).
-2. When `isManual` is true:
-   - Skip the today-only DOB filter so the recipient is always included.
-   - Skip the idempotency log insert (or use a `test-` prefixed `sent_on`/separate code path) so repeated tests aren't blocked by the unique constraint, and so they don't pollute real birthday history.
-   - Use a unique `idempotencyKey` per test (e.g. include a timestamp) so the email queue doesn't dedupe successive tests.
-3. Bypass member-not-found when the only member returned has no DOB (still send the test).
-4. Keep the cron path (no `member_id`) unchanged — real sends still require today = DOB.
+```js
+import { createRoot } from 'react-dom/client'
+// ...
+createRoot(document.getElementById('root')).render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>,
+)
+```
 
-## Result
+(Keep the SW registration block exactly as it is.)
 
-Clicking "Send test to me" will deliver the configured channels (in-app / email / SMS / WhatsApp) to your own member record any day, with no impact on the real birthday cron logic.
+### 2. `vite.config.js` — also alias `react-dom/client`
+
+Add to the `resolve.alias` block so React/ReactDOM stay a single instance:
+
+```js
+'react-dom/client': path.resolve(__dirname, './node_modules/react-dom/client'),
+```
+
+This matches the existing aliases for `react`, `react-dom`, and `react/jsx-runtime` and is consistent with the project's "Single React instance via Vite aliasing" rule.
+
+## Verification
+
+After publishing:
+1. Hard-refresh `https://app.churchmanagementsuite.org/` — landing page should render.
+2. Console should be clean (no `createRoot` TypeError).
+3. The auto-updating service worker we just shipped will then propagate to existing PWA installs as designed.
+
+## Out of scope
+
+- No SW changes needed — `public/sw.js` and the registration logic in `main.jsx` are correct; the SW just couldn't help because the React bootstrap itself was broken.
+- No dependency upgrades.
