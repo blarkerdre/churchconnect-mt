@@ -1509,6 +1509,7 @@ export default function Settings() {
         </TabsList>
 
         <TabsContent value="branding" className="space-y-6">
+          <StorageUsageCard />
           <ChurchBrandingSection />
           <FaviconOgImageSection />
           <DashboardBannerSettings />
