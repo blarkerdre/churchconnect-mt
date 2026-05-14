@@ -178,6 +178,32 @@ export default function ApiKeysSection() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <Dialog open={!!newlyCreatedKey} onOpenChange={(open) => !open && setNewlyCreatedKey(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-amber-500" /> Copy your API key now
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              This is the only time the full key will be shown. Store it securely — we keep only a hash on our servers.
+            </p>
+            <div className="font-mono text-xs break-all bg-muted p-3 rounded border">
+              {newlyCreatedKey}
+            </div>
+            <div className="flex gap-2">
+              <Button className="flex-1" onClick={() => copyKey(newlyCreatedKey)}>
+                <Copy className="h-4 w-4 mr-2" /> Copy
+              </Button>
+              <Button variant="outline" className="flex-1" onClick={() => setNewlyCreatedKey(null)}>
+                I've saved it
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }
