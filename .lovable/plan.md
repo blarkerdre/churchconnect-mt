@@ -1,35 +1,35 @@
-The repeated 500 is not caused by the hosted backend being down. The issue is in the function chain:
+## Goal
 
-- `send-testimony` calls `send-email-alert` with the service-role key.
-- `send-email-alert` expects a real signed-in user token and rejects the service-role token as `Invalid token`.
-- The payload is also incompatible: `send-email-alert` expects `subject` + `body` + audience targeting, while `send-testimony` sends `to` + `html`.
+Add **Session** and **Date** filters to the course Registrations view (Exam Management → Course → Registrations), alongside the existing Search and Source filters.
 
-Plan:
+## Where
 
-1. Update `supabase/functions/send-testimony/index.ts`
-   - Validate the caller’s auth token from the request.
-   - Confirm the caller belongs to the submitted tenant before saving/sending.
-   - Keep tenant-scoped database writes guarded by `tenant_id`.
+`src/pages/ExamManagement.jsx` → `CourseRegistrationsView` (lines ~694–856). No DB or backend changes; data already includes `session_id`, `exam_sessions(name)`, and `registered_at`.
 
-2. Remove the internal `send-email-alert` call
-   - Do not call another protected function for this one-recipient testimony email.
-   - Instead enqueue the testimony email directly into the existing transactional email queue using `enqueue_email`, matching the project’s current email infrastructure.
-   - Add `email_send_log` rows so delivery can still be tracked.
+## Changes
 
-3. Make errors explicit and non-misleading
-   - Return `400` for missing testimony recipient settings or invalid input.
-   - Return a clear `403` if the user is not allowed for the tenant.
-   - Only return `500` for actual server-side queue/database failures.
+1. **State**
+   - `sessionFilter` (default `"all"`)
+   - `dateFrom`, `dateTo` (ISO `yyyy-mm-dd`, default empty)
 
-4. Validate after implementation
-   - Deploy `send-testimony`.
-   - Test it with a sample authenticated payload.
-   - Confirm it no longer returns `send-email-alert failed: 401 {"error":"Invalid token"}` and instead returns success when the email is queued.
+2. **Session dropdown**
+   - Build options from distinct `{ id, name }` found in `registrations` (plus an "All Sessions" entry and a "— No session —" entry for legacy rows where `session_id` is null).
+   - Place next to the existing Source `Select`.
 
-<presentation-actions>
-  <presentation-open-history>View History</presentation-open-history>
-</presentation-actions>
+3. **Date range**
+   - Two compact `<Input type="date">` controls labelled "From" / "To" (keeps things simple on the 384px viewport, no extra deps).
+   - Filter on `registered_at` ≥ from (00:00) and ≤ to (23:59:59).
 
-<presentation-actions>
-<presentation-link url="https://docs.lovable.dev/tips-tricks/troubleshooting">Troubleshooting docs</presentation-link>
-</presentation-actions>
+4. **Filter logic** — extend `filteredRegistrations` to also apply session + date checks.
+
+5. **CSV export** — already iterates `filteredRegistrations`, so it inherits filters. Append the active filter summary to the filename (e.g. `BCC_registrations_NewCohort_2026-01-01_to_2026-05-14.csv`) when filters are set.
+
+6. **Empty-state copy** — update the "No registrations match…" message to mention filters generally (already generic enough — leave as-is).
+
+7. **Responsive layout** — wrap the toolbar (search + source + session + dates + CSV) in a `flex-wrap gap-2` container so it stacks cleanly on the 384px mobile viewport.
+
+## Out of scope
+
+- No changes to how registrations are created.
+- No changes to the database, RLS, or to `OpenSessionsPanel` / public registration pages.
+- No changes to certificate generation.

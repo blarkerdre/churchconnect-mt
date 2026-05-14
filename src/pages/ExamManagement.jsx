@@ -696,6 +696,9 @@ function CourseRegistrationsView({ course }) {
   const { tenantId } = useTenantQuery();
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [sourceFilter, setSourceFilter] = useState("all");
+  const [sessionFilter, setSessionFilter] = useState("all");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
 
   const { data: registrations = [], isLoading } = useQuery({
@@ -725,9 +728,27 @@ function CourseRegistrationsView({ course }) {
     onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
 
+  const sessionOptions = Array.from(
+    new Map(
+      registrations.map(r => [r.session_id || "__none__", { id: r.session_id || "__none__", name: r.exam_sessions?.name || "— No session —" }])
+    ).values()
+  );
+
+  const fromTs = dateFrom ? new Date(`${dateFrom}T00:00:00`).getTime() : null;
+  const toTs = dateTo ? new Date(`${dateTo}T23:59:59.999`).getTime() : null;
+
   const filteredRegistrations = registrations.filter(r => {
     if (sourceFilter === "member" && !r.members?.user_id) return false;
     if (sourceFilter === "public" && r.members?.user_id) return false;
+    if (sessionFilter !== "all") {
+      const sid = r.session_id || "__none__";
+      if (sid !== sessionFilter) return false;
+    }
+    if (fromTs || toTs) {
+      const ts = new Date(r.registered_at).getTime();
+      if (fromTs && ts < fromTs) return false;
+      if (toTs && ts > toTs) return false;
+    }
     if (searchTerm) {
       const s = searchTerm.toLowerCase();
       const name = `${r.members?.first_name || ""} ${r.members?.last_name || ""}`.toLowerCase();
@@ -751,7 +772,14 @@ function CourseRegistrationsView({ course }) {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `${course.name}_registrations.csv`;
+    const parts = [course.name, "registrations"];
+    if (sessionFilter !== "all") {
+      const sName = sessionOptions.find(o => o.id === sessionFilter)?.name || "session";
+      parts.push(sName.replace(/[^a-z0-9]+/gi, "_"));
+    }
+    if (dateFrom) parts.push(`from-${dateFrom}`);
+    if (dateTo) parts.push(`to-${dateTo}`);
+    a.download = `${parts.join("_")}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -759,12 +787,12 @@ function CourseRegistrationsView({ course }) {
   return (
     <Card className="border-0 shadow-sm">
       <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <CardTitle className="text-base font-display flex items-center gap-2">
             <Users className="h-4 w-4 text-primary" /> Registrations — {course.name}
             <Badge variant="secondary" className="ml-2">{filteredRegistrations.length}</Badge>
           </CardTitle>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <div className="relative">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
               <Input
@@ -784,6 +812,45 @@ function CourseRegistrationsView({ course }) {
                 <SelectItem value="public">QR / Public</SelectItem>
               </SelectContent>
             </Select>
+            <Select value={sessionFilter} onValueChange={setSessionFilter}>
+              <SelectTrigger className="w-[160px] h-8 text-xs">
+                <SelectValue placeholder="All Sessions" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Sessions</SelectItem>
+                {sessionOptions.map(o => (
+                  <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <div className="flex items-center gap-1">
+              <label className="text-[11px] text-muted-foreground">From</label>
+              <Input
+                type="date"
+                value={dateFrom}
+                onChange={e => setDateFrom(e.target.value)}
+                className="h-8 w-[140px] text-xs"
+              />
+            </div>
+            <div className="flex items-center gap-1">
+              <label className="text-[11px] text-muted-foreground">To</label>
+              <Input
+                type="date"
+                value={dateTo}
+                onChange={e => setDateTo(e.target.value)}
+                className="h-8 w-[140px] text-xs"
+              />
+            </div>
+            {(sessionFilter !== "all" || dateFrom || dateTo) && (
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-8 text-xs"
+                onClick={() => { setSessionFilter("all"); setDateFrom(""); setDateTo(""); }}
+              >
+                Clear
+              </Button>
+            )}
             {filteredRegistrations.length > 0 && (
               <Button size="sm" variant="outline" className="gap-1.5" onClick={downloadCSV}>
                 <Download className="h-3.5 w-3.5" /> Download CSV
