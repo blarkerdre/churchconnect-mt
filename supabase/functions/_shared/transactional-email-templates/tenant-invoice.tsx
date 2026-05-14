@@ -258,3 +258,10 @@ const button = {
 const hr = { borderColor: '#e8e0d4', margin: '20px 0' }
 const hrLight = { borderColor: '#e8e0d4', margin: '12px 0' }
 const footer = { fontSize: '11px', color: '#999999', lineHeight: '1.4', margin: '0' }
+const paymentBox = {
+  backgroundColor: '#f6f8fb',
+  borderRadius: '6px',
+  padding: '12px 16px',
+  border: '1px solid #e0e6ef',
+  margin: '16px 0',
+}
