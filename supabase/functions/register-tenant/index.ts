@@ -125,9 +125,10 @@ Deno.serve(async (req) => {
         }
         userId = existingUser.id;
       } else {
+        console.error("register-tenant: createUser failed:", userError);
         return new Response(
-          JSON.stringify({ error: userError.message }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          JSON.stringify({ error: "An unexpected error occurred" }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
     } else {
