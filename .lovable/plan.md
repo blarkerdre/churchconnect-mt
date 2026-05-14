@@ -1,59 +1,54 @@
+# Sanitize Raw Error Messages in Edge Functions
 
-# Security Hardening Plan
+The previous round patched 6 admin-side edge functions. The scanner has now flagged 7 more functions still returning raw `err.message` to callers. This plan replaces those with generic error strings while preserving full server-side logging.
 
-Addresses the open security findings. One finding (register-tenant rate limiting) is intentionally skipped — the platform does not yet have rate-limiting primitives, and the policy is to defer ad-hoc implementations.
+## Scope
 
-## 1. Followup scheduled messages — recipient PII exposure (error)
+**Public-reachable (highest risk):**
+- `register-tenant` — lines 129 & 177 leak auth/DB errors to unauthenticated callers
+- `grade-exam` — line 244 leaks DB errors to any authenticated user
+- `send-testimony` — line 206 leaks errors to any member
 
-**Problem:** `followup_scheduled_messages` SELECT policy lets any creator read `recipient_phone` / `recipient_email`.
+**Authenticated leader/admin callers:**
+- `make-call` — line 275
+- `send-sms` — line 461
+- `invite-to-tenant` — line 259
 
-**Fix (migration):**
-- Drop the broad "Assigned users can manage own followup messages" SELECT policy.
-- Replace with split policies:
-  - SELECT for admins and unit leaders (tenant-scoped) — full row.
-  - SELECT for `created_by = auth.uid()` — keep, but expose only via a SECURITY DEFINER view `followup_scheduled_messages_safe` that omits `recipient_phone` / `recipient_email`. Update the followups UI to read the safe view for the "my scheduled messages" listing.
-- INSERT/UPDATE/DELETE policies for the creator remain unchanged.
+**Webhook caller:**
+- `stripe-subscription-webhook` — line 310 (could expose Stripe API error details)
 
-## 2. `tenant-pwa-icons` bucket — any member can write/delete (error)
+## Approach
 
-**Fix (migration):** Drop existing INSERT/UPDATE/DELETE storage policies on `tenant-pwa-icons` and recreate them using `is_admin(auth.uid(), ((storage.foldername(name))[1])::uuid)`, mirroring `tenant-branding`.
+For each function, in the outer `catch` (and the explicit 4xx leak paths in `register-tenant`):
 
-## 3. Unscoped `is_admin(uuid)` overload (error)
+1. Keep `console.error("<fn> error:", err)` (or add it where missing) so the full error stays in logs.
+2. Replace the response body's `err.message` / `error.message` with a generic string: `"An unexpected error occurred"`.
+3. Preserve intentional, safe 4xx messages (e.g. validation errors like "Email and password required", "Invalid password", "tenant_id is required"). These are not changed.
 
-**Fix (migration):**
-- Audit all policies/functions referencing the single-arg `is_admin(uuid)`. Rewrite each to `is_admin(auth.uid(), tenant_id)` against the row's `tenant_id`.
-- Then `DROP FUNCTION public.is_admin(uuid)` to eliminate the footgun.
-- If any caller cannot resolve a tenant_id (e.g. cross-tenant super-admin checks), switch them to `has_role(auth.uid(), 'super_admin')` explicitly.
+### Per-function specifics
 
-## 4. Raw `err.message` in edge functions (warn)
+- **register-tenant**
+  - Line 129 (user creation failure that's not "already registered"): return generic 500 instead of `userError.message`. The "already registered" branch keeps its specific 409 message.
+  - Line 177 (tenant creation failure): return generic 500 instead of `Tenant creation failed: ${tenantError.message}`.
+  - Add `console.error` for both.
 
-**Fix (code):** In `admin-toggle-user`, `admin-delete-user`, `admin-create-user`, `archive-tenant`, `admin-list-banned-users`, `manage-tenant-subscription`, replace 500-path `err.message` returns with `console.error(...)` plus a generic `{ error: "An unexpected error occurred" }`. Preserve user-facing 400/403 messages that are intentional.
+- **grade-exam** (line 244): generic message in 500 response; keep `console.error("grade-exam error:", err)`.
 
-## 5. `public-wofbi-register` hardcoded tenant fallback (warn)
+- **send-testimony** (line 206): generic message; keep server-side log.
 
-**Fix (code):** Remove `DEFAULT_TENANT_ID`. Have `resolveTenantId` return `null` when neither id nor slug resolves; respond with HTTP 400 `"Missing tenant context"`, mirroring `public-register`.
+- **make-call** (line 275): generic message; keep `console.error`. Inner Twilio-error rethrows still bubble to the catch.
 
-## 6. `wsf_attendance_reports` over-broad SELECT (warn)
+- **send-sms** (line 461): generic message; keep `console.error`. The per-recipient `error_message` written to `sms_log` (line 434) is internal storage, not a response — left as-is.
 
-**Fix (migration):** Drop "Authenticated can view wsf reports" and replace with:
-- Admins (tenant-scoped) — all rows.
-- Unit leaders for the WSF unit — all rows.
-- WSF centre leader — only rows where `wsf_centre_id` matches a centre they lead (`is_home_cell_leader_for_centre`).
+- **invite-to-tenant** (line 259): generic message; add/keep `console.error`.
 
-## 7. `church-documents` bucket public flag verification (warn)
+- **stripe-subscription-webhook** (line 310): generic message; keep `console.error("[stripe-webhook] Error:", error.message)`. Webhook still returns 500 so Stripe will retry.
 
-**Fix (migration):** Set `storage.buckets.public = false` for `church-documents`. Confirm the app already uses signed URLs for certificates (it does — `useSignedMemberPhoto` pattern is the precedent); otherwise add signed-URL retrieval where direct public URLs are used. Update the security memory accepted-risk note accordingly.
+## Verification
 
-## 8. `exam_titles` anon cross-tenant exposure (warn)
+After edits:
+1. Confirm each function still compiles (deploy will validate).
+2. Mark `edge_fn_err_leak` as fixed via `security--manage_security_finding` with an explanation listing the 7 functions patched.
+3. Update `@security-memory` to reaffirm the "no raw error messages in HTTP responses" invariant now that all known offenders are clean.
 
-**Fix (migration):** Drop the unscoped "Anon can view active courses with open registration" policy. Replace with a SECURITY DEFINER RPC `get_public_courses_for_tenant(_tenant_id uuid)` that returns active+open courses for a single tenant, and update `PublicWoFBIRegistration.jsx` to call it. Anonymous direct table reads on `exam_titles` are then removed.
-
-## Skipped
-
-- **`register_tenant_ratelimit`** — Platform-level rate limiting primitives are not available; per current Lovable policy, do not add ad-hoc rate limiting. Will be revisited when infrastructure is in place.
-
-## Technical Notes
-
-- All new policies and functions follow the existing pattern: `SECURITY DEFINER`, explicit `SET search_path = public`, tenant-scoped checks via `is_admin(uid, tenant_id)` / role helpers.
-- After migrations, mark each finding fixed via `security--manage_security_finding` with the relevant explanation, and update `security--update_memory` to reflect the new posture (private `church-documents` bucket, removal of `is_admin(uuid)` overload, scoped exam_titles access, deferred rate limiting).
-- No frontend behavior changes beyond: followups "my messages" view reads safe view; public WoFBI registration must include `tenant_slug` (already does in normal flows).
+No DB migrations, no frontend changes, no behavior changes for happy paths.
