@@ -256,7 +256,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Insert completion record
+    // Insert completion record (tenant-scoped)
     const { data: completion, error: insertErr } = await supabase
       .from("training_completions")
       .insert({
@@ -267,12 +267,14 @@ Deno.serve(async (req) => {
         certificate_url: filePath,
         issued_by: userId,
         notes: notes || null,
+        tenant_id,
       })
       .select()
       .single();
 
     if (insertErr) {
-      return new Response(JSON.stringify({ error: insertErr.message }), {
+      console.error("issue-certificate insert error:", insertErr);
+      return new Response(JSON.stringify({ error: "An unexpected error occurred" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
