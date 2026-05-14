@@ -20,6 +20,19 @@ import {
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { useSignedMemberPhoto } from "@/hooks/useSignedMemberPhoto";
+
+function SignedJoinRequestAvatar({ member, initials }) {
+  const { url } = useSignedMemberPhoto(member?.photo_url);
+  return (
+    <Avatar className="h-10 w-10 shrink-0">
+      <AvatarImage src={url || ""} alt={`${member?.first_name || ""} ${member?.last_name || ""}`} />
+      <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">
+        {initials || "?"}
+      </AvatarFallback>
+    </Avatar>
+  );
+}
 
 export default function PendingJoinRequests({ filter = "all" }) {
   const { data: requests = [], isLoading } = usePendingJoinRequests();

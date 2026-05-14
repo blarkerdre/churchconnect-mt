@@ -226,13 +226,16 @@ export default function SignPostDetailPanel({ open, onClose, referralId, onCreat
               {/* Member contact card */}
               <div className="rounded-xl border border-border bg-card p-4 space-y-3">
                 <div className="flex items-center gap-3">
-                  {member?.photo_url ? (
-                    <img src={member.photo_url} alt={memberName} className="h-12 w-12 rounded-full object-cover" />
-                  ) : (
-                    <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold">
-                      {initials}
-                    </div>
-                  )}
+                  <MemberAvatar
+                    member={member}
+                    alt={memberName}
+                    className="h-12 w-12 rounded-full object-cover"
+                    fallback={
+                      <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold">
+                        {initials}
+                      </div>
+                    }
+                  />
                   <div className="min-w-0">
                     <p className="font-semibold text-sm text-foreground truncate">{memberName}</p>
                     <p className="text-[11px] text-muted-foreground">
