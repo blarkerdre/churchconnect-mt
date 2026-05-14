@@ -132,6 +132,16 @@ export default function TenantAnalyticsTab({ tenants }) {
                 </div>
               )}
 
+              {t.storage_limit_mb > 0 && (
+                <div className="space-y-1">
+                  <div className="flex justify-between text-xs text-muted-foreground">
+                    <span>Storage usage</span>
+                    <span>{stats.storageMb?.toFixed(1) ?? 0} / {t.storage_limit_mb} MB</span>
+                  </div>
+                  <Progress value={Math.min(Math.round(((stats.storageMb || 0) / t.storage_limit_mb) * 100), 100)} className="h-2" />
+                </div>
+              )}
+
               <div className="flex gap-2 text-xs text-muted-foreground flex-wrap">
                 <span>{stats.users} users</span>
                 <span>•</span>
