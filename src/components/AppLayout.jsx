@@ -1,4 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import InstallAppDialog, { shouldAutoOpenInstall } from "@/components/pwa/InstallAppDialog";
+import { useInstallPrompt } from "@/hooks/useInstallPrompt";
+import { Download } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { useUnitMembership } from "@/hooks/useUnitMembership";
@@ -62,6 +65,8 @@ export default function Layout({ children }) {
   const [switchLoading, setSwitchLoading] = useState(false);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [signpostInboxOpen, setSignpostInboxOpen] = useState(false);
+  const [installOpen, setInstallOpen] = useState(false);
+  const { isAvailable: installAvailable, isInstalled, canPrompt, isIOSSafari } = useInstallPrompt();
   const location = useLocation();
   const navigate = useNavigate();
   const { signOut, user, profile, isAdmin, isUnitLeader, isWSFLeader, roles, leaderUnits, isTenantOwner, isTenantAdmin } = useAuth();
@@ -168,6 +173,16 @@ export default function Layout({ children }) {
       setSwitchLoading(false);
     }
   };
+
+  // Auto-open install dialog once per tenant if installable & not dismissed recently
+  useEffect(() => {
+    if (isInstalled) return;
+    if (!user || !tenantId) return;
+    if (!canPrompt && !isIOSSafari) return;
+    if (!shouldAutoOpenInstall(tenantId)) return;
+    const t = setTimeout(() => setInstallOpen(true), 3000);
+    return () => clearTimeout(t);
+  }, [user, tenantId, canPrompt, isIOSSafari, isInstalled]);
 
   // Payment gate: suspended tenants are blocked (super admins bypass)
   if (subscriptionStatus === "suspended" && !isSuperAdmin) {
@@ -312,6 +327,16 @@ export default function Layout({ children }) {
               <p className="text-[10px] text-sidebar-foreground/40">{getRoleTitle()}</p>
             </div>
           )}
+          {installAvailable && !isInstalled && (
+            <button
+              onClick={() => { setInstallOpen(true); setSidebarOpen(false); }}
+              title={collapsed ? "Install app" : undefined}
+              className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium bg-primary/10 text-primary hover:bg-primary/20 transition-colors ${collapsed ? "justify-center" : ""}`}
+            >
+              <Download className="h-4 w-4 shrink-0" />
+              {!collapsed && "Install app"}
+            </button>
+          )}
           <button
             onClick={() => { setFeedbackOpen(true); setSidebarOpen(false); }}
             title={collapsed ? "Feedback" : undefined}
@@ -430,6 +455,7 @@ export default function Layout({ children }) {
       </Dialog>
       <AppFeedbackDialog open={feedbackOpen} onOpenChange={setFeedbackOpen} />
       <SignPostInboxDialog open={signpostInboxOpen} onOpenChange={setSignpostInboxOpen} />
+      <InstallAppDialog open={installOpen} onOpenChange={setInstallOpen} />
     </div>
   );
 }

@@ -1,48 +1,36 @@
 ## Goal
-Make installed PWAs use the tenant logo as the app icon and the tenant name as the app name, on iOS and Android.
+Prompt logged-in users to install the PWA so they get the tenant-branded app on their home screen with one tap (Android/Chrome) or clear instructions (iOS).
 
-## Root cause recap
-The current dynamic manifest is a `blob:` URL with `data:` icons embedded. iOS/Android install pipelines can't fetch blob URLs and reject inline data icons, so they fall back to `/manifest.json` (default icon + generic name).
+## Components
 
-## Approach
-Serve a real, fetchable manifest from a Supabase Edge Function, with real PNG icons stored in a public bucket. Name the manifest after the tenant.
+### 1. `useInstallPrompt` hook (`src/hooks/useInstallPrompt.jsx`)
+- Captures `beforeinstallprompt` (Chrome/Edge/Android) into a ref.
+- Detects platform: iOS Safari, Android Chrome, desktop, other.
+- Detects already-installed (`display-mode: standalone` or `navigator.standalone`).
+- Exposes: `{ canPrompt, isIOS, isInstalled, promptInstall, dismiss }`.
+- `promptInstall()` calls the saved event's `prompt()` (must be from a user click).
 
-## Steps
+### 2. `InstallAppDialog` (`src/components/pwa/InstallAppDialog.jsx`)
+- Branded modal using `TenantDialogHeader` showing tenant logo + "Install {tenant name}".
+- **Android/Chrome**: primary "Install" button → calls `promptInstall()`. On accept → close + toast.
+- **iOS**: shows step-by-step instructions with Share icon → "Add to Home Screen" (no button can trigger it).
+- **Desktop unsupported browsers**: short "Open this site on your phone to install" message.
+- "Maybe later" button stores a dismissal timestamp in `localStorage` (key includes `tenant_id`).
 
-### 1. Storage bucket for tenant PWA icons
-- Create public bucket `tenant-pwa-icons` (migration).
-- Public read; writes restricted to tenant admins/owners via RLS using `user_has_tenant_access`.
-- Path convention: `{tenant_id}/icon-192.png`, `{tenant_id}/icon-512.png`, `{tenant_id}/apple-touch-icon.png`.
+### 3. Auto-trigger logic (in `AppLayout`)
+- On mount for an authenticated member, if:
+  - not already installed,
+  - not dismissed within last 7 days,
+  - tenant is resolved (so manifest has the branded name),
+  - either `beforeinstallprompt` fired OR platform is iOS Safari,
+- → open the dialog after a short delay (3s) on first navigation.
+- Persistent install button in the user dropdown / sidebar footer ("Install app") so users can trigger it any time.
 
-### 2. Icon generation (client-side, on tenant load)
-- In `TenantThemeProvider`, when a tenant has a `logo_url` but no cached PWA icons:
-  - Render 192/512/180 PNGs on canvas (white bg, padded, centered) — reuse existing `renderSquareIcon`.
-  - Upload them to `tenant-pwa-icons/{tenant_id}/...` (overwrite).
-  - Store a hash/version of the source logo in `tenants.settings.pwa_icons_version` so we only re-render when the logo changes.
-- Skip if `settings.pwa_icon_url` is already set explicitly (admin override).
-
-### 3. Edge function `get-manifest`
-- New function `supabase/functions/get-manifest/index.ts`, `verify_jwt = false`.
-- Query: `?tenant={slug}` (or `?tenantId=`).
-- Looks up tenant → returns JSON with:
-  - `name`: tenant name (full)
-  - `short_name`: tenant name truncated to 12 chars
-  - `id` / `start_url` / `scope`: `/t/{slug}`
-  - `display: "standalone"`, `theme_color`: tenant primary color, `background_color: "#ffffff"`
-  - `icons`: public URLs from `tenant-pwa-icons` bucket (192, 512, with `purpose: "any maskable"`), correct MIME from extension; falls back to `/icon-192.png`, `/icon-512.png` when no tenant icons exist.
-- Response headers: `Content-Type: application/manifest+json`, `Access-Control-Allow-Origin: *`, short `Cache-Control`.
-
-### 4. Wire manifest link
-- In `TenantThemeProvider`, replace the blob-manifest logic:
-  - Set `<link rel="manifest" href="https://{project}.functions.supabase.co/get-manifest?tenant={slug}">` (use `import.meta.env.VITE_SUPABASE_URL`).
-  - Set `<link rel="apple-touch-icon" href="{public 180px URL}">` (real URL, not data:).
-  - Set `<meta name="apple-mobile-web-app-title" content="{tenant name}">` so iOS home-screen label matches the tenant.
-- Remove the old blob URL + cleanup race; keep favicon logic untouched.
-
-### 5. CORS on storage
-- Bucket already public — Supabase serves `Access-Control-Allow-Origin: *` for public objects, so no extra config needed.
+### 4. Settings opt-out (light)
+- Sidebar/profile menu entry "Install app" only shown when installable or iOS, hidden once installed.
 
 ## Notes
-- Users must remove + re-add the home-screen icon to see the new name/icon (iOS/Android cache install-time manifest fields — documented behavior, not a bug).
-- Admin-uploaded `pwa_icon_url` / `og_image_url` overrides remain respected.
-- No changes to `public/manifest.json` (used as the no-tenant fallback).
+- Cannot truly auto-install — `prompt()` requires a user click. We auto-open the dialog; the user clicks Install.
+- iOS will never have a programmatic install — instructions only.
+- Tenant name + icon already wired through the manifest from previous step, so the install dialog (Chrome) shows the right branding.
+- No backend changes.
