@@ -10,6 +10,25 @@ import SignPostedToMeWidget from "@/components/dashboard/SignPostedToMeWidget";
 import { BirthdayBanner, UpcomingBirthdayItem } from "@/components/dashboard/BirthdayCelebration";
 import { useTenant } from "@/contexts/TenantContext";
 import ImageLightbox from "@/components/ui/ImageLightbox";
+import { useSignedMemberPhoto } from "@/hooks/useSignedMemberPhoto";
+
+function SignedMemberLightboxAvatar({ member }) {
+  const { url } = useSignedMemberPhoto(member?.photo_url);
+  if (!url) {
+    return (
+      <div className="h-14 w-14 rounded-2xl bg-accent flex items-center justify-center text-xl font-bold text-accent-foreground shrink-0 overflow-hidden">
+        {`${member?.first_name?.[0] || ""}${member?.last_name?.[0] || ""}`}
+      </div>
+    );
+  }
+  return (
+    <ImageLightbox src={url} alt={`${member.first_name} ${member.last_name}`}>
+      <div className="h-14 w-14 rounded-2xl bg-accent flex items-center justify-center text-xl font-bold text-accent-foreground shrink-0 overflow-hidden cursor-pointer hover:opacity-80 transition-opacity">
+        <img src={url} alt="" className="h-full w-full object-cover" />
+      </div>
+    </ImageLightbox>
+  );
+}
 import DashboardBanner from "@/components/dashboard/DashboardBanner";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -67,11 +86,7 @@ export default function MemberDashboard({ currentUser, myMember }) {
       <Card className="border-0 shadow-sm bg-gradient-to-r from-primary to-primary/70 text-primary-foreground overflow-hidden">
         <CardContent className="p-6 flex items-center gap-4">
           {myMember?.photo_url ? (
-            <ImageLightbox src={myMember.photo_url} alt={`${myMember.first_name} ${myMember.last_name}`}>
-              <div className="h-14 w-14 rounded-2xl bg-accent flex items-center justify-center text-xl font-bold text-accent-foreground shrink-0 overflow-hidden cursor-pointer hover:opacity-80 transition-opacity">
-                <img src={myMember.photo_url} alt="" className="h-full w-full object-cover" />
-              </div>
-            </ImageLightbox>
+            <SignedMemberLightboxAvatar member={myMember} />
           ) : (
             <div className="h-14 w-14 rounded-2xl bg-accent flex items-center justify-center text-xl font-bold text-accent-foreground shrink-0 overflow-hidden">
               {myMember ? `${myMember.first_name?.[0]}${myMember.last_name?.[0]}` : currentUser?.full_name?.[0] || "?"}

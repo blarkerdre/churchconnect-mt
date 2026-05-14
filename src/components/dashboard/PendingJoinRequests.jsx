@@ -20,6 +20,19 @@ import {
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { useSignedMemberPhoto } from "@/hooks/useSignedMemberPhoto";
+
+function SignedJoinRequestAvatar({ member, initials }) {
+  const { url } = useSignedMemberPhoto(member?.photo_url);
+  return (
+    <Avatar className="h-10 w-10 shrink-0">
+      <AvatarImage src={url || ""} alt={`${member?.first_name || ""} ${member?.last_name || ""}`} />
+      <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">
+        {initials || "?"}
+      </AvatarFallback>
+    </Avatar>
+  );
+}
 
 export default function PendingJoinRequests({ filter = "all" }) {
   const { data: requests = [], isLoading } = usePendingJoinRequests();
@@ -84,12 +97,8 @@ export default function PendingJoinRequests({ filter = "all" }) {
                 className="flex flex-col sm:flex-row sm:items-center gap-3 p-3 rounded-xl border border-border bg-muted/30"
               >
                 <div className="flex items-center gap-3 flex-1 min-w-0">
-                  <Avatar className="h-10 w-10 shrink-0">
-                    <AvatarImage src={m.photo_url || ""} alt={`${m.first_name || ""} ${m.last_name || ""}`} />
-                    <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">
-                      {initials || "?"}
-                    </AvatarFallback>
-                  </Avatar>
+                  <SignedJoinRequestAvatar member={m} initials={initials} />
+
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium text-foreground truncate">
                       {m.first_name} {m.last_name}
