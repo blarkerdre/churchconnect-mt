@@ -1,5 +1,8 @@
 import { useEffect } from "react";
 import { useTenant } from "@/contexts/TenantContext";
+import { supabase } from "@/integrations/supabase/client";
+
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 
 /**
  * Converts a hex color (#rrggbb) to HSL values string "H S% L%".
