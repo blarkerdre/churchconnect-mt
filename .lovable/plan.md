@@ -1,44 +1,70 @@
-## Problem
+## Findings & disposition
 
-`supabase/functions/register-tenant/index.ts` is a public, unauthenticated edge function (used by `/onboard` for self-serve church signup). Two real risks:
+### 1. `is_admin_no_tenant_scope` — **fix** (real cross-tenant escalation)
 
-1. **Privilege escalation** — it inserts `user_roles { role: 'super_admin', tenant_id }`. Combined with `is_admin()`'s check `role IN ('admin','super_admin')` (no tenant filter for `super_admin`), this gives every newly-registered tenant owner platform-wide super-admin powers.
-2. **Abuse / spam tenant creation** — anyone can spin up unlimited tenants + auth users with no throttling or bot protection.
+Three policies use the unscoped overload. Rewrite each to use `is_admin(auth.uid(), <tenant_id>)`:
 
-## Plan
+- `public.user_roles` → policy **"Admins can view all roles"** (SELECT)
+- `public.wsf_zones` → policy **"Admins can manage wsf zones"** (ALL)
+- `storage.objects` → policy **"Admins upload book covers"** (INSERT)
 
-Keep the endpoint public (self-serve onboarding must work) but harden it.
+For `wsf_zones` and `user_roles` the table already has a `tenant_id` column — swap `is_admin(auth.uid())` for `is_admin(auth.uid(), tenant_id)`. The redundant `user_has_tenant_access(tenant_id)` becomes unnecessary (the scoped `is_admin` already verifies tenant membership) but I'll leave it for defence in depth.
 
-### 1. Stop granting platform super_admin
-In `register-tenant/index.ts` step 5, change the `user_roles` insert from `role: "super_admin"` to `role: "admin"` (tenant-scoped). The `tenant_memberships` row already gives them `owner`, and `is_admin(user, tenant)` recognises both. They keep full control of *their own* tenant, but no cross-tenant powers.
+For the storage `book-covers` upload: book covers are stored under `${tenantId}/...` (matches the existing **"Tenant-scoped update/delete book-covers"** policies). Rewrite as:
 
-### 2. Add a one-time migration to demote any existing self-registered super_admins
-Migration: for every `user_roles` row where `role='super_admin' AND tenant_id IS NOT NULL`, downgrade to `'admin'`. (True platform super-admins have `tenant_id IS NULL` and are unaffected.)
+```sql
+(bucket_id = 'book-covers'
+ AND (storage.foldername(name))[1] IS NOT NULL
+ AND is_admin(auth.uid(), ((storage.foldername(name))[1])::uuid))
+```
 
-### 3. Add abuse protection on the public endpoint
-- **CAPTCHA**: require a Cloudflare Turnstile token in the request body (`captcha_token`). Verify server-side against Turnstile's siteverify endpoint using a `TURNSTILE_SECRET_KEY` secret. Reject with 400 if missing/invalid.
-- **Rate limit**: simple table `public_signup_attempts (ip text, created_at timestamptz default now())`; reject if >3 attempts from same IP in last hour. IP read from `cf-connecting-ip` / `x-forwarded-for`.
-- **Input hardening**: enforce `slug` length 3–40, `church_name` length 2–120, `admin_password` ≥ 10 chars, `admin_email` regex, reject reserved slugs (`admin`, `api`, `auth`, `app`, `www`, `t`, `onboard`, `landing`).
+Migration: `DROP POLICY` + `CREATE POLICY` for each.
 
-### 4. Frontend (`src/pages/Onboard.jsx`)
-- Add Turnstile widget; pass `captcha_token` in the invoke body.
-- Requires `VITE_TURNSTILE_SITE_KEY` (publishable, fine in code).
+### 2. `profile_photos_bucket_cross_tenant_read` — **partial fix + flag**
 
-### 5. Secrets needed
-- `TURNSTILE_SECRET_KEY` — request via `add_secret` after user approves plan. (Free Cloudflare Turnstile key.)
+The current SELECT policy lets any tenant member read every file under that tenant's folder prefix. **Fix the policy** (tighten to: own folder, OR tenant admin/leader of the tenant prefix), so the metadata/list API stops leaking other members' personal photos.
 
-### Out of scope
-- Existing public flows (`public-register`, `public-wofbi-register`) — they're tenant-scoped, not creating tenants.
-- Changing `is_admin()` semantics for super_admin (a separate, riskier refactor).
+New `storage.objects` SELECT policy for `profile-photos`:
+```sql
+bucket_id = 'profile-photos'
+AND (
+  (storage.foldername(name))[1] = auth.uid()::text                             -- own user folder
+  OR (
+    (storage.foldername(name))[1] ~ '^[0-9a-fA-F-]{36}$'                       -- tenant_id folder (logos, OG images)
+    AND (
+      is_admin(auth.uid(), ((storage.foldername(name))[1])::uuid)
+      OR has_role(auth.uid(), 'unit_leader'::app_role, ((storage.foldername(name))[1])::uuid)
+    )
+  )
+)
+```
 
-### Verification
-- Anonymous POST without captcha → 400.
-- Valid signup → tenant created, user is `owner` + tenant-scoped `admin`, NOT `super_admin`. Confirm via `select role, tenant_id from user_roles where user_id = ...`.
-- 4th rapid signup from same IP → 429.
-- Existing platform super_admins (`tenant_id IS NULL`) still work.
+**Important caveat I'll surface to the user (no code change in this task):** the `profile-photos` bucket is currently `public = true`, so anyone holding a `getPublicUrl()` link can still read the file regardless of RLS. The directory and dashboard code uses `getPublicUrl` for member photos, which is why broad read worked. To fully close the GDPR concern we'd need a follow-up: flip the bucket private, switch every `getPublicUrl` call (Members table, BirthdayCelebration, MemberDashboard, PendingJoinRequests, WSFLeaderDashboard, etc.) to short-lived `createSignedUrl` requests, and add a tenant-membership read policy. That's a separate, bigger refactor — I'll list affected files and recommend it but will not do it here unless you ask.
 
-### Files
-- edit `supabase/functions/register-tenant/index.ts`
-- new migration: demote rogue super_admins + create `public_signup_attempts` table with RLS deny-all (function uses service role)
-- edit `src/pages/Onboard.jsx` (Turnstile widget)
-- mark security finding fixed
+### 3. `exam_questions_member_read_blocked` — **ignore (false positive)**
+
+Members never read `public.exam_questions` directly. `TakeExamDialog.jsx` calls the SECURITY DEFINER RPC `get_exam_questions_safe(_subject_id, _training_type)` which returns the questions without `correct_answer`. Admin/leader management goes through `get_exam_questions_with_answers` (also SECURITY DEFINER, role-gated). Granting members direct table SELECT would *re-introduce* an answer-leak risk because the column is on the same table.
+
+I'll mark this finding as ignored with that explanation and update the security memory.
+
+## Files / actions
+
+- New migration:
+  - drop + recreate the 3 unscoped `is_admin` policies (tenant-scoped)
+  - drop + recreate the `profile-photos` SELECT policy
+- `manage_security_finding`:
+  - mark `is_admin_no_tenant_scope` fixed
+  - mark `profile_photos_bucket_cross_tenant_read` fixed (with caveat)
+  - ignore `exam_questions_member_read_blocked` (RPC-only access pattern)
+- `update_memory` — record: book-covers/profile-photos use tenant_id folder prefix; exam questions are read via SECURITY DEFINER RPCs; if anyone changes that, restore proper RLS.
+
+## Verification
+
+- Re-run policy query → no policy expression contains `is_admin(auth.uid())` (single-arg).
+- Sign in as Tenant A admin, attempt SELECT on a Tenant B `wsf_zones` row → blocked.
+- As Member X in Tenant A, list `profile-photos/<member-Y-uuid>/...` via SDK → empty (own folder still works).
+- Member takes an exam via `TakeExamDialog` → questions still load (RPC unchanged).
+
+## Out of scope (recommend as follow-up)
+
+- Make `profile-photos` bucket private and convert all `getPublicUrl` member-photo reads to `createSignedUrl`. Files affected: `MyProfile.jsx`, `Settings.jsx`, `Members*.jsx`, `BirthdayCelebration.jsx`, `MemberDashboard.jsx`, `PendingJoinRequests.jsx`, `WSFLeaderDashboard.jsx`, plus any avatar usage in feeds.
