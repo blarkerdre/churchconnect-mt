@@ -138,8 +138,8 @@ serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {
-    console.error("[create-tenant-checkout] Error:", error.message);
-    return new Response(JSON.stringify({ error: error.message }), {
+    console.error("[create-tenant-checkout] Error:", error);
+    return new Response(JSON.stringify({ error: "An unexpected error occurred" }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 400,
     });

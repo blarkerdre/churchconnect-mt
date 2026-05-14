@@ -42,11 +42,22 @@ Deno.serve(async (req) => {
     // Use service role for DB operations
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Check caller is admin or unit_leader
-    const { data: isAdminResult } = await supabase.rpc("is_admin", { _user_id: userId });
+    const body = await req.json();
+    const { member_id, training_type, completion_date, notes, tenant_id } = body;
+
+    if (!member_id || !training_type || !tenant_id) {
+      return new Response(
+        JSON.stringify({ error: "member_id, training_type and tenant_id are required" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Tenant-scoped role checks: caller must be admin OR unit_leader within this tenant
+    const { data: isAdminResult } = await supabase.rpc("is_admin", { _user_id: userId, _tenant_id: tenant_id });
     const { data: isLeaderResult } = await supabase.rpc("has_role", {
       _user_id: userId,
       _role: "unit_leader",
+      _tenant_id: tenant_id,
     });
     if (!isAdminResult && !isLeaderResult) {
       return new Response(JSON.stringify({ error: "Forbidden" }), {
@@ -55,22 +66,13 @@ Deno.serve(async (req) => {
       });
     }
 
-    const body = await req.json();
-    const { member_id, training_type, completion_date, notes, tenant_id } = body;
-
-    if (!member_id || !training_type) {
-      return new Response(
-        JSON.stringify({ error: "member_id and training_type are required" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // Check duplicate
+    // Check duplicate (tenant-scoped)
     const { data: existing } = await supabase
       .from("training_completions")
       .select("id")
       .eq("member_id", member_id)
       .eq("training_type", training_type)
+      .eq("tenant_id", tenant_id)
       .maybeSingle();
 
     if (existing) {
@@ -80,11 +82,12 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Get member info
+    // Get member info — must belong to this tenant
     const { data: member, error: memberErr } = await supabase
       .from("members")
       .select("*")
       .eq("id", member_id)
+      .eq("tenant_id", tenant_id)
       .single();
     if (memberErr || !member) {
       return new Response(JSON.stringify({ error: "Member not found" }), {
@@ -253,7 +256,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Insert completion record
+    // Insert completion record (tenant-scoped)
     const { data: completion, error: insertErr } = await supabase
       .from("training_completions")
       .insert({
@@ -264,12 +267,14 @@ Deno.serve(async (req) => {
         certificate_url: filePath,
         issued_by: userId,
         notes: notes || null,
+        tenant_id,
       })
       .select()
       .single();
 
     if (insertErr) {
-      return new Response(JSON.stringify({ error: insertErr.message }), {
+      console.error("issue-certificate insert error:", insertErr);
+      return new Response(JSON.stringify({ error: "An unexpected error occurred" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -385,7 +390,7 @@ Deno.serve(async (req) => {
     );
   } catch (err) {
     console.error("issue-certificate error:", err);
-    return new Response(JSON.stringify({ error: err.message }), {
+    return new Response(JSON.stringify({ error: "An unexpected error occurred" }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
