@@ -65,6 +65,8 @@ export default function Layout({ children }) {
   const [switchLoading, setSwitchLoading] = useState(false);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [signpostInboxOpen, setSignpostInboxOpen] = useState(false);
+  const [installOpen, setInstallOpen] = useState(false);
+  const { isAvailable: installAvailable, isInstalled, canPrompt, isIOSSafari } = useInstallPrompt();
   const location = useLocation();
   const navigate = useNavigate();
   const { signOut, user, profile, isAdmin, isUnitLeader, isWSFLeader, roles, leaderUnits, isTenantOwner, isTenantAdmin } = useAuth();
