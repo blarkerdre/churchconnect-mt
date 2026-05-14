@@ -728,9 +728,27 @@ function CourseRegistrationsView({ course }) {
     onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
 
+  const sessionOptions = Array.from(
+    new Map(
+      registrations.map(r => [r.session_id || "__none__", { id: r.session_id || "__none__", name: r.exam_sessions?.name || "— No session —" }])
+    ).values()
+  );
+
+  const fromTs = dateFrom ? new Date(`${dateFrom}T00:00:00`).getTime() : null;
+  const toTs = dateTo ? new Date(`${dateTo}T23:59:59.999`).getTime() : null;
+
   const filteredRegistrations = registrations.filter(r => {
     if (sourceFilter === "member" && !r.members?.user_id) return false;
     if (sourceFilter === "public" && r.members?.user_id) return false;
+    if (sessionFilter !== "all") {
+      const sid = r.session_id || "__none__";
+      if (sid !== sessionFilter) return false;
+    }
+    if (fromTs || toTs) {
+      const ts = new Date(r.registered_at).getTime();
+      if (fromTs && ts < fromTs) return false;
+      if (toTs && ts > toTs) return false;
+    }
     if (searchTerm) {
       const s = searchTerm.toLowerCase();
       const name = `${r.members?.first_name || ""} ${r.members?.last_name || ""}`.toLowerCase();
