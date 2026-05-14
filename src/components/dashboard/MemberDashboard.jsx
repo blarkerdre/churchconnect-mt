@@ -10,6 +10,25 @@ import SignPostedToMeWidget from "@/components/dashboard/SignPostedToMeWidget";
 import { BirthdayBanner, UpcomingBirthdayItem } from "@/components/dashboard/BirthdayCelebration";
 import { useTenant } from "@/contexts/TenantContext";
 import ImageLightbox from "@/components/ui/ImageLightbox";
+import { useSignedMemberPhoto } from "@/hooks/useSignedMemberPhoto";
+
+function SignedMemberLightboxAvatar({ member }) {
+  const { url } = useSignedMemberPhoto(member?.photo_url);
+  if (!url) {
+    return (
+      <div className="h-14 w-14 rounded-2xl bg-accent flex items-center justify-center text-xl font-bold text-accent-foreground shrink-0 overflow-hidden">
+        {`${member?.first_name?.[0] || ""}${member?.last_name?.[0] || ""}`}
+      </div>
+    );
+  }
+  return (
+    <ImageLightbox src={url} alt={`${member.first_name} ${member.last_name}`}>
+      <div className="h-14 w-14 rounded-2xl bg-accent flex items-center justify-center text-xl font-bold text-accent-foreground shrink-0 overflow-hidden cursor-pointer hover:opacity-80 transition-opacity">
+        <img src={url} alt="" className="h-full w-full object-cover" />
+      </div>
+    </ImageLightbox>
+  );
+}
 import DashboardBanner from "@/components/dashboard/DashboardBanner";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
