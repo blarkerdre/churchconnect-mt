@@ -772,7 +772,14 @@ function CourseRegistrationsView({ course }) {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `${course.name}_registrations.csv`;
+    const parts = [course.name, "registrations"];
+    if (sessionFilter !== "all") {
+      const sName = sessionOptions.find(o => o.id === sessionFilter)?.name || "session";
+      parts.push(sName.replace(/[^a-z0-9]+/gi, "_"));
+    }
+    if (dateFrom) parts.push(`from-${dateFrom}`);
+    if (dateTo) parts.push(`to-${dateTo}`);
+    a.download = `${parts.join("_")}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   };
