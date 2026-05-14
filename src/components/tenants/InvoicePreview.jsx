@@ -145,6 +145,21 @@ const InvoicePreview = forwardRef(function InvoicePreview({ invoice, churchName 
         </div>
       </div>
 
+      {/* Payment Details (invoices only) */}
+      {!isReceipt && (
+        <>
+          <div style={{ fontSize: "11px", color: "#999", textTransform: "uppercase", letterSpacing: "1px", margin: "16px 0 4px" }}>
+            Payment Details
+          </div>
+          <div style={{ fontSize: "13px", lineHeight: 1.7, padding: "12px 16px", backgroundColor: "#f6f8fb", border: "1px solid #e0e6ef", borderRadius: "6px" }}>
+            <div><strong>Account Name:</strong> {ISSUER.name}</div>
+            <div><strong>Sort Code:</strong> {ISSUER.sortCode}</div>
+            <div><strong>Account Number:</strong> {ISSUER.accountNumber}</div>
+            <div><strong>Reference:</strong> {invoice.invoice_number}</div>
+          </div>
+        </>
+      )}
+
       {invoice.notes && (
         <>
           <div style={{ fontSize: "11px", color: "#999", textTransform: "uppercase", letterSpacing: "1px", margin: "16px 0 4px" }}>
