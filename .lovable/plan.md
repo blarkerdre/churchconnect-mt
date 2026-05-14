@@ -1,43 +1,44 @@
-## Goal
+## Problem
 
-Allow members of the **Follow-up** church unit (not just admins/unit leaders) to send SMS/WhatsApp and place phone calls — but only for follow-up records they created or are assigned to in their tenant.
+`supabase/functions/register-tenant/index.ts` is a public, unauthenticated edge function (used by `/onboard` for self-serve church signup). Two real risks:
 
-## Behaviour
+1. **Privilege escalation** — it inserts `user_roles { role: 'super_admin', tenant_id }`. Combined with `is_admin()`'s check `role IN ('admin','super_admin')` (no tenant filter for `super_admin`), this gives every newly-registered tenant owner platform-wide super-admin powers.
+2. **Abuse / spam tenant creation** — anyone can spin up unlimited tenants + auth users with no throttling or bot protection.
 
-A non-admin, non-leader user is permitted to call `send-sms` or `make-call` only when **all** of these hold:
-1. They belong to the tenant (`user_belongs_to_tenant`).
-2. They are an active member of the tenant's Follow-up unit (their `members.church_unit` matches a Follow-up unit in `church_units`).
-3. The request carries `reference_type = "followup"` and a `reference_id` that points to a `followups` row in the same tenant where `assigned_to = user.id` OR `created_by = user.id`.
+## Plan
 
-Anything outside that scope (bulk sends, non-followup messages, other tenants' rows) still requires admin or `unit_leader`. Admins and unit leaders keep their current unrestricted access.
+Keep the endpoint public (self-serve onboarding must work) but harden it.
 
-## Changes
+### 1. Stop granting platform super_admin
+In `register-tenant/index.ts` step 5, change the `user_roles` insert from `role: "super_admin"` to `role: "admin"` (tenant-scoped). The `tenant_memberships` row already gives them `owner`, and `is_admin(user, tenant)` recognises both. They keep full control of *their own* tenant, but no cross-tenant powers.
 
-### 1. Database — new helper RPC
-Add `public.user_is_followup_unit_member(_user_id uuid, _tenant_id uuid) returns boolean` (SECURITY DEFINER, `search_path=public`):
-- Returns true when a row exists in `members` with that `user_id`, `tenant_id`, `status` active, and `church_unit` matching (case-insensitive) any `church_units.name` for the tenant whose name ILIKE `%follow%up%` or equals `Followup`/`Follow-up`/`Follow Up`.
+### 2. Add a one-time migration to demote any existing self-registered super_admins
+Migration: for every `user_roles` row where `role='super_admin' AND tenant_id IS NOT NULL`, downgrade to `'admin'`. (True platform super-admins have `tenant_id IS NULL` and are unaffected.)
 
-### 2. `supabase/functions/send-sms/index.ts`
-After the existing `isAdmin || isLeader` check fails, before returning 403:
-- If `recipients.length === 1`, `sms_type === "followup"` (or `reference_type === "followup"`), and `reference_id` is set:
-  - Call `user_is_followup_unit_member(userId, tenant_id)`. If false → 403.
-  - Load the `followups` row by id + tenant_id; verify `assigned_to = userId` OR `created_by = userId`; verify the recipient phone matches the linked member's phone (or the followup's contact phone). If any check fails → 403.
-- Otherwise → keep current 403.
+### 3. Add abuse protection on the public endpoint
+- **CAPTCHA**: require a Cloudflare Turnstile token in the request body (`captcha_token`). Verify server-side against Turnstile's siteverify endpoint using a `TURNSTILE_SECRET_KEY` secret. Reject with 400 if missing/invalid.
+- **Rate limit**: simple table `public_signup_attempts (ip text, created_at timestamptz default now())`; reject if >3 attempts from same IP in last hour. IP read from `cf-connecting-ip` / `x-forwarded-for`.
+- **Input hardening**: enforce `slug` length 3–40, `church_name` length 2–120, `admin_password` ≥ 10 chars, `admin_email` regex, reject reserved slugs (`admin`, `api`, `auth`, `app`, `www`, `t`, `onboard`, `landing`).
 
-### 3. `supabase/functions/make-call/index.ts`
-Same pattern as send-sms, gated on `reference_type === "followup"` + `reference_id` + single recipient.
+### 4. Frontend (`src/pages/Onboard.jsx`)
+- Add Turnstile widget; pass `captcha_token` in the invoke body.
+- Requires `VITE_TURNSTILE_SITE_KEY` (publishable, fine in code).
 
-### 4. No UI changes
-`FollowupMessageDialog` and `FollowupDetailPanel` already pass `reference_type: "followup"` and `reference_id`, so follow-up unit members will simply stop seeing the "Forbidden" toast for their own assigned/created follow-ups.
+### 5. Secrets needed
+- `TURNSTILE_SECRET_KEY` — request via `add_secret` after user approves plan. (Free Cloudflare Turnstile key.)
 
-## Out of scope
-- No new role in `app_role`.
-- No change to bulk SMS, announcements, birthday messages, or pastoral care messaging.
-- No change to RLS on the `followups` table itself.
-- No UI permission badges or visibility toggles.
+### Out of scope
+- Existing public flows (`public-register`, `public-wofbi-register`) — they're tenant-scoped, not creating tenants.
+- Changing `is_admin()` semantics for super_admin (a separate, riskier refactor).
 
-## Verification
-- As a follow-up unit member assigned to a follow-up: send SMS + place call from the Follow-up detail panel → succeeds.
-- Same user tries to send SMS to a follow-up they are **not** assigned to → 403.
-- Same user tries a bulk send from Communications → 403.
-- Admin/unit leader behaviour unchanged.
+### Verification
+- Anonymous POST without captcha → 400.
+- Valid signup → tenant created, user is `owner` + tenant-scoped `admin`, NOT `super_admin`. Confirm via `select role, tenant_id from user_roles where user_id = ...`.
+- 4th rapid signup from same IP → 429.
+- Existing platform super_admins (`tenant_id IS NULL`) still work.
+
+### Files
+- edit `supabase/functions/register-tenant/index.ts`
+- new migration: demote rogue super_admins + create `public_signup_attempts` table with RLS deny-all (function uses service role)
+- edit `src/pages/Onboard.jsx` (Turnstile widget)
+- mark security finding fixed
