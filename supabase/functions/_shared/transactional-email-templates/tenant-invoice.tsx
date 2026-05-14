@@ -180,8 +180,8 @@ const TenantInvoiceEmail = ({
           <Hr style={hr} />
 
           <Text style={footer}>
-            This {heading.toLowerCase()} was issued by {SITE_NAME} on behalf of your church administrator.
-            For questions, please reply to this email.
+            Issued by {ISSUER.name} · Company No. {ISSUER.companyReg} · {ISSUER.email} · {ISSUER.website}
+            <br />For questions, please reply to this email.
           </Text>
         </Container>
       </Body>
