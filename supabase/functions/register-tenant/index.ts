@@ -40,14 +40,43 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Validate slug format
-    if (!/^[a-z0-9-]+$/.test(slug)) {
+    // Validate slug format & length
+    if (!/^[a-z0-9-]+$/.test(slug) || slug.length < 3 || slug.length > 40) {
       return new Response(
-        JSON.stringify({ error: "Slug must contain only lowercase letters, numbers, and hyphens" }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
+        JSON.stringify({ error: "Slug must be 3-40 characters of lowercase letters, numbers, and hyphens" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Reject reserved slugs
+    const RESERVED_SLUGS = new Set([
+      "admin", "api", "auth", "app", "www", "t", "onboard", "landing",
+      "public", "static", "assets", "settings", "dashboard", "system",
+    ]);
+    if (RESERVED_SLUGS.has(slug)) {
+      return new Response(
+        JSON.stringify({ error: "This slug is reserved. Please choose a different one." }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Validate church_name, email, password
+    if (typeof church_name !== "string" || church_name.trim().length < 2 || church_name.length > 120) {
+      return new Response(
+        JSON.stringify({ error: "Church name must be between 2 and 120 characters" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    if (typeof admin_email !== "string" || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(admin_email) || admin_email.length > 255) {
+      return new Response(
+        JSON.stringify({ error: "A valid admin email is required" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    if (typeof admin_password !== "string" || admin_password.length < 10 || admin_password.length > 200) {
+      return new Response(
+        JSON.stringify({ error: "Admin password must be at least 10 characters" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
