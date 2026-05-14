@@ -1,54 +1,28 @@
 # Sanitize Raw Error Messages in Edge Functions
 
-The previous round patched 6 admin-side edge functions. The scanner has now flagged 7 more functions still returning raw `err.message` to callers. This plan replaces those with generic error strings while preserving full server-side logging.
+Replace raw `err.message` / `error.message` in HTTP response bodies with a generic `"An unexpected error occurred"` string, while preserving full details in `console.error` server-side logs.
 
 ## Scope
 
-**Public-reachable (highest risk):**
-- `register-tenant` — lines 129 & 177 leak auth/DB errors to unauthenticated callers
-- `grade-exam` — line 244 leaks DB errors to any authenticated user
-- `send-testimony` — line 206 leaks errors to any member
+Six edge functions flagged by the scanner:
 
-**Authenticated leader/admin callers:**
-- `make-call` — line 275
-- `send-sms` — line 461
-- `invite-to-tenant` — line 259
-
-**Webhook caller:**
-- `stripe-subscription-webhook` — line 310 (could expose Stripe API error details)
+1. **`auth-email-hook`** (line ~311) — publicly reachable webhook, highest priority.
+2. **`process-scheduled-communications`** (line ~29) — DB fetch error branch.
+3. **`process-scheduled-followups`** (lines ~33, ~100) — two error branches.
+4. **`refresh-sms-status`** (line ~165) — outer catch.
+5. **`send-birthday-messages`** (line ~78) — tenant query failure.
+6. **`send-event-reminders`** (line ~121) — outer catch.
 
 ## Approach
 
-For each function, in the outer `catch` (and the explicit 4xx leak paths in `register-tenant`):
-
-1. Keep `console.error("<fn> error:", err)` (or add it where missing) so the full error stays in logs.
-2. Replace the response body's `err.message` / `error.message` with a generic string: `"An unexpected error occurred"`.
-3. Preserve intentional, safe 4xx messages (e.g. validation errors like "Email and password required", "Invalid password", "tenant_id is required"). These are not changed.
-
-### Per-function specifics
-
-- **register-tenant**
-  - Line 129 (user creation failure that's not "already registered"): return generic 500 instead of `userError.message`. The "already registered" branch keeps its specific 409 message.
-  - Line 177 (tenant creation failure): return generic 500 instead of `Tenant creation failed: ${tenantError.message}`.
-  - Add `console.error` for both.
-
-- **grade-exam** (line 244): generic message in 500 response; keep `console.error("grade-exam error:", err)`.
-
-- **send-testimony** (line 206): generic message; keep server-side log.
-
-- **make-call** (line 275): generic message; keep `console.error`. Inner Twilio-error rethrows still bubble to the catch.
-
-- **send-sms** (line 461): generic message; keep `console.error`. The per-recipient `error_message` written to `sms_log` (line 434) is internal storage, not a response — left as-is.
-
-- **invite-to-tenant** (line 259): generic message; add/keep `console.error`.
-
-- **stripe-subscription-webhook** (line 310): generic message; keep `console.error("[stripe-webhook] Error:", error.message)`. Webhook still returns 500 so Stripe will retry.
+For each location:
+- Replace the response body's raw error string with `{ error: "An unexpected error occurred" }`.
+- Ensure `console.error(...)` captures the full error before the response is returned.
+- Preserve any intentional 4xx validation messages — only the 5xx/internal branches change.
+- No behavior change for happy paths; no DB or frontend edits.
 
 ## Verification
 
-After edits:
-1. Confirm each function still compiles (deploy will validate).
-2. Mark `edge_fn_err_leak` as fixed via `security--manage_security_finding` with an explanation listing the 7 functions patched.
-3. Update `@security-memory` to reaffirm the "no raw error messages in HTTP responses" invariant now that all known offenders are clean.
-
-No DB migrations, no frontend changes, no behavior changes for happy paths.
+- Re-read each modified file to confirm no remaining `err.message`/`error.message` leaks in HTTP responses.
+- Mark `edge_fn_err_leak_new` as fixed via `security--manage_security_finding`.
+- Reaffirm the "no raw error messages in HTTP responses" invariant in `@security-memory`.

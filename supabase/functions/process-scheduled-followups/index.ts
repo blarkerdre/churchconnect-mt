@@ -30,7 +30,7 @@ Deno.serve(async (req) => {
 
     if (fetchErr) {
       console.error("Failed to fetch scheduled messages:", fetchErr);
-      return new Response(JSON.stringify({ error: fetchErr.message }), {
+      return new Response(JSON.stringify({ error: "An unexpected error occurred" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -97,7 +97,7 @@ Deno.serve(async (req) => {
   } catch (error) {
     console.error("process-scheduled-followups error:", error);
     return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
+      JSON.stringify({ error: "An unexpected error occurred" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
