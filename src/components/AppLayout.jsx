@@ -174,6 +174,16 @@ export default function Layout({ children }) {
     }
   };
 
+  // Auto-open install dialog once per tenant if installable & not dismissed recently
+  useEffect(() => {
+    if (isInstalled) return;
+    if (!user || !tenantId) return;
+    if (!canPrompt && !isIOSSafari) return;
+    if (!shouldAutoOpenInstall(tenantId)) return;
+    const t = setTimeout(() => setInstallOpen(true), 3000);
+    return () => clearTimeout(t);
+  }, [user, tenantId, canPrompt, isIOSSafari, isInstalled]);
+
   // Payment gate: suspended tenants are blocked (super admins bypass)
   if (subscriptionStatus === "suspended" && !isSuperAdmin) {
     return <PaymentRequiredScreen />;
