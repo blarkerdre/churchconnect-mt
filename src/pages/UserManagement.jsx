@@ -80,13 +80,27 @@ export default function UserManagement() {
 
   // Fetch banned users from backend so disabled state persists across refreshes
   const { data: bannedUserIds = [] } = useQuery({
-    queryKey: ["banned-users"],
+    queryKey: ["banned-users", tenantId],
     queryFn: async () => {
       try {
-        const { data, error } = await supabase.functions.invoke("admin-list-banned-users");
+        const { data, error } = await supabase.functions.invoke("admin-list-banned-users", {
+          method: "GET",
+          headers: { "x-tenant-id": tenantId || "" },
+          // pass tenant_id via query string
+          body: undefined,
+        });
         if (error) {
-          console.warn("Failed to fetch banned users:", error.message);
-          return [];
+          // Fallback: build URL with query param manually
+          const session = (await supabase.auth.getSession()).data.session;
+          const resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-list-banned-users?tenant_id=${encodeURIComponent(tenantId || "")}`, {
+            headers: { Authorization: `Bearer ${session?.access_token}` },
+          });
+          const j = await resp.json().catch(() => ({}));
+          if (!resp.ok) {
+            console.warn("Failed to fetch banned users:", j.error);
+            return [];
+          }
+          return j.banned_user_ids || [];
         }
         if (data?.error) {
           console.warn("Banned users API error:", data.error);
@@ -98,6 +112,7 @@ export default function UserManagement() {
         return [];
       }
     },
+    enabled: !!tenantId,
     retry: false,
   });
 
