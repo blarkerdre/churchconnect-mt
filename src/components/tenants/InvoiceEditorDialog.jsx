@@ -143,18 +143,13 @@ export default function InvoiceEditorDialog({ open, onOpenChange, invoice, tenan
       const pdf = new jsPDF({ orientation: "p", unit: "mm", format: "a4" });
       const pageWidth = pdf.internal.pageSize.getWidth();
       const pageHeight = pdf.internal.pageSize.getHeight();
-      const imgWidth = pageWidth - 20;
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
-      let heightLeft = imgHeight;
-      let position = 10;
-      pdf.addImage(imgData, "PNG", 10, position, imgWidth, imgHeight);
-      heightLeft -= pageHeight - 10;
-      while (heightLeft > 0) {
-        pdf.addPage();
-        position = 10 - (imgHeight - heightLeft);
-        pdf.addImage(imgData, "PNG", 10, position, imgWidth, imgHeight);
-        heightLeft -= pageHeight;
-      }
+      const maxW = pageWidth - 20;
+      const maxH = pageHeight - 20;
+      const scale = Math.min(maxW / canvas.width, maxH / canvas.height);
+      const imgWidth = canvas.width * scale;
+      const imgHeight = canvas.height * scale;
+      const x = (pageWidth - imgWidth) / 2;
+      pdf.addImage(imgData, "PNG", x, 10, imgWidth, imgHeight);
       const label = invoice.document_type === "receipt" ? "Receipt" : "Invoice";
       pdf.save(`${label}-${invoice.invoice_number}.pdf`);
     } catch (err) {
