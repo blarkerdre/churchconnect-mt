@@ -1,39 +1,22 @@
-## Finding
+## Cause
 
-`exam_titles` has a broad `Authenticated can view exam titles` SELECT policy. The scanner flags it because fields like `grade_classifications`, `pass_mark_percentage`, `send_certificate_email`, `send_result_email` could be considered internal config.
+In the previous migration I updated `storage.objects.bucket_id` from `church-documents` → `dashboard-banners`, but that only changed the metadata row. The underlying file in storage is still keyed under `church-documents/...` in S3. So the new public URLs return 404 ("Not found") and the slider shows nothing.
 
-## Reality check
+```
+DB row says:  dashboard-banners/<tid>/banners/x.jpg   ✗ no file there
+S3 has:       church-documents/<tid>/banners/x.jpg    (orphaned)
+```
 
-These fields are actually used by member-facing client code:
+## Fix
 
-- `TakeExamDialog.jsx` reads `pass_mark_percentage` to show pass requirements
-- `MyProfile.jsx` reads `name, send_certificate_email` to render certificate UI
-- `ExamSessionManager`, `OpenSessionsPanel`, `SessionEnrolDialog`, `IssueCertificateDialog`, `CertificateTemplateSettings` all read `exam_titles` directly
-- The public `get_public_courses_for_tenant` RPC is only used by the unauthenticated WoFBI registration page, not by signed-in members
+1. Revert my earlier SQL `UPDATE storage.objects … SET bucket_id` so the metadata matches reality again (28 banner rows go back to `church-documents`).
+2. Run a one-shot Node script (uses `SUPABASE_SERVICE_ROLE_KEY`) that, for each banner object:
+   - downloads it from `church-documents`
+   - uploads it into `dashboard-banners` at the same path
+   - deletes the original from `church-documents`
+3. Verify a sample URL returns 200.
+4. The `app_settings.dashboard_banners` URLs already point to `dashboard-banners` from the prior migration, so no further DB update is needed once the actual files are there.
 
-So members legitimately need read access. The fields the scanner highlights are not secrets — they're operational settings members see anyway when taking exams or viewing certificates.
+No client-code changes — `DashboardBannerSettings.jsx` already writes to `dashboard-banners`.
 
-## Recommended path
-
-**Dismiss as accepted risk** and update the security memory. Rationale:
-
-- All listed fields are non-sensitive operational config
-- Tenant scoping is already enforced by RLS (`tenant_id = current tenant`)
-- No PII or credentials exposed
-- Routing every read through an RPC adds maintenance cost with zero security gain
-
-I'll mark the finding as ignored and update `@security-memory` to record that authenticated tenant-scoped SELECT on `exam_titles` is intentional, with the RPC reserved for unauthenticated public registration.
-
-## Alternative (if you'd rather harden)
-
-If you'd prefer to lock it down anyway, I can:
-
-1. Replace the broad SELECT policy with admin-only SELECT
-2. Create a new `get_courses_for_member(_tenant_id)` RPC returning `id, name, is_active, pass_mark_percentage, send_certificate_email`
-3. Refactor 7 client files to use the RPC instead of direct table reads
-
-This is ~30 mins of work for no real-world security improvement. Say the word if you want it.
-
-## Decision needed
-
-Reply **"dismiss"** (recommended) or **"harden"** (refactor to RPC).
+`church-documents` stays private (security finding remains resolved).
