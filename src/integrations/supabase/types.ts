@@ -321,7 +321,7 @@ export type Database = {
           entity_type: string
           id: string
           tenant_id: string | null
-          user_id: string
+          user_id: string | null
         }
         Insert: {
           action: string
@@ -331,7 +331,7 @@ export type Database = {
           entity_type: string
           id?: string
           tenant_id?: string | null
-          user_id: string
+          user_id?: string | null
         }
         Update: {
           action?: string
@@ -341,7 +341,7 @@ export type Database = {
           entity_type?: string
           id?: string
           tenant_id?: string | null
-          user_id?: string
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -4111,6 +4111,10 @@ export type Database = {
         Args: { _tenant_id: string; _unit: string; _user_id: string }
         Returns: boolean
       }
+      jsonb_diff: {
+        Args: { _ignore?: string[]; _new: Json; _old: Json }
+        Returns: Json
+      }
       member_eligible_for_session: {
         Args: { _member_id: string; _session_id: string }
         Returns: boolean
@@ -4265,6 +4269,16 @@ export type Database = {
       user_is_followup_unit_member: {
         Args: { _tenant_id: string; _user_id: string }
         Returns: boolean
+      }
+      write_audit: {
+        Args: {
+          _action: string
+          _details: Json
+          _entity_id: string
+          _entity_type: string
+          _tenant_id: string
+        }
+        Returns: undefined
       }
     }
     Enums: {
