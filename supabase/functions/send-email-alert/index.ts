@@ -1,4 +1,5 @@
 import { createClient } from 'npm:@supabase/supabase-js@2'
+import { writeAudit } from '../_shared/audit.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -294,6 +295,22 @@ Deno.serve(async (req) => {
 
     enqueued++
   }
+
+  await writeAudit(serviceClient, {
+    tenant_id: tenant_id ?? null,
+    user_id: user?.id ?? null,
+    action: 'email_sent',
+    entity_type: 'email_send_log',
+    details: {
+      channel: 'email',
+      audience_label: audienceLabel,
+      recipients_count: members.length,
+      success_count: enqueued,
+      skipped_count: skipped,
+      subject,
+      source: 'send-email-alert',
+    },
+  })
 
   return new Response(
     JSON.stringify({ sent: enqueued, skipped, total: members.length }),

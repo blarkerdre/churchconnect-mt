@@ -1,4 +1,5 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { writeAudit } from "../_shared/audit.ts";;
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -179,6 +180,15 @@ Deno.serve(async (req) => {
       .from("purged_data_archives")
       .update({ status: "restored" })
       .eq("id", archive_id);
+
+    await writeAudit(adminClient, {
+      tenant_id: null,
+      user_id: user?.id ?? null,
+      action: "data_restore",
+      entity_type: "purged_data_archives",
+      entity_id: archive_id,
+      details: { warnings_count: restoreErrors.length, source: "restore-purged-data" },
+    });
 
     return new Response(
       JSON.stringify({

@@ -1,5 +1,6 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { checkSmsQuota, QuotaExceededError } from "../_shared/sms-quota.ts";
+import { writeAudit } from "../_shared/audit.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -416,6 +417,23 @@ Deno.serve(async (req) => {
     if (logs.length > 0) {
       await serviceClient.from("sms_log").insert(logs);
     }
+
+    // Audit trail entry (one per dispatch batch)
+    await writeAudit(serviceClient, {
+      tenant_id,
+      user_id: userId,
+      action: (channel === "whatsapp" ? "whatsapp_sent" : "sms_sent"),
+      entity_type: "sms_log",
+      entity_id: reference_id ?? null,
+      details: {
+        channel: channel || "sms",
+        sms_type: sms_type || null,
+        recipients_count: recipients.length,
+        success_count: sent,
+        failed_count: failed,
+        source: "send-sms",
+      },
+    });
 
     const responseBody: Record<string, unknown> = { sent, failed, total: recipients.length };
     if (quota > 0) {
