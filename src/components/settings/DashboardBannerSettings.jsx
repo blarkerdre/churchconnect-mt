@@ -81,10 +81,10 @@ export default function DashboardBannerSettings() {
       const ext = file.name.split(".").pop();
       const path = `${tenantId}/banners/${Date.now()}.${ext}`;
       const { error: uploadError } = await supabase.storage
-        .from("church-documents")
+        .from("dashboard-banners")
         .upload(path, file, { upsert: true });
       if (uploadError) throw uploadError;
-      const { data: urlData } = supabase.storage.from("church-documents").getPublicUrl(path);
+      const { data: urlData } = supabase.storage.from("dashboard-banners").getPublicUrl(path);
       updateSlide(index, "image_url", urlData.publicUrl);
     } catch (e) {
       toast({ title: "Upload failed", description: e.message, variant: "destructive" });
