@@ -1,4 +1,5 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { checkSmsQuota } from "../_shared/sms-quota.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -339,6 +340,10 @@ Deno.serve(async (req) => {
             : `Hi ${firstName}, your request to join ${targetLabel} was declined.${declineReason ? ` Reason: ${declineReason}` : ""} - ${churchShortName}`;
           try {
             const webhookUrl = `${supabaseUrl}/functions/v1/twilio-webhook`;
+            const __quota = await checkSmsQuota(supabase, jr.tenant_id, "sms", 1);
+            if (!__quota.allowed) {
+              console.warn("[notify-join-decision] SMS quota exceeded for tenant", jr.tenant_id, "— skipping send");
+            } else {
             const response = await fetch(`${GATEWAY_URL}/Messages.json`, {
               method: "POST",
               headers: {
@@ -366,6 +371,7 @@ Deno.serve(async (req) => {
               delivery_status: response.ok ? "queued" : null,
               tenant_id: jr.tenant_id,
             });
+            }
             smsSent = response.ok;
           } catch (err) {
             console.error("Join-decision SMS error:", err);
