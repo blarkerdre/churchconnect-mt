@@ -1,4 +1,5 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { writeAudit } from "../_shared/audit.ts";;
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -296,6 +297,15 @@ Deno.serve(async (req) => {
         }
       }
     }
+
+    await writeAudit(adminClient, {
+      tenant_id,
+      user_id: user?.id ?? null,
+      action: "data_purge",
+      entity_type: "tenant",
+      entity_id: tenant_id,
+      details: { archive_id: archiveId, source: "purge-all-data" },
+    });
 
     return new Response(
       JSON.stringify({

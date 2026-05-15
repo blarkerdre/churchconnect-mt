@@ -1,4 +1,5 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { writeAudit } from "../_shared/audit.ts";;
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -379,6 +380,22 @@ Deno.serve(async (req) => {
         // Don't fail the whole operation
       }
     }
+
+    await writeAudit(supabase, {
+      tenant_id,
+      user_id: userData?.user?.id ?? null,
+      action: "certificate_issued",
+      entity_type: "training_completions",
+      entity_id: completion?.id ?? null,
+      details: {
+        member_id,
+        training_type,
+        completion_date,
+        certificate_number: certificateNumber,
+        notes,
+        source: "issue-certificate",
+      },
+    });
 
     return new Response(
       JSON.stringify({
