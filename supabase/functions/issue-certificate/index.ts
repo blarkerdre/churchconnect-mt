@@ -383,7 +383,7 @@ Deno.serve(async (req) => {
 
     await writeAudit(supabase, {
       tenant_id,
-      user_id: userData?.user?.id ?? null,
+      user_id: userId,
       action: "certificate_issued",
       entity_type: "training_completions",
       entity_id: completion?.id ?? null,
