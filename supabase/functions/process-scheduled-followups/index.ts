@@ -1,4 +1,5 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { assertSmsQuota, QuotaExceededError } from "../_shared/sms-quota.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
