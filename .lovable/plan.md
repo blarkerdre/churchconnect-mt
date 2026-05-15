@@ -1,45 +1,39 @@
-## Goal
+## Finding
 
-Resolve the security finding by making `church-documents` private again, while keeping the dashboard slideshow (the original reason it was made public) working.
+`exam_titles` has a broad `Authenticated can view exam titles` SELECT policy. The scanner flags it because fields like `grade_classifications`, `pass_mark_percentage`, `send_certificate_email`, `send_result_email` could be considered internal config.
 
-## Approach
+## Reality check
 
-Move public-facing dashboard banner images to a dedicated public bucket, and keep all other content (certificates, report attachments, member-uploaded docs) in a private `church-documents` bucket served via signed URLs.
+These fields are actually used by member-facing client code:
 
-## Changes
+- `TakeExamDialog.jsx` reads `pass_mark_percentage` to show pass requirements
+- `MyProfile.jsx` reads `name, send_certificate_email` to render certificate UI
+- `ExamSessionManager`, `OpenSessionsPanel`, `SessionEnrolDialog`, `IssueCertificateDialog`, `CertificateTemplateSettings` all read `exam_titles` directly
+- The public `get_public_courses_for_tenant` RPC is only used by the unauthenticated WoFBI registration page, not by signed-in members
 
-### 1. Storage migration
+So members legitimately need read access. The fields the scanner highlights are not secrets — they're operational settings members see anyway when taking exams or viewing certificates.
 
-- Create new public bucket `dashboard-banners` with RLS:
-  - Public `SELECT` (anyone can read)
-  - `INSERT/UPDATE/DELETE` restricted to admins / unit leaders of the tenant whose `tenantId` matches the first path segment
-- Set `church-documents` back to `public = false`
+## Recommended path
 
-### 2. Banner code
+**Dismiss as accepted risk** and update the security memory. Rationale:
 
-- `src/components/settings/DashboardBannerSettings.jsx`: upload to `dashboard-banners` instead of `church-documents`; keep using `getPublicUrl`
-- Existing banner URLs already saved in `app_settings.dashboard_banners` will continue to resolve because the bucket they point to (`church-documents`) will still serve via signed URL only — so we also add a one-time migration step: copy existing banner files from `church-documents/<tenant>/banners/*` to `dashboard-banners/<tenant>/banners/*` and rewrite the stored URLs in `app_settings`. (Or, simpler: ask admins to re-upload — see Decision below.)
+- All listed fields are non-sensitive operational config
+- Tenant scoping is already enforced by RLS (`tenant_id = current tenant`)
+- No PII or credentials exposed
+- Routing every read through an RPC adds maintenance cost with zero security gain
 
-### 3. No code changes needed for these (already use signed URLs):
+I'll mark the finding as ignored and update `@security-memory` to record that authenticated tenant-scoped SELECT on `exam_titles` is intentional, with the RPC reserved for unauthenticated public registration.
 
-- `MyCertificates.jsx` — `createSignedUrl` ✓
-- `CertificateTemplateSettings.jsx` — `createSignedUrl` ✓
-- `ReportAttachments.jsx` — `createSignedUrl` ✓
-- `issue-certificate` edge function — server-side, unaffected
-- `purge-all-data` edge function — server-side, unaffected
+## Alternative (if you'd rather harden)
+
+If you'd prefer to lock it down anyway, I can:
+
+1. Replace the broad SELECT policy with admin-only SELECT
+2. Create a new `get_courses_for_member(_tenant_id)` RPC returning `id, name, is_active, pass_mark_percentage, send_certificate_email`
+3. Refactor 7 client files to use the RPC instead of direct table reads
+
+This is ~30 mins of work for no real-world security improvement. Say the word if you want it.
 
 ## Decision needed
 
-For existing banners already uploaded while the bucket was public, choose one:
-
-**A. Auto-migrate (recommended)** — migration script copies existing `church-documents/<tenant>/banners/*` objects into `dashboard-banners/` and updates `app_settings.dashboard_banners` URLs. Zero admin action.
-
-**B. Re-upload** — leave existing banners broken; admins re-upload through the new bucket. Simpler migration, slight UX cost.
-
-I'll go with **A** unless you say otherwise.
-
-## Result
-
-- `church-documents` becomes private — finding resolved
-- Certificates, reports, member docs continue to work via signed URLs
-- Dashboard slideshow keeps using fast public URLs from a properly scoped public bucket
+Reply **"dismiss"** (recommended) or **"harden"** (refactor to RPC).
