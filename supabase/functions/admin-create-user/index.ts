@@ -211,6 +211,15 @@ Deno.serve(async (req) => {
       }
     }
 
+    await writeAudit(supabase, {
+      tenant_id,
+      user_id: caller.id,
+      action: "user_create",
+      entity_type: "auth.users",
+      entity_id: userId,
+      details: { target_email: normalizedEmail, target_name: normalizedFullName, role, member_id: memberId, reused_existing: reusedExisting, source: "admin-create-user" },
+    });
+
     return jsonResponse({ success: true, user_id: userId, member_id: memberId, reused_existing_user: reusedExisting });
   } catch (err) {
     console.error("admin-create-user error:", err);
