@@ -418,6 +418,23 @@ Deno.serve(async (req) => {
       await serviceClient.from("sms_log").insert(logs);
     }
 
+    // Audit trail entry (one per dispatch batch)
+    await writeAudit(serviceClient, {
+      tenant_id,
+      user_id: userId,
+      action: (channel === "whatsapp" ? "whatsapp_sent" : "sms_sent"),
+      entity_type: "sms_log",
+      entity_id: reference_id ?? null,
+      details: {
+        channel: channel || "sms",
+        sms_type: sms_type || null,
+        recipients_count: recipients.length,
+        success_count: sent,
+        failed_count: failed,
+        source: "send-sms",
+      },
+    });
+
     const responseBody: Record<string, unknown> = { sent, failed, total: recipients.length };
     if (quota > 0) {
       responseBody.remaining = Math.max(quota - currentUsage - sent, 0);
