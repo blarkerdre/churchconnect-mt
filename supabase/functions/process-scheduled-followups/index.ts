@@ -67,6 +67,7 @@ Deno.serve(async (req) => {
         }
 
         if (msg.channel === "sms") {
+          await assertSmsQuota(supabase, msg.tenant_id, "sms", 1);
           await sendSms(msg, supabase, supabaseUrl);
         } else if (msg.channel === "email") {
           await sendEmail(msg, supabase, supabaseUrl);
