@@ -1,4 +1,5 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { writeAudit } from "../_shared/audit.ts";;
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -137,6 +138,19 @@ Deno.serve(async (req) => {
         importErrors.push(`${table}: ${String(e)}`);
       }
     }
+
+    await writeAudit(adminClient, {
+      tenant_id,
+      user_id: user?.id ?? null,
+      action: "data_import",
+      entity_type: "tenant",
+      entity_id: tenant_id,
+      details: {
+        rows_imported: totalImported,
+        warnings_count: importErrors.length,
+        source: "import-tenant-data",
+      },
+    });
 
     return new Response(
       JSON.stringify({
