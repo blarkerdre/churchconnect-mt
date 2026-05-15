@@ -1,4 +1,5 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { checkSmsQuota } from "../_shared/sms-quota.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -205,6 +206,10 @@ Deno.serve(async (req) => {
 
           try {
             const webhookUrl = `${supabaseUrl}/functions/v1/twilio-webhook`;
+            const __quota = await checkSmsQuota(supabase, tenant_id, "sms", 1);
+            if (!__quota.allowed) {
+              console.warn("[notify-pastoral-assignment] SMS quota exceeded for tenant", tenant_id, "— skipping send");
+            } else {
             const response = await fetch(`${GATEWAY_URL}/Messages.json`, {
               method: "POST",
               headers: {
@@ -233,6 +238,7 @@ Deno.serve(async (req) => {
               delivery_status: response.ok ? "queued" : null,
               tenant_id,
             });
+            }
 
             if (response.ok) {
               console.log("Pastoral care assignment SMS sent to", cleaned);

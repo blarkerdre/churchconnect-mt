@@ -1,4 +1,5 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { assertSmsQuota, QuotaExceededError } from "../_shared/sms-quota.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -66,6 +67,7 @@ Deno.serve(async (req) => {
         }
 
         if (msg.channel === "sms") {
+          await assertSmsQuota(supabase, msg.tenant_id, "sms", 1);
           await sendSms(msg, supabase, supabaseUrl);
         } else if (msg.channel === "email") {
           await sendEmail(msg, supabase, supabaseUrl);
