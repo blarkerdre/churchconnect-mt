@@ -55,68 +55,49 @@ Deno.serve(async (req) => {
       tokenSource = "none";
     }
 
+    if (!authToken) {
+      console.warn(`No Twilio auth token configured (source=${tokenSource}) — rejecting webhook`);
+      return new Response("Forbidden", { status: 403, headers: { "Content-Type": "text/plain" } });
+    }
+
     // Validate Twilio signature using HMAC-SHA1
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const webhookUrl = `${supabaseUrl}/functions/v1/twilio-webhook`;
+    const supabaseUrl2 = Deno.env.get("SUPABASE_URL")!;
+    const webhookUrl = `${supabaseUrl2}/functions/v1/twilio-webhook`;
     const twilioSignature = req.headers.get("X-Twilio-Signature") ?? "";
 
-    let signatureValid = false;
+    const data =
+      webhookUrl +
+      Object.keys(params)
+        .sort()
+        .reduce((acc, key) => acc + key + params[key], "");
 
-    if (authToken) {
-      const data =
-        webhookUrl +
-        Object.keys(params)
-          .sort()
-          .reduce((acc, key) => acc + key + params[key], "");
+    const encoder = new TextEncoder();
+    const key = await crypto.subtle.importKey(
+      "raw",
+      encoder.encode(authToken),
+      { name: "HMAC", hash: "SHA-1" },
+      false,
+      ["sign"],
+    );
+    const signature = await crypto.subtle.sign("HMAC", key, encoder.encode(data));
+    const expectedSignature = btoa(String.fromCharCode(...new Uint8Array(signature)));
 
-      const encoder = new TextEncoder();
-      const key = await crypto.subtle.importKey(
-        "raw",
-        encoder.encode(authToken),
-        { name: "HMAC", hash: "SHA-1" },
-        false,
-        ["sign"],
-      );
-      const signature = await crypto.subtle.sign("HMAC", key, encoder.encode(data));
-      const expectedSignature = btoa(String.fromCharCode(...new Uint8Array(signature)));
-
-      signatureValid = twilioSignature === expectedSignature;
-      if (signatureValid) {
-        console.log(`Signature validated using ${tokenSource} auth token`);
-      }
+    // Constant-time comparison
+    const a = encoder.encode(twilioSignature);
+    const b = encoder.encode(expectedSignature);
+    let signatureValid = a.length === b.length;
+    const maxLen = Math.max(a.length, b.length);
+    let diff = a.length ^ b.length;
+    for (let i = 0; i < maxLen; i++) {
+      diff |= (a[i] ?? 0) ^ (b[i] ?? 0);
     }
+    signatureValid = signatureValid && diff === 0;
 
     if (!signatureValid) {
-      // Fallback: verify SID exists in our logs (proves we sent it)
-      console.log("Signature mismatch — trying fallback SID verification");
-
-      if (messageSid) {
-        const { data: existingLog } = await supabase
-          .from("sms_log")
-          .select("id")
-          .eq("message_sid", messageSid)
-          .maybeSingle();
-        if (!existingLog) {
-          console.warn("MessageSid not found in sms_log — rejecting");
-          return new Response("Forbidden", { status: 403, headers: { "Content-Type": "text/plain" } });
-        }
-        console.log("Fallback validation passed — MessageSid in sms_log");
-      } else if (callSid) {
-        const { data: existingCall } = await supabase
-          .from("call_log")
-          .select("id")
-          .eq("provider_call_id", callSid)
-          .maybeSingle();
-        if (!existingCall) {
-          console.warn("CallSid not found in call_log — rejecting");
-          return new Response("Forbidden", { status: 403, headers: { "Content-Type": "text/plain" } });
-        }
-        console.log("Fallback validation passed — CallSid in call_log");
-      } else {
-        console.warn("No MessageSid or CallSid — rejecting");
-        return new Response("Forbidden", { status: 403, headers: { "Content-Type": "text/plain" } });
-      }
+      console.warn(`Twilio signature mismatch (tokenSource=${tokenSource}) — rejecting`);
+      return new Response("Forbidden", { status: 403, headers: { "Content-Type": "text/plain" } });
     }
+    console.log(`Signature validated using ${tokenSource} auth token`);
 
     // Branch: SMS status
     if (messageSid && messageStatus) {
