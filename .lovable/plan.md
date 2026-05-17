@@ -1,136 +1,55 @@
-# Detailed Audit Logging — Evidence-Grade Records
+## Root cause
 
-## Goal
-Make `audit_log` an evidence-grade trail. Today only ~15 action types are logged (mostly role/member/event/announcement). Notifications, certificates, exports, imports, deletions, password resets, SMS/email sends, payments, etc. are not captured. We will close those gaps with consistent metadata and timestamps.
+The `church-documents` storage policies require the first folder of every object path to be a `tenant_id` UUID (this is how tenant isolation is enforced). Two paths violate that contract:
 
-## What gets recorded
+1. **Background upload** — `certificate-backgrounds/${timestamp}.${ext}` → Postgres tries to cast `"certificate-backgrounds"` to UUID → insert fails with the error you pasted.
+2. **Issued certificates** — `certificates/${member_id}/${cert_no}.svg` → same problem; signed-URL creation is rejected, so Download throws an "Error downloading certificate" toast.
 
-Every audit row will continue to use the existing schema (`audit_log`: `user_id`, `tenant_id`, `action`, `entity_type`, `entity_id`, `details jsonb`, `created_at`) — no destructive schema change. We standardise `details` to always include:
+A secondary issue: even when the SVG download works, browsers open SVGs inline rather than saving them, and SVG isn't shareable on WhatsApp/social. You asked for PNG.
 
-- `actor_email` / `actor_name` (snapshot at time of action)
-- `target_name` / `target_email` where applicable
-- `before` / `after` diff for updates (only changed fields)
-- `channel` (sms|whatsapp|email|in_app|push) for messaging
-- `recipients_count`, `success_count`, `failed_count`
-- `source` (page or function name that produced the event)
-- `ip` and `user_agent` for browser-originated actions (best-effort)
-- `request_id` (uuid) so multi-step flows can be correlated
+## Plan
 
-## New action coverage
+### 1. Tenant-scope every storage path
 
-### Notifications & messaging
-- `notification_sent` — every direct in-app notification insert from admin tools
-- `sms_sent` / `whatsapp_sent` — logged inside `send-sms` edge function after dispatch (per batch, with quota snapshot)
-- `email_sent` — logged inside `send-email-alert` and `send-transactional-email`
-- `birthday_messages_sent` — from `send-birthday-messages`
-- `event_reminder_sent` — from `send-event-reminders`
-- `bulk_message_sent` — already exists, will be standardised
-- `announcement_publish` — when `is_published` flips true
+- **`CertificateTemplateSettings.jsx`** `handleUpload`: upload to `${tenantId}/certificate-backgrounds/${Date.now()}.${ext}`. Guard against missing `tenantId`.
+- **`issue-certificate` edge function**: write the certificate to `${tenant_id}/certificates/${member_id}/${certificateNumber}.png` (see step 2 for PNG). Store this same path in `training_completions.certificate_url`.
+- **Backwards compatibility for old rows**: in `MyCertificates.handleDownload` and the issue function's email step, if `createSignedUrl(path)` fails AND the path does not start with `${tenantId}/`, retry with `${tenantId}/${path}` before showing an error. This rescues already-issued certificates without a data migration.
 
-### Certificates & training
-- `certificate_issued` — from `issue-certificate` edge function (member, course, issued_by, certificate_url)
-- `certificate_template_update` — from `CertificateTemplateSettings`
-- `exam_session_open` / `exam_session_close`
-- `exam_attempt_graded` — server-side grading trigger writes a row
-- `course_registration_create` / `_cancel`
+### 2. Generate PNG output instead of SVG
 
-### Data actions (high-evidence)
-- `data_export` — any tenant export (members CSV, training reports, attendance, etc.) via `export-tenant-data` and any client-side `Print/Download` flows
-- `data_import` — `BulkImportDialog`, `import-tenant-data`
-- `data_purge` / `data_restore` — `purge-all-data`, `restore-purged-data`
-- `tenant_archive` / `tenant_restore`
-- `member_create` / `member_update` / `member_delete` — full coverage with diffs (currently only delete is consistently logged)
-- `member_status_change` — already tracked in `member_status_history`; mirror to `audit_log` for unified view
-- `pastoral_assignment_create` / `_close`
-- `transport_assignment`
-- `followup_assignment` / `_status_change`
-- `signpost_create` / `_update`
-- `consent_update` (privacy/consent text changes)
-- `settings_update` — any tenant settings change (sms limits, branding, providers)
-- `secret_rotate` — API keys / Domifort tokens / tenant API keys
-- `payment_recorded` / `subscription_change`
+The edge function currently emits SVG. Convert to PNG inside the function:
 
-### Auth / access
-- `login_success` / `login_failure` (from auth hook)
-- `password_reset_request` / `password_reset_complete`
-- `user_invite_send` / `user_invite_accept`
-- `tenant_switch`
+- Use `npm:@resvg/resvg-js@2` (pure-WASM, runs in Deno Edge runtime, no system fonts needed) to rasterise the existing SVG at 2× (1684×1190) for crisp print quality.
+- Embed Playfair Display + Inter as base64 woff2 in the SVG `<defs><style>@font-face>...` so text renders identically on the server (the current `@import` from Google Fonts is ignored by resvg). Bundle the two woff2 files under `supabase/functions/_shared/fonts/` and read them at cold start.
+- Upload as `image/png`, `contentType: "image/png"`, filename `${certificateNumber}.png`. Update `training_completions.certificate_url` and the email link accordingly.
 
-## Implementation plan
+### 3. Force download (not inline) in the browser
 
-### 1. Shared audit helpers
-- Extend `src/lib/audit.js`:
-  - Auto-capture `user_agent` and best-effort `ip` (via lightweight IP echo edge fn `whoami`) and attach to `details.context`.
-  - Add `logAuditDiff(action, entityType, entityId, before, after, tenantId)` that computes a minimal field diff.
-  - Add `logAuditBulk(action, rows[], tenantId)` for batched writes.
-- Create `supabase/functions/_shared/audit.ts` with:
-  - `writeAudit(serviceClient, { tenant_id, user_id, action, entity_type, entity_id, details })`
-  - `withAudit(handler, { action, entity_type })` wrapper for edge functions that auto-logs success/failure with timing.
+- Generate signed URLs with `download: \`${certificateNumber}.png\`` — Supabase storage adds `response-content-disposition=attachment; filename=...` so the browser saves the file instead of opening it.
+- Apply this in `MyCertificates.handleDownload`, the admin certificate list, and the email "Download Certificate" button.
 
-### 2. Edge function instrumentation
-Add `writeAudit` calls to:
-- `send-sms`, `send-email-alert`, `send-transactional-email`, `send-birthday-messages`, `send-event-reminders`
-- `issue-certificate`
-- `export-tenant-data`, `import-tenant-data`, `purge-all-data`, `restore-purged-data`
-- `archive-tenant`, `register-tenant`, `invite-to-tenant`
-- `admin-create-user`, `admin-delete-user`, `admin-toggle-user`
-- `create-tenant-api-key`, `domifort-token-create`
-- `grade-exam`
-- `stripe-subscription-webhook`, `manage-tenant-subscription`, `check-tenant-payments`
+### 4. Provide a sample background
 
-Each call records action, entity, and a `details` payload with channel/counts/before-after as relevant.
+Add a built-in sample (no upload needed):
 
-### 3. Database triggers (server-of-truth events)
-New SQL triggers writing directly to `audit_log` for events that bypass the app:
-- `members` insert/update/delete (diff-based)
-- `notifications` insert (group by `(reference_type, reference_id, tenant_id)` to avoid one row per recipient — store `recipients_count`)
-- `pastoral_care_cases`, `transport_bookings`, `followup_referrals`, `followup_referral_updates` status changes
-- `tenant_invoices` paid/overdue transitions
-- `tenants` settings/limit changes (compare OLD vs NEW jsonb)
-- `member_status_history` → mirror into `audit_log` as `member_status_change`
+- Generate one elegant navy/gold sample PNG (`src/assets/certificate-sample-bg.png`, 1684×1190) via the image generator.
+- Add an "Use sample background" button in the Certificate Template dialog that copies that asset into the tenant's `${tenantId}/certificate-backgrounds/sample.png` (one-time, idempotent) and sets `background_image_url` to that path.
+- Keep the existing user upload flow intact; the sample is just a shortcut.
 
-All triggers `SECURITY DEFINER` with `SET search_path = public`, capture `auth.uid()` when present, fall back to `NULL` user_id with `details.source='system'`.
+### 5. Verification
 
-### 4. Client instrumentation
-Add `logAudit` calls (or `logAuditDiff`) in:
-- `MemberFormDialog` (create/update — currently missing)
-- `CertificateTemplateSettings`, `IssueCertificateDialog`
-- `BulkImportDialog`
-- `DangerZoneSection` (purge/restore/export buttons)
-- `Settings.jsx` sub-sections that mutate tenant settings (SMS limits, branding, providers, consent, banner, follow-up templates, external links, WSF zones/centres, birthday messages)
-- `ApiKeysSection`, `DomifortIntegrationSection`
-- `PastoralCareFormDialog`, `TransportBookingDialog`, `FollowupFormDialog`, `SignPostDialog`, `ReferralUpdateDialog`
-- `TenantBillingTab` payment recording
-- `MyProfile` password change
-- `TenantContext` tenant switching
+- Upload a new background → confirm it lands in `${tenantId}/certificate-backgrounds/...` and the preview shows it.
+- Issue a fresh certificate → confirm PNG file appears in storage under `${tenant_id}/certificates/...`, Download saves the file, email contains a working signed link.
+- Open My Certificates with an existing old SVG row → fallback path-prefix retry works and the file downloads (or shows a clear "regenerate" CTA if the underlying file is gone).
 
-### 5. UI: Audit Log page upgrade (`src/pages/AuditLog.jsx`)
-- Add filters: date range, actor, entity type, channel, tenant (for super admin).
-- Add columns: timestamp (with seconds + timezone), actor, action, entity, channel, counts, source.
-- Add expandable row showing full `details` JSON with diff highlighting (`before` vs `after`).
-- Add "Export CSV" button for the current filtered view (logs the export itself).
-- Pagination (50/page) and "Load more" instead of fixed 200.
-- Add a "Notifications" and "Messaging" preset filter chip.
-- Make accessible to tenant admins (currently super_admin only) — they see only their tenant's rows; super admin sees all.
+### Out of scope
 
-### 6. Retention & integrity
-- Add a partial index `idx_audit_log_tenant_created_at` for fast filtered queries.
-- Document retention: keep indefinitely (evidence). Add a nightly job (no auto-delete) that asserts no row was modified — `audit_log` becomes append-only via a trigger that blocks `UPDATE`/`DELETE` for non-super-admins.
+- Backfilling/regenerating already-issued SVG certificates as PNGs (we keep them downloadable via fallback; we can do a one-off regeneration later if you want).
+- Changing the certificate visual design beyond switching SVG → PNG raster.
+- Editing the storage RLS policies — the tenant-prefix contract is correct and shared with documents/branding.
 
-## Out of scope
-- External SIEM streaming / webhook export
-- Cryptographic chaining/Merkle proofs (can be a follow-up if compliance needs tamper-evidence beyond append-only)
-- Backfilling historic events that were never logged
+### Technical notes
 
-## Technical notes
-- All triggers and edge writes go to the existing `audit_log` table — no schema migration to columns, only new indexes and a guard trigger.
-- Notifications fan-out (one row per user) is collapsed into a single audit row keyed by `(reference_type, reference_id)` to keep the log readable.
-- IP capture uses a tiny `whoami` edge function returning `req.headers.get('x-forwarded-for')`; cached per session in the client to avoid extra round-trips per action.
-- Diff computation uses a shared `diffObjects(before, after, allowedKeys)` util to avoid logging sensitive/noisy fields (e.g. timestamps).
-
-## Deliverables
-1. Migration: append-only guard trigger + indexes + DB triggers for members/notifications/pastoral/transport/followups/tenants/invoices.
-2. `supabase/functions/_shared/audit.ts` and instrumentation across the listed edge functions.
-3. Extended `src/lib/audit.js` with diff + context capture + new `whoami` edge function.
-4. Client instrumentation across the listed pages/dialogs.
-5. Rebuilt `src/pages/AuditLog.jsx` with filters, diff view, CSV export, and tenant-admin access.
+- resvg-js cold-start cost is ~50–150ms; acceptable for an admin action.
+- We must `escapeXml` the dynamic strings before rasterisation (already done in current code).
+- PNG file size at 2× ~150–300 KB; well within member storage quota.

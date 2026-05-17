@@ -7,13 +7,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import TenantDialogHeader from "@/components/ui/TenantDialogHeader";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Award, Plus, Pencil, Trash2, Upload, Image, Eye } from "lucide-react";
+import { Loader2, Award, Plus, Pencil, Trash2, Upload, Image, Eye, Sparkles } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 import { assertStorageAvailable } from "@/lib/storageQuota";
 import { useAppSetting } from "@/hooks/useAppSetting";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
+import sampleBgUrl from "@/assets/certificate-sample-bg.jpg";
 
 const emptyTemplate = {
   training_type: "",
@@ -130,12 +131,16 @@ export default function CertificateTemplateSettings() {
       toast({ title: "File must be under 5MB", variant: "destructive" });
       return;
     }
+    if (!tenantId) {
+      toast({ title: "Tenant not loaded yet — try again", variant: "destructive" });
+      return;
+    }
 
     setUploading(true);
     try {
       await assertStorageAvailable(tenantId, file.size);
       const ext = file.name.split(".").pop();
-      const path = `certificate-backgrounds/${Date.now()}.${ext}`;
+      const path = `${tenantId}/certificate-backgrounds/${Date.now()}.${ext}`;
       const { error } = await supabase.storage
         .from("church-documents")
         .upload(path, file, { contentType: file.type, upsert: true });
@@ -144,6 +149,29 @@ export default function CertificateTemplateSettings() {
       toast({ title: "Image uploaded" });
     } catch (err) {
       toast({ title: "Upload failed", description: err.message, variant: "destructive" });
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleUseSample = async () => {
+    if (!tenantId) {
+      toast({ title: "Tenant not loaded yet — try again", variant: "destructive" });
+      return;
+    }
+    setUploading(true);
+    try {
+      const resp = await fetch(sampleBgUrl);
+      const blob = await resp.blob();
+      const path = `${tenantId}/certificate-backgrounds/sample.jpg`;
+      const { error } = await supabase.storage
+        .from("church-documents")
+        .upload(path, blob, { contentType: "image/jpeg", upsert: true });
+      if (error) throw error;
+      set("background_image_url", path);
+      toast({ title: "Sample background applied" });
+    } catch (err) {
+      toast({ title: "Could not apply sample", description: err.message, variant: "destructive" });
     } finally {
       setUploading(false);
     }
@@ -370,13 +398,16 @@ export default function CertificateTemplateSettings() {
             {/* Background Image Upload */}
             <div className="space-y-1.5">
               <Label>Certificate Background Image</Label>
-              <p className="text-xs text-muted-foreground">Upload a sample certificate (PNG/JPG) to use as the background. Text will be overlaid on top.</p>
-              <div className="flex items-center gap-2">
+              <p className="text-xs text-muted-foreground">Upload a sample certificate (PNG/JPG) to use as the background, or use our built-in sample. Text will be overlaid on top.</p>
+              <div className="flex flex-wrap items-center gap-2">
                 <label className="flex items-center gap-2 px-3 py-2 border rounded-md cursor-pointer hover:bg-muted/50 text-sm">
                   {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
                   {uploading ? "Uploading..." : "Upload Image"}
                   <input type="file" accept="image/*" onChange={handleUpload} className="hidden" disabled={uploading} />
                 </label>
+                <Button type="button" variant="outline" size="sm" onClick={handleUseSample} disabled={uploading} className="gap-1.5">
+                  <Sparkles className="h-3.5 w-3.5" /> Use Sample
+                </Button>
                 {form.background_image_url && (
                   <Button variant="ghost" size="sm" onClick={() => set("background_image_url", "")}>Remove</Button>
                 )}
