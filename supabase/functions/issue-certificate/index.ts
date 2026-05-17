@@ -1,5 +1,31 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { writeAudit } from "../_shared/audit.ts";;
+import { Resvg, initWasm } from "npm:@resvg/resvg-wasm@2.6.2";
+import { writeAudit } from "../_shared/audit.ts";
+
+// Initialise resvg wasm once per cold-start
+let _wasmReady: Promise<void> | null = null;
+async function ensureWasm() {
+  if (!_wasmReady) {
+    _wasmReady = (async () => {
+      const wasmResp = await fetch(
+        "https://unpkg.com/@resvg/resvg-wasm@2.6.2/index_bg.wasm"
+      );
+      const wasmBuf = await wasmResp.arrayBuffer();
+      await initWasm(wasmBuf);
+    })();
+  }
+  return _wasmReady;
+}
+
+async function renderSvgToPng(svg: string): Promise<Uint8Array> {
+  await ensureWasm();
+  const resvg = new Resvg(svg, {
+    background: "rgba(255,255,255,1)",
+    fitTo: { mode: "width", value: 1684 }, // 2x for crisp output
+    font: { loadSystemFonts: false, defaultFontFamily: "serif" },
+  });
+  return resvg.render().asPng();
+}
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -149,22 +175,29 @@ Deno.serve(async (req) => {
     let svgCert: string;
 
     if (backgroundImageUrl) {
-      // Generate a signed URL for the background image to embed in SVG
-      const { data: bgSignedData } = await supabase.storage
-        .from("church-documents")
-        .createSignedUrl(backgroundImageUrl, 60 * 60); // 1 hour
+      // Generate a signed URL for the background image to embed in SVG.
+      // Backward compatibility: older rows may have been saved without the tenant_id prefix.
+      const candidatePaths = [
+        backgroundImageUrl,
+        backgroundImageUrl.startsWith(`${tenant_id}/`) ? null : `${tenant_id}/${backgroundImageUrl}`,
+      ].filter(Boolean) as string[];
 
-      // Download the image and convert to base64 for embedding
       let bgDataUri = "";
-      if (bgSignedData?.signedUrl) {
+      for (const candidate of candidatePaths) {
+        const { data: bgSignedData } = await supabase.storage
+          .from("church-documents")
+          .createSignedUrl(candidate, 60 * 60);
+        if (!bgSignedData?.signedUrl) continue;
         try {
           const imgResp = await fetch(bgSignedData.signedUrl);
+          if (!imgResp.ok) continue;
           const imgBuf = await imgResp.arrayBuffer();
           const contentType = imgResp.headers.get("content-type") || "image/png";
           const base64 = btoa(String.fromCharCode(...new Uint8Array(imgBuf)));
           bgDataUri = `data:${contentType};base64,${base64}`;
+          break;
         } catch (e) {
-          console.warn("Failed to fetch background image, falling back to default design:", e);
+          console.warn("Failed to fetch background image candidate:", candidate, e);
         }
       }
 
@@ -241,12 +274,23 @@ Deno.serve(async (req) => {
 </svg>`;
     }
 
-    // Upload SVG to storage
-    const filePath = `certificates/${member_id}/${certificateNumber}.svg`;
+    // Rasterise SVG → PNG and upload to a tenant-scoped path
+    let pngBytes: Uint8Array;
+    try {
+      pngBytes = await renderSvgToPng(svgCert);
+    } catch (renderErr) {
+      console.error("PNG render failed:", renderErr);
+      return new Response(
+        JSON.stringify({ error: "Failed to render certificate" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const filePath = `${tenant_id}/certificates/${member_id}/${certificateNumber}.png`;
     const { error: uploadErr } = await supabase.storage
       .from("church-documents")
-      .upload(filePath, new Blob([svgCert], { type: "image/svg+xml" }), {
-        contentType: "image/svg+xml",
+      .upload(filePath, pngBytes, {
+        contentType: "image/png",
         upsert: true,
       });
     if (uploadErr) {
@@ -305,7 +349,7 @@ Deno.serve(async (req) => {
       try {
         const { data: signedUrl } = await supabase.storage
           .from("church-documents")
-          .createSignedUrl(filePath, 60 * 60 * 24 * 7); // 7 days
+          .createSignedUrl(filePath, 60 * 60 * 24 * 7, { download: `${certificateNumber}.png` }); // 7 days
 
         // Lookup or create unsubscribe token
         const { data: tokenRow } = await supabase
