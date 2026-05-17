@@ -22,14 +22,23 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { tenant_id, email, role = "member" } = await req.json();
-    console.log("invite-to-tenant called", { caller: caller.id, tenant_id, email, role });
+    const { tenant_id, email, role: rawRole = "member" } = await req.json();
+    console.log("invite-to-tenant called", { caller: caller.id, tenant_id, email, role: rawRole });
 
     if (!tenant_id || !email) {
       return new Response(JSON.stringify({ error: "tenant_id and email required" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    // Validate role against an allowlist
+    const ALLOWED_ROLES = ["member", "admin", "owner"];
+    if (!ALLOWED_ROLES.includes(rawRole)) {
+      return new Response(JSON.stringify({ error: "Invalid role" }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const role = rawRole;
 
     // Verify caller is admin or tenant admin (tenant-scoped)
     const { data: isAdmin } = await supabase.rpc("is_admin", { _user_id: caller.id, _tenant_id: tenant_id });
@@ -38,6 +47,23 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: "Admin access required" }), {
         status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
+    }
+
+    // Privilege-escalation guard: only owners or super_admins may assign 'owner' or 'admin' roles.
+    if (role === "owner" || role === "admin") {
+      const { data: isSuperAdmin } = await supabase.rpc("has_role", { _user_id: caller.id, _role: "super_admin" });
+      const { data: callerMembership } = await supabase
+        .from("tenant_memberships")
+        .select("role")
+        .eq("tenant_id", tenant_id)
+        .eq("user_id", caller.id)
+        .maybeSingle();
+      const callerIsOwner = callerMembership?.role === "owner";
+      if (!isSuperAdmin && !callerIsOwner) {
+        return new Response(JSON.stringify({ error: "Only owners or super-admins can assign owner/admin roles" }), {
+          status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
     }
 
     const normalizedEmail = email.toLowerCase().trim();
