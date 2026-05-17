@@ -398,13 +398,16 @@ export default function CertificateTemplateSettings() {
             {/* Background Image Upload */}
             <div className="space-y-1.5">
               <Label>Certificate Background Image</Label>
-              <p className="text-xs text-muted-foreground">Upload a sample certificate (PNG/JPG) to use as the background. Text will be overlaid on top.</p>
-              <div className="flex items-center gap-2">
+              <p className="text-xs text-muted-foreground">Upload a sample certificate (PNG/JPG) to use as the background, or use our built-in sample. Text will be overlaid on top.</p>
+              <div className="flex flex-wrap items-center gap-2">
                 <label className="flex items-center gap-2 px-3 py-2 border rounded-md cursor-pointer hover:bg-muted/50 text-sm">
                   {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
                   {uploading ? "Uploading..." : "Upload Image"}
                   <input type="file" accept="image/*" onChange={handleUpload} className="hidden" disabled={uploading} />
                 </label>
+                <Button type="button" variant="outline" size="sm" onClick={handleUseSample} disabled={uploading} className="gap-1.5">
+                  <Sparkles className="h-3.5 w-3.5" /> Use Sample
+                </Button>
                 {form.background_image_url && (
                   <Button variant="ghost" size="sm" onClick={() => set("background_image_url", "")}>Remove</Button>
                 )}
