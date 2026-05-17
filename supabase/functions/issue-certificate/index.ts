@@ -1,5 +1,31 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { writeAudit } from "../_shared/audit.ts";;
+import { Resvg, initWasm } from "npm:@resvg/resvg-wasm@2.6.2";
+import { writeAudit } from "../_shared/audit.ts";
+
+// Initialise resvg wasm once per cold-start
+let _wasmReady: Promise<void> | null = null;
+async function ensureWasm() {
+  if (!_wasmReady) {
+    _wasmReady = (async () => {
+      const wasmResp = await fetch(
+        "https://unpkg.com/@resvg/resvg-wasm@2.6.2/index_bg.wasm"
+      );
+      const wasmBuf = await wasmResp.arrayBuffer();
+      await initWasm(wasmBuf);
+    })();
+  }
+  return _wasmReady;
+}
+
+async function renderSvgToPng(svg: string): Promise<Uint8Array> {
+  await ensureWasm();
+  const resvg = new Resvg(svg, {
+    background: "rgba(255,255,255,1)",
+    fitTo: { mode: "width", value: 1684 }, // 2x for crisp output
+    font: { loadSystemFonts: false, defaultFontFamily: "serif" },
+  });
+  return resvg.render().asPng();
+}
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
