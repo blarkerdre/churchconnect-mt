@@ -30,11 +30,23 @@ export default function MyCertificates({ memberId, hiddenCourseNames = [] }) {
       toast({ title: "Certificate file not available", variant: "destructive" });
       return;
     }
+    const path = completion.certificate_url;
+    const ext = path.endsWith(".png") ? "png" : path.endsWith(".svg") ? "svg" : "pdf";
+    const filename = `${completion.certificate_number || "certificate"}.${ext}`;
+
+    const trySign = async (p) =>
+      supabase.storage.from("church-documents").createSignedUrl(p, 60 * 5, { download: filename });
+
     try {
-      const { data, error } = await supabase.storage
-        .from("church-documents")
-        .createSignedUrl(completion.certificate_url, 60 * 5);
-      if (error) throw error;
+      let { data, error } = await trySign(path);
+      // Backward compatibility: older rows were saved without the tenant_id/ prefix
+      if ((error || !data?.signedUrl) && tenantId && !path.startsWith(`${tenantId}/`)) {
+        const alt = `${tenantId}/${path}`;
+        const retry = await trySign(alt);
+        data = retry.data;
+        error = retry.error;
+      }
+      if (error || !data?.signedUrl) throw error || new Error("Could not create signed URL");
       window.open(data.signedUrl, "_blank");
     } catch (err) {
       toast({ title: "Error downloading certificate", description: err.message, variant: "destructive" });
