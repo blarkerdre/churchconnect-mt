@@ -349,7 +349,7 @@ Deno.serve(async (req) => {
       try {
         const { data: signedUrl } = await supabase.storage
           .from("church-documents")
-          .createSignedUrl(filePath, 60 * 60 * 24 * 7); // 7 days
+          .createSignedUrl(filePath, 60 * 60 * 24 * 7, { download: `${certificateNumber}.png` }); // 7 days
 
         // Lookup or create unsubscribe token
         const { data: tokenRow } = await supabase
