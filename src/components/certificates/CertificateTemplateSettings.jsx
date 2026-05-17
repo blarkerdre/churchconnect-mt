@@ -131,12 +131,16 @@ export default function CertificateTemplateSettings() {
       toast({ title: "File must be under 5MB", variant: "destructive" });
       return;
     }
+    if (!tenantId) {
+      toast({ title: "Tenant not loaded yet — try again", variant: "destructive" });
+      return;
+    }
 
     setUploading(true);
     try {
       await assertStorageAvailable(tenantId, file.size);
       const ext = file.name.split(".").pop();
-      const path = `certificate-backgrounds/${Date.now()}.${ext}`;
+      const path = `${tenantId}/certificate-backgrounds/${Date.now()}.${ext}`;
       const { error } = await supabase.storage
         .from("church-documents")
         .upload(path, file, { contentType: file.type, upsert: true });
@@ -145,6 +149,29 @@ export default function CertificateTemplateSettings() {
       toast({ title: "Image uploaded" });
     } catch (err) {
       toast({ title: "Upload failed", description: err.message, variant: "destructive" });
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleUseSample = async () => {
+    if (!tenantId) {
+      toast({ title: "Tenant not loaded yet — try again", variant: "destructive" });
+      return;
+    }
+    setUploading(true);
+    try {
+      const resp = await fetch(sampleBgUrl);
+      const blob = await resp.blob();
+      const path = `${tenantId}/certificate-backgrounds/sample.jpg`;
+      const { error } = await supabase.storage
+        .from("church-documents")
+        .upload(path, blob, { contentType: "image/jpeg", upsert: true });
+      if (error) throw error;
+      set("background_image_url", path);
+      toast({ title: "Sample background applied" });
+    } catch (err) {
+      toast({ title: "Could not apply sample", description: err.message, variant: "destructive" });
     } finally {
       setUploading(false);
     }
