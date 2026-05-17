@@ -175,22 +175,29 @@ Deno.serve(async (req) => {
     let svgCert: string;
 
     if (backgroundImageUrl) {
-      // Generate a signed URL for the background image to embed in SVG
-      const { data: bgSignedData } = await supabase.storage
-        .from("church-documents")
-        .createSignedUrl(backgroundImageUrl, 60 * 60); // 1 hour
+      // Generate a signed URL for the background image to embed in SVG.
+      // Backward compatibility: older rows may have been saved without the tenant_id prefix.
+      const candidatePaths = [
+        backgroundImageUrl,
+        backgroundImageUrl.startsWith(`${tenant_id}/`) ? null : `${tenant_id}/${backgroundImageUrl}`,
+      ].filter(Boolean) as string[];
 
-      // Download the image and convert to base64 for embedding
       let bgDataUri = "";
-      if (bgSignedData?.signedUrl) {
+      for (const candidate of candidatePaths) {
+        const { data: bgSignedData } = await supabase.storage
+          .from("church-documents")
+          .createSignedUrl(candidate, 60 * 60);
+        if (!bgSignedData?.signedUrl) continue;
         try {
           const imgResp = await fetch(bgSignedData.signedUrl);
+          if (!imgResp.ok) continue;
           const imgBuf = await imgResp.arrayBuffer();
           const contentType = imgResp.headers.get("content-type") || "image/png";
           const base64 = btoa(String.fromCharCode(...new Uint8Array(imgBuf)));
           bgDataUri = `data:${contentType};base64,${base64}`;
+          break;
         } catch (e) {
-          console.warn("Failed to fetch background image, falling back to default design:", e);
+          console.warn("Failed to fetch background image candidate:", candidate, e);
         }
       }
 
