@@ -274,12 +274,23 @@ Deno.serve(async (req) => {
 </svg>`;
     }
 
-    // Upload SVG to storage
-    const filePath = `certificates/${member_id}/${certificateNumber}.svg`;
+    // Rasterise SVG → PNG and upload to a tenant-scoped path
+    let pngBytes: Uint8Array;
+    try {
+      pngBytes = await renderSvgToPng(svgCert);
+    } catch (renderErr) {
+      console.error("PNG render failed:", renderErr);
+      return new Response(
+        JSON.stringify({ error: "Failed to render certificate" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const filePath = `${tenant_id}/certificates/${member_id}/${certificateNumber}.png`;
     const { error: uploadErr } = await supabase.storage
       .from("church-documents")
-      .upload(filePath, new Blob([svgCert], { type: "image/svg+xml" }), {
-        contentType: "image/svg+xml",
+      .upload(filePath, pngBytes, {
+        contentType: "image/png",
         upsert: true,
       });
     if (uploadErr) {
