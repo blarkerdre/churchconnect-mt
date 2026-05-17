@@ -7,13 +7,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import TenantDialogHeader from "@/components/ui/TenantDialogHeader";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Award, Plus, Pencil, Trash2, Upload, Image, Eye } from "lucide-react";
+import { Loader2, Award, Plus, Pencil, Trash2, Upload, Image, Eye, Sparkles } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 import { assertStorageAvailable } from "@/lib/storageQuota";
 import { useAppSetting } from "@/hooks/useAppSetting";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
+import sampleBgUrl from "@/assets/certificate-sample-bg.jpg";
 
 const emptyTemplate = {
   training_type: "",
