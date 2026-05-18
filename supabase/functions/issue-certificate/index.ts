@@ -1,5 +1,6 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { Resvg, initWasm } from "npm:@resvg/resvg-wasm@2.6.2";
+import { encodeBase64 } from "https://deno.land/std@0.224.0/encoding/base64.ts";
 import { writeAudit } from "../_shared/audit.ts";
 
 // Initialise resvg wasm once per cold-start
@@ -17,12 +18,51 @@ async function ensureWasm() {
   return _wasmReady;
 }
 
+// Cache font buffers per cold-start so resvg can render text.
+let _fontsPromise: Promise<Uint8Array[]> | null = null;
+async function loadFonts(): Promise<Uint8Array[]> {
+  if (!_fontsPromise) {
+    const urls = [
+      // Playfair Display 700 (serif headings)
+      "https://cdn.jsdelivr.net/npm/@fontsource/playfair-display@5.0.20/files/playfair-display-latin-700-normal.ttf",
+      // Inter 400 / 600 (body)
+      "https://cdn.jsdelivr.net/npm/@fontsource/inter@5.0.18/files/inter-latin-400-normal.ttf",
+      "https://cdn.jsdelivr.net/npm/@fontsource/inter@5.0.18/files/inter-latin-600-normal.ttf",
+      "https://cdn.jsdelivr.net/npm/@fontsource/inter@5.0.18/files/inter-latin-500-normal.ttf",
+      "https://cdn.jsdelivr.net/npm/@fontsource/inter@5.0.18/files/inter-latin-700-normal.ttf",
+    ];
+    _fontsPromise = Promise.all(
+      urls.map(async (u) => {
+        try {
+          const r = await fetch(u);
+          if (!r.ok) {
+            console.warn("Font fetch failed:", u, r.status);
+            return null;
+          }
+          return new Uint8Array(await r.arrayBuffer());
+        } catch (e) {
+          console.warn("Font fetch error:", u, e);
+          return null;
+        }
+      })
+    ).then((arr) => arr.filter((x): x is Uint8Array => !!x));
+  }
+  return _fontsPromise;
+}
+
 async function renderSvgToPng(svg: string): Promise<Uint8Array> {
   await ensureWasm();
+  const fontBuffers = await loadFonts();
   const resvg = new Resvg(svg, {
     background: "rgba(255,255,255,1)",
     fitTo: { mode: "width", value: 1684 }, // 2x for crisp output
-    font: { loadSystemFonts: false, defaultFontFamily: "serif" },
+    font: {
+      loadSystemFonts: false,
+      fontBuffers,
+      defaultFontFamily: "Inter",
+      serifFamily: "Playfair Display",
+      sansSerifFamily: "Inter",
+    },
   });
   return resvg.render().asPng();
 }
