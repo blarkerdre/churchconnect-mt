@@ -233,12 +233,15 @@ Deno.serve(async (req) => {
           if (!imgResp.ok) continue;
           const imgBuf = await imgResp.arrayBuffer();
           const contentType = imgResp.headers.get("content-type") || "image/png";
-          const base64 = btoa(String.fromCharCode(...new Uint8Array(imgBuf)));
+          const base64 = encodeBase64(new Uint8Array(imgBuf));
           bgDataUri = `data:${contentType};base64,${base64}`;
           break;
         } catch (e) {
           console.warn("Failed to fetch background image candidate:", candidate, e);
         }
+      }
+      if (!bgDataUri) {
+        console.warn("Background image could not be embedded; falling back to solid color. Path:", backgroundImageUrl);
       }
 
       const nameY = textPositions.name_y || 280;
