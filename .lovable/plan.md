@@ -1,63 +1,65 @@
-# Why the issued certificate is a plain blue file
+## Why birthday messages aren't sending automatically
 
-The PNG produced by `issue-certificate` falls back to a blank navy rectangle for two independent reasons in the same edge function. Both must be fixed.
+The hourly pg_cron job `send-birthday-messages-hourly` IS scheduled and active (runs at minute 0 every hour), but **every invocation is being rejected with HTTP 403** by the edge function.
 
-## Root causes
+### Root cause
 
-1. **Background image silently fails to embed.**
-   The function fetches the signed URL of the uploaded background, then converts the bytes with:
-   ```ts
-   btoa(String.fromCharCode(...new Uint8Array(imgBuf)))
+The cron job currently calls the function with the **anon key** as the `Authorization: Bearer` token:
+
+```
+'Authorization', 'Bearer eyJhbGciOi...' (anon key)
+```
+
+But `supabase/functions/send-birthday-messages/index.ts` requires one of:
+1. `bearer === serviceKey` (service role) — for cron, OR
+2. A real user JWT belonging to a tenant admin — for the manual "Send wishes" button
+
+The anon key matches neither, so the function returns `403 Forbidden` and exits before querying tenants/members. That's why:
+- Manual "Send wishes" works (uses the admin's JWT).
+- Automatic hourly runs silently do nothing (no tenants processed, no logs beyond boot/shutdown).
+
+This is the same vault-secret pattern used by `process-email-queue`: cron must authenticate with the **service role key**, not the anon key.
+
+### Fix
+
+Reschedule the cron job to use the service role key from Supabase Vault instead of the hardcoded anon key. Use `supabase--insert` (not migration) since the SQL embeds secrets and shouldn't be replayed on remixes.
+
+Steps:
+
+1. **Ensure the service role key exists in Vault** under the name `email_queue_service_role_key` (already created by `setup_email_infra`). Reuse it — no new secret needed.
+
+2. **Unschedule the broken job** and re-create it pulling the key from Vault:
+
+   ```sql
+   SELECT cron.unschedule('send-birthday-messages-hourly');
+
+   SELECT cron.schedule(
+     'send-birthday-messages-hourly',
+     '0 * * * *',
+     $$
+     SELECT net.http_post(
+       url := 'https://qfordhikmtgedfybktjg.supabase.co/functions/v1/send-birthday-messages',
+       headers := jsonb_build_object(
+         'Content-Type', 'application/json',
+         'Authorization', 'Bearer ' || (SELECT decrypted_secret FROM vault.decrypted_secrets WHERE name = 'email_queue_service_role_key')
+       ),
+       body := '{}'::jsonb
+     );
+     $$
+   );
    ```
-   The spread operator pushes every byte onto the JS call stack. For the 160 KB sample JPG (and any reasonably-sized upload) this throws `RangeError: Maximum call stack size exceeded` in Deno. The `try/catch` around it swallows the error, leaves `bgDataUri = ""`, and the SVG falls back to a single `<rect fill="#1a2d4d"/>` — no border, no decoration, just navy. That is the "plain blue" you see.
 
-2. **resvg renders no text because no fonts are loaded.**
-   The renderer is created with `loadSystemFonts: false` and only `defaultFontFamily: "serif"`. The SVG's `@import url('https://fonts.googleapis.com/css2?...')` is **not** fetched by resvg-wasm — it ignores `<style>` font imports. With no font buffers supplied, every `<text>` glyph is dropped. So even when the background does load, the name / training type / date / cert number never appear.
+3. **Verify** by querying `cron.job_run_details` after the next top-of-hour run, and check `birthday_message_log` for new `sent` rows on any tenant whose members have a birthday today.
 
-Combined effect: a navy rectangle with nothing on it.
+### Out of scope
 
-## Fix
+- No edge function code changes — its auth logic is correct.
+- No template/UI/RLS changes.
+- Not re-sending past missed birthdays (the function is idempotent per day, but historic dates won't be back-filled).
 
-Edit only `supabase/functions/issue-certificate/index.ts`.
+### Verification
 
-1. **Replace the base64 conversion** with Deno std's chunk-safe encoder:
-   ```ts
-   import { encodeBase64 } from "https://deno.land/std@0.224.0/encoding/base64.ts";
-   // ...
-   const base64 = encodeBase64(new Uint8Array(imgBuf));
-   ```
-   Also log a warning when every candidate path fails so future issues surface in edge function logs instead of being silent.
-
-2. **Load real font buffers into resvg.** Fetch Playfair Display 700 and Inter 400/600 TTFs from a stable CDN (jsDelivr `@fontsource/...`) once per cold start, cache them at module scope, and pass them via the resvg constructor:
-   ```ts
-   const resvg = new Resvg(svg, {
-     background: "rgba(255,255,255,1)",
-     fitTo: { mode: "width", value: 1684 },
-     font: {
-       loadSystemFonts: false,
-       fontBuffers: [playfairBold, interRegular, interSemibold],
-       defaultFontFamily: "Inter",
-       serifFamily: "Playfair Display",
-       sansSerifFamily: "Inter",
-     },
-   });
-   ```
-   Font fetch failures are non-fatal: render proceeds with whatever loaded, and we log a warning.
-
-3. **Remove the now-useless `@import` Google Fonts `<style>` block** from both SVG branches so resvg doesn't waste time on it. Keep `font-family` attributes — they will resolve against the loaded buffers.
-
-4. **Log clearly** when `bgDataUri` ends up empty after trying both candidate paths, so a future broken upload is obvious in logs.
-
-## Out of scope
-
-- No DB schema changes.
-- No changes to `CertificateTemplateSettings.jsx`, `MyCertificates.jsx`, or the sample asset itself.
-- Not regenerating already-issued blue certificates — fix forward; user can reissue after this lands.
-
-## Verification
-
-After deploy, in the preview:
-1. Open Certificate Templates → confirm "Use Sample" is still applied to the Default template.
-2. Issue a fresh certificate to a test member.
-3. Download from My Certificates → the PNG should now show the navy/gold sample background **plus** the member name, training, date, certificate number, and signatory.
-4. Check edge function logs — no `bgDataUri` warnings, no font warnings.
+After applying:
+- `SELECT * FROM cron.job_run_details WHERE jobname = 'send-birthday-messages-hourly' ORDER BY start_time DESC LIMIT 3;` should show `status = succeeded` and HTTP 200.
+- Edge function logs should show real invocations (not just boot/shutdown).
+- On a day with a member birthday, `birthday_message_log` gains rows around the configured `send_hour_local` (default UTC hour 8).
