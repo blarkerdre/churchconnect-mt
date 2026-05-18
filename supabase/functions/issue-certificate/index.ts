@@ -272,11 +272,7 @@ Deno.serve(async (req) => {
       // Default SVG-generated design
       svgCert = `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="842" height="595" viewBox="0 0 842 595">
-  <defs>
-    <style>
-      @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&amp;family=Inter:wght@400;500;600&amp;display=swap');
-    </style>
-  </defs>
+  
   <!-- Background -->
   <rect width="842" height="595" fill="${bgColor}"/>
   <!-- Inner frame -->
