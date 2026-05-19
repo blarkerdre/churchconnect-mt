@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from "@/components/ui/select";
-import { Plus, Edit, Trash2, Loader2, FileText, Home, CheckCircle2, AlertCircle, TrendingUp, Users } from "lucide-react";
+import { Plus, Edit, Trash2, Loader2, FileText, Home, CheckCircle2, AlertCircle, TrendingUp, Users, User, Baby, UserPlus, MessageCircle } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -123,7 +123,13 @@ export default function WSFAttendanceTab({ centres }) {
   const summaryStats = (() => {
     const centresInScope = filterCentreId === "all" ? availableCentres.length : 1;
     const held = filteredReports.length;
-    const totalAttendance = filteredReports.reduce((sum, r) => sum + r.male + r.female + r.children, 0);
+    const totalMale = filteredReports.reduce((s, r) => s + (r.male || 0), 0);
+    const totalFemale = filteredReports.reduce((s, r) => s + (r.female || 0), 0);
+    const totalChildren = filteredReports.reduce((s, r) => s + (r.children || 0), 0);
+    const totalAdults = totalMale + totalFemale;
+    const totalFirstTimers = filteredReports.reduce((s, r) => s + (r.first_timers || 0), 0);
+    const totalTestimonies = filteredReports.reduce((s, r) => s + (r.testimonies || 0), 0);
+    const totalAttendance = totalAdults + totalChildren;
     const avgAttendance = held > 0 ? Math.round(totalAttendance / held) : 0;
 
     let weeks = 0;
@@ -140,7 +146,7 @@ export default function WSFAttendanceTab({ centres }) {
     const expected = weeks * centresInScope;
     const notHeld = weeks > 0 ? Math.max(0, expected - held) : null;
 
-    return { centresInScope, held, totalAttendance, notHeld, avgAttendance, hasRange };
+    return { centresInScope, held, totalAttendance, notHeld, avgAttendance, hasRange, totalMale, totalFemale, totalAdults, totalChildren, totalFirstTimers, totalTestimonies };
   })();
 
   const buildPrintRows = () => ({
@@ -236,13 +242,19 @@ export default function WSFAttendanceTab({ centres }) {
       </div>
 
       {isAdmin && (
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
           {[
             { title: "Cell Centres", value: summaryStats.centresInScope, sub: filterCentreId === "all" ? "All centres" : "Filtered", icon: Home, color: "text-primary" },
             { title: "Meetings Held", value: summaryStats.held, sub: `${filteredReports.length} report${filteredReports.length === 1 ? "" : "s"}`, icon: CheckCircle2, color: "text-accent" },
             { title: "Meetings Not Held", value: summaryStats.notHeld ?? "—", sub: summaryStats.hasRange ? "Weekly cadence" : (summaryStats.notHeld === null ? "Set a date range" : "Estimated from reports"), icon: AlertCircle, color: "text-destructive" },
             { title: "Avg Attendance", value: summaryStats.avgAttendance, sub: "Per meeting", icon: TrendingUp, color: "text-chart-3" },
             { title: "Total Attendance", value: summaryStats.totalAttendance, sub: "Across all meetings", icon: Users, color: "text-chart-4" },
+            { title: "Male", value: summaryStats.totalMale, sub: "Adult men", icon: User, color: "text-chart-1" },
+            { title: "Female", value: summaryStats.totalFemale, sub: "Adult women", icon: User, color: "text-chart-2" },
+            { title: "Adults", value: summaryStats.totalAdults, sub: "Male + Female", icon: Users, color: "text-primary" },
+            { title: "Children", value: summaryStats.totalChildren, sub: "Across all meetings", icon: Baby, color: "text-chart-5" },
+            { title: "First Timers", value: summaryStats.totalFirstTimers, sub: "Across all meetings", icon: UserPlus, color: "text-accent" },
+            { title: "Testimonies", value: summaryStats.totalTestimonies, sub: "Across all meetings", icon: MessageCircle, color: "text-chart-3" },
           ].map(stat => (
             <Card key={stat.title} className="border-0 shadow-sm">
               <CardContent className="p-4">
