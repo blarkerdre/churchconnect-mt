@@ -242,30 +242,36 @@ export default function WSFAttendanceTab({ centres }) {
       </div>
 
       {isAdmin && (
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-          {[
-            { title: "Cell Centres", value: summaryStats.centresInScope, sub: filterCentreId === "all" ? "All centres" : "Filtered", icon: Home, color: "text-primary" },
-            { title: "Meetings Held", value: summaryStats.held, sub: `${filteredReports.length} report${filteredReports.length === 1 ? "" : "s"}`, icon: CheckCircle2, color: "text-accent" },
-            { title: "Meetings Not Held", value: summaryStats.notHeld ?? "—", sub: summaryStats.hasRange ? "Weekly cadence" : (summaryStats.notHeld === null ? "Set a date range" : "Estimated from reports"), icon: AlertCircle, color: "text-destructive" },
-            { title: "Avg Attendance", value: summaryStats.avgAttendance, sub: "Per meeting", icon: TrendingUp, color: "text-chart-3" },
-            { title: "Total Attendance", value: summaryStats.totalAttendance, sub: "Across all meetings", icon: Users, color: "text-chart-4" },
-          ].map(stat => (
-            <Card key={stat.title} className="border-0 shadow-sm">
-              <CardContent className="p-4">
-                <div className="flex items-start justify-between">
-                  <div className="min-w-0">
-                    <p className="text-xs font-medium text-muted-foreground truncate">{stat.title}</p>
-                    <p className="text-2xl font-display font-bold text-foreground mt-1">{stat.value}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5 truncate">{stat.sub}</p>
-                  </div>
+        <Card className="border-0 shadow-sm">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base font-display flex items-center gap-2">
+              <TrendingUp className="h-4 w-4 text-primary" />
+              Summary
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
+              {[
+                { title: "Cell Centres", value: summaryStats.centresInScope, sub: filterCentreId === "all" ? "All centres" : "Filtered", icon: Home, color: "text-primary" },
+                { title: "Meetings Held", value: summaryStats.held, sub: `${filteredReports.length} report${filteredReports.length === 1 ? "" : "s"}`, icon: CheckCircle2, color: "text-accent" },
+                { title: "Meetings Not Held", value: summaryStats.notHeld ?? "—", sub: summaryStats.hasRange ? "Weekly cadence" : (summaryStats.notHeld === null ? "Set a date range" : "Estimated"), icon: AlertCircle, color: "text-destructive" },
+                { title: "Avg Attendance", value: summaryStats.avgAttendance, sub: "Per meeting", icon: TrendingUp, color: "text-chart-3" },
+                { title: "Total Attendance", value: summaryStats.totalAttendance, sub: "All meetings", icon: Users, color: "text-chart-4" },
+              ].map(stat => (
+                <div key={stat.title} className="flex items-center gap-3">
                   <div className={`h-9 w-9 rounded-xl bg-muted flex items-center justify-center ${stat.color} shrink-0`}>
                     <stat.icon className="h-4 w-4" />
                   </div>
+                  <div className="min-w-0">
+                    <p className="text-xs font-medium text-muted-foreground truncate">{stat.title}</p>
+                    <p className="text-xl font-display font-bold text-foreground leading-tight">{stat.value}</p>
+                    <p className="text-[10px] text-muted-foreground mt-0.5 truncate">{stat.sub}</p>
+                  </div>
                 </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       {isAdmin && filteredReports.length > 0 && (
