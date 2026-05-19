@@ -123,7 +123,13 @@ export default function WSFAttendanceTab({ centres }) {
   const summaryStats = (() => {
     const centresInScope = filterCentreId === "all" ? availableCentres.length : 1;
     const held = filteredReports.length;
-    const totalAttendance = filteredReports.reduce((sum, r) => sum + r.male + r.female + r.children, 0);
+    const totalMale = filteredReports.reduce((s, r) => s + (r.male || 0), 0);
+    const totalFemale = filteredReports.reduce((s, r) => s + (r.female || 0), 0);
+    const totalChildren = filteredReports.reduce((s, r) => s + (r.children || 0), 0);
+    const totalAdults = totalMale + totalFemale;
+    const totalFirstTimers = filteredReports.reduce((s, r) => s + (r.first_timers || 0), 0);
+    const totalTestimonies = filteredReports.reduce((s, r) => s + (r.testimonies || 0), 0);
+    const totalAttendance = totalAdults + totalChildren;
     const avgAttendance = held > 0 ? Math.round(totalAttendance / held) : 0;
 
     let weeks = 0;
@@ -140,7 +146,7 @@ export default function WSFAttendanceTab({ centres }) {
     const expected = weeks * centresInScope;
     const notHeld = weeks > 0 ? Math.max(0, expected - held) : null;
 
-    return { centresInScope, held, totalAttendance, notHeld, avgAttendance, hasRange };
+    return { centresInScope, held, totalAttendance, notHeld, avgAttendance, hasRange, totalMale, totalFemale, totalAdults, totalChildren, totalFirstTimers, totalTestimonies };
   })();
 
   const buildPrintRows = () => ({
