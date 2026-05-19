@@ -1,12 +1,10 @@
-Consolidate the six new demographic totals into a single summary card on the Home Cell Attendance report.
+Consolidate the five main operational stats into a single summary card, matching the Attendance Breakdown pattern.
 
 ## Changes
 
 **File:** `src/components/wsf/WSFAttendanceTab.jsx`
 
-1. Remove the six standalone stat cards (Male, Female, Adults, Children, First Timers, Testimonies) from the admin summary grid.
-2. Revert the grid back to `grid-cols-2 sm:grid-cols-5` for the original five operational cards (Cell Centres, Meetings Held, Meetings Not Held, Avg Attendance, Total Attendance).
-3. Add one new "Attendance Breakdown" card directly below the stats grid. Inside it, render the six totals as a compact 3-column (2 on mobile) grid of label/value pairs with small icons:
-   - Male, Female, Adults, Children, First Timers, Testimonies
-4. Card uses existing `Card`/`CardHeader`/`CardContent` components and semantic tokens; values pulled from already-computed `summaryStats` fields (`totalMale`, `totalFemale`, `totalAdults`, `totalChildren`, `totalFirstTimers`, `totalTestimonies`).
-5. Only renders for admins (inside the existing `{isAdmin && ...}` block) and when `filteredReports.length > 0`.
+1. Replace the `grid-cols-2 sm:grid-cols-5` block of five standalone stat cards with a single "Summary" card.
+2. Inside the card, render the five stats (Cell Centres, Meetings Held, Meetings Not Held, Avg Attendance, Total Attendance) in a 2-column (mobile) / 5-column (sm+) grid of icon + label + value + sub items, using the same compact row style as the Attendance Breakdown card.
+3. Keep semantic tokens, icons, and `summaryStats` values as-is. Card only renders inside the existing `{isAdmin && ...}` block.
+4. The Attendance Breakdown card below it stays unchanged.
