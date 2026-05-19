@@ -242,19 +242,13 @@ export default function WSFAttendanceTab({ centres }) {
       </div>
 
       {isAdmin && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
           {[
             { title: "Cell Centres", value: summaryStats.centresInScope, sub: filterCentreId === "all" ? "All centres" : "Filtered", icon: Home, color: "text-primary" },
             { title: "Meetings Held", value: summaryStats.held, sub: `${filteredReports.length} report${filteredReports.length === 1 ? "" : "s"}`, icon: CheckCircle2, color: "text-accent" },
             { title: "Meetings Not Held", value: summaryStats.notHeld ?? "—", sub: summaryStats.hasRange ? "Weekly cadence" : (summaryStats.notHeld === null ? "Set a date range" : "Estimated from reports"), icon: AlertCircle, color: "text-destructive" },
             { title: "Avg Attendance", value: summaryStats.avgAttendance, sub: "Per meeting", icon: TrendingUp, color: "text-chart-3" },
             { title: "Total Attendance", value: summaryStats.totalAttendance, sub: "Across all meetings", icon: Users, color: "text-chart-4" },
-            { title: "Male", value: summaryStats.totalMale, sub: "Adult men", icon: User, color: "text-chart-1" },
-            { title: "Female", value: summaryStats.totalFemale, sub: "Adult women", icon: User, color: "text-chart-2" },
-            { title: "Adults", value: summaryStats.totalAdults, sub: "Male + Female", icon: Users, color: "text-primary" },
-            { title: "Children", value: summaryStats.totalChildren, sub: "Across all meetings", icon: Baby, color: "text-chart-5" },
-            { title: "First Timers", value: summaryStats.totalFirstTimers, sub: "Across all meetings", icon: UserPlus, color: "text-accent" },
-            { title: "Testimonies", value: summaryStats.totalTestimonies, sub: "Across all meetings", icon: MessageCircle, color: "text-chart-3" },
           ].map(stat => (
             <Card key={stat.title} className="border-0 shadow-sm">
               <CardContent className="p-4">
@@ -272,6 +266,39 @@ export default function WSFAttendanceTab({ centres }) {
             </Card>
           ))}
         </div>
+      )}
+
+      {isAdmin && filteredReports.length > 0 && (
+        <Card className="border-0 shadow-sm">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base font-display flex items-center gap-2">
+              <Users className="h-4 w-4 text-primary" />
+              Attendance Breakdown
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+              {[
+                { label: "Male", value: summaryStats.totalMale, icon: User, color: "text-chart-1" },
+                { label: "Female", value: summaryStats.totalFemale, icon: User, color: "text-chart-2" },
+                { label: "Adults", value: summaryStats.totalAdults, icon: Users, color: "text-primary" },
+                { label: "Children", value: summaryStats.totalChildren, icon: Baby, color: "text-chart-5" },
+                { label: "First Timers", value: summaryStats.totalFirstTimers, icon: UserPlus, color: "text-accent" },
+                { label: "Testimonies", value: summaryStats.totalTestimonies, icon: MessageCircle, color: "text-chart-3" },
+              ].map(item => (
+                <div key={item.label} className="flex items-center gap-3">
+                  <div className={`h-9 w-9 rounded-xl bg-muted flex items-center justify-center ${item.color} shrink-0`}>
+                    <item.icon className="h-4 w-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-xs font-medium text-muted-foreground truncate">{item.label}</p>
+                    <p className="text-xl font-display font-bold text-foreground leading-tight">{item.value}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
       )}
 
 
