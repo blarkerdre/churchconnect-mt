@@ -241,7 +241,7 @@ export default function WSFAttendanceTab({ centres }) {
         </Button>
       </div>
 
-      {isAdmin && (
+      {canAccess && (
         <Card className="border-0 shadow-sm">
           <CardHeader className="pb-3">
             <CardTitle className="text-base font-display flex items-center gap-2">
@@ -274,7 +274,7 @@ export default function WSFAttendanceTab({ centres }) {
         </Card>
       )}
 
-      {isAdmin && filteredReports.length > 0 && (
+      {canAccess && filteredReports.length > 0 && (
         <Card className="border-0 shadow-sm">
           <CardHeader className="pb-3">
             <CardTitle className="text-base font-display flex items-center gap-2">
@@ -356,11 +356,13 @@ export default function WSFAttendanceTab({ centres }) {
                           <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(r)}>
                             <Edit className="h-3.5 w-3.5" />
                           </Button>
-                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => {
-                            if (window.confirm("Delete this report?")) deleteMutation.mutate(r.id);
-                          }}>
-                            <Trash2 className="h-3.5 w-3.5 text-destructive" />
-                          </Button>
+                          {isAdmin && (
+                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => {
+                              if (window.confirm("Delete this report?")) deleteMutation.mutate(r.id);
+                            }}>
+                              <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                            </Button>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>
