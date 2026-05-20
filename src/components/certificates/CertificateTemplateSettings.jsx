@@ -23,6 +23,7 @@ const emptyTemplate = {
   signatory_title: "",
   background_color: "#1a2d4d",
   accent_color: "#c5a028",
+  text_color: "#1a2d4d",
   custom_message: "This is to certify that the above named has successfully completed",
   background_image_url: "",
   text_positions: { name_y: 280, training_y: 340, date_y: 380, signatory_y: 500 },
