@@ -23,6 +23,7 @@ const emptyTemplate = {
   signatory_title: "",
   background_color: "#1a2d4d",
   accent_color: "#c5a028",
+  text_color: "#1a2d4d",
   custom_message: "This is to certify that the above named has successfully completed",
   background_image_url: "",
   text_positions: { name_y: 280, training_y: 340, date_y: 380, signatory_y: 500 },
@@ -112,6 +113,7 @@ export default function CertificateTemplateSettings() {
       signatory_title: t.signatory_title,
       background_color: t.background_color,
       accent_color: t.accent_color,
+      text_color: t.text_color || t.background_color || "#1a2d4d",
       custom_message: t.custom_message || "",
       background_image_url: t.background_image_url || "",
       text_positions: t.text_positions || emptyTemplate.text_positions,
@@ -199,6 +201,7 @@ export default function CertificateTemplateSettings() {
       signatory_title: form.signatory_title,
       background_color: form.background_color,
       accent_color: form.accent_color,
+      text_color: form.text_color || "#1a2d4d",
       custom_message: form.custom_message || null,
       background_image_url: form.background_image_url || null,
       text_positions: form.text_positions,
@@ -222,6 +225,7 @@ export default function CertificateTemplateSettings() {
     const sigTitle = form.signatory_title || "";
     const bgColor = safeColor(form.background_color, "#1a2d4d");
     const accentColor = safeColor(form.accent_color, "#c5a028");
+    const textColor = safeColor(form.text_color, "#1a2d4d");
     const customMessage = form.custom_message || "This is to certify that the above named has successfully completed";
 
     if (form.background_image_url && previewUrl) {
@@ -234,14 +238,14 @@ export default function CertificateTemplateSettings() {
       return `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="842" height="595" viewBox="0 0 842 595">
   <defs><style>@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&amp;family=Inter:wght@400;500;600&amp;display=swap');</style></defs>
   <image href="${previewUrl}" width="842" height="595" preserveAspectRatio="xMidYMid slice"/>
-  <text x="421" y="${nameY}" text-anchor="middle" font-family="Playfair Display, serif" font-weight="700" font-size="32" fill="${bgColor}">${escapeXml(memberName)}</text>
-  <text x="421" y="${trainingY}" text-anchor="middle" font-family="Inter, sans-serif" font-weight="600" font-size="18" fill="${bgColor}">${escapeXml(trainingType)}</text>
-  <text x="421" y="${dateY}" text-anchor="middle" font-family="Inter, sans-serif" font-weight="400" font-size="13" fill="#666">Completed on ${formattedDate}</text>
-  <text x="421" y="${certNumY}" text-anchor="middle" font-family="Inter, sans-serif" font-weight="400" font-size="10" fill="#aaa">Certificate No: ${certNumber}</text>
+  <text x="421" y="${nameY}" text-anchor="middle" font-family="Playfair Display, serif" font-weight="700" font-size="32" fill="${textColor}" stroke="rgba(255,255,255,0.35)" stroke-width="0.6" paint-order="stroke">${escapeXml(memberName)}</text>
+  <text x="421" y="${trainingY}" text-anchor="middle" font-family="Inter, sans-serif" font-weight="600" font-size="18" fill="${textColor}">${escapeXml(trainingType)}</text>
+  <text x="421" y="${dateY}" text-anchor="middle" font-family="Inter, sans-serif" font-weight="400" font-size="13" fill="${textColor}" opacity="0.75">Completed on ${formattedDate}</text>
+  <text x="421" y="${certNumY}" text-anchor="middle" font-family="Inter, sans-serif" font-weight="400" font-size="10" fill="${textColor}" opacity="0.6">Certificate No: ${certNumber}</text>
   ${sigName ? `
-  <line x1="301" y1="${sigY - 20}" x2="541" y2="${sigY - 20}" stroke="#ccc" stroke-width="1"/>
-  <text x="421" y="${sigY}" text-anchor="middle" font-family="Inter, sans-serif" font-weight="600" font-size="13" fill="${bgColor}">${escapeXml(sigName)}</text>
-  <text x="421" y="${sigY + 18}" text-anchor="middle" font-family="Inter, sans-serif" font-weight="400" font-size="11" fill="#888">${escapeXml(sigTitle)}</text>` : ""}
+  <line x1="301" y1="${sigY - 20}" x2="541" y2="${sigY - 20}" stroke="${textColor}" stroke-opacity="0.4" stroke-width="1"/>
+  <text x="421" y="${sigY}" text-anchor="middle" font-family="Inter, sans-serif" font-weight="600" font-size="13" fill="${textColor}">${escapeXml(sigName)}</text>
+  <text x="421" y="${sigY + 18}" text-anchor="middle" font-family="Inter, sans-serif" font-weight="400" font-size="11" fill="${textColor}" opacity="0.75">${escapeXml(sigTitle)}</text>` : ""}
 </svg>`;
     }
 
@@ -418,6 +422,17 @@ export default function CertificateTemplateSettings() {
             </div>
 
             {/* Text Position Controls - only show when background image is set */}
+            {form.background_image_url && (
+              <div className="space-y-1.5">
+                <Label>Text Color (on image)</Label>
+                <p className="text-xs text-muted-foreground">Colour used for the name, training type, date and signatory drawn on top of your background image. Pick something that contrasts the artwork (e.g. white on a dark image).</p>
+                <div className="flex items-center gap-2">
+                  <input type="color" value={form.text_color || "#1a2d4d"} onChange={(e) => set("text_color", e.target.value)} className="h-9 w-9 rounded cursor-pointer border" />
+                  <Input value={form.text_color || "#1a2d4d"} onChange={(e) => set("text_color", e.target.value)} className="flex-1" />
+                </div>
+              </div>
+            )}
+
             {form.background_image_url && (
               <div className="space-y-2">
                 <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Text Positions (Y offset in pixels)</Label>
