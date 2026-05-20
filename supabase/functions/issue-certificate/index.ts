@@ -184,6 +184,7 @@ Deno.serve(async (req) => {
     const signatoryTitle = template?.signatory_title || "";
     const bgColor = template?.background_color || "#1a2d4d";
     const accentColor = template?.accent_color || "#c5a028";
+    const textColor = template?.text_color || bgColor || "#1a2d4d";
     const customMessage =
       template?.custom_message ||
       "This is to certify that the above named has successfully completed";
