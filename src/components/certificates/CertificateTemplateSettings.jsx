@@ -113,6 +113,7 @@ export default function CertificateTemplateSettings() {
       signatory_title: t.signatory_title,
       background_color: t.background_color,
       accent_color: t.accent_color,
+      text_color: t.text_color || t.background_color || "#1a2d4d",
       custom_message: t.custom_message || "",
       background_image_url: t.background_image_url || "",
       text_positions: t.text_positions || emptyTemplate.text_positions,
