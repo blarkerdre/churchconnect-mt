@@ -256,17 +256,17 @@ Deno.serve(async (req) => {
   
   ${bgDataUri ? `<image href="${bgDataUri}" width="842" height="595" preserveAspectRatio="xMidYMid slice"/>` : `<rect width="842" height="595" fill="${bgColor}"/>`}
   <!-- Member name -->
-  <text x="421" y="${nameY}" text-anchor="middle" font-family="Playfair Display, serif" font-weight="700" font-size="32" fill="${bgColor}">${escapeXml(memberName)}</text>
+  <text x="421" y="${nameY}" text-anchor="middle" font-family="Playfair Display, serif" font-weight="700" font-size="32" fill="${textColor}" stroke="rgba(255,255,255,0.35)" stroke-width="0.6" paint-order="stroke">${escapeXml(memberName)}</text>
   <!-- Training type -->
-  <text x="421" y="${trainingY}" text-anchor="middle" font-family="Inter, sans-serif" font-weight="600" font-size="18" fill="${bgColor}">${escapeXml(training_type)}</text>
+  <text x="421" y="${trainingY}" text-anchor="middle" font-family="Inter, sans-serif" font-weight="600" font-size="18" fill="${textColor}">${escapeXml(training_type)}</text>
   <!-- Date -->
-  <text x="421" y="${dateY}" text-anchor="middle" font-family="Inter, sans-serif" font-weight="400" font-size="13" fill="#666">Completed on ${formattedDate}</text>
+  <text x="421" y="${dateY}" text-anchor="middle" font-family="Inter, sans-serif" font-weight="400" font-size="13" fill="${textColor}" opacity="0.75">Completed on ${formattedDate}</text>
   <!-- Certificate number -->
-  <text x="421" y="${certNumY}" text-anchor="middle" font-family="Inter, sans-serif" font-weight="400" font-size="10" fill="#aaa">Certificate No: ${certificateNumber}</text>
+  <text x="421" y="${certNumY}" text-anchor="middle" font-family="Inter, sans-serif" font-weight="400" font-size="10" fill="${textColor}" opacity="0.6">Certificate No: ${certificateNumber}</text>
   ${signatoryName ? `
-  <line x1="301" y1="${sigY - 20}" x2="541" y2="${sigY - 20}" stroke="#ccc" stroke-width="1"/>
-  <text x="421" y="${sigY}" text-anchor="middle" font-family="Inter, sans-serif" font-weight="600" font-size="13" fill="${bgColor}">${escapeXml(signatoryName)}</text>
-  <text x="421" y="${sigY + 18}" text-anchor="middle" font-family="Inter, sans-serif" font-weight="400" font-size="11" fill="#888">${escapeXml(signatoryTitle)}</text>
+  <line x1="301" y1="${sigY - 20}" x2="541" y2="${sigY - 20}" stroke="${textColor}" stroke-opacity="0.4" stroke-width="1"/>
+  <text x="421" y="${sigY}" text-anchor="middle" font-family="Inter, sans-serif" font-weight="600" font-size="13" fill="${textColor}">${escapeXml(signatoryName)}</text>
+  <text x="421" y="${sigY + 18}" text-anchor="middle" font-family="Inter, sans-serif" font-weight="400" font-size="11" fill="${textColor}" opacity="0.75">${escapeXml(signatoryTitle)}</text>
   ` : ""}
 </svg>`;
     } else {
