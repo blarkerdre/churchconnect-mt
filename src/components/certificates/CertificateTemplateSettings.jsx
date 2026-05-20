@@ -201,6 +201,7 @@ export default function CertificateTemplateSettings() {
       signatory_title: form.signatory_title,
       background_color: form.background_color,
       accent_color: form.accent_color,
+      text_color: form.text_color || "#1a2d4d",
       custom_message: form.custom_message || null,
       background_image_url: form.background_image_url || null,
       text_positions: form.text_positions,
