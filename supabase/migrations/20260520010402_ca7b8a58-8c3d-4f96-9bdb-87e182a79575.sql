@@ -1,0 +1,1 @@
+ALTER TABLE public.certificate_templates ADD COLUMN IF NOT EXISTS text_color text DEFAULT '#1a2d4d';

@@ -589,6 +589,7 @@ export type Database = {
           signatory_name: string
           signatory_title: string
           tenant_id: string | null
+          text_color: string | null
           text_positions: Json | null
           training_type: string
           updated_at: string
@@ -605,6 +606,7 @@ export type Database = {
           signatory_name?: string
           signatory_title?: string
           tenant_id?: string | null
+          text_color?: string | null
           text_positions?: Json | null
           training_type: string
           updated_at?: string
@@ -621,6 +623,7 @@ export type Database = {
           signatory_name?: string
           signatory_title?: string
           tenant_id?: string | null
+          text_color?: string | null
           text_positions?: Json | null
           training_type?: string
           updated_at?: string
