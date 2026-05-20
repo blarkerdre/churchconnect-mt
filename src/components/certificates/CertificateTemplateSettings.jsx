@@ -423,6 +423,17 @@ export default function CertificateTemplateSettings() {
 
             {/* Text Position Controls - only show when background image is set */}
             {form.background_image_url && (
+              <div className="space-y-1.5">
+                <Label>Text Color (on image)</Label>
+                <p className="text-xs text-muted-foreground">Colour used for the name, training type, date and signatory drawn on top of your background image. Pick something that contrasts the artwork (e.g. white on a dark image).</p>
+                <div className="flex items-center gap-2">
+                  <input type="color" value={form.text_color || "#1a2d4d"} onChange={(e) => set("text_color", e.target.value)} className="h-9 w-9 rounded cursor-pointer border" />
+                  <Input value={form.text_color || "#1a2d4d"} onChange={(e) => set("text_color", e.target.value)} className="flex-1" />
+                </div>
+              </div>
+            )}
+
+            {form.background_image_url && (
               <div className="space-y-2">
                 <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Text Positions (Y offset in pixels)</Label>
                 <p className="text-xs text-muted-foreground">Adjust where text appears on the certificate (0 = top, 595 = bottom)</p>
