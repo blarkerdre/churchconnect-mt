@@ -22,14 +22,16 @@ async function ensureWasm() {
 let _fontsPromise: Promise<Uint8Array[]> | null = null;
 async function loadFonts(): Promise<Uint8Array[]> {
   if (!_fontsPromise) {
+    // Google Fonts gstatic TTF URLs (resvg-wasm needs TTF/OTF — fontsource jsdelivr
+    // packages no longer ship .ttf, only .woff2, which resvg-wasm cannot consume).
     const urls = [
       // Playfair Display 700 (serif headings)
-      "https://cdn.jsdelivr.net/npm/@fontsource/playfair-display@5.0.20/files/playfair-display-latin-700-normal.ttf",
-      // Inter 400 / 600 (body)
-      "https://cdn.jsdelivr.net/npm/@fontsource/inter@5.0.18/files/inter-latin-400-normal.ttf",
-      "https://cdn.jsdelivr.net/npm/@fontsource/inter@5.0.18/files/inter-latin-600-normal.ttf",
-      "https://cdn.jsdelivr.net/npm/@fontsource/inter@5.0.18/files/inter-latin-500-normal.ttf",
-      "https://cdn.jsdelivr.net/npm/@fontsource/inter@5.0.18/files/inter-latin-700-normal.ttf",
+      "https://fonts.gstatic.com/s/playfairdisplay/v40/nuFvD-vYSZviVYUb_rj3ij__anPXJzDwcbmjWBN2PKeiukDQ.ttf",
+      // Inter 400 / 500 / 600 / 700 (body)
+      "https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuLyfMZg.ttf",
+      "https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuI6fMZg.ttf",
+      "https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuGKYMZg.ttf",
+      "https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuFuYMZg.ttf",
     ];
     _fontsPromise = Promise.all(
       urls.map(async (u) => {
@@ -45,7 +47,13 @@ async function loadFonts(): Promise<Uint8Array[]> {
           return null;
         }
       })
-    ).then((arr) => arr.filter((x): x is Uint8Array => !!x));
+    ).then((arr) => {
+      const buffers = arr.filter((x): x is Uint8Array => !!x);
+      if (buffers.length === 0) {
+        console.error("loadFonts: no font buffers loaded — text will not render");
+      }
+      return buffers;
+    });
   }
   return _fontsPromise;
 }
