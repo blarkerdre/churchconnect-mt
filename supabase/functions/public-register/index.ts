@@ -573,12 +573,12 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Verify auth user exists before writing user_id to prevent FK violation
-    let verifiedUserId: string | null = null;
+    // Verify auth user exists before writing user_id to prevent FK violation.
+    // Only stamp user_id when the form email matches the signed-in user.
     let verifiedUserId: string | null = null;
     if (isSelfRegistration && authenticatedUser?.userId) {
-
       const { data: verifiedUser, error: verifyErr } = await supabase.auth.admin.getUserById(authenticatedUser.userId);
+
       if (!verifyErr && verifiedUser?.user) {
         verifiedUserId = authenticatedUser.userId;
       } else {
