@@ -575,7 +575,9 @@ Deno.serve(async (req) => {
 
     // Verify auth user exists before writing user_id to prevent FK violation
     let verifiedUserId: string | null = null;
-    if (authenticatedUser?.userId) {
+    let verifiedUserId: string | null = null;
+    if (isSelfRegistration && authenticatedUser?.userId) {
+
       const { data: verifiedUser, error: verifyErr } = await supabase.auth.admin.getUserById(authenticatedUser.userId);
       if (!verifyErr && verifiedUser?.user) {
         verifiedUserId = authenticatedUser.userId;
