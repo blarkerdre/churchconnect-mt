@@ -1,45 +1,63 @@
-# Fix: Certificate name not rendered on background image
+# Fix mis-linked member: Sonia Ojilere
 
-## Root cause
+## What's wrong
 
-The edge function logs show every font fetch returning **404**:
+The member **Sonia Ojilere** (`chidimmasonia1@gmail.com`, tenant: Winners Chapel International, Cardiff) has `user_id` pointing to the auth account **viakanum1@gmail.com** (Akaninyene Umo).
 
+That means whenever Akaninyene logs in, the app treats him as Sonia — his Dashboard, "My Profile", certificates, and any "member-self" views all resolve to Sonia's record.
+
+There is **no auth account** for `chidimmasonia1@gmail.com`, so Sonia herself has never actually logged in.
+
+## Why this happened
+
+Timeline from the database:
+
+- 2026-04-11 10:17:17 — auth user `viakanum1@gmail.com` (Akaninyene Umo) is created.
+- 2026-04-11 10:30:37 — member row for **Sonia Ojilere** is created, and at that moment `user_id` is set to Akaninyene's auth id.
+
+Two plausible mechanisms, both consistent with the data:
+
+1. **Signup trigger mis-attribution.** When Akaninyene signed up, our `handle_new_user` / signup trigger looks for an existing member row to attach the new auth user to (by email / name match in the active tenant context). If the trigger's match was loose (e.g. name-only fallback, or stale `tenant_slug` metadata) it could have attached his new auth id to the wrong member — Sonia — instead of creating/linking his own.
+
+2. **Self-registration while signed in as someone else.** Akaninyene was logged in and used the public member registration form to register Sonia. The registration path (`public-register` edge function or the in-app member form) wrote `user_id = auth.uid()` onto Sonia's new member row, because it assumes the submitting user *is* the member.
+
+Either way the root cause is the same class of bug: an auth user id is being attached to a member row that doesn't belong to them, with no email-match safeguard.
+
+## Fix — two parts
+
+### 1. Data fix (immediate)
+
+Clear the bad link on Sonia's member row so she's no longer "owned" by Akaninyene's login. Also make sure Akaninyene has his own member row in the same tenant (if he doesn't, he'll need one or an invitation, but that's a separate decision — flagged below, not done in this migration).
+
+```sql
+UPDATE public.members
+SET user_id = NULL,
+    updated_at = now()
+WHERE id = '9d5b1664-03b0-4d80-9ea1-540f5a56c7bf'
+  AND user_id = 'ce5fca97-2c75-4149-a0c3-6361055526cd';
 ```
-Font fetch failed: .../@fontsource/playfair-display@5.0.20/.../playfair-display-latin-700-normal.ttf 404
-Font fetch failed: .../@fontsource/inter@5.0.18/.../inter-latin-400-normal.ttf 404
-... (500, 600, 700 same)
-```
 
-I confirmed via curl: `@fontsource` packages on jsDelivr **no longer ship `.ttf` files** in `/files/` — only `.woff2`. So `loadFonts()` returns an empty array, resvg has no fonts available, and every `<text>` element silently renders as nothing.
+After this:
+- Sonia's member record is "unlinked" — admins can re-link it later when Sonia actually signs up with `chidimmasonia1@gmail.com`.
+- Akaninyene's login still works; he just won't be auto-mapped to any member until a correct link is made.
 
-On the default (no background image) design the SVG still has the decorative rectangles/lines/accent bars, so it *looks* like something was generated. On the background-image design there are **no shapes** — just text — so the output looks like the bare background image with no name. That matches exactly what you're seeing.
+### 2. Open question (not part of this migration)
 
-## Fix
+Does Akaninyene Umo have his own member record in WCI Cardiff that *should* be linked to `viakanum1@gmail.com`? I can check and, if so, link his auth id to that row in a follow-up step. If he doesn't have a member record yet, we should decide whether to create one or treat him as admin-only.
 
-Switch `loadFonts()` in `supabase/functions/issue-certificate/index.ts` to URLs that actually exist and are TTF (resvg-wasm needs TTF/OTF buffers).
+## Out of scope here
 
-Use the raw font files from the Fontsource GitHub repo via jsDelivr's `gh` endpoint, which still serves `.ttf`:
-
-```
-https://cdn.jsdelivr.net/gh/fontsource/font-files/fonts/google/inter/files/inter-latin-400-normal.ttf
-https://cdn.jsdelivr.net/gh/fontsource/font-files/fonts/google/inter/files/inter-latin-500-normal.ttf
-https://cdn.jsdelivr.net/gh/fontsource/font-files/fonts/google/inter/files/inter-latin-600-normal.ttf
-https://cdn.jsdelivr.net/gh/fontsource/font-files/fonts/google/inter/files/inter-latin-700-normal.ttf
-https://cdn.jsdelivr.net/gh/fontsource/font-files/fonts/google/playfair-display/files/playfair-display-latin-700-normal.ttf
-```
-
-(I'll verify each returns 200 before saving the change, and reset the cached `_fontsPromise` is unnecessary since it's per-cold-start.)
-
-Also add a guard: if `fontBuffers.length === 0`, log a clear error so future regressions are obvious instead of silently producing a blank certificate.
-
-## Files changed
-
-- `supabase/functions/issue-certificate/index.ts` — replace 5 font URLs in `loadFonts()`, add empty-buffer warning.
-
-## Out of scope
-
-No template, schema, UI, layout, or storage changes. The text_color feature added previously stays as-is.
+- No changes to the signup trigger or `public-register` logic in this pass — those need a separate hardening plan (require email match between auth user and member before linking). Happy to write that next if you want.
+- No notification sent to either user.
 
 ## Verification
 
-After deploy, re-issue a certificate and check the edge function logs — `Font fetch failed` warnings should be gone, and the name should appear on the background image.
+After the migration runs:
+
+```sql
+SELECT id, first_name, last_name, email, user_id
+FROM members
+WHERE id = '9d5b1664-03b0-4d80-9ea1-540f5a56c7bf';
+```
+
+Expect `user_id` to be `NULL`. Then ask Akaninyene to refresh — his Dashboard should no longer show Sonia.
