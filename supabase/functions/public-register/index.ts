@@ -464,7 +464,26 @@ Deno.serve(async (req) => {
     let resultMemberId: string | null = null;
     let resultMode = "created";
 
-    if (authenticatedUser?.userId) {
+    // SECURITY: Only link a member row to the authenticated user when the form's
+    // email matches the auth user's email. This prevents admins/leaders who are
+    // logged in and registering someone else from having that new member row
+    // stamped with their own user_id (which would let them see and act as the
+    // other person).
+    const isSelfRegistration =
+      !!authenticatedUser?.userId &&
+      !!email &&
+      !!authenticatedUser?.email &&
+      email.trim().toLowerCase() === authenticatedUser.email.trim().toLowerCase();
+
+    if (authenticatedUser?.userId && !isSelfRegistration) {
+      console.warn("public-register: skipping user_id stamp — form email does not match auth user", {
+        authEmail: authenticatedUser.email,
+        formEmail: email,
+      });
+    }
+
+    if (isSelfRegistration) {
+
       let linkedMemberQuery = supabase
         .from("members")
         .select("id")
@@ -554,10 +573,12 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Verify auth user exists before writing user_id to prevent FK violation
+    // Verify auth user exists before writing user_id to prevent FK violation.
+    // Only stamp user_id when the form email matches the signed-in user.
     let verifiedUserId: string | null = null;
-    if (authenticatedUser?.userId) {
+    if (isSelfRegistration && authenticatedUser?.userId) {
       const { data: verifiedUser, error: verifyErr } = await supabase.auth.admin.getUserById(authenticatedUser.userId);
+
       if (!verifyErr && verifiedUser?.user) {
         verifiedUserId = authenticatedUser.userId;
       } else {
