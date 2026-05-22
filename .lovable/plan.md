@@ -1,63 +1,48 @@
-# Fix mis-linked member: Sonia Ojilere
+# Harden member registration against cross-account linking
 
-## What's wrong
+## Root cause (confirmed)
 
-The member **Sonia Ojilere** (`chidimmasonia1@gmail.com`, tenant: Winners Chapel International, Cardiff) has `user_id` pointing to the auth account **viakanum1@gmail.com** (Akaninyene Umo).
+The `public-register` edge function stamps `user_id = authenticatedUser.userId` onto member rows **without verifying the form's email matches the signed-in user's email**. So when Akaninyene Umo was logged in and submitted Sonia Ojilere's registration, Sonia's new member row got Akaninyene's `user_id`.
 
-That means whenever Akaninyene logs in, the app treats him as Sonia — his Dashboard, "My Profile", certificates, and any "member-self" views all resolve to Sonia's record.
+The signup database trigger (`handle_new_user`) is already safe — it only claims members where `lower(members.email) = lower(NEW.email)` in the resolved tenant. No change needed there.
 
-There is **no auth account** for `chidimmasonia1@gmail.com`, so Sonia herself has never actually logged in.
+`public-wofbi-register` does not touch `user_id`, so it's unaffected.
 
-## Why this happened
+## Fix
 
-Timeline from the database:
+In `supabase/functions/public-register/index.ts`, introduce a single guard:
 
-- 2026-04-11 10:17:17 — auth user `viakanum1@gmail.com` (Akaninyene Umo) is created.
-- 2026-04-11 10:30:37 — member row for **Sonia Ojilere** is created, and at that moment `user_id` is set to Akaninyene's auth id.
-
-Two plausible mechanisms, both consistent with the data:
-
-1. **Signup trigger mis-attribution.** When Akaninyene signed up, our `handle_new_user` / signup trigger looks for an existing member row to attach the new auth user to (by email / name match in the active tenant context). If the trigger's match was loose (e.g. name-only fallback, or stale `tenant_slug` metadata) it could have attached his new auth id to the wrong member — Sonia — instead of creating/linking his own.
-
-2. **Self-registration while signed in as someone else.** Akaninyene was logged in and used the public member registration form to register Sonia. The registration path (`public-register` edge function or the in-app member form) wrote `user_id = auth.uid()` onto Sonia's new member row, because it assumes the submitting user *is* the member.
-
-Either way the root cause is the same class of bug: an auth user id is being attached to a member row that doesn't belong to them, with no email-match safeguard.
-
-## Fix — two parts
-
-### 1. Data fix (immediate)
-
-Clear the bad link on Sonia's member row so she's no longer "owned" by Akaninyene's login. Also make sure Akaninyene has his own member row in the same tenant (if he doesn't, he'll need one or an invitation, but that's a separate decision — flagged below, not done in this migration).
-
-```sql
-UPDATE public.members
-SET user_id = NULL,
-    updated_at = now()
-WHERE id = '9d5b1664-03b0-4d80-9ea1-540f5a56c7bf'
-  AND user_id = 'ce5fca97-2c75-4149-a0c3-6361055526cd';
+```text
+const isSelfRegistration =
+  !!authenticatedUser?.userId &&
+  !!email &&
+  !!authenticatedUser.email &&
+  email.trim().toLowerCase() === authenticatedUser.email.trim().toLowerCase();
 ```
 
-After this:
-- Sonia's member record is "unlinked" — admins can re-link it later when Sonia actually signs up with `chidimmasonia1@gmail.com`.
-- Akaninyene's login still works; he just won't be auto-mapped to any member until a correct link is made.
+Then apply it in every place that currently writes `user_id`:
 
-### 2. Open question (not part of this migration)
+1. **Claim-by-email path (~line 521)** — only run the claim/update with `user_id` when `isSelfRegistration` is true. Otherwise fall through to the duplicate-email update path (which does not write `user_id`).
+2. **`linkedMember` update path (~line 480)** — this path already requires the member row to be linked to the auth user via `member_id` metadata, so leave it alone (the link was established earlier under a verified flow). Add a defensive check: if the existing row's `email` differs from the auth user's email, skip writing `user_id` updates.
+3. **New-member insert path (~line 594)** — set `user_id: isSelfRegistration ? verifiedUserId : null`. Admins/leaders registering someone else will create an unlinked member row, which is the correct outcome.
+4. **`ensureTenantAccess` calls** — keep, because tenant membership for the *logged-in admin* is unrelated to which member row was created.
 
-Does Akaninyene Umo have his own member record in WCI Cardiff that *should* be linked to `viakanum1@gmail.com`? I can check and, if so, link his auth id to that row in a follow-up step. If he doesn't have a member record yet, we should decide whether to create one or treat him as admin-only.
+Add a `console.warn` when `authenticatedUser` is present but `isSelfRegistration` is false, so future cross-account submissions are visible in edge logs:
 
-## Out of scope here
+```text
+console.warn("public-register: skipping user_id stamp — form email does not match auth user", {
+  authEmail: authenticatedUser.email, formEmail: email
+});
+```
 
-- No changes to the signup trigger or `public-register` logic in this pass — those need a separate hardening plan (require email match between auth user and member before linking). Happy to write that next if you want.
-- No notification sent to either user.
+## Out of scope
+
+- No DB migration. The trigger is already correct, and `members.user_id` already allows NULL.
+- No retroactive scan of existing mis-linked rows (we only know about Sonia; can be a follow-up if you want a sweep).
+- No UI changes. Admins registering someone else will still see the success state; the member just won't be auto-linked to the admin's login.
 
 ## Verification
 
-After the migration runs:
-
-```sql
-SELECT id, first_name, last_name, email, user_id
-FROM members
-WHERE id = '9d5b1664-03b0-4d80-9ea1-540f5a56c7bf';
-```
-
-Expect `user_id` to be `NULL`. Then ask Akaninyene to refresh — his Dashboard should no longer show Sonia.
+1. Akaninyene logs in → opens public registration form → enters someone else's email → submits. Expect: new member row has `user_id = NULL`, Akaninyene's Dashboard is unaffected.
+2. A new visitor signs up via `/auth` with email `x@example.com` → trigger auto-claims any existing member row in the resolved tenant where `lower(email) = 'x@example.com'`. Unchanged behaviour.
+3. An already-authenticated user re-submits the registration form with their own email → `isSelfRegistration` is true → claim path links them. Unchanged behaviour.
