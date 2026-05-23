@@ -331,7 +331,7 @@ export default function CertificateTemplateSettings() {
                     variant="ghost"
                     size="icon"
                     className="h-8 w-8 text-destructive hover:text-destructive"
-                    onClick={() => window.confirm(`Delete template for "${t.training_type}"?`) && deleteMutation.mutate(t.id)}
+                    onClick={() => setDeleteTarget(t)}
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                   </Button>
