@@ -380,6 +380,15 @@ export default function WSFAttendanceTab({ centres }) {
         onSave={(data) => saveMutation.mutateAsync(data)}
         allCentres={availableCentres}
       />
+
+      <PasswordConfirmDialog
+        open={!!deleteTarget}
+        onOpenChange={(o) => { if (!o) setDeleteTarget(null); }}
+        title="Delete attendance report"
+        description="This will permanently delete this Home Cell attendance report. This action cannot be undone."
+        isPending={deleteMutation.isPending}
+        onConfirm={() => deleteMutation.mutate(deleteTarget.id)}
+      />
     </div>
   );
 }
