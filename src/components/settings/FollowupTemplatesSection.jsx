@@ -13,6 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
 import { Send, Plus, Pencil, Trash2, Loader2, Mail, MessageSquare, Clock } from "lucide-react";
+import PasswordConfirmDialog from "@/components/shared/PasswordConfirmDialog";
 
 const FOLLOWUP_TYPES = ["First Timer", "New Convert", "Visitor"];
 const CHANNELS = [
