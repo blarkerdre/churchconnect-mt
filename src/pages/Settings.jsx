@@ -944,6 +944,15 @@ function FaviconOgImageSection() {
           </CollapsibleContent>
         </Collapsible>
       </CardContent>
+      <PasswordConfirmDialog
+        open={!!removeType}
+        onOpenChange={(o) => { if (!o) setRemoveType(null); }}
+        title="Remove branding image"
+        description={removeType ? `Remove the ${removeType === "favicon" ? "favicon" : removeType === "pwa-icon" ? "app icon" : "social image"}?` : ""}
+        confirmLabel="Remove"
+        isPending={uploadingFavicon || uploadingOg}
+        onConfirm={async () => { const t = removeType; setRemoveType(null); await handleRemove(t); }}
+      />
     </Card>
   );
 }
