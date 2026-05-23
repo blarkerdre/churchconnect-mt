@@ -169,9 +169,7 @@ export default function FollowupTemplatesSection() {
                       <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => openEdit(t)}>
                         <Pencil className="h-3.5 w-3.5" />
                       </Button>
-                      <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => {
-                        if (window.confirm("Delete this template?")) deleteMutation.mutate(t.id);
-                      }}>
+                      <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => setDeleteTarget(t)}>
                         <Trash2 className="h-3.5 w-3.5" />
                       </Button>
                     </div>
