@@ -492,6 +492,7 @@ function ChurchUnitsSection() {
   const [editingUnit, setEditingUnit] = useState(null);
   const [unitName, setUnitName] = useState("");
   const [unitActive, setUnitActive] = useState(true);
+  const [deleteUnit, setDeleteUnit] = useState(null);
 
   const { data: units = [], isLoading } = useQuery({
     queryKey: ["church-units", false, tenantId],
