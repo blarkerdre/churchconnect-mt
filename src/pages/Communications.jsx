@@ -524,7 +524,7 @@ export default function Communications() {
 
   const handleDelete = (a) => {
     if (!isAdmin && a.created_by !== user?.id) return;
-    if (confirm("Delete this communication?")) deleteMutation.mutate(a.id);
+    setDeleteTarget(a);
   };
 
   const canManage = (a) => isAdmin || a.created_by === user?.id;
