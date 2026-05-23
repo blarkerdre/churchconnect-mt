@@ -280,6 +280,15 @@ export default function WSFCentresSection() {
         onOpenChange={(open) => { if (!open) setMembersDialogCentre(null); }}
         centre={membersDialogCentre}
       />
+
+      <PasswordConfirmDialog
+        open={!!deleteTarget}
+        onOpenChange={(o) => { if (!o) setDeleteTarget(null); }}
+        title="Delete Home Cell centre"
+        description={deleteTarget ? `Permanently delete the centre "${deleteTarget.name}"?` : ""}
+        isPending={deleteMutation.isPending}
+        onConfirm={() => deleteMutation.mutate(deleteTarget.id)}
+      />
     </>
   );
 }
