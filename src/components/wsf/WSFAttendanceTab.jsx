@@ -358,13 +358,9 @@ export default function WSFAttendanceTab({ centres }) {
                           <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(r)}>
                             <Edit className="h-3.5 w-3.5" />
                           </Button>
-                          {isAdmin && (
-                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => {
-                              if (window.confirm("Delete this report?")) deleteMutation.mutate(r.id);
-                            }}>
-                              <Trash2 className="h-3.5 w-3.5 text-destructive" />
-                            </Button>
-                          )}
+                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setDeleteTarget(r)}>
+                            <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                          </Button>
                         </div>
                       </TableCell>
                     </TableRow>
