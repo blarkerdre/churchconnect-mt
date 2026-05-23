@@ -146,10 +146,7 @@ export default function WSFCentreMembersDialog({ open, onOpenChange, centre, isR
                           variant="ghost"
                           size="icon"
                           className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
-                          onClick={() => {
-                            if (window.confirm(`Remove ${m.first_name} ${m.last_name} from this centre?`))
-                              removeMutation.mutate(m.id);
-                          }}
+                          onClick={() => setRemoveTarget(m)}
                           disabled={removeMutation.isPending}
                         >
                           <UserMinus className="h-4 w-4 text-destructive" />
