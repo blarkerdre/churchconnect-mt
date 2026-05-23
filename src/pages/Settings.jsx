@@ -771,6 +771,7 @@ function FaviconOgImageSection() {
   const { currentTenant, tenantId, isTenantAdmin } = useTenant();
   const [uploadingFavicon, setUploadingFavicon] = useState(false);
   const [uploadingOg, setUploadingOg] = useState(false);
+  const [removeType, setRemoveType] = useState(null);
   const faviconInputRef = React.useRef(null);
   const ogInputRef = React.useRef(null);
 
