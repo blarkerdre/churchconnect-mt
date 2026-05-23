@@ -16,6 +16,7 @@ import { useUnitMembership } from "@/hooks/useUnitMembership";
 import { useSubFeature } from "@/hooks/useSubFeature";
 import PrintReportButton from "@/components/PrintReportButton";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
+import PasswordConfirmDialog from "@/components/shared/PasswordConfirmDialog";
 
 const statusColors = {
   "Confirmed": "bg-chart-3/10 text-chart-3",
