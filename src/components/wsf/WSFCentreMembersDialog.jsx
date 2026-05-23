@@ -208,6 +208,15 @@ export default function WSFCentreMembersDialog({ open, onOpenChange, centre, isR
           </div>
         )}
       </DialogContent>
+      <PasswordConfirmDialog
+        open={!!removeTarget}
+        onOpenChange={(o) => { if (!o) setRemoveTarget(null); }}
+        title="Remove member from centre"
+        description={removeTarget ? `Remove ${removeTarget.first_name} ${removeTarget.last_name} from this Home Cell centre?` : ""}
+        confirmLabel="Remove"
+        isPending={removeMutation.isPending}
+        onConfirm={() => removeMutation.mutate(removeTarget.id)}
+      />
     </Dialog>
   );
 }
