@@ -346,7 +346,11 @@ export default function Transportation() {
                       <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); openManage(b); }}>Manage</Button>
                       <Button variant="ghost" size="icon" onClick={(e) => {
                         e.stopPropagation();
-                        if (window.confirm("Delete this booking?")) deleteBookingMutation.mutate(b.id);
+                        setConfirmDelete({
+                          title: "Delete booking",
+                          description: "This will permanently delete the transport booking.",
+                          run: () => deleteBookingMutation.mutate(b.id),
+                        });
                       }}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                     </div>
                   )}
