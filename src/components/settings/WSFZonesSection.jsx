@@ -12,6 +12,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
+import PasswordConfirmDialog from "@/components/shared/PasswordConfirmDialog";
 
 export default function WSFZonesSection() {
   const queryClient = useQueryClient();
@@ -19,6 +20,7 @@ export default function WSFZonesSection() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState({ name: "", description: "", is_active: true });
+  const [deleteTarget, setDeleteTarget] = useState(null);
 
   const { data: zones = [], isLoading } = useQuery({
     queryKey: ["wsf-zones", tenantId],
