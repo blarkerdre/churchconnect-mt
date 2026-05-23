@@ -287,6 +287,7 @@ export default function Communications() {
   const [selectedAnnouncement, setSelectedAnnouncement] = useState(null);
   const [selectedSmsLog, setSelectedSmsLog] = useState(null);
   const [selectedEmailLog, setSelectedEmailLog] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null);
 
   const canManageComms = isAdmin || isUnitLeader || isWSFLeader;
 
