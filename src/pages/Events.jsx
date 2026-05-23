@@ -295,12 +295,8 @@ export default function Events() {
     setDialogOpen(true);
   };
 
-  const handleDelete = (e) => {
-    const msg = e.is_recurring && !e.recurrence_parent_id
-      ? "Delete this recurring event and all its occurrences?"
-      : "Delete this event?";
-    if (window.confirm(msg)) deleteMutation.mutate(e);
-  };
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const handleDelete = (e) => setDeleteTarget(e);
 
   return (
     <div className="space-y-6">
