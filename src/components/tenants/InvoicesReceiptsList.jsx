@@ -144,11 +144,7 @@ export default function InvoicesReceiptsList({ tenant, payments = [] }) {
                         variant="ghost"
                         className="h-7 w-7"
                         disabled={deleteMutation.isPending}
-                        onClick={() => {
-                          if (confirm(`Delete ${inv.invoice_number}?`)) {
-                            deleteMutation.mutate(inv.id);
-                          }
-                        }}
+                        onClick={() => setDeleteTarget(inv)}
                       >
                         <Trash2 className="h-3 w-3" />
                       </Button>
