@@ -471,6 +471,15 @@ function SettingsListSection({ settingsKey, title, icon: Icon, description }) {
           </div>
         </DialogContent>
       </Dialog>
+
+      <PasswordConfirmDialog
+        open={deleteIdx !== null}
+        onOpenChange={(o) => { if (!o) setDeleteIdx(null); }}
+        title="Delete item"
+        description={deleteIdx !== null ? `Permanently delete "${items[deleteIdx]}"?` : ""}
+        isPending={saveMutation.isPending}
+        onConfirm={confirmDeleteItem}
+      />
     </Card>
   );
 }
