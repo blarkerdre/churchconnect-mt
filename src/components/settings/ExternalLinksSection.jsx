@@ -23,6 +23,7 @@ export default function ExternalLinksSection() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingIdx, setEditingIdx] = useState(null);
   const [form, setForm] = useState({ title: "", url: "", description: "", icon: "Globe" });
+  const [deleteIdx, setDeleteIdx] = useState(null);
 
   const { data: links = [], isLoading } = useQuery({
     queryKey: ["app-settings", "external_links", tenantId],
