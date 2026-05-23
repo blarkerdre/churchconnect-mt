@@ -15,6 +15,7 @@ import { assertStorageAvailable } from "@/lib/storageQuota";
 import { useAppSetting } from "@/hooks/useAppSetting";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
 import sampleBgUrl from "@/assets/certificate-sample-bg.jpg";
+import PasswordConfirmDialog from "@/components/shared/PasswordConfirmDialog";
 
 const emptyTemplate = {
   training_type: "",
