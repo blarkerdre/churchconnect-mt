@@ -38,6 +38,7 @@ export default function CertificateTemplateSettings() {
   const [form, setForm] = useState(emptyTemplate);
   const [uploading, setUploading] = useState(false);
   const [useCustomType, setUseCustomType] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState(null);
 
   const { data: courses = [] } = useQuery({
     queryKey: ["exam-titles-active", tenantId],
