@@ -7,11 +7,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { useToast } from "@/components/ui/use-toast";
 import { FileText, Receipt, Plus, Pencil, Trash2, Loader2 } from "lucide-react";
 import InvoiceEditorDialog from "./InvoiceEditorDialog";
+import PasswordConfirmDialog from "@/components/shared/PasswordConfirmDialog";
 
 export default function InvoicesReceiptsList({ tenant, payments = [] }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [editing, setEditing] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null);
   const tenantId = tenant?.id;
 
   const { data: invoices = [], isLoading } = useQuery({
