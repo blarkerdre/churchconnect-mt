@@ -185,6 +185,15 @@ export default function ExternalLinksSection() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <PasswordConfirmDialog
+        open={deleteIdx !== null}
+        onOpenChange={(o) => { if (!o) setDeleteIdx(null); }}
+        title="Delete link"
+        description={deleteIdx !== null ? `Permanently delete "${links[deleteIdx]?.title}"?` : ""}
+        isPending={saveMutation.isPending}
+        onConfirm={confirmDelete}
+      />
     </Card>
   );
 }
