@@ -28,6 +28,7 @@ import { useTenantQuery } from "@/hooks/useTenantQuery";
 import WSFCentresSection from "@/components/settings/WSFCentresSection";
 import WSFZonesSection from "@/components/settings/WSFZonesSection";
 import CertificateTemplateSettings from "@/components/certificates/CertificateTemplateSettings";
+import PasswordConfirmDialog from "@/components/shared/PasswordConfirmDialog";
 import ExternalLinksSection from "@/components/settings/ExternalLinksSection";
 import DangerZoneSection from "@/components/settings/DangerZoneSection";
 
