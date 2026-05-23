@@ -528,6 +528,14 @@ export default function Transportation() {
           </div>
         </DialogContent>
       </Dialog>
+      <PasswordConfirmDialog
+        open={!!confirmDelete}
+        onOpenChange={(o) => { if (!o) setConfirmDelete(null); }}
+        title={confirmDelete?.title || "Confirm delete"}
+        description={confirmDelete?.description}
+        isPending={deleteBookingMutation.isPending || deleteLocationMutation.isPending}
+        onConfirm={() => confirmDelete?.run?.()}
+      />
     </div>
   );
 }
