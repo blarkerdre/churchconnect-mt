@@ -10,11 +10,13 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
+import PasswordConfirmDialog from "@/components/shared/PasswordConfirmDialog";
 
 export default function WSFCentreMembersDialog({ open, onOpenChange, centre, isReadOnly = false }) {
   const [search, setSearch] = useState("");
   const [addSearch, setAddSearch] = useState("");
   const [showAdd, setShowAdd] = useState(false);
+  const [removeTarget, setRemoveTarget] = useState(null);
   const queryClient = useQueryClient();
   const { tenantId, scopeQuery } = useTenantQuery();
 
