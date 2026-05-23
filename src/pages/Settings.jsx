@@ -752,6 +752,15 @@ function ChurchBrandingSection() {
           </div>
         </div>
       </CardContent>
+      <PasswordConfirmDialog
+        open={confirmRemove}
+        onOpenChange={setConfirmRemove}
+        title="Remove church logo"
+        description="The logo will be removed from the login page and throughout the app."
+        confirmLabel="Remove"
+        isPending={uploading}
+        onConfirm={handleRemove}
+      />
     </Card>
   );
 }
