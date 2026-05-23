@@ -173,6 +173,15 @@ export default function WSFZonesSection() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <PasswordConfirmDialog
+        open={!!deleteTarget}
+        onOpenChange={(o) => { if (!o) setDeleteTarget(null); }}
+        title="Delete zone"
+        description={deleteTarget ? `Permanently delete the Home Cell zone "${deleteTarget.name}"?` : ""}
+        isPending={deleteMutation.isPending}
+        onConfirm={() => deleteMutation.mutate(deleteTarget.id)}
+      />
     </>
   );
 }
