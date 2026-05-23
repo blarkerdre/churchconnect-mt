@@ -24,6 +24,7 @@ export default function WSFCentresSection() {
   const [editing, setEditing] = useState(null);
   const [membersDialogCentre, setMembersDialogCentre] = useState(null);
   const [form, setForm] = useState({ name: "", host_name: "", host_member_id: "", location: "", address: "", postcode: "", city: "Cardiff", coverage_postcodes: "", meeting_day: "", meeting_time: "", is_active: true, leader_id: "", zone_id: "" });
+  const [deleteTarget, setDeleteTarget] = useState(null);
 
   const { data: centres = [], isLoading } = useQuery({
     queryKey: ["wsf-centres", tenantId],
