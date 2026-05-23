@@ -28,6 +28,7 @@ import SMSDialog from "@/components/sms/SMSDialog";
 import { useSubFeature } from "@/hooks/useSubFeature";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
 import { renderTextWithLinks } from "@/lib/linkify";
+import PasswordConfirmDialog from "@/components/shared/PasswordConfirmDialog";
 
 const STATIC_AUDIENCES = ["All Members", "Leaders Only"];
 
