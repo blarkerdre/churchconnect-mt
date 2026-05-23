@@ -26,6 +26,7 @@ export default function WSFAttendanceTab({ centres }) {
   const [filterCentreId, setFilterCentreId] = useState("all");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const [deleteTarget, setDeleteTarget] = useState(null);
 
   // Find centres this user leads (by matching user_id to leader's member record)
   const { data: userMember } = useQuery({
