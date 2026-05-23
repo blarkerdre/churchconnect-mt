@@ -609,6 +609,15 @@ function ChurchUnitsSection() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <PasswordConfirmDialog
+        open={!!deleteUnit}
+        onOpenChange={(o) => { if (!o) setDeleteUnit(null); }}
+        title="Delete church unit"
+        description={deleteUnit ? `Permanently delete the church unit "${deleteUnit.name}"?` : ""}
+        isPending={deleteMutation.isPending}
+        onConfirm={() => deleteMutation.mutate(deleteUnit.id)}
+      />
     </Card>
   );
 }
