@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { ICON_OPTIONS, getIconComponent } from "@/lib/icon-map";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
+import PasswordConfirmDialog from "@/components/shared/PasswordConfirmDialog";
 
 export default function ExternalLinksSection() {
   const qc = useQueryClient();
@@ -23,6 +24,7 @@ export default function ExternalLinksSection() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingIdx, setEditingIdx] = useState(null);
   const [form, setForm] = useState({ title: "", url: "", description: "", icon: "Globe" });
+  const [deleteIdx, setDeleteIdx] = useState(null);
 
   const { data: links = [], isLoading } = useQuery({
     queryKey: ["app-settings", "external_links", tenantId],
@@ -69,11 +71,11 @@ export default function ExternalLinksSection() {
     setDialogOpen(false);
   };
 
-  const handleDelete = (idx) => {
-    if (window.confirm(`Delete "${links[idx].title}"?`)) {
-      saveMutation.mutate(links.filter((_, i) => i !== idx));
-      toast({ title: "Link deleted" });
-    }
+  const handleDelete = (idx) => setDeleteIdx(idx);
+  const confirmDelete = () => {
+    if (deleteIdx === null) return;
+    saveMutation.mutate(links.filter((_, i) => i !== deleteIdx));
+    toast({ title: "Link deleted" });
   };
 
   const move = (idx, dir) => {
@@ -183,6 +185,15 @@ export default function ExternalLinksSection() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <PasswordConfirmDialog
+        open={deleteIdx !== null}
+        onOpenChange={(o) => { if (!o) setDeleteIdx(null); }}
+        title="Delete link"
+        description={deleteIdx !== null ? `Permanently delete "${links[deleteIdx]?.title}"?` : ""}
+        isPending={saveMutation.isPending}
+        onConfirm={confirmDelete}
+      />
     </Card>
   );
 }

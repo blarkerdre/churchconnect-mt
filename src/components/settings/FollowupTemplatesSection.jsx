@@ -13,6 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
 import { Send, Plus, Pencil, Trash2, Loader2, Mail, MessageSquare, Clock } from "lucide-react";
+import PasswordConfirmDialog from "@/components/shared/PasswordConfirmDialog";
 
 const FOLLOWUP_TYPES = ["First Timer", "New Convert", "Visitor"];
 const CHANNELS = [
@@ -34,6 +35,7 @@ export default function FollowupTemplatesSection() {
   const qc = useQueryClient();
   const [editDialog, setEditDialog] = useState(false);
   const [editItem, setEditItem] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null);
 
   const { data: templates = [], isLoading } = useQuery({
     queryKey: ["followup-message-templates", tenantId],
@@ -167,9 +169,7 @@ export default function FollowupTemplatesSection() {
                       <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => openEdit(t)}>
                         <Pencil className="h-3.5 w-3.5" />
                       </Button>
-                      <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => {
-                        if (window.confirm("Delete this template?")) deleteMutation.mutate(t.id);
-                      }}>
+                      <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => setDeleteTarget(t)}>
                         <Trash2 className="h-3.5 w-3.5" />
                       </Button>
                     </div>
@@ -239,6 +239,15 @@ export default function FollowupTemplatesSection() {
           )}
         </DialogContent>
       </Dialog>
+
+      <PasswordConfirmDialog
+        open={!!deleteTarget}
+        onOpenChange={(o) => { if (!o) setDeleteTarget(null); }}
+        title="Delete template"
+        description="Permanently delete this follow-up template?"
+        isPending={deleteMutation.isPending}
+        onConfirm={() => deleteMutation.mutate(deleteTarget.id)}
+      />
     </Card>
   );
 }

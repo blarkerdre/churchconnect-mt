@@ -10,11 +10,13 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
+import PasswordConfirmDialog from "@/components/shared/PasswordConfirmDialog";
 
 export default function WSFCentreMembersDialog({ open, onOpenChange, centre, isReadOnly = false }) {
   const [search, setSearch] = useState("");
   const [addSearch, setAddSearch] = useState("");
   const [showAdd, setShowAdd] = useState(false);
+  const [removeTarget, setRemoveTarget] = useState(null);
   const queryClient = useQueryClient();
   const { tenantId, scopeQuery } = useTenantQuery();
 
@@ -144,10 +146,7 @@ export default function WSFCentreMembersDialog({ open, onOpenChange, centre, isR
                           variant="ghost"
                           size="icon"
                           className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
-                          onClick={() => {
-                            if (window.confirm(`Remove ${m.first_name} ${m.last_name} from this centre?`))
-                              removeMutation.mutate(m.id);
-                          }}
+                          onClick={() => setRemoveTarget(m)}
                           disabled={removeMutation.isPending}
                         >
                           <UserMinus className="h-4 w-4 text-destructive" />
@@ -209,6 +208,15 @@ export default function WSFCentreMembersDialog({ open, onOpenChange, centre, isR
           </div>
         )}
       </DialogContent>
+      <PasswordConfirmDialog
+        open={!!removeTarget}
+        onOpenChange={(o) => { if (!o) setRemoveTarget(null); }}
+        title="Remove member from centre"
+        description={removeTarget ? `Remove ${removeTarget.first_name} ${removeTarget.last_name} from this Home Cell centre?` : ""}
+        confirmLabel="Remove"
+        isPending={removeMutation.isPending}
+        onConfirm={() => removeMutation.mutate(removeTarget.id)}
+      />
     </Dialog>
   );
 }

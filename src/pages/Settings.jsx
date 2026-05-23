@@ -28,6 +28,7 @@ import { useTenantQuery } from "@/hooks/useTenantQuery";
 import WSFCentresSection from "@/components/settings/WSFCentresSection";
 import WSFZonesSection from "@/components/settings/WSFZonesSection";
 import CertificateTemplateSettings from "@/components/certificates/CertificateTemplateSettings";
+import PasswordConfirmDialog from "@/components/shared/PasswordConfirmDialog";
 import ExternalLinksSection from "@/components/settings/ExternalLinksSection";
 import DangerZoneSection from "@/components/settings/DangerZoneSection";
 
@@ -359,6 +360,7 @@ function SettingsListSection({ settingsKey, title, icon: Icon, description }) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingIdx, setEditingIdx] = useState(null);
   const [itemName, setItemName] = useState("");
+  const [deleteIdx, setDeleteIdx] = useState(null);
 
   const { data: items = [], isLoading } = useQuery({
     queryKey: ["app-settings", settingsKey, tenantId],
@@ -406,11 +408,11 @@ function SettingsListSection({ settingsKey, title, icon: Icon, description }) {
     closeDialog();
   };
 
-  const handleDelete = (idx) => {
-    if (window.confirm(`Delete "${items[idx]}"?`)) {
-      saveMutation.mutate(items.filter((_, i) => i !== idx));
-      toast({ title: "Deleted" });
-    }
+  const handleDelete = (idx) => setDeleteIdx(idx);
+  const confirmDeleteItem = () => {
+    if (deleteIdx === null) return;
+    saveMutation.mutate(items.filter((_, i) => i !== deleteIdx));
+    toast({ title: "Deleted" });
   };
 
   return (
@@ -469,6 +471,15 @@ function SettingsListSection({ settingsKey, title, icon: Icon, description }) {
           </div>
         </DialogContent>
       </Dialog>
+
+      <PasswordConfirmDialog
+        open={deleteIdx !== null}
+        onOpenChange={(o) => { if (!o) setDeleteIdx(null); }}
+        title="Delete item"
+        description={deleteIdx !== null ? `Permanently delete "${items[deleteIdx]}"?` : ""}
+        isPending={saveMutation.isPending}
+        onConfirm={confirmDeleteItem}
+      />
     </Card>
   );
 }
@@ -481,6 +492,7 @@ function ChurchUnitsSection() {
   const [editingUnit, setEditingUnit] = useState(null);
   const [unitName, setUnitName] = useState("");
   const [unitActive, setUnitActive] = useState(true);
+  const [deleteUnit, setDeleteUnit] = useState(null);
 
   const { data: units = [], isLoading } = useQuery({
     queryKey: ["church-units", false, tenantId],
@@ -530,11 +542,7 @@ function ChurchUnitsSection() {
     saveMutation.mutate({ id: editingUnit?.id, name: unitName.trim(), is_active: unitActive });
   };
 
-  const handleDelete = (unit) => {
-    if (window.confirm(`Delete "${unit.name}"?`)) {
-      deleteMutation.mutate(unit.id);
-    }
-  };
+  const handleDelete = (unit) => setDeleteUnit(unit);
 
   return (
     <Card className="border-0 shadow-sm">
@@ -601,6 +609,15 @@ function ChurchUnitsSection() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <PasswordConfirmDialog
+        open={!!deleteUnit}
+        onOpenChange={(o) => { if (!o) setDeleteUnit(null); }}
+        title="Delete church unit"
+        description={deleteUnit ? `Permanently delete the church unit "${deleteUnit.name}"?` : ""}
+        isPending={deleteMutation.isPending}
+        onConfirm={() => deleteMutation.mutate(deleteUnit.id)}
+      />
     </Card>
   );
 }
@@ -610,6 +627,7 @@ function ChurchBrandingSection() {
   const qc = useQueryClient();
   const { currentTenant, tenantId, isTenantAdmin } = useTenant();
   const [uploading, setUploading] = useState(false);
+  const [confirmRemove, setConfirmRemove] = useState(false);
   const fileInputRef = React.useRef(null);
 
   const logoUrl = currentTenant?.logo_url || null;
@@ -663,7 +681,7 @@ function ChurchBrandingSection() {
   };
 
   const handleRemove = async () => {
-    if (!tenantId || !window.confirm("Remove the church logo?")) return;
+    if (!tenantId) return;
     setUploading(true);
     try {
       const { error } = await supabase
@@ -723,7 +741,7 @@ function ChurchBrandingSection() {
               <Button
                 size="sm"
                 variant="outline"
-                onClick={handleRemove}
+                onClick={() => setConfirmRemove(true)}
                 disabled={uploading}
                 className="gap-1.5 text-destructive hover:text-destructive"
               >
@@ -734,6 +752,15 @@ function ChurchBrandingSection() {
           </div>
         </div>
       </CardContent>
+      <PasswordConfirmDialog
+        open={confirmRemove}
+        onOpenChange={setConfirmRemove}
+        title="Remove church logo"
+        description="The logo will be removed from the login page and throughout the app."
+        confirmLabel="Remove"
+        isPending={uploading}
+        onConfirm={handleRemove}
+      />
     </Card>
   );
 }
@@ -744,6 +771,7 @@ function FaviconOgImageSection() {
   const { currentTenant, tenantId, isTenantAdmin } = useTenant();
   const [uploadingFavicon, setUploadingFavicon] = useState(false);
   const [uploadingOg, setUploadingOg] = useState(false);
+  const [removeType, setRemoveType] = useState(null);
   const faviconInputRef = React.useRef(null);
   const ogInputRef = React.useRef(null);
 
@@ -806,7 +834,7 @@ function FaviconOgImageSection() {
 
   const handleRemove = async (type) => {
     const label = type === "favicon" ? "favicon" : type === "pwa-icon" ? "app icon" : "social image";
-    if (!tenantId || !window.confirm(`Remove the ${label}?`)) return;
+    if (!tenantId) return;
     const setUploading = type === "favicon" ? setUploadingFavicon : type === "pwa-icon" ? setUploadingPwa : setUploadingOg;
     setUploading(true);
     try {
@@ -878,7 +906,7 @@ function FaviconOgImageSection() {
                     {faviconUrl ? "Change Favicon" : "Upload Favicon"}
                   </Button>
                   {faviconUrl && (
-                    <Button size="sm" variant="outline" onClick={() => handleRemove("favicon")} disabled={uploadingFavicon} className="gap-1.5 text-destructive hover:text-destructive">
+                    <Button size="sm" variant="outline" onClick={() => setRemoveType("favicon")} disabled={uploadingFavicon} className="gap-1.5 text-destructive hover:text-destructive">
                       <X className="h-4 w-4" /> Remove
                     </Button>
                   )}
@@ -905,7 +933,7 @@ function FaviconOgImageSection() {
                     {ogImageUrl ? "Change Image" : "Upload Image"}
                   </Button>
                   {ogImageUrl && (
-                    <Button size="sm" variant="outline" onClick={() => handleRemove("og-image")} disabled={uploadingOg} className="gap-1.5 text-destructive hover:text-destructive">
+                    <Button size="sm" variant="outline" onClick={() => setRemoveType("og-image")} disabled={uploadingOg} className="gap-1.5 text-destructive hover:text-destructive">
                       <X className="h-4 w-4" /> Remove
                     </Button>
                   )}
@@ -916,6 +944,15 @@ function FaviconOgImageSection() {
           </CollapsibleContent>
         </Collapsible>
       </CardContent>
+      <PasswordConfirmDialog
+        open={!!removeType}
+        onOpenChange={(o) => { if (!o) setRemoveType(null); }}
+        title="Remove branding image"
+        description={removeType ? `Remove the ${removeType === "favicon" ? "favicon" : removeType === "pwa-icon" ? "app icon" : "social image"}?` : ""}
+        confirmLabel="Remove"
+        isPending={uploadingFavicon || uploadingOg}
+        onConfirm={async () => { const t = removeType; setRemoveType(null); await handleRemove(t); }}
+      />
     </Card>
   );
 }

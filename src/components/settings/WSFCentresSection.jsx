@@ -13,6 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
 import WSFCentreMembersDialog from "@/components/wsf/WSFCentreMembersDialog";
+import PasswordConfirmDialog from "@/components/shared/PasswordConfirmDialog";
 
 const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
@@ -23,6 +24,7 @@ export default function WSFCentresSection() {
   const [editing, setEditing] = useState(null);
   const [membersDialogCentre, setMembersDialogCentre] = useState(null);
   const [form, setForm] = useState({ name: "", host_name: "", host_member_id: "", location: "", address: "", postcode: "", city: "Cardiff", coverage_postcodes: "", meeting_day: "", meeting_time: "", is_active: true, leader_id: "", zone_id: "" });
+  const [deleteTarget, setDeleteTarget] = useState(null);
 
   const { data: centres = [], isLoading } = useQuery({
     queryKey: ["wsf-centres", tenantId],
@@ -188,7 +190,7 @@ export default function WSFCentresSection() {
                       <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(c)}>
                         <Edit className="h-3.5 w-3.5" />
                       </Button>
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { if (window.confirm("Delete this centre?")) deleteMutation.mutate(c.id); }}>
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setDeleteTarget(c)}>
                         <Trash2 className="h-3.5 w-3.5 text-destructive" />
                       </Button>
                     </div>
@@ -277,6 +279,15 @@ export default function WSFCentresSection() {
         open={!!membersDialogCentre}
         onOpenChange={(open) => { if (!open) setMembersDialogCentre(null); }}
         centre={membersDialogCentre}
+      />
+
+      <PasswordConfirmDialog
+        open={!!deleteTarget}
+        onOpenChange={(o) => { if (!o) setDeleteTarget(null); }}
+        title="Delete Home Cell centre"
+        description={deleteTarget ? `Permanently delete the centre "${deleteTarget.name}"?` : ""}
+        isPending={deleteMutation.isPending}
+        onConfirm={() => deleteMutation.mutate(deleteTarget.id)}
       />
     </>
   );

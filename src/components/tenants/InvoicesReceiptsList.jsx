@@ -7,11 +7,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { useToast } from "@/components/ui/use-toast";
 import { FileText, Receipt, Plus, Pencil, Trash2, Loader2 } from "lucide-react";
 import InvoiceEditorDialog from "./InvoiceEditorDialog";
+import PasswordConfirmDialog from "@/components/shared/PasswordConfirmDialog";
 
 export default function InvoicesReceiptsList({ tenant, payments = [] }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [editing, setEditing] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null);
   const tenantId = tenant?.id;
 
   const { data: invoices = [], isLoading } = useQuery({
@@ -142,11 +144,7 @@ export default function InvoicesReceiptsList({ tenant, payments = [] }) {
                         variant="ghost"
                         className="h-7 w-7"
                         disabled={deleteMutation.isPending}
-                        onClick={() => {
-                          if (confirm(`Delete ${inv.invoice_number}?`)) {
-                            deleteMutation.mutate(inv.id);
-                          }
-                        }}
+                        onClick={() => setDeleteTarget(inv)}
                       >
                         <Trash2 className="h-3 w-3" />
                       </Button>
@@ -167,6 +165,15 @@ export default function InvoicesReceiptsList({ tenant, payments = [] }) {
           tenant={tenant}
         />
       )}
+
+      <PasswordConfirmDialog
+        open={!!deleteTarget}
+        onOpenChange={(o) => { if (!o) setDeleteTarget(null); }}
+        title="Delete invoice"
+        description={deleteTarget ? `Permanently delete ${deleteTarget.invoice_number}?` : ""}
+        isPending={deleteMutation.isPending}
+        onConfirm={() => deleteMutation.mutate(deleteTarget.id)}
+      />
     </div>
   );
 }

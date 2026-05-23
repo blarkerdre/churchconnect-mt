@@ -16,6 +16,7 @@ import { useUnitMembership } from "@/hooks/useUnitMembership";
 import { useSubFeature } from "@/hooks/useSubFeature";
 import PrintReportButton from "@/components/PrintReportButton";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
+import PasswordConfirmDialog from "@/components/shared/PasswordConfirmDialog";
 
 const statusColors = {
   "Confirmed": "bg-chart-3/10 text-chart-3",
@@ -47,6 +48,7 @@ export default function Transportation() {
   const [form, setForm] = useState({ pickup_address: "", destination: "Church", request_date: "", pickup_time: "", notes: "", passengers: 1 });
   const [manageForm, setManageForm] = useState({ status: "", assigned_driver: "", driver_phone: "", assigned_to: "" });
   const [locationForm, setLocationForm] = useState({ name: "", address: "", notes: "" });
+  const [confirmDelete, setConfirmDelete] = useState(null); // { title, description, run }
   const [detailBooking, setDetailBooking] = useState(null);
 
   const { data: bookings = [], isLoading } = useQuery({
@@ -344,7 +346,11 @@ export default function Transportation() {
                       <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); openManage(b); }}>Manage</Button>
                       <Button variant="ghost" size="icon" onClick={(e) => {
                         e.stopPropagation();
-                        if (window.confirm("Delete this booking?")) deleteBookingMutation.mutate(b.id);
+                        setConfirmDelete({
+                          title: "Delete booking",
+                          description: "This will permanently delete the transport booking.",
+                          run: () => deleteBookingMutation.mutate(b.id),
+                        });
                       }}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                     </div>
                   )}
@@ -492,9 +498,11 @@ export default function Transportation() {
                 </div>
                 <div className="flex items-center gap-1">
                   <Button variant="ghost" size="icon" onClick={() => openEditLocation(loc)}><Edit className="h-4 w-4" /></Button>
-                  <Button variant="ghost" size="icon" onClick={() => {
-                    if (window.confirm("Remove this location?")) deleteLocationMutation.mutate(loc.id);
-                  }}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                  <Button variant="ghost" size="icon" onClick={() => setConfirmDelete({
+                    title: "Remove location",
+                    description: "This will remove the pickup location from your list.",
+                    run: () => deleteLocationMutation.mutate(loc.id),
+                  })}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                 </div>
               </div>
             ))}
@@ -520,6 +528,14 @@ export default function Transportation() {
           </div>
         </DialogContent>
       </Dialog>
+      <PasswordConfirmDialog
+        open={!!confirmDelete}
+        onOpenChange={(o) => { if (!o) setConfirmDelete(null); }}
+        title={confirmDelete?.title || "Confirm delete"}
+        description={confirmDelete?.description}
+        isPending={deleteBookingMutation.isPending || deleteLocationMutation.isPending}
+        onConfirm={() => confirmDelete?.run?.()}
+      />
     </div>
   );
 }

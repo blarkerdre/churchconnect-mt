@@ -14,6 +14,7 @@ import { useTenantQuery } from "@/hooks/useTenantQuery";
 import { format } from "date-fns";
 import WSFAttendanceFormDialog from "./WSFAttendanceFormDialog";
 import PrintReportButton from "@/components/PrintReportButton";
+import PasswordConfirmDialog from "@/components/shared/PasswordConfirmDialog";
 
 export default function WSFAttendanceTab({ centres }) {
   const { user, isAdmin } = useAuth();
@@ -25,6 +26,7 @@ export default function WSFAttendanceTab({ centres }) {
   const [filterCentreId, setFilterCentreId] = useState("all");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const [deleteTarget, setDeleteTarget] = useState(null);
 
   // Find centres this user leads (by matching user_id to leader's member record)
   const { data: userMember } = useQuery({
@@ -356,13 +358,9 @@ export default function WSFAttendanceTab({ centres }) {
                           <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(r)}>
                             <Edit className="h-3.5 w-3.5" />
                           </Button>
-                          {isAdmin && (
-                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => {
-                              if (window.confirm("Delete this report?")) deleteMutation.mutate(r.id);
-                            }}>
-                              <Trash2 className="h-3.5 w-3.5 text-destructive" />
-                            </Button>
-                          )}
+                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setDeleteTarget(r)}>
+                            <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                          </Button>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -381,6 +379,15 @@ export default function WSFAttendanceTab({ centres }) {
         report={editing}
         onSave={(data) => saveMutation.mutateAsync(data)}
         allCentres={availableCentres}
+      />
+
+      <PasswordConfirmDialog
+        open={!!deleteTarget}
+        onOpenChange={(o) => { if (!o) setDeleteTarget(null); }}
+        title="Delete attendance report"
+        description="This will permanently delete this Home Cell attendance report. This action cannot be undone."
+        isPending={deleteMutation.isPending}
+        onConfirm={() => deleteMutation.mutate(deleteTarget.id)}
       />
     </div>
   );

@@ -28,6 +28,7 @@ import SMSDialog from "@/components/sms/SMSDialog";
 import { useSubFeature } from "@/hooks/useSubFeature";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
 import { renderTextWithLinks } from "@/lib/linkify";
+import PasswordConfirmDialog from "@/components/shared/PasswordConfirmDialog";
 
 const STATIC_AUDIENCES = ["All Members", "Leaders Only"];
 
@@ -286,6 +287,7 @@ export default function Communications() {
   const [selectedAnnouncement, setSelectedAnnouncement] = useState(null);
   const [selectedSmsLog, setSelectedSmsLog] = useState(null);
   const [selectedEmailLog, setSelectedEmailLog] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null);
 
   const canManageComms = isAdmin || isUnitLeader || isWSFLeader;
 
@@ -522,7 +524,7 @@ export default function Communications() {
 
   const handleDelete = (a) => {
     if (!isAdmin && a.created_by !== user?.id) return;
-    if (confirm("Delete this communication?")) deleteMutation.mutate(a.id);
+    setDeleteTarget(a);
   };
 
   const canManage = (a) => isAdmin || a.created_by === user?.id;
@@ -865,6 +867,15 @@ export default function Communications() {
           )}
         </DialogContent>
       </Dialog>
+
+      <PasswordConfirmDialog
+        open={!!deleteTarget}
+        onOpenChange={(o) => { if (!o) setDeleteTarget(null); }}
+        title="Delete communication"
+        description="This will permanently delete this announcement/communication."
+        isPending={deleteMutation.isPending}
+        onConfirm={() => deleteMutation.mutate(deleteTarget.id)}
+      />
     </div>
   );
 }
