@@ -627,6 +627,7 @@ function ChurchBrandingSection() {
   const qc = useQueryClient();
   const { currentTenant, tenantId, isTenantAdmin } = useTenant();
   const [uploading, setUploading] = useState(false);
+  const [confirmRemove, setConfirmRemove] = useState(false);
   const fileInputRef = React.useRef(null);
 
   const logoUrl = currentTenant?.logo_url || null;
