@@ -136,7 +136,7 @@ export default function WSFZonesSection() {
                     <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(z)}>
                       <Edit className="h-3.5 w-3.5" />
                     </Button>
-                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { if (window.confirm("Delete this zone?")) deleteMutation.mutate(z.id); }}>
+                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setDeleteTarget(z)}>
                       <Trash2 className="h-3.5 w-3.5 text-destructive" />
                     </Button>
                   </div>
