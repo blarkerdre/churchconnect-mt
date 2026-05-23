@@ -516,6 +516,15 @@ export default function CertificateTemplateSettings() {
           </p>
         </DialogContent>
       </Dialog>
+
+      <PasswordConfirmDialog
+        open={!!deleteTarget}
+        onOpenChange={(o) => { if (!o) setDeleteTarget(null); }}
+        title="Delete certificate template"
+        description={deleteTarget ? `Permanently delete the template for "${deleteTarget.training_type}"?` : ""}
+        isPending={deleteMutation.isPending}
+        onConfirm={() => deleteMutation.mutate(deleteTarget.id)}
+      />
     </Card>
   );
 }
