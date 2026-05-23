@@ -165,6 +165,15 @@ export default function InvoicesReceiptsList({ tenant, payments = [] }) {
           tenant={tenant}
         />
       )}
+
+      <PasswordConfirmDialog
+        open={!!deleteTarget}
+        onOpenChange={(o) => { if (!o) setDeleteTarget(null); }}
+        title="Delete invoice"
+        description={deleteTarget ? `Permanently delete ${deleteTarget.invoice_number}?` : ""}
+        isPending={deleteMutation.isPending}
+        onConfirm={() => deleteMutation.mutate(deleteTarget.id)}
+      />
     </div>
   );
 }
