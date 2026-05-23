@@ -22,6 +22,7 @@ import { useChurchUnits } from "@/hooks/useChurchUnits";
 import { useSubFeature } from "@/hooks/useSubFeature";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
 import { renderTextWithLinks } from "@/lib/linkify";
+import PasswordConfirmDialog from "@/components/shared/PasswordConfirmDialog";
 
 const statusColors = {
   "Upcoming": "bg-primary/10 text-primary",
@@ -294,12 +295,8 @@ export default function Events() {
     setDialogOpen(true);
   };
 
-  const handleDelete = (e) => {
-    const msg = e.is_recurring && !e.recurrence_parent_id
-      ? "Delete this recurring event and all its occurrences?"
-      : "Delete this event?";
-    if (window.confirm(msg)) deleteMutation.mutate(e);
-  };
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const handleDelete = (e) => setDeleteTarget(e);
 
   return (
     <div className="space-y-6">
@@ -592,6 +589,16 @@ export default function Events() {
         smsType="event"
         referenceId={smsEvent?.id || null}
         title={smsEvent ? `Notify: ${smsEvent.title}` : ""}
+      />
+      <PasswordConfirmDialog
+        open={!!deleteTarget}
+        onOpenChange={(o) => { if (!o) setDeleteTarget(null); }}
+        title="Delete event"
+        description={deleteTarget?.is_recurring && !deleteTarget?.recurrence_parent_id
+          ? "This will delete the recurring event and all its occurrences. This cannot be undone."
+          : "This will permanently delete the event. This cannot be undone."}
+        isPending={deleteMutation.isPending}
+        onConfirm={() => deleteMutation.mutate(deleteTarget)}
       />
     </div>
   );

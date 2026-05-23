@@ -15,6 +15,7 @@ import { assertStorageAvailable } from "@/lib/storageQuota";
 import { useAppSetting } from "@/hooks/useAppSetting";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
 import sampleBgUrl from "@/assets/certificate-sample-bg.jpg";
+import PasswordConfirmDialog from "@/components/shared/PasswordConfirmDialog";
 
 const emptyTemplate = {
   training_type: "",
@@ -37,6 +38,7 @@ export default function CertificateTemplateSettings() {
   const [form, setForm] = useState(emptyTemplate);
   const [uploading, setUploading] = useState(false);
   const [useCustomType, setUseCustomType] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState(null);
 
   const { data: courses = [] } = useQuery({
     queryKey: ["exam-titles-active", tenantId],
@@ -329,7 +331,7 @@ export default function CertificateTemplateSettings() {
                     variant="ghost"
                     size="icon"
                     className="h-8 w-8 text-destructive hover:text-destructive"
-                    onClick={() => window.confirm(`Delete template for "${t.training_type}"?`) && deleteMutation.mutate(t.id)}
+                    onClick={() => setDeleteTarget(t)}
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                   </Button>
@@ -514,6 +516,15 @@ export default function CertificateTemplateSettings() {
           </p>
         </DialogContent>
       </Dialog>
+
+      <PasswordConfirmDialog
+        open={!!deleteTarget}
+        onOpenChange={(o) => { if (!o) setDeleteTarget(null); }}
+        title="Delete certificate template"
+        description={deleteTarget ? `Permanently delete the template for "${deleteTarget.training_type}"?` : ""}
+        isPending={deleteMutation.isPending}
+        onConfirm={() => deleteMutation.mutate(deleteTarget.id)}
+      />
     </Card>
   );
 }

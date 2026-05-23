@@ -1,48 +1,48 @@
-# Harden member registration against cross-account linking
+## Goals
 
-## Root cause (confirmed)
+1. Require password re-entry before any delete action across the app (no type-to-confirm).
+2. Home Cell leaders should not be able to delete their own centre's attendance reports .
 
-The `public-register` edge function stamps `user_id = authenticatedUser.userId` onto member rows **without verifying the form's email matches the signed-in user's email**. So when Akaninyene Umo was logged in and submitted Sonia Ojilere's registration, Sonia's new member row got Akaninyene's `user_id`.
+## 1. New shared dialog: `PasswordConfirmDialog`
 
-The signup database trigger (`handle_new_user`) is already safe — it only claims members where `lower(members.email) = lower(NEW.email)` in the resolved tenant. No change needed there.
+Create `src/components/shared/PasswordConfirmDialog.jsx`, a lighter sibling of the existing `DangerConfirmDialog`:
 
-`public-wofbi-register` does not touch `user_id`, so it's unaffected.
+- Props: `open`, `onOpenChange`, `title`, `description`, `confirmLabel` (default "Delete"), `isPending`, `onConfirm`.
+- Body shows the warning and a single password input.
+- Verifies via `supabase.auth.signInWithPassword({ email: user.email, password })`.
+- On success, calls `onConfirm()`. On failure, shows toast and stays open.
+- Same red destructive styling as `DangerConfirmDialog`, no type-to-confirm.
 
-## Fix
+## 2. Replace every `window.confirm`/`confirm` delete with `PasswordConfirmDialog`
 
-In `supabase/functions/public-register/index.ts`, introduce a single guard:
+Files to update (one delete confirm each unless noted):
 
-```text
-const isSelfRegistration =
-  !!authenticatedUser?.userId &&
-  !!email &&
-  !!authenticatedUser.email &&
-  email.trim().toLowerCase() === authenticatedUser.email.trim().toLowerCase();
-```
+- `src/components/wsf/WSFAttendanceTab.jsx` — also drop the `isAdmin &&` gate so Home Cell leaders see the delete button (RLS already restricts to their own centres).
+- `src/pages/Events.jsx`
+- `src/pages/Transportation.jsx` (booking delete + location delete)
+- `src/pages/Communications.jsx`
+- `src/pages/Settings.jsx` (3 spots: list item delete, unit delete, logo/branding removals)
+- `src/components/wsf/WSFCentreMembersDialog.jsx` (remove member from centre)
+- `src/components/settings/WSFZonesSection.jsx`
+- `src/components/settings/WSFCentresSection.jsx`
+- `src/components/settings/FollowupTemplatesSection.jsx`
+- `src/components/settings/ExternalLinksSection.jsx`
+- `src/components/certificates/CertificateTemplateSettings.jsx`
+- `src/components/tenants/InvoicesReceiptsList.jsx`
 
-Then apply it in every place that currently writes `user_id`:
+Pattern in each file: add local `useState` for `{ open, target }`, replace the `if (window.confirm(...)) deleteMutation.mutate(x)` with `setConfirm({ open: true, target: x })`, render `<PasswordConfirmDialog ... onConfirm={() => deleteMutation.mutate(confirm.target)} isPending={deleteMutation.isPending} />`.
 
-1. **Claim-by-email path (~line 521)** — only run the claim/update with `user_id` when `isSelfRegistration` is true. Otherwise fall through to the duplicate-email update path (which does not write `user_id`).
-2. **`linkedMember` update path (~line 480)** — this path already requires the member row to be linked to the auth user via `member_id` metadata, so leave it alone (the link was established earlier under a verified flow). Add a defensive check: if the existing row's `email` differs from the auth user's email, skip writing `user_id` updates.
-3. **New-member insert path (~line 594)** — set `user_id: isSelfRegistration ? verifiedUserId : null`. Admins/leaders registering someone else will create an unlinked member row, which is the correct outcome.
-4. **`ensureTenantAccess` calls** — keep, because tenant membership for the *logged-in admin* is unrelated to which member row was created.
+## 3. Leave existing `DangerConfirmDialog` usages alone
 
-Add a `console.warn` when `authenticatedUser` is present but `isSelfRegistration` is false, so future cross-account submissions are visible in edge logs:
+Places already using `DangerConfirmDialog` (exam course/subject/session, member delete, sermon folder, tenant danger zone, etc.) keep their stronger type-to-confirm + password flow — they're truly destructive bulk operations.
 
-```text
-console.warn("public-register: skipping user_id stamp — form email does not match auth user", {
-  authEmail: authenticatedUser.email, formEmail: email
-});
-```
+## Technical notes
+
+- No DB / RLS changes required. The Home Cell leader fix is purely a UI gating change in `WSFAttendanceTab.jsx`.
+- The new dialog reuses `useAuth` and `supabase.auth.signInWithPassword` exactly like `DangerConfirmDialog` for consistency.
+- Verified the existing `wsf_attendance_reports` RLS policy `"WSF leaders can manage own centre reports"` covers delete for the centre's leader.
 
 ## Out of scope
 
-- No DB migration. The trigger is already correct, and `members.user_id` already allows NULL.
-- No retroactive scan of existing mis-linked rows (we only know about Sonia; can be a follow-up if you want a sweep).
-- No UI changes. Admins registering someone else will still see the success state; the member just won't be auto-linked to the admin's login.
-
-## Verification
-
-1. Akaninyene logs in → opens public registration form → enters someone else's email → submits. Expect: new member row has `user_id = NULL`, Akaninyene's Dashboard is unaffected.
-2. A new visitor signs up via `/auth` with email `x@example.com` → trigger auto-claims any existing member row in the resolved tenant where `lower(email) = 'x@example.com'`. Unchanged behaviour.
-3. An already-authenticated user re-submits the registration form with their own email → `isSelfRegistration` is true → claim path links them. Unchanged behaviour.
+- Hard-deletes inside edit forms (e.g. `MemberFormDialog`'s built-in delete) — already covered by `DangerConfirmDialog`.
+- Bulk-deletes through Danger Zone / purge functions — already gated.

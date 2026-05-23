@@ -12,6 +12,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
+import PasswordConfirmDialog from "@/components/shared/PasswordConfirmDialog";
 
 export default function WSFZonesSection() {
   const queryClient = useQueryClient();
@@ -19,6 +20,7 @@ export default function WSFZonesSection() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState({ name: "", description: "", is_active: true });
+  const [deleteTarget, setDeleteTarget] = useState(null);
 
   const { data: zones = [], isLoading } = useQuery({
     queryKey: ["wsf-zones", tenantId],
@@ -134,7 +136,7 @@ export default function WSFZonesSection() {
                     <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(z)}>
                       <Edit className="h-3.5 w-3.5" />
                     </Button>
-                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { if (window.confirm("Delete this zone?")) deleteMutation.mutate(z.id); }}>
+                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setDeleteTarget(z)}>
                       <Trash2 className="h-3.5 w-3.5 text-destructive" />
                     </Button>
                   </div>
@@ -171,6 +173,15 @@ export default function WSFZonesSection() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <PasswordConfirmDialog
+        open={!!deleteTarget}
+        onOpenChange={(o) => { if (!o) setDeleteTarget(null); }}
+        title="Delete zone"
+        description={deleteTarget ? `Permanently delete the Home Cell zone "${deleteTarget.name}"?` : ""}
+        isPending={deleteMutation.isPending}
+        onConfirm={() => deleteMutation.mutate(deleteTarget.id)}
+      />
     </>
   );
 }
