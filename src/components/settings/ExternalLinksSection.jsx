@@ -71,11 +71,11 @@ export default function ExternalLinksSection() {
     setDialogOpen(false);
   };
 
-  const handleDelete = (idx) => {
-    if (window.confirm(`Delete "${links[idx].title}"?`)) {
-      saveMutation.mutate(links.filter((_, i) => i !== idx));
-      toast({ title: "Link deleted" });
-    }
+  const handleDelete = (idx) => setDeleteIdx(idx);
+  const confirmDelete = () => {
+    if (deleteIdx === null) return;
+    saveMutation.mutate(links.filter((_, i) => i !== deleteIdx));
+    toast({ title: "Link deleted" });
   };
 
   const move = (idx, dir) => {
