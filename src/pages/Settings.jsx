@@ -741,7 +741,7 @@ function ChurchBrandingSection() {
               <Button
                 size="sm"
                 variant="outline"
-                onClick={handleRemove}
+                onClick={() => setConfirmRemove(true)}
                 disabled={uploading}
                 className="gap-1.5 text-destructive hover:text-destructive"
               >
