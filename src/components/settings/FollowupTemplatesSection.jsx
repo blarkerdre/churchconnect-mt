@@ -35,6 +35,7 @@ export default function FollowupTemplatesSection() {
   const qc = useQueryClient();
   const [editDialog, setEditDialog] = useState(false);
   const [editItem, setEditItem] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null);
 
   const { data: templates = [], isLoading } = useQuery({
     queryKey: ["followup-message-templates", tenantId],
