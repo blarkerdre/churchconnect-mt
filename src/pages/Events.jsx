@@ -22,6 +22,7 @@ import { useChurchUnits } from "@/hooks/useChurchUnits";
 import { useSubFeature } from "@/hooks/useSubFeature";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
 import { renderTextWithLinks } from "@/lib/linkify";
+import PasswordConfirmDialog from "@/components/shared/PasswordConfirmDialog";
 
 const statusColors = {
   "Upcoming": "bg-primary/10 text-primary",
