@@ -13,6 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
 import WSFCentreMembersDialog from "@/components/wsf/WSFCentreMembersDialog";
+import PasswordConfirmDialog from "@/components/shared/PasswordConfirmDialog";
 
 const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
