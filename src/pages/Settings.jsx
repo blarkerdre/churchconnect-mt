@@ -542,11 +542,7 @@ function ChurchUnitsSection() {
     saveMutation.mutate({ id: editingUnit?.id, name: unitName.trim(), is_active: unitActive });
   };
 
-  const handleDelete = (unit) => {
-    if (window.confirm(`Delete "${unit.name}"?`)) {
-      deleteMutation.mutate(unit.id);
-    }
-  };
+  const handleDelete = (unit) => setDeleteUnit(unit);
 
   return (
     <Card className="border-0 shadow-sm">
