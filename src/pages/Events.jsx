@@ -590,6 +590,16 @@ export default function Events() {
         referenceId={smsEvent?.id || null}
         title={smsEvent ? `Notify: ${smsEvent.title}` : ""}
       />
+      <PasswordConfirmDialog
+        open={!!deleteTarget}
+        onOpenChange={(o) => { if (!o) setDeleteTarget(null); }}
+        title="Delete event"
+        description={deleteTarget?.is_recurring && !deleteTarget?.recurrence_parent_id
+          ? "This will delete the recurring event and all its occurrences. This cannot be undone."
+          : "This will permanently delete the event. This cannot be undone."}
+        isPending={deleteMutation.isPending}
+        onConfirm={() => deleteMutation.mutate(deleteTarget)}
+      />
     </div>
   );
 }
