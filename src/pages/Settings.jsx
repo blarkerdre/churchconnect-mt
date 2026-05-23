@@ -408,11 +408,11 @@ function SettingsListSection({ settingsKey, title, icon: Icon, description }) {
     closeDialog();
   };
 
-  const handleDelete = (idx) => {
-    if (window.confirm(`Delete "${items[idx]}"?`)) {
-      saveMutation.mutate(items.filter((_, i) => i !== idx));
-      toast({ title: "Deleted" });
-    }
+  const handleDelete = (idx) => setDeleteIdx(idx);
+  const confirmDeleteItem = () => {
+    if (deleteIdx === null) return;
+    saveMutation.mutate(items.filter((_, i) => i !== deleteIdx));
+    toast({ title: "Deleted" });
   };
 
   return (
