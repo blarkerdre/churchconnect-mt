@@ -834,7 +834,7 @@ function FaviconOgImageSection() {
 
   const handleRemove = async (type) => {
     const label = type === "favicon" ? "favicon" : type === "pwa-icon" ? "app icon" : "social image";
-    if (!tenantId || !window.confirm(`Remove the ${label}?`)) return;
+    if (!tenantId) return;
     const setUploading = type === "favicon" ? setUploadingFavicon : type === "pwa-icon" ? setUploadingPwa : setUploadingOg;
     setUploading(true);
     try {
