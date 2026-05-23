@@ -681,7 +681,7 @@ function ChurchBrandingSection() {
   };
 
   const handleRemove = async () => {
-    if (!tenantId || !window.confirm("Remove the church logo?")) return;
+    if (!tenantId) return;
     setUploading(true);
     try {
       const { error } = await supabase
