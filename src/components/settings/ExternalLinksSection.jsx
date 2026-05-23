@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { ICON_OPTIONS, getIconComponent } from "@/lib/icon-map";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
+import PasswordConfirmDialog from "@/components/shared/PasswordConfirmDialog";
 
 export default function ExternalLinksSection() {
   const qc = useQueryClient();
