@@ -360,6 +360,7 @@ function SettingsListSection({ settingsKey, title, icon: Icon, description }) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingIdx, setEditingIdx] = useState(null);
   const [itemName, setItemName] = useState("");
+  const [deleteIdx, setDeleteIdx] = useState(null);
 
   const { data: items = [], isLoading } = useQuery({
     queryKey: ["app-settings", settingsKey, tenantId],
