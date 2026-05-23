@@ -933,7 +933,7 @@ function FaviconOgImageSection() {
                     {ogImageUrl ? "Change Image" : "Upload Image"}
                   </Button>
                   {ogImageUrl && (
-                    <Button size="sm" variant="outline" onClick={() => handleRemove("og-image")} disabled={uploadingOg} className="gap-1.5 text-destructive hover:text-destructive">
+                    <Button size="sm" variant="outline" onClick={() => setRemoveType("og-image")} disabled={uploadingOg} className="gap-1.5 text-destructive hover:text-destructive">
                       <X className="h-4 w-4" /> Remove
                     </Button>
                   )}
