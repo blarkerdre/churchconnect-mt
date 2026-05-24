@@ -297,6 +297,9 @@ export default function Followups() {
           {canCreateFollowup && <Button onClick={openNew} className="bg-primary hover:bg-primary/90"><Plus className="h-4 w-4 mr-2" /> New Follow-up</Button>}
           {(isAdmin || isUnitLeader) && (
             <>
+              <Button variant="outline" onClick={() => setReportOpen(true)}>
+                <FileBarChart className="h-4 w-4 mr-2" /> Generate Report
+              </Button>
               <Button variant="outline" onClick={downloadCSV}><Download className="h-4 w-4 mr-2" /> Download</Button>
               <PrintReportButton
                 label="Print"
