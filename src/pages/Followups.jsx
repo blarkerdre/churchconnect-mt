@@ -432,6 +432,13 @@ export default function Followups() {
         }}
       />
 
+      <FollowupReportDialog
+        open={reportOpen}
+        onOpenChange={setReportOpen}
+        followups={followups}
+        profileMap={profileMap}
+      />
+
     </div>
   );
 }
