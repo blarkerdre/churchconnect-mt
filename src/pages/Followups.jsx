@@ -4,8 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { HeartHandshake, Search, Phone, MessageSquare, CalendarCheck, Plus, AlertCircle, Loader2, UserCheck, User, Download, Mail } from "lucide-react";
+import { HeartHandshake, Search, Phone, MessageSquare, CalendarCheck, Plus, AlertCircle, Loader2, UserCheck, User, Download, Mail, FileBarChart } from "lucide-react";
 import PrintReportButton from "@/components/PrintReportButton";
+import FollowupReportDialog from "@/components/followups/FollowupReportDialog";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -35,6 +36,7 @@ export default function Followups() {
   
   const [messageDialogOpen, setMessageDialogOpen] = useState(false);
   const [messageFollowup, setMessageFollowup] = useState(null);
+  const [reportOpen, setReportOpen] = useState(false);
   const queryClient = useQueryClient();
   const { enabled: canCreateFollowup } = useSubFeature("followups.create");
   
@@ -295,6 +297,9 @@ export default function Followups() {
           {canCreateFollowup && <Button onClick={openNew} className="bg-primary hover:bg-primary/90"><Plus className="h-4 w-4 mr-2" /> New Follow-up</Button>}
           {(isAdmin || isUnitLeader) && (
             <>
+              <Button variant="outline" onClick={() => setReportOpen(true)}>
+                <FileBarChart className="h-4 w-4 mr-2" /> Generate Report
+              </Button>
               <Button variant="outline" onClick={downloadCSV}><Download className="h-4 w-4 mr-2" /> Download</Button>
               <PrintReportButton
                 label="Print"
@@ -425,6 +430,13 @@ export default function Followups() {
         onSaved={() => {
           queryClient.invalidateQueries({ queryKey: ["followup-messages"] });
         }}
+      />
+
+      <FollowupReportDialog
+        open={reportOpen}
+        onOpenChange={setReportOpen}
+        followups={followups}
+        profileMap={profileMap}
       />
 
     </div>
