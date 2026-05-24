@@ -1,48 +1,40 @@
-## Goals
+## Add Follow-up & Sign-Post Reports
 
-1. Require password re-entry before any delete action across the app (no type-to-confirm).
-2. Home Cell leaders should not be able to delete their own centre's attendance reports .
+Today the Follow-ups page only exports a flat CSV/print of the current filtered list — no grouping, no signpost coverage. Add a dedicated **Reports** dialog on the Follow-ups page that lets admins/unit leaders generate filtered, grouped reports across follow-ups **and** sign-post referrals.
 
-## 1. New shared dialog: `PasswordConfirmDialog`
+### 1. New component: `FollowupReportDialog.jsx`
+Location: `src/components/followups/FollowupReportDialog.jsx`
 
-Create `src/components/shared/PasswordConfirmDialog.jsx`, a lighter sibling of the existing `DangerConfirmDialog`:
+Filters (all optional, combinable):
+- **Report type**: Follow-ups · Sign-Posts (referrals) · Combined
+- **Date range** (created/due/completed — selectable basis)
+- **Status**: multi-select (Pending, In Progress, Completed, Overdue — and for referrals: pending, accepted, declined, completed)
+- **Follow-up type**: multi-select (First Timer, New Convert, Visitor, Absentee, Pastoral, etc.)
+- **Assigned to**: member/leader picker (or "Unassigned")
+- **Priority**: Low/Medium/High/Urgent
+- **Group by**: None · Assigned Member · Status · Type · Referral Target
 
-- Props: `open`, `onOpenChange`, `title`, `description`, `confirmLabel` (default "Delete"), `isPending`, `onConfirm`.
-- Body shows the warning and a single password input.
-- Verifies via `supabase.auth.signInWithPassword({ email: user.email, password })`.
-- On success, calls `onConfirm()`. On failure, shows toast and stays open.
-- Same red destructive styling as `DangerConfirmDialog`, no type-to-confirm.
+Output:
+- Summary cards: total, by status, overdue count, completion rate, avg days to complete
+- Grouped table preview
+- **Export**: CSV download + Print (reuse `PrintReportButton` pattern)
+- For Sign-Posts: include referral type, target unit/centre, assigned leader, current status, latest update note
 
-## 2. Replace every `window.confirm`/`confirm` delete with `PasswordConfirmDialog`
+### 2. Data fetching
+- Reuse current `followups` query plus a new `followup_referrals` query joined to `followups`, `members`, `wsf_centres`, profiles for assigned leader names — all tenant-scoped with explicit `.eq("tenant_id", tenantId)`.
+- For "Combined" mode, list each follow-up with its referral(s) inline.
 
-Files to update (one delete confirm each unless noted):
+### 3. Hook into Follow-ups page
+`src/pages/Followups.jsx`: add a **"Generate Report"** button (next to existing Download/Print) for admins & unit leaders, opening the new dialog. Existing quick CSV/Print buttons stay as-is.
 
-- `src/components/wsf/WSFAttendanceTab.jsx` — also drop the `isAdmin &&` gate so Home Cell leaders see the delete button (RLS already restricts to their own centres).
-- `src/pages/Events.jsx`
-- `src/pages/Transportation.jsx` (booking delete + location delete)
-- `src/pages/Communications.jsx`
-- `src/pages/Settings.jsx` (3 spots: list item delete, unit delete, logo/branding removals)
-- `src/components/wsf/WSFCentreMembersDialog.jsx` (remove member from centre)
-- `src/components/settings/WSFZonesSection.jsx`
-- `src/components/settings/WSFCentresSection.jsx`
-- `src/components/settings/FollowupTemplatesSection.jsx`
-- `src/components/settings/ExternalLinksSection.jsx`
-- `src/components/certificates/CertificateTemplateSettings.jsx`
-- `src/components/tenants/InvoicesReceiptsList.jsx`
+### 4. Access control
+Same gate as current export: `isAdmin || isUnitLeader`. Unit leaders see only follow-ups/referrals within their assigned scope (already enforced by RLS).
 
-Pattern in each file: add local `useState` for `{ open, target }`, replace the `if (window.confirm(...)) deleteMutation.mutate(x)` with `setConfirm({ open: true, target: x })`, render `<PasswordConfirmDialog ... onConfirm={() => deleteMutation.mutate(confirm.target)} isPending={deleteMutation.isPending} />`.
+### Out of scope
+- No DB schema changes (existing tables cover everything).
+- No new routes — lives inside Follow-ups page.
+- No scheduled/email-delivered reports.
 
-## 3. Leave existing `DangerConfirmDialog` usages alone
-
-Places already using `DangerConfirmDialog` (exam course/subject/session, member delete, sermon folder, tenant danger zone, etc.) keep their stronger type-to-confirm + password flow — they're truly destructive bulk operations.
-
-## Technical notes
-
-- No DB / RLS changes required. The Home Cell leader fix is purely a UI gating change in `WSFAttendanceTab.jsx`.
-- The new dialog reuses `useAuth` and `supabase.auth.signInWithPassword` exactly like `DangerConfirmDialog` for consistency.
-- Verified the existing `wsf_attendance_reports` RLS policy `"WSF leaders can manage own centre reports"` covers delete for the centre's leader.
-
-## Out of scope
-
-- Hard-deletes inside edit forms (e.g. `MemberFormDialog`'s built-in delete) — already covered by `DangerConfirmDialog`.
-- Bulk-deletes through Danger Zone / purge functions — already gated.
+### Files touched
+- **New**: `src/components/followups/FollowupReportDialog.jsx`
+- **Edit**: `src/pages/Followups.jsx` (add button + dialog mount)
