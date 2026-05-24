@@ -36,6 +36,7 @@ export default function Followups() {
   
   const [messageDialogOpen, setMessageDialogOpen] = useState(false);
   const [messageFollowup, setMessageFollowup] = useState(null);
+  const [reportOpen, setReportOpen] = useState(false);
   const queryClient = useQueryClient();
   const { enabled: canCreateFollowup } = useSubFeature("followups.create");
   
