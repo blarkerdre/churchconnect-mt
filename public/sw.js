@@ -5,7 +5,7 @@
  * - Push notification handlers preserved
  */
 
-const VERSION = 'v3';
+const VERSION = 'v4';
 const HTML_CACHE = `html-${VERSION}`;
 const ASSET_CACHE = `assets-${VERSION}`;
 
@@ -99,14 +99,17 @@ function fetchWithTimeout(request, ms) {
 /* ---------- Push notifications (unchanged) ---------- */
 
 self.addEventListener('push', (event) => {
-  const data = event.data?.json?.() ?? {};
+  let data = {};
+  try { data = event.data?.json?.() ?? {}; }
+  catch { data = { title: 'New Notification', message: event.data?.text?.() || '' }; }
   const title = data.title || 'New Notification';
   const options = {
     body: data.message || data.body || '',
     icon: '/icon-192.png',
-    badge: '/favicon.ico',
-    vibrate: [200, 100, 200],
+    badge: '/icon-192.png',
+    vibrate: [300, 150, 300, 150, 500],
     tag: data.tag || 'pwa-notification',
+    renotify: true,
     data: { url: data.url || '/' },
   };
   event.waitUntil(self.registration.showNotification(title, options));
