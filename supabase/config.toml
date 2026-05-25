@@ -35,3 +35,5 @@ project_id = "qfordhikmtgedfybktjg"
     verify_jwt = false
   [functions.get-manifest]
     verify_jwt = false
+  [functions.send-push]
+    verify_jwt = false
