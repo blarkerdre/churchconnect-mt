@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { formatDistanceToNow, format } from "date-fns";
 import { toast } from "sonner";
 import { requestNotificationPermission, registerServiceWorker, triggerNotificationAlert } from "@/lib/notification-alert";
+import { subscribeToPush } from "@/hooks/usePushSubscription";
 
 const typeIcons = {
   pastoral_care: Heart,
@@ -72,10 +73,30 @@ export default function NotificationBell() {
     refetchInterval: 30000,
   });
 
+  const [permission, setPermission] = useState(
+    typeof Notification !== "undefined" ? Notification.permission : "default"
+  );
+
   useEffect(() => {
-    requestNotificationPermission();
     registerServiceWorker();
   }, []);
+
+  // Auto-subscribe to push when permission is granted
+  useEffect(() => {
+    if (!user?.id || permission !== "granted") return;
+    subscribeToPush(user.id, tenantId);
+  }, [user?.id, tenantId, permission]);
+
+  const handleEnableAlerts = async () => {
+    const result = await requestNotificationPermission();
+    setPermission(result);
+    if (result === "granted") {
+      toast.success("Alerts enabled");
+      if (user?.id) subscribeToPush(user.id, tenantId);
+    } else if (result === "denied") {
+      toast.error("Notifications blocked. Enable them in your browser settings.");
+    }
+  };
 
   useEffect(() => {
     if (!user?.id || !tenantId) return;
@@ -194,6 +215,16 @@ export default function NotificationBell() {
               </Button>
             )}
           </div>
+          {permission !== "granted" && (
+            <div className="px-4 py-2 border-b border-border bg-primary/5 flex items-center justify-between gap-2">
+              <p className="text-xs text-muted-foreground leading-tight">
+                Enable sound &amp; alerts so your phone rings on new notifications.
+              </p>
+              <Button size="sm" className="h-7 text-xs shrink-0" onClick={handleEnableAlerts}>
+                Enable
+              </Button>
+            </div>
+          )}
           <ScrollArea className="h-[60vh] max-h-96">
             {notifications.length === 0 ? (
               <p className="text-sm text-muted-foreground text-center py-8">No notifications</p>
