@@ -95,6 +95,18 @@ export default function InstallAppDialog({ open, onOpenChange }) {
           </p>
         )}
 
+        {!isIOS && (
+          <div className="flex items-start gap-2 rounded-md bg-muted/50 p-3 text-xs text-muted-foreground mt-2">
+            <Info className="h-4 w-4 mt-0.5 shrink-0" />
+            <p>
+              <strong className="text-foreground">Heads up for Android users:</strong> After installing,
+              Google may show a Play Protect warning that the app "is built for an older version of Android."
+              This comes from Android itself, not from this app — your data is safe. Tap{" "}
+              <strong>Install anyway</strong> to continue. Google updates this automatically over time.
+            </p>
+          </div>
+        )}
+
         <DialogFooter className="gap-2 sm:gap-2">
           <Button variant="ghost" onClick={handleDismiss}>
             Maybe later
