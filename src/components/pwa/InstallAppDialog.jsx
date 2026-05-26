@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Download, Share, Plus, Smartphone } from "lucide-react";
+import { Download, Share, Plus, Smartphone, Info } from "lucide-react";
 import TenantDialogHeader from "@/components/ui/TenantDialogHeader";
 import { useTenant } from "@/contexts/TenantContext";
 import { useInstallPrompt } from "@/hooks/useInstallPrompt";
@@ -93,6 +93,18 @@ export default function InstallAppDialog({ open, onOpenChange }) {
             Open this site on your phone (Chrome on Android or Safari on iPhone) to install it
             to your home screen. On desktop Chrome/Edge, look for the install icon in the address bar.
           </p>
+        )}
+
+        {!isIOS && (
+          <div className="flex items-start gap-2 rounded-md bg-muted/50 p-3 text-xs text-muted-foreground mt-2">
+            <Info className="h-4 w-4 mt-0.5 shrink-0" />
+            <p>
+              <strong className="text-foreground">Heads up for Android users:</strong> After installing,
+              Google may show a Play Protect warning that the app "is built for an older version of Android."
+              This comes from Android itself, not from this app — your data is safe. Tap{" "}
+              <strong>Install anyway</strong> to continue. Google updates this automatically over time.
+            </p>
+          </div>
         )}
 
         <DialogFooter className="gap-2 sm:gap-2">
