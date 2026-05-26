@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Download, Share, Plus, Smartphone } from "lucide-react";
+import { Download, Share, Plus, Smartphone, Info } from "lucide-react";
 import TenantDialogHeader from "@/components/ui/TenantDialogHeader";
 import { useTenant } from "@/contexts/TenantContext";
 import { useInstallPrompt } from "@/hooks/useInstallPrompt";

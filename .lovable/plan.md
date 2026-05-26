@@ -1,37 +1,35 @@
-## Why no sound
 
-Edge function logs show every push attempt failing with:
-`push send error: 403 permission denied: invalid JWT provided`
+## Part 1 — Add the Android note to the Install dialog
 
-This means the DB trigger reaches the Edge Functions gateway, but the gateway rejects the call before `send-push` runs — so no Web Push is ever delivered to the device. Separately, the in-app chime only plays when the tab is open, so on a locked phone you'd hear nothing either way.
+In `src/components/pwa/InstallAppDialog.jsx`, add a small informational note that appears only for Android (non-iOS) users in the install dialog body. Wording:
 
-## Fix
+> **Heads up for Android users:** After installing, Google may show a Play Protect warning that the app "is built for an older version of Android." This comes from Android itself, not from this app — your data is safe. Tap **Install anyway** to continue. Google updates this automatically over time.
 
-### 1. Disable JWT verification on `send-push`
-Add to `supabase/config.toml`:
-```
-[functions.send-push]
-  verify_jwt = false
-```
-The function is only invoked by our DB trigger (using the service-role key from vault as a shared secret in the payload pattern) and is not user-facing. This matches how `auth-email-hook`, `twilio-webhook`, `stripe-subscription-webhook`, etc. are configured.
+Styled as a subtle muted info box (`bg-muted/50`, small text, `Info` icon from lucide-react) placed below the existing install instructions. Only rendered when `!isIOS`.
 
-### 2. Add a shared-secret guard inside `send-push`
-Since we're turning off gateway JWT checks, validate the caller in code. The trigger already has access to the `email_queue_service_role_key` vault secret — reuse it:
-- Trigger passes `Authorization: Bearer <service_role_key>` (already does).
-- `send-push/index.ts` checks `req.headers.get("authorization")` equals `Bearer ${SUPABASE_SERVICE_ROLE_KEY}` and rejects with 401 otherwise.
+No other files change.
 
-### 3. Verify end-to-end
-After deploy:
-- Insert a test row into `public.notifications` for the logged-in user.
-- Confirm `send-push` logs show 201/200 from the push provider instead of 403.
-- Confirm the device shows a system notification (with the new chime / vibration from `sw.js`).
+## Part 2 — Can this app be put on the Play Store?
 
-### 4. In-app chime sanity check
-While we're in there, confirm `triggerNotificationAlert` is actually being called. The realtime handler in `NotificationBell.jsx` already calls it, but the user is on `/index` viewport 384px — they may not have clicked "Enable" yet. No code change needed unless step 3 still shows no audio; if so, we'll add a one-line `console.debug` in the realtime callback to confirm it fires.
+Short answer: **yes, but not from Lovable directly.** Lovable builds web apps (React + Vite). The Play Store only accepts Android app packages (`.aab` / `.apk`). There are three realistic paths:
 
-## Files
+### Option A — Trusted Web Activity (TWA) via Bubblewrap *(recommended)*
+Wraps the existing PWA in a thin native Android shell that opens the live site fullscreen with no browser UI. The app on Play Store *is* the deployed Lovable site.
 
-- `supabase/config.toml` — add `[functions.send-push] verify_jwt = false`
-- `supabase/functions/send-push/index.ts` — add bearer-token check against `SUPABASE_SERVICE_ROLE_KEY`
+- Requires: a published custom domain (already have `app.churchmanagementsuite.org`), a valid PWA manifest (already in place), HTTPS (already), and a Digital Asset Links file at `/.well-known/assetlinks.json` to verify domain ownership.
+- Tooling: Google's [Bubblewrap CLI](https://github.com/GoogleChromeLabs/bubblewrap) generates a signed `.aab` in ~10 minutes.
+- Cost: $25 one-time Google Play developer account.
+- Pro: any update to the web app is instantly live in the installed Android app — no resubmission needed.
+- Con: must be done outside Lovable (on your laptop or a CI runner). Solves the Play Protect warning permanently because the app is now distributed through Play.
 
-No DB migration, no client changes.
+### Option B — Capacitor / PWABuilder
+Same idea as TWA but wraps the app in a WebView with optional native plugins (camera, push, etc.). Slightly heavier. Use this only if you need deeper Android-native APIs.
+
+### Option C — Stay PWA-only
+Keep the current "Add to home screen" flow. No Play Store presence, but the Play Protect warning continues to appear on install until Chrome bumps the WebAPK targetSdkVersion upstream.
+
+### Recommendation
+Go with **Option A (TWA via Bubblewrap)** once the app is feature-stable. I can prepare the `/.well-known/assetlinks.json` route and a short step-by-step Bubblewrap guide as a follow-up task — that part lives outside the Lovable codebase but I can scaffold everything Lovable needs to support it.
+
+## Files changed in this plan
+- `src/components/pwa/InstallAppDialog.jsx` — add Android Play Protect note.
