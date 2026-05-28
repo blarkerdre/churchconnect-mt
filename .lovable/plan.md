@@ -1,59 +1,33 @@
+# Why scheduled birthday messages aren't sending
 
-## Goal
-Prepare everything Lovable needs to support a Google Play Store release via a Trusted Web Activity (TWA), without touching app behavior. The actual `.aab` build still happens outside Lovable in Bubblewrap, but after this plan, the domain will be ready to verify ownership and you'll have a clear checklist of assets to gather.
+## Root cause
 
-## Part 1 — Serve `/.well-known/assetlinks.json`
+The hourly cron job `send-birthday-messages-hourly` is firing on schedule, but every call returns **403 Forbidden** from the `send-birthday-messages` Edge Function.
 
-Google requires a Digital Asset Links file at `https://app.churchmanagementsuite.org/.well-known/assetlinks.json` so the TWA can prove it owns the domain (this is what removes the browser URL bar inside the installed Android app).
+Evidence from the database:
+- `cron.job_run_details` shows the job "succeeds" every hour (it just enqueues the HTTP call).
+- `net._http_response` shows every request to `/functions/v1/send-birthday-messages` returns `403 {"error":"Forbidden"}` (last 6+ hours confirmed).
 
-Approach: add a **static file** at `public/.well-known/assetlinks.json`. Vite serves everything under `public/` at the site root, so the file becomes available at the correct URL with no routing or edge function needed.
-
-Initial contents will be a placeholder array with one entry and a `TODO_SHA256_FINGERPRINT` marker. Once you generate the signing key with Bubblewrap, you'll paste the real SHA-256 fingerprint into that one spot.
-
-```json
-[
-  {
-    "relation": ["delegate_permission/common.handle_all_urls"],
-    "target": {
-      "namespace": "android_app",
-      "package_name": "org.churchmanagementsuite.app",
-      "sha256_cert_fingerprints": [
-        "TODO_REPLACE_WITH_BUBBLEWRAP_SHA256_FINGERPRINT"
-      ]
-    }
-  }
-]
+The Edge Function authorizes the caller by comparing the bearer token to `SUPABASE_SERVICE_ROLE_KEY`:
+```ts
+let authorized = bearer === serviceKey;
 ```
+The cron job sends the bearer from the Vault secret `email_queue_service_role_key`. That Vault secret was stored on **2026-03-26** and no longer matches the current `SUPABASE_SERVICE_ROLE_KEY` — i.e. the service-role key has been rotated since, and the Vault copy is stale. So every cron call is rejected.
 
-Package name `org.churchmanagementsuite.app` is a sensible default derived from your domain. You can change it before generating the keystore — once chosen, it's permanent for that Play Store listing.
+Manual "Send wishes" from the UI works because it uses the logged-in admin's JWT, which passes the second authorization branch (`is_admin` RPC).
 
-## Part 2 — Bubblewrap checklist (outside Lovable)
+## Fix
 
-After this plan ships and you've published the latest version of the app, the steps on your laptop are:
+Refresh the Vault secret so cron authenticates with the current service-role key. Per project guidance, the correct way to refresh it is to re-run `email_domain--setup_email_infra` — it's idempotent and rewrites `email_queue_service_role_key` (and the related cron auth) with the latest key.
 
-1. Install Bubblewrap: `npm i -g @bubblewrap/cli`
-2. `bubblewrap init --manifest=https://app.churchmanagementsuite.org/manifest.json`
-3. Confirm package name `org.churchmanagementsuite.app` (or change it).
-4. Bubblewrap generates a signing keystore — **back it up**, losing it means you can never update the app.
-5. Run `bubblewrap fingerprint` → copy the SHA-256.
-6. Paste the SHA-256 into `public/.well-known/assetlinks.json` in Lovable, publish, verify the URL responds.
-7. `bubblewrap build` → produces `app-release-bundle.aab`.
-8. Upload `.aab` to Play Console, fill listing, submit for review (~1–3 days first time).
+Steps:
+1. Call `email_domain--setup_email_infra` to refresh `email_queue_service_role_key` in Vault.
+2. Wait for the next hourly tick (or trigger one run manually) and re-check `net._http_response` for a `200` from `/send-birthday-messages`.
+3. Confirm `birthday_message_log` gets new `sent` rows for any members whose birthday is today.
 
-## Part 3 — Play Store listing assets you'll need to gather
+No code changes required.
 
-Not built in this plan — just a heads-up so you can start collecting:
-
-- **App icon**: 512×512 PNG (can reuse your existing PWA icon).
-- **Feature graphic**: 1024×500 PNG/JPG (banner shown at top of store listing).
-- **Phone screenshots**: at least 2, ideally 4–8, 1080×1920 (portrait).
-- **Short description**: max 80 characters.
-- **Full description**: max 4000 characters.
-- **Privacy policy URL**: required, must be publicly accessible.
-- **Content rating questionnaire**: filled in Play Console.
-
-## Files changed
-- `public/.well-known/assetlinks.json` — new placeholder file with TODO fingerprint.
-
-## What does NOT change
-- No code, no edge functions, no manifest, no PWA behavior. iOS, multi-tenancy, and per-tenant PWA logos all continue to work exactly as today.
+## Not changing
+- `send-birthday-messages/index.ts` authorization logic is correct.
+- Cron schedule (`0 * * * *`) and per-tenant `send_hour_local = 8` are fine.
+- `birthday_message_settings` rows are `enabled = true` with channels configured.
