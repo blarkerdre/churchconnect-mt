@@ -11,7 +11,7 @@ import { Toggle } from "@/components/ui/toggle";
 import { Button } from "@/components/ui/button";
 import HandwritingPad from "@/components/sermons/HandwritingPad";
 
-const MenuBar = ({ editor }) => {
+const MenuBar = ({ editor, onOpenPad }) => {
   if (!editor) return null;
 
   const buttons = [
