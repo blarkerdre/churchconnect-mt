@@ -37,15 +37,14 @@ export function useConsentText(tenantId) {
  * Fetch consent settings for a resolved tenant (works without auth for public pages).
  */
 export function usePublicConsentText(resolvedTenantId) {
+export function usePublicConsentText(resolvedTenantId) {
   const { data } = useQuery({
     queryKey: ["consent-settings-public", resolvedTenantId],
     enabled: !!resolvedTenantId,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("app_settings")
-        .select("key, value")
-        .eq("tenant_id", resolvedTenantId)
-        .in("key", ["consent_text", "privacy_policy_url"]);
+      const { data, error } = await supabase.rpc("get_public_consent_settings", {
+        _tenant_id: resolvedTenantId,
+      });
       if (error) throw error;
       const map = {};
       (data || []).forEach((r) => (map[r.key] = r.value));
@@ -53,7 +52,6 @@ export function usePublicConsentText(resolvedTenantId) {
     },
   });
 
-  return {
     consentText: data?.consent_text || DEFAULT_CONSENT_TEXT,
     privacyUrl: data?.privacy_policy_url || "",
   };
