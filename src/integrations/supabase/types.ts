@@ -4056,6 +4056,13 @@ export type Database = {
           training_type: string
         }[]
       }
+      get_public_consent_settings: {
+        Args: { _tenant_id: string }
+        Returns: {
+          key: string
+          value: Json
+        }[]
+      }
       get_public_courses_for_tenant: {
         Args: { _tenant_id: string }
         Returns: {
