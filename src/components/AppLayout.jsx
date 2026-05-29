@@ -23,6 +23,7 @@ import NotificationBell from "@/components/notifications/NotificationBell";
 import MobileBottomNav from "@/components/navigation/MobileBottomNav";
 import PaymentRequiredScreen from "@/components/tenants/PaymentRequiredScreen";
 import PaymentWarningBanner from "@/components/tenants/PaymentWarningBanner";
+import useMessageAlerts from "@/hooks/useMessageAlerts";
 import PWAUpdateBanner from "@/components/PWAUpdateBanner";
 import { getEnvironmentLabel, getBackendHost, isBackendMismatch, isPreviewEnvironment } from "@/lib/environment";
 import { useAppSetting } from "@/hooks/useAppSetting";
@@ -72,6 +73,7 @@ export default function Layout({ children }) {
   const { signOut, user, profile, isAdmin, isUnitLeader, isWSFLeader, roles, leaderUnits, isTenantOwner, isTenantAdmin } = useAuth();
   const { currentTenant, tenantId, tenantSlug, tenantMemberships, switchTenant } = useTenant();
   const queryClient = useQueryClient();
+  useMessageAlerts();
   const tenantPrefix = tenantSlug ? `/t/${tenantSlug}` : "";
   const isSuperAdmin = roles.includes("super_admin");
   const subscriptionStatus = currentTenant?.subscription_status;
