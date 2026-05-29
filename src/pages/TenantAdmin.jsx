@@ -32,23 +32,8 @@ import TenantAnalyticsTab from "@/components/tenants/TenantAnalyticsTab";
 import TenantBillingTab from "@/components/tenants/TenantBillingTab";
 import DomifortIntegrationSection from "@/components/tenants/DomifortIntegrationSection";
 
-const FEATURE_MODULES = [
-  { key: "members", label: "Members", description: "Member directory and management" },
-  { key: "events", label: "Events", description: "Event scheduling and registration" },
-  { key: "attendance", label: "Attendance", description: "Unit meeting attendance tracking" },
-  { key: "followups", label: "Follow-ups", description: "Follow-up task management" },
-  { key: "pastoral-care", label: "Pastoral Care", description: "Pastoral care requests and tracking" },
-  { key: "communications", label: "Communications", description: "Announcements, email, and messaging" },
-  { key: "transportation", label: "Transportation", description: "Transport booking and management" },
-  { key: "analytics", label: "Analytics", description: "Attendance and growth analytics" },
-  { key: "training-reports", label: "Training Reports", description: "BFC and training progress" },
-  { key: "church-attendance", label: "Church Attendance", description: "Sunday service attendance" },
-  { key: "exam-management", label: "Bible School", description: "Exam sessions and results" },
-  { key: "wsf", label: "Home Cell Centres", description: "Home Cell Fellowship management" },
-  { key: "sms", label: "SMS", description: "SMS messaging capability" },
-  { key: "sermon-notes", label: "Sermon Notes", description: "Sermon notes management" },
-  { key: "testimony", label: "Testimony", description: "Member testimony sharing" },
-];
+import { FEATURE_MODULES } from "@/lib/feature-modules";
+
 
 const PLAN_TIERS = [
   { value: "free", label: "Free", memberLimit: 100, storageLimit: 500, smsLimit: 50, whatsappLimit: 50 },
