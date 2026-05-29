@@ -65,6 +65,7 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
   const [password, setPassword] = useState("");
   const [accountRole, setAccountRole] = useState("member");
   const [confirmUpdateOpen, setConfirmUpdateOpen] = useState(false);
+  const [pendingRoles, setPendingRoles] = useState([]);
 
   const showChurchUnits = !HIDE_SPIRITUAL_STATUSES.includes(form.membership_status);
   const showSpiritualDev = !HIDE_SPIRITUAL_STATUSES.includes(form.membership_status);
@@ -224,6 +225,13 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
       setAccountRole("member");
     }
   }, [member, open]);
+
+  // Sync staged role edits with saved roles whenever the dialog opens or saved roles refresh
+  useEffect(() => {
+    if (open) {
+      setPendingRoles(memberRoles.map((r) => r.role));
+    }
+  }, [open, memberRoles]);
 
   const validateForm = () => {
     if (!form.first_name || !form.last_name) {
@@ -403,6 +411,26 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
         const { error } = await supabase.from("members").insert(withTenant(payload)).select().single();
         if (error) throw error;
         toast({ title: "Member registered" });
+      }
+      // Apply staged role changes (admin-only, linked accounts only)
+      if (member && memberUserId && isAdmin) {
+        const savedRoles = memberRoles.map((r) => r.role);
+        const toAdd = pendingRoles.filter((r) => !savedRoles.includes(r));
+        const toRemove = savedRoles.filter((r) => !pendingRoles.includes(r) && r !== "super_admin");
+        for (const role of toAdd) {
+          const { error } = await supabase.from("user_roles").insert(withTenant({ user_id: memberUserId, role }));
+          if (error) throw error;
+          await logAudit("role_add", "user_roles", memberUserId, { role, target_name: `${member.first_name} ${member.last_name}` }, tenantId);
+        }
+        for (const role of toRemove) {
+          const { error } = await supabase.from("user_roles").delete().eq("user_id", memberUserId).eq("role", role).eq("tenant_id", tenantId);
+          if (error) throw error;
+          await logAudit("role_remove", "user_roles", memberUserId, { role, target_name: `${member.first_name} ${member.last_name}` }, tenantId);
+        }
+        if (toAdd.length || toRemove.length) {
+          queryClient.invalidateQueries({ queryKey: ["member-roles", memberUserId] });
+          queryClient.invalidateQueries({ queryKey: ["all-user-roles"] });
+        }
       }
       onSaved();
       setConfirmUpdateOpen(false);
@@ -752,23 +780,36 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
                       })}
                     </div>
                     {canChange ? (
-                      <div className="grid grid-cols-2 gap-2">
-                        {availableRoles.map(r => {
-                          const hasRole = userRoles.includes(r);
-                          return (
-                            <label key={r} className="flex items-center gap-2 cursor-pointer text-sm p-2 rounded-lg hover:bg-muted/50">
-                              <Checkbox
-                                checked={hasRole}
-                                onCheckedChange={(checked) => {
-                                  toggleRoleMutation.mutate({ userId: memberUserId, role: r, add: !!checked });
-                                }}
-                                disabled={toggleRoleMutation.isPending}
-                              />
-                              <span className="capitalize">{r === "wsf_leader" ? "Home Cell Leader" : r.replace("_", " ")}</span>
-                            </label>
-                          );
-                        })}
-                      </div>
+                      <>
+                        <div className="grid grid-cols-2 gap-2">
+                          {availableRoles.map(r => {
+                            const hasRole = pendingRoles.includes(r);
+                            return (
+                              <label key={r} className="flex items-center gap-2 cursor-pointer text-sm p-2 rounded-lg hover:bg-muted/50">
+                                <Checkbox
+                                  checked={hasRole}
+                                  onCheckedChange={(checked) => {
+                                    setPendingRoles((prev) =>
+                                      checked ? [...prev.filter((x) => x !== r), r] : prev.filter((x) => x !== r)
+                                    );
+                                  }}
+                                />
+                                <span className="capitalize">{r === "wsf_leader" ? "Home Cell Leader" : r.replace("_", " ")}</span>
+                              </label>
+                            );
+                          })}
+                        </div>
+                        {(() => {
+                          const dirty =
+                            pendingRoles.length !== userRoles.length ||
+                            pendingRoles.some((r) => !userRoles.includes(r));
+                          return dirty ? (
+                            <p className="text-xs text-amber-600 italic">
+                              Unsaved role changes — click Update to apply.
+                            </p>
+                          ) : null;
+                        })()}
+                      </>
                     ) : (
                       <p className="text-xs text-muted-foreground italic">
                         {isOwnAccount ? "Cannot change your own roles" : "Insufficient permissions to change roles"}

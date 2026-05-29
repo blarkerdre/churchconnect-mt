@@ -1,19 +1,30 @@
-Goal: Improve role-change UX in TenantUsersDialog and clarify that the picker controls church-level membership, not app-level user roles.
+## Goal
+In `MemberFormDialog`, role checkboxes currently mutate immediately (`onCheckedChange` calls `toggleRoleMutation.mutate`). Change this so role edits are staged locally and only persisted when the user clicks the dialog's **Update** button.
 
-Changes in `src/components/tenants/TenantUsersDialog.jsx`:
+## Changes — `src/components/members/MemberFormDialog.jsx`
 
-1. Column header rename  
-   - Change `Role` → `Church Role` in the users table header.
+1. **Add staged state**
+   - New `pendingRoles` state (a `Set` or string array) initialised from `memberRoles` when the dialog opens / `memberRoles` changes.
+   - Reset on dialog close, member switch, and after successful save.
 
-2. Tooltip helper  
-   - Wrap the role `<Select>` with a `<Tooltip>` that says:  
-     "This sets the user's role within this specific church."
+2. **Switch checkboxes to local state**
+   - `checked` reads from `pendingRoles` instead of `userRoles`.
+   - `onCheckedChange` updates `pendingRoles` only — no mutation call.
+   - Remove the `disabled={toggleRoleMutation.isPending}` tie to the inline mutation.
+   - Keep the read-only badge row showing **saved** roles (unchanged), so the user sees current vs. pending. Add a small "Unsaved role changes" hint when `pendingRoles` differs from saved `userRoles`.
 
-3. Staged update flow  
-   - Remove `onValueChange` from the inline `<Select>` so changing the dropdown no longer triggers a confirmation dialog immediately.
-   - Add per-row state (`editingRole`) that stores the newly selected role.
-   - Show an **Update** button next to the Select when the value differs from the saved role. Clicking it opens the existing confirmation dialog.
-   - Show a **Cancel** button to revert the Select to the saved role.
-   - Keep all existing confirmation-token logic and mutations unchanged.
+3. **Apply on Update**
+   - In the existing submit handler (the one tied to the Update button), after the member save succeeds and only when `canChange` is true:
+     - Diff `pendingRoles` vs. saved `userRoles`.
+     - For each added role: insert into `user_roles` (with tenant) and `logAudit("role_add", ...)`.
+     - For each removed role: delete from `user_roles` scoped by `user_id`, `role`, `tenant_id` and `logAudit("role_remove", ...)`.
+     - Invalidate `["member-roles", memberUserId]` and `["all-user-roles"]` queries.
+   - Show a single toast covering role updates (or fold into existing save toast).
 
-No backend or new files needed.
+4. **Cleanup**
+   - Remove `toggleRoleMutation` if no longer used elsewhere in the file (verify first); otherwise leave it.
+
+## Out of scope
+- No backend / SQL / RLS changes.
+- No changes to `TenantUsersDialog` (already done).
+- No visual redesign beyond the small "unsaved changes" hint.
