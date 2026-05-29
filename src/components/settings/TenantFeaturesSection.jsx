@@ -15,6 +15,7 @@ export default function TenantFeaturesSection() {
   const { roles } = useAuth();
   const isSuperAdmin = roles?.includes("super_admin");
   const canManage = isSuperAdmin || isTenantOwner || isTenantAdmin;
+  const canEdit = isSuperAdmin || isTenantOwner;
   const queryClient = useQueryClient();
 
   const [disabled, setDisabled] = useState([]);
