@@ -386,8 +386,8 @@ export default function TenantUsersDialog({ tenant, open, onOpenChange }) {
                                     </SelectTrigger>
                                     <SelectContent>
                                       <SelectItem value="member">Member</SelectItem>
-                                      <SelectItem value="admin">Admin</SelectItem>
-                                      <SelectItem value="owner">Owner</SelectItem>
+                                      {(canPromoteToAdmin || m.role === "admin") && <SelectItem value="admin">Admin</SelectItem>}
+                                      {(canPromoteToAdmin || m.role === "owner") && <SelectItem value="owner">Owner</SelectItem>}
                                     </SelectContent>
                                   </Select>
                                 </TooltipTrigger>
