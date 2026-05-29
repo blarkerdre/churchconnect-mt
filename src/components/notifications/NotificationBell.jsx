@@ -48,7 +48,7 @@ const referenceRoutes = {
 };
 
 export default function NotificationBell() {
-  const { user, isTenantAdmin, isTenantOwner } = useAuth();
+  const { user, isTenantAdmin, isTenantOwner, roles } = useAuth();
   const { tenantId } = useTenantQuery();
   const { tenantSlug } = useTenant();
   const queryClient = useQueryClient();
@@ -226,9 +226,11 @@ export default function NotificationBell() {
           <div className="flex items-center justify-between px-4 py-3 border-b border-border gap-2">
             <h3 className="text-sm font-semibold text-foreground">Notifications</h3>
             <div className="flex items-center gap-1">
-              <Button variant="ghost" size="sm" className="text-xs h-7" onClick={handleTestSound} title="Play test sound">
-                Test sound
-              </Button>
+              {(isTenantOwner || roles.includes("super_admin")) && (
+                <Button variant="ghost" size="sm" className="text-xs h-7" onClick={handleTestSound} title="Play test sound">
+                  Test sound
+                </Button>
+              )}
               {unreadCount > 0 && (
                 <Button variant="ghost" size="sm" className="text-xs h-7" onClick={() => markAllRead.mutate()}>
                   <Check className="h-3 w-3 mr-1" /> Mark all read
