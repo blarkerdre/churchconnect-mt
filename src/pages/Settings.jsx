@@ -14,9 +14,11 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 import {
+import {
   Settings as SettingsIcon, Plus, Pencil, Trash2, Loader2,
-  Users, Church, CalendarDays, TrendingUp, Heart, Globe, Bell, Award, Link2, ShieldAlert, Upload, X, ImageIcon, Mail, Phone, CreditCard, Send, Key, ChevronDown
+  Users, Church, CalendarDays, TrendingUp, Heart, Globe, Bell, Award, Link2, ShieldAlert, Upload, X, ImageIcon, Mail, Phone, CreditCard, Send, Key, ChevronDown, SlidersHorizontal
 } from "lucide-react";
+
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import FollowupTemplatesSection from "@/components/settings/FollowupTemplatesSection";
@@ -32,7 +34,9 @@ import PasswordConfirmDialog from "@/components/shared/PasswordConfirmDialog";
 import ExternalLinksSection from "@/components/settings/ExternalLinksSection";
 import DangerZoneSection from "@/components/settings/DangerZoneSection";
 
-import ConsentPrivacySection from "@/components/settings/ConsentPrivacySection";
+import ApiKeysSection from "@/components/settings/ApiKeysSection";
+import TenantFeaturesSection from "@/components/settings/TenantFeaturesSection";
+
 import DashboardBannerSettings from "@/components/settings/DashboardBannerSettings";
 import ApiKeysSection from "@/components/settings/ApiKeysSection";
 
@@ -1547,9 +1551,12 @@ function TestimonyEmailSection() {
       </CardContent>
     </Card>
   );
-}
+export default function Settings() {
+  const { roles } = useAuth();
+  const { isTenantOwner, isTenantAdmin } = useTenant();
+  const isSuperAdmin = roles.includes("super_admin");
+  const canManageTenant = isSuperAdmin || isTenantOwner || isTenantAdmin;
 
-/* ─── Main Settings page ─── */
 export default function Settings() {
   const { roles } = useAuth();
   const isSuperAdmin = roles.includes("super_admin");
@@ -1576,17 +1583,21 @@ export default function Settings() {
           <TabsTrigger value="training" className="gap-1.5 text-xs"><TrendingUp className="h-3.5 w-3.5" /><span className="hidden sm:inline"> Training</span></TabsTrigger>
           <TabsTrigger value="pastoral" className="gap-1.5 text-xs"><Heart className="h-3.5 w-3.5" /><span className="hidden sm:inline"> Pastoral</span></TabsTrigger>
           <TabsTrigger value="followup-templates" className="gap-1.5 text-xs"><Send className="h-3.5 w-3.5" /><span className="hidden sm:inline"> Follow-ups</span></TabsTrigger>
-          {isSuperAdmin && (
+          {canManageTenant && (
+            <TabsTrigger value="features" className="gap-1.5 text-xs"><SlidersHorizontal className="h-3.5 w-3.5" /><span className="hidden sm:inline"> Features</span></TabsTrigger>
+          )}
+          {canManageTenant && (
             <TabsTrigger value="certificates" className="gap-1.5 text-xs"><Award className="h-3.5 w-3.5" /><span className="hidden sm:inline"> Certs</span></TabsTrigger>
           )}
-          {isSuperAdmin && (
+          {canManageTenant && (
             <TabsTrigger value="links" className="gap-1.5 text-xs"><Link2 className="h-3.5 w-3.5" /><span className="hidden sm:inline"> Links</span></TabsTrigger>
           )}
           <TabsTrigger value="consent" className="gap-1.5 text-xs"><ShieldAlert className="h-3.5 w-3.5" /><span className="hidden sm:inline"> Consent</span></TabsTrigger>
           <TabsTrigger value="api" className="gap-1.5 text-xs"><Key className="h-3.5 w-3.5" /><span className="hidden sm:inline"> API</span></TabsTrigger>
-          {isSuperAdmin && (
+          {canManageTenant && (
             <TabsTrigger value="danger" className="gap-1.5 text-xs text-destructive"><ShieldAlert className="h-3.5 w-3.5" /><span className="hidden sm:inline"> Danger</span></TabsTrigger>
           )}
+
         </TabsList>
 
         <TabsContent value="branding" className="space-y-6">
@@ -1659,12 +1670,17 @@ export default function Settings() {
           <FollowupTemplatesSection />
         </TabsContent>
 
-        {isSuperAdmin && (
+        {canManageTenant && (
+          <TabsContent value="features">
+            <TenantFeaturesSection />
+          </TabsContent>
+        )}
+        {canManageTenant && (
           <TabsContent value="certificates">
             <CertificateTemplateSettings />
           </TabsContent>
         )}
-        {isSuperAdmin && (
+        {canManageTenant && (
           <TabsContent value="links">
             <ExternalLinksSection />
           </TabsContent>
@@ -1678,7 +1694,7 @@ export default function Settings() {
           <ApiKeysSection />
         </TabsContent>
 
-        {isSuperAdmin && (
+        {canManageTenant && (
           <TabsContent value="danger">
             <DangerZoneSection />
           </TabsContent>
