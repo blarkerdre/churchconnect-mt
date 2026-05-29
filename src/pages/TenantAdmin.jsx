@@ -706,6 +706,10 @@ export default function TenantAdmin() {
           </Card>
         </TabsContent>
 
+        <TabsContent value="platform-users">
+          <PlatformUsersTab />
+        </TabsContent>
+
         <TabsContent value="analytics">
           <TenantAnalyticsTab tenants={tenants} />
         </TabsContent>
