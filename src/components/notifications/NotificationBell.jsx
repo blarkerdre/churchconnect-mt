@@ -73,6 +73,13 @@ export default function NotificationBell() {
     refetchInterval: 30000,
   });
 
+  // Hide billing/payment notifications from members who can't act on them.
+  const canSeeBilling = isTenantAdmin || isTenantOwner;
+  const visibleNotifications = canSeeBilling
+    ? notifications
+    : notifications.filter((n) => n.type !== "billing");
+
+
   const [permission, setPermission] = useState(
     typeof Notification !== "undefined" ? Notification.permission : "default"
   );
