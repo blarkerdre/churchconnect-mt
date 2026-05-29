@@ -19,7 +19,11 @@ import BulkUnitAssignDialog from "@/components/users/BulkUnitAssignDialog";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
 import DangerConfirmDialog from "@/components/exams/DangerConfirmDialog";
 
-const ROLES = ["super_admin", "admin", "unit_leader", "wsf_leader"];
+// NOTE: super_admin is intentionally NOT assignable from the per-tenant role picker.
+// It is a platform-wide role (tenant_id IS NULL) and must be granted via the
+// Tenant Admin / platform flow only. Labels for super_admin remain in roleLabels
+// so existing super_admin badges still render correctly.
+const ROLES = ["admin", "unit_leader", "wsf_leader"];
 
 const roleIcons = {
   super_admin: ShieldCheck,
@@ -306,9 +310,7 @@ export default function UserManagement() {
                   const isDisabled = disabledUsers[p.user_id] === true;
                   const targetIsSuperAdmin = userRoles.includes("super_admin");
 
-                  const availableRoles = isSuperAdmin
-                    ? ROLES
-                    : ROLES.filter(r => r !== "super_admin");
+                  const availableRoles = ROLES;
 
                   return (
                     <tr key={p.id} className={`border-b border-border hover:bg-muted/30 transition-colors ${isDisabled ? "opacity-60" : ""}`}>
@@ -449,7 +451,7 @@ export default function UserManagement() {
               <Select value={addForm.role} onValueChange={v => setAddForm(f => ({ ...f, role: v }))}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {(isSuperAdmin ? ROLES : ROLES.filter(r => r !== "super_admin")).map(r => (
+                  {ROLES.map(r => (
                     <SelectItem key={r} value={r}>{roleLabels[r] || r.replace("_", " ")}</SelectItem>
                   ))}
                 </SelectContent>
