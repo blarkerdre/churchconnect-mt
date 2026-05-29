@@ -2565,6 +2565,50 @@ export type Database = {
           },
         ]
       }
+      platform_alerts: {
+        Row: {
+          active: boolean
+          created_at: string
+          created_by: string
+          expires_at: string | null
+          id: string
+          message: string
+          tenant_id: string | null
+          title: string | null
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          created_by: string
+          expires_at?: string | null
+          id?: string
+          message: string
+          tenant_id?: string | null
+          title?: string | null
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          created_by?: string
+          expires_at?: string | null
+          id?: string
+          message?: string
+          tenant_id?: string | null
+          title?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "platform_alerts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
