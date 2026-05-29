@@ -19,7 +19,11 @@ import BulkUnitAssignDialog from "@/components/users/BulkUnitAssignDialog";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
 import DangerConfirmDialog from "@/components/exams/DangerConfirmDialog";
 
-const ROLES = ["super_admin", "admin", "unit_leader", "wsf_leader"];
+// NOTE: super_admin is intentionally NOT assignable from the per-tenant role picker.
+// It is a platform-wide role (tenant_id IS NULL) and must be granted via the
+// Tenant Admin / platform flow only. Labels for super_admin remain in roleLabels
+// so existing super_admin badges still render correctly.
+const ROLES = ["admin", "unit_leader", "wsf_leader"];
 
 const roleIcons = {
   super_admin: ShieldCheck,
