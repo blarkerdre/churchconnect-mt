@@ -377,6 +377,7 @@ export default function TenantUsersDialog({ tenant, open, onOpenChange }) {
                                   <Select
                                     key={`${m.id}-${m.role}-${selectVersion}`}
                                     value={currentValue}
+                                    disabled={!canPromoteToAdmin && (m.role === "admin" || m.role === "owner")}
                                     onValueChange={(newRole) => {
                                       setEditingRoles((prev) => ({ ...prev, [m.id]: newRole }));
                                     }}
