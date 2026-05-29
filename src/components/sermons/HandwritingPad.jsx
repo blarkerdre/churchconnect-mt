@@ -147,8 +147,8 @@ export default function HandwritingPad({ open, onOpenChange, onConvert }) {
         toast.error("Couldn't read that — try writing larger or clearer.");
         return;
       }
-      onConvert?.(text);
-      onOpenChange(false);
+      setDraftText(text);
+      setView("review");
     } catch (err) {
       toast.error(err.message || "Failed to transcribe handwriting.");
     } finally {
