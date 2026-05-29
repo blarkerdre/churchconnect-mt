@@ -17,6 +17,7 @@ export default function HandwritingPad({ open, onOpenChange, onConvert }) {
   const ctxRef = useRef(null);
   const strokesRef = useRef([]); // array of strokes; each stroke = array of points
   const currentStrokeRef = useRef(null);
+  const drawingRef = useRef(false);
   const [thickness, setThickness] = useState(3);
   const [converting, setConverting] = useState(false);
   const [hasStrokes, setHasStrokes] = useState(false);
