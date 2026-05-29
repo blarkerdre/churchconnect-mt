@@ -52,10 +52,11 @@ const emptyMember = {
 export default function MemberFormDialog({ open, onOpenChange, member, onSaved }) {
   const { data: churchUnits = [] } = useChurchUnits();
   const CHURCH_UNITS = churchUnits.map(u => u.name);
-  const { isAdmin, roles: currentUserRoles, user: currentUser } = useAuth();
+  const { isAdmin, roles: currentUserRoles, user: currentUser, isTenantOwner } = useAuth();
   const { tenantId, withTenant, scopeQuery } = useTenantQuery();
   const { currentTenant } = useTenant();
   const isSuperAdmin = currentUserRoles.includes("super_admin");
+  const canAssignAdminRole = isSuperAdmin || isTenantOwner;
   const queryClient = useQueryClient();
   const [form, setForm] = useState(emptyMember);
   const [saving, setSaving] = useState(false);
