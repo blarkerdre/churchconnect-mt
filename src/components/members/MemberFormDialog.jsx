@@ -226,6 +226,13 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
     }
   }, [member, open]);
 
+  // Sync staged role edits with saved roles whenever the dialog opens or saved roles refresh
+  useEffect(() => {
+    if (open) {
+      setPendingRoles(memberRoles.map((r) => r.role));
+    }
+  }, [open, memberRoles]);
+
   const validateForm = () => {
     if (!form.first_name || !form.last_name) {
       toast({ title: "First name and last name are required", variant: "destructive" });
