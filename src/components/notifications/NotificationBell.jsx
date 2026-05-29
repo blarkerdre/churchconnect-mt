@@ -223,18 +223,23 @@ export default function NotificationBell() {
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-80 p-0" align="end">
-          <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-border gap-2">
             <h3 className="text-sm font-semibold text-foreground">Notifications</h3>
-            {unreadCount > 0 && (
-              <Button variant="ghost" size="sm" className="text-xs h-7" onClick={() => markAllRead.mutate()}>
-                <Check className="h-3 w-3 mr-1" /> Mark all read
+            <div className="flex items-center gap-1">
+              <Button variant="ghost" size="sm" className="text-xs h-7" onClick={handleTestSound} title="Play test sound">
+                Test sound
               </Button>
-            )}
+              {unreadCount > 0 && (
+                <Button variant="ghost" size="sm" className="text-xs h-7" onClick={() => markAllRead.mutate()}>
+                  <Check className="h-3 w-3 mr-1" /> Mark all read
+                </Button>
+              )}
+            </div>
           </div>
           {permission !== "granted" && (
             <div className="px-4 py-2 border-b border-border bg-primary/5 flex items-center justify-between gap-2">
               <p className="text-xs text-muted-foreground leading-tight">
-                Enable sound &amp; alerts so your phone rings on new notifications.
+                Tap Enable and you should hear a chime. If you don't, check your device isn't on silent.
               </p>
               <Button size="sm" className="h-7 text-xs shrink-0" onClick={handleEnableAlerts}>
                 Enable
