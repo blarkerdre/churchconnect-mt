@@ -20,6 +20,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useTenant } from "@/contexts/TenantContext";
 import NotificationBell from "@/components/notifications/NotificationBell";
+import PlatformAlertOverlay from "@/components/alerts/PlatformAlertOverlay";
 import MobileBottomNav from "@/components/navigation/MobileBottomNav";
 import PaymentRequiredScreen from "@/components/tenants/PaymentRequiredScreen";
 import PaymentWarningBanner from "@/components/tenants/PaymentWarningBanner";
@@ -433,6 +434,7 @@ export default function Layout({ children }) {
         </main>
         <MobileBottomNav />
       </div>
+      <PlatformAlertOverlay />
       {/* Password confirmation dialog for tenant switching */}
       <Dialog open={!!pendingTenantSwitch} onOpenChange={(open) => { if (!open) { setPendingTenantSwitch(null); setSwitchPassword(""); } }}>
         <DialogContent className="max-w-sm">
