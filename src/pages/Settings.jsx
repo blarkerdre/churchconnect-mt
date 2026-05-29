@@ -1670,12 +1670,17 @@ export default function Settings() {
           <FollowupTemplatesSection />
         </TabsContent>
 
-        {isSuperAdmin && (
+        {canManageTenant && (
+          <TabsContent value="features">
+            <TenantFeaturesSection />
+          </TabsContent>
+        )}
+        {canManageTenant && (
           <TabsContent value="certificates">
             <CertificateTemplateSettings />
           </TabsContent>
         )}
-        {isSuperAdmin && (
+        {canManageTenant && (
           <TabsContent value="links">
             <ExternalLinksSection />
           </TabsContent>
