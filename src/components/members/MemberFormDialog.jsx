@@ -588,7 +588,6 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
                         <SelectItem value="unit_leader">Unit Leader</SelectItem>
                         <SelectItem value="wsf_leader">Home Cell Leader</SelectItem>
                         {isSuperAdmin && <SelectItem value="admin">Admin</SelectItem>}
-                        {isSuperAdmin && <SelectItem value="super_admin">Super Admin</SelectItem>}
                       </SelectContent>
                     </Select>
                   </div>
@@ -732,14 +731,14 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
             <div>
               <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">User Roles</h3>
               {(() => {
-                const ROLES = ["super_admin", "admin", "unit_leader", "wsf_leader"];
+                const ROLES = ["admin", "unit_leader", "wsf_leader"];
                 const roleIcons = { super_admin: ShieldCheck, admin: Shield, unit_leader: UserCog, wsf_leader: Globe, member: User };
                 const roleColors = { super_admin: "bg-destructive/10 text-destructive", admin: "bg-primary/10 text-primary", unit_leader: "bg-accent/10 text-accent", wsf_leader: "bg-chart-3/10 text-chart-3", member: "bg-muted text-muted-foreground" };
                 const userRoles = memberRoles.map(r => r.role);
                 const isOwnAccount = memberUserId === currentUser?.id;
                 const hasAdminRole = userRoles.some(r => ["admin", "super_admin"].includes(r));
                 const canChange = !isOwnAccount && (isSuperAdmin || (!hasAdminRole && isAdmin));
-                const availableRoles = isSuperAdmin ? ROLES : ROLES.filter(r => !["super_admin", "admin"].includes(r));
+                const availableRoles = isSuperAdmin ? ROLES : ROLES.filter(r => r !== "admin");
 
                 return (
                   <div className="space-y-3">
