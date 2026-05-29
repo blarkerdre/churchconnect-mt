@@ -72,8 +72,12 @@ function describeAction(action) {
 
 export default function TenantUsersDialog({ tenant, open, onOpenChange }) {
   const { toast } = useToast();
-  const { user, roles: userRoles } = useAuth();
+  const { user, roles: userRoles, tenantMemberships } = useAuth();
   const isSuperAdmin = userRoles.includes("super_admin");
+  const isOwnerOfThisTenant = (tenantMemberships || []).some(
+    (m) => m.tenant_id === tenant?.id && m.role === "owner"
+  );
+  const canPromoteToAdmin = isSuperAdmin || isOwnerOfThisTenant;
   const queryClient = useQueryClient();
   const [addEmail, setAddEmail] = useState("");
   const [addRole, setAddRole] = useState("member");
