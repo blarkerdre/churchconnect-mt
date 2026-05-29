@@ -23,7 +23,7 @@ import { Alert, AlertTitle, AlertDescription as AlertDesc } from "@/components/u
 import {
   Building2, Users, UserCheck, Plus, CheckCircle2, ArrowRightLeft, Clock, Pencil, Save,
   Image, Palette, Users2, Archive, ArchiveRestore, Trash2, BarChart3, AlertTriangle,
-  ShieldAlert, Eye, Skull, Link, Copy, ExternalLink, Mail, Share2, Lock,
+  ShieldAlert, Eye, Skull, Link, Copy, ExternalLink, Mail, Share2, Lock, Megaphone,
 } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useToast } from "@/components/ui/use-toast";
@@ -31,6 +31,7 @@ import TenantUsersDialog from "@/components/tenants/TenantUsersDialog";
 import TenantAnalyticsTab from "@/components/tenants/TenantAnalyticsTab";
 import TenantBillingTab from "@/components/tenants/TenantBillingTab";
 import DomifortIntegrationSection from "@/components/tenants/DomifortIntegrationSection";
+import BroadcastAlertSection from "@/components/alerts/BroadcastAlertSection";
 import PlatformUsersTab from "@/components/tenants/PlatformUsersTab";
 
 import { FEATURE_MODULES } from "@/lib/feature-modules";
@@ -445,6 +446,7 @@ export default function TenantAdmin() {
           <TabsTrigger value="platform-users"><Users2 className="h-3.5 w-3.5 mr-1" />Platform Users</TabsTrigger>
           <TabsTrigger value="analytics"><BarChart3 className="h-3.5 w-3.5 mr-1" />Analytics</TabsTrigger>
           <TabsTrigger value="integrations"><Link className="h-3.5 w-3.5 mr-1" />Integrations</TabsTrigger>
+          <TabsTrigger value="broadcast"><Megaphone className="h-3.5 w-3.5 mr-1" />Broadcast</TabsTrigger>
         </TabsList>
 
         <TabsContent value="tenants">
@@ -716,6 +718,10 @@ export default function TenantAdmin() {
 
         <TabsContent value="integrations">
           <DomifortIntegrationSection />
+        </TabsContent>
+
+        <TabsContent value="broadcast">
+          <BroadcastAlertSection />
         </TabsContent>
       </Tabs>
 
