@@ -37,7 +37,6 @@ export function useConsentText(tenantId) {
  * Fetch consent settings for a resolved tenant (works without auth for public pages).
  */
 export function usePublicConsentText(resolvedTenantId) {
-export function usePublicConsentText(resolvedTenantId) {
   const { data } = useQuery({
     queryKey: ["consent-settings-public", resolvedTenantId],
     enabled: !!resolvedTenantId,
@@ -52,10 +51,12 @@ export function usePublicConsentText(resolvedTenantId) {
     },
   });
 
+  return {
     consentText: data?.consent_text || DEFAULT_CONSENT_TEXT,
     privacyUrl: data?.privacy_policy_url || "",
   };
 }
+
 
 /** Render "Privacy Policy" as a link if URL is provided, otherwise plain text */
 export function renderPrivacyLink(privacyUrl) {
