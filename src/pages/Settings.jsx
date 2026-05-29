@@ -1557,6 +1557,7 @@ export default function Settings() {
   const { isTenantOwner, isTenantAdmin } = useTenant();
   const isSuperAdmin = roles.includes("super_admin");
   const canManageTenant = isSuperAdmin || isTenantOwner || isTenantAdmin;
+  const canOwnerOnly = isSuperAdmin || isTenantOwner;
 
   return (
     <div className="space-y-6">
