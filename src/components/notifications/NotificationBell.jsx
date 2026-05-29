@@ -233,11 +233,11 @@ export default function NotificationBell() {
             </div>
           )}
           <ScrollArea className="h-[60vh] max-h-96">
-            {notifications.length === 0 ? (
+            {visibleNotifications.length === 0 ? (
               <p className="text-sm text-muted-foreground text-center py-8">No notifications</p>
             ) : (
               <div className="divide-y divide-border">
-                {notifications.map(n => {
+                {visibleNotifications.map(n => {
                   const NIcon = referenceTypeIcons[n.reference_type] || typeIcons[n.type] || Info;
                   return (
                     <div
