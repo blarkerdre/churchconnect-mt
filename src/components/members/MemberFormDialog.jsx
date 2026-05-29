@@ -52,10 +52,11 @@ const emptyMember = {
 export default function MemberFormDialog({ open, onOpenChange, member, onSaved }) {
   const { data: churchUnits = [] } = useChurchUnits();
   const CHURCH_UNITS = churchUnits.map(u => u.name);
-  const { isAdmin, roles: currentUserRoles, user: currentUser } = useAuth();
+  const { isAdmin, roles: currentUserRoles, user: currentUser, isTenantOwner } = useAuth();
   const { tenantId, withTenant, scopeQuery } = useTenantQuery();
   const { currentTenant } = useTenant();
   const isSuperAdmin = currentUserRoles.includes("super_admin");
+  const canAssignAdminRole = isSuperAdmin || isTenantOwner;
   const queryClient = useQueryClient();
   const [form, setForm] = useState(emptyMember);
   const [saving, setSaving] = useState(false);
@@ -615,7 +616,7 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
                         <SelectItem value="member">Member</SelectItem>
                         <SelectItem value="unit_leader">Unit Leader</SelectItem>
                         <SelectItem value="wsf_leader">Home Cell Leader</SelectItem>
-                        {isSuperAdmin && <SelectItem value="admin">Admin</SelectItem>}
+                        {canAssignAdminRole && <SelectItem value="admin">Admin</SelectItem>}
                       </SelectContent>
                     </Select>
                   </div>
@@ -765,8 +766,8 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
                 const userRoles = memberRoles.map(r => r.role);
                 const isOwnAccount = memberUserId === currentUser?.id;
                 const hasAdminRole = userRoles.some(r => ["admin", "super_admin"].includes(r));
-                const canChange = !isOwnAccount && (isSuperAdmin || (!hasAdminRole && isAdmin));
-                const availableRoles = isSuperAdmin ? ROLES : ROLES.filter(r => r !== "admin");
+                const canChange = !isOwnAccount && (canAssignAdminRole || (!hasAdminRole && isAdmin));
+                const availableRoles = canAssignAdminRole ? ROLES : ROLES.filter(r => r !== "admin");
 
                 return (
                   <div className="space-y-3">

@@ -72,9 +72,21 @@ Deno.serve(async (req) => {
     const normalizedEmail = String(email).trim().toLowerCase();
     const normalizedFullName = String(full_name || email).trim();
 
-    // Only super_admin can assign elevated roles
-    if (role && ['admin', 'super_admin'].includes(role)) {
-      if (!isSuperAdmin) return jsonResponse({ error: "Super-admin access required to assign elevated roles" }, 403);
+    // Elevated-role assignment gates
+    if (role === 'super_admin' && !isSuperAdmin) {
+      return jsonResponse({ error: "Super-admin access required to assign super_admin" }, 403);
+    }
+    if (role === 'admin' && !isSuperAdmin) {
+      // Tenant owner of this tenant may also assign admin
+      const { data: ownerRow } = await supabase
+        .from("tenant_memberships")
+        .select("role")
+        .eq("user_id", caller.id)
+        .eq("tenant_id", tenant_id)
+        .maybeSingle();
+      if (ownerRow?.role !== "owner") {
+        return jsonResponse({ error: "Tenant owner or super-admin required to assign admin role" }, 403);
+      }
     }
 
     // Resolve tenant slug so handle_new_user trigger links to the correct tenant
