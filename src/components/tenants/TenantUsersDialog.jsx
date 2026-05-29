@@ -81,6 +81,7 @@ export default function TenantUsersDialog({ tenant, open, onOpenChange }) {
   const [pendingAction, setPendingAction] = useState(null);
   const [confirmToken, setConfirmToken] = useState("");
   const [selectVersion, setSelectVersion] = useState(0);
+  const [editingRoles, setEditingRoles] = useState({});
 
   const { data: memberships = [], isLoading } = useQuery({
     queryKey: ["tenant-users", tenant?.id],
