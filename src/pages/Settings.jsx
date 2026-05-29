@@ -1696,7 +1696,7 @@ export default function Settings() {
           <ApiKeysSection />
         </TabsContent>
 
-        {canManageTenant && (
+        {canOwnerOnly && (
           <TabsContent value="danger">
             <DangerZoneSection />
           </TabsContent>
