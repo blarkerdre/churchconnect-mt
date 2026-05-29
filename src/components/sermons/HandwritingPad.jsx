@@ -68,6 +68,8 @@ export default function HandwritingPad({ open, onOpenChange, onConvert }) {
     if (!open) return;
     strokesRef.current = [];
     setHasStrokes(false);
+    setView("pad");
+    setDraftText("");
     // Defer to next frame so dialog has laid out
     const id = requestAnimationFrame(() => setupCanvas());
     const onResize = () => setupCanvas();
