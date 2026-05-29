@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Badge } from "@/components/ui/badge";
 import { formatDistanceToNow, format } from "date-fns";
 import { toast } from "sonner";
-import { requestNotificationPermission, registerServiceWorker, triggerNotificationAlert } from "@/lib/notification-alert";
+import { requestNotificationPermission, registerServiceWorker, triggerNotificationAlert, testNotificationSound } from "@/lib/notification-alert";
 import { subscribeToPush } from "@/hooks/usePushSubscription";
 
 const typeIcons = {
