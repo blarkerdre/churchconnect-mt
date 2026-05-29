@@ -311,8 +311,8 @@ export default function TenantUsersDialog({ tenant, open, onOpenChange }) {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="member">Member</SelectItem>
-              <SelectItem value="admin">Admin</SelectItem>
-              <SelectItem value="owner">Owner</SelectItem>
+              {canPromoteToAdmin && <SelectItem value="admin">Admin</SelectItem>}
+              {canPromoteToAdmin && <SelectItem value="owner">Owner</SelectItem>}
             </SelectContent>
           </Select>
           <Button type="submit" size="sm" disabled={inviteMutation.isPending}>
