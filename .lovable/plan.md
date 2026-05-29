@@ -1,67 +1,34 @@
-## Allow tenant owners to grant app-level Admin from the member form
+# Restrict payment-due notifications to admins/owners
 
-Currently, only super-admins can grant the `admin` app role in `MemberFormDialog`. Tenant owners can grant the `admin` *tenant* role (via tenant management) but cannot mint app-level admins from the member form. This plan unifies the two: a tenant owner gets the same authority as a super-admin when assigning app roles to members **within their own tenant**.
+Audit shows payment-related surfaces are inconsistently scoped. Banner is already gated, but two other surfaces leak to regular members:
 
-### 1. `src/components/members/MemberFormDialog.jsx` (UI gate)
+1. **`PaymentRequiredScreen` (suspension lockout)** — `src/components/AppLayout.jsx:188` currently blocks the entire app for **every** user of a suspended tenant. A regular member sees a billing screen they can't act on.
+2. **In-app notifications backlog** — DB check shows a `member`-role user has a "Payment Overdue" notification (likely role changed after insert). Going forward we'll keep insert-time filtering and add a defensive read-time guard.
+3. **Banner** (`AppLayout.jsx:424`) — already correctly gated to `isTenantAdmin || isTenantOwner`. No change.
+4. **Notification inserts** in `check-tenant-payments` and `stripe-subscription-webhook` — already filter `role in ('owner','admin')`. No change.
 
-Pull `isTenantOwner` from `useAuth()` and treat owner === super-admin for role-assignment UI:
+## Changes
 
-- Line 55: add `isTenantOwner` to the `useAuth()` destructure.
-- Add a derived flag: `const canAssignAdminRole = isSuperAdmin || isTenantOwner;`
-- Line 618 (Create-account role select) — show the `Admin` option when `canAssignAdminRole` (not just `isSuperAdmin`).
-- Line 768–769 (existing-member role checkbox grid):
-  - `canChange = !isOwnAccount && (canAssignAdminRole || (!hasAdminRole && isAdmin))`
-  - `availableRoles = canAssignAdminRole ? ROLES : ROLES.filter(r => r !== "admin")`
-
-No other UI changes — the "Cannot change your own roles" and admin-protection logic stays identical.
-
-### 2. `supabase/functions/admin-create-user/index.ts` (server gate)
-
-Today (lines ~75–78) the check is:
-
-```ts
-if (role && ['admin', 'super_admin'].includes(role)) {
-  if (!isSuperAdmin) return jsonResponse({ error: "Super-admin access required..." }, 403);
-}
-```
-
-Split the two roles so tenant owners can mint `admin` for their own tenant, while `super_admin` stays super-admin-only:
-
-```ts
-if (role === 'super_admin' && !isSuperAdmin) {
-  return jsonResponse({ error: "Super-admin access required to assign super_admin" }, 403);
-}
-if (role === 'admin' && !isSuperAdmin) {
-  // Must be the OWNER of this tenant
-  const { data: ownerRow } = await supabase
-    .from("tenant_memberships")
-    .select("role")
-    .eq("user_id", caller.id)
-    .eq("tenant_id", tenant_id)
-    .maybeSingle();
-  if (ownerRow?.role !== "owner") {
-    return jsonResponse({ error: "Tenant owner or super-admin required to assign admin role" }, 403);
+### `src/components/AppLayout.jsx`
+- Gate the `PaymentRequiredScreen` lockout to admins/owners only:
+  ```
+  if (subscriptionStatus === "suspended" && !isSuperAdmin && (isTenantAdmin || isTenantOwner)) {
+    return <PaymentRequiredScreen />;
   }
-}
-```
+  ```
+- Regular members of a suspended tenant continue to use the app normally (the tenant owner is the one who needs to act on billing).
 
-The existing `isTenantAdmin || isSuperAdmin` check above still gates *access* to the function; this block only tightens the elevated-role assignment.
+### `src/components/notifications/NotificationBell.jsx`
+- In the notifications query, filter out `type = "billing"` entries when the current user is not `isTenantAdmin`/`isTenantOwner`. This hides any legacy/stale billing notifications from non-admin members. Add `.or(...)` clause or post-filter the array — post-filter is simplest:
+  ```
+  const visible = notifications.filter(n => n.type !== "billing" || isTenantAdmin || isTenantOwner);
+  ```
+  Use `visible` for rendering and `unreadCount`.
 
-### 3. Role-update path (existing-member checkbox save)
+### Data cleanup (optional, one-off migration)
+- Delete existing `type='billing'` notifications belonging to users whose current tenant role is `member`. Single small migration; safe because these users can't act on them anyway.
 
-`MemberFormDialog` applies staged role changes around line 415 by writing directly to `user_roles` through the supabase client. RLS on `user_roles` already allows tenant admins/owners (via the same `is_admin` RPC) to insert/delete rows scoped to their tenant, so the client-side write will succeed for owners once the UI lets them tick the box. No DB migration needed.
-
-### Permission matrix after change
-
-```text
-Capability                         Owner   Admin   SuperAdmin
-─────────────────────────────────────────────────────────────
-Grant app-level Admin (member form)  ✓       ✗        ✓
-Grant Unit / Home Cell Leader        ✓       ✓        ✓
-Grant super_admin                    ✗       ✗        ✓
-```
-
-### Out of scope
-
-- Tenant-level `admin` membership role (tenant management dialog) — unchanged.
-- No changes to `useAuth` bridge, RLS, or `user_roles` schema.
+## Out of scope
+- The `PaymentWarningBanner` gating (already correct).
+- Edge-function notification inserts (already correctly scoped to owner/admin).
+- Email/SMS billing alerts (none exist).
