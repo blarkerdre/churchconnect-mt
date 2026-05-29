@@ -616,7 +616,7 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
                         <SelectItem value="member">Member</SelectItem>
                         <SelectItem value="unit_leader">Unit Leader</SelectItem>
                         <SelectItem value="wsf_leader">Home Cell Leader</SelectItem>
-                        {isSuperAdmin && <SelectItem value="admin">Admin</SelectItem>}
+                        {canAssignAdminRole && <SelectItem value="admin">Admin</SelectItem>}
                       </SelectContent>
                     </Select>
                   </div>
