@@ -107,33 +107,24 @@ Deno.serve(async (req) => {
     });
 
     if (userError) {
-      // If user already exists, look them up and reuse
       if (userError.message?.includes("already been registered")) {
-        const { data: { users }, error: listError } = await admin.auth.admin.listUsers();
-        if (listError) {
-          return new Response(
-            JSON.stringify({ error: "Failed to look up existing user" }),
-            { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          );
-        }
-        const existingUser = users.find((u: any) => u.email?.toLowerCase() === admin_email.toLowerCase());
-        if (!existingUser) {
-          return new Response(
-            JSON.stringify({ error: "User exists but could not be found" }),
-            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          );
-        }
-        userId = existingUser.id;
-      } else {
-        console.error("register-tenant: createUser failed:", userError);
+        // SECURITY: never silently assign an existing user as owner of a new
+        // tenant they didn't authorize. Require them to sign in / use a fresh email.
         return new Response(
-          JSON.stringify({ error: "An unexpected error occurred" }),
-          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          JSON.stringify({
+            error:
+              "This email is already registered. Please sign in with that account or use a different email to create the church.",
+          }),
+          { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
-    } else {
-      userId = newUser.user.id;
+      console.error("register-tenant: createUser failed:", userError);
+      return new Response(
+        JSON.stringify({ error: "An unexpected error occurred" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
+    userId = newUser.user.id;
 
     // 2. Build disabled_features array from feature toggles
     // Features map: key -> route path

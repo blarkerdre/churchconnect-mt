@@ -14,6 +14,15 @@ Deno.serve(async (req) => {
   const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
   const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!
 
+  // Restrict to service-role callers (pg_cron / internal invocation)
+  const bearer = (req.headers.get('Authorization') ?? '').replace('Bearer ', '')
+  if (!serviceKey || bearer !== serviceKey) {
+    return new Response(JSON.stringify({ error: 'Forbidden' }), {
+      status: 403,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    })
+  }
+
   const client = createClient(supabaseUrl, serviceKey)
 
   // Fetch due scheduled communications
