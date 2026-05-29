@@ -310,9 +310,7 @@ export default function UserManagement() {
                   const isDisabled = disabledUsers[p.user_id] === true;
                   const targetIsSuperAdmin = userRoles.includes("super_admin");
 
-                  const availableRoles = isSuperAdmin
-                    ? ROLES
-                    : ROLES.filter(r => r !== "super_admin");
+                  const availableRoles = ROLES;
 
                   return (
                     <tr key={p.id} className={`border-b border-border hover:bg-muted/30 transition-colors ${isDisabled ? "opacity-60" : ""}`}>
