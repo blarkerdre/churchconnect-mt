@@ -37,7 +37,6 @@ import ApiKeysSection from "@/components/settings/ApiKeysSection";
 import TenantFeaturesSection from "@/components/settings/TenantFeaturesSection";
 
 import DashboardBannerSettings from "@/components/settings/DashboardBannerSettings";
-import ApiKeysSection from "@/components/settings/ApiKeysSection";
 
 /* ─── Notification Preferences section ─── */
 function NotificationPreferencesSection() {
@@ -1550,15 +1549,13 @@ function TestimonyEmailSection() {
       </CardContent>
     </Card>
   );
+}
+
 export default function Settings() {
   const { roles } = useAuth();
   const { isTenantOwner, isTenantAdmin } = useTenant();
   const isSuperAdmin = roles.includes("super_admin");
   const canManageTenant = isSuperAdmin || isTenantOwner || isTenantAdmin;
-
-export default function Settings() {
-  const { roles } = useAuth();
-  const isSuperAdmin = roles.includes("super_admin");
 
   return (
     <div className="space-y-6">
