@@ -1592,8 +1592,12 @@ export default function Settings() {
           {canManageTenant && (
             <TabsTrigger value="links" className="gap-1.5 text-xs"><Link2 className="h-3.5 w-3.5" /><span className="hidden sm:inline"> Links</span></TabsTrigger>
           )}
-          <TabsTrigger value="consent" className="gap-1.5 text-xs"><ShieldAlert className="h-3.5 w-3.5" /><span className="hidden sm:inline"> Consent</span></TabsTrigger>
-          <TabsTrigger value="api" className="gap-1.5 text-xs"><Key className="h-3.5 w-3.5" /><span className="hidden sm:inline"> API</span></TabsTrigger>
+          {canOwnerOnly && (
+            <TabsTrigger value="consent" className="gap-1.5 text-xs"><ShieldAlert className="h-3.5 w-3.5" /><span className="hidden sm:inline"> Consent</span></TabsTrigger>
+          )}
+          {canOwnerOnly && (
+            <TabsTrigger value="api" className="gap-1.5 text-xs"><Key className="h-3.5 w-3.5" /><span className="hidden sm:inline"> API</span></TabsTrigger>
+          )}
           {canOwnerOnly && (
             <TabsTrigger value="danger" className="gap-1.5 text-xs text-destructive"><ShieldAlert className="h-3.5 w-3.5" /><span className="hidden sm:inline"> Danger</span></TabsTrigger>
           )}
@@ -1688,13 +1692,17 @@ export default function Settings() {
           </TabsContent>
         )}
 
-        <TabsContent value="consent">
-          <ConsentPrivacySection />
-        </TabsContent>
+        {canOwnerOnly && (
+          <TabsContent value="consent">
+            <ConsentPrivacySection />
+          </TabsContent>
+        )}
 
-        <TabsContent value="api">
-          <ApiKeysSection />
-        </TabsContent>
+        {canOwnerOnly && (
+          <TabsContent value="api">
+            <ApiKeysSection />
+          </TabsContent>
+        )}
 
         {canOwnerOnly && (
           <TabsContent value="danger">
