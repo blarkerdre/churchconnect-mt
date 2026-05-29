@@ -1,34 +1,74 @@
 ## Goal
-Fix the `blarkerdre@yahoo.com` super_admin issue and prevent it from happening again.
 
-## 1. Data fix — revoke the bad row
+You're right — there is no platform-wide users list in Tenant Admin today. The existing `TenantUsersDialog` is per-tenant only, and `UserManagement.jsx` is scoped to the current tenant. So there is currently no UI to promote someone to (or demote them from) global Super Admin. The only way right now is direct DB insert into `user_roles` with `role='super_admin'` and `tenant_id=NULL`.
 
-Delete the tenant-scoped `super_admin` row for `blarkerdre@yahoo.com` from `user_roles` (the one with `tenant_id = d8bbbdae…` / WCI Cardiff). His `tenant_memberships` row stays intact, so he keeps normal access to WCI Cardiff but loses fake super-admin status. Audit-log the revoke.
+This plan adds that missing UI.
 
-## 2. DB hardening — make the invalid state impossible
+## 1. New "Platform Users" tab in Tenant Admin
 
-Migration on `public.user_roles`:
+In `src/pages/TenantAdmin.jsx`, add a fourth top-level tab next to **Tenants / Analytics / Integrations**:
 
-- Add a `CHECK` constraint: `role <> 'super_admin' OR tenant_id IS NULL`.
-- Add a partial unique index so a given user has at most one global super_admin row: `UNIQUE (user_id) WHERE role = 'super_admin'`.
-- (Optional safety) `BEFORE INSERT/UPDATE` trigger that nulls `tenant_id` when `role = 'super_admin'`, so legacy code paths that pass `tenant_id` don't error — they just get coerced to the correct global row.
+- `TabsTrigger value="platform-users"` labelled **Platform Users** (icon: `Users2`).
+- `TabsContent` renders a new component `PlatformUsersTab`.
 
-This guarantees `has_role(uid, 'super_admin')` (which already requires `tenant_id IS NULL`) can never disagree with what's in the table again.
+Gated by `SuperAdminRoute` (already wraps the page), so only existing super admins see it.
 
-## 3. UI hardening — hide super_admin from the tenant role picker
+## 2. New component: `src/components/tenants/PlatformUsersTab.jsx`
 
-`src/pages/UserManagement.jsx`:
+A searchable table of every user on the platform.
 
-- Remove `"super_admin"` from the `ROLES` array used by the per-tenant role picker. Keep `roleIcons`/`roleColors`/`roleLabels` entries so existing super_admin badges still render correctly in the list, but the role can no longer be **assigned** from this screen — even by an existing super_admin. Promotion to platform super_admin should only happen via the dedicated super-admin flow (Tenant Admin), never inside a tenant context.
-- Remove the now-dead `isSuperAdmin ? ROLES : ROLES.filter(...)` branches (lines ~309–311 and ~452) and just use `ROLES` directly.
-- Leave the existing guard that prevents non–super-admins from editing other admins' roles in place.
+**Columns:** Avatar + Name, Email, Tenant memberships (chips: tenant name + role), Super Admin badge, Last sign-in, Actions.
+
+**Data source:**
+- `profiles` (id, user_id, full_name, email, avatar_url) — primary list.
+- `user_roles` filtered to `role='super_admin'` (and `tenant_id IS NULL`) — to flag who's a super admin.
+- `tenant_memberships` joined to `tenants(name, slug)` — to show which churches they belong to.
+- Last sign-in from `auth.users.last_sign_in_at` via the existing `admin-list-banned-users` pattern or a small new edge function (see Technical notes).
+
+**Search / filters:** text search on name + email; filter chips for "Super admins only" and "No tenant memberships".
+
+**Actions per row (super admin only):**
+- **Promote to Super Admin** — visible when user is not already a super admin.
+- **Revoke Super Admin** — visible when they are. Disabled for the currently signed-in user (cannot demote yourself; prevents lockout).
+- Both actions open a small confirm dialog stating the consequence ("This grants/removes platform-wide access to every tenant").
+
+## 3. Promotion / revocation logic
+
+Both actions write directly via the Supabase client (the existing CHECK constraint + unique index + trigger from the previous migration already enforce correctness):
+
+```js
+// Promote
+await supabase.from("user_roles").insert({
+  user_id, role: "super_admin", tenant_id: null,
+});
+
+// Revoke
+await supabase.from("user_roles").delete()
+  .eq("user_id", user_id).eq("role", "super_admin").is("tenant_id", null);
+```
+
+Each action calls `logAudit("super_admin_grant" | "super_admin_revoke", "user_roles", user_id, { target_email })` (no tenant_id — these are global actions).
+
+RLS check: confirm `user_roles` policies allow super admins to INSERT/DELETE rows for other users. If not, the actions go through a tiny new edge function `admin-set-super-admin` (service role) that verifies the caller is a super admin via `has_role` before mutating. I'll check the existing RLS during implementation and pick whichever path is needed — preference is direct client write to keep it simple.
+
+## 4. UI hardening recap (already done)
+
+- `super_admin` is no longer in the per-tenant role picker (`UserManagement.jsx`).
+- DB rejects `super_admin` rows with a non-null `tenant_id`.
+
+So the new Platform Users tab is the **only** place super admin can be granted, which matches the security model.
 
 ## Technical notes
 
-- Migration order: run the data delete first (step 1) so the new CHECK constraint doesn't reject existing rows when added. Alternatively, do both in one migration: `DELETE` → `ALTER TABLE ... ADD CONSTRAINT`.
-- The trigger from step 2 is belt-and-suspenders; the CHECK alone is sufficient if we're confident no other code path inserts `super_admin` with a `tenant_id`. I'll include the trigger for safety.
-- No changes needed to `has_role`, RLS policies, or `useAuth` — they already treat super_admin as global-only.
+- For last-sign-in, easiest path is to add a small read-only edge function (`admin-list-platform-users`) that uses the service role to call `auth.admin.listUsers()` and joins to profiles. If we want to skip the edge function entirely in v1, omit the "Last sign-in" column and just query `profiles` + `user_roles` + `tenant_memberships` directly.
+- Tab content should paginate (50/page) — there could eventually be thousands of users across tenants.
+- No schema changes needed.
+- File list:
+  - new: `src/components/tenants/PlatformUsersTab.jsx`
+  - edited: `src/pages/TenantAdmin.jsx` (add tab + import)
+  - optional new: `supabase/functions/admin-list-platform-users/index.ts` (only if we want last-sign-in)
 
 ## Out of scope
-- No change to `kugbiyiadeniyi@gmail.com` (correct global super_admin).
-- No change to `tenant_memberships` for blarkerdre (he remains a normal WCI Cardiff member/whatever role he had there).
+
+- Editing profiles, banning/unbanning users (already handled elsewhere), or changing per-tenant membership roles (that stays in `TenantUsersDialog`).
+- Inviting brand-new users — keep using existing `invite-to-tenant` flow.
