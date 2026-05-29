@@ -65,6 +65,7 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
   const [password, setPassword] = useState("");
   const [accountRole, setAccountRole] = useState("member");
   const [confirmUpdateOpen, setConfirmUpdateOpen] = useState(false);
+  const [pendingRoles, setPendingRoles] = useState([]);
 
   const showChurchUnits = !HIDE_SPIRITUAL_STATUSES.includes(form.membership_status);
   const showSpiritualDev = !HIDE_SPIRITUAL_STATUSES.includes(form.membership_status);
