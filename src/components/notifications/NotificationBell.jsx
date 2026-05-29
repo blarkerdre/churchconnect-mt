@@ -124,7 +124,7 @@ export default function NotificationBell() {
     return () => { supabase.removeChannel(channel); };
   }, [user?.id, tenantId, queryClient]);
 
-  const unreadCount = notifications.filter(n => !n.is_read).length;
+  const unreadCount = visibleNotifications.filter(n => !n.is_read).length;
 
   const markRead = useMutation({
     mutationFn: async (id) => {
