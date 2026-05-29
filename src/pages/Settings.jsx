@@ -1551,9 +1551,12 @@ function TestimonyEmailSection() {
       </CardContent>
     </Card>
   );
-}
+export default function Settings() {
+  const { roles } = useAuth();
+  const { isTenantOwner, isTenantAdmin } = useTenant();
+  const isSuperAdmin = roles.includes("super_admin");
+  const canManageTenant = isSuperAdmin || isTenantOwner || isTenantAdmin;
 
-/* ─── Main Settings page ─── */
 export default function Settings() {
   const { roles } = useAuth();
   const isSuperAdmin = roles.includes("super_admin");
