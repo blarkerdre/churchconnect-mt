@@ -72,8 +72,12 @@ function describeAction(action) {
 
 export default function TenantUsersDialog({ tenant, open, onOpenChange }) {
   const { toast } = useToast();
-  const { user, roles: userRoles } = useAuth();
+  const { user, roles: userRoles, tenantMemberships } = useAuth();
   const isSuperAdmin = userRoles.includes("super_admin");
+  const isOwnerOfThisTenant = (tenantMemberships || []).some(
+    (m) => m.tenant_id === tenant?.id && m.role === "owner"
+  );
+  const canPromoteToAdmin = isSuperAdmin || isOwnerOfThisTenant;
   const queryClient = useQueryClient();
   const [addEmail, setAddEmail] = useState("");
   const [addRole, setAddRole] = useState("member");
@@ -307,8 +311,8 @@ export default function TenantUsersDialog({ tenant, open, onOpenChange }) {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="member">Member</SelectItem>
-              <SelectItem value="admin">Admin</SelectItem>
-              <SelectItem value="owner">Owner</SelectItem>
+              {canPromoteToAdmin && <SelectItem value="admin">Admin</SelectItem>}
+              {canPromoteToAdmin && <SelectItem value="owner">Owner</SelectItem>}
             </SelectContent>
           </Select>
           <Button type="submit" size="sm" disabled={inviteMutation.isPending}>
@@ -373,6 +377,7 @@ export default function TenantUsersDialog({ tenant, open, onOpenChange }) {
                                   <Select
                                     key={`${m.id}-${m.role}-${selectVersion}`}
                                     value={currentValue}
+                                    disabled={!canPromoteToAdmin && (m.role === "admin" || m.role === "owner")}
                                     onValueChange={(newRole) => {
                                       setEditingRoles((prev) => ({ ...prev, [m.id]: newRole }));
                                     }}
@@ -382,8 +387,8 @@ export default function TenantUsersDialog({ tenant, open, onOpenChange }) {
                                     </SelectTrigger>
                                     <SelectContent>
                                       <SelectItem value="member">Member</SelectItem>
-                                      <SelectItem value="admin">Admin</SelectItem>
-                                      <SelectItem value="owner">Owner</SelectItem>
+                                      {(canPromoteToAdmin || m.role === "admin") && <SelectItem value="admin">Admin</SelectItem>}
+                                      {(canPromoteToAdmin || m.role === "owner") && <SelectItem value="owner">Owner</SelectItem>}
                                     </SelectContent>
                                   </Select>
                                 </TooltipTrigger>

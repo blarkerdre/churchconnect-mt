@@ -15,6 +15,7 @@ export default function TenantFeaturesSection() {
   const { roles } = useAuth();
   const isSuperAdmin = roles?.includes("super_admin");
   const canManage = isSuperAdmin || isTenantOwner || isTenantAdmin;
+  const canEdit = isSuperAdmin || isTenantOwner;
   const queryClient = useQueryClient();
 
   const [disabled, setDisabled] = useState([]);
@@ -78,6 +79,11 @@ export default function TenantFeaturesSection() {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-1">
+        {!canEdit && (
+          <p className="text-xs text-muted-foreground pb-2">
+            Read-only — only the church owner can change modules.
+          </p>
+        )}
         {FEATURE_MODULES.map((f) => {
           const path = `/${f.key}`;
           const isOn = !disabled.includes(path);
@@ -87,16 +93,18 @@ export default function TenantFeaturesSection() {
                 <p className="text-sm font-medium">{f.label}</p>
                 <p className="text-xs text-muted-foreground">{f.description}</p>
               </div>
-              <Switch checked={isOn} onCheckedChange={() => toggle(f.key)} disabled={saving} />
+              <Switch checked={isOn} onCheckedChange={() => toggle(f.key)} disabled={saving || !canEdit} />
             </div>
           );
         })}
-        <div className="pt-4 flex justify-end">
-          <Button onClick={handleSave} disabled={!dirty || saving} size="sm">
-            {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
-            Save Changes
-          </Button>
-        </div>
+        {canEdit && (
+          <div className="pt-4 flex justify-end">
+            <Button onClick={handleSave} disabled={!dirty || saving} size="sm">
+              {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
+              Save Changes
+            </Button>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
