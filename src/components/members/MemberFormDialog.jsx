@@ -780,23 +780,36 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
                       })}
                     </div>
                     {canChange ? (
-                      <div className="grid grid-cols-2 gap-2">
-                        {availableRoles.map(r => {
-                          const hasRole = userRoles.includes(r);
-                          return (
-                            <label key={r} className="flex items-center gap-2 cursor-pointer text-sm p-2 rounded-lg hover:bg-muted/50">
-                              <Checkbox
-                                checked={hasRole}
-                                onCheckedChange={(checked) => {
-                                  toggleRoleMutation.mutate({ userId: memberUserId, role: r, add: !!checked });
-                                }}
-                                disabled={toggleRoleMutation.isPending}
-                              />
-                              <span className="capitalize">{r === "wsf_leader" ? "Home Cell Leader" : r.replace("_", " ")}</span>
-                            </label>
-                          );
-                        })}
-                      </div>
+                      <>
+                        <div className="grid grid-cols-2 gap-2">
+                          {availableRoles.map(r => {
+                            const hasRole = pendingRoles.includes(r);
+                            return (
+                              <label key={r} className="flex items-center gap-2 cursor-pointer text-sm p-2 rounded-lg hover:bg-muted/50">
+                                <Checkbox
+                                  checked={hasRole}
+                                  onCheckedChange={(checked) => {
+                                    setPendingRoles((prev) =>
+                                      checked ? [...prev.filter((x) => x !== r), r] : prev.filter((x) => x !== r)
+                                    );
+                                  }}
+                                />
+                                <span className="capitalize">{r === "wsf_leader" ? "Home Cell Leader" : r.replace("_", " ")}</span>
+                              </label>
+                            );
+                          })}
+                        </div>
+                        {(() => {
+                          const dirty =
+                            pendingRoles.length !== userRoles.length ||
+                            pendingRoles.some((r) => !userRoles.includes(r));
+                          return dirty ? (
+                            <p className="text-xs text-amber-600 italic">
+                              Unsaved role changes — click Update to apply.
+                            </p>
+                          ) : null;
+                        })()}
+                      </>
                     ) : (
                       <p className="text-xs text-muted-foreground italic">
                         {isOwnAccount ? "Cannot change your own roles" : "Insufficient permissions to change roles"}
