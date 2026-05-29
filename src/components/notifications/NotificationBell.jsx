@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Badge } from "@/components/ui/badge";
 import { formatDistanceToNow, format } from "date-fns";
 import { toast } from "sonner";
-import { requestNotificationPermission, registerServiceWorker, triggerNotificationAlert } from "@/lib/notification-alert";
+import { requestNotificationPermission, registerServiceWorker, triggerNotificationAlert, testNotificationSound } from "@/lib/notification-alert";
 import { subscribeToPush } from "@/hooks/usePushSubscription";
 
 const typeIcons = {
@@ -95,6 +95,10 @@ export default function NotificationBell() {
   }, [user?.id, tenantId, permission]);
 
   const handleEnableAlerts = async () => {
+    // Play the chime immediately inside the user gesture — this both unlocks
+    // mobile audio and lets the user hear that sound works before we even
+    // ask for permission.
+    testNotificationSound();
     const result = await requestNotificationPermission();
     setPermission(result);
     if (result === "granted") {
@@ -103,6 +107,11 @@ export default function NotificationBell() {
     } else if (result === "denied") {
       toast.error("Notifications blocked. Enable them in your browser settings.");
     }
+  };
+
+  const handleTestSound = () => {
+    testNotificationSound();
+    toast.success("Playing test sound — check your device isn't on silent");
   };
 
   useEffect(() => {
@@ -214,18 +223,23 @@ export default function NotificationBell() {
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-80 p-0" align="end">
-          <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-border gap-2">
             <h3 className="text-sm font-semibold text-foreground">Notifications</h3>
-            {unreadCount > 0 && (
-              <Button variant="ghost" size="sm" className="text-xs h-7" onClick={() => markAllRead.mutate()}>
-                <Check className="h-3 w-3 mr-1" /> Mark all read
+            <div className="flex items-center gap-1">
+              <Button variant="ghost" size="sm" className="text-xs h-7" onClick={handleTestSound} title="Play test sound">
+                Test sound
               </Button>
-            )}
+              {unreadCount > 0 && (
+                <Button variant="ghost" size="sm" className="text-xs h-7" onClick={() => markAllRead.mutate()}>
+                  <Check className="h-3 w-3 mr-1" /> Mark all read
+                </Button>
+              )}
+            </div>
           </div>
           {permission !== "granted" && (
             <div className="px-4 py-2 border-b border-border bg-primary/5 flex items-center justify-between gap-2">
               <p className="text-xs text-muted-foreground leading-tight">
-                Enable sound &amp; alerts so your phone rings on new notifications.
+                Tap Enable and you should hear a chime. If you don't, check your device isn't on silent.
               </p>
               <Button size="sm" className="h-7 text-xs shrink-0" onClick={handleEnableAlerts}>
                 Enable
