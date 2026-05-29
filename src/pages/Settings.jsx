@@ -1594,7 +1594,7 @@ export default function Settings() {
           )}
           <TabsTrigger value="consent" className="gap-1.5 text-xs"><ShieldAlert className="h-3.5 w-3.5" /><span className="hidden sm:inline"> Consent</span></TabsTrigger>
           <TabsTrigger value="api" className="gap-1.5 text-xs"><Key className="h-3.5 w-3.5" /><span className="hidden sm:inline"> API</span></TabsTrigger>
-          {canManageTenant && (
+          {canOwnerOnly && (
             <TabsTrigger value="danger" className="gap-1.5 text-xs text-destructive"><ShieldAlert className="h-3.5 w-3.5" /><span className="hidden sm:inline"> Danger</span></TabsTrigger>
           )}
 
