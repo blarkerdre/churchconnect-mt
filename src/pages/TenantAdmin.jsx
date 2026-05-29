@@ -31,6 +31,7 @@ import TenantUsersDialog from "@/components/tenants/TenantUsersDialog";
 import TenantAnalyticsTab from "@/components/tenants/TenantAnalyticsTab";
 import TenantBillingTab from "@/components/tenants/TenantBillingTab";
 import DomifortIntegrationSection from "@/components/tenants/DomifortIntegrationSection";
+import PlatformUsersTab from "@/components/tenants/PlatformUsersTab";
 
 import { FEATURE_MODULES } from "@/lib/feature-modules";
 
