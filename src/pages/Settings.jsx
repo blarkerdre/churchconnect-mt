@@ -34,7 +34,9 @@ import PasswordConfirmDialog from "@/components/shared/PasswordConfirmDialog";
 import ExternalLinksSection from "@/components/settings/ExternalLinksSection";
 import DangerZoneSection from "@/components/settings/DangerZoneSection";
 
-import ConsentPrivacySection from "@/components/settings/ConsentPrivacySection";
+import ApiKeysSection from "@/components/settings/ApiKeysSection";
+import TenantFeaturesSection from "@/components/settings/TenantFeaturesSection";
+
 import DashboardBannerSettings from "@/components/settings/DashboardBannerSettings";
 import ApiKeysSection from "@/components/settings/ApiKeysSection";
 
