@@ -1583,17 +1583,21 @@ export default function Settings() {
           <TabsTrigger value="training" className="gap-1.5 text-xs"><TrendingUp className="h-3.5 w-3.5" /><span className="hidden sm:inline"> Training</span></TabsTrigger>
           <TabsTrigger value="pastoral" className="gap-1.5 text-xs"><Heart className="h-3.5 w-3.5" /><span className="hidden sm:inline"> Pastoral</span></TabsTrigger>
           <TabsTrigger value="followup-templates" className="gap-1.5 text-xs"><Send className="h-3.5 w-3.5" /><span className="hidden sm:inline"> Follow-ups</span></TabsTrigger>
-          {isSuperAdmin && (
+          {canManageTenant && (
+            <TabsTrigger value="features" className="gap-1.5 text-xs"><SlidersHorizontal className="h-3.5 w-3.5" /><span className="hidden sm:inline"> Features</span></TabsTrigger>
+          )}
+          {canManageTenant && (
             <TabsTrigger value="certificates" className="gap-1.5 text-xs"><Award className="h-3.5 w-3.5" /><span className="hidden sm:inline"> Certs</span></TabsTrigger>
           )}
-          {isSuperAdmin && (
+          {canManageTenant && (
             <TabsTrigger value="links" className="gap-1.5 text-xs"><Link2 className="h-3.5 w-3.5" /><span className="hidden sm:inline"> Links</span></TabsTrigger>
           )}
           <TabsTrigger value="consent" className="gap-1.5 text-xs"><ShieldAlert className="h-3.5 w-3.5" /><span className="hidden sm:inline"> Consent</span></TabsTrigger>
           <TabsTrigger value="api" className="gap-1.5 text-xs"><Key className="h-3.5 w-3.5" /><span className="hidden sm:inline"> API</span></TabsTrigger>
-          {isSuperAdmin && (
+          {canManageTenant && (
             <TabsTrigger value="danger" className="gap-1.5 text-xs text-destructive"><ShieldAlert className="h-3.5 w-3.5" /><span className="hidden sm:inline"> Danger</span></TabsTrigger>
           )}
+
         </TabsList>
 
         <TabsContent value="branding" className="space-y-6">
