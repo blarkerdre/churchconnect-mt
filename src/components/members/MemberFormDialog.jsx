@@ -766,8 +766,8 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
                 const userRoles = memberRoles.map(r => r.role);
                 const isOwnAccount = memberUserId === currentUser?.id;
                 const hasAdminRole = userRoles.some(r => ["admin", "super_admin"].includes(r));
-                const canChange = !isOwnAccount && (isSuperAdmin || (!hasAdminRole && isAdmin));
-                const availableRoles = isSuperAdmin ? ROLES : ROLES.filter(r => r !== "admin");
+                const canChange = !isOwnAccount && (canAssignAdminRole || (!hasAdminRole && isAdmin));
+                const availableRoles = canAssignAdminRole ? ROLES : ROLES.filter(r => r !== "admin");
 
                 return (
                   <div className="space-y-3">
