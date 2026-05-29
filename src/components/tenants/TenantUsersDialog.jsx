@@ -81,6 +81,7 @@ export default function TenantUsersDialog({ tenant, open, onOpenChange }) {
   const [pendingAction, setPendingAction] = useState(null);
   const [confirmToken, setConfirmToken] = useState("");
   const [selectVersion, setSelectVersion] = useState(0);
+  const [editingRoles, setEditingRoles] = useState({});
 
   const { data: memberships = [], isLoading } = useQuery({
     queryKey: ["tenant-users", tenant?.id],
@@ -346,7 +347,7 @@ export default function TenantUsersDialog({ tenant, open, onOpenChange }) {
                   <TableHeader>
                     <TableRow>
                       <TableHead>User</TableHead>
-                      <TableHead>Role</TableHead>
+                      <TableHead>Church Role</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -354,6 +355,9 @@ export default function TenantUsersDialog({ tenant, open, onOpenChange }) {
                     {filteredMemberships.map((m) => {
                       const profile = m.profiles;
                       const isOnlyOwner = m.role === "owner" && ownerCount <= 1;
+                      const pendingRole = editingRoles[m.id];
+                      const currentValue = pendingRole ?? m.role;
+                      const isDirty = pendingRole && pendingRole !== m.role;
                       return (
                         <TableRow key={m.id}>
                           <TableCell>
@@ -363,23 +367,65 @@ export default function TenantUsersDialog({ tenant, open, onOpenChange }) {
                             </div>
                           </TableCell>
                           <TableCell>
-                            <Select
-                              key={`${m.id}-${m.role}-${selectVersion}`}
-                              value={m.role}
-                              onValueChange={(newRole) => {
-                                if (newRole === m.role) return;
-                                requestAction({ type: "role", membership: m, newRole });
-                              }}
-                            >
-                              <SelectTrigger className="w-28 h-7 text-xs">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="member">Member</SelectItem>
-                                <SelectItem value="admin">Admin</SelectItem>
-                                <SelectItem value="owner">Owner</SelectItem>
-                              </SelectContent>
-                            </Select>
+                            <div className="flex items-center gap-1">
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Select
+                                    key={`${m.id}-${m.role}-${selectVersion}`}
+                                    value={currentValue}
+                                    onValueChange={(newRole) => {
+                                      setEditingRoles((prev) => ({ ...prev, [m.id]: newRole }));
+                                    }}
+                                  >
+                                    <SelectTrigger className="w-28 h-7 text-xs">
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="member">Member</SelectItem>
+                                      <SelectItem value="admin">Admin</SelectItem>
+                                      <SelectItem value="owner">Owner</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  This sets the user's role within this specific church.
+                                </TooltipContent>
+                              </Tooltip>
+                              {isDirty && (
+                                <>
+                                  <Button
+                                    size="sm"
+                                    variant="default"
+                                    className="h-7 px-2 text-xs"
+                                    onClick={() => {
+                                      requestAction({ type: "role", membership: m, newRole: pendingRole });
+                                      setEditingRoles((prev) => {
+                                        const next = { ...prev };
+                                        delete next[m.id];
+                                        return next;
+                                      });
+                                    }}
+                                  >
+                                    Update
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-7 px-2 text-xs"
+                                    onClick={() => {
+                                      setEditingRoles((prev) => {
+                                        const next = { ...prev };
+                                        delete next[m.id];
+                                        return next;
+                                      });
+                                      setSelectVersion((v) => v + 1);
+                                    }}
+                                  >
+                                    Cancel
+                                  </Button>
+                                </>
+                              )}
+                            </div>
                           </TableCell>
                           <TableCell className="text-right space-x-1">
                             {isSuperAdmin && m.role !== "owner" && (
