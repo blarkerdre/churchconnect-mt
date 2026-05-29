@@ -1607,9 +1607,11 @@ export default function Settings() {
           <DashboardBannerSettings />
         </TabsContent>
 
-        <TabsContent value="billing">
-          <BillingSection />
-        </TabsContent>
+        {canOwnerOnly && (
+          <TabsContent value="billing">
+            <BillingSection />
+          </TabsContent>
+        )}
 
         <TabsContent value="notifications">
           <NotificationPreferencesSection />
