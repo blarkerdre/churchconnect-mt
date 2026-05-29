@@ -1,32 +1,24 @@
-# Handwriting → Text for Sermon Notes
+# Editable transcription preview
 
-Add a "Write with pen" mode to the Sermon Note editor so users can write with a stylus (Apple Pencil, S Pen) or finger, then have the strokes converted to typed text and inserted into the TipTap editor.
+After "Convert to text" returns, show the transcribed text in an editable Textarea inside the same HandwritingPad dialog so you can fix any recognition mistakes before it goes into your sermon note.
 
-## How it will work (user flow)
+## Flow
 
-1. In the **New / Edit Sermon Note** dialog, a new **Pen** button appears in the editor toolbar (next to Bold/Italic).
-2. Tapping it opens a **Handwriting pad** overlay:
-   - Full-width white canvas sized to the dialog, with smooth pressure-aware strokes.
-   - Controls: Pen thickness, Eraser/Undo last stroke, Clear, Cancel, **Convert to text**.
-   - Works with finger, Apple Pencil, Samsung S Pen, mouse (uses Pointer Events).
-3. **Convert to text** sends the canvas image to an Edge Function that calls Lovable AI (Gemini vision) to transcribe the handwriting.
-4. The returned text is inserted at the current cursor position in the TipTap editor. The pad closes. User can keep writing more, or save.
+1. Tap **Pen** in the editor toolbar — handwriting pad opens (unchanged).
+2. Write, tap **Convert to text** — same edge function call as today.
+3. Instead of inserting immediately, the pad swaps to a **Review** view:
+   - Multi-line Textarea pre-filled with the transcribed text, auto-focused, cursor at end.
+   - Helper line: "Edit anything that was misread, then insert."
+   - Buttons: **Back to pad** (returns to canvas with strokes intact so you can rewrite), **Cancel**, **Insert into note**.
+4. **Insert into note** sends the (possibly edited) text up via the existing `onConvert(text)` callback — `SermonRichEditor` already splits on newlines into `<p>` tags, so corrections including line breaks are preserved.
 
-## Components to add / change
+## Files to change
 
-- `src/components/sermons/HandwritingPad.jsx` *(new)* — canvas overlay using Pointer Events, stroke smoothing, undo/clear, "Convert" button. Exports a base64 PNG.
-- `src/components/sermons/SermonRichEditor.jsx` — add a `Pen` toolbar button that opens `HandwritingPad`; on convert, call `editor.chain().focus().insertContent(text).run()`.
-- `supabase/functions/transcribe-handwriting/index.ts` *(new)* — accepts `{ imageBase64 }`, calls Lovable AI Gateway with `google/gemini-2.5-flash` (vision) using a prompt like *"Transcribe the handwriting in this image. Return ONLY the transcribed text, preserving line breaks. If unreadable, return an empty string."* Returns `{ text }`. Uses standard 429/402 handling already used by other AI functions in this repo.
+- `src/components/sermons/HandwritingPad.jsx` — add `view` state (`"pad" | "review"`) and `draftText` state. On successful transcribe, set `draftText` and switch to `"review"` instead of calling `onConvert` + closing. Render a Textarea + the new buttons when `view === "review"`. Reset both on dialog open.
 
-No DB schema changes. No new secrets — `LOVABLE_API_KEY` is already available to Edge Functions.
+No changes to `SermonRichEditor.jsx`, the edge function, or any DB.
 
-## Why this approach (vs alternatives)
+## Notes
 
-- **Browser-native handwriting (Apple Scribble / Samsung handwriting keyboard)** works on contentEditable but only on those specific devices, has no Android/desktop story, and gives no visible affordance. We'll still benefit from it on iPadOS automatically — this canvas is for everyone else and for the explicit "pen" experience the user asked for.
-- **On-device handwriting recognition libraries** (MyScript, etc.) require paid SDKs/licences. Using Lovable AI keeps it free under the gateway and supports any language Gemini handles, including names of preachers/scripture references.
-
-## Notes / limits
-
-- One page of handwriting at a time (canvas is cleared after insert). For long notes, user writes a paragraph, converts, writes the next.
-- Accuracy depends on legibility; we'll show a toast like "Couldn't read that — try writing larger" if the model returns empty text.
-- Image is sent only to Lovable AI; nothing stored.
+- Strokes stay on the canvas while you're in Review, so "Back to pad" returns you to exactly what you drew — handy when the AI mangled half a word and you want to rewrite just that part rather than typing it.
+- Empty-after-edit is blocked the same way empty transcription is today (toast: "Write something first.").

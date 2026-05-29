@@ -2,11 +2,12 @@ import React, { useEffect, useRef, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
+import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Eraser, Undo2, Loader2 } from "lucide-react";
-
+import { Eraser, Undo2, Loader2, ArrowLeft } from "lucide-react";
 /**
  * Stylus/finger handwriting pad. Captures strokes on a canvas and sends the
  * rendered image to the `transcribe-handwriting` edge function. Returns the
@@ -17,10 +18,11 @@ export default function HandwritingPad({ open, onOpenChange, onConvert }) {
   const ctxRef = useRef(null);
   const strokesRef = useRef([]); // array of strokes; each stroke = array of points
   const currentStrokeRef = useRef(null);
-  const drawingRef = useRef(false);
   const [thickness, setThickness] = useState(3);
   const [converting, setConverting] = useState(false);
   const [hasStrokes, setHasStrokes] = useState(false);
+  const [view, setView] = useState("pad"); // "pad" | "review"
+  const [draftText, setDraftText] = useState("");
 
   // Resize canvas to its CSS size with devicePixelRatio
   const setupCanvas = () => {
@@ -66,6 +68,8 @@ export default function HandwritingPad({ open, onOpenChange, onConvert }) {
     if (!open) return;
     strokesRef.current = [];
     setHasStrokes(false);
+    setView("pad");
+    setDraftText("");
     // Defer to next frame so dialog has laid out
     const id = requestAnimationFrame(() => setupCanvas());
     const onResize = () => setupCanvas();
@@ -143,8 +147,8 @@ export default function HandwritingPad({ open, onOpenChange, onConvert }) {
         toast.error("Couldn't read that — try writing larger or clearer.");
         return;
       }
-      onConvert?.(text);
-      onOpenChange(false);
+      setDraftText(text);
+      setView("review");
     } catch (err) {
       toast.error(err.message || "Failed to transcribe handwriting.");
     } finally {
@@ -152,60 +156,106 @@ export default function HandwritingPad({ open, onOpenChange, onConvert }) {
     }
   };
 
+  const handleInsert = () => {
+    const text = draftText.trim();
+    if (!text) {
+      toast.error("Write something first.");
+      return;
+    }
+    onConvert?.(text);
+    onOpenChange(false);
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Handwriting → Text</DialogTitle>
+          <DialogTitle>{view === "review" ? "Review transcription" : "Handwriting → Text"}</DialogTitle>
         </DialogHeader>
-        <div className="space-y-3">
-          <div className="flex items-center gap-3">
-            <Label className="text-xs whitespace-nowrap">Pen size</Label>
-            <Slider
-              value={[thickness]}
-              onValueChange={(v) => setThickness(v[0])}
-              min={1}
-              max={10}
-              step={1}
-              className="max-w-[160px]"
-            />
-            <div className="flex-1" />
-            <Button type="button" size="sm" variant="ghost" onClick={handleUndo} disabled={!hasStrokes || converting}>
-              <Undo2 className="h-4 w-4 mr-1" /> Undo
-            </Button>
-            <Button type="button" size="sm" variant="ghost" onClick={handleClear} disabled={!hasStrokes || converting}>
-              <Eraser className="h-4 w-4 mr-1" /> Clear
-            </Button>
+
+        {view === "pad" ? (
+          <div className="space-y-3">
+            <div className="flex items-center gap-3">
+              <Label className="text-xs whitespace-nowrap">Pen size</Label>
+              <Slider
+                value={[thickness]}
+                onValueChange={(v) => setThickness(v[0])}
+                min={1}
+                max={10}
+                step={1}
+                className="max-w-[160px]"
+              />
+              <div className="flex-1" />
+              <Button type="button" size="sm" variant="ghost" onClick={handleUndo} disabled={!hasStrokes || converting}>
+                <Undo2 className="h-4 w-4 mr-1" /> Undo
+              </Button>
+              <Button type="button" size="sm" variant="ghost" onClick={handleClear} disabled={!hasStrokes || converting}>
+                <Eraser className="h-4 w-4 mr-1" /> Clear
+              </Button>
+            </div>
+            <div className="rounded-md border border-input bg-white overflow-hidden">
+              <canvas
+                ref={canvasRef}
+                onPointerDown={handlePointerDown}
+                onPointerMove={handlePointerMove}
+                onPointerUp={handlePointerUp}
+                onPointerCancel={handlePointerUp}
+                onPointerLeave={handlePointerUp}
+                className="w-full h-[360px] touch-none cursor-crosshair block"
+                style={{ touchAction: "none" }}
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Write with your finger or stylus (Apple Pencil, S Pen). Tap “Convert to text” to review and insert it.
+            </p>
           </div>
-          <div className="rounded-md border border-input bg-white overflow-hidden">
-            <canvas
-              ref={canvasRef}
-              onPointerDown={handlePointerDown}
-              onPointerMove={handlePointerMove}
-              onPointerUp={handlePointerUp}
-              onPointerCancel={handlePointerUp}
-              onPointerLeave={handlePointerUp}
-              className="w-full h-[360px] touch-none cursor-crosshair block"
-              style={{ touchAction: "none" }}
+        ) : (
+          <div className="space-y-2">
+            <Textarea
+              autoFocus
+              value={draftText}
+              onChange={(e) => setDraftText(e.target.value)}
+              rows={10}
+              className="font-sans text-sm"
+              placeholder="Transcribed text will appear here…"
             />
+            <p className="text-xs text-muted-foreground">
+              Edit anything that was misread, then insert into your note.
+            </p>
           </div>
-          <p className="text-xs text-muted-foreground">
-            Write with your finger or stylus (Apple Pencil, S Pen). Tap “Convert to text” to insert it into your notes.
-          </p>
-        </div>
+        )}
+
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={converting}>
-            Cancel
-          </Button>
-          <Button onClick={handleConvert} disabled={converting || !hasStrokes}>
-            {converting ? (
-              <><Loader2 className="h-4 w-4 mr-1 animate-spin" /> Converting…</>
-            ) : (
-              "Convert to text"
-            )}
-          </Button>
+          {view === "pad" ? (
+            <>
+              <Button variant="outline" onClick={() => onOpenChange(false)} disabled={converting}>
+                Cancel
+              </Button>
+              <Button onClick={handleConvert} disabled={converting || !hasStrokes}>
+                {converting ? (
+                  <><Loader2 className="h-4 w-4 mr-1 animate-spin" /> Converting…</>
+                ) : (
+                  "Convert to text"
+                )}
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button variant="ghost" onClick={() => setView("pad")}>
+                <ArrowLeft className="h-4 w-4 mr-1" /> Back to pad
+              </Button>
+              <div className="flex-1" />
+              <Button variant="outline" onClick={() => onOpenChange(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleInsert} disabled={!draftText.trim()}>
+                Insert into note
+              </Button>
+            </>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
 }
+
