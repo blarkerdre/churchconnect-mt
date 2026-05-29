@@ -2,11 +2,12 @@ import React, { useEffect, useRef, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
+import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Eraser, Undo2, Loader2 } from "lucide-react";
-
+import { Eraser, Undo2, Loader2, ArrowLeft } from "lucide-react";
 /**
  * Stylus/finger handwriting pad. Captures strokes on a canvas and sends the
  * rendered image to the `transcribe-handwriting` edge function. Returns the
