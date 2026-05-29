@@ -1557,6 +1557,7 @@ export default function Settings() {
   const { isTenantOwner, isTenantAdmin } = useTenant();
   const isSuperAdmin = roles.includes("super_admin");
   const canManageTenant = isSuperAdmin || isTenantOwner || isTenantAdmin;
+  const canOwnerOnly = isSuperAdmin || isTenantOwner;
 
   return (
     <div className="space-y-6">
@@ -1570,7 +1571,9 @@ export default function Settings() {
       <Tabs defaultValue="branding" className="space-y-4">
         <TabsList className="flex flex-nowrap h-auto gap-1 overflow-x-auto w-full justify-start [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
           <TabsTrigger value="branding" className="gap-1.5 text-xs"><ImageIcon className="h-3.5 w-3.5" /><span className="hidden sm:inline"> Branding</span></TabsTrigger>
-          <TabsTrigger value="billing" className="gap-1.5 text-xs"><CreditCard className="h-3.5 w-3.5" /><span className="hidden sm:inline"> Billing</span></TabsTrigger>
+          {canOwnerOnly && (
+            <TabsTrigger value="billing" className="gap-1.5 text-xs"><CreditCard className="h-3.5 w-3.5" /><span className="hidden sm:inline"> Billing</span></TabsTrigger>
+          )}
           <TabsTrigger value="notifications" className="gap-1.5 text-xs"><Bell className="h-3.5 w-3.5" /><span className="hidden sm:inline"> Notifications</span></TabsTrigger>
           <TabsTrigger value="comms" className="gap-1.5 text-xs"><Mail className="h-3.5 w-3.5" /><span className="hidden sm:inline"> Comms</span></TabsTrigger>
           <TabsTrigger value="units" className="gap-1.5 text-xs"><Users className="h-3.5 w-3.5" /><span className="hidden sm:inline"> Units</span></TabsTrigger>
@@ -1591,7 +1594,7 @@ export default function Settings() {
           )}
           <TabsTrigger value="consent" className="gap-1.5 text-xs"><ShieldAlert className="h-3.5 w-3.5" /><span className="hidden sm:inline"> Consent</span></TabsTrigger>
           <TabsTrigger value="api" className="gap-1.5 text-xs"><Key className="h-3.5 w-3.5" /><span className="hidden sm:inline"> API</span></TabsTrigger>
-          {canManageTenant && (
+          {canOwnerOnly && (
             <TabsTrigger value="danger" className="gap-1.5 text-xs text-destructive"><ShieldAlert className="h-3.5 w-3.5" /><span className="hidden sm:inline"> Danger</span></TabsTrigger>
           )}
 
@@ -1604,9 +1607,11 @@ export default function Settings() {
           <DashboardBannerSettings />
         </TabsContent>
 
-        <TabsContent value="billing">
-          <BillingSection />
-        </TabsContent>
+        {canOwnerOnly && (
+          <TabsContent value="billing">
+            <BillingSection />
+          </TabsContent>
+        )}
 
         <TabsContent value="notifications">
           <NotificationPreferencesSection />
@@ -1691,7 +1696,7 @@ export default function Settings() {
           <ApiKeysSection />
         </TabsContent>
 
-        {canManageTenant && (
+        {canOwnerOnly && (
           <TabsContent value="danger">
             <DangerZoneSection />
           </TabsContent>
