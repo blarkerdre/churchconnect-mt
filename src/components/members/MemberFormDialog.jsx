@@ -412,6 +412,26 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
         if (error) throw error;
         toast({ title: "Member registered" });
       }
+      // Apply staged role changes (admin-only, linked accounts only)
+      if (member && memberUserId && isAdmin) {
+        const savedRoles = memberRoles.map((r) => r.role);
+        const toAdd = pendingRoles.filter((r) => !savedRoles.includes(r));
+        const toRemove = savedRoles.filter((r) => !pendingRoles.includes(r) && r !== "super_admin");
+        for (const role of toAdd) {
+          const { error } = await supabase.from("user_roles").insert(withTenant({ user_id: memberUserId, role }));
+          if (error) throw error;
+          await logAudit("role_add", "user_roles", memberUserId, { role, target_name: `${member.first_name} ${member.last_name}` }, tenantId);
+        }
+        for (const role of toRemove) {
+          const { error } = await supabase.from("user_roles").delete().eq("user_id", memberUserId).eq("role", role).eq("tenant_id", tenantId);
+          if (error) throw error;
+          await logAudit("role_remove", "user_roles", memberUserId, { role, target_name: `${member.first_name} ${member.last_name}` }, tenantId);
+        }
+        if (toAdd.length || toRemove.length) {
+          queryClient.invalidateQueries({ queryKey: ["member-roles", memberUserId] });
+          queryClient.invalidateQueries({ queryKey: ["all-user-roles"] });
+        }
+      }
       onSaved();
       setConfirmUpdateOpen(false);
     } catch (err) {
