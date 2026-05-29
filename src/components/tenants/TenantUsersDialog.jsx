@@ -427,24 +427,6 @@ export default function TenantUsersDialog({ tenant, open, onOpenChange }) {
                               )}
                             </div>
                           </TableCell>
-                            <Select
-                              key={`${m.id}-${m.role}-${selectVersion}`}
-                              value={m.role}
-                              onValueChange={(newRole) => {
-                                if (newRole === m.role) return;
-                                requestAction({ type: "role", membership: m, newRole });
-                              }}
-                            >
-                              <SelectTrigger className="w-28 h-7 text-xs">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="member">Member</SelectItem>
-                                <SelectItem value="admin">Admin</SelectItem>
-                                <SelectItem value="owner">Owner</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </TableCell>
                           <TableCell className="text-right space-x-1">
                             {isSuperAdmin && m.role !== "owner" && (
                               <Tooltip>
