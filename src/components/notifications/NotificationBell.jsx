@@ -48,7 +48,7 @@ const referenceRoutes = {
 };
 
 export default function NotificationBell() {
-  const { user } = useAuth();
+  const { user, isTenantAdmin, isTenantOwner } = useAuth();
   const { tenantId } = useTenantQuery();
   const { tenantSlug } = useTenant();
   const queryClient = useQueryClient();
@@ -72,6 +72,13 @@ export default function NotificationBell() {
     enabled: !!user?.id && !!tenantId,
     refetchInterval: 30000,
   });
+
+  // Hide billing/payment notifications from members who can't act on them.
+  const canSeeBilling = isTenantAdmin || isTenantOwner;
+  const visibleNotifications = canSeeBilling
+    ? notifications
+    : notifications.filter((n) => n.type !== "billing");
+
 
   const [permission, setPermission] = useState(
     typeof Notification !== "undefined" ? Notification.permission : "default"
@@ -117,7 +124,7 @@ export default function NotificationBell() {
     return () => { supabase.removeChannel(channel); };
   }, [user?.id, tenantId, queryClient]);
 
-  const unreadCount = notifications.filter(n => !n.is_read).length;
+  const unreadCount = visibleNotifications.filter(n => !n.is_read).length;
 
   const markRead = useMutation({
     mutationFn: async (id) => {
@@ -226,11 +233,11 @@ export default function NotificationBell() {
             </div>
           )}
           <ScrollArea className="h-[60vh] max-h-96">
-            {notifications.length === 0 ? (
+            {visibleNotifications.length === 0 ? (
               <p className="text-sm text-muted-foreground text-center py-8">No notifications</p>
             ) : (
               <div className="divide-y divide-border">
-                {notifications.map(n => {
+                {visibleNotifications.map(n => {
                   const NIcon = referenceTypeIcons[n.reference_type] || typeIcons[n.type] || Info;
                   return (
                     <div
