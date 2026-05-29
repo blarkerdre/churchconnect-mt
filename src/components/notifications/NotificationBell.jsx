@@ -95,6 +95,10 @@ export default function NotificationBell() {
   }, [user?.id, tenantId, permission]);
 
   const handleEnableAlerts = async () => {
+    // Play the chime immediately inside the user gesture — this both unlocks
+    // mobile audio and lets the user hear that sound works before we even
+    // ask for permission.
+    testNotificationSound();
     const result = await requestNotificationPermission();
     setPermission(result);
     if (result === "granted") {
@@ -103,6 +107,11 @@ export default function NotificationBell() {
     } else if (result === "denied") {
       toast.error("Notifications blocked. Enable them in your browser settings.");
     }
+  };
+
+  const handleTestSound = () => {
+    testNotificationSound();
+    toast.success("Playing test sound — check your device isn't on silent");
   };
 
   useEffect(() => {
