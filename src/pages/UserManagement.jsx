@@ -451,7 +451,7 @@ export default function UserManagement() {
               <Select value={addForm.role} onValueChange={v => setAddForm(f => ({ ...f, role: v }))}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {(isSuperAdmin ? ROLES : ROLES.filter(r => r !== "super_admin")).map(r => (
+                  {ROLES.map(r => (
                     <SelectItem key={r} value={r}>{roleLabels[r] || r.replace("_", " ")}</SelectItem>
                   ))}
                 </SelectContent>
