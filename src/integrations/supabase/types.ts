@@ -3730,6 +3730,169 @@ export type Database = {
           },
         ]
       }
+      unit_task_assignments: {
+        Row: {
+          acknowledged_at: string | null
+          completed_at: string | null
+          created_at: string
+          id: string
+          member_id: string
+          status: string
+          task_id: string
+          tenant_id: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          acknowledged_at?: string | null
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          member_id: string
+          status?: string
+          task_id: string
+          tenant_id: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          acknowledged_at?: string | null
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          member_id?: string
+          status?: string
+          task_id?: string
+          tenant_id?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "unit_task_assignments_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "unit_task_assignments_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "unit_tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "unit_task_assignments_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      unit_task_comments: {
+        Row: {
+          assignment_id: string | null
+          author_id: string
+          body: string
+          created_at: string
+          id: string
+          task_id: string
+          tenant_id: string
+        }
+        Insert: {
+          assignment_id?: string | null
+          author_id: string
+          body: string
+          created_at?: string
+          id?: string
+          task_id: string
+          tenant_id: string
+        }
+        Update: {
+          assignment_id?: string | null
+          author_id?: string
+          body?: string
+          created_at?: string
+          id?: string
+          task_id?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "unit_task_comments_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "unit_task_assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "unit_task_comments_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "unit_tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "unit_task_comments_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      unit_tasks: {
+        Row: {
+          created_at: string
+          created_by: string
+          description: string | null
+          due_date: string | null
+          id: string
+          priority: string
+          status: string
+          tenant_id: string
+          title: string
+          unit_name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          priority?: string
+          status?: string
+          tenant_id: string
+          title: string
+          unit_name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          priority?: string
+          status?: string
+          tenant_id?: string
+          title?: string
+          unit_name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "unit_tasks_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           id: string
@@ -4358,6 +4521,10 @@ export type Database = {
       user_has_tenant_access: { Args: { _tenant_id: string }; Returns: boolean }
       user_is_followup_unit_member: {
         Args: { _tenant_id: string; _user_id: string }
+        Returns: boolean
+      }
+      user_leads_unit: {
+        Args: { _tenant_id: string; _unit_name: string; _user_id: string }
         Returns: boolean
       }
       write_audit: {
