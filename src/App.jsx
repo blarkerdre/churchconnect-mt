@@ -92,36 +92,36 @@ function SuperAdminRoute({ children }) {
 }
 
 function WSFRoute({ children }) {
-  const { isAdmin, isWSFLeader, loading } = useAuth();
+  const { isAdmin, isWSFLeader, isReportsOfficer, loading } = useAuth();
   const { tenantSlug } = useParams();
   if (loading) return null;
-  if (!isAdmin && !isWSFLeader) return <Navigate to={tenantSlug ? `/t/${tenantSlug}` : "/"} replace />;
+  if (!isAdmin && !isWSFLeader && !isReportsOfficer) return <Navigate to={tenantSlug ? `/t/${tenantSlug}` : "/"} replace />;
   return children;
 }
 
 function LeaderRoute({ children }) {
-  const { isAdmin, isUnitLeader, loading } = useAuth();
+  const { isAdmin, isUnitLeader, isReportsOfficer, loading } = useAuth();
   const { tenantSlug } = useParams();
   if (loading) return null;
-  if (!isAdmin && !isUnitLeader) return <Navigate to={tenantSlug ? `/t/${tenantSlug}` : "/"} replace />;
+  if (!isAdmin && !isUnitLeader && !isReportsOfficer) return <Navigate to={tenantSlug ? `/t/${tenantSlug}` : "/"} replace />;
   return children;
 }
 
 function FollowupRoute({ children }) {
-  const { isAdmin, isUnitLeader, loading } = useAuth();
+  const { isAdmin, isUnitLeader, isReportsOfficer, loading } = useAuth();
   const { tenantSlug } = useParams();
   const { isMemberOfUnit: isFollowupMember, isLoading: memberLoading } = useUnitMembership("Follow-up");
   if (loading || memberLoading) return null;
-  if (!isAdmin && !isUnitLeader && !isFollowupMember) return <Navigate to={tenantSlug ? `/t/${tenantSlug}` : "/"} replace />;
+  if (!isAdmin && !isUnitLeader && !isFollowupMember && !isReportsOfficer) return <Navigate to={tenantSlug ? `/t/${tenantSlug}` : "/"} replace />;
   return children;
 }
 
 function TrainingRoute({ children }) {
-  const { isAdmin, isUnitLeader, roles, loading } = useAuth();
+  const { isAdmin, isUnitLeader, isReportsOfficer, roles, loading } = useAuth();
   const { tenantSlug } = useParams();
   if (loading) return null;
   const isSuperAdmin = roles.includes("super_admin");
-  if (!isAdmin && !isSuperAdmin && !isUnitLeader) return <Navigate to={tenantSlug ? `/t/${tenantSlug}` : "/"} replace />;
+  if (!isAdmin && !isSuperAdmin && !isUnitLeader && !isReportsOfficer) return <Navigate to={tenantSlug ? `/t/${tenantSlug}` : "/"} replace />;
   return children;
 }
 
