@@ -17,7 +17,7 @@ const AuthContext = createContext({
   user: null, profile: null, roles: [], loading: true, leaderUnits: [], leaderCentres: [], myMember: null,
   tenantMemberships: [],
   signUp: noop, signIn: noop, signOut: noop, resetPassword: noop, updatePassword: noop,
-  isAdmin: false, isUnitLeader: false, isWSFLeader: false, isMember: false,
+  isAdmin: false, isUnitLeader: false, isWSFLeader: false, isMember: false, isReportsOfficer: false,
   isTenantOwner: false, isTenantAdmin: false,
   refreshUser: () => {},
 });
@@ -186,6 +186,7 @@ export function AuthProvider({ children }) {
   const isTenantOwner = tenantMemberships.some((m) => m.role === "owner");
   const isTenantAdmin = tenantMemberships.some((m) => m.role === "owner" || m.role === "admin");
 
+  const isReportsOfficer = roles.includes("reports_officer");
   // Bridge: treat tenant owners/admins as app-level admins
   const isAdmin = roles.includes("admin") || roles.includes("super_admin") || isTenantAdmin;
   const isUnitLeader = roles.includes("unit_leader");
@@ -197,7 +198,7 @@ export function AuthProvider({ children }) {
        value={{
         user, profile, roles, loading, dataLoaded, leaderUnits, leaderCentres, myMember, tenantMemberships,
         signUp, signIn, signOut, resetPassword, updatePassword,
-        isAdmin, isUnitLeader, isWSFLeader, isMember,
+        isAdmin, isUnitLeader, isWSFLeader, isMember, isReportsOfficer,
         isTenantOwner, isTenantAdmin,
         refreshUser: () => user && fetchUserData(user.id, user.email),
       }}

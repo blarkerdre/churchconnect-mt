@@ -4344,6 +4344,10 @@ export type Database = {
         Args: { _centre_id: string; _tenant_id: string; _user_id: string }
         Returns: boolean
       }
+      is_reports_officer: {
+        Args: { _tenant_id: string; _user_id: string }
+        Returns: boolean
+      }
       is_tenant_admin: {
         Args: { _tenant_id: string; _user_id: string }
         Returns: boolean
@@ -4545,6 +4549,7 @@ export type Database = {
         | "unit_leader"
         | "member"
         | "wsf_leader"
+        | "reports_officer"
       followup_message_channel: "sms" | "email"
       followup_message_status:
         | "draft"
@@ -4721,7 +4726,14 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["super_admin", "admin", "unit_leader", "member", "wsf_leader"],
+      app_role: [
+        "super_admin",
+        "admin",
+        "unit_leader",
+        "member",
+        "wsf_leader",
+        "reports_officer",
+      ],
       followup_message_channel: ["sms", "email"],
       followup_message_status: [
         "draft",

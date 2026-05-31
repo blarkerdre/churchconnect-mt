@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Loader2, Shield, ShieldCheck, UserCog, User, Plus, Trash2, Globe, UsersRound, Ban, CheckCircle2, Search } from "lucide-react";
+import { Loader2, Shield, ShieldCheck, UserCog, User, Plus, Trash2, Globe, UsersRound, Ban, CheckCircle2, Search, FileText } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
@@ -23,13 +23,14 @@ import DangerConfirmDialog from "@/components/exams/DangerConfirmDialog";
 // It is a platform-wide role (tenant_id IS NULL) and must be granted via the
 // Tenant Admin / platform flow only. Labels for super_admin remain in roleLabels
 // so existing super_admin badges still render correctly.
-const ROLES = ["admin", "unit_leader", "wsf_leader"];
+const ROLES = ["admin", "unit_leader", "wsf_leader", "reports_officer"];
 
 const roleIcons = {
   super_admin: ShieldCheck,
   admin: Shield,
   unit_leader: UserCog,
   wsf_leader: Globe,
+  reports_officer: FileText,
   member: User,
 };
 
@@ -38,6 +39,7 @@ const roleColors = {
   admin: "bg-primary/10 text-primary",
   unit_leader: "bg-accent/10 text-accent",
   wsf_leader: "bg-chart-3/10 text-chart-3",
+  reports_officer: "bg-chart-2/10 text-chart-2",
   member: "bg-muted text-muted-foreground",
 };
 
@@ -46,6 +48,7 @@ const roleLabels = {
   admin: "Admin",
   unit_leader: "Unit Leader",
   wsf_leader: "Home Cell Leader",
+  reports_officer: "Reports Officer",
   member: "Member",
 };
 
