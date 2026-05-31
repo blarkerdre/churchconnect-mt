@@ -75,6 +75,14 @@ function AdminRoute({ children }) {
   return children;
 }
 
+function ReportsRoute({ children }) {
+  const { isAdmin, isReportsOfficer, loading } = useAuth();
+  const { tenantSlug } = useParams();
+  if (loading) return null;
+  if (!isAdmin && !isReportsOfficer) return <Navigate to={tenantSlug ? `/t/${tenantSlug}` : "/"} replace />;
+  return children;
+}
+
 function SuperAdminRoute({ children }) {
   const { roles, loading } = useAuth();
   const { tenantSlug } = useParams();
