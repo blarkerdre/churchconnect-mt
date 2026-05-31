@@ -42,6 +42,7 @@ const SermonNotes = lazy(() => import("@/pages/SermonNotes"));
 const Testimony = lazy(() => import("@/pages/Testimony"));
 const Unsubscribe = lazy(() => import("@/pages/Unsubscribe"));
 const UnitTasks = lazy(() => import("@/pages/UnitTasks"));
+const Reports = lazy(() => import("@/pages/Reports"));
 
 function PageFallback() {
   return (
