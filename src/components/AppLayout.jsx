@@ -138,6 +138,7 @@ export default function Layout({ children }) {
     if (roles.includes("admin")) return "Admin";
     if (isTenantOwner) return "Tenant Owner";
     if (isTenantAdmin) return "Tenant Admin";
+    if (isReportsOfficer) return "Reports Officer";
     if (isUnitLeader && isWSFLeader) return "Unit & Home Cell Leader";
     if (isUnitLeader) return "Unit Leader";
     if (isWSFLeader) return "Home Cell Leader";
