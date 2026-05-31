@@ -23,13 +23,14 @@ import DangerConfirmDialog from "@/components/exams/DangerConfirmDialog";
 // It is a platform-wide role (tenant_id IS NULL) and must be granted via the
 // Tenant Admin / platform flow only. Labels for super_admin remain in roleLabels
 // so existing super_admin badges still render correctly.
-const ROLES = ["admin", "unit_leader", "wsf_leader"];
+const ROLES = ["admin", "unit_leader", "wsf_leader", "reports_officer"];
 
 const roleIcons = {
   super_admin: ShieldCheck,
   admin: Shield,
   unit_leader: UserCog,
   wsf_leader: Globe,
+  reports_officer: FileText,
   member: User,
 };
 
@@ -38,6 +39,7 @@ const roleColors = {
   admin: "bg-primary/10 text-primary",
   unit_leader: "bg-accent/10 text-accent",
   wsf_leader: "bg-chart-3/10 text-chart-3",
+  reports_officer: "bg-chart-2/10 text-chart-2",
   member: "bg-muted text-muted-foreground",
 };
 
@@ -46,6 +48,7 @@ const roleLabels = {
   admin: "Admin",
   unit_leader: "Unit Leader",
   wsf_leader: "Home Cell Leader",
+  reports_officer: "Reports Officer",
   member: "Member",
 };
 
