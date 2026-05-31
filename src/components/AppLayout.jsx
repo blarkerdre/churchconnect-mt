@@ -46,7 +46,8 @@ const allNavItems = [
   { name: "Pastoral Care", icon: Heart, path: "/pastoral-care", access: null },
   { name: "Communications", icon: Megaphone, path: "/communications", access: null },
   { name: "Transportation", icon: Car, path: "/transportation", access: null },
-  { name: "Analytics", icon: BarChart2, path: "/analytics", access: "admin" },
+  { name: "Reports Hub", icon: FileText, path: "/reports", access: "reports" },
+  { name: "Analytics", icon: BarChart2, path: "/analytics", access: "reports" },
   { name: "Training Report", icon: TrendingUp, path: "/training-reports", access: "training" },
   { name: "Church Attendance", icon: ClipboardList, path: "/church-attendance", access: "training" },
   { name: "Bible School", icon: BookOpen, path: "/exam-management", access: null },
@@ -72,7 +73,7 @@ export default function Layout({ children }) {
   const { isAvailable: installAvailable, isInstalled, canPrompt, isIOSSafari } = useInstallPrompt();
   const location = useLocation();
   const navigate = useNavigate();
-  const { signOut, user, profile, isAdmin, isUnitLeader, isWSFLeader, roles, leaderUnits, isTenantOwner, isTenantAdmin } = useAuth();
+  const { signOut, user, profile, isAdmin, isUnitLeader, isWSFLeader, isReportsOfficer, roles, leaderUnits, isTenantOwner, isTenantAdmin } = useAuth();
   const { currentTenant, tenantId, tenantSlug, tenantMemberships, switchTenant } = useTenant();
   const queryClient = useQueryClient();
   useMessageAlerts();
@@ -117,10 +118,11 @@ export default function Layout({ children }) {
     if (item.access === null) return true;
     if (item.access === "super_admin") return isSuperAdmin;
     if (item.access === "admin") return isAdmin;
-    if (item.access === "leader") return isAdmin || isUnitLeader;
-    if (item.access === "wsf") return isAdmin || isWSFLeader;
-    if (item.access === "followup_member") return isAdmin || isFollowupUnit || isFollowupMember;
-    if (item.access === "training") return isAdmin || isSuperAdmin || isTrainingAccess;
+    if (item.access === "reports") return isAdmin || isReportsOfficer;
+    if (item.access === "leader") return isAdmin || isUnitLeader || isReportsOfficer;
+    if (item.access === "wsf") return isAdmin || isWSFLeader || isReportsOfficer;
+    if (item.access === "followup_member") return isAdmin || isFollowupUnit || isFollowupMember || isReportsOfficer;
+    if (item.access === "training") return isAdmin || isSuperAdmin || isTrainingAccess || isReportsOfficer;
     return false;
   });
 
@@ -136,6 +138,7 @@ export default function Layout({ children }) {
     if (roles.includes("admin")) return "Admin";
     if (isTenantOwner) return "Tenant Owner";
     if (isTenantAdmin) return "Tenant Admin";
+    if (isReportsOfficer) return "Reports Officer";
     if (isUnitLeader && isWSFLeader) return "Unit & Home Cell Leader";
     if (isUnitLeader) return "Unit Leader";
     if (isWSFLeader) return "Home Cell Leader";

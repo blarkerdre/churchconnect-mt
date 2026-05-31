@@ -42,6 +42,7 @@ const SermonNotes = lazy(() => import("@/pages/SermonNotes"));
 const Testimony = lazy(() => import("@/pages/Testimony"));
 const Unsubscribe = lazy(() => import("@/pages/Unsubscribe"));
 const UnitTasks = lazy(() => import("@/pages/UnitTasks"));
+const Reports = lazy(() => import("@/pages/Reports"));
 
 function PageFallback() {
   return (
@@ -74,6 +75,14 @@ function AdminRoute({ children }) {
   return children;
 }
 
+function ReportsRoute({ children }) {
+  const { isAdmin, isReportsOfficer, loading } = useAuth();
+  const { tenantSlug } = useParams();
+  if (loading) return null;
+  if (!isAdmin && !isReportsOfficer) return <Navigate to={tenantSlug ? `/t/${tenantSlug}` : "/"} replace />;
+  return children;
+}
+
 function SuperAdminRoute({ children }) {
   const { roles, loading } = useAuth();
   const { tenantSlug } = useParams();
@@ -83,36 +92,36 @@ function SuperAdminRoute({ children }) {
 }
 
 function WSFRoute({ children }) {
-  const { isAdmin, isWSFLeader, loading } = useAuth();
+  const { isAdmin, isWSFLeader, isReportsOfficer, loading } = useAuth();
   const { tenantSlug } = useParams();
   if (loading) return null;
-  if (!isAdmin && !isWSFLeader) return <Navigate to={tenantSlug ? `/t/${tenantSlug}` : "/"} replace />;
+  if (!isAdmin && !isWSFLeader && !isReportsOfficer) return <Navigate to={tenantSlug ? `/t/${tenantSlug}` : "/"} replace />;
   return children;
 }
 
 function LeaderRoute({ children }) {
-  const { isAdmin, isUnitLeader, loading } = useAuth();
+  const { isAdmin, isUnitLeader, isReportsOfficer, loading } = useAuth();
   const { tenantSlug } = useParams();
   if (loading) return null;
-  if (!isAdmin && !isUnitLeader) return <Navigate to={tenantSlug ? `/t/${tenantSlug}` : "/"} replace />;
+  if (!isAdmin && !isUnitLeader && !isReportsOfficer) return <Navigate to={tenantSlug ? `/t/${tenantSlug}` : "/"} replace />;
   return children;
 }
 
 function FollowupRoute({ children }) {
-  const { isAdmin, isUnitLeader, loading } = useAuth();
+  const { isAdmin, isUnitLeader, isReportsOfficer, loading } = useAuth();
   const { tenantSlug } = useParams();
   const { isMemberOfUnit: isFollowupMember, isLoading: memberLoading } = useUnitMembership("Follow-up");
   if (loading || memberLoading) return null;
-  if (!isAdmin && !isUnitLeader && !isFollowupMember) return <Navigate to={tenantSlug ? `/t/${tenantSlug}` : "/"} replace />;
+  if (!isAdmin && !isUnitLeader && !isFollowupMember && !isReportsOfficer) return <Navigate to={tenantSlug ? `/t/${tenantSlug}` : "/"} replace />;
   return children;
 }
 
 function TrainingRoute({ children }) {
-  const { isAdmin, isUnitLeader, roles, loading } = useAuth();
+  const { isAdmin, isUnitLeader, isReportsOfficer, roles, loading } = useAuth();
   const { tenantSlug } = useParams();
   if (loading) return null;
   const isSuperAdmin = roles.includes("super_admin");
-  if (!isAdmin && !isSuperAdmin && !isUnitLeader) return <Navigate to={tenantSlug ? `/t/${tenantSlug}` : "/"} replace />;
+  if (!isAdmin && !isSuperAdmin && !isUnitLeader && !isReportsOfficer) return <Navigate to={tenantSlug ? `/t/${tenantSlug}` : "/"} replace />;
   return children;
 }
 
@@ -141,7 +150,7 @@ function AppPages() {
         <Route path="/pastoral-care" element={<FeatureGate path="/pastoral-care"><PastoralCare /></FeatureGate>} />
         <Route path="/communications" element={<FeatureGate path="/communications"><Communications /></FeatureGate>} />
         <Route path="/transportation" element={<FeatureGate path="/transportation"><Transportation /></FeatureGate>} />
-        <Route path="/analytics" element={<FeatureGate path="/analytics"><AdminRoute><Analytics /></AdminRoute></FeatureGate>} />
+        <Route path="/analytics" element={<FeatureGate path="/analytics"><ReportsRoute><Analytics /></ReportsRoute></FeatureGate>} />
         <Route path="/training-reports" element={<FeatureGate path="/training-reports"><TrainingRoute><TrainingReports /></TrainingRoute></FeatureGate>} />
         <Route path="/exam-management" element={<FeatureGate path="/exam-management"><ProtectedRoute><ExamManagement /></ProtectedRoute></FeatureGate>} />
         <Route path="/church-attendance" element={<FeatureGate path="/church-attendance"><TrainingRoute><ChurchAttendance /></TrainingRoute></FeatureGate>} />
@@ -150,6 +159,7 @@ function AppPages() {
         <Route path="/sermon-notes" element={<FeatureGate path="/sermon-notes"><SermonNotes /></FeatureGate>} />
         <Route path="/testimony" element={<FeatureGate path="/testimony"><Testimony /></FeatureGate>} />
         <Route path="/unit-tasks" element={<ProtectedRoute><UnitTasks /></ProtectedRoute>} />
+        <Route path="/reports" element={<ReportsRoute><Reports /></ReportsRoute>} />
         <Route path="/settings" element={<AdminRoute><Settings /></AdminRoute>} />
         <Route path="/system-logs" element={<AdminRoute><SystemLogs /></AdminRoute>} />
         <Route path="/tenant-admin" element={<SuperAdminRoute><TenantAdmin /></SuperAdminRoute>} />
