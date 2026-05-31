@@ -4545,6 +4545,7 @@ export type Database = {
         | "unit_leader"
         | "member"
         | "wsf_leader"
+        | "reports_officer"
       followup_message_channel: "sms" | "email"
       followup_message_status:
         | "draft"
@@ -4721,7 +4722,14 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["super_admin", "admin", "unit_leader", "member", "wsf_leader"],
+      app_role: [
+        "super_admin",
+        "admin",
+        "unit_leader",
+        "member",
+        "wsf_leader",
+        "reports_officer",
+      ],
       followup_message_channel: ["sms", "email"],
       followup_message_status: [
         "draft",
