@@ -150,7 +150,7 @@ function AppPages() {
         <Route path="/pastoral-care" element={<FeatureGate path="/pastoral-care"><PastoralCare /></FeatureGate>} />
         <Route path="/communications" element={<FeatureGate path="/communications"><Communications /></FeatureGate>} />
         <Route path="/transportation" element={<FeatureGate path="/transportation"><Transportation /></FeatureGate>} />
-        <Route path="/analytics" element={<FeatureGate path="/analytics"><AdminRoute><Analytics /></AdminRoute></FeatureGate>} />
+        <Route path="/analytics" element={<FeatureGate path="/analytics"><ReportsRoute><Analytics /></ReportsRoute></FeatureGate>} />
         <Route path="/training-reports" element={<FeatureGate path="/training-reports"><TrainingRoute><TrainingReports /></TrainingRoute></FeatureGate>} />
         <Route path="/exam-management" element={<FeatureGate path="/exam-management"><ProtectedRoute><ExamManagement /></ProtectedRoute></FeatureGate>} />
         <Route path="/church-attendance" element={<FeatureGate path="/church-attendance"><TrainingRoute><ChurchAttendance /></TrainingRoute></FeatureGate>} />
