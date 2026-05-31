@@ -118,10 +118,11 @@ export default function Layout({ children }) {
     if (item.access === null) return true;
     if (item.access === "super_admin") return isSuperAdmin;
     if (item.access === "admin") return isAdmin;
-    if (item.access === "leader") return isAdmin || isUnitLeader;
-    if (item.access === "wsf") return isAdmin || isWSFLeader;
-    if (item.access === "followup_member") return isAdmin || isFollowupUnit || isFollowupMember;
-    if (item.access === "training") return isAdmin || isSuperAdmin || isTrainingAccess;
+    if (item.access === "reports") return isAdmin || isReportsOfficer;
+    if (item.access === "leader") return isAdmin || isUnitLeader || isReportsOfficer;
+    if (item.access === "wsf") return isAdmin || isWSFLeader || isReportsOfficer;
+    if (item.access === "followup_member") return isAdmin || isFollowupUnit || isFollowupMember || isReportsOfficer;
+    if (item.access === "training") return isAdmin || isSuperAdmin || isTrainingAccess || isReportsOfficer;
     return false;
   });
 
