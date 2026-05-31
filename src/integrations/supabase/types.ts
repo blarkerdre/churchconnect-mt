@@ -4344,6 +4344,10 @@ export type Database = {
         Args: { _centre_id: string; _tenant_id: string; _user_id: string }
         Returns: boolean
       }
+      is_reports_officer: {
+        Args: { _tenant_id: string; _user_id: string }
+        Returns: boolean
+      }
       is_tenant_admin: {
         Args: { _tenant_id: string; _user_id: string }
         Returns: boolean
