@@ -73,7 +73,7 @@ export default function Layout({ children }) {
   const { isAvailable: installAvailable, isInstalled, canPrompt, isIOSSafari } = useInstallPrompt();
   const location = useLocation();
   const navigate = useNavigate();
-  const { signOut, user, profile, isAdmin, isUnitLeader, isWSFLeader, roles, leaderUnits, isTenantOwner, isTenantAdmin } = useAuth();
+  const { signOut, user, profile, isAdmin, isUnitLeader, isWSFLeader, isReportsOfficer, roles, leaderUnits, isTenantOwner, isTenantAdmin } = useAuth();
   const { currentTenant, tenantId, tenantSlug, tenantMemberships, switchTenant } = useTenant();
   const queryClient = useQueryClient();
   useMessageAlerts();
