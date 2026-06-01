@@ -1,79 +1,26 @@
-## Reports Officer Role
+# Fix "pending" duplicates in System Logs → Emails
 
-Add a new app-level role that can view and generate comprehensive reports across all modules, **read-only** — no edit/create/delete of underlying records.
+## Diagnosis
 
-### 1. New role: `reports_officer`
+The `email_send_log` table is append-only: every email writes a `pending` row on enqueue, then a second row (`sent`/`failed`/`dlq`/`suppressed`) when the dispatcher finishes. The two rows share a `message_id`.
 
-- Add `'reports_officer'` to the `app_role` enum.
-- Assignable by tenant owners/admins from **User Management** (alongside existing role checkboxes).
-- Hidden from public/self-signup (same pattern as other privileged roles per existing Role Assignment UI rule).
+Checked the DB: in the last week, every "pending" entry has a matching "sent" row 1–5 seconds later. **No emails are actually stuck.** It's purely a display problem.
 
-### 2. Permissions model
+`src/pages/SystemLogs.jsx` queries `email_send_log` without deduplicating, so each email is rendered twice and the Pending stat card is always inflated.
 
-Add a helper:
-```sql
-public.is_reports_officer(_user_id uuid, _tenant_id uuid) returns boolean
-```
+## Fix
 
-Extend RLS **SELECT** policies on these tables so a reports_officer in the same tenant can read all rows (tenant-scoped):
-- `members`, `member_status_history`
-- `attendance_sessions`, `attendance_records`, `unit_meeting_*`
-- `church_attendance_*`
-- `followups`, `followup_referrals`, `followup_referral_updates`
-- `events`, `event_registrations`
-- `announcements`, `sms_log`, `email_log`, `notifications`
-- `pastoral_care_*`, `prayer_requests`
-- `transport_bookings`
-- `unit_tasks`, `unit_task_assignments`, `unit_task_comments`
-- `wsf_centres`, `wsf_attendance_*` (Home Cell)
-- `exam_sessions`, `exam_attempts`, `course_registrations`, `exam_subjects` (Bible School)
-- `training_*` (BFC/BCC/LCC/LDC)
-- `member_feed` / journey-related views
+Edit `src/pages/SystemLogs.jsx` only:
 
-No INSERT/UPDATE/DELETE grants — purely read.
+1. In the email query (around line 113), keep fetching the raw rows (we still need the time window + filters), then collapse to the latest row per `message_id` in JS before computing stats and rendering the table:
+   - Group by `message_id` (fall back to `id` when null).
+   - Keep the row with the most recent `created_at` per group.
+2. Apply the existing status filter **after** dedup, so selecting "Pending" only shows emails whose *latest* status is still pending (i.e. genuinely in-queue), not every email ever sent.
+3. Recompute `stats` (total / sent / failed / pending / suppressed) from the deduped list so the cards match reality.
+4. Leave everything else (auth logs, edge logs, other tabs) untouched.
 
-### 3. Reports Hub page (`/t/:slug/reports`)
+## Out of scope
 
-A single hub the reports_officer (and admins/owners) land on, with one card per module. Each card opens the **existing** report dialog/view for that module — we are not rebuilding report logic, just centralising access.
-
-Modules surfaced (reusing existing components):
-- Analytics → `pages/Analytics.jsx` (Member Milestone, Status Conversion, Announcement, Absence)
-- Church Attendance → `pages/ChurchAttendance.jsx` report view
-- Unit Attendance → existing attendance report in `Attendance.jsx`
-- Home Cell → WSF attendance report in `WSFManagement.jsx`
-- Members → directory export + Member Journey timeline
-- Follow-ups → `FollowupReportDialog`
-- Sign-Posts → existing sign-post inbox report
-- Prayer Requests / Pastoral Care → existing pastoral care reports
-- Events → registrations export from `RegistrationsDialog`
-- Communications → announcement + SMS history reports
-- Transportation → existing transport report
-- Training Reports → `pages/TrainingReports.jsx`
-- Unit Tasks → `UnitTaskReportDialog`
-- Bible School → `CourseResultsView` + session reports
-
-Each card: icon, title, short description, "Open report" button. Filterable by date range at the top (passed as default into each dialog where supported).
-
-### 4. Navigation & gating
-
-- Add **Reports** sidebar entry (in `AppLayout.jsx`) visible to: `super_admin`, tenant owner/admin, `reports_officer`.
-- Route registered in `App.jsx` as `/t/:tenantSlug/reports`.
-- `useAuth` exposes `isReportsOfficer` derived from `roles.includes('reports_officer')`.
-- Where existing report dialogs are currently gated by `isAdmin`, widen the check to `isAdmin || isReportsOfficer`.
-
-### 5. Audit
-
-- Every report opened/exported by a reports_officer is logged via existing `logAudit` util (`action: 'report_view'` / `'report_export'`, entity = module key). Provides accountability since the role sees cross-member data.
-
-### Out of scope
-- Building any new reports — only centralising and granting access to what exists.
-- Editing data, sending messages, or any write operations from this role.
-- Cross-tenant reporting (role is strictly tenant-scoped).
-
-### Files
-
-**Migration (new):** add enum value, `is_reports_officer()` helper, extend SELECT policies on the tables listed above, audit-log entries.
-
-**New:** `src/pages/Reports.jsx`, `src/components/reports/ReportCard.jsx`.
-
-**Edited:** `src/App.jsx` (route), `src/components/AppLayout.jsx` (nav), `src/hooks/useAuth.jsx` (`isReportsOfficer`), `src/pages/UserManagement.jsx` + `src/components/users/...` (role assignment UI), report dialog gates across the modules listed.
+- No DB / migration changes.
+- No edge function changes.
+- No changes to how emails are logged or processed — the queue is working correctly.
