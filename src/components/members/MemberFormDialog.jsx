@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Info, Shield, ShieldCheck, UserCog, Globe, User, Link2, Unlink2 } from "lucide-react";
+import { Loader2, Info, Shield, ShieldCheck, UserCog, Globe, User, Link2, Unlink2, FileText } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -760,9 +760,10 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
             <div>
               <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">User Roles</h3>
               {(() => {
-                const ROLES = ["admin", "unit_leader", "wsf_leader"];
-                const roleIcons = { super_admin: ShieldCheck, admin: Shield, unit_leader: UserCog, wsf_leader: Globe, member: User };
-                const roleColors = { super_admin: "bg-destructive/10 text-destructive", admin: "bg-primary/10 text-primary", unit_leader: "bg-accent/10 text-accent", wsf_leader: "bg-chart-3/10 text-chart-3", member: "bg-muted text-muted-foreground" };
+                const ROLES = ["admin", "unit_leader", "wsf_leader", "reports_officer"];
+                const roleIcons = { super_admin: ShieldCheck, admin: Shield, unit_leader: UserCog, wsf_leader: Globe, reports_officer: FileText, member: User };
+                const roleColors = { super_admin: "bg-destructive/10 text-destructive", admin: "bg-primary/10 text-primary", unit_leader: "bg-accent/10 text-accent", wsf_leader: "bg-chart-3/10 text-chart-3", reports_officer: "bg-chart-2/10 text-chart-2", member: "bg-muted text-muted-foreground" };
+                const roleLabel = (r) => r === "wsf_leader" ? "Home Cell Leader" : r === "reports_officer" ? "Reports Officer" : r.replace("_", " ");
                 const userRoles = memberRoles.map(r => r.role);
                 const isOwnAccount = memberUserId === currentUser?.id;
                 const hasAdminRole = userRoles.some(r => ["admin", "super_admin"].includes(r));
@@ -776,7 +777,7 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
                         <Badge className="bg-muted text-muted-foreground border-0 gap-1"><User className="h-3 w-3" /> member (default)</Badge>
                       ) : userRoles.map(r => {
                         const RoleIcon = roleIcons[r] || User;
-                        const label = r === "wsf_leader" ? "Home Cell Leader" : r.replace("_", " ");
+                        const label = roleLabel(r);
                         return <Badge key={r} className={`${roleColors[r]} border-0 gap-1`}><RoleIcon className="h-3 w-3" />{label}</Badge>;
                       })}
                     </div>
@@ -795,7 +796,7 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
                                     );
                                   }}
                                 />
-                                <span className="capitalize">{r === "wsf_leader" ? "Home Cell Leader" : r.replace("_", " ")}</span>
+                                <span className="capitalize">{roleLabel(r)}</span>
                               </label>
                             );
                           })}
