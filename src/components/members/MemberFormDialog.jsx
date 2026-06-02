@@ -796,7 +796,7 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
                                     );
                                   }}
                                 />
-                                <span className="capitalize">{r === "wsf_leader" ? "Home Cell Leader" : r.replace("_", " ")}</span>
+                                <span className="capitalize">{roleLabel(r)}</span>
                               </label>
                             );
                           })}
