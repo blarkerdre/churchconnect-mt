@@ -777,7 +777,7 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
                         <Badge className="bg-muted text-muted-foreground border-0 gap-1"><User className="h-3 w-3" /> member (default)</Badge>
                       ) : userRoles.map(r => {
                         const RoleIcon = roleIcons[r] || User;
-                        const label = r === "wsf_leader" ? "Home Cell Leader" : r.replace("_", " ");
+                        const label = roleLabel(r);
                         return <Badge key={r} className={`${roleColors[r]} border-0 gap-1`}><RoleIcon className="h-3 w-3" />{label}</Badge>;
                       })}
                     </div>
