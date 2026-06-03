@@ -55,7 +55,7 @@ export default function WSFManagement() {
     enabled: ledCentres.length > 0,
   });
 
-  if (!isAdmin && !isWSFLeader) {
+  if (!isAdmin && !isWSFLeader && !isReportsOfficer) {
     return (
       <Card className="border-0 shadow-sm">
         <CardContent className="p-8 text-center text-muted-foreground">
