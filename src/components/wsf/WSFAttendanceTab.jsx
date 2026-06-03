@@ -40,7 +40,8 @@ export default function WSFAttendanceTab({ centres }) {
 
   const ledCentres = centres.filter(c => c.leader_id && userMember?.id && c.leader_id === userMember.id);
   const isWsfLeader = ledCentres.length > 0;
-  const canAccess = isAdmin || isWsfLeader;
+  const canAccess = isAdmin || isWsfLeader || isReportsOfficer;
+  const canWrite = isAdmin || isWsfLeader;
 
   // Fetch zones for grouping
   const { data: zones = [] } = useQuery({
