@@ -10,7 +10,7 @@ import { Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 export default function WSFManagement() {
-  const { isAdmin, isWSFLeader, user } = useAuth();
+  const { isAdmin, isWSFLeader, isReportsOfficer, user } = useAuth();
   const { tenantId, scopeQuery } = useTenantQuery();
   const [selectedCentre, setSelectedCentre] = useState(null);
 
