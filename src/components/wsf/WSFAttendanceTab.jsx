@@ -17,7 +17,7 @@ import PrintReportButton from "@/components/PrintReportButton";
 import PasswordConfirmDialog from "@/components/shared/PasswordConfirmDialog";
 
 export default function WSFAttendanceTab({ centres }) {
-  const { user, isAdmin } = useAuth();
+  const { user, isAdmin, isReportsOfficer } = useAuth();
   const { tenantId, withTenant, scopeQuery } = useTenantQuery();
   const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
