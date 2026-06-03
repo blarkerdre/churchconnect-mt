@@ -38,7 +38,7 @@ export default function WSFManagement() {
     ? centres.filter(c => c.leader_id === myMember.id)
     : [];
 
-  const visibleCentres = isAdmin ? centres : ledCentres;
+  const visibleCentres = (isAdmin || isReportsOfficer) ? centres : ledCentres;
 
   const { data: memberCounts = {} } = useQuery({
     queryKey: ["wsf-member-counts", ledCentres.map(c => c.id), tenantId],
