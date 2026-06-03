@@ -370,7 +370,7 @@ export default function Analytics() {
       <TabsContent value="reports" className="space-y-6">
         {isAdmin && <MemberMilestoneReport />}
         {isAdmin && <StatusConversionReport />}
-        <FeedbackSummary />
+        {isAdmin && <FeedbackSummary />}
       </TabsContent>
 
       {isAdmin && (
