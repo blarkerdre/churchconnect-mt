@@ -239,9 +239,11 @@ export default function WSFAttendanceTab({ centres }) {
             </>
           )}
         </div>
-        <Button size="lg" className="bg-primary text-primary-foreground shadow-md font-semibold px-6" onClick={() => openNew()}>
-          <Plus className="h-5 w-5 mr-2" /> Record Attendance
-        </Button>
+        {canWrite && (
+          <Button size="lg" className="bg-primary text-primary-foreground shadow-md font-semibold px-6" onClick={() => openNew()}>
+            <Plus className="h-5 w-5 mr-2" /> Record Attendance
+          </Button>
+        )}
       </div>
 
       {canAccess && (
