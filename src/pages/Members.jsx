@@ -27,10 +27,10 @@ const statusColors = {
 };
 
 export default function Members() {
-  const { isAdmin, isUnitLeader, isWSFLeader, user, loading: authLoading, myMember, leaderUnits } = useAuth();
+  const { isAdmin, isUnitLeader, isWSFLeader, isReportsOfficer, user, loading: authLoading, myMember, leaderUnits } = useAuth();
   const { tenantId, scopeQuery } = useTenantQuery();
   const isLeader = isUnitLeader || isWSFLeader;
-  const viewOnly = isLeader && !isAdmin;
+  const viewOnly = (isLeader || isReportsOfficer) && !isAdmin;
   const unitLeaderReadOnly = isUnitLeader && !isAdmin;
   const [search, setSearch] = useState("");
   const [filters, setFilters] = useState({ status: "all", unit: "all", dateFrom: null, dateTo: null, account: "all" });
@@ -167,9 +167,9 @@ export default function Members() {
           
         </div>
         <div className="grid grid-cols-4 sm:flex sm:flex-wrap items-center gap-2">
-          {(isAdmin || (isUnitLeader && !unitLeaderReadOnly)) && (
+          {(isAdmin || (isUnitLeader && !unitLeaderReadOnly) || isReportsOfficer) && (
             <>
-              {canQrCode && (
+              {canQrCode && !isReportsOfficer && (
                 <Button variant="outline" size="sm" onClick={() => setQrOpen(true)} className="gap-1.5">
                   <QrCode className="h-4 w-4" /><span className="hidden sm:inline">QR Code</span>
                 </Button>
@@ -179,12 +179,12 @@ export default function Members() {
                   <Download className="h-4 w-4" /><span className="hidden sm:inline">CSV</span>
                 </Button>
               )}
-              {canBulkImport && (
+              {canBulkImport && !isReportsOfficer && (
                 <Button variant="outline" size="sm" onClick={() => setImportOpen(true)} className="gap-1.5">
                   <Upload className="h-4 w-4" /><span className="hidden sm:inline">Import CSV</span>
                 </Button>
               )}
-              {canAddMember && (
+              {canAddMember && !isReportsOfficer && (
                 <Button onClick={openNew} className="bg-primary hover:bg-primary/90 w-full sm:w-auto">
                   <Plus className="h-4 w-4 mr-2" /> Register Member
                 </Button>

@@ -17,7 +17,7 @@ const AuthContext = createContext({
   user: null, profile: null, roles: [], loading: true, leaderUnits: [], leaderCentres: [], myMember: null,
   tenantMemberships: [],
   signUp: noop, signIn: noop, signOut: noop, resetPassword: noop, updatePassword: noop,
-  isAdmin: false, isUnitLeader: false, isWSFLeader: false, isMember: false, isReportsOfficer: false,
+  isAdmin: false, isUnitLeader: false, isWSFLeader: false, isMember: false, isReportsOfficer: false, isReadOnly: false,
   isTenantOwner: false, isTenantAdmin: false,
   refreshUser: () => {},
 });
@@ -192,13 +192,15 @@ export function AuthProvider({ children }) {
   const isUnitLeader = roles.includes("unit_leader");
   const isWSFLeader = roles.includes("wsf_leader");
   const isMember = roles.includes("member");
+  // Reports Officer is read-only unless they ALSO hold a write-capable role
+  const isReadOnly = isReportsOfficer && !isAdmin && !isUnitLeader && !isWSFLeader;
 
   return (
     <AuthContext.Provider
        value={{
         user, profile, roles, loading, dataLoaded, leaderUnits, leaderCentres, myMember, tenantMemberships,
         signUp, signIn, signOut, resetPassword, updatePassword,
-        isAdmin, isUnitLeader, isWSFLeader, isMember, isReportsOfficer,
+        isAdmin, isUnitLeader, isWSFLeader, isMember, isReportsOfficer, isReadOnly,
         isTenantOwner, isTenantAdmin,
         refreshUser: () => user && fetchUserData(user.id, user.email),
       }}
