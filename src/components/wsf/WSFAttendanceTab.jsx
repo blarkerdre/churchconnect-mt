@@ -17,7 +17,7 @@ import PrintReportButton from "@/components/PrintReportButton";
 import PasswordConfirmDialog from "@/components/shared/PasswordConfirmDialog";
 
 export default function WSFAttendanceTab({ centres }) {
-  const { user, isAdmin } = useAuth();
+  const { user, isAdmin, isReportsOfficer } = useAuth();
   const { tenantId, withTenant, scopeQuery } = useTenantQuery();
   const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -40,7 +40,8 @@ export default function WSFAttendanceTab({ centres }) {
 
   const ledCentres = centres.filter(c => c.leader_id && userMember?.id && c.leader_id === userMember.id);
   const isWsfLeader = ledCentres.length > 0;
-  const canAccess = isAdmin || isWsfLeader;
+  const canAccess = isAdmin || isWsfLeader || isReportsOfficer;
+  const canWrite = isAdmin || isWsfLeader;
 
   // Fetch zones for grouping
   const { data: zones = [] } = useQuery({
@@ -52,7 +53,7 @@ export default function WSFAttendanceTab({ centres }) {
     },
   });
   // Determine which centres to show reports for
-  const visibleCentreIds = isAdmin ? centres.map(c => c.id) : ledCentres.map(c => c.id);
+  const visibleCentreIds = (isAdmin || isReportsOfficer) ? centres.map(c => c.id) : ledCentres.map(c => c.id);
 
   const { data: reports = [], isLoading } = useQuery({
     queryKey: ["wsf-attendance-reports", tenantId, visibleCentreIds],
@@ -238,9 +239,11 @@ export default function WSFAttendanceTab({ centres }) {
             </>
           )}
         </div>
-        <Button size="lg" className="bg-primary text-primary-foreground shadow-md font-semibold px-6" onClick={() => openNew()}>
-          <Plus className="h-5 w-5 mr-2" /> Record Attendance
-        </Button>
+        {canWrite && (
+          <Button size="lg" className="bg-primary text-primary-foreground shadow-md font-semibold px-6" onClick={() => openNew()}>
+            <Plus className="h-5 w-5 mr-2" /> Record Attendance
+          </Button>
+        )}
       </div>
 
       {canAccess && (
@@ -355,12 +358,16 @@ export default function WSFAttendanceTab({ centres }) {
                       <TableCell className="text-center">{r.testimonies}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-1">
-                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(r)}>
-                            <Edit className="h-3.5 w-3.5" />
-                          </Button>
-                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setDeleteTarget(r)}>
-                            <Trash2 className="h-3.5 w-3.5 text-destructive" />
-                          </Button>
+                          {canWrite && (
+                            <>
+                              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(r)}>
+                                <Edit className="h-3.5 w-3.5" />
+                              </Button>
+                              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setDeleteTarget(r)}>
+                                <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                              </Button>
+                            </>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>

@@ -10,7 +10,7 @@ import { Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 export default function WSFManagement() {
-  const { isAdmin, isWSFLeader, user } = useAuth();
+  const { isAdmin, isWSFLeader, isReportsOfficer, user } = useAuth();
   const { tenantId, scopeQuery } = useTenantQuery();
   const [selectedCentre, setSelectedCentre] = useState(null);
 
@@ -38,7 +38,7 @@ export default function WSFManagement() {
     ? centres.filter(c => c.leader_id === myMember.id)
     : [];
 
-  const visibleCentres = isAdmin ? centres : ledCentres;
+  const visibleCentres = (isAdmin || isReportsOfficer) ? centres : ledCentres;
 
   const { data: memberCounts = {} } = useQuery({
     queryKey: ["wsf-member-counts", ledCentres.map(c => c.id), tenantId],
@@ -55,7 +55,7 @@ export default function WSFManagement() {
     enabled: ledCentres.length > 0,
   });
 
-  if (!isAdmin && !isWSFLeader) {
+  if (!isAdmin && !isWSFLeader && !isReportsOfficer) {
     return (
       <Card className="border-0 shadow-sm">
         <CardContent className="p-8 text-center text-muted-foreground">
