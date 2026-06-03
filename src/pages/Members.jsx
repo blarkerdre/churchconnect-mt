@@ -27,10 +27,10 @@ const statusColors = {
 };
 
 export default function Members() {
-  const { isAdmin, isUnitLeader, isWSFLeader, user, loading: authLoading, myMember, leaderUnits } = useAuth();
+  const { isAdmin, isUnitLeader, isWSFLeader, isReportsOfficer, user, loading: authLoading, myMember, leaderUnits } = useAuth();
   const { tenantId, scopeQuery } = useTenantQuery();
   const isLeader = isUnitLeader || isWSFLeader;
-  const viewOnly = isLeader && !isAdmin;
+  const viewOnly = (isLeader || isReportsOfficer) && !isAdmin;
   const unitLeaderReadOnly = isUnitLeader && !isAdmin;
   const [search, setSearch] = useState("");
   const [filters, setFilters] = useState({ status: "all", unit: "all", dateFrom: null, dateTo: null, account: "all" });
