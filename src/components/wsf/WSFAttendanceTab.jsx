@@ -53,7 +53,7 @@ export default function WSFAttendanceTab({ centres }) {
     },
   });
   // Determine which centres to show reports for
-  const visibleCentreIds = isAdmin ? centres.map(c => c.id) : ledCentres.map(c => c.id);
+  const visibleCentreIds = (isAdmin || isReportsOfficer) ? centres.map(c => c.id) : ledCentres.map(c => c.id);
 
   const { data: reports = [], isLoading } = useQuery({
     queryKey: ["wsf-attendance-reports", tenantId, visibleCentreIds],
