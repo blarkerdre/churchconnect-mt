@@ -125,6 +125,16 @@ function TrainingRoute({ children }) {
   return children;
 }
 
+function TrainingReportRoute({ children }) {
+  const { isAdmin, isUnitLeader, isReportsOfficer, roles, loading } = useAuth();
+  const { tenantSlug } = useParams();
+  const { isMemberOfUnit: isTrainingRepMember, isLoading: memberLoading } = useUnitMembership("Training Rep");
+  if (loading || memberLoading) return null;
+  const isSuperAdmin = roles.includes("super_admin");
+  if (!isAdmin && !isSuperAdmin && !isUnitLeader && !isTrainingRepMember && !isReportsOfficer) return <Navigate to={tenantSlug ? `/t/${tenantSlug}` : "/"} replace />;
+  return children;
+}
+
 function FeatureGate({ path, children }) {
   const { roles, loading } = useAuth();
   const { tenantSlug } = useParams();
