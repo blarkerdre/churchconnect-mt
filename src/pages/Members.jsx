@@ -223,9 +223,9 @@ export default function Members() {
                   <th className="text-left p-3 sm:p-4 font-medium text-muted-foreground">Name</th>
                   <th className="text-left p-3 sm:p-4 font-medium text-muted-foreground hidden sm:table-cell">Contact</th>
                   {(isAdmin || viewOnly) && <th className="text-left p-3 sm:p-4 font-medium text-muted-foreground hidden md:table-cell">Church Unit</th>}
-                   <th className="text-left p-3 sm:p-4 font-medium text-muted-foreground">Status</th>
+                  <th className="text-left p-3 sm:p-4 font-medium text-muted-foreground">Status</th>
                    {isAdmin && <th className="text-center p-3 sm:p-4 font-medium text-muted-foreground hidden sm:table-cell">Account</th>}
-                  <th className="text-right p-3 sm:p-4 font-medium text-muted-foreground">Actions</th>
+                  {!(isReportsOfficer && !isAdmin) && <th className="text-right p-3 sm:p-4 font-medium text-muted-foreground">Actions</th>}
                 </tr>
               </thead>
               <tbody>
