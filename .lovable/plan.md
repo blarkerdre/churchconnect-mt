@@ -1,34 +1,38 @@
-## Goal
-The dialog opens, members are selected, but clicking **Create Task** appears to do nothing — no toast, no dialog close, no row in `unit_tasks`. We need to surface what's actually happening.
+## What I found
 
-## Likely causes (ranked)
-1. The submit promise is hanging (e.g. `tenantId` is `null` so RLS silently rejects but the await never returns an error in the expected shape).
-2. `user` is `undefined` at the moment of click → `user.id` throws synchronously, swallowed by something upstream.
-3. An exception in `logAudit` or `supabase.functions.invoke(...)` is happening *before* `toast.success` (unlikely, but worth ruling out).
-4. RLS rejects but the error message doesn't match `/row-level security/i` so a generic message *should* toast — confirm Toaster is mounted on this route.
+- No `unit_tasks` or `unit_task_assignments` rows currently exist in the database, so task creation is not reaching a successful save.
+- The table grants and current access policies are present, but the UI currently performs task creation in multiple client-side steps:
+  1. create `unit_tasks`
+  2. create `unit_task_assignments`
+  3. trigger notifications
+- That makes the flow fragile: if any client-side insert, permission check, assignment row, or notification call fails, the user can experience “Create Task” doing nothing or rolling back.
+- The notification function has no recent logs, which strongly suggests it is not being reached after the button click.
 
-## Changes (only to `src/components/unitTasks/UnitTaskFormDialog.jsx`)
+## Plan
 
-1. **Guard preconditions explicitly** at the top of `submit`:
-   - If `!tenantId` → `toast.error("No tenant context — reload the page")` and return.
-   - If `!user?.id` → `toast.error("Not signed in")` and return.
+1. **Move creation into one backend action**
+   - Add a dedicated `create-unit-task` backend function.
+   - It will validate the signed-in user is tenant owner/admin/super admin or a leader for the selected unit.
+   - It will create the task and assignment rows in one controlled flow using backend privileges after validation.
+   - It will return clear errors if tenant, permission, title, unit, or selected members are invalid.
 
-2. **Add diagnostic logs** around each await so we can see in the browser console exactly where it stalls:
-   ```
-   console.log("[unit-task] submit start", { tenantId, userId: user?.id, unit: form.unit_name, count: selected.size });
-   console.log("[unit-task] inserting task", payload);
-   console.log("[unit-task] task created", task);
-   console.log("[unit-task] inserting assignments", rows.length);
-   ```
+2. **Update the dialog submit handler**
+   - Replace the two direct table inserts with a single function call.
+   - Keep the visible loading state on the Create Task button.
+   - Show a success toast when the task is created.
+   - Show a clear error toast if creation fails.
 
-3. **Surface every error path with a visible toast** — currently the outer catch shows `err.message`, but if `err` is a PostgrestError object without `message`, it shows nothing useful. Use `err?.message || err?.error_description || JSON.stringify(err)`.
+3. **Ensure members are notified**
+   - After successful task creation, trigger the existing `notify-unit-task-assignment` flow from the backend side.
+   - Keep notification failure best-effort so a task is not lost if email/SMS/push has an issue.
+   - In-app notifications will be created for selected members who have login accounts; email/SMS can still use member contact details where available.
 
-4. **Move `logAudit` and the notify invoke inside a `try { } catch` so a failure there can't break the success flow** (already fire-and-forget for invoke, but `logAudit` is awaited-ish — wrap defensively).
+4. **Add safe diagnostics**
+   - Log key backend steps: request received, permission result, task created, assignments created, notification triggered.
+   - Do not log private message content or secrets.
 
-5. **Confirm `<Toaster />` (Sonner) is mounted globally** — quick read of `src/App.jsx` to verify. If missing on this route, toasts would never appear, which would perfectly explain "silently does nothing".
-
-## Verification
-After the change, you reproduce the click and share the browser console output. The logs will pinpoint the failing step, and I'll apply the precise fix (RLS, schema, or client-side) in a follow-up.
-
-## Out of scope
-No DB / RLS / edge function changes in this step — diagnose first, fix second.
+5. **Verify**
+   - Deploy the backend functions.
+   - Test creating a task as a tenant owner/admin.
+   - Confirm rows appear in `unit_tasks` and `unit_task_assignments`.
+   - Confirm notification function logs appear after task creation.
