@@ -15,7 +15,7 @@ export default function TenantFeaturesSection() {
   const { roles } = useAuth();
   const isSuperAdmin = roles?.includes("super_admin");
   const canManage = isSuperAdmin || isTenantOwner || isTenantAdmin;
-  const canEdit = isSuperAdmin || isTenantOwner;
+  const canEdit = false;
   const queryClient = useQueryClient();
 
   const [disabled, setDisabled] = useState([]);
@@ -81,7 +81,8 @@ export default function TenantFeaturesSection() {
       <CardContent className="space-y-1">
         {!canEdit && (
           <p className="text-xs text-muted-foreground pb-2">
-            Read-only — only the church owner can change modules.
+            Read-only — module availability is managed by the platform.
+
           </p>
         )}
         {FEATURE_MODULES.map((f) => {
