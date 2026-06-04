@@ -42,9 +42,14 @@ export default function UnitTasks() {
     enabled: !!tenantId && canLead,
     queryFn: async () => {
       if (isAdmin || isSuperAdmin) {
-        const { data, error } = await supabase.rpc("get_active_church_unit_names", { _tenant_id: tenantId });
+        const { data, error } = await supabase
+          .from("church_units")
+          .select("name")
+          .eq("tenant_id", tenantId)
+          .eq("is_active", true)
+          .order("name");
         if (error) return [];
-        return (data || []).map((r) => r.name || r.unit_name || r).filter(Boolean);
+        return (data || []).map((r) => r.name).filter(Boolean);
       }
       return leaderUnits || [];
     },
