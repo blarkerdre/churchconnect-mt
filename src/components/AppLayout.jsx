@@ -124,6 +124,7 @@ export default function Layout({ children }) {
     if (item.access === "wsf") return isAdmin || isWSFLeader || isReportsOfficer;
     if (item.access === "followup_member") return isAdmin || isFollowupUnit || isFollowupMember || isReportsOfficer;
     if (item.access === "training") return isAdmin || isSuperAdmin || isTrainingAccess || isReportsOfficer;
+    if (item.access === "training_report") return isAdmin || isSuperAdmin || isUnitLeader || isTrainingRepMember || isReportsOfficer;
     return false;
   });
 
