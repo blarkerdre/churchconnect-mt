@@ -1,4 +1,5 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { validateOutboundUrl, validateMethod } from "../_shared/url-validator.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
