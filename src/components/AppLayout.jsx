@@ -110,6 +110,7 @@ export default function Layout({ children }) {
   const tenantLine2 = tenantNameParts.length > 2 ? tenantNameParts.slice(2).join(" ") : "";
   const tenantLogoUrl = currentTenant?.logo_url || null;
   const { isMemberOfUnit: isFollowupMember } = useUnitMembership("Follow-up");
+  const { isMemberOfUnit: isTrainingRepMember } = useUnitMembership("Training Rep");
 
   // Filter nav items based on role and disabled features
   const navItems = allNavItems.filter(item => {
