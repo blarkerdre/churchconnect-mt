@@ -72,30 +72,40 @@ export default function UnitTaskFormDialog({ open, onOpenChange, unitOptions = [
     if (!form.title.trim()) return toast.error("Title is required");
     if (!form.unit_name) return toast.error("Select a unit");
     if (selected.size === 0) return toast.error("Select at least one member");
+    if (!tenantId) return toast.error("No tenant context — reload the page");
+    if (!user?.id) return toast.error("Not signed in");
+
+    console.log("[unit-task] submit start", {
+      tenantId, userId: user.id, unit: form.unit_name, count: selected.size,
+    });
+
     setSaving(true);
     let createdTaskId = null;
     try {
+      const payload = {
+        tenant_id: tenantId,
+        unit_name: form.unit_name,
+        title: form.title.trim(),
+        description: form.description.trim() || null,
+        due_date: form.due_date || null,
+        priority: form.priority,
+        status: "Open",
+        created_by: user.id,
+      };
+      console.log("[unit-task] inserting task", payload);
       const { data: task, error: tErr } = await supabase
         .from("unit_tasks")
-        .insert({
-          tenant_id: tenantId,
-          unit_name: form.unit_name,
-          title: form.title.trim(),
-          description: form.description.trim() || null,
-          due_date: form.due_date || null,
-          priority: form.priority,
-          status: "Open",
-          created_by: user.id,
-        })
+        .insert(payload)
         .select()
         .single();
       if (tErr) {
-        console.error("Unit task create failed", tErr);
+        console.error("[unit-task] task insert failed", tErr);
         if (/row-level security/i.test(tErr.message || "")) {
           throw new Error("You don't have permission to create a task for this unit.");
         }
         throw tErr;
       }
+      console.log("[unit-task] task created", task);
       createdTaskId = task.id;
 
       const rows = members
@@ -107,29 +117,36 @@ export default function UnitTaskFormDialog({ open, onOpenChange, unitOptions = [
           user_id: m.user_id || null,
           status: "Pending",
         }));
+      console.log("[unit-task] inserting assignments", rows.length);
       const { error: aErr } = await supabase.from("unit_task_assignments").insert(rows);
       if (aErr) {
-        console.error("Unit task assignments failed", aErr);
-        // Roll back orphan task
+        console.error("[unit-task] assignments failed", aErr);
         await supabase.from("unit_tasks").delete().eq("id", task.id).eq("tenant_id", tenantId);
         createdTaskId = null;
         throw aErr;
       }
+      console.log("[unit-task] assignments inserted");
 
-      // Notify assignees (fire-and-forget)
-      supabase.functions.invoke("notify-unit-task-assignment", {
-        body: { task_id: task.id, tenant_id: tenantId },
-      }).catch((e) => console.warn("notify-unit-task-assignment failed", e));
+      try {
+        supabase.functions.invoke("notify-unit-task-assignment", {
+          body: { task_id: task.id, tenant_id: tenantId },
+        }).catch((e) => console.warn("[unit-task] notify failed", e));
+      } catch (e) { console.warn("[unit-task] notify threw", e); }
 
-      logAudit("unit_task.created", "unit_task", task.id, {
-        unit_name: form.unit_name, assignees: rows.length, title: task.title,
-      }, tenantId);
+      try {
+        logAudit("unit_task.created", "unit_task", task.id, {
+          unit_name: form.unit_name, assignees: rows.length, title: task.title,
+        }, tenantId);
+      } catch (e) { console.warn("[unit-task] logAudit threw", e); }
 
       toast.success(`Task assigned to ${rows.length} member${rows.length === 1 ? "" : "s"}`);
       onSaved?.();
       onOpenChange(false);
     } catch (err) {
-      toast.error(err.message || "Failed to create task");
+      console.error("[unit-task] submit error", err);
+      const msg = err?.message || err?.error_description || err?.details
+        || (typeof err === "string" ? err : JSON.stringify(err));
+      toast.error(msg || "Failed to create task");
     } finally {
       setSaving(false);
     }
