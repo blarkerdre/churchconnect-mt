@@ -1,6 +1,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { checkSmsQuota, QuotaExceededError } from "../_shared/sms-quota.ts";
 import { writeAudit } from "../_shared/audit.ts";
+import { validateOutboundUrl, validateMethod } from "../_shared/url-validator.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
