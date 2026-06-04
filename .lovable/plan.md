@@ -1,28 +1,33 @@
 ## Problem
 
-Admins cannot create new unit tasks. RLS on `unit_tasks` and `unit_task_assignments` currently only allows:
-- `super_admin` (app role)
-- `tenant_memberships.role in ('owner','admin')`
-- unit leaders for their unit
+The "New Task" button on Unit Tasks is disabled for admins because `allUnits` is empty.
 
-Users who are admins via the app-level `user_roles` table (role = `'admin'`) — but not also a tenant_memberships owner/admin — fail the `WITH CHECK` and get blocked on insert. This is the same bridge pattern used elsewhere in the project (per the Role Bridging memory).
+Root cause: `src/pages/UnitTasks.jsx` calls the RPC with the wrong parameter name:
+
+```js
+supabase.rpc("get_active_church_unit_names", { _tenant_id: tenantId })
+```
+
+The actual function signature is `get_active_church_unit_names(_tenant_slug text)`. The mismatched parameter makes the RPC error out; the catch returns `[]`, so `allUnits` stays empty and the button stays disabled.
 
 ## Fix
 
-Update RLS policies on `unit_tasks` and `unit_task_assignments` so an app-level admin is treated the same as a tenant admin/owner. No UI changes needed — `UnitTasks.jsx` and `UnitTaskFormDialog.jsx` already correctly gate creation to admins and unit leaders, and pass the right `unit_name` + members.
+In `src/pages/UnitTasks.jsx`, replace the RPC call with a direct, tenant‑scoped query against `church_units` (consistent with how units are listed elsewhere in the app and avoids any slug/uuid coupling):
 
-### Migration
+```js
+const { data, error } = await supabase
+  .from("church_units")
+  .select("name")
+  .eq("tenant_id", tenantId)
+  .eq("is_active", true)
+  .order("name");
+if (error) return [];
+return (data || []).map((r) => r.name).filter(Boolean);
+```
 
-For each of these 8 policies, add `has_role(auth.uid(), 'admin'::app_role)` as an additional OR branch:
-
-- `unit_tasks_insert` (WITH CHECK) — keep the `created_by = auth.uid()` guard
-- `unit_tasks_select`, `unit_tasks_update`, `unit_tasks_delete`
-- `uta_insert` (WITH CHECK)
-- `uta_select`, `uta_update`, `uta_delete`
-
-The existing unit-leader and tenant-membership branches remain untouched, so unit leaders continue to only see/manage their own units' tasks.
+Leave the non-admin branch (`return leaderUnits || []`) as-is.
 
 ## Out of scope
 
-- No changes to the form UI, member filtering, or the unit dropdown — those already enforce the rule that admins see all units and leaders see only theirs.
-- No changes to assignment status flows.
+- No RLS / migration changes — the previous migration already fixed the admin insert permission.
+- No changes to the form, member filtering, or report dialog.
