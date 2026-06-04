@@ -1,29 +1,36 @@
-## Goal
-Lock down Training Report (and only Training Report — Church Attendance left as-is) so it is visible to: Super Admins, Admins, any Unit Leader, and members of the **Training Rep** unit. Reports Officers retain read-only access.
+# Reissue Member Certificate
 
-## Frontend
+Allow admins / unit leaders to regenerate an already-issued certificate (e.g. after a name correction, template update, or lost PNG) without manually deleting the existing record.
 
-**`src/App.jsx` — new `TrainingReportRoute` guard** (mirrors `FollowupRoute`):
-- Uses `useUnitMembership("Training Rep")` plus `isAdmin / isSuperAdmin / isUnitLeader / isReportsOfficer`.
-- Redirects to tenant root if none match.
-- Wrap only the `/training-reports` route with it (keep `/church-attendance` on existing `TrainingRoute`).
+## UX — `IssueCertificateDialog.jsx`
 
-**`src/components/AppLayout.jsx`** — sidebar visibility:
-- Add a new access tag `training_report` for the Training Report nav item (keep Church Attendance on `training`).
-- Call `useUnitMembership("Training Rep")` to get `isTrainingRepMember`.
-- Visibility rule: `isAdmin || isSuperAdmin || isUnitLeader || isTrainingRepMember || isReportsOfficer`.
+Each row in the existing "Completed Trainings" list gets two icon actions:
+- **Download** — opens the existing certificate PNG in a new tab (signed URL).
+- **Reissue** — opens a small confirm prompt ("Regenerate certificate for {training}? The existing certificate number will be kept and the PDF/PNG re-emailed to the member.") and calls the edge function in reissue mode.
 
-## Backend (RLS on `public.training_reports`)
+The "Issue New Certificate" section is unchanged — disabled options for already-issued trainings stay disabled (reissue is the path for those).
 
-Single migration replacing the two existing policies:
+After a successful reissue, the same toast pattern is used: "Certificate {number} re-issued and emailed."
 
-- `Authorized users can view training reports` (SELECT):
-  `is_admin(auth.uid(), tenant_id)` OR `has_role(auth.uid(), 'super_admin')` OR `has_role(auth.uid(), 'unit_leader', tenant_id)` OR `has_role(auth.uid(), 'reports_officer', tenant_id)` OR `user_is_unit_member(auth.uid(), 'Training Rep', tenant_id)`.
-- `Authorized users can manage training reports` (ALL):
-  Same as above minus `reports_officer` (read-only). USING + WITH CHECK identical.
+## Backend — `supabase/functions/issue-certificate/index.ts`
 
-Reuses the existing `user_is_unit_member` SECURITY DEFINER helper (case-insensitive, trimmed, comma-split on `members.church_unit`) already added in a prior migration.
+Accept a new optional flag `reissue: true` in the request body.
+
+When `reissue` is true:
+1. Require the existing `training_completions` row (member + training_type + tenant). If missing → 404.
+2. Keep the original `certificate_number` and `completion_date` (unless a new `completion_date` is supplied).
+3. Re-render the SVG → PNG using the current template, upload to the same `filePath` with `upsert: true` (already the case).
+4. UPDATE the existing row (refresh `certificate_url`, `notes` if provided, `updated_at`, `issued_by = caller`). Do NOT insert a new row, do NOT bump the duplicate check.
+5. Re-send the certificate email if the member has an email (same flow as initial issue).
+6. Write an audit log entry with action `certificate.reissued`.
+
+When `reissue` is false / omitted → existing behaviour (409 on duplicate) is preserved.
+
+Authorization is unchanged: admin or unit_leader in the tenant.
 
 ## Out of scope
-- No changes to Church Attendance access.
-- No new unit auto-creation — relies on the tenant already having a unit named "Training Rep" (case-insensitive match) and members having it in their `church_unit`.
+
+- No new DB columns, no schema migration.
+- No bulk reissue.
+- No version history of past PNGs (file is overwritten in storage).
+- Certificate number is preserved — not regenerated.

@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Award, CheckCircle2 } from "lucide-react";
+import { Loader2, Award, CheckCircle2, RotateCw, Download } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
@@ -29,6 +29,7 @@ export default function IssueCertificateDialog({ open, onOpenChange, member }) {
   const [trainingType, setTrainingType] = useState("");
   const [completionDate, setCompletionDate] = useState(new Date().toISOString().split("T")[0]);
   const [notes, setNotes] = useState("");
+  const [reissuingId, setReissuingId] = useState(null);
 
   // Fetch existing completions for this member
   const { data: completions = [] } = useQuery({
@@ -102,6 +103,50 @@ export default function IssueCertificateDialog({ open, onOpenChange, member }) {
     },
   });
 
+  const reissueMutation = useMutation({
+    mutationFn: async (completion) => {
+      setReissuingId(completion.id);
+      const { data, error } = await supabase.functions.invoke("issue-certificate", {
+        body: {
+          member_id: member.id,
+          training_type: completion.training_type,
+          tenant_id: tenantId,
+          reissue: true,
+        },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      return data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["training-completions"] });
+      toast({
+        title: "Certificate reissued",
+        description: `Certificate ${data.certificate_number} has been regenerated${member.email ? " and emailed" : ""}.`,
+      });
+      setReissuingId(null);
+    },
+    onError: (err) => {
+      setReissuingId(null);
+      toast({ title: "Reissue failed", description: err.message, variant: "destructive" });
+    },
+  });
+
+  const handleDownload = async (completion) => {
+    if (!completion.certificate_url) {
+      toast({ title: "No file available", description: "Try reissuing the certificate.", variant: "destructive" });
+      return;
+    }
+    const { data, error } = await supabase.storage
+      .from("church-documents")
+      .createSignedUrl(completion.certificate_url, 60 * 5, { download: `${completion.certificate_number}.png` });
+    if (error || !data?.signedUrl) {
+      toast({ title: "Download failed", description: error?.message || "Could not generate link.", variant: "destructive" });
+      return;
+    }
+    window.open(data.signedUrl, "_blank", "noopener,noreferrer");
+  };
+
   const handleIssue = () => {
     if (!trainingType) {
       toast({ title: "Please select a training type", variant: "destructive" });
@@ -126,20 +171,51 @@ export default function IssueCertificateDialog({ open, onOpenChange, member }) {
                 Completed Trainings
               </h4>
               <div className="space-y-1.5">
-                {completions.map((c) => (
-                  <div key={c.id} className="flex items-center justify-between p-2.5 rounded-lg bg-chart-3/5">
-                    <div className="flex items-center gap-2">
-                      <CheckCircle2 className="h-4 w-4 text-chart-3" />
-                      <span className="text-sm font-medium text-foreground">{c.training_type}</span>
+                {completions.map((c) => {
+                  const isReissuing = reissuingId === c.id && reissueMutation.isPending;
+                  return (
+                    <div key={c.id} className="flex items-center justify-between gap-2 p-2.5 rounded-lg bg-chart-3/5">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <CheckCircle2 className="h-4 w-4 text-chart-3 shrink-0" />
+                        <div className="min-w-0">
+                          <div className="text-sm font-medium text-foreground truncate">{c.training_type}</div>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <span className="text-[11px] text-muted-foreground">
+                              {format(new Date(c.completion_date), "dd MMM yyyy")}
+                            </span>
+                            <Badge variant="outline" className="text-[10px]">{c.certificate_number}</Badge>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1 shrink-0">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          title="Download certificate"
+                          onClick={() => handleDownload(c)}
+                          disabled={isReissuing}
+                        >
+                          <Download className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          title="Reissue certificate"
+                          onClick={() => {
+                            if (window.confirm(`Reissue certificate for "${c.training_type}"? The certificate number (${c.certificate_number}) will be kept and the file regenerated${member.email ? " and re-emailed" : ""}.`)) {
+                              reissueMutation.mutate(c);
+                            }
+                          }}
+                          disabled={isReissuing || reissueMutation.isPending}
+                        >
+                          {isReissuing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCw className="h-4 w-4" />}
+                        </Button>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-muted-foreground">
-                        {format(new Date(c.completion_date), "dd MMM yyyy")}
-                      </span>
-                      <Badge variant="outline" className="text-[10px]">{c.certificate_number}</Badge>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}
