@@ -127,18 +127,31 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Tenant-scoped role checks: caller must be admin OR unit_leader within this tenant
+    // Tenant-scoped role checks: caller must be admin OR a unit_leader assigned to the "Training Rep" unit within this tenant
     const { data: isAdminResult } = await supabase.rpc("is_admin", { _user_id: userId, _tenant_id: tenant_id });
-    const { data: isLeaderResult } = await supabase.rpc("has_role", {
-      _user_id: userId,
-      _role: "unit_leader",
-      _tenant_id: tenant_id,
-    });
-    if (!isAdminResult && !isLeaderResult) {
-      return new Response(JSON.stringify({ error: "Forbidden" }), {
-        status: 403,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+    let isTrainingRepLeader = false;
+    if (!isAdminResult) {
+      const { data: isLeaderResult } = await supabase.rpc("has_role", {
+        _user_id: userId,
+        _role: "unit_leader",
+        _tenant_id: tenant_id,
       });
+      if (isLeaderResult) {
+        const { data: assignment } = await supabase
+          .from("unit_leader_assignments")
+          .select("id")
+          .eq("user_id", userId)
+          .eq("tenant_id", tenant_id)
+          .ilike("unit_name", "Training Rep")
+          .maybeSingle();
+        isTrainingRepLeader = !!assignment;
+      }
+    }
+    if (!isAdminResult && !isTrainingRepLeader) {
+      return new Response(
+        JSON.stringify({ error: "Only admins and the Training Rep unit leader can issue certificates" }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
     // Check existing completion (tenant-scoped)
