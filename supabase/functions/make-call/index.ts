@@ -1,4 +1,5 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { validateOutboundUrl, validateMethod } from "../_shared/url-validator.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -148,10 +149,22 @@ Deno.serve(async (req) => {
         headers[customConfig.auth_header] = customConfig.auth_value;
       }
 
-      const response = await fetch(customConfig.endpoint, {
-        method: customConfig.method || "POST",
+      let validatedUrl: URL;
+      let validatedMethod: string;
+      try {
+        validatedUrl = validateOutboundUrl(customConfig.endpoint);
+        validatedMethod = validateMethod(customConfig.method);
+      } catch (e) {
+        return new Response(
+          JSON.stringify({ error: `Custom voice provider rejected: ${e instanceof Error ? e.message : "invalid configuration"}` }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      const response = await fetch(validatedUrl.toString(), {
+        method: validatedMethod,
         headers,
         body: bodyStr,
+        redirect: "manual",
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {

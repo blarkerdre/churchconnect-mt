@@ -1,6 +1,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { checkSmsQuota, QuotaExceededError } from "../_shared/sms-quota.ts";
 import { writeAudit } from "../_shared/audit.ts";
+import { validateOutboundUrl, validateMethod } from "../_shared/url-validator.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -292,10 +293,13 @@ Deno.serve(async (req) => {
             headers[customConfig.auth_header] = customConfig.auth_value;
           }
 
-          response = await fetch(customConfig.endpoint, {
-            method: customConfig.method || "POST",
+          const validatedUrl = validateOutboundUrl(customConfig.endpoint);
+          const validatedMethod = validateMethod(customConfig.method);
+          response = await fetch(validatedUrl.toString(), {
+            method: validatedMethod,
             headers,
             body: bodyStr,
+            redirect: "manual",
           });
           data = await response.json().catch(() => ({}));
           if (!response.ok) {

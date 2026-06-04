@@ -1,5 +1,6 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { assertSmsQuota, QuotaExceededError } from "../_shared/sms-quota.ts";
+import { validateOutboundUrl, validateMethod } from "../_shared/url-validator.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -167,10 +168,13 @@ async function sendSms(
       headers[customConfig.auth_header] = customConfig.auth_value;
     }
 
-    const response = await fetch(customConfig.endpoint, {
-      method: customConfig.method || "POST",
+    const validatedUrl = validateOutboundUrl(customConfig.endpoint);
+    const validatedMethod = validateMethod(customConfig.method);
+    const response = await fetch(validatedUrl.toString(), {
+      method: validatedMethod,
       headers,
       body: bodyStr,
+      redirect: "manual",
     });
     const data = await response.json().catch(() => ({}));
     if (!response.ok) {
