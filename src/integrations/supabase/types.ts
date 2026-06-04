@@ -4182,6 +4182,10 @@ export type Database = {
             Args: { _email: string; _tenant_id?: string; _user_id: string }
             Returns: string
           }
+      can_manage_unit_task: {
+        Args: { _task_id: string; _tenant_id: string; _user_id: string }
+        Returns: boolean
+      }
       check_tenant_storage_quota: {
         Args: { _added_bytes?: number; _tenant_id: string }
         Returns: boolean
@@ -4334,6 +4338,10 @@ export type Database = {
       }
       is_assigned_referral_leader_for_member: {
         Args: { _member_id: string; _tenant_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_assigned_unit_task: {
+        Args: { _task_id: string; _tenant_id: string; _user_id: string }
         Returns: boolean
       }
       is_followup_team_member: {
