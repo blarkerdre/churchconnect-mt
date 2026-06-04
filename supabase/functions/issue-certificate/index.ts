@@ -118,7 +118,7 @@ Deno.serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     const body = await req.json();
-    const { member_id, training_type, completion_date, notes, tenant_id } = body;
+    const { member_id, training_type, completion_date, notes, tenant_id, reissue } = body;
 
     if (!member_id || !training_type || !tenant_id) {
       return new Response(
@@ -141,19 +141,25 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Check duplicate (tenant-scoped)
+    // Check existing completion (tenant-scoped)
     const { data: existing } = await supabase
       .from("training_completions")
-      .select("id")
+      .select("*")
       .eq("member_id", member_id)
       .eq("training_type", training_type)
       .eq("tenant_id", tenant_id)
       .maybeSingle();
 
-    if (existing) {
+    if (existing && !reissue) {
       return new Response(
         JSON.stringify({ error: "Certificate already issued for this training" }),
         { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    if (reissue && !existing) {
+      return new Response(
+        JSON.stringify({ error: "No existing certificate found to reissue" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
