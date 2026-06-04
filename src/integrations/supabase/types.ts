@@ -4427,6 +4427,10 @@ export type Database = {
           read_ct: number
         }[]
       }
+      task_is_in_user_unit: {
+        Args: { _task_id: string; _tenant_id: string; _user_id: string }
+        Returns: boolean
+      }
       update_own_member_profile:
         | {
             Args: {
@@ -4533,6 +4537,10 @@ export type Database = {
       user_has_tenant_access: { Args: { _tenant_id: string }; Returns: boolean }
       user_is_followup_unit_member: {
         Args: { _tenant_id: string; _user_id: string }
+        Returns: boolean
+      }
+      user_is_unit_member: {
+        Args: { _tenant_id: string; _unit_name: string; _user_id: string }
         Returns: boolean
       }
       user_leads_unit: {
