@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ClipboardList, Plus, FileBarChart, Loader2, ChevronRight } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
@@ -33,6 +33,7 @@ const assignStatusColor = {
 export default function UnitTasks() {
   const { user, isAdmin, isUnitLeader, leaderUnits, roles } = useAuth();
   const { tenantId } = useTenantQuery();
+  const queryClient = useQueryClient();
   const isSuperAdmin = roles.includes("super_admin");
   const canLead = isAdmin || isUnitLeader || isSuperAdmin;
 
@@ -72,7 +73,7 @@ export default function UnitTasks() {
   }, [canLead, activeTab]);
 
   // Tasks for "Leading" tab
-  const { data: leadTasks = [], isLoading: leadLoading, refetch: refetchLead } = useQuery({
+  const { data: leadTasks = [], isLoading: leadLoading, isFetching: leadFetching, error: leadError, refetch: refetchLead } = useQuery({
     queryKey: ["leading-tasks", tenantId, unitFilter, statusFilter, allUnits.join("|")],
     enabled: !!tenantId && canLead,
     queryFn: async () => {
@@ -88,6 +89,7 @@ export default function UnitTasks() {
       if (error) throw error;
       return data || [];
     },
+    staleTime: 0,
   });
 
   // My assignments
@@ -104,6 +106,7 @@ export default function UnitTasks() {
       if (error) throw error;
       return data || [];
     },
+    staleTime: 0,
   });
 
   const mineGrouped = useMemo(() => {
@@ -117,6 +120,9 @@ export default function UnitTasks() {
 
   const onChanged = () => {
     if (canLead) setActiveTab("leading");
+    setStatusFilter("Open");
+    queryClient.invalidateQueries({ queryKey: ["leading-tasks"] });
+    queryClient.invalidateQueries({ queryKey: ["my-assignments"] });
     refetchLead();
     refetchMine();
   };
