@@ -293,10 +293,13 @@ Deno.serve(async (req) => {
             headers[customConfig.auth_header] = customConfig.auth_value;
           }
 
-          response = await fetch(customConfig.endpoint, {
-            method: customConfig.method || "POST",
+          const validatedUrl = validateOutboundUrl(customConfig.endpoint);
+          const validatedMethod = validateMethod(customConfig.method);
+          response = await fetch(validatedUrl.toString(), {
+            method: validatedMethod,
             headers,
             body: bodyStr,
+            redirect: "manual",
           });
           data = await response.json().catch(() => ({}));
           if (!response.ok) {
