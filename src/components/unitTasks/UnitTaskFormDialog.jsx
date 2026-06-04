@@ -14,6 +14,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
 import { toast } from "sonner";
+import { logAudit } from "@/lib/audit";
 
 const PRIORITIES = ["Low", "Medium", "High", "Urgent"];
 
@@ -72,6 +73,7 @@ export default function UnitTaskFormDialog({ open, onOpenChange, unitOptions = [
     if (!form.unit_name) return toast.error("Select a unit");
     if (selected.size === 0) return toast.error("Select at least one member");
     setSaving(true);
+    let createdTaskId = null;
     try {
       const { data: task, error: tErr } = await supabase
         .from("unit_tasks")
@@ -87,7 +89,14 @@ export default function UnitTaskFormDialog({ open, onOpenChange, unitOptions = [
         })
         .select()
         .single();
-      if (tErr) throw tErr;
+      if (tErr) {
+        console.error("Unit task create failed", tErr);
+        if (/row-level security/i.test(tErr.message || "")) {
+          throw new Error("You don't have permission to create a task for this unit.");
+        }
+        throw tErr;
+      }
+      createdTaskId = task.id;
 
       const rows = members
         .filter((m) => selected.has(m.id))
@@ -99,7 +108,22 @@ export default function UnitTaskFormDialog({ open, onOpenChange, unitOptions = [
           status: "Pending",
         }));
       const { error: aErr } = await supabase.from("unit_task_assignments").insert(rows);
-      if (aErr) throw aErr;
+      if (aErr) {
+        console.error("Unit task assignments failed", aErr);
+        // Roll back orphan task
+        await supabase.from("unit_tasks").delete().eq("id", task.id).eq("tenant_id", tenantId);
+        createdTaskId = null;
+        throw aErr;
+      }
+
+      // Notify assignees (fire-and-forget)
+      supabase.functions.invoke("notify-unit-task-assignment", {
+        body: { task_id: task.id, tenant_id: tenantId },
+      }).catch((e) => console.warn("notify-unit-task-assignment failed", e));
+
+      logAudit("unit_task.created", "unit_task", task.id, {
+        unit_name: form.unit_name, assignees: rows.length, title: task.title,
+      }, tenantId);
 
       toast.success(`Task assigned to ${rows.length} member${rows.length === 1 ? "" : "s"}`);
       onSaved?.();
