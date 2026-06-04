@@ -1,18 +1,12 @@
-# Move Analytics into Reports Hub + Admin-only Feedback
+## Make Modules section fully read-only in Settings
 
-## Context
-- `/analytics` route already exists and is gated by `ReportsRoute` (admin or Reports Officer).
-- Reports Hub (`/reports`) already lists Analytics as its first card.
-- Sidebar currently shows BOTH "Reports Hub" and a separate "Analytics" entry.
-- Sidebar Feedback button is currently visible to everyone.
+### Change
+`src/components/settings/TenantFeaturesSection.jsx`:
+- Set `canEdit = false` for all users (no role can edit from Settings).
+- Update read-only notice to: "Read-only — module availability is managed by the platform."
+- Switches stay visible but `disabled`; Save button is hidden (existing `{canEdit && ...}` guard already handles this).
+- Keep `canManage` visibility gate so the section continues to render for owners/admins.
 
-## Changes
-
-### 1. `src/components/AppLayout.jsx`
-- Remove the standalone `{ name: "Analytics", icon: BarChart2, path: "/analytics", access: "reports" }` nav item so Analytics is only reachable via Reports Hub. The `/analytics` route itself stays (Reports Hub links to it).
-- Wrap the Feedback button (lines ~350–357) so it only renders when `isAdmin` is true. Reports Officer and other roles will no longer see it.
-
-## Out of scope
-- No route changes, no auth/role logic changes, no edits to `Analytics.jsx` or `Reports.jsx`.
-- App feedback dialog component itself is unchanged.
-- No backend/RLS changes.
+### Out of scope
+- No backend/RLS changes (server-side write policies already enforce permissions).
+- No changes to Tenant Admin or Super Admin module management surfaces.
