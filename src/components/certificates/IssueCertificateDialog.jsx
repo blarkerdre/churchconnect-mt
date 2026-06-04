@@ -171,20 +171,51 @@ export default function IssueCertificateDialog({ open, onOpenChange, member }) {
                 Completed Trainings
               </h4>
               <div className="space-y-1.5">
-                {completions.map((c) => (
-                  <div key={c.id} className="flex items-center justify-between p-2.5 rounded-lg bg-chart-3/5">
-                    <div className="flex items-center gap-2">
-                      <CheckCircle2 className="h-4 w-4 text-chart-3" />
-                      <span className="text-sm font-medium text-foreground">{c.training_type}</span>
+                {completions.map((c) => {
+                  const isReissuing = reissuingId === c.id && reissueMutation.isPending;
+                  return (
+                    <div key={c.id} className="flex items-center justify-between gap-2 p-2.5 rounded-lg bg-chart-3/5">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <CheckCircle2 className="h-4 w-4 text-chart-3 shrink-0" />
+                        <div className="min-w-0">
+                          <div className="text-sm font-medium text-foreground truncate">{c.training_type}</div>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <span className="text-[11px] text-muted-foreground">
+                              {format(new Date(c.completion_date), "dd MMM yyyy")}
+                            </span>
+                            <Badge variant="outline" className="text-[10px]">{c.certificate_number}</Badge>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1 shrink-0">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          title="Download certificate"
+                          onClick={() => handleDownload(c)}
+                          disabled={isReissuing}
+                        >
+                          <Download className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          title="Reissue certificate"
+                          onClick={() => {
+                            if (window.confirm(`Reissue certificate for "${c.training_type}"? The certificate number (${c.certificate_number}) will be kept and the file regenerated${member.email ? " and re-emailed" : ""}.`)) {
+                              reissueMutation.mutate(c);
+                            }
+                          }}
+                          disabled={isReissuing || reissueMutation.isPending}
+                        >
+                          {isReissuing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCw className="h-4 w-4" />}
+                        </Button>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-muted-foreground">
-                        {format(new Date(c.completion_date), "dd MMM yyyy")}
-                      </span>
-                      <Badge variant="outline" className="text-[10px]">{c.certificate_number}</Badge>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}
