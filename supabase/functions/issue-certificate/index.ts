@@ -205,20 +205,24 @@ Deno.serve(async (req) => {
     const backgroundImageUrl = template?.background_image_url || null;
     const textPositions = template?.text_positions || { name_y: 280, training_y: 340, date_y: 380, signatory_y: 500 };
 
-    // Generate certificate number
-    const year = new Date().getFullYear();
-    const prefix = training_type
-      .replace(/[^A-Za-z]/g, "")
-      .toUpperCase()
-      .slice(0, 6);
-    const { count } = await supabase
-      .from("training_completions")
-      .select("*", { count: "exact", head: true })
-      .ilike("certificate_number", `CERT-${prefix}-${year}-%`);
-    const seq = String((count || 0) + 1).padStart(4, "0");
-    const certificateNumber = `CERT-${prefix}-${year}-${seq}`;
+    let certificateNumber: string;
+    if (existing?.certificate_number) {
+      certificateNumber = existing.certificate_number;
+    } else {
+      const year = new Date().getFullYear();
+      const prefix = training_type
+        .replace(/[^A-Za-z]/g, "")
+        .toUpperCase()
+        .slice(0, 6);
+      const { count } = await supabase
+        .from("training_completions")
+        .select("*", { count: "exact", head: true })
+        .ilike("certificate_number", `CERT-${prefix}-${year}-%`);
+      const seq = String((count || 0) + 1).padStart(4, "0");
+      certificateNumber = `CERT-${prefix}-${year}-${seq}`;
+    }
 
-    const certDate = completion_date || new Date().toISOString().split("T")[0];
+    const certDate = completion_date || existing?.completion_date || new Date().toISOString().split("T")[0];
     const formattedDate = new Date(certDate).toLocaleDateString("en-GB", {
       day: "numeric",
       month: "long",
