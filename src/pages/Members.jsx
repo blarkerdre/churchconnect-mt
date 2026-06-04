@@ -158,41 +158,42 @@ export default function Members() {
   return (
     <div className="space-y-6">
       {/* Controls */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 flex-1">
-          <div className="relative w-full sm:w-72">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Search members..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-10" />
+      {!(isReportsOfficer && !isAdmin) && (
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 flex-1">
+            <div className="relative w-full sm:w-72">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input placeholder="Search members..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-10" />
+            </div>
           </div>
-          
+          <div className="grid grid-cols-4 sm:flex sm:flex-wrap items-center gap-2">
+            {(isAdmin || (isUnitLeader && !unitLeaderReadOnly)) && (
+              <>
+                {canQrCode && (
+                  <Button variant="outline" size="sm" onClick={() => setQrOpen(true)} className="gap-1.5">
+                    <QrCode className="h-4 w-4" /><span className="hidden sm:inline">QR Code</span>
+                  </Button>
+                )}
+                {canCsvExport && (
+                  <Button variant="outline" size="sm" onClick={handleDownloadCSV} className="gap-1.5">
+                    <Download className="h-4 w-4" /><span className="hidden sm:inline">CSV</span>
+                  </Button>
+                )}
+                {canBulkImport && (
+                  <Button variant="outline" size="sm" onClick={() => setImportOpen(true)} className="gap-1.5">
+                    <Upload className="h-4 w-4" /><span className="hidden sm:inline">Import CSV</span>
+                  </Button>
+                )}
+                {canAddMember && (
+                  <Button onClick={openNew} className="bg-primary hover:bg-primary/90 w-full sm:w-auto">
+                    <Plus className="h-4 w-4 mr-2" /> Register Member
+                  </Button>
+                )}
+              </>
+            )}
+          </div>
         </div>
-        <div className="grid grid-cols-4 sm:flex sm:flex-wrap items-center gap-2">
-          {(isAdmin || (isUnitLeader && !unitLeaderReadOnly) || isReportsOfficer) && (
-            <>
-              {canQrCode && !isReportsOfficer && (
-                <Button variant="outline" size="sm" onClick={() => setQrOpen(true)} className="gap-1.5">
-                  <QrCode className="h-4 w-4" /><span className="hidden sm:inline">QR Code</span>
-                </Button>
-              )}
-              {canCsvExport && (
-                <Button variant="outline" size="sm" onClick={handleDownloadCSV} className="gap-1.5">
-                  <Download className="h-4 w-4" /><span className="hidden sm:inline">CSV</span>
-                </Button>
-              )}
-              {canBulkImport && !isReportsOfficer && (
-                <Button variant="outline" size="sm" onClick={() => setImportOpen(true)} className="gap-1.5">
-                  <Upload className="h-4 w-4" /><span className="hidden sm:inline">Import CSV</span>
-                </Button>
-              )}
-              {canAddMember && !isReportsOfficer && (
-                <Button onClick={openNew} className="bg-primary hover:bg-primary/90 w-full sm:w-auto">
-                  <Plus className="h-4 w-4 mr-2" /> Register Member
-                </Button>
-              )}
-            </>
-          )}
-        </div>
-      </div>
+      )}
 
       {/* Filters */}
       {(isAdmin || viewOnly) && (
