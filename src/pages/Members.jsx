@@ -277,27 +277,29 @@ export default function Members() {
                         )}
                       </td>
                     )}
-                    <td className="p-3 sm:p-4 text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon"><MoreVertical className="h-4 w-4" /></Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          {canEditMember(m) && (
-                            <DropdownMenuItem onClick={() => openEdit(m)}><Edit className="h-4 w-4 mr-2" /> Edit</DropdownMenuItem>
-                          )}
-                          {((isAdmin) || (isUnitLeader && (leaderUnits || []).some(u => String(u).toLowerCase() === "training rep"))) && canCertificate && (
-                            <DropdownMenuItem onClick={() => setCertMember(m)}><Award className="h-4 w-4 mr-2" /> Issue Certificate</DropdownMenuItem>
-                          )}
-                          {isAdmin && (
-                            <DropdownMenuItem onClick={() => handleDelete(m)} className="text-destructive"><Trash2 className="h-4 w-4 mr-2" /> Delete</DropdownMenuItem>
-                          )}
-                          {!canEditMember(m) && !isAdmin && (
-                            <DropdownMenuItem disabled className="text-muted-foreground">View only</DropdownMenuItem>
-                          )}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </td>
+                    {!(isReportsOfficer && !isAdmin) && (
+                      <td className="p-3 sm:p-4 text-right">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon"><MoreVertical className="h-4 w-4" /></Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            {canEditMember(m) && (
+                              <DropdownMenuItem onClick={() => openEdit(m)}><Edit className="h-4 w-4 mr-2" /> Edit</DropdownMenuItem>
+                            )}
+                            {((isAdmin) || (isUnitLeader && (leaderUnits || []).some(u => String(u).toLowerCase() === "training rep"))) && canCertificate && (
+                              <DropdownMenuItem onClick={() => setCertMember(m)}><Award className="h-4 w-4 mr-2" /> Issue Certificate</DropdownMenuItem>
+                            )}
+                            {isAdmin && (
+                              <DropdownMenuItem onClick={() => handleDelete(m)} className="text-destructive"><Trash2 className="h-4 w-4 mr-2" /> Delete</DropdownMenuItem>
+                            )}
+                            {!canEditMember(m) && !isAdmin && (
+                              <DropdownMenuItem disabled className="text-muted-foreground">View only</DropdownMenuItem>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </td>
+                    )}
                   </tr>
                 ))}
                 {filtered.length === 0 && (
