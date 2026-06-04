@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -62,6 +62,10 @@ export default function UnitTasks() {
   const [reportOpen, setReportOpen] = useState(false);
   const [selected, setSelected] = useState(null);
 
+  useEffect(() => {
+    if (canLead && activeTab === "mine") setActiveTab("leading");
+  }, [canLead, activeTab]);
+
   // Tasks for "Leading" tab
   const { data: leadTasks = [], isLoading: leadLoading, refetch: refetchLead } = useQuery({
     queryKey: ["leading-tasks", tenantId, unitFilter, statusFilter, allUnits.join("|")],
@@ -106,7 +110,11 @@ export default function UnitTasks() {
     return buckets;
   }, [myAssignments]);
 
-  const onChanged = () => { refetchLead(); refetchMine(); };
+  const onChanged = () => {
+    if (canLead) setActiveTab("leading");
+    refetchLead();
+    refetchMine();
+  };
 
   return (
     <div className="p-4 md:p-6 max-w-7xl mx-auto space-y-6">
