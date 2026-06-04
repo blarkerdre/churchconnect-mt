@@ -75,78 +75,44 @@ export default function UnitTaskFormDialog({ open, onOpenChange, unitOptions = [
     if (!tenantId) return toast.error("No tenant context — reload the page");
     if (!user?.id) return toast.error("Not signed in");
 
-    console.log("[unit-task] submit start", {
-      tenantId, userId: user.id, unit: form.unit_name, count: selected.size,
-    });
-
     setSaving(true);
-    let createdTaskId = null;
     try {
-      const payload = {
-        tenant_id: tenantId,
-        unit_name: form.unit_name,
-        title: form.title.trim(),
-        description: form.description.trim() || null,
-        due_date: form.due_date || null,
-        priority: form.priority,
-        status: "Open",
-        created_by: user.id,
-      };
-      console.log("[unit-task] inserting task", payload);
-      const { data: task, error: tErr } = await supabase
-        .from("unit_tasks")
-        .insert(payload)
-        .select()
-        .single();
-      if (tErr) {
-        console.error("[unit-task] task insert failed", tErr);
-        if (/row-level security/i.test(tErr.message || "")) {
-          throw new Error("You don't have permission to create a task for this unit.");
-        }
-        throw tErr;
-      }
-      console.log("[unit-task] task created", task);
-      createdTaskId = task.id;
-
-      const rows = members
-        .filter((m) => selected.has(m.id))
-        .map((m) => ({
+      const member_ids = members.filter((m) => selected.has(m.id)).map((m) => m.id);
+      const { data, error } = await supabase.functions.invoke("create-unit-task", {
+        body: {
           tenant_id: tenantId,
-          task_id: task.id,
-          member_id: m.id,
-          user_id: m.user_id || null,
-          status: "Pending",
-        }));
-      console.log("[unit-task] inserting assignments", rows.length);
-      const { error: aErr } = await supabase.from("unit_task_assignments").insert(rows);
-      if (aErr) {
-        console.error("[unit-task] assignments failed", aErr);
-        await supabase.from("unit_tasks").delete().eq("id", task.id).eq("tenant_id", tenantId);
-        createdTaskId = null;
-        throw aErr;
+          unit_name: form.unit_name,
+          title: form.title.trim(),
+          description: form.description.trim() || null,
+          due_date: form.due_date || null,
+          priority: form.priority,
+          member_ids,
+        },
+      });
+      if (error) {
+        // Try to extract server message from the response body
+        let serverMsg = "";
+        try {
+          const ctx = error?.context;
+          if (ctx?.json) serverMsg = (await ctx.json())?.error || "";
+          else if (ctx?.text) serverMsg = await ctx.text();
+        } catch { /* noop */ }
+        throw new Error(serverMsg || error.message || "Failed to create task");
       }
-      console.log("[unit-task] assignments inserted");
+      if (data?.error) throw new Error(data.error);
 
       try {
-        supabase.functions.invoke("notify-unit-task-assignment", {
-          body: { task_id: task.id, tenant_id: tenantId },
-        }).catch((e) => console.warn("[unit-task] notify failed", e));
-      } catch (e) { console.warn("[unit-task] notify threw", e); }
-
-      try {
-        logAudit("unit_task.created", "unit_task", task.id, {
-          unit_name: form.unit_name, assignees: rows.length, title: task.title,
+        logAudit("unit_task.created", "unit_task", data?.task?.id, {
+          unit_name: form.unit_name, assignees: member_ids.length, title: form.title.trim(),
         }, tenantId);
-      } catch (e) { console.warn("[unit-task] logAudit threw", e); }
+      } catch { /* noop */ }
 
-      toast.success(`Task assigned to ${rows.length} member${rows.length === 1 ? "" : "s"}`);
+      toast.success(`Task assigned to ${member_ids.length} member${member_ids.length === 1 ? "" : "s"}`);
       onSaved?.();
       onOpenChange(false);
     } catch (err) {
       console.error("[unit-task] submit error", err);
-      const msg = err?.message || err?.error_description || err?.details
-        || (typeof err === "string" ? err : JSON.stringify(err));
-      toast.error(msg || "Failed to create task");
+      toast.error(err?.message || "Failed to create task");
     } finally {
       setSaving(false);
     }
