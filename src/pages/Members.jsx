@@ -158,41 +158,42 @@ export default function Members() {
   return (
     <div className="space-y-6">
       {/* Controls */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 flex-1">
-          <div className="relative w-full sm:w-72">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Search members..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-10" />
+      {!(isReportsOfficer && !isAdmin) && (
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 flex-1">
+            <div className="relative w-full sm:w-72">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input placeholder="Search members..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-10" />
+            </div>
           </div>
-          
+          <div className="grid grid-cols-4 sm:flex sm:flex-wrap items-center gap-2">
+            {(isAdmin || (isUnitLeader && !unitLeaderReadOnly)) && (
+              <>
+                {canQrCode && (
+                  <Button variant="outline" size="sm" onClick={() => setQrOpen(true)} className="gap-1.5">
+                    <QrCode className="h-4 w-4" /><span className="hidden sm:inline">QR Code</span>
+                  </Button>
+                )}
+                {canCsvExport && (
+                  <Button variant="outline" size="sm" onClick={handleDownloadCSV} className="gap-1.5">
+                    <Download className="h-4 w-4" /><span className="hidden sm:inline">CSV</span>
+                  </Button>
+                )}
+                {canBulkImport && (
+                  <Button variant="outline" size="sm" onClick={() => setImportOpen(true)} className="gap-1.5">
+                    <Upload className="h-4 w-4" /><span className="hidden sm:inline">Import CSV</span>
+                  </Button>
+                )}
+                {canAddMember && (
+                  <Button onClick={openNew} className="bg-primary hover:bg-primary/90 w-full sm:w-auto">
+                    <Plus className="h-4 w-4 mr-2" /> Register Member
+                  </Button>
+                )}
+              </>
+            )}
+          </div>
         </div>
-        <div className="grid grid-cols-4 sm:flex sm:flex-wrap items-center gap-2">
-          {(isAdmin || (isUnitLeader && !unitLeaderReadOnly) || isReportsOfficer) && (
-            <>
-              {canQrCode && !isReportsOfficer && (
-                <Button variant="outline" size="sm" onClick={() => setQrOpen(true)} className="gap-1.5">
-                  <QrCode className="h-4 w-4" /><span className="hidden sm:inline">QR Code</span>
-                </Button>
-              )}
-              {canCsvExport && (
-                <Button variant="outline" size="sm" onClick={handleDownloadCSV} className="gap-1.5">
-                  <Download className="h-4 w-4" /><span className="hidden sm:inline">CSV</span>
-                </Button>
-              )}
-              {canBulkImport && !isReportsOfficer && (
-                <Button variant="outline" size="sm" onClick={() => setImportOpen(true)} className="gap-1.5">
-                  <Upload className="h-4 w-4" /><span className="hidden sm:inline">Import CSV</span>
-                </Button>
-              )}
-              {canAddMember && !isReportsOfficer && (
-                <Button onClick={openNew} className="bg-primary hover:bg-primary/90 w-full sm:w-auto">
-                  <Plus className="h-4 w-4 mr-2" /> Register Member
-                </Button>
-              )}
-            </>
-          )}
-        </div>
-      </div>
+      )}
 
       {/* Filters */}
       {(isAdmin || viewOnly) && (
@@ -222,9 +223,9 @@ export default function Members() {
                   <th className="text-left p-3 sm:p-4 font-medium text-muted-foreground">Name</th>
                   <th className="text-left p-3 sm:p-4 font-medium text-muted-foreground hidden sm:table-cell">Contact</th>
                   {(isAdmin || viewOnly) && <th className="text-left p-3 sm:p-4 font-medium text-muted-foreground hidden md:table-cell">Church Unit</th>}
-                   <th className="text-left p-3 sm:p-4 font-medium text-muted-foreground">Status</th>
+                  <th className="text-left p-3 sm:p-4 font-medium text-muted-foreground">Status</th>
                    {isAdmin && <th className="text-center p-3 sm:p-4 font-medium text-muted-foreground hidden sm:table-cell">Account</th>}
-                  <th className="text-right p-3 sm:p-4 font-medium text-muted-foreground">Actions</th>
+                  {!(isReportsOfficer && !isAdmin) && <th className="text-right p-3 sm:p-4 font-medium text-muted-foreground">Actions</th>}
                 </tr>
               </thead>
               <tbody>
@@ -276,31 +277,33 @@ export default function Members() {
                         )}
                       </td>
                     )}
-                    <td className="p-3 sm:p-4 text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon"><MoreVertical className="h-4 w-4" /></Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          {canEditMember(m) && (
-                            <DropdownMenuItem onClick={() => openEdit(m)}><Edit className="h-4 w-4 mr-2" /> Edit</DropdownMenuItem>
-                          )}
-                          {((isAdmin) || (isUnitLeader && (leaderUnits || []).some(u => String(u).toLowerCase() === "training rep"))) && canCertificate && (
-                            <DropdownMenuItem onClick={() => setCertMember(m)}><Award className="h-4 w-4 mr-2" /> Issue Certificate</DropdownMenuItem>
-                          )}
-                          {isAdmin && (
-                            <DropdownMenuItem onClick={() => handleDelete(m)} className="text-destructive"><Trash2 className="h-4 w-4 mr-2" /> Delete</DropdownMenuItem>
-                          )}
-                          {!canEditMember(m) && !isAdmin && (
-                            <DropdownMenuItem disabled className="text-muted-foreground">View only</DropdownMenuItem>
-                          )}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </td>
+                    {!(isReportsOfficer && !isAdmin) && (
+                      <td className="p-3 sm:p-4 text-right">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon"><MoreVertical className="h-4 w-4" /></Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            {canEditMember(m) && (
+                              <DropdownMenuItem onClick={() => openEdit(m)}><Edit className="h-4 w-4 mr-2" /> Edit</DropdownMenuItem>
+                            )}
+                            {((isAdmin) || (isUnitLeader && (leaderUnits || []).some(u => String(u).toLowerCase() === "training rep"))) && canCertificate && (
+                              <DropdownMenuItem onClick={() => setCertMember(m)}><Award className="h-4 w-4 mr-2" /> Issue Certificate</DropdownMenuItem>
+                            )}
+                            {isAdmin && (
+                              <DropdownMenuItem onClick={() => handleDelete(m)} className="text-destructive"><Trash2 className="h-4 w-4 mr-2" /> Delete</DropdownMenuItem>
+                            )}
+                            {!canEditMember(m) && !isAdmin && (
+                              <DropdownMenuItem disabled className="text-muted-foreground">View only</DropdownMenuItem>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </td>
+                    )}
                   </tr>
                 ))}
                 {filtered.length === 0 && (
-                  <tr><td colSpan={isAdmin ? 6 : (viewOnly ? 5 : 4)} className="p-8 text-center text-muted-foreground">No members found</td></tr>
+                  <tr><td colSpan={isAdmin ? 6 : ((isReportsOfficer && !isAdmin) ? 4 : (viewOnly ? 5 : 4))} className="p-8 text-center text-muted-foreground">No members found</td></tr>
                 )}
               </tbody>
             </table>
