@@ -1,36 +1,24 @@
-# Reissue Member Certificate
+# Restrict Certificate Issuance
 
-Allow admins / unit leaders to regenerate an already-issued certificate (e.g. after a name correction, template update, or lost PNG) without manually deleting the existing record.
-
-## UX — `IssueCertificateDialog.jsx`
-
-Each row in the existing "Completed Trainings" list gets two icon actions:
-- **Download** — opens the existing certificate PNG in a new tab (signed URL).
-- **Reissue** — opens a small confirm prompt ("Regenerate certificate for {training}? The existing certificate number will be kept and the PDF/PNG re-emailed to the member.") and calls the edge function in reissue mode.
-
-The "Issue New Certificate" section is unchanged — disabled options for already-issued trainings stay disabled (reissue is the path for those).
-
-After a successful reissue, the same toast pattern is used: "Certificate {number} re-issued and emailed."
+Limit who can issue / reissue training certificates to **admins** and **unit leaders specifically assigned to the "Training Rep" unit**. Other unit leaders lose the ability they currently have.
 
 ## Backend — `supabase/functions/issue-certificate/index.ts`
 
-Accept a new optional flag `reissue: true` in the request body.
+Replace the current "admin OR any unit_leader" gate with:
 
-When `reissue` is true:
-1. Require the existing `training_completions` row (member + training_type + tenant). If missing → 404.
-2. Keep the original `certificate_number` and `completion_date` (unless a new `completion_date` is supplied).
-3. Re-render the SVG → PNG using the current template, upload to the same `filePath` with `upsert: true` (already the case).
-4. UPDATE the existing row (refresh `certificate_url`, `notes` if provided, `updated_at`, `issued_by = caller`). Do NOT insert a new row, do NOT bump the duplicate check.
-5. Re-send the certificate email if the member has an email (same flow as initial issue).
-6. Write an audit log entry with action `certificate.reissued`.
+1. Admin in this tenant → allowed.
+2. Otherwise: caller must have `unit_leader` role in this tenant **AND** a row in `unit_leader_assignments` with `unit_name ILIKE 'Training Rep'` for `user_id = caller` and `tenant_id = tenant_id`.
+3. Anyone else → 403 Forbidden (message: "Only admins and the Training Rep unit leader can issue certificates").
 
-When `reissue` is false / omitted → existing behaviour (409 on duplicate) is preserved.
+Applies to both initial issue and reissue (same code path / same gate).
 
-Authorization is unchanged: admin or unit_leader in the tenant.
+## Frontend gating
+
+- `src/pages/Members.jsx`: the "Issue Certificate" dropdown item currently shows for `isAdmin` only. Change to show for `isAdmin || (isUnitLeader && leaderUnits.some(u => u.toLowerCase() === 'training rep'))`. `leaderUnits` is already provided by `useAuth`.
+- `src/components/certificates/IssueCertificateDialog.jsx`: no role logic lives here today; the new gate at the call site is sufficient. The Reissue button inside the dialog stays as-is (only users who can open the dialog can press it).
 
 ## Out of scope
 
-- No new DB columns, no schema migration.
-- No bulk reissue.
-- No version history of past PNGs (file is overwritten in storage).
-- Certificate number is preserved — not regenerated.
+- No DB migration / no new RLS policy on `training_completions` (the edge function is the single write path and runs with service role).
+- No changes to certificate template settings, MyCertificates view, or exam-driven auto-issuance (server-to-server call from `grade-exam` already uses the service-role bearer, which bypasses this user-level check).
+- "Training Rep" unit name is matched case-insensitively but is otherwise hard-coded — no admin UI to change it.
