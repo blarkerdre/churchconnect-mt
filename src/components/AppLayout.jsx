@@ -47,7 +47,6 @@ const allNavItems = [
   { name: "Communications", icon: Megaphone, path: "/communications", access: null },
   { name: "Transportation", icon: Car, path: "/transportation", access: null },
   { name: "Reports Hub", icon: FileText, path: "/reports", access: "reports" },
-  { name: "Analytics", icon: BarChart2, path: "/analytics", access: "reports" },
   { name: "Training Report", icon: TrendingUp, path: "/training-reports", access: "training_report" },
   { name: "Church Attendance", icon: ClipboardList, path: "/church-attendance", access: "training" },
   { name: "Bible School", icon: BookOpen, path: "/exam-management", access: null },
@@ -347,14 +346,16 @@ export default function Layout({ children }) {
               {!collapsed && "Install app"}
             </button>
           )}
-          <button
-            onClick={() => { setFeedbackOpen(true); setSidebarOpen(false); }}
-            title={collapsed ? "Feedback" : undefined}
-            className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium bg-accent/10 text-accent hover:bg-accent/20 transition-colors ${collapsed ? "justify-center" : ""}`}
-          >
-            <Star className="h-4 w-4 shrink-0" />
-            {!collapsed && "Feedback"}
-          </button>
+          {isAdmin && (
+            <button
+              onClick={() => { setFeedbackOpen(true); setSidebarOpen(false); }}
+              title={collapsed ? "Feedback" : undefined}
+              className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium bg-accent/10 text-accent hover:bg-accent/20 transition-colors ${collapsed ? "justify-center" : ""}`}
+            >
+              <Star className="h-4 w-4 shrink-0" />
+              {!collapsed && "Feedback"}
+            </button>
+          )}
           <button
             onClick={signOut}
             className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors ${collapsed ? "justify-center" : ""}`}
