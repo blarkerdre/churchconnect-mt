@@ -103,6 +103,50 @@ export default function IssueCertificateDialog({ open, onOpenChange, member }) {
     },
   });
 
+  const reissueMutation = useMutation({
+    mutationFn: async (completion) => {
+      setReissuingId(completion.id);
+      const { data, error } = await supabase.functions.invoke("issue-certificate", {
+        body: {
+          member_id: member.id,
+          training_type: completion.training_type,
+          tenant_id: tenantId,
+          reissue: true,
+        },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      return data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["training-completions"] });
+      toast({
+        title: "Certificate reissued",
+        description: `Certificate ${data.certificate_number} has been regenerated${member.email ? " and emailed" : ""}.`,
+      });
+      setReissuingId(null);
+    },
+    onError: (err) => {
+      setReissuingId(null);
+      toast({ title: "Reissue failed", description: err.message, variant: "destructive" });
+    },
+  });
+
+  const handleDownload = async (completion) => {
+    if (!completion.certificate_url) {
+      toast({ title: "No file available", description: "Try reissuing the certificate.", variant: "destructive" });
+      return;
+    }
+    const { data, error } = await supabase.storage
+      .from("church-documents")
+      .createSignedUrl(completion.certificate_url, 60 * 5, { download: `${completion.certificate_number}.png` });
+    if (error || !data?.signedUrl) {
+      toast({ title: "Download failed", description: error?.message || "Could not generate link.", variant: "destructive" });
+      return;
+    }
+    window.open(data.signedUrl, "_blank", "noopener,noreferrer");
+  };
+
   const handleIssue = () => {
     if (!trainingType) {
       toast({ title: "Please select a training type", variant: "destructive" });
