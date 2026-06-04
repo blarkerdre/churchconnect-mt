@@ -48,7 +48,7 @@ const allNavItems = [
   { name: "Transportation", icon: Car, path: "/transportation", access: null },
   { name: "Reports Hub", icon: FileText, path: "/reports", access: "reports" },
   { name: "Analytics", icon: BarChart2, path: "/analytics", access: "reports" },
-  { name: "Training Report", icon: TrendingUp, path: "/training-reports", access: "training" },
+  { name: "Training Report", icon: TrendingUp, path: "/training-reports", access: "training_report" },
   { name: "Church Attendance", icon: ClipboardList, path: "/church-attendance", access: "training" },
   { name: "Bible School", icon: BookOpen, path: "/exam-management", access: null },
   { name: "Sermon Notes", icon: FileText, path: "/sermon-notes", access: null },
