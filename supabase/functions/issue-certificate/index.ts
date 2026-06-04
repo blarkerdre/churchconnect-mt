@@ -355,21 +355,43 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Insert completion record (tenant-scoped)
-    const { data: completion, error: insertErr } = await supabase
-      .from("training_completions")
-      .insert({
-        member_id,
-        training_type,
-        completion_date: certDate,
-        certificate_number: certificateNumber,
-        certificate_url: filePath,
-        issued_by: userId,
-        notes: notes || null,
-        tenant_id,
-      })
-      .select()
-      .single();
+    // Insert or update completion record (tenant-scoped)
+    let completion: unknown = null;
+    let insertErr: unknown = null;
+    if (existing) {
+      const { data, error } = await supabase
+        .from("training_completions")
+        .update({
+          completion_date: certDate,
+          certificate_url: filePath,
+          issued_by: userId,
+          ...(notes !== undefined ? { notes: notes || null } : {}),
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", existing.id)
+        .eq("tenant_id", tenant_id)
+        .select()
+        .single();
+      completion = data;
+      insertErr = error;
+    } else {
+      const { data, error } = await supabase
+        .from("training_completions")
+        .insert({
+          member_id,
+          training_type,
+          completion_date: certDate,
+          certificate_number: certificateNumber,
+          certificate_url: filePath,
+          issued_by: userId,
+          notes: notes || null,
+          tenant_id,
+        })
+        .select()
+        .single();
+      completion = data;
+      insertErr = error;
+    }
 
     if (insertErr) {
       console.error("issue-certificate insert error:", insertErr);
