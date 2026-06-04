@@ -175,6 +175,12 @@ export default function UnitTasks() {
               </Select>
             </div>
 
+            {leadError && (
+              <Card><CardContent className="py-4 text-sm text-destructive">Unable to load leading tasks: {leadError.message}</CardContent></Card>
+            )}
+            {leadFetching && !leadLoading && (
+              <p className="text-xs text-muted-foreground">Refreshing tasks…</p>
+            )}
             {leadLoading ? (
               <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
             ) : leadTasks.length === 0 ? (
