@@ -285,7 +285,7 @@ export default function Members() {
                           {canEditMember(m) && (
                             <DropdownMenuItem onClick={() => openEdit(m)}><Edit className="h-4 w-4 mr-2" /> Edit</DropdownMenuItem>
                           )}
-                          {isAdmin && canCertificate && (
+                          {((isAdmin) || (isUnitLeader && (leaderUnits || []).some(u => String(u).toLowerCase() === "training rep"))) && canCertificate && (
                             <DropdownMenuItem onClick={() => setCertMember(m)}><Award className="h-4 w-4 mr-2" /> Issue Certificate</DropdownMenuItem>
                           )}
                           {isAdmin && (
