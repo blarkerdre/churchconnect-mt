@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -61,9 +61,14 @@ export default function UnitTasks() {
   const [formOpen, setFormOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
   const [selected, setSelected] = useState(null);
+  const didSetInitialLeaderTab = useRef(false);
 
   useEffect(() => {
-    if (canLead && activeTab === "mine") setActiveTab("leading");
+    if (canLead && !didSetInitialLeaderTab.current) {
+      setActiveTab("leading");
+      didSetInitialLeaderTab.current = true;
+    }
+    if (!canLead) didSetInitialLeaderTab.current = false;
   }, [canLead, activeTab]);
 
   // Tasks for "Leading" tab
