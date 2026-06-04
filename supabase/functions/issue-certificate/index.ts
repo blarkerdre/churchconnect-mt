@@ -366,7 +366,6 @@ Deno.serve(async (req) => {
           certificate_url: filePath,
           issued_by: userId,
           ...(notes !== undefined ? { notes: notes || null } : {}),
-          updated_at: new Date().toISOString(),
         })
         .eq("id", existing.id)
         .eq("tenant_id", tenant_id)
