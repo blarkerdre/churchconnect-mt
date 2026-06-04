@@ -118,7 +118,7 @@ Deno.serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     const body = await req.json();
-    const { member_id, training_type, completion_date, notes, tenant_id } = body;
+    const { member_id, training_type, completion_date, notes, tenant_id, reissue } = body;
 
     if (!member_id || !training_type || !tenant_id) {
       return new Response(
@@ -141,19 +141,25 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Check duplicate (tenant-scoped)
+    // Check existing completion (tenant-scoped)
     const { data: existing } = await supabase
       .from("training_completions")
-      .select("id")
+      .select("*")
       .eq("member_id", member_id)
       .eq("training_type", training_type)
       .eq("tenant_id", tenant_id)
       .maybeSingle();
 
-    if (existing) {
+    if (existing && !reissue) {
       return new Response(
         JSON.stringify({ error: "Certificate already issued for this training" }),
         { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    if (reissue && !existing) {
+      return new Response(
+        JSON.stringify({ error: "No existing certificate found to reissue" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
@@ -199,20 +205,24 @@ Deno.serve(async (req) => {
     const backgroundImageUrl = template?.background_image_url || null;
     const textPositions = template?.text_positions || { name_y: 280, training_y: 340, date_y: 380, signatory_y: 500 };
 
-    // Generate certificate number
-    const year = new Date().getFullYear();
-    const prefix = training_type
-      .replace(/[^A-Za-z]/g, "")
-      .toUpperCase()
-      .slice(0, 6);
-    const { count } = await supabase
-      .from("training_completions")
-      .select("*", { count: "exact", head: true })
-      .ilike("certificate_number", `CERT-${prefix}-${year}-%`);
-    const seq = String((count || 0) + 1).padStart(4, "0");
-    const certificateNumber = `CERT-${prefix}-${year}-${seq}`;
+    let certificateNumber: string;
+    if (existing?.certificate_number) {
+      certificateNumber = existing.certificate_number;
+    } else {
+      const year = new Date().getFullYear();
+      const prefix = training_type
+        .replace(/[^A-Za-z]/g, "")
+        .toUpperCase()
+        .slice(0, 6);
+      const { count } = await supabase
+        .from("training_completions")
+        .select("*", { count: "exact", head: true })
+        .ilike("certificate_number", `CERT-${prefix}-${year}-%`);
+      const seq = String((count || 0) + 1).padStart(4, "0");
+      certificateNumber = `CERT-${prefix}-${year}-${seq}`;
+    }
 
-    const certDate = completion_date || new Date().toISOString().split("T")[0];
+    const certDate = completion_date || existing?.completion_date || new Date().toISOString().split("T")[0];
     const formattedDate = new Date(certDate).toLocaleDateString("en-GB", {
       day: "numeric",
       month: "long",
@@ -345,21 +355,43 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Insert completion record (tenant-scoped)
-    const { data: completion, error: insertErr } = await supabase
-      .from("training_completions")
-      .insert({
-        member_id,
-        training_type,
-        completion_date: certDate,
-        certificate_number: certificateNumber,
-        certificate_url: filePath,
-        issued_by: userId,
-        notes: notes || null,
-        tenant_id,
-      })
-      .select()
-      .single();
+    // Insert or update completion record (tenant-scoped)
+    let completion: unknown = null;
+    let insertErr: unknown = null;
+    if (existing) {
+      const { data, error } = await supabase
+        .from("training_completions")
+        .update({
+          completion_date: certDate,
+          certificate_url: filePath,
+          issued_by: userId,
+          ...(notes !== undefined ? { notes: notes || null } : {}),
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", existing.id)
+        .eq("tenant_id", tenant_id)
+        .select()
+        .single();
+      completion = data;
+      insertErr = error;
+    } else {
+      const { data, error } = await supabase
+        .from("training_completions")
+        .insert({
+          member_id,
+          training_type,
+          completion_date: certDate,
+          certificate_number: certificateNumber,
+          certificate_url: filePath,
+          issued_by: userId,
+          notes: notes || null,
+          tenant_id,
+        })
+        .select()
+        .single();
+      completion = data;
+      insertErr = error;
+    }
 
     if (insertErr) {
       console.error("issue-certificate insert error:", insertErr);
@@ -472,9 +504,9 @@ Deno.serve(async (req) => {
     await writeAudit(supabase, {
       tenant_id,
       user_id: userId,
-      action: "certificate_issued",
+      action: reissue ? "certificate_reissued" : "certificate_issued",
       entity_type: "training_completions",
-      entity_id: completion?.id ?? null,
+      entity_id: (completion as { id?: string } | null)?.id ?? existing?.id ?? null,
       details: {
         member_id,
         training_type,
