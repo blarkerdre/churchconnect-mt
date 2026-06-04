@@ -14,6 +14,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
 import { toast } from "sonner";
+import { logAudit } from "@/lib/audit";
 
 const PRIORITIES = ["Low", "Medium", "High", "Urgent"];
 
