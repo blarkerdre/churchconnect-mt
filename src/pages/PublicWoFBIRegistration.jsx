@@ -12,14 +12,11 @@ import { usePublicConsentText, renderConsentText } from "@/hooks/useConsentText"
 import { toast } from "@/components/ui/use-toast";
 import { Toaster } from "@/components/ui/toaster";
 
-
-
 const emptyForm = {
   first_name: "",
   last_name: "",
   email: "",
   phone: "",
-  session_id: "",
   course_id: "",
   gdpr_consent: false,
   website: "", // honeypot
@@ -31,15 +28,12 @@ export default function PublicWoFBIRegistration() {
   const [saving, setSaving] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [courseName, setCourseName] = useState("");
-  const [sessions, setSessions] = useState([]);
-  const [sessionCourses, setSessionCourses] = useState([]); // exam_session_courses rows
-  const [allCourses, setAllCourses] = useState([]); // exam_titles for tenant
+  const [courses, setCourses] = useState([]);
   const [loadingCourses, setLoadingCourses] = useState(true);
   const [resolvedTenantId, setResolvedTenantId] = useState(null);
   const [tenantName, setTenantName] = useState("");
   const [tenantLogo, setTenantLogo] = useState(null);
 
-  // Resolve tenant from slug
   useEffect(() => {
     if (tenantSlug) {
       supabase.rpc("get_tenant_by_slug", { _slug: tenantSlug })
@@ -52,43 +46,17 @@ export default function PublicWoFBIRegistration() {
     }
   }, [tenantSlug]);
 
-  // Load open sessions, their course mappings, and active courses
   useEffect(() => {
     if (!resolvedTenantId) return;
     setLoadingCourses(true);
-    Promise.all([
-      supabase
-        .from("exam_sessions")
-        .select("id, name, description, status")
-        .eq("tenant_id", resolvedTenantId)
-        .in("status", ["draft", "active"])
-        .order("created_at", { ascending: false }),
-      supabase
-        .from("exam_session_courses")
-        .select("session_id, exam_title, sort_order")
-        .eq("tenant_id", resolvedTenantId)
-        .order("sort_order"),
-      supabase.rpc("get_public_courses_for_tenant", { _tenant_id: resolvedTenantId }),
-    ]).then(([s, sc, c]) => {
-      setSessions(s.data || []);
-      setSessionCourses(sc.data || []);
-      setAllCourses(c.data || []);
-      setLoadingCourses(false);
-    });
+    supabase.rpc("get_public_courses_for_tenant", { _tenant_id: resolvedTenantId })
+      .then(({ data }) => {
+        setCourses(data || []);
+        setLoadingCourses(false);
+      });
   }, [resolvedTenantId]);
 
-  // Courses available in the chosen session (filter exam_titles by names listed in exam_session_courses)
-  const courses = React.useMemo(() => {
-    if (!form.session_id) return [];
-    const names = new Set(
-      sessionCourses.filter((r) => r.session_id === form.session_id).map((r) => r.exam_title)
-    );
-    return allCourses.filter((c) => names.has(c.name));
-  }, [form.session_id, sessionCourses, allCourses]);
-
-
-  const set = (k, v) =>
-    setForm((f) => (k === "session_id" ? { ...f, session_id: v, course_id: "" } : { ...f, [k]: v }));
+  const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -98,10 +66,6 @@ export default function PublicWoFBIRegistration() {
     }
     if (!form.email.trim()) {
       toast({ title: "Email is required", variant: "destructive" });
-      return;
-    }
-    if (!form.session_id) {
-      toast({ title: "Please select a session", variant: "destructive" });
       return;
     }
     if (!form.course_id) {
@@ -199,7 +163,6 @@ export default function PublicWoFBIRegistration() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Honeypot */}
             <input
               type="text"
               name="website"
@@ -258,40 +221,14 @@ export default function PublicWoFBIRegistration() {
             </div>
 
             <div className="space-y-1">
-              <Label>Select Session *</Label>
+              <Label>Select Course *</Label>
               {loadingCourses ? (
                 <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
-                  <Loader2 className="h-4 w-4 animate-spin" /> Loading sessions...
+                  <Loader2 className="h-4 w-4 animate-spin" /> Loading courses...
                 </div>
-              ) : sessions.length === 0 ? (
-                <p className="text-sm text-muted-foreground py-2">
-                  No sessions are currently open for registration.
-                </p>
-              ) : (
-                <Select value={form.session_id} onValueChange={(v) => set("session_id", v)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Choose a session" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {sessions.map((s) => (
-                      <SelectItem key={s.id} value={s.id}>
-                        {s.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-            </div>
-
-            <div className="space-y-1">
-              <Label>Select Course *</Label>
-              {!form.session_id ? (
-                <p className="text-sm text-muted-foreground py-2">
-                  Please select a session first.
-                </p>
               ) : courses.length === 0 ? (
                 <p className="text-sm text-muted-foreground py-2">
-                  No courses available in this session.
+                  No courses are currently open for registration.
                 </p>
               ) : (
                 <Select value={form.course_id} onValueChange={(v) => set("course_id", v)}>
@@ -314,7 +251,7 @@ export default function PublicWoFBIRegistration() {
             <Button
               type="submit"
               className="w-full"
-              disabled={saving || sessions.length === 0 || !form.session_id || courses.length === 0}
+              disabled={saving || courses.length === 0}
             >
               {saving ? (
                 <>
