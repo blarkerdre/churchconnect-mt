@@ -1,24 +1,20 @@
-## Goal
-Let admins see all testimonies submitted in their church on the Testimony page — showing the subject, sender, and total count — while keeping the existing member experience untouched.
+## Diagnosis
+Each email writes two rows to `email_send_log` sharing a `message_id`: a `pending` row at enqueue, then a `sent` / `dlq` / `failed` row when the worker finishes. The main Email Logs page deduplicates correctly. Two other views do not, so historic `pending` rows appear next to their `sent` counterparts and look stuck.
+
+Database confirms only **1** email is genuinely still pending; the rest of the apparent "pending" entries are duplicates of already-sent emails.
 
 ## Changes
 
-**`src/pages/Testimony.jsx`**
-- Read `isAdmin` from `useAuth`.
-- When `isAdmin` is true, render an additional "All Testimonies" tab (admin-only) alongside the existing "New Testimony" and "My Testimonies" tabs.
-- Admin tab content:
-  - Header with total count badge (e.g. "12 testimonies").
-  - Search input (title / sender / situation).
-  - Optional filter chips: All / Shared publicly / Private.
-  - List of testimonies showing:
-    - Subject (`title`)
-    - Sender name (`member_name`, fallback "Anonymous")
-    - Submission date
-    - Public/Private indicator
-    - Expand to view situation / action / god_did (reuses the same expandable card pattern already in the page).
-- Query: `supabase.from("testimonies").select("*").eq("tenant_id", tenantId).order("created_at", desc)`. Admin RLS policy already permits this — no backend changes.
+**`src/pages/Communications.jsx`**
+- `MemberEmailList` (~line 231): after fetching, dedupe by `message_id` (keep latest by `created_at`) before rendering.
+- Admin email list query (~line 415): apply the same dedupe step.
+
+**`src/pages/SystemLogs.jsx`**
+- Email logs query (~line 113): after fetch, dedupe by `message_id` so only the latest status row per email is listed. Rows with null `message_id` keep their own row.
+
+Helper: a small inline `dedupeByMessageId(rows)` function (or shared util) used by all three call sites — same logic already in `EmailDashboard.jsx`.
 
 ## Out of scope
-- No DB / RLS / edge function changes.
-- No edits to member submission flow or "My Testimonies" tab.
-- No messaging or export actions (can be added later if requested).
+- No DB / RLS / edge-function changes.
+- Not touching `EmailDashboard.jsx` (already correct).
+- Not retrying or cleaning up the 1 genuinely pending row and 42 DLQ rows — separate concern; can investigate if you want.
