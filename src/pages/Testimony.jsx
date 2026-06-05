@@ -146,7 +146,9 @@ export default function Testimony() {
         <TabsList className="w-full">
           <TabsTrigger value="new" className="flex-1">New Testimony</TabsTrigger>
           <TabsTrigger value="history" className="flex-1">My Testimonies</TabsTrigger>
+          {isAdmin && <TabsTrigger value="all" className="flex-1">All ({allTestimonies.length})</TabsTrigger>}
         </TabsList>
+
 
         <TabsContent value="new">
           <Card className="border shadow-sm">
