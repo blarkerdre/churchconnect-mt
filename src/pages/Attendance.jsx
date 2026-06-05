@@ -21,6 +21,7 @@ import CheckInPanel from "@/components/attendance/CheckInPanel";
 export default function Attendance() {
   const { isAdmin, isUnitLeader, isWSFLeader, leaderUnits = [], leaderCentres = [] } = useAuth();
   const { tenantId, scopeQuery, withTenant } = useTenantQuery();
+  const { data: churchUnits = [] } = useChurchUnits();
   const canManage = isAdmin || isUnitLeader || isWSFLeader;
   const isUnitLeaderOnly = isUnitLeader && !isAdmin;
   const isWSFLeaderOnly = isWSFLeader && !isAdmin && !isUnitLeader;
@@ -31,6 +32,7 @@ export default function Attendance() {
   const [form, setForm] = useState({ title: "", session_type: "Sunday Service", session_date: "", notes: "", unit: "" });
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const [unitFilter, setUnitFilter] = useState("all");
   const [demoForm, setDemoForm] = useState({ male_count: 0, female_count: 0, meeting_notes: "" });
 
   const { data: sessions = [], isLoading } = useQuery({
