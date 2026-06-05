@@ -239,12 +239,13 @@ function MemberEmailList({ memberId, memberEmail, tenantId, onSelect }) {
         .select("*")
         .eq("recipient_email", memberEmail)
         .order("created_at", { ascending: false })
-        .limit(100);
+        .limit(200);
       if (error) throw error;
-      return data || [];
+      return dedupeByMessageId(data || []).slice(0, 100);
     },
     enabled: !!memberEmail && !!tenantId,
   });
+
 
   if (isLoading) return <div className="flex justify-center py-16"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>;
   if (logs.length === 0) return (
