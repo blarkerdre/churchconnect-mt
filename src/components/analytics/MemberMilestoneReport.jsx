@@ -23,6 +23,7 @@ import { Download, Send, Target, CheckCircle2, XCircle, Loader2, CalendarIcon, X
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
+import { useAuth } from "@/hooks/useAuth";
 import PrintReportButton from "@/components/PrintReportButton";
 import MessageFilteredMembersDialog from "./MessageFilteredMembersDialog";
 import { format, startOfDay, endOfDay, subDays, startOfYear } from "date-fns";
