@@ -25,8 +25,6 @@ import { useSubFeature } from "@/hooks/useSubFeature";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
 import { getGradeClassification, DEFAULT_GRADE_CLASSIFICATIONS } from "@/lib/grade-utils";
 import StatementOfResult from "@/components/exams/StatementOfResult";
-import ExamSessionManager from "@/components/exams/ExamSessionManager";
-import OpenSessionsPanel from "@/components/exams/OpenSessionsPanel";
 
 const OPTION_LETTERS = ["a", "b", "c", "d"];
 const QUESTION_TYPES = [
@@ -287,8 +285,6 @@ export default function ExamManagement() {
       {/* WoFBI About Section (Admin Editable) */}
       <WofbiAboutEditor />
 
-      {/* Exam Sessions */}
-      <ExamSessionManager />
 
       {/* Certificate Courses */}
       <Card className="border-0 shadow-sm">
@@ -696,7 +692,6 @@ function CourseRegistrationsView({ course }) {
   const { tenantId } = useTenantQuery();
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [sourceFilter, setSourceFilter] = useState("all");
-  const [sessionFilter, setSessionFilter] = useState("all");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
@@ -706,7 +701,7 @@ function CourseRegistrationsView({ course }) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("course_registrations")
-        .select("id, registered_at, member_id, session_id, exam_sessions(name), members(first_name, last_name, email, phone, user_id)")
+        .select("id, registered_at, member_id, members(first_name, last_name, email, phone, user_id)")
         .eq("course_id", course.id)
         .order("registered_at", { ascending: false });
       if (error) throw error;
@@ -728,22 +723,12 @@ function CourseRegistrationsView({ course }) {
     onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
 
-  const sessionOptions = Array.from(
-    new Map(
-      registrations.map(r => [r.session_id || "__none__", { id: r.session_id || "__none__", name: r.exam_sessions?.name || "— No session —" }])
-    ).values()
-  );
-
   const fromTs = dateFrom ? new Date(`${dateFrom}T00:00:00`).getTime() : null;
   const toTs = dateTo ? new Date(`${dateTo}T23:59:59.999`).getTime() : null;
 
   const filteredRegistrations = registrations.filter(r => {
     if (sourceFilter === "member" && !r.members?.user_id) return false;
     if (sourceFilter === "public" && r.members?.user_id) return false;
-    if (sessionFilter !== "all") {
-      const sid = r.session_id || "__none__";
-      if (sid !== sessionFilter) return false;
-    }
     if (fromTs || toTs) {
       const ts = new Date(r.registered_at).getTime();
       if (fromTs && ts < fromTs) return false;
@@ -758,13 +743,12 @@ function CourseRegistrationsView({ course }) {
   });
 
   const downloadCSV = () => {
-    const headers = ["Name", "Email", "Phone", "Source", "Session", "Registered At"];
+    const headers = ["Name", "Email", "Phone", "Source", "Registered At"];
     const rows = filteredRegistrations.map(r => [
       `${r.members?.first_name || ""} ${r.members?.last_name || ""}`.trim(),
       r.members?.email || "",
       r.members?.phone || "",
       r.members?.user_id ? "Member" : "QR / Public",
-      r.exam_sessions?.name || "—",
       new Date(r.registered_at).toLocaleDateString(),
     ]);
     const csv = [headers, ...rows].map(row => row.map(c => `"${(c || "").replace(/"/g, '""')}"`).join(",")).join("\n");
@@ -773,10 +757,6 @@ function CourseRegistrationsView({ course }) {
     const a = document.createElement("a");
     a.href = url;
     const parts = [course.name, "registrations"];
-    if (sessionFilter !== "all") {
-      const sName = sessionOptions.find(o => o.id === sessionFilter)?.name || "session";
-      parts.push(sName.replace(/[^a-z0-9]+/gi, "_"));
-    }
     if (dateFrom) parts.push(`from-${dateFrom}`);
     if (dateTo) parts.push(`to-${dateTo}`);
     a.download = `${parts.join("_")}.csv`;
@@ -812,17 +792,6 @@ function CourseRegistrationsView({ course }) {
                 <SelectItem value="public">QR / Public</SelectItem>
               </SelectContent>
             </Select>
-            <Select value={sessionFilter} onValueChange={setSessionFilter}>
-              <SelectTrigger className="w-[160px] h-8 text-xs">
-                <SelectValue placeholder="All Sessions" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Sessions</SelectItem>
-                {sessionOptions.map(o => (
-                  <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
             <div className="flex items-center gap-1">
               <label className="text-[11px] text-muted-foreground">From</label>
               <Input
@@ -841,12 +810,12 @@ function CourseRegistrationsView({ course }) {
                 className="h-8 w-[140px] text-xs"
               />
             </div>
-            {(sessionFilter !== "all" || dateFrom || dateTo) && (
+            {(dateFrom || dateTo) && (
               <Button
                 size="sm"
                 variant="ghost"
                 className="h-8 text-xs"
-                onClick={() => { setSessionFilter("all"); setDateFrom(""); setDateTo(""); }}
+                onClick={() => { setDateFrom(""); setDateTo(""); }}
               >
                 Clear
               </Button>
@@ -873,7 +842,7 @@ function CourseRegistrationsView({ course }) {
                   <TableHead className="font-semibold">Email</TableHead>
                   <TableHead className="font-semibold">Phone</TableHead>
                   <TableHead className="font-semibold">Source</TableHead>
-                  <TableHead className="font-semibold">Session</TableHead>
+                  
                   <TableHead className="font-semibold">Registered</TableHead>
                   <TableHead className="font-semibold text-right">Actions</TableHead>
                 </TableRow>
@@ -889,7 +858,7 @@ function CourseRegistrationsView({ course }) {
                         {r.members?.user_id ? "Member" : "QR / Public"}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">{r.exam_sessions?.name || "—"}</TableCell>
+                    
                     <TableCell className="text-sm text-muted-foreground">{new Date(r.registered_at).toLocaleDateString()}</TableCell>
                     <TableCell className="text-right">
                       <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setDeleteTarget(r)}>
