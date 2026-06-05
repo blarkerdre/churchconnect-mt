@@ -83,17 +83,12 @@ async function resolveTenantId(
   bodyTenantId: string | null,
   bodyTenantSlug: string | null
 ): Promise<string | null> {
-  // 1. Direct tenant_id from body
   if (bodyTenantId) return bodyTenantId;
-
-  // 2. Resolve from slug
   if (bodyTenantSlug) {
     const { data } = await supabase.rpc("get_tenant_by_slug", { _slug: bodyTenantSlug });
     const row = Array.isArray(data) ? data[0] : data;
     if (row?.id) return row.id;
   }
-
-  // 3. No fallback — caller must supply tenant context
   return null;
 }
 
@@ -117,7 +112,6 @@ Deno.serve(async (req) => {
       auth: { autoRefreshToken: false, persistSession: false },
     });
 
-    // Rate limiting
     const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
       req.headers.get("cf-connecting-ip") || "unknown";
     if (isRateLimited(ip)) {
@@ -129,14 +123,12 @@ Deno.serve(async (req) => {
 
     const body = await req.json();
 
-    // Honeypot
     if (body.website) {
       return new Response(JSON.stringify({ success: true }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Resolve tenant — must be supplied via slug or id
     const tenantId = await resolveTenantId(
       supabase,
       sanitize(body.tenant_id, 36),
@@ -189,15 +181,6 @@ Deno.serve(async (req) => {
       });
     }
 
-    const sessionId = sanitize(body.session_id, 36);
-    if (!sessionId) {
-      return new Response(JSON.stringify({ error: "Please select a session." }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    // Verify course exists, is active, open, and belongs to tenant
     const { data: course, error: courseError } = await supabase
       .from("exam_titles")
       .select("id, name, registration_open, is_active")
@@ -214,37 +197,6 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Verify session belongs to tenant and is open (draft or active)
-    const { data: session, error: sessionError } = await supabase
-      .from("exam_sessions")
-      .select("id, name, status")
-      .eq("id", sessionId)
-      .eq("tenant_id", tenantId)
-      .maybeSingle();
-    if (sessionError) throw sessionError;
-    if (!session || !["draft", "active"].includes(session.status)) {
-      return new Response(JSON.stringify({ error: "This session is not currently accepting registrations." }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    // Verify the course is included in this session
-    const { data: sessionCourse } = await supabase
-      .from("exam_session_courses")
-      .select("id")
-      .eq("session_id", sessionId)
-      .eq("exam_title", course.name)
-      .eq("tenant_id", tenantId)
-      .maybeSingle();
-    if (!sessionCourse) {
-      return new Response(JSON.stringify({ error: "This course is not part of the selected session." }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    // Find or create member by email — scoped to tenant
     let memberId: string | null = null;
     let isNewMember = false;
 
@@ -280,35 +232,30 @@ Deno.serve(async (req) => {
       isNewMember = true;
     }
 
-    // Check for duplicate registration in this same session
     const { data: existingReg } = await supabase
       .from("course_registrations")
       .select("id")
       .eq("member_id", memberId)
       .eq("course_id", courseId)
-      .eq("session_id", sessionId)
       .maybeSingle();
 
     if (existingReg) {
-      return new Response(JSON.stringify({ error: "You are already registered for this course in this session." }), {
+      return new Response(JSON.stringify({ error: "You are already registered for this course." }), {
         status: 409,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Insert course registration with tenant_id and session_id
     const { error: regError } = await supabase
       .from("course_registrations")
-      .insert({ member_id: memberId, course_id: courseId, session_id: sessionId, tenant_id: tenantId });
+      .insert({ member_id: memberId, course_id: courseId, tenant_id: tenantId });
 
     if (regError) throw regError;
 
-    // Fire-and-forget welcome email for new members
     if (isNewMember && email) {
       triggerWelcomeEmail(email, firstName, lastName, tenantId);
     }
 
-    // Fire-and-forget course registration confirmation email
     if (email) {
       triggerCourseRegistrationEmail(email, firstName, course.name, tenantId);
     }
