@@ -369,10 +369,11 @@ export default function Analytics() {
       </TabsContent>
 
       <TabsContent value="reports" className="space-y-6">
-        {isAdmin && <MemberMilestoneReport />}
-        {isAdmin && <StatusConversionReport />}
-        {isAdmin && <FeedbackSummary />}
+        {canViewReports && <MemberMilestoneReport />}
+        {canViewReports && <StatusConversionReport />}
+        {canViewReports && <FeedbackSummary />}
       </TabsContent>
+
 
       {isAdmin && (
         <TabsContent value="announcements" className="space-y-6">
