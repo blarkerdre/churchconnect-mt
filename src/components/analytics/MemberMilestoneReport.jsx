@@ -587,10 +587,12 @@ export default function MemberMilestoneReport() {
               <Users className="h-4 w-4 mr-2" />
               {unitFilter === "all" ? "Download All Units" : "Download Unit Members"}
             </Button>
-            <Button variant="outline" size="sm" onClick={() => openMessage("unit")} disabled={!tenantId || unitRoster.length === 0}>
-              <Send className="h-4 w-4 mr-2" />
-              {unitFilter === "all" ? "Message All Units" : "Message Unit Members"}
-            </Button>
+            {isAdmin && (
+              <Button variant="outline" size="sm" onClick={() => openMessage("unit")} disabled={!tenantId || unitRoster.length === 0}>
+                <Send className="h-4 w-4 mr-2" />
+                {unitFilter === "all" ? "Message All Units" : "Message Unit Members"}
+              </Button>
+            )}
             <Button variant="outline" size="sm" onClick={exportCentreMembers} disabled={!tenantId || centreRoster.length === 0}>
               <Home className="h-4 w-4 mr-2" />
               {centreFilter === "all" ? "Download All Centres" : "Download Centre Members"}
