@@ -597,10 +597,12 @@ export default function MemberMilestoneReport() {
               <Home className="h-4 w-4 mr-2" />
               {centreFilter === "all" ? "Download All Centres" : "Download Centre Members"}
             </Button>
-            <Button variant="outline" size="sm" onClick={() => openMessage("centre")} disabled={!tenantId || centreRoster.length === 0}>
-              <Send className="h-4 w-4 mr-2" />
-              {centreFilter === "all" ? "Message All Centres" : "Message Centre Members"}
-            </Button>
+            {isAdmin && (
+              <Button variant="outline" size="sm" onClick={() => openMessage("centre")} disabled={!tenantId || centreRoster.length === 0}>
+                <Send className="h-4 w-4 mr-2" />
+                {centreFilter === "all" ? "Message All Centres" : "Message Centre Members"}
+              </Button>
+            )}
           </div>
           <p className="text-[11px] text-muted-foreground">
             Acts on the {unitFilter === "all" ? "all-units" : `"${unitFilter}"`} unit roster and the {selectedCentreLabel ? `"${selectedCentreLabel}"` : "all-centres"} centre roster (respects Status & Joined date; ignores milestone selection).
