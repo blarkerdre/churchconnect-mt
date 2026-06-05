@@ -31,7 +31,8 @@ export default function Analytics() {
   const [dateTo, setDateTo] = useState(format(new Date(), "yyyy-MM-dd"));
   const { enabled: canDownloadReport } = useSubFeature("analytics.download_report");
   const { tenantId, scopeQuery } = useTenantQuery();
-  const { isAdmin } = useAuth();
+  const { isAdmin, isReportsOfficer } = useAuth();
+  const canViewReports = isAdmin || isReportsOfficer;
 
   // Attendance sessions + records
   const { data: sessions = [], isLoading: loadingSessions } = useQuery({
