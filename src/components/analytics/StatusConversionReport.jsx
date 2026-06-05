@@ -40,6 +40,7 @@ const PRESETS = [
 
 export default function StatusConversionReport() {
   const { tenantId, scopeQuery } = useTenantQuery();
+  const { isAdmin } = useAuth();
   const [preset, setPreset] = useState("any_to_active");
   const [fromStatus, setFromStatus] = useState("any");
   const [toStatus, setToStatus] = useState("Active");
