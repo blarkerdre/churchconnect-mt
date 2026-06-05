@@ -28,6 +28,8 @@ import SMSDialog from "@/components/sms/SMSDialog";
 import { useSubFeature } from "@/hooks/useSubFeature";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
 import { renderTextWithLinks } from "@/lib/linkify";
+import { dedupeByMessageId } from "@/lib/dedupe-email-log";
+
 import PasswordConfirmDialog from "@/components/shared/PasswordConfirmDialog";
 
 const STATIC_AUDIENCES = ["All Members", "Leaders Only"];
