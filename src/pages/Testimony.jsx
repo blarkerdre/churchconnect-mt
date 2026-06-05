@@ -16,11 +16,30 @@ import { format } from "date-fns";
 
 export default function Testimony() {
   const { tenantId } = useTenantQuery();
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const queryClient = useQueryClient();
   const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState("");
   const [expandedId, setExpandedId] = useState(null);
+  const [adminSearch, setAdminSearch] = useState("");
+  const [adminExpandedId, setAdminExpandedId] = useState(null);
+  const [adminFilter, setAdminFilter] = useState("all");
+
+  const { data: allTestimonies = [], isLoading: loadingAll } = useQuery({
+    queryKey: ["all-testimonies", tenantId],
+    queryFn: async () => {
+      if (!tenantId) return [];
+      const { data, error } = await supabase
+        .from("testimonies")
+        .select("*")
+        .eq("tenant_id", tenantId)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!tenantId && !!isAdmin,
+  });
+
 
   const { data: myMember } = useQuery({
     queryKey: ["my-member", user?.id, tenantId],
