@@ -23,6 +23,7 @@ import { Download, Send, Loader2, ArrowRight, Users, TrendingUp, Clock } from "l
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
+import { useAuth } from "@/hooks/useAuth";
 import PrintReportButton from "@/components/PrintReportButton";
 import MessageFilteredMembersDialog from "./MessageFilteredMembersDialog";
 import { format, subMonths, differenceInDays } from "date-fns";
@@ -39,6 +40,7 @@ const PRESETS = [
 
 export default function StatusConversionReport() {
   const { tenantId, scopeQuery } = useTenantQuery();
+  const { isAdmin } = useAuth();
   const [preset, setPreset] = useState("any_to_active");
   const [fromStatus, setFromStatus] = useState("any");
   const [toStatus, setToStatus] = useState("Active");
@@ -276,9 +278,11 @@ export default function StatusConversionReport() {
             <Download className="h-4 w-4 mr-2" /> Export CSV
           </Button>
           <PrintReportButton buildRows={buildPrintRows} label="Print Report" />
-          <Button size="sm" onClick={() => setMessageOpen(true)} disabled={uniqueMembers.length === 0}>
-            <Send className="h-4 w-4 mr-2" /> Message {uniqueMembers.length} Member{uniqueMembers.length !== 1 ? "s" : ""}
-          </Button>
+          {isAdmin && (
+            <Button size="sm" onClick={() => setMessageOpen(true)} disabled={uniqueMembers.length === 0}>
+              <Send className="h-4 w-4 mr-2" /> Message {uniqueMembers.length} Member{uniqueMembers.length !== 1 ? "s" : ""}
+            </Button>
+          )}
         </div>
 
         {/* Table */}

@@ -31,7 +31,8 @@ export default function Analytics() {
   const [dateTo, setDateTo] = useState(format(new Date(), "yyyy-MM-dd"));
   const { enabled: canDownloadReport } = useSubFeature("analytics.download_report");
   const { tenantId, scopeQuery } = useTenantQuery();
-  const { isAdmin } = useAuth();
+  const { isAdmin, isReportsOfficer } = useAuth();
+  const canViewReports = isAdmin || isReportsOfficer;
 
   // Attendance sessions + records
   const { data: sessions = [], isLoading: loadingSessions } = useQuery({
@@ -368,10 +369,11 @@ export default function Analytics() {
       </TabsContent>
 
       <TabsContent value="reports" className="space-y-6">
-        {isAdmin && <MemberMilestoneReport />}
-        {isAdmin && <StatusConversionReport />}
-        {isAdmin && <FeedbackSummary />}
+        {canViewReports && <MemberMilestoneReport />}
+        {canViewReports && <StatusConversionReport />}
+        {canViewReports && <FeedbackSummary />}
       </TabsContent>
+
 
       {isAdmin && (
         <TabsContent value="announcements" className="space-y-6">
