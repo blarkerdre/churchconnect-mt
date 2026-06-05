@@ -199,15 +199,24 @@ export default function Attendance() {
       {canManage && (
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 p-3 bg-muted/50 rounded-lg border border-border">
           <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-            <Filter className="h-4 w-4" /> Filter by date:
+            <Filter className="h-4 w-4" /> Filter:
           </div>
-          <div className="flex items-center gap-2 flex-1">
-            <Input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="h-9 text-sm flex-1" placeholder="From" />
+          <div className="flex items-center gap-2 flex-1 flex-wrap">
+            <Input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="h-9 text-sm flex-1 min-w-[120px]" placeholder="From" />
             <span className="text-xs text-muted-foreground">to</span>
-            <Input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="h-9 text-sm flex-1" placeholder="To" />
+            <Input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="h-9 text-sm flex-1 min-w-[120px]" placeholder="To" />
+            {isAdmin && churchUnits.length > 0 && (
+              <Select value={unitFilter} onValueChange={setUnitFilter}>
+                <SelectTrigger className="h-9 text-sm w-full sm:w-48"><SelectValue placeholder="All units" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All units</SelectItem>
+                  {churchUnits.map(u => <SelectItem key={u.id} value={u.name}>{u.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            )}
           </div>
-          {(dateFrom || dateTo) && (
-            <Button variant="ghost" size="sm" onClick={() => { setDateFrom(""); setDateTo(""); }} className="text-xs">Clear</Button>
+          {(dateFrom || dateTo || unitFilter !== "all") && (
+            <Button variant="ghost" size="sm" onClick={() => { setDateFrom(""); setDateTo(""); setUnitFilter("all"); }} className="text-xs">Clear</Button>
           )}
         </div>
       )}
