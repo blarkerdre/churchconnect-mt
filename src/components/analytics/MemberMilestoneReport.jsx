@@ -49,6 +49,7 @@ const slugify = (s) =>
 
 export default function MemberMilestoneReport() {
   const { tenantId } = useTenantQuery();
+  const { isAdmin } = useAuth();
   const [selected, setSelected] = useState(["bfc_completed"]);
   const [mode, setMode] = useState("missing"); // missing | completed
   const [statusFilter, setStatusFilter] = useState("all");
