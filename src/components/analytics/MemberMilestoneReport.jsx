@@ -23,6 +23,7 @@ import { Download, Send, Target, CheckCircle2, XCircle, Loader2, CalendarIcon, X
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
+import { useAuth } from "@/hooks/useAuth";
 import PrintReportButton from "@/components/PrintReportButton";
 import MessageFilteredMembersDialog from "./MessageFilteredMembersDialog";
 import { format, startOfDay, endOfDay, subDays, startOfYear } from "date-fns";
@@ -48,6 +49,7 @@ const slugify = (s) =>
 
 export default function MemberMilestoneReport() {
   const { tenantId } = useTenantQuery();
+  const { isAdmin } = useAuth();
   const [selected, setSelected] = useState(["bfc_completed"]);
   const [mode, setMode] = useState("missing"); // missing | completed
   const [statusFilter, setStatusFilter] = useState("all");
@@ -585,18 +587,22 @@ export default function MemberMilestoneReport() {
               <Users className="h-4 w-4 mr-2" />
               {unitFilter === "all" ? "Download All Units" : "Download Unit Members"}
             </Button>
-            <Button variant="outline" size="sm" onClick={() => openMessage("unit")} disabled={!tenantId || unitRoster.length === 0}>
-              <Send className="h-4 w-4 mr-2" />
-              {unitFilter === "all" ? "Message All Units" : "Message Unit Members"}
-            </Button>
+            {isAdmin && (
+              <Button variant="outline" size="sm" onClick={() => openMessage("unit")} disabled={!tenantId || unitRoster.length === 0}>
+                <Send className="h-4 w-4 mr-2" />
+                {unitFilter === "all" ? "Message All Units" : "Message Unit Members"}
+              </Button>
+            )}
             <Button variant="outline" size="sm" onClick={exportCentreMembers} disabled={!tenantId || centreRoster.length === 0}>
               <Home className="h-4 w-4 mr-2" />
               {centreFilter === "all" ? "Download All Centres" : "Download Centre Members"}
             </Button>
-            <Button variant="outline" size="sm" onClick={() => openMessage("centre")} disabled={!tenantId || centreRoster.length === 0}>
-              <Send className="h-4 w-4 mr-2" />
-              {centreFilter === "all" ? "Message All Centres" : "Message Centre Members"}
-            </Button>
+            {isAdmin && (
+              <Button variant="outline" size="sm" onClick={() => openMessage("centre")} disabled={!tenantId || centreRoster.length === 0}>
+                <Send className="h-4 w-4 mr-2" />
+                {centreFilter === "all" ? "Message All Centres" : "Message Centre Members"}
+              </Button>
+            )}
           </div>
           <p className="text-[11px] text-muted-foreground">
             Acts on the {unitFilter === "all" ? "all-units" : `"${unitFilter}"`} unit roster and the {selectedCentreLabel ? `"${selectedCentreLabel}"` : "all-centres"} centre roster (respects Status & Joined date; ignores milestone selection).
@@ -612,9 +618,11 @@ export default function MemberMilestoneReport() {
               <Download className="h-4 w-4 mr-2" /> Export CSV
             </Button>
             <PrintReportButton buildRows={buildPrintRows} label="Print Report" />
-            <Button size="sm" onClick={() => openMessage("milestone")} disabled={!tenantId || filtered.length === 0}>
-              <Send className="h-4 w-4 mr-2" /> Message Members
-            </Button>
+            {isAdmin && (
+              <Button size="sm" onClick={() => openMessage("milestone")} disabled={!tenantId || filtered.length === 0}>
+                <Send className="h-4 w-4 mr-2" /> Message Members
+              </Button>
+            )}
           </div>
         </div>
 
