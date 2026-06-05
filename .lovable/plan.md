@@ -1,20 +1,40 @@
-## Diagnosis
-Each email writes two rows to `email_send_log` sharing a `message_id`: a `pending` row at enqueue, then a `sent` / `dlq` / `failed` row when the worker finishes. The main Email Logs page deduplicates correctly. Two other views do not, so historic `pending` rows appear next to their `sent` counterparts and look stuck.
+## Goal
+Remove the "Exam Sessions" feature from Bible School Management entirely and delete all session records.
 
-Database confirms only **1** email is genuinely still pending; the rest of the apparent "pending" entries are duplicates of already-sent emails.
+## UI / code changes
 
-## Changes
+**`src/pages/ExamManagement.jsx`**
+- Remove `ExamSessionManager` import and its rendered block (the "Exam Sessions" section around line 290–291).
+- In the Registrations table:
+  - Drop `session_id`, `exam_sessions(name)` from the select.
+  - Remove `sessionFilter` state, `sessionOptions`, the "All Sessions" Select filter, the Session column in the table, the Session field in CSV export, and the session piece of the filename/clear-filters logic.
 
-**`src/pages/Communications.jsx`**
-- `MemberEmailList` (~line 231): after fetching, dedupe by `message_id` (keep latest by `created_at`) before rendering.
-- Admin email list query (~line 415): apply the same dedupe step.
+**`src/pages/MyProfile.jsx`**
+- Remove the `OpenSessionsPanel` import + usage (around line 1114) and the related session query block (~line 980–994).
 
-**`src/pages/SystemLogs.jsx`**
-- Email logs query (~line 113): after fetch, dedupe by `message_id` so only the latest status row per email is listed. Rows with null `message_id` keep their own row.
+**`src/pages/PublicWoFBIRegistration.jsx`**
+- Remove the session picker UI and the `sessionCourses` / `exam_sessions` / `exam_session_courses` queries. Fall back to showing all active `exam_titles` for the tenant (existing behaviour when no session is chosen).
 
-Helper: a small inline `dedupeByMessageId(rows)` function (or shared util) used by all three call sites — same logic already in `EmailDashboard.jsx`.
+**`supabase/functions/public-wofbi-register/index.ts`**
+- Drop session lookup and any `session_id` written into `course_registrations`.
+
+**Delete component files** (no longer referenced):
+- `src/components/exams/ExamSessionManager.jsx`
+- `src/components/exams/OpenSessionsPanel.jsx`
+- `src/components/exams/SessionEnrolDialog.jsx`
+
+## Data deletion (migration)
+
+Single migration:
+```sql
+UPDATE public.course_registrations SET session_id = NULL WHERE session_id IS NOT NULL;
+DELETE FROM public.exam_session_courses;
+DELETE FROM public.exam_sessions;
+```
+
+Tables and the `session_id` column stay in place (kept nullable) so historical schema, archive/export functions, and the types file don't need a churn. They simply hold no rows and are no longer surfaced anywhere in the UI.
 
 ## Out of scope
-- No DB / RLS / edge-function changes.
-- Not touching `EmailDashboard.jsx` (already correct).
-- Not retrying or cleaning up the 1 genuinely pending row and 42 DLQ rows — separate concern; can investigate if you want.
+- Not dropping `exam_sessions` / `exam_session_courses` tables or the `session_id` column.
+- No changes to grading, attempts, subjects, or course registrations beyond clearing `session_id`.
+- No changes to `archive-tenant` / `purge-all-data` (still reference the tables harmlessly).
