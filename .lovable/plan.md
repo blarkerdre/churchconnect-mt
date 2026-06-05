@@ -1,21 +1,34 @@
-## Goal
-When a Reports Officer opens Members (from the Reports Hub), only the AudienceFilter and the members table should be visible. All action buttons and the search box should be hidden.
+## Why Reports Officer sees an empty Reports tab in Analytics
 
-## Changes — `src/pages/Members.jsx`
+In `src/pages/Analytics.jsx`, the three reports under the **Reports** tab are gated behind `isAdmin`:
 
-1. **Hide top controls bar for Reports Officer (non-admin):**
-   - Wrap the entire top controls `<div class="flex flex-col sm:flex-row ...">` (Search input + QR/CSV/Import/Register buttons) so it does not render when `isReportsOfficer && !isAdmin`.
-   - This removes the Search box and any action buttons for Reports Officers.
+```jsx
+{isAdmin && <MemberMilestoneReport />}
+{isAdmin && <StatusConversionReport />}
+{isAdmin && <FeedbackSummary />}
+```
 
-2. **Keep AudienceFilter visible** — current condition `(isAdmin || viewOnly)` already includes Reports Officer; no change.
+Reports Officer passes the route guard (`ReportsRoute` allows `isReportsOfficer`), so they land on the page, but the Reports tab renders nothing for them. The Overview tab works fine because it's not gated.
 
-3. **Keep stats cards** — current condition `(isAdmin || viewOnly)` already shows them.
+## Fix
 
-4. **Row actions dropdown:**
-   - For Reports Officer (non-admin), render no menu items (Edit/Issue Certificate/Delete are already gated off). Show a single disabled "View only" item, and optionally hide the trigger button entirely for Reports Officer to keep the table clean.
-   - Simpler: hide the entire Actions cell (trigger + dropdown) for `isReportsOfficer && !isAdmin`, and drop the Actions column header for them; adjust the empty-state `colSpan` accordingly.
+Allow Reports Officer to view (read-only) the report content, while keeping the bulk-messaging actions admin-only (memory: milestone/conversion reports are admin-only for messaging).
+
+**`src/pages/Analytics.jsx`**
+- Pull `isReportsOfficer` from `useAuth`.
+- Change the gates to `{(isAdmin || isReportsOfficer) && <MemberMilestoneReport />}` etc.
+- Leave Announcements tab admin-only (no change).
+
+**`src/components/analytics/MemberMilestoneReport.jsx`**
+- Read `isAdmin` from `useAuth`.
+- Hide the "Message …" buttons (lines ~588, 596, 615) when `!isAdmin` so Reports Officers can view rosters/metrics but cannot trigger messaging. Keep CSV Download available.
+
+**`src/components/analytics/StatusConversionReport.jsx`**
+- Same pattern: hide the "Message N Members" button (line ~279) when `!isAdmin`.
+
+**`src/components/feedback/FeedbackSummary.jsx`**
+- No admin-only actions detected; render as-is for Reports Officer.
 
 ## Out of scope
-- No changes to other Reports Hub modules.
-- No backend/RLS changes.
-- No changes to admin/owner/unit-leader views of Members.
+- No RLS / backend changes (Reports Officer already has read access via RLS for these tables).
+- No changes to Overview tab or other modules.
