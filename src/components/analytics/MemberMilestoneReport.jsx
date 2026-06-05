@@ -618,9 +618,11 @@ export default function MemberMilestoneReport() {
               <Download className="h-4 w-4 mr-2" /> Export CSV
             </Button>
             <PrintReportButton buildRows={buildPrintRows} label="Print Report" />
-            <Button size="sm" onClick={() => openMessage("milestone")} disabled={!tenantId || filtered.length === 0}>
-              <Send className="h-4 w-4 mr-2" /> Message Members
-            </Button>
+            {isAdmin && (
+              <Button size="sm" onClick={() => openMessage("milestone")} disabled={!tenantId || filtered.length === 0}>
+                <Send className="h-4 w-4 mr-2" /> Message Members
+              </Button>
+            )}
           </div>
         </div>
 
