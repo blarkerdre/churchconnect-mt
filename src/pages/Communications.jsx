@@ -28,6 +28,8 @@ import SMSDialog from "@/components/sms/SMSDialog";
 import { useSubFeature } from "@/hooks/useSubFeature";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
 import { renderTextWithLinks } from "@/lib/linkify";
+import { dedupeByMessageId } from "@/lib/dedupe-email-log";
+
 import PasswordConfirmDialog from "@/components/shared/PasswordConfirmDialog";
 
 const STATIC_AUDIENCES = ["All Members", "Leaders Only"];
@@ -237,12 +239,13 @@ function MemberEmailList({ memberId, memberEmail, tenantId, onSelect }) {
         .select("*")
         .eq("recipient_email", memberEmail)
         .order("created_at", { ascending: false })
-        .limit(100);
+        .limit(200);
       if (error) throw error;
-      return data || [];
+      return dedupeByMessageId(data || []).slice(0, 100);
     },
     enabled: !!memberEmail && !!tenantId,
   });
+
 
   if (isLoading) return <div className="flex justify-center py-16"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>;
   if (logs.length === 0) return (
@@ -411,12 +414,13 @@ export default function Communications() {
           .in("status", ["scheduled", "processing"]);
         return count || 0;
       }
-      const { count } = await supabase
+      const { data } = await supabase
         .from("email_send_log")
-        .select("id", { count: "exact", head: true })
+        .select("message_id, id, created_at")
         .eq("recipient_email", myMember.email)
         .gte("created_at", thirtyDaysAgo);
-      return count || 0;
+      return dedupeByMessageId(data || []).length;
+
     },
     enabled: emailEnabled && (canManageComms ? !!tenantId : !!myMember?.email),
   });
