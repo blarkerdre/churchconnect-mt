@@ -488,9 +488,13 @@ export default function Attendance() {
                     </Select>
                   )
                 ) : (
-                  <Input value={form.unit} onChange={e => setForm(f => ({ ...f, unit: e.target.value }))} placeholder="e.g. Choir, Ushering" />
+                  <Select value={form.unit} onValueChange={v => setForm(f => ({ ...f, unit: v }))}>
+                    <SelectTrigger><SelectValue placeholder="Select unit" /></SelectTrigger>
+                    <SelectContent>
+                      {churchUnits.map(u => <SelectItem key={u.id} value={u.name}>{u.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
                 )}
-              </div>
             )}
             {(form.session_type === "Home Cell Meeting" || isWSFLeaderOnly) && (
               <div>
