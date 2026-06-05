@@ -1080,7 +1080,7 @@ function MemberExamsView({ memberId, memberRecord, courses, loading }) {
 
       <WofbiAboutDisplay />
 
-      <OpenSessionsPanel memberId={memberId} />
+
 
 
       {activeCourses.length === 0 ? (

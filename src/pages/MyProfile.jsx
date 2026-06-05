@@ -22,7 +22,7 @@ import MyCertificates from "@/components/certificates/MyCertificates";
 import { MemberAvatar } from "@/components/members/MemberAvatar";
 import MemberJourneyTimeline from "@/components/members/MemberJourneyTimeline";
 import TakeExamDialog from "@/components/exams/TakeExamDialog";
-import OpenSessionsPanel from "@/components/exams/OpenSessionsPanel";
+
 import { useTenantQuery } from "@/hooks/useTenantQuery";
 import WelcomeQuestions from "@/components/members/WelcomeQuestions";
 import { useTenant, DEFAULT_TENANT_ID } from "@/contexts/TenantContext";
@@ -668,8 +668,6 @@ export default function MyProfile() {
       {/* App Feedback */}
       {!editing && <AppFeedbackSection />}
 
-      {/* Open Certificate Course Sessions */}
-      {!editing && <OpenSessionsPanel memberId={member.id} />}
 
       {/* Take Exams */}
       {!editing && <DynamicExamButtons memberId={member.id} onSelect={setExamSelection} tenantId={tenantId} />}
@@ -967,38 +965,11 @@ function DynamicExamButtons({ memberId, onSelect, tenantId }) {
   const { data: registrations = [] } = useQuery({
     queryKey: ["my-course-registrations-v2", memberId, tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("course_registrations").select("course_id, session_id").eq("member_id", memberId).eq("tenant_id", tenantId);
+      const { data, error } = await supabase.from("course_registrations").select("course_id").eq("member_id", memberId).eq("tenant_id", tenantId);
       if (error) throw error;
       return data;
     },
     enabled: !!memberId && !!tenantId,
-  });
-
-  const { data: openSessions = [] } = useQuery({
-    queryKey: ["my-open-sessions", tenantId],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("exam_sessions").select("id, auto_open_exams").eq("tenant_id", tenantId).eq("status", "active");
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!tenantId,
-  });
-
-  // Courses included in any active session (used for auto-open)
-  const activeSessionIds = openSessions.map(s => s.id);
-  const { data: openSessionCourses = [] } = useQuery({
-    queryKey: ["my-open-session-courses", tenantId, activeSessionIds.join("|")],
-    queryFn: async () => {
-      if (activeSessionIds.length === 0) return [];
-      const { data, error } = await supabase
-        .from("exam_session_courses")
-        .select("session_id, exam_title")
-        .eq("tenant_id", tenantId)
-        .in("session_id", activeSessionIds);
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!tenantId && activeSessionIds.length > 0,
   });
 
   const { data: allSubjects = [] } = useQuery({
@@ -1027,25 +998,11 @@ function DynamicExamButtons({ memberId, onSelect, tenantId }) {
 
   if (isLoading || courses.length === 0) return null;
 
-  // Session-owned openness: a course renders only if it's in an active session AND
-  // (a) the member is registered for that session, or (b) the session is auto_open.
-  const autoOpenSessionIds = new Set(openSessions.filter(s => s.auto_open_exams !== false).map(s => s.id));
-  const eligibleCourseIds = new Set();
-  openSessionCourses.forEach(sc => {
-    const course = courses.find(c => c.name === sc.exam_title);
-    if (!course) return;
-    const memberRegisteredHere = registrations.some(r => r.course_id === course.id && r.session_id === sc.session_id);
-    const isAutoOpen = autoOpenSessionIds.has(sc.session_id);
-    if (memberRegisteredHere || isAutoOpen) {
-      eligibleCourseIds.add(course.id);
-    }
-  });
-
-  const registeredCourses = courses.filter(c => eligibleCourseIds.has(c.id));
+  // Show all courses the member is registered for.
+  const registeredCourseIds = new Set(registrations.map(r => r.course_id));
+  const registeredCourses = courses.filter(c => registeredCourseIds.has(c.id));
   if (registeredCourses.length === 0) return null;
 
-  // No silent auto-register — the OpenSessionsPanel handles enrolment explicitly.
-  // The DB trigger blocks attempts that aren't eligible, so this is purely a UX guard.
   const handleSubjectClick = (course, subject) => {
     onSelect({ type: course.name, subjectId: subject.id, subjectName: subject.name });
   };
