@@ -23,6 +23,7 @@ import { Download, Send, Loader2, ArrowRight, Users, TrendingUp, Clock } from "l
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
+import { useAuth } from "@/hooks/useAuth";
 import PrintReportButton from "@/components/PrintReportButton";
 import MessageFilteredMembersDialog from "./MessageFilteredMembersDialog";
 import { format, subMonths, differenceInDays } from "date-fns";
