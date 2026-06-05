@@ -495,6 +495,7 @@ export default function Attendance() {
                     </SelectContent>
                   </Select>
                 )}
+              </div>
             )}
             {(form.session_type === "Home Cell Meeting" || isWSFLeaderOnly) && (
               <div>
