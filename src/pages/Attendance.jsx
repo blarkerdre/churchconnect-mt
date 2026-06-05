@@ -14,12 +14,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
+import { useChurchUnits } from "@/hooks/useChurchUnits";
 import ReportAttachments from "@/components/reports/ReportAttachments";
 import CheckInPanel from "@/components/attendance/CheckInPanel";
 
 export default function Attendance() {
   const { isAdmin, isUnitLeader, isWSFLeader, leaderUnits = [], leaderCentres = [] } = useAuth();
   const { tenantId, scopeQuery, withTenant } = useTenantQuery();
+  const { data: churchUnits = [] } = useChurchUnits();
   const canManage = isAdmin || isUnitLeader || isWSFLeader;
   const isUnitLeaderOnly = isUnitLeader && !isAdmin;
   const isWSFLeaderOnly = isWSFLeader && !isAdmin && !isUnitLeader;
@@ -30,6 +32,7 @@ export default function Attendance() {
   const [form, setForm] = useState({ title: "", session_type: "Sunday Service", session_date: "", notes: "", unit: "" });
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const [unitFilter, setUnitFilter] = useState("all");
   const [demoForm, setDemoForm] = useState({ male_count: 0, female_count: 0, meeting_notes: "" });
 
   const { data: sessions = [], isLoading } = useQuery({
@@ -45,6 +48,9 @@ export default function Attendance() {
     return sessions.filter(s => {
       if (dateFrom && s.session_date < dateFrom) return false;
       if (dateTo && s.session_date > dateTo) return false;
+      if (unitFilter && unitFilter !== "all") {
+        if ((s.unit || "").toLowerCase() !== unitFilter.toLowerCase()) return false;
+      }
       // Unit leaders only see their unit meetings
       if (isUnitLeaderOnly && !isWSFLeader) {
         if (s.session_type !== "Unit Meeting") return false;
@@ -63,7 +69,7 @@ export default function Attendance() {
       }
       return true;
     });
-  }, [sessions, dateFrom, dateTo, isUnitLeaderOnly, isWSFLeaderOnly, isUnitLeader, isWSFLeader, isAdmin, leaderUnits, leaderCentres]);
+  }, [sessions, dateFrom, dateTo, unitFilter, isUnitLeaderOnly, isWSFLeaderOnly, isUnitLeader, isWSFLeader, isAdmin, leaderUnits, leaderCentres]);
 
   const selectedSession = filteredSessions.find(s => s.id === selectedSessionId) || filteredSessions[0];
 
@@ -193,15 +199,24 @@ export default function Attendance() {
       {canManage && (
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 p-3 bg-muted/50 rounded-lg border border-border">
           <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-            <Filter className="h-4 w-4" /> Filter by date:
+            <Filter className="h-4 w-4" /> Filter:
           </div>
-          <div className="flex items-center gap-2 flex-1">
-            <Input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="h-9 text-sm flex-1" placeholder="From" />
+          <div className="flex items-center gap-2 flex-1 flex-wrap">
+            <Input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="h-9 text-sm flex-1 min-w-[120px]" placeholder="From" />
             <span className="text-xs text-muted-foreground">to</span>
-            <Input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="h-9 text-sm flex-1" placeholder="To" />
+            <Input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="h-9 text-sm flex-1 min-w-[120px]" placeholder="To" />
+            {isAdmin && churchUnits.length > 0 && (
+              <Select value={unitFilter} onValueChange={setUnitFilter}>
+                <SelectTrigger className="h-9 text-sm w-full sm:w-48"><SelectValue placeholder="All units" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All units</SelectItem>
+                  {churchUnits.map(u => <SelectItem key={u.id} value={u.name}>{u.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            )}
           </div>
-          {(dateFrom || dateTo) && (
-            <Button variant="ghost" size="sm" onClick={() => { setDateFrom(""); setDateTo(""); }} className="text-xs">Clear</Button>
+          {(dateFrom || dateTo || unitFilter !== "all") && (
+            <Button variant="ghost" size="sm" onClick={() => { setDateFrom(""); setDateTo(""); setUnitFilter("all"); }} className="text-xs">Clear</Button>
           )}
         </div>
       )}
@@ -473,7 +488,12 @@ export default function Attendance() {
                     </Select>
                   )
                 ) : (
-                  <Input value={form.unit} onChange={e => setForm(f => ({ ...f, unit: e.target.value }))} placeholder="e.g. Choir, Ushering" />
+                  <Select value={form.unit} onValueChange={v => setForm(f => ({ ...f, unit: v }))}>
+                    <SelectTrigger><SelectValue placeholder="Select unit" /></SelectTrigger>
+                    <SelectContent>
+                      {churchUnits.map(u => <SelectItem key={u.id} value={u.name}>{u.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
                 )}
               </div>
             )}
