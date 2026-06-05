@@ -414,12 +414,13 @@ export default function Communications() {
           .in("status", ["scheduled", "processing"]);
         return count || 0;
       }
-      const { count } = await supabase
+      const { data } = await supabase
         .from("email_send_log")
-        .select("id", { count: "exact", head: true })
+        .select("message_id, id, created_at")
         .eq("recipient_email", myMember.email)
         .gte("created_at", thirtyDaysAgo);
-      return count || 0;
+      return dedupeByMessageId(data || []).length;
+
     },
     enabled: emailEnabled && (canManageComms ? !!tenantId : !!myMember?.email),
   });
