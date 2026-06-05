@@ -16,11 +16,30 @@ import { format } from "date-fns";
 
 export default function Testimony() {
   const { tenantId } = useTenantQuery();
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const queryClient = useQueryClient();
   const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState("");
   const [expandedId, setExpandedId] = useState(null);
+  const [adminSearch, setAdminSearch] = useState("");
+  const [adminExpandedId, setAdminExpandedId] = useState(null);
+  const [adminFilter, setAdminFilter] = useState("all");
+
+  const { data: allTestimonies = [], isLoading: loadingAll } = useQuery({
+    queryKey: ["all-testimonies", tenantId],
+    queryFn: async () => {
+      if (!tenantId) return [];
+      const { data, error } = await supabase
+        .from("testimonies")
+        .select("*")
+        .eq("tenant_id", tenantId)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!tenantId && !!isAdmin,
+  });
+
 
   const { data: myMember } = useQuery({
     queryKey: ["my-member", user?.id, tenantId],
@@ -127,7 +146,9 @@ export default function Testimony() {
         <TabsList className="w-full">
           <TabsTrigger value="new" className="flex-1">New Testimony</TabsTrigger>
           <TabsTrigger value="history" className="flex-1">My Testimonies</TabsTrigger>
+          {isAdmin && <TabsTrigger value="all" className="flex-1">All ({allTestimonies.length})</TabsTrigger>}
         </TabsList>
+
 
         <TabsContent value="new">
           <Card className="border shadow-sm">
@@ -249,7 +270,115 @@ export default function Testimony() {
             )}
           </div>
         </TabsContent>
+        {isAdmin && (
+          <TabsContent value="all">
+            <div className="space-y-4">
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <p className="text-sm text-muted-foreground">
+                  <span className="font-semibold text-foreground">{allTestimonies.length}</span> testimon{allTestimonies.length === 1 ? "y" : "ies"} submitted
+                </p>
+                <div className="flex gap-1">
+                  {["all", "shared", "private"].map((f) => (
+                    <Button
+                      key={f}
+                      size="sm"
+                      variant={adminFilter === f ? "default" : "outline"}
+                      onClick={() => setAdminFilter(f)}
+                      className="h-7 text-xs capitalize"
+                    >
+                      {f}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  value={adminSearch}
+                  onChange={(e) => setAdminSearch(e.target.value)}
+                  placeholder="Search by subject, sender, or content..."
+                  className="pl-9"
+                />
+              </div>
+
+              {loadingAll ? (
+                <div className="flex justify-center py-8">
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                </div>
+              ) : (
+                (() => {
+                  const filteredAll = allTestimonies.filter((t) => {
+                    if (adminFilter === "shared" && !t.share_publicly) return false;
+                    if (adminFilter === "private" && t.share_publicly) return false;
+                    if (!adminSearch.trim()) return true;
+                    const q = adminSearch.toLowerCase();
+                    return (
+                      t.title?.toLowerCase().includes(q) ||
+                      t.member_name?.toLowerCase().includes(q) ||
+                      t.situation?.toLowerCase().includes(q) ||
+                      t.god_did?.toLowerCase().includes(q)
+                    );
+                  });
+                  if (filteredAll.length === 0) {
+                    return (
+                      <Card className="border">
+                        <CardContent className="py-8 text-center text-muted-foreground">
+                          No testimonies match the current filter.
+                        </CardContent>
+                      </Card>
+                    );
+                  }
+                  return filteredAll.map((t) => {
+                    const isExpanded = adminExpandedId === t.id;
+                    return (
+                      <Card key={t.id} className="border shadow-sm">
+                        <button
+                          type="button"
+                          className="w-full text-left px-4 py-3 flex items-center justify-between gap-2"
+                          onClick={() => setAdminExpandedId(isExpanded ? null : t.id)}
+                        >
+                          <div className="min-w-0 flex-1">
+                            <p className="font-medium text-sm text-foreground truncate">{t.title}</p>
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
+                              <span className="font-medium text-foreground/80">{t.member_name || "Anonymous"}</span>
+                              <span>·</span>
+                              <span>{format(new Date(t.created_at), "dd MMM yyyy")}</span>
+                              {t.share_publicly ? (
+                                <span className="inline-flex items-center gap-0.5 text-primary"><Share2 className="h-3 w-3" /> Shared</span>
+                              ) : (
+                                <span className="inline-flex items-center gap-0.5"><Lock className="h-3 w-3" /> Private</span>
+                              )}
+                            </div>
+                          </div>
+                          {isExpanded ? <ChevronUp className="h-4 w-4 shrink-0 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />}
+                        </button>
+                        {isExpanded && (
+                          <CardContent className="pt-0 pb-4 space-y-3 text-sm">
+                            <div>
+                              <p className="font-medium text-muted-foreground text-xs mb-1">What was the situation?</p>
+                              <p className="whitespace-pre-wrap text-foreground">{t.situation}</p>
+                            </div>
+                            <div>
+                              <p className="font-medium text-muted-foreground text-xs mb-1">What did you do?</p>
+                              <p className="whitespace-pre-wrap text-foreground">{t.action}</p>
+                            </div>
+                            <div>
+                              <p className="font-medium text-muted-foreground text-xs mb-1">What has the Lord done?</p>
+                              <p className="whitespace-pre-wrap text-foreground">{t.god_did}</p>
+                            </div>
+                          </CardContent>
+                        )}
+                      </Card>
+                    );
+                  });
+                })()
+              )}
+            </div>
+          </TabsContent>
+        )}
       </Tabs>
     </div>
+
   );
 }
