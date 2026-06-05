@@ -278,9 +278,11 @@ export default function StatusConversionReport() {
             <Download className="h-4 w-4 mr-2" /> Export CSV
           </Button>
           <PrintReportButton buildRows={buildPrintRows} label="Print Report" />
-          <Button size="sm" onClick={() => setMessageOpen(true)} disabled={uniqueMembers.length === 0}>
-            <Send className="h-4 w-4 mr-2" /> Message {uniqueMembers.length} Member{uniqueMembers.length !== 1 ? "s" : ""}
-          </Button>
+          {isAdmin && (
+            <Button size="sm" onClick={() => setMessageOpen(true)} disabled={uniqueMembers.length === 0}>
+              <Send className="h-4 w-4 mr-2" /> Message {uniqueMembers.length} Member{uniqueMembers.length !== 1 ? "s" : ""}
+            </Button>
+          )}
         </div>
 
         {/* Table */}
