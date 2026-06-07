@@ -1,40 +1,65 @@
-## Goal
-Remove the "Exam Sessions" feature from Bible School Management entirely and delete all session records.
+# Certificates Report
 
-## UI / code changes
+Add a new admin report that summarises every certificate issued and reissued in the tenant, with filters, totals, an activity timeline, and CSV / print export.
 
-**`src/pages/ExamManagement.jsx`**
-- Remove `ExamSessionManager` import and its rendered block (the "Exam Sessions" section around line 290–291).
-- In the Registrations table:
-  - Drop `session_id`, `exam_sessions(name)` from the select.
-  - Remove `sessionFilter` state, `sessionOptions`, the "All Sessions" Select filter, the Session column in the table, the Session field in CSV export, and the session piece of the filename/clear-filters logic.
+## Where it lives
 
-**`src/pages/MyProfile.jsx`**
-- Remove the `OpenSessionsPanel` import + usage (around line 1114) and the related session query block (~line 980–994).
+- New page: `src/pages/CertificatesReport.jsx` at route `/certificates-report` (tenant-prefixed).
+- Linked from:
+  - **Reports Hub** (`src/pages/Reports.jsx`) — new card "Certificates" (Award icon).
+  - **Training Reports** page — small "Certificates Report" button in the header so admins managing training can jump straight in.
+- Visible to Admins, Tenant Owners/Admins, and Reports Officer (read-only). Hidden from regular members.
 
-**`src/pages/PublicWoFBIRegistration.jsx`**
-- Remove the session picker UI and the `sessionCourses` / `exam_sessions` / `exam_session_courses` queries. Fall back to showing all active `exam_titles` for the tenant (existing behaviour when no session is chosen).
+## Data sources (already exist — no schema changes)
 
-**`supabase/functions/public-wofbi-register/index.ts`**
-- Drop session lookup and any `session_id` written into `course_registrations`.
+- `training_completions` — current state per (member, training_type): cert number, completion date, issuer, file URL.
+- `audit_log` — full history with `action IN ('certificate_issued','certificate_reissued')`, including `details.certificate_number`, `details.training_type`, `details.member_id`, actor `user_id`, and `created_at`. This is the source of truth for reissue counts and timestamps (since reissues update the row in place and keep the same cert number).
+- `members` — for member names, units, status.
 
-**Delete component files** (no longer referenced):
-- `src/components/exams/ExamSessionManager.jsx`
-- `src/components/exams/OpenSessionsPanel.jsx`
-- `src/components/exams/SessionEnrolDialog.jsx`
+All queries scoped with `.eq("tenant_id", tenantId)` per project rule.
 
-## Data deletion (migration)
+## UI
 
-Single migration:
-```sql
-UPDATE public.course_registrations SET session_id = NULL WHERE session_id IS NOT NULL;
-DELETE FROM public.exam_session_courses;
-DELETE FROM public.exam_sessions;
-```
+Header: "Certificates Report" with date range, totals chips, export buttons.
 
-Tables and the `session_id` column stay in place (kept nullable) so historical schema, archive/export functions, and the types file don't need a churn. They simply hold no rows and are no longer surfaced anywhere in the UI.
+**Filters**
+- Date range (issued/reissued between) — defaults to last 90 days.
+- Training programme (multi-select, sourced from distinct `training_type` in `training_completions` + active `exam_titles`).
+- Issued by (user dropdown, optional).
+- Member search (name / cert number).
+- Status: All / Issued only / Reissued only / Reissued ≥ 1 time.
 
-## Out of scope
-- Not dropping `exam_sessions` / `exam_session_courses` tables or the `session_id` column.
-- No changes to grading, attempts, subjects, or course registrations beyond clearing `session_id`.
-- No changes to `archive-tenant` / `purge-all-data` (still reference the tables harmlessly).
+**Summary stat cards**
+- Total certificates issued (distinct cert numbers in range)
+- Total reissues in range
+- Members certified (distinct members)
+- Top programme (by count)
+
+**Tabs**
+1. **By Certificate** — table: Member · Programme · Cert No · Completion Date · First Issued · Last Reissued · Reissue Count · Issued By · Download.
+2. **Activity Log** — chronological audit list: timestamp · action badge (Issued / Reissued) · cert no · member · programme · actor.
+3. **By Programme** — aggregated table: Programme · Issued · Reissued · Unique Members; with a small bar chart (recharts, already used in project).
+
+**Exports**
+- "Export CSV" for the active tab (members + cert details, or activity log).
+- `PrintReportButton` reusing the existing component for a print-friendly view of the active tab.
+
+## Technical notes
+
+- Single page component using `@tanstack/react-query` with `tenantId` from `useTenantQuery`.
+- Two parallel queries:
+  - `training_completions` joined with `members(first_name,last_name,email,unit,status)`.
+  - `audit_log` filtered by `action IN ('certificate_issued','certificate_reissued')` and date range.
+- Reissue count per cert = count of `certificate_reissued` rows whose `details->>certificate_number` matches; first issued = min `created_at` of `certificate_issued`; last reissued = max of `certificate_reissued`.
+- Issuer name resolved via a `profiles` lookup keyed by actor `user_id` (single batched query for the unique set).
+- CSV built client-side; no edge function needed.
+- Permission guard mirrors Training Reports page (admin/owner/reports officer); redirects others with a toast.
+
+## Files to add / edit
+
+- **Add** `src/pages/CertificatesReport.jsx`
+- **Edit** `src/App.jsx` — register the route (tenant-prefixed and standalone) with the same auth guard pattern as `TrainingReports`.
+- **Edit** `src/pages/Reports.jsx` — add the "Certificates" module card.
+- **Edit** `src/pages/TrainingReports.jsx` — add a header link/button to the new report.
+
+No DB migration, no edge function, no new dependencies.

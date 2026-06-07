@@ -13,7 +13,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "@/components/ui/use-toast";
 import { format, parseISO } from "date-fns";
-import { Loader2, Plus, Droplets, Flame, BookOpen, Users, TrendingUp, Paperclip, Download, Printer } from "lucide-react";
+import { Loader2, Plus, Droplets, Flame, BookOpen, Users, TrendingUp, Paperclip, Download, Printer, Award } from "lucide-react";
+import { Link, useParams } from "react-router-dom";
 import { useAppSetting } from "@/hooks/useAppSetting";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
 import ReportAttachments from "@/components/reports/ReportAttachments";
@@ -59,6 +60,8 @@ export default function TrainingReports() {
   const [filterTo, setFilterTo] = useState("");
   const [expandedRow, setExpandedRow] = useState(null);
   const { user } = useAuth();
+  const { tenantSlug } = useParams();
+  const certReportPath = tenantSlug ? `/t/${tenantSlug}/certificates-report` : "/certificates-report";
   const qc = useQueryClient();
   const { tenantId, scopeQuery, withTenant } = useTenantQuery();
 
@@ -179,6 +182,10 @@ export default function TrainingReports() {
           </h1>
           <p className="text-sm text-muted-foreground mt-1">Record attendance and outcomes for training sessions</p>
         </div>
+        <div className="flex items-center gap-2">
+          <Button asChild size="sm" variant="outline" className="gap-1.5">
+            <Link to={certReportPath}><Award className="h-4 w-4" /> Certificates Report</Link>
+          </Button>
         {canRecordSession && (
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
@@ -256,6 +263,7 @@ export default function TrainingReports() {
           </DialogContent>
         </Dialog>
         )}
+        </div>
       </div>
 
       {/* Summary Cards */}
