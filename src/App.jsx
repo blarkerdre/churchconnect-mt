@@ -43,6 +43,7 @@ const Testimony = lazy(() => import("@/pages/Testimony"));
 const Unsubscribe = lazy(() => import("@/pages/Unsubscribe"));
 const UnitTasks = lazy(() => import("@/pages/UnitTasks"));
 const Reports = lazy(() => import("@/pages/Reports"));
+const CertificatesReport = lazy(() => import("@/pages/CertificatesReport"));
 
 function PageFallback() {
   return (
@@ -170,6 +171,7 @@ function AppPages() {
         <Route path="/testimony" element={<FeatureGate path="/testimony"><Testimony /></FeatureGate>} />
         <Route path="/unit-tasks" element={<ProtectedRoute><UnitTasks /></ProtectedRoute>} />
         <Route path="/reports" element={<ReportsRoute><Reports /></ReportsRoute>} />
+        <Route path="/certificates-report" element={<ReportsRoute><CertificatesReport /></ReportsRoute>} />
         <Route path="/settings" element={<AdminRoute><Settings /></AdminRoute>} />
         <Route path="/system-logs" element={<AdminRoute><SystemLogs /></AdminRoute>} />
         <Route path="/tenant-admin" element={<SuperAdminRoute><TenantAdmin /></SuperAdminRoute>} />
