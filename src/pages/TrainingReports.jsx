@@ -263,6 +263,7 @@ export default function TrainingReports() {
           </DialogContent>
         </Dialog>
         )}
+        </div>
       </div>
 
       {/* Summary Cards */}
