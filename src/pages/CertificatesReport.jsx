@@ -99,6 +99,17 @@ export default function CertificatesReport() {
     return m;
   }, [issuers]);
 
+  // Map certificate_number -> member name (from completions)
+  const certMemberMap = useMemo(() => {
+    const m = new Map();
+    completions.forEach((c) => {
+      if (!c.certificate_number) return;
+      const name = `${c.members?.first_name || ""} ${c.members?.last_name || ""}`.trim() || "—";
+      m.set(c.certificate_number, name);
+    });
+    return m;
+  }, [completions]);
+
   // Build reissue stats per cert number
   const reissueStats = useMemo(() => {
     const map = new Map();
