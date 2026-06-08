@@ -99,6 +99,17 @@ export default function CertificatesReport() {
     return m;
   }, [issuers]);
 
+  // Map certificate_number -> member name (from completions)
+  const certMemberMap = useMemo(() => {
+    const m = new Map();
+    completions.forEach((c) => {
+      if (!c.certificate_number) return;
+      const name = `${c.members?.first_name || ""} ${c.members?.last_name || ""}`.trim() || "—";
+      m.set(c.certificate_number, name);
+    });
+    return m;
+  }, [completions]);
+
   // Build reissue stats per cert number
   const reissueStats = useMemo(() => {
     const map = new Map();
@@ -231,10 +242,11 @@ export default function CertificatesReport() {
   const exportActivityCSV = () => {
     downloadCSV(
       `certificate-activity-${fromDate}-to-${toDate}.csv`,
-      ["Timestamp", "Action", "Cert No", "Programme", "Actor"],
+      ["Timestamp", "Action", "Member", "Cert No", "Programme", "Actor"],
       filteredAudit.map((a) => [
         format(parseISO(a.created_at), "yyyy-MM-dd HH:mm:ss"),
         a.action === "certificate_reissued" ? "Reissued" : "Issued",
+        certMemberMap.get(a.details?.certificate_number) || "—",
         a.details?.certificate_number || "",
         a.details?.training_type || "",
         issuerMap.get(a.user_id) || "",
@@ -260,10 +272,11 @@ export default function CertificatesReport() {
 
   const buildActivityPrint = () => ({
     title: `Certificate Activity Log (${fromDate} to ${toDate})`,
-    headers: ["When", "Action", "Cert No", "Programme", "Actor"],
+    headers: ["When", "Action", "Member", "Cert No", "Programme", "Actor"],
     rows: filteredAudit.map((a) => [
       format(parseISO(a.created_at), "dd MMM yyyy HH:mm"),
       a.action === "certificate_reissued" ? "Reissued" : "Issued",
+      certMemberMap.get(a.details?.certificate_number) || "—",
       a.details?.certificate_number || "",
       a.details?.training_type || "",
       issuerMap.get(a.user_id) || "—",
@@ -410,15 +423,16 @@ export default function CertificatesReport() {
                   <TableRow>
                     <TableHead>When</TableHead>
                     <TableHead>Action</TableHead>
+                    <TableHead>Member</TableHead>
                     <TableHead>Cert No</TableHead>
                     <TableHead>Programme</TableHead>
                     <TableHead>Actor</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {loading && <TableRow><TableCell colSpan={5} className="text-center py-6 text-muted-foreground">Loading…</TableCell></TableRow>}
+                  {loading && <TableRow><TableCell colSpan={6} className="text-center py-6 text-muted-foreground">Loading…</TableCell></TableRow>}
                   {!loading && filteredAudit.length === 0 && (
-                    <TableRow><TableCell colSpan={5} className="text-center py-6 text-muted-foreground">No activity in this range.</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={6} className="text-center py-6 text-muted-foreground">No activity in this range.</TableCell></TableRow>
                   )}
                   {filteredAudit.map((a) => (
                     <TableRow key={a.id}>
@@ -428,6 +442,7 @@ export default function CertificatesReport() {
                           ? <Badge variant="secondary"><RotateCw className="h-3 w-3 mr-1" /> Reissued</Badge>
                           : <Badge><Award className="h-3 w-3 mr-1" /> Issued</Badge>}
                       </TableCell>
+                      <TableCell className="font-medium">{certMemberMap.get(a.details?.certificate_number) || "—"}</TableCell>
                       <TableCell><Badge variant="outline" className="text-[10px]">{a.details?.certificate_number || "—"}</Badge></TableCell>
                       <TableCell>{a.details?.training_type || "—"}</TableCell>
                       <TableCell className="text-sm text-muted-foreground">{issuerMap.get(a.user_id) || "—"}</TableCell>

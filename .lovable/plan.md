@@ -1,34 +1,24 @@
 ## Goal
+Surface the member name in the certificate report’s Activity Log view so operators can see who each certificate action relates to without cross-referencing certificate numbers.
 
-Make certificate templates (and their uploaded background images) fully tenant-scoped so each church manages, uploads, and uses its own templates without cross-tenant collisions.
+## What to build
 
-## Current state
+### 1. Client-side certificate-to-member lookup
+The Activity Log fetches `audit_log` rows with `certificate_number` in `details`, but no member info. We already load all `training_completions` (with joined `members`) in the same page. Build a `Map<certificateNumber, memberName>` from the completions array so the Activity Log tab can resolve names instantly without extra queries.
 
-- `certificate_templates.tenant_id` already exists and RLS is tenant-scoped (`is_admin(auth.uid(), tenant_id)` for writes, `user_has_tenant_access(tenant_id)` for reads).
-- The Settings UI (`CertificateTemplateSettings`) is already gated behind `canManageTenant` and scopes its queries with `useTenantQuery`.
-- Background uploads already go to `church-documents/{tenantId}/certificate-backgrounds/...`.
-- **Gap 1 — schema:** `certificate_templates` has a global `UNIQUE (training_type)` constraint. Two tenants cannot both create a "Default" (or any same-named) template — the second one fails.
-- **Gap 2 — schema:** `tenant_id` is nullable, allowing a future row to leak globally.
-- **Gap 3 — edge function:** `supabase/functions/issue-certificate/index.ts` looks up templates by `training_type` only (no `.eq("tenant_id", tenant_id)`), so a tenant could pick up another tenant's template when the names happen to match.
+### 2. Activity Log table — new "Member" column
+Insert a "Member" column into the Activity Log table between "Action" and "Cert No". Use the lookup map to render the name; fall back to "—" if the certificate number isn’t found (e.g. legacy audit rows).
 
-## Changes
+### 3. Activity CSV export — new "Member" column
+Add a "Member" header and corresponding row value in `exportActivityCSV`, using the same lookup map.
 
-### 1. Database migration
+### 4. Activity print view — new "Member" column
+Add a "Member" header and row value in `buildActivityPrint`, using the same lookup map.
 
-- Drop `certificate_templates_training_type_key` (the global unique).
-- Add composite unique `UNIQUE (tenant_id, training_type)` so each tenant has its own namespace.
-- Set `tenant_id NOT NULL` (all existing rows already have it).
+## Files
+- `src/pages/CertificatesReport.jsx`
 
-### 2. Edge function — `supabase/functions/issue-certificate/index.ts`
-
-In the two template lookups (the requested `training_type` and the `"default"` fallback), add `.eq("tenant_id", tenant_id)` so a template is only matched within the issuing tenant.
-
-### 3. UI — no functional change needed
-
-`CertificateTemplateSettings.jsx` already uses `withTenant(...)` on insert and `scopeQuery(...)` on reads. Confirmed sufficient after the schema change; no edits required.
-
-## Out of scope
-
-- Branding/colour/signatory defaults remain as-is.
-- Storage bucket policies for `church-documents` are already tenant-prefixed; no policy changes.
-- No UI redesign; the Settings → Certificates tab stays where it is.
+## No-go
+- No database changes.
+- No alterations to how audit logs are written.
+- No changes to the By Certificate or By Programme tabs.
