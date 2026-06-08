@@ -423,15 +423,16 @@ export default function CertificatesReport() {
                   <TableRow>
                     <TableHead>When</TableHead>
                     <TableHead>Action</TableHead>
+                    <TableHead>Member</TableHead>
                     <TableHead>Cert No</TableHead>
                     <TableHead>Programme</TableHead>
                     <TableHead>Actor</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {loading && <TableRow><TableCell colSpan={5} className="text-center py-6 text-muted-foreground">Loading…</TableCell></TableRow>}
+                  {loading && <TableRow><TableCell colSpan={6} className="text-center py-6 text-muted-foreground">Loading…</TableCell></TableRow>}
                   {!loading && filteredAudit.length === 0 && (
-                    <TableRow><TableCell colSpan={5} className="text-center py-6 text-muted-foreground">No activity in this range.</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={6} className="text-center py-6 text-muted-foreground">No activity in this range.</TableCell></TableRow>
                   )}
                   {filteredAudit.map((a) => (
                     <TableRow key={a.id}>
@@ -441,6 +442,7 @@ export default function CertificatesReport() {
                           ? <Badge variant="secondary"><RotateCw className="h-3 w-3 mr-1" /> Reissued</Badge>
                           : <Badge><Award className="h-3 w-3 mr-1" /> Issued</Badge>}
                       </TableCell>
+                      <TableCell className="font-medium">{certMemberMap.get(a.details?.certificate_number) || "—"}</TableCell>
                       <TableCell><Badge variant="outline" className="text-[10px]">{a.details?.certificate_number || "—"}</Badge></TableCell>
                       <TableCell>{a.details?.training_type || "—"}</TableCell>
                       <TableCell className="text-sm text-muted-foreground">{issuerMap.get(a.user_id) || "—"}</TableCell>
