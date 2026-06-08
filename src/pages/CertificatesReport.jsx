@@ -272,10 +272,11 @@ export default function CertificatesReport() {
 
   const buildActivityPrint = () => ({
     title: `Certificate Activity Log (${fromDate} to ${toDate})`,
-    headers: ["When", "Action", "Cert No", "Programme", "Actor"],
+    headers: ["When", "Action", "Member", "Cert No", "Programme", "Actor"],
     rows: filteredAudit.map((a) => [
       format(parseISO(a.created_at), "dd MMM yyyy HH:mm"),
       a.action === "certificate_reissued" ? "Reissued" : "Issued",
+      certMemberMap.get(a.details?.certificate_number) || "—",
       a.details?.certificate_number || "",
       a.details?.training_type || "",
       issuerMap.get(a.user_id) || "—",
