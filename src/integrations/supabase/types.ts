@@ -588,7 +588,7 @@ export type Database = {
           logo_url: string | null
           signatory_name: string
           signatory_title: string
-          tenant_id: string | null
+          tenant_id: string
           text_color: string | null
           text_positions: Json | null
           training_type: string
@@ -605,7 +605,7 @@ export type Database = {
           logo_url?: string | null
           signatory_name?: string
           signatory_title?: string
-          tenant_id?: string | null
+          tenant_id: string
           text_color?: string | null
           text_positions?: Json | null
           training_type: string
@@ -622,7 +622,7 @@ export type Database = {
           logo_url?: string | null
           signatory_name?: string
           signatory_title?: string
-          tenant_id?: string | null
+          tenant_id?: string
           text_color?: string | null
           text_positions?: Json | null
           training_type?: string
