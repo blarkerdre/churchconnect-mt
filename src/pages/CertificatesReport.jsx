@@ -242,10 +242,11 @@ export default function CertificatesReport() {
   const exportActivityCSV = () => {
     downloadCSV(
       `certificate-activity-${fromDate}-to-${toDate}.csv`,
-      ["Timestamp", "Action", "Cert No", "Programme", "Actor"],
+      ["Timestamp", "Action", "Member", "Cert No", "Programme", "Actor"],
       filteredAudit.map((a) => [
         format(parseISO(a.created_at), "yyyy-MM-dd HH:mm:ss"),
         a.action === "certificate_reissued" ? "Reissued" : "Issued",
+        certMemberMap.get(a.details?.certificate_number) || "—",
         a.details?.certificate_number || "",
         a.details?.training_type || "",
         issuerMap.get(a.user_id) || "",
