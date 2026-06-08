@@ -190,10 +190,11 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Get template (case-insensitive + fallback to "Default" template)
+    // Get template (case-insensitive + fallback to "Default" template), scoped to tenant
     let { data: template } = await supabase
       .from("certificate_templates")
       .select("*")
+      .eq("tenant_id", tenant_id)
       .ilike("training_type", training_type.trim())
       .maybeSingle();
 
@@ -201,6 +202,7 @@ Deno.serve(async (req) => {
       const { data: defaultTpl } = await supabase
         .from("certificate_templates")
         .select("*")
+        .eq("tenant_id", tenant_id)
         .ilike("training_type", "default")
         .maybeSingle();
       template = defaultTpl;
