@@ -137,6 +137,25 @@ function TrainingReportRoute({ children }) {
   return children;
 }
 
+function CertificateApprovalsRoute({ children }) {
+  const { isAdmin, loading, user } = useAuth();
+  const { tenantSlug } = useParams();
+  const { tenantId } = useTenant();
+  const { data: isTrainingRepLeader = false, isLoading: leaderLoading } = useQuery({
+    queryKey: ["is-training-rep-leader", user?.id, tenantId],
+    enabled: !!user?.id && !!tenantId,
+    queryFn: async () => {
+      const { data } = await import("@/integrations/supabase/client").then(m =>
+        m.supabase.rpc("is_training_rep_leader", { _user_id: user.id, _tenant_id: tenantId })
+      );
+      return !!data;
+    },
+  });
+  if (loading || leaderLoading) return null;
+  if (!isAdmin && !isTrainingRepLeader) return <Navigate to={tenantSlug ? `/t/${tenantSlug}` : "/"} replace />;
+  return children;
+}
+
 function FeatureGate({ path, children }) {
   const { roles, loading } = useAuth();
   const { tenantSlug } = useParams();
