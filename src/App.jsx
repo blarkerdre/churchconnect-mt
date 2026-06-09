@@ -146,9 +146,7 @@ function CertificateApprovalsRoute({ children }) {
     queryKey: ["is-training-rep-leader", user?.id, tenantId],
     enabled: !!user?.id && !!tenantId,
     queryFn: async () => {
-      const { data } = await import("@/integrations/supabase/client").then(m =>
-        m.supabase.rpc("is_training_rep_leader", { _user_id: user.id, _tenant_id: tenantId })
-      );
+      const { data } = await supabase.rpc("is_training_rep_leader", { _user_id: user.id, _tenant_id: tenantId });
       return !!data;
     },
   });
