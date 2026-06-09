@@ -18,6 +18,7 @@ import { Link, useParams } from "react-router-dom";
 import { useAppSetting } from "@/hooks/useAppSetting";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
 import ReportAttachments from "@/components/reports/ReportAttachments";
+import TrainingAttendeesPanel from "@/components/training/TrainingAttendeesPanel";
 import PrintReportButton from "@/components/PrintReportButton";
 import { useSubFeature } from "@/hooks/useSubFeature";
 
@@ -338,17 +339,20 @@ export default function TrainingReports() {
                           <TableCell className="text-center">{r.holy_ghost_baptism}</TableCell>
                           <TableCell className="text-center">{r.water_baptism}</TableCell>
                           <TableCell>
-                            {canAttachments && (
-                              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setExpandedRow(expandedRow === r.id ? null : r.id)}>
-                                <Paperclip className="h-3.5 w-3.5" />
-                              </Button>
-                            )}
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setExpandedRow(expandedRow === r.id ? null : r.id)}>
+                              <Users className="h-3.5 w-3.5" />
+                            </Button>
                           </TableCell>
                         </TableRow>
                         {expandedRow === r.id && (
                           <TableRow>
-                            <TableCell colSpan={8} className="bg-muted/20 p-3">
-                              <ReportAttachments relatedTable="training_reports" relatedId={r.id} />
+                            <TableCell colSpan={8} className="bg-muted/20 p-3 space-y-4">
+                              <TrainingAttendeesPanel report={r} />
+                              {canAttachments && (
+                                <div className="pt-3 border-t">
+                                  <ReportAttachments relatedTable="training_reports" relatedId={r.id} />
+                                </div>
+                              )}
                             </TableCell>
                           </TableRow>
                         )}

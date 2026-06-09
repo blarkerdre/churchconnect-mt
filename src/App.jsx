@@ -1,5 +1,6 @@
 import { Toaster } from "@/components/ui/toaster";
-import { QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider, useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { queryClientInstance } from "@/lib/query-client";
 import { BrowserRouter as Router, Route, Routes, Navigate, useParams, useLocation } from "react-router-dom";
 import { lazy, Suspense } from "react";
@@ -44,6 +45,7 @@ const Unsubscribe = lazy(() => import("@/pages/Unsubscribe"));
 const UnitTasks = lazy(() => import("@/pages/UnitTasks"));
 const Reports = lazy(() => import("@/pages/Reports"));
 const CertificatesReport = lazy(() => import("@/pages/CertificatesReport"));
+const CertificateApprovals = lazy(() => import("@/pages/CertificateApprovals"));
 
 function PageFallback() {
   return (
@@ -136,6 +138,23 @@ function TrainingReportRoute({ children }) {
   return children;
 }
 
+function CertificateApprovalsRoute({ children }) {
+  const { isAdmin, loading, user } = useAuth();
+  const { tenantSlug } = useParams();
+  const { tenantId } = useTenant();
+  const { data: isTrainingRepLeader = false, isLoading: leaderLoading } = useQuery({
+    queryKey: ["is-training-rep-leader", user?.id, tenantId],
+    enabled: !!user?.id && !!tenantId,
+    queryFn: async () => {
+      const { data } = await supabase.rpc("is_training_rep_leader", { _user_id: user.id, _tenant_id: tenantId });
+      return !!data;
+    },
+  });
+  if (loading || leaderLoading) return null;
+  if (!isAdmin && !isTrainingRepLeader) return <Navigate to={tenantSlug ? `/t/${tenantSlug}` : "/"} replace />;
+  return children;
+}
+
 function FeatureGate({ path, children }) {
   const { roles, loading } = useAuth();
   const { tenantSlug } = useParams();
@@ -172,6 +191,7 @@ function AppPages() {
         <Route path="/unit-tasks" element={<ProtectedRoute><UnitTasks /></ProtectedRoute>} />
         <Route path="/reports" element={<ReportsRoute><Reports /></ReportsRoute>} />
         <Route path="/certificates-report" element={<ReportsRoute><CertificatesReport /></ReportsRoute>} />
+        <Route path="/certificate-approvals" element={<CertificateApprovalsRoute><CertificateApprovals /></CertificateApprovalsRoute>} />
         <Route path="/settings" element={<AdminRoute><Settings /></AdminRoute>} />
         <Route path="/system-logs" element={<AdminRoute><SystemLogs /></AdminRoute>} />
         <Route path="/tenant-admin" element={<SuperAdminRoute><TenantAdmin /></SuperAdminRoute>} />
