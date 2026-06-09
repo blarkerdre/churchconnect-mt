@@ -3443,6 +3443,88 @@ export type Database = {
           },
         ]
       }
+      training_attendees: {
+        Row: {
+          attended: boolean
+          certificate_number: string | null
+          completed: boolean
+          created_at: string
+          decision_at: string | null
+          decision_by: string | null
+          decision_notes: string | null
+          id: string
+          member_id: string
+          not_completed_reason: string | null
+          signpost_status: string
+          signposted_at: string | null
+          signposted_by: string | null
+          tenant_id: string
+          training_report_id: string
+          training_type: string
+          updated_at: string
+        }
+        Insert: {
+          attended?: boolean
+          certificate_number?: string | null
+          completed?: boolean
+          created_at?: string
+          decision_at?: string | null
+          decision_by?: string | null
+          decision_notes?: string | null
+          id?: string
+          member_id: string
+          not_completed_reason?: string | null
+          signpost_status?: string
+          signposted_at?: string | null
+          signposted_by?: string | null
+          tenant_id: string
+          training_report_id: string
+          training_type: string
+          updated_at?: string
+        }
+        Update: {
+          attended?: boolean
+          certificate_number?: string | null
+          completed?: boolean
+          created_at?: string
+          decision_at?: string | null
+          decision_by?: string | null
+          decision_notes?: string | null
+          id?: string
+          member_id?: string
+          not_completed_reason?: string | null
+          signpost_status?: string
+          signposted_at?: string | null
+          signposted_by?: string | null
+          tenant_id?: string
+          training_report_id?: string
+          training_type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "training_attendees_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "training_attendees_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "training_attendees_training_report_id_fkey"
+            columns: ["training_report_id"]
+            isOneToOne: false
+            referencedRelation: "training_reports"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       training_completions: {
         Row: {
           certificate_number: string
@@ -4357,6 +4439,14 @@ export type Database = {
         Returns: boolean
       }
       is_tenant_admin: {
+        Args: { _tenant_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_training_rep_leader: {
+        Args: { _tenant_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_training_rep_member: {
         Args: { _tenant_id: string; _user_id: string }
         Returns: boolean
       }
