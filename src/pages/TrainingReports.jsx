@@ -18,6 +18,7 @@ import { Link, useParams } from "react-router-dom";
 import { useAppSetting } from "@/hooks/useAppSetting";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
 import ReportAttachments from "@/components/reports/ReportAttachments";
+import TrainingAttendeesPanel from "@/components/training/TrainingAttendeesPanel";
 import PrintReportButton from "@/components/PrintReportButton";
 import { useSubFeature } from "@/hooks/useSubFeature";
 
