@@ -183,8 +183,16 @@ export default function CertificateApprovals() {
           <TabsTrigger value="declined">Declined ({counts.declined || 0})</TabsTrigger>
           <TabsTrigger value="issued">Issued ({counts.issued || 0})</TabsTrigger>
           <TabsTrigger value="all">All ({counts.all || 0})</TabsTrigger>
+          <TabsTrigger value="report">Report</TabsTrigger>
         </TabsList>
       </Tabs>
+
+      {tab === "report" && (
+        <ReportView rows={rows} trainingTypes={trainingTypes} profileMap={profileMap} />
+      )}
+      {tab !== "report" && (
+      <>
+
 
       <Card className="border-0 shadow-sm">
         <CardHeader className="pb-3">
