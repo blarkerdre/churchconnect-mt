@@ -323,6 +323,82 @@ export default function TrainingReports() {
                 </div>
               </div>
 
+              {canManageAttendees && (
+                <div className="border rounded-lg p-3 space-y-3 bg-muted/30">
+                  <p className="text-sm font-semibold text-foreground flex items-center gap-2">
+                    <Users className="h-4 w-4" /> Attendees
+                    {selectedMembers.length > 0 && (
+                      <Badge variant="secondary" className="ml-1 text-[10px]">{selectedMembers.length}</Badge>
+                    )}
+                  </p>
+                  <div className="relative">
+                    <Search className="absolute left-2 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
+                    <Input
+                      value={attendeeSearch}
+                      onChange={(e) => setAttendeeSearch(e.target.value)}
+                      placeholder="Search members to add..."
+                      className="pl-7 h-8 text-xs"
+                    />
+                  </div>
+                  {attendeeSearch && filteredMembers.length > 0 && (
+                    <div className="border rounded-md bg-background max-h-40 overflow-y-auto">
+                      {filteredMembers.map(m => (
+                        <label key={m.id} className="flex items-center gap-2 px-2 py-1.5 hover:bg-muted cursor-pointer text-xs">
+                          <Checkbox checked={!!attendees[m.id]} onCheckedChange={() => toggleAttendee(m)} />
+                          <span className="truncate">{m.first_name} {m.last_name}</span>
+                          {m.email && <span className="text-muted-foreground truncate ml-auto">{m.email}</span>}
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                  {selectedMembers.length === 0 ? (
+                    <p className="text-xs text-muted-foreground italic">Search above to add members who attended. You can also add them later from the session row.</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {selectedMembers.map(m => {
+                        const info = attendees[m.id];
+                        return (
+                          <div key={m.id} className="rounded-md border bg-background p-2 space-y-1.5">
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="text-xs font-medium truncate">{m.first_name} {m.last_name}</span>
+                              <Button type="button" variant="ghost" size="icon" className="h-6 w-6" onClick={() => toggleAttendee(m)}>
+                                <X className="h-3 w-3" />
+                              </Button>
+                            </div>
+                            <div className="flex flex-wrap items-center gap-3">
+                              <label className="flex items-center gap-1.5 text-xs">
+                                <Checkbox
+                                  checked={info.completed}
+                                  onCheckedChange={(v) => updateAttendee(m.id, { completed: !!v, signpost: v ? info.signpost : false })}
+                                />
+                                Completed
+                              </label>
+                              {info.completed && (
+                                <label className="flex items-center gap-1.5 text-xs">
+                                  <Checkbox
+                                    checked={info.signpost}
+                                    onCheckedChange={(v) => updateAttendee(m.id, { signpost: !!v })}
+                                  />
+                                  <Send className="h-3 w-3" /> Signpost for certificate
+                                </label>
+                              )}
+                            </div>
+                            {!info.completed && (
+                              <Input
+                                value={info.reason}
+                                onChange={(e) => updateAttendee(m.id, { reason: e.target.value })}
+                                placeholder="Reason for not completing (optional)"
+                                className="h-7 text-xs"
+                              />
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+
               <div>
                 <Label>Notes</Label>
                 <Textarea value={form.notes} onChange={(e) => set("notes", e.target.value)} rows={2} />
