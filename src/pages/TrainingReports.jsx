@@ -62,11 +62,15 @@ export default function TrainingReports() {
   const [filterFrom, setFilterFrom] = useState("");
   const [filterTo, setFilterTo] = useState("");
   const [expandedRow, setExpandedRow] = useState(null);
-  const { user } = useAuth();
+  const [attendeeSearch, setAttendeeSearch] = useState("");
+  const [attendees, setAttendees] = useState({}); // { memberId: { completed, reason, signpost } }
+  const { user, isAdmin } = useAuth();
   const { tenantSlug } = useParams();
   const certReportPath = tenantSlug ? `/t/${tenantSlug}/certificates-report` : "/certificates-report";
   const qc = useQueryClient();
   const { tenantId, scopeQuery, withTenant } = useTenantQuery();
+  const { isMemberOfUnit: isTrainingRep } = useUnitMembership("Training Rep");
+  const canManageAttendees = isAdmin || isTrainingRep;
 
   const { enabled: canRecordSession } = useSubFeature("training.record_session");
   const { enabled: canCsvExport } = useSubFeature("training.csv_export");
@@ -89,15 +93,81 @@ export default function TrainingReports() {
     },
   });
 
+  const { data: allMembers = [] } = useQuery({
+    queryKey: ["members-for-training-form", tenantId],
+    enabled: !!tenantId && open && canManageAttendees,
+    queryFn: async () => {
+      const { data, error } = await scopeQuery(
+        supabase.from("members").select("id, first_name, last_name, email").order("first_name", { ascending: true })
+      );
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  const filteredMembers = useMemo(() => {
+    const s = attendeeSearch.trim().toLowerCase();
+    if (!s) return [];
+    return allMembers.filter(m => {
+      const name = `${m.first_name} ${m.last_name}`.toLowerCase();
+      return name.includes(s) || (m.email || "").toLowerCase().includes(s);
+    }).slice(0, 50);
+  }, [allMembers, attendeeSearch]);
+
+  const selectedMembers = useMemo(
+    () => allMembers.filter(m => attendees[m.id]),
+    [allMembers, attendees]
+  );
+
+  const toggleAttendee = (m) => {
+    setAttendees(prev => {
+      const next = { ...prev };
+      if (next[m.id]) delete next[m.id];
+      else next[m.id] = { completed: true, reason: "", signpost: false };
+      return next;
+    });
+  };
+  const updateAttendee = (id, patch) => {
+    setAttendees(prev => ({ ...prev, [id]: { ...prev[id], ...patch } }));
+  };
+
+  const resetForm = () => {
+    setForm(emptyForm);
+    setAttendees({});
+    setAttendeeSearch("");
+  };
+
   const saveMutation = useMutation({
     mutationFn: async (payload) => {
-      const { error } = await supabase.from("training_reports").insert(withTenant(payload));
+      const { data: inserted, error } = await supabase
+        .from("training_reports")
+        .insert(withTenant(payload))
+        .select("id")
+        .single();
       if (error) throw error;
+      const reportId = inserted.id;
+
+      const attendeeRows = Object.entries(attendees).map(([memberId, info]) => withTenant({
+        training_report_id: reportId,
+        member_id: memberId,
+        training_type: payload.training_type,
+        attended: true,
+        completed: !!info.completed,
+        not_completed_reason: info.completed ? null : (info.reason || null),
+        signpost_status: info.completed && info.signpost ? "pending" : "none",
+        signposted_by: info.completed && info.signpost ? user?.id : null,
+        signposted_at: info.completed && info.signpost ? new Date().toISOString() : null,
+      }));
+      if (attendeeRows.length > 0) {
+        const { error: aErr } = await supabase.from("training_attendees").insert(attendeeRows);
+        if (aErr) throw new Error(`Session saved but attendees failed: ${aErr.message}`);
+      }
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["training-reports"] });
+      qc.invalidateQueries({ queryKey: ["certificate-approvals"] });
       toast({ title: "Report saved successfully" });
-      setForm(emptyForm);
+      resetForm();
       setOpen(false);
     },
     onError: (err) => toast({ title: "Error saving report", description: err.message, variant: "destructive" }),
