@@ -300,3 +300,157 @@ export default function CertificateApprovals() {
     </div>
   );
 }
+
+function ReportView({ rows, trainingTypes, profileMap }) {
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [typeFilter, setTypeFilter] = useState("all");
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
+
+  const filtered = useMemo(() => {
+    return rows.filter(r => {
+      if (statusFilter !== "all" && r.signpost_status !== statusFilter) return false;
+      if (typeFilter !== "all" && r.training_type !== typeFilter) return false;
+      if (from && r.signposted_at && r.signposted_at < from) return false;
+      if (to && r.signposted_at && r.signposted_at > to + "T23:59:59") return false;
+      return true;
+    });
+  }, [rows, statusFilter, typeFilter, from, to]);
+
+  const stats = useMemo(() => {
+    const s = { total: filtered.length, pending: 0, approved: 0, declined: 0, issued: 0, avgDays: 0 };
+    let decidedCount = 0; let totalDays = 0;
+    filtered.forEach(r => {
+      s[r.signpost_status] = (s[r.signpost_status] || 0) + 1;
+      if (r.decision_at && r.signposted_at) {
+        decidedCount++;
+        totalDays += (new Date(r.decision_at) - new Date(r.signposted_at)) / 86400000;
+      }
+    });
+    s.avgDays = decidedCount > 0 ? (totalDays / decidedCount).toFixed(1) : "—";
+    return s;
+  }, [filtered]);
+
+  const byType = useMemo(() => {
+    const map = new Map();
+    filtered.forEach(r => {
+      const k = r.training_type;
+      if (!map.has(k)) map.set(k, { type: k, total: 0, pending: 0, approved: 0, declined: 0, issued: 0 });
+      const g = map.get(k);
+      g.total++;
+      g[r.signpost_status] = (g[r.signpost_status] || 0) + 1;
+    });
+    return [...map.values()].sort((a, b) => b.total - a.total);
+  }, [filtered]);
+
+  const headers = ["Training Type", "Total", "Pending", "Approved", "Declined", "Issued"];
+  const buildRows = () => byType.map(g => [g.type, g.total, g.pending, g.approved, g.declined, g.issued]);
+
+  const handleCSV = () => {
+    const csv = [headers.join(","), ...buildRows().map(r => r.map(c => `"${c}"`).join(","))].join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = `certificate-approvals-report-${format(new Date(), "yyyy-MM-dd")}.csv`; a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  return (
+    <div className="space-y-4">
+      <Card className="border-0 shadow-sm">
+        <CardContent className="p-4 flex flex-wrap items-end gap-3">
+          <div>
+            <label className="text-xs text-muted-foreground">From</label>
+            <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="h-8 text-xs w-36" />
+          </div>
+          <div>
+            <label className="text-xs text-muted-foreground">To</label>
+            <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="h-8 text-xs w-36" />
+          </div>
+          <div>
+            <label className="text-xs text-muted-foreground block">Status</label>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-32 h-8 text-xs"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All</SelectItem>
+                <SelectItem value="pending">Pending</SelectItem>
+                <SelectItem value="approved">Approved</SelectItem>
+                <SelectItem value="declined">Declined</SelectItem>
+                <SelectItem value="issued">Issued</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <label className="text-xs text-muted-foreground block">Training type</label>
+            <Select value={typeFilter} onValueChange={setTypeFilter}>
+              <SelectTrigger className="w-36 h-8 text-xs"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All types</SelectItem>
+                {trainingTypes.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="ml-auto flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={handleCSV} disabled={byType.length === 0} className="gap-1.5">
+              <Download className="h-3.5 w-3.5" /> CSV
+            </Button>
+            <PrintReportButton buildRows={() => ({ title: "Certificate Approvals Report", headers, rows: buildRows() })} label="Print" />
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="grid grid-cols-2 sm:grid-cols-6 gap-3">
+        {[
+          { label: "Total", value: stats.total },
+          { label: "Pending", value: stats.pending || 0 },
+          { label: "Approved", value: stats.approved || 0 },
+          { label: "Declined", value: stats.declined || 0 },
+          { label: "Issued", value: stats.issued || 0 },
+          { label: "Avg days to decision", value: stats.avgDays },
+        ].map(s => (
+          <Card key={s.label} className="border-0 shadow-sm">
+            <CardContent className="p-3 text-center">
+              <p className="text-xl font-display font-bold text-foreground">{s.value}</p>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wide">{s.label}</p>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      <Card className="border-0 shadow-sm">
+        <CardHeader className="pb-3"><CardTitle className="text-base font-display">Breakdown by training type</CardTitle></CardHeader>
+        <CardContent>
+          {byType.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-8">No records match the selected filters</p>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Training Type</TableHead>
+                  <TableHead className="text-center">Total</TableHead>
+                  <TableHead className="text-center">Pending</TableHead>
+                  <TableHead className="text-center">Approved</TableHead>
+                  <TableHead className="text-center">Declined</TableHead>
+                  <TableHead className="text-center">Issued</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {byType.map(g => (
+                  <TableRow key={g.type}>
+                    <TableCell className="font-medium text-sm">{g.type}</TableCell>
+                    <TableCell className="text-center">{g.total}</TableCell>
+                    <TableCell className="text-center">{g.pending || 0}</TableCell>
+                    <TableCell className="text-center">{g.approved || 0}</TableCell>
+                    <TableCell className="text-center">{g.declined || 0}</TableCell>
+                    <TableCell className="text-center">{g.issued || 0}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
