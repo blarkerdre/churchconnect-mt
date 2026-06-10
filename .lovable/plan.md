@@ -1,84 +1,56 @@
 ## Goal
 
-Let members of the **Training Rep** unit record per-member attendance against training sessions, mark non-completion, and signpost completers to the **Training Rep Unit leader** for certificate issuance. The Training Rep Unit leader approves/declines and generates a report.
+Extend the existing training workflow so attendees can be searched and added **inside the "Record Training Session" dialog** (not only via the post-creation expandable panel), and give the Training Rep Unit leader a dedicated **report view** for certificate approvals.
 
-## Roles (no new app role)
+The rest of the workflow (signpost → approve/decline → issue certificate) already exists from the previous implementation and is reused unchanged.
 
-- **Training Rep member** — any user whose `members.church_unit` includes "Training Rep" / "Training Reps" / "Training" (case-insensitive, comma-tolerant). Admins also allowed.
-- **Training Rep Unit leader** — any user listed in `unit_leader_assignments` for the Training Rep unit. Admins also allowed.
+## Changes
 
-New SECURITY DEFINER helpers (recursion-safe, mirroring `user_is_followup_unit_member`):
-- `is_training_rep_member(_user_id, _tenant_id) returns boolean`
-- `is_training_rep_leader(_user_id, _tenant_id) returns boolean`
+### 1. Record Training Session dialog (`src/pages/TrainingReports.jsx`)
 
-## Data model
+Add a new **Attendees** section to the create form, visible only to Training Rep members / admins:
 
-New table `public.training_attendees`:
+- Search input that filters tenant `members` by name/email (debounced, capped at 200 results).
+- Checkbox list of matching members; selected rows show inline in a chip strip with a remove (×) button.
+- Per-row **Completed** toggle (defaults to true). When unchecked, an optional **Reason** input appears.
+- Empty list is allowed (existing behaviour preserved — you can save a session with no attendees and add them later).
 
-- `id`, `tenant_id`, `training_report_id` (FK → `training_reports`, cascade)
-- `member_id` (FK → `members`)
-- `training_type` (denormalised for filtering)
-- `attended` bool default true
-- `completed` bool default false
-- `not_completed_reason` text
-- `signpost_status` text check (`none|pending|approved|declined|issued`) default `none`
-- `signposted_by`, `signposted_at`
-- `decision_by`, `decision_at`, `decision_notes`
-- `certificate_number` (set on issuance)
-- timestamps + unique `(training_report_id, member_id)`
+On submit:
 
-RLS:
-- SELECT: tenant members via `user_has_tenant_access`.
-- INSERT / UPDATE attendance + signpost fields: Training Rep members or admins.
-- UPDATE decision fields: Training Rep Unit leader or admin (BEFORE UPDATE trigger enforces column-scoped permissions and forbids cross-tenant writes).
-- DELETE: admins only.
+- Insert the `training_reports` row as today.
+- Then insert one `training_attendees` row per selected member (`training_report_id` = new id, `training_type`, `attended: true`, `completed`, `not_completed_reason`, `signpost_status: 'none'`).
+- Both inserts happen in the same mutation; failure of the attendee insert surfaces a toast but the session row is kept (already saved).
 
-Standard GRANTs, `updated_at` trigger, audit log on status transitions.
+No DB / RLS changes — the `training_attendees` table, policies, and triggers from the prior migration cover this.
 
-## UI changes
+### 2. Signpost from inside the dialog (optional convenience)
 
-1. **`TrainingReports.jsx`** — each session row gains an expandable **Attendees** panel (visible to all; editable only by Training Rep members / admins):
-   - "Add Members" searchable multi-select from tenant `members`.
-   - Per-row `Completed` toggle; if off, optional `Reason` input.
-   - **Signpost for Certificate** button on completed, non-signposted rows → sets status `pending`. Single confirmation dialog (no leader picker — always routed to Training Rep Unit leaders).
-   - Status badge after signpost.
+In the same Attendees section, completed rows get a **Signpost** checkbox. If ticked at save time, the attendee insert sets `signpost_status: 'pending'`, `signposted_by`, `signposted_at`, triggering the existing notification flow to Training Rep Unit leaders.
 
-2. **New page `src/pages/CertificateApprovals.jsx`** at `/t/:tenantSlug/certificate-approvals`:
-   - Tabs: Pending / Approved / Declined / Issued / All.
-   - Columns: Member, Training Type, Session Date, Signposted By/At, Status, Actions.
-   - **Approve** → calls existing `issue-certificate` edge function, stores returned cert number, sets status `issued`.
-   - **Decline** → requires notes, sets status `declined`.
-   - CSV export + Print via existing helpers.
-   - Visible to Training Rep Unit leaders and admins only.
+### 3. Leader report (`src/pages/CertificateApprovals.jsx`)
 
-3. **`AppLayout.jsx`** sidebar — new "Certificate Approvals" entry for Training Rep leaders + admins, with a pending-count badge.
+Add a **Report** tab alongside the existing Pending / Approved / Declined / Issued / All tabs. The report tab shows:
 
-4. **`CertificatesReport.jsx`** — new **Approvals** tab mirroring the inbox with filters (status, training type, date range) and CSV/Print.
+- Filters: status (multi), training type, date range (signposted_at), decision-maker.
+- Summary cards: total signposted, pending, approved, declined, issued, average days to decision.
+- Grouped table by Training Type with per-group counts.
+- Reuse existing CSV export + `PrintReportButton`.
 
-5. **Notifications** — DB trigger inserts a `notifications` row for each Training Rep Unit leader on `pending`. New edge function `notify-certificate-signpost` sends best-effort email (mirrors `notify-pastoral-assignment`).
+Visible only to Training Rep Unit leaders and admins (existing route guard already enforces this).
 
-## Edge functions
+### 4. `TrainingAttendeesPanel.jsx`
 
-- **Reuse** `issue-certificate` on approval.
-- **New** `supabase/functions/notify-certificate-signpost/index.ts`.
-
-## Files
-
-**New**
-- migration `<ts>_training_attendees.sql`
-- `supabase/functions/notify-certificate-signpost/index.ts`
-- `src/pages/CertificateApprovals.jsx`
-- `src/components/training/TrainingAttendeesPanel.jsx`
-
-**Edited**
-- `src/pages/TrainingReports.jsx`
-- `src/pages/CertificatesReport.jsx`
-- `src/App.jsx`
-- `src/components/AppLayout.jsx`
+No functional change — remains the post-creation editor for sessions already saved. Stays in sync with the new in-form path because both write to `training_attendees`.
 
 ## Out of scope
 
-- New `training_rep` app role (unit-membership check is sufficient).
-- Bulk CSV import of attendees.
-- Changes to certificate template / `issue-certificate` core logic.
-- Routing to the member's own unit leader (all approvals go to the Training Rep Unit leader).
+- No new tables, RLS, or edge functions (all already in place).
+- No changes to `issue-certificate` or notification function.
+- No bulk CSV import of attendees.
+- No new app role — unit-membership check continues to gate access.
+
+## Files
+
+**Edited**
+- `src/pages/TrainingReports.jsx` — extend create dialog with attendee search/select + save-time inserts.
+- `src/pages/CertificateApprovals.jsx` — add Report tab with filters, summary, grouped table, CSV/Print.
