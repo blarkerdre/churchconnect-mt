@@ -273,6 +273,10 @@ export default function CertificateApprovals() {
           )}
         </CardContent>
       </Card>
+      </>
+      )}
+
+
 
       <Dialog open={!!declineFor} onOpenChange={(v) => !v && setDeclineFor(null)}>
         <DialogContent>
