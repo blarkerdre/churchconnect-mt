@@ -158,6 +158,33 @@ Deno.serve(async (req) => {
       const recipientPhone = memberRow?.phone;
       const recipientName = profile?.full_name || memberRow?.first_name || (passengerMode ? "there" : "Team Member");
 
+      // In-app notification (bell + push via trigger)
+      try {
+        const notifTitle = passengerMode
+          ? (psPreset?.heading || "Transport Booking Update")
+          : isNewBooking
+            ? "New Transport Booking"
+            : "Transport Booking Assigned";
+        const notifMessage = passengerMode
+          ? (psPreset?.bodyLine || "There is an update on your transport booking.")
+          : isNewBooking
+            ? `${member_name || "A passenger"} requested transport: ${pickup || "TBC"} → ${destination || "Church"} on ${request_date || "TBC"}${pickup_time ? ` at ${pickup_time}` : ""}.`
+            : `You've been assigned a transport booking for ${member_name || "a passenger"}: ${pickup || "TBC"} → ${destination || "Church"} on ${request_date || "TBC"}${pickup_time ? ` at ${pickup_time}` : ""}.`;
+        const { error: notifErr } = await supabase.from("notifications").insert({
+          user_id: userId,
+          tenant_id,
+          title: notifTitle,
+          message: notifMessage,
+          type: "transport",
+          reference_type: "transport",
+          reference_id: booking_id,
+        });
+        if (notifErr) console.error("Failed to insert transport notification:", notifErr);
+      } catch (e) {
+        console.error("Transport notification insert error:", e);
+      }
+
+
       // Send email
       if (recipientEmail) {
         const normalizedEmail = recipientEmail.trim().toLowerCase();
