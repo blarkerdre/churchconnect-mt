@@ -48,6 +48,14 @@ Deno.serve(async (req) => {
     }
     const body = await req.json();
     const { notification_type, booking_id, member_name, pickup, destination, request_date, pickup_time, tenant_id } = body;
+    const journeyType: string = body.journey_type || "Single";
+    const returnDate: string | null = body.return_date || null;
+    const returnTime: string | null = body.return_time || null;
+    const isRoundTrip = journeyType === "Round Trip";
+    const journeyLabel = isRoundTrip ? "Round Trip" : "Single Trip";
+    const returnLine = isRoundTrip && (returnDate || returnTime)
+      ? `Return: ${returnDate || "TBC"}${returnTime ? ` at ${returnTime}` : ""}`
+      : "";
 
     // Fetch tenant branding
     let churchName = "Church";
