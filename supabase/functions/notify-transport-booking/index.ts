@@ -111,13 +111,18 @@ Deno.serve(async (req) => {
     const isNewBooking = notification_type === "new_booking";
     const passengerStatus: string | undefined = body.status;
     const stopNumber: number | undefined = typeof body.stop_number === "number" ? body.stop_number : undefined;
+    const driverName: string = (body.driver_name || "").toString().trim();
+    const driverPhone: string = (body.driver_phone || "").toString().trim();
+    const driverSuffix = driverName
+      ? ` Driver: ${driverName}${driverPhone ? ` (${driverPhone})` : ""}.`
+      : "";
     const pickupAtPhrase = pickup ? ` from ${pickup}` : "";
     const pickupDescPhrase = pickupLocationDescription ? ` — ${pickupLocationDescription}` : "";
     const passengerHeadings: Record<string, { subject: string; heading: string; bodyLine: string }> = {
       "Pickup Scheduled": {
         subject: `Your pickup time is scheduled`,
         heading: "Your Pickup Time",
-        bodyLine: `Your driver will pick you up at ${pickup_time || "the scheduled time"}${pickupAtPhrase}${pickupDescPhrase}${stopNumber ? ` (Stop #${stopNumber} on the route)` : ""}. Please be ready a few minutes early.`,
+        bodyLine: `Your driver will pick you up at ${pickup_time || "the scheduled time"}${pickupAtPhrase}${pickupDescPhrase}${stopNumber ? ` (Stop #${stopNumber} on the route)` : ""}.${driverSuffix} Please be ready a few minutes early.`,
       },
       "Confirmed": {
         subject: `Your transport is confirmed`,
@@ -332,8 +337,42 @@ Deno.serve(async (req) => {
 
         if (/^\+[1-9]\d{6,14}$/.test(cleaned)) {
           const locLine = pickupLocationDescription ? ` Location: ${pickupLocationDescription}.` : "";
+
+          // Build a compact passenger SMS that fits in a single GSM-7 segment (160 chars).
+          const cap = (s: string, n: number) => (s.length > n ? s.slice(0, Math.max(0, n - 1)) + "…" : s);
+          let passengerSms = "";
+          if (passengerMode) {
+            const shortChurch = cap(churchShortName || "Church", 16);
+            const shortPickup = cap(pickup || "TBC", 40);
+            const shortDesc = pickupLocationDescription ? cap(pickupLocationDescription, 30) : "";
+            const shortDriver = driverName ? cap(driverName, 20) : "";
+            const dateStr = request_date || "TBC";
+            const timeStr = pickup_time ? ` ${pickup_time}` : "";
+            const stopStr = stopNumber ? ` Stop #${stopNumber}.` : "";
+            const buildSms = (opts: { desc: boolean; stop: boolean; driverPhone: boolean; driverName: boolean }) => {
+              const descPart = opts.desc && shortDesc ? ` (${shortDesc})` : "";
+              const driverPart = opts.driverName && shortDriver
+                ? ` Driver ${shortDriver}${opts.driverPhone && driverPhone ? ` ${driverPhone}` : ""}.`
+                : "";
+              const stopPart = opts.stop ? stopStr : "";
+              return `${shortChurch}: Pickup ${dateStr}${timeStr} from ${shortPickup}${descPart}.${driverPart}${stopPart}`;
+            };
+            const tries = [
+              { desc: true, stop: true, driverPhone: true, driverName: true },
+              { desc: false, stop: true, driverPhone: true, driverName: true },
+              { desc: false, stop: false, driverPhone: true, driverName: true },
+              { desc: false, stop: false, driverPhone: false, driverName: true },
+              { desc: false, stop: false, driverPhone: false, driverName: false },
+            ];
+            for (const t of tries) {
+              passengerSms = buildSms(t);
+              if (passengerSms.length <= 160) break;
+            }
+            if (passengerSms.length > 160) passengerSms = passengerSms.slice(0, 159) + "…";
+          }
+
           const smsBody = passengerMode
-            ? `Hi ${recipientName}, ${(psPreset?.bodyLine || "there is an update on your transport booking.")} (${journeyLabel}) Pickup: ${pickup} on ${request_date}${pickup_time ? ` at ${pickup_time}` : ""}.${locLine}${returnLine ? ` ${returnLine}.` : ""} - ${churchShortName}`
+            ? passengerSms
             : isNewBooking
               ? `Hi ${recipientName}, new transport booking from ${member_name} (${journeyLabel}): ${pickup} → ${destination} on ${request_date}.${locLine}${returnLine ? ` ${returnLine}.` : ""} Please check the system. - ${churchShortName}`
               : `Hi ${recipientName}, you've been assigned a transport booking for ${member_name} (${journeyLabel}): ${pickup} → ${destination} on ${request_date}.${locLine}${returnLine ? ` ${returnLine}.` : ""} - ${churchShortName}`;
