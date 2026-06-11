@@ -320,9 +320,27 @@ export default function Transportation() {
 
   const openManage = (b) => {
     setSelectedBooking(b);
-    setManageForm({ status: b.status, assigned_driver: b.assigned_driver || "", driver_phone: b.driver_phone || "", assigned_to: b.assigned_to || "" });
+    setManageForm({ status: b.status, assigned_driver: b.assigned_driver || "", driver_phone: b.driver_phone || "", driver_user_id: b.driver_user_id || "", assigned_to: b.assigned_to || "" });
     setManageDialogOpen(true);
   };
+
+  // Passenger acknowledgement
+  const acknowledgeMutation = useMutation({
+    mutationFn: async (id) => {
+      const { data, error } = await supabase.from("transportation")
+        .update({ passenger_acknowledged_at: new Date().toISOString() })
+        .eq("id", id).eq("tenant_id", tenantId).eq("user_id", user.id)
+        .select("*, members(first_name, last_name, phone, email)").single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["transportation"] });
+      if (data) setDetailBooking(data);
+      toast({ title: "Acknowledged — thank you!" });
+    },
+    onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+  });
 
   const openEditLocation = (loc) => {
     setEditingLocation(loc);
