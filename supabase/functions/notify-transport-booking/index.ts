@@ -109,7 +109,13 @@ Deno.serve(async (req) => {
 
     const isNewBooking = notification_type === "new_booking";
     const passengerStatus: string | undefined = body.status;
+    const stopNumber: number | undefined = typeof body.stop_number === "number" ? body.stop_number : undefined;
     const passengerHeadings: Record<string, { subject: string; heading: string; bodyLine: string }> = {
+      "Pickup Scheduled": {
+        subject: `Your pickup time is scheduled`,
+        heading: "Your Pickup Time",
+        bodyLine: `Your driver will pick you up at ${pickup_time || "the scheduled time"}${stopNumber ? ` (Stop #${stopNumber} on the route)` : ""}. Please be ready a few minutes early.`,
+      },
       "Confirmed": {
         subject: `Your transport is confirmed`,
         heading: "Your Transport Booking is Confirmed",
@@ -243,7 +249,8 @@ Deno.serve(async (req) => {
           <p style="margin:0 0 8px;color:#555;font-size:14px;"><strong>Date:</strong> ${escHtml(request_date || "TBC")}${pickup_time ? ` at ${escHtml(pickup_time)}` : ""}</p>
           ${isRoundTrip ? `<p style="margin:0 0 8px;color:#555;font-size:14px;"><strong>Return:</strong> ${escHtml(returnDate || "TBC")}${returnTime ? ` at ${escHtml(returnTime)}` : ""}</p>` : ""}
           ${body.driver_name ? `<p style="margin:0 0 8px;color:#555;font-size:14px;"><strong>Driver:</strong> ${escHtml(body.driver_name)}${body.driver_phone ? ` (${escHtml(body.driver_phone)})` : ""}</p>` : ""}
-          ${!passengerMode ? `<p style="margin:0 0 8px;color:#555;font-size:14px;"><strong>Passenger:</strong> ${escHtml(member_name || "Unknown")}</p>` : ""}`;
+          ${!passengerMode ? `<p style="margin:0 0 8px;color:#555;font-size:14px;"><strong>Passenger:</strong> ${escHtml(member_name || "Unknown")}</p>` : ""}
+          ${stopNumber ? `<p style="margin:0 0 8px;color:#555;font-size:14px;"><strong>Stop #:</strong> ${stopNumber}</p>` : ""}`;
 
         const heading = passengerMode
           ? (psPreset?.heading || "Transport Booking Update")
