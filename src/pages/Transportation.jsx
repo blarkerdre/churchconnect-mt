@@ -589,9 +589,11 @@ export default function Transportation() {
                   )}
                 </div>
 
-                {canRunCheckin(detailBooking) && (
+                {(canRunCheckin(detailBooking) || isPassenger(detailBooking)) && (
                   <div className="rounded-lg border border-border p-3 space-y-3">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Check-In Workflow</p>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      Check-In Workflow{!canRunCheckin(detailBooking) && isPassenger(detailBooking) ? " (read-only)" : ""}
+                    </p>
                     <ol className="flex items-center justify-between gap-1">
                       {CHECKIN_STEPS.map((step, idx) => {
                         const done = currentStepIdx >= idx && currentStepIdx !== -1;
@@ -608,7 +610,7 @@ export default function Transportation() {
                         );
                       })}
                     </ol>
-                    {!terminal && (
+                    {canRunCheckin(detailBooking) && !terminal && (
                       <div className="flex flex-wrap gap-2 pt-1">
                         {next && (
                           <Button size="sm" onClick={() => statusMutation.mutate({ id: detailBooking.id, status: next.status })} disabled={statusMutation.isPending} className="bg-primary">
