@@ -3648,6 +3648,7 @@ export type Database = {
           destination: string | null
           driver_phone: string | null
           id: string
+          journey_type: string
           member_id: string | null
           no_show_at: string | null
           notes: string | null
@@ -3657,6 +3658,8 @@ export type Database = {
           pickup_address: string
           pickup_time: string | null
           request_date: string
+          return_date: string | null
+          return_time: string | null
           status: Database["public"]["Enums"]["transport_status"]
           tenant_id: string | null
           updated_at: string
@@ -3671,6 +3674,7 @@ export type Database = {
           destination?: string | null
           driver_phone?: string | null
           id?: string
+          journey_type?: string
           member_id?: string | null
           no_show_at?: string | null
           notes?: string | null
@@ -3680,6 +3684,8 @@ export type Database = {
           pickup_address: string
           pickup_time?: string | null
           request_date: string
+          return_date?: string | null
+          return_time?: string | null
           status?: Database["public"]["Enums"]["transport_status"]
           tenant_id?: string | null
           updated_at?: string
@@ -3694,6 +3700,7 @@ export type Database = {
           destination?: string | null
           driver_phone?: string | null
           id?: string
+          journey_type?: string
           member_id?: string | null
           no_show_at?: string | null
           notes?: string | null
@@ -3703,6 +3710,8 @@ export type Database = {
           pickup_address?: string
           pickup_time?: string | null
           request_date?: string
+          return_date?: string | null
+          return_time?: string | null
           status?: Database["public"]["Enums"]["transport_status"]
           tenant_id?: string | null
           updated_at?: string
