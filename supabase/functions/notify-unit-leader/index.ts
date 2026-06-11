@@ -85,7 +85,8 @@ Deno.serve(async (req) => {
     // Send email
     if (recipientEmail) {
       const senderDomain = "notify.app.churchmanagementsuite.org";
-      const fromAddress = `${churchShortName} <noreply@${senderDomain}>`;
+      const safeFromName = `"${String(churchShortName).replace(/[\\"]/g, "\\$&")}"`;
+      const fromAddress = `${safeFromName} <noreply@${senderDomain}>`;
       const messageId = `unit-leader-${crypto.randomUUID()}`;
       const emailSubject = `New Member Joined Your Unit: ${unit_name}`;
 
