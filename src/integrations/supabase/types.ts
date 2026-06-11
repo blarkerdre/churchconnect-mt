@@ -3658,6 +3658,7 @@ export type Database = {
           passengers: number | null
           picked_up_at: string | null
           pickup_address: string
+          pickup_location_description: string | null
           pickup_order: number | null
           pickup_time: string | null
           request_date: string
@@ -3687,6 +3688,7 @@ export type Database = {
           passengers?: number | null
           picked_up_at?: string | null
           pickup_address: string
+          pickup_location_description?: string | null
           pickup_order?: number | null
           pickup_time?: string | null
           request_date: string
@@ -3716,6 +3718,7 @@ export type Database = {
           passengers?: number | null
           picked_up_at?: string | null
           pickup_address?: string
+          pickup_location_description?: string | null
           pickup_order?: number | null
           pickup_time?: string | null
           request_date?: string
