@@ -50,7 +50,8 @@ const STEP_TIMESTAMP_KEY = {
 export default function Transportation() {
   const { user, isAdmin, leaderUnits } = useAuth();
   const { isMemberOfUnit: isTransportUnit } = useUnitMembership("Transportation");
-  const canManage = isAdmin || leaderUnits.includes("Transportation") || isTransportUnit;
+  const isLeader = isAdmin || leaderUnits.includes("Transportation");
+  const canManage = isLeader; // Only leaders can manage bookings (approve/assign/edit/delete)
   const { enabled: canCreateBooking } = useSubFeature("transportation.create_booking");
   const queryClient = useQueryClient();
   const { tenantId, scopeQuery, withTenant } = useTenantQuery();
@@ -66,7 +67,7 @@ export default function Transportation() {
   const [selectedBooking, setSelectedBooking] = useState(null);
   const [editingLocation, setEditingLocation] = useState(null);
   const [form, setForm] = useState({ pickup_address: "", destination: "Church", request_date: "", pickup_time: "", notes: "", passengers: 1, journey_type: "Single", return_date: "", return_time: "" });
-  const [manageForm, setManageForm] = useState({ status: "", assigned_driver: "", driver_phone: "", assigned_to: "" });
+  const [manageForm, setManageForm] = useState({ status: "", assigned_driver: "", driver_phone: "", driver_user_id: "", assigned_to: "" });
   const [locationForm, setLocationForm] = useState({ name: "", address: "", notes: "" });
   const [confirmDelete, setConfirmDelete] = useState(null); // { title, description, run }
   const [detailBooking, setDetailBooking] = useState(null);
@@ -117,7 +118,21 @@ export default function Transportation() {
     }
   });
 
-  const visibleBookings = canManage ? bookings : bookings.filter(b => b.user_id === user?.id);
+  // Role helpers per booking
+  const isPassenger = (b) => b.user_id === user?.id;
+  const isAssignee = (b) => b.assigned_to && b.assigned_to === user?.id;
+  const isDriverUser = (b) => b.driver_user_id && b.driver_user_id === user?.id;
+  // Unit members see all bookings but only act on their own assignments
+  const canRunCheckin = (b) => isLeader || isAssignee(b) || isDriverUser(b);
+  const canContactPassenger = (b) => canRunCheckin(b);
+  const canAcknowledge = (b) =>
+    isPassenger(b) && ["Confirmed", "Notified", "Checked In", "Picked Up", "Completed"].includes(b.status);
+
+  // Visibility: leaders & unit members see all; otherwise own bookings + assignments + driver jobs
+  const visibleBookings =
+    isLeader || isTransportUnit
+      ? bookings
+      : bookings.filter(b => b.user_id === user?.id || b.assigned_to === user?.id || b.driver_user_id === user?.id);
 
   const filtered = visibleBookings.filter(b => {
     const name = b.members ? `${b.members.first_name} ${b.members.last_name}` : "";
@@ -127,6 +142,7 @@ export default function Transportation() {
     const matchAssignee = filterAssignee === "All" || (filterAssignee === "Unassigned" ? !b.assigned_to : b.assigned_to === filterAssignee);
     return matchSearch && matchStatus && matchDate && matchAssignee;
   });
+
 
   const bookMutation = useMutation({
     mutationFn: async (formData) => {
@@ -304,9 +320,27 @@ export default function Transportation() {
 
   const openManage = (b) => {
     setSelectedBooking(b);
-    setManageForm({ status: b.status, assigned_driver: b.assigned_driver || "", driver_phone: b.driver_phone || "", assigned_to: b.assigned_to || "" });
+    setManageForm({ status: b.status, assigned_driver: b.assigned_driver || "", driver_phone: b.driver_phone || "", driver_user_id: b.driver_user_id || "", assigned_to: b.assigned_to || "" });
     setManageDialogOpen(true);
   };
+
+  // Passenger acknowledgement
+  const acknowledgeMutation = useMutation({
+    mutationFn: async (id) => {
+      const { data, error } = await supabase.from("transportation")
+        .update({ passenger_acknowledged_at: new Date().toISOString() })
+        .eq("id", id).eq("tenant_id", tenantId).eq("user_id", user.id)
+        .select("*, members(first_name, last_name, phone, email)").single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["transportation"] });
+      if (data) setDetailBooking(data);
+      toast({ title: "Acknowledged — thank you!" });
+    },
+    onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+  });
 
   const openEditLocation = (loc) => {
     setEditingLocation(loc);
@@ -546,7 +580,7 @@ export default function Transportation() {
                   )}
                 </div>
 
-                {canManage && (
+                {canRunCheckin(detailBooking) && (
                   <div className="rounded-lg border border-border p-3 space-y-3">
                     <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Check-In Workflow</p>
                     <ol className="flex items-center justify-between gap-1">
@@ -578,16 +612,40 @@ export default function Transportation() {
                             <XCircle className="h-3.5 w-3.5 mr-1" /> No-Show
                           </Button>
                         )}
-                        <Button size="sm" variant="outline" className="text-destructive border-destructive/30 hover:bg-destructive/5"
-                          onClick={() => statusMutation.mutate({ id: detailBooking.id, status: "Cancelled" })} disabled={statusMutation.isPending}>
-                          Cancel Booking
-                        </Button>
+                        {isLeader && (
+                          <Button size="sm" variant="outline" className="text-destructive border-destructive/30 hover:bg-destructive/5"
+                            onClick={() => statusMutation.mutate({ id: detailBooking.id, status: "Cancelled" })} disabled={statusMutation.isPending}>
+                            Cancel Booking
+                          </Button>
+                        )}
                       </div>
                     )}
                   </div>
                 )}
 
-                {canManage && (passengerPhone || passengerEmail) && (
+                {/* Passenger acknowledgement */}
+                {isPassenger(detailBooking) && (
+                  <div className="rounded-lg border border-border p-3 space-y-2">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Your Booking</p>
+                    {detailBooking.passenger_acknowledged_at ? (
+                      <p className="text-sm text-chart-3 flex items-center gap-1">
+                        <CheckCircle className="h-4 w-4" />
+                        Acknowledged on {new Date(detailBooking.passenger_acknowledged_at).toLocaleString()}
+                      </p>
+                    ) : canAcknowledge(detailBooking) ? (
+                      <>
+                        <p className="text-xs text-muted-foreground">Please confirm you've received this update from the Transport team.</p>
+                        <Button size="sm" onClick={() => acknowledgeMutation.mutate(detailBooking.id)} disabled={acknowledgeMutation.isPending} className="bg-primary">
+                          <CheckCircle className="h-3.5 w-3.5 mr-1" /> Acknowledge
+                        </Button>
+                      </>
+                    ) : (
+                      <p className="text-xs text-muted-foreground">Your booking is awaiting team review.</p>
+                    )}
+                  </div>
+                )}
+
+                {canContactPassenger(detailBooking) && (passengerPhone || passengerEmail) && (
                   <div className="rounded-lg border border-border p-3 space-y-2">
                     <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Contact {passengerName}</p>
                     <div className="flex flex-wrap gap-2">
@@ -709,16 +767,13 @@ export default function Transportation() {
             <div>
               <Label>Driver (Transport Unit)</Label>
               <Select
-                value={(() => {
-                  const match = transportMembers.find(m => `${m.first_name} ${m.last_name}` === manageForm.assigned_driver);
-                  return match ? match.user_id : "manual";
-                })()}
+                value={manageForm.driver_user_id || "manual"}
                 onValueChange={v => {
                   if (v === "manual") {
-                    setManageForm(f => ({ ...f, assigned_driver: "", driver_phone: "" }));
+                    setManageForm(f => ({ ...f, driver_user_id: "", assigned_driver: "", driver_phone: "" }));
                   } else {
                     const m = transportMembers.find(x => x.user_id === v);
-                    if (m) setManageForm(f => ({ ...f, assigned_driver: `${m.first_name} ${m.last_name}`, driver_phone: m.phone || "" }));
+                    if (m) setManageForm(f => ({ ...f, driver_user_id: m.user_id, assigned_driver: `${m.first_name} ${m.last_name}`, driver_phone: m.phone || "" }));
                   }
                 }}
               >
@@ -734,17 +789,17 @@ export default function Transportation() {
               </Select>
               <p className="text-[11px] text-muted-foreground mt-1">Pick a Transport unit member to auto-fill, or type a name and phone below.</p>
             </div>
-            <div><Label>Driver Name</Label><Input value={manageForm.assigned_driver} onChange={e => setManageForm(f => ({ ...f, assigned_driver: e.target.value }))} placeholder="Driver name" /></div>
+            <div><Label>Driver Name</Label><Input value={manageForm.assigned_driver} onChange={e => setManageForm(f => ({ ...f, assigned_driver: e.target.value, driver_user_id: "" }))} placeholder="Driver name" /></div>
             <div><Label>Driver Phone</Label><Input value={manageForm.driver_phone} onChange={e => setManageForm(f => ({ ...f, driver_phone: e.target.value }))} placeholder="Phone number" /></div>
             <div className="flex gap-2">
-              <Button onClick={() => manageMutation.mutate({ id: selectedBooking.id, updates: { status: "Confirmed", assigned_driver: manageForm.assigned_driver, driver_phone: manageForm.driver_phone, assigned_to: manageForm.assigned_to || null } })} className="flex-1 bg-chart-3 hover:bg-chart-3/90">
+              <Button onClick={() => manageMutation.mutate({ id: selectedBooking.id, updates: { status: "Confirmed", assigned_driver: manageForm.assigned_driver, driver_phone: manageForm.driver_phone, driver_user_id: manageForm.driver_user_id || null, assigned_to: manageForm.assigned_to || null } })} className="flex-1 bg-chart-3 hover:bg-chart-3/90">
                 <CheckCircle className="h-4 w-4 mr-2" /> Approve
               </Button>
               <Button variant="destructive" onClick={() => manageMutation.mutate({ id: selectedBooking.id, updates: { status: "Cancelled" } })} className="flex-1">
                 <XCircle className="h-4 w-4 mr-2" /> Reject
               </Button>
             </div>
-            <Button variant="outline" onClick={() => manageMutation.mutate({ id: selectedBooking.id, updates: { ...manageForm, assigned_to: manageForm.assigned_to || null } })} disabled={manageMutation.isPending} className="w-full">
+            <Button variant="outline" onClick={() => manageMutation.mutate({ id: selectedBooking.id, updates: { ...manageForm, driver_user_id: manageForm.driver_user_id || null, assigned_to: manageForm.assigned_to || null } })} disabled={manageMutation.isPending} className="w-full">
               {manageMutation.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
               Save Changes
             </Button>
