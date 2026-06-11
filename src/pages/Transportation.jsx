@@ -76,7 +76,7 @@ export default function Transportation() {
     queryFn: async () => {
       const { data, error } = await scopeQuery(supabase
         .from("transportation")
-        .select("*, members(first_name, last_name)")
+        .select("*, members(first_name, last_name, phone, email)")
         .order("request_date", { ascending: false }));
       if (error) throw error;
       return data;
