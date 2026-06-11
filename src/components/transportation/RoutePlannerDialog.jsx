@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { GripVertical, MapPin, Clock, Phone, ArrowUp, ArrowDown, Loader2, Route } from "lucide-react";
+import { GripVertical, MapPin, Clock, Phone, ArrowUp, ArrowDown, Loader2, Route, Bell } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
