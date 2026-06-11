@@ -329,11 +329,12 @@ Deno.serve(async (req) => {
         if (!cleaned.startsWith("+")) cleaned = "+" + cleaned;
 
         if (/^\+[1-9]\d{6,14}$/.test(cleaned)) {
+          const locLine = pickupLocationDescription ? ` Location: ${pickupLocationDescription}.` : "";
           const smsBody = passengerMode
-            ? `Hi ${recipientName}, ${(psPreset?.bodyLine || "there is an update on your transport booking.")} (${journeyLabel}) Pickup: ${pickup} on ${request_date}${pickup_time ? ` at ${pickup_time}` : ""}${returnLine ? `. ${returnLine}` : ""}. - ${churchShortName}`
+            ? `Hi ${recipientName}, ${(psPreset?.bodyLine || "there is an update on your transport booking.")} (${journeyLabel}) Pickup: ${pickup} on ${request_date}${pickup_time ? ` at ${pickup_time}` : ""}.${locLine}${returnLine ? ` ${returnLine}.` : ""} - ${churchShortName}`
             : isNewBooking
-              ? `Hi ${recipientName}, new transport booking from ${member_name} (${journeyLabel}): ${pickup} → ${destination} on ${request_date}${returnLine ? `. ${returnLine}` : ""}. Please check the system. - ${churchShortName}`
-              : `Hi ${recipientName}, you've been assigned a transport booking for ${member_name} (${journeyLabel}): ${pickup} → ${destination} on ${request_date}${returnLine ? `. ${returnLine}` : ""}. - ${churchShortName}`;
+              ? `Hi ${recipientName}, new transport booking from ${member_name} (${journeyLabel}): ${pickup} → ${destination} on ${request_date}.${locLine}${returnLine ? ` ${returnLine}.` : ""} Please check the system. - ${churchShortName}`
+              : `Hi ${recipientName}, you've been assigned a transport booking for ${member_name} (${journeyLabel}): ${pickup} → ${destination} on ${request_date}.${locLine}${returnLine ? ` ${returnLine}.` : ""} - ${churchShortName}`;
 
           try {
             const webhookUrl = `${supabaseUrl}/functions/v1/twilio-webhook`;
