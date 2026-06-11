@@ -1,32 +1,71 @@
-# Auto-seed default option lists in Settings
+## Goal
+Add a richer passenger check-in workflow to transport bookings with new statuses (Notified, Checked In, Picked Up, No-Show) and quick ways for the transport team to contact the member who requested the booking.
 
-## Problem
-The Settings tabs **Services**, **Events**, **Training**, and **Pastoral** show "No items configured" because no `app_settings` row exists for these keys for the tenant. Forms across the app fall back to hardcoded `DEFAULT_*` lists, but the Settings UI doesn't surface those defaults.
+## Status lifecycle
+Extend the existing `transport_status` enum from `Pending → Confirmed → In Transit → Completed / Cancelled` to:
 
-## Fix
-When a tenant admin opens one of these tabs and the `app_settings` row is missing, automatically write the in-code defaults to `app_settings` for that tenant. The list then renders the standard options and admins can add/edit/remove from there.
+```text
+Pending → Confirmed → Notified → Checked In → Picked Up → Completed
+                                                    ↘ No-Show (terminal)
+                                       ↘ Cancelled (any time)
+```
 
-## Changes
+- **Notified**: driver has informed the passenger they're on the way / scheduled.
+- **Checked In**: passenger confirmed they're ready at the pickup point.
+- **Picked Up**: driver has collected the passenger.
+- **No-Show**: passenger didn't appear at pickup.
 
-**File:** `src/pages/Settings.jsx` (only)
+Old "In Transit" is retained as a synonym path (still in DB enum for back-compat); the new "Picked Up" is the preferred forward state. Completed remains the final success state.
 
-1. Extend `SettingsListSection` to accept an optional `defaults` prop (string array).
-2. After the `useQuery` resolves, if the row didn't exist (we'll detect via a `rowExists` flag returned from the query) and `defaults` is non-empty, trigger a one-time upsert of `{ key, tenant_id, value: defaults }`. Guard with a `useRef` so it fires once per mount/tenant.
-3. Pass the appropriate defaults to each of the four `<SettingsListSection>` instances, sourced from the same constants the forms already use:
-   - `service_types` → existing default service list (mirrors `ChurchAttendance.jsx` defaults)
-   - `event_categories` → categories from `EventFormDialog.jsx` / `EventCard.jsx`
-   - `training_types` → BFC/BCC/LCC/LDC + existing training defaults
-   - `pastoral_care_types` → `DEFAULT_CATEGORIES` from `PastoralCareFormDialog.jsx`
+## Database changes
+1. Add enum values to `transport_status`: `Notified`, `Checked In`, `Picked Up`, `No-Show` (idempotent `ALTER TYPE ... ADD VALUE IF NOT EXISTS`).
+2. Add columns to `public.transportation`:
+   - `notified_at timestamptz`
+   - `checked_in_at timestamptz`
+   - `picked_up_at timestamptz`
+   - `no_show_at timestamptz`
+   - `checkin_notes text`
+3. Extend `audit_transport_change()` to record transitions through the new statuses (status change already covered, but stamp the matching `*_at` via a small `BEFORE UPDATE` trigger that sets the timestamp when status flips to the corresponding value).
 
-Defaults will be declared as `const` arrays at the top of `Settings.jsx` to keep this self-contained.
+No RLS changes needed — existing policies cover updates by admins / Transportation unit leaders / members.
 
-## Behavior
-- First admin to open the tab seeds the list; subsequent visits read the saved row.
-- Admins can edit or delete any item afterwards (including down to an empty list — we won't re-seed once a row exists, even if emptied).
-- No schema changes, no edge function, no migration.
-- Scoped per tenant via the existing `withTenant` / `tenant_id` guards.
+## Backend (Edge functions)
+- `notify-transport-booking`: add a new `notification_type: "passenger_status"` path that sends the passenger (the requesting member) an email + optional SMS when their booking is set to **Notified** (e.g. "Your ride is on the way") or **Checked In** confirmation. Reuses existing email enqueue + Twilio quota path.
+- No new function — extend the existing one.
+
+## Frontend changes
+
+### Status colours & order (`src/pages/Transportation.jsx`)
+Update `statusColors` and `ALL_STATUSES` to include the new statuses with distinct theme colours.
+
+### Detail panel (`src/components/transportation/TransportDetailPanel.jsx`)
+Replace the single `nextStatus` map with a richer **Check-In Workflow** section visible to the transport team:
+- Stepper showing the passenger journey with timestamps (Confirmed → Notified → Checked In → Picked Up → Completed).
+- Action buttons that advance to the next step (`Notify Passenger`, `Mark Checked In`, `Mark Picked Up`, `Mark Completed`).
+- Secondary action `Mark No-Show` (with confirm) available from Notified/Checked In states.
+- `Cancel` action retained.
+- Free-text **Check-in note** textarea saved to `checkin_notes`.
+
+### Contact member actions
+New **Contact Passenger** block in the detail panel with quick buttons:
+- **Call** → `tel:` link to `members.phone`
+- **SMS** → `sms:` link with a prefilled message ("Hi {name}, this is {church} transport. We're on our way for your {pickup_time} pickup.")
+- **WhatsApp** → `https://wa.me/<E164>` deep link
+- **Email** → `mailto:` link to `members.email`
+- **Send notification**: triggers the new `notify-transport-booking` `passenger_status` path so it goes through the church's email/SMS gateway and is logged.
+
+Phone numbers are normalised via existing `src/lib/phone-utils.js` `normalizePhone` before building the deep links.
+
+### Booking form (`TransportBookingDialog.jsx`)
+Add the new statuses to the manager-side status `Select`. No other changes.
 
 ## Out of scope
-- Backfilling other tenants in bulk.
-- Changing the form fallbacks (they remain as safety nets).
-- Any UI restyle of the tabs themselves.
+- No changes to financial tracking, no new tables.
+- No changes to member-facing self-service beyond seeing the new status badge on their own booking.
+
+## Files to touch
+- `supabase/migrations/<new>.sql` (enum + columns + trigger)
+- `supabase/functions/notify-transport-booking/index.ts` (passenger_status branch)
+- `src/pages/Transportation.jsx` (statuses, colours, filters, manage dialog options)
+- `src/components/transportation/TransportDetailPanel.jsx` (check-in stepper, contact block, no-show)
+- `src/components/transportation/TransportBookingDialog.jsx` (status options)

@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Car, MapPin, Clock, User, Plus, Loader2, CheckCircle, XCircle, Trash2, Edit, Settings, Search, Download, UserCheck } from "lucide-react";
+import { Car, MapPin, Clock, User, Plus, Loader2, CheckCircle, XCircle, Trash2, Edit, Settings, Search, Download, UserCheck, Phone, Mail, MessageSquare, Send, BellRing, CarFront } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
@@ -17,15 +17,35 @@ import { useSubFeature } from "@/hooks/useSubFeature";
 import PrintReportButton from "@/components/PrintReportButton";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
 import PasswordConfirmDialog from "@/components/shared/PasswordConfirmDialog";
+import { normalizePhone } from "@/lib/phone-utils";
 
 const statusColors = {
-  "Confirmed": "bg-chart-3/10 text-chart-3",
   "Pending": "bg-accent/10 text-accent",
+  "Confirmed": "bg-chart-3/10 text-chart-3",
+  "Notified": "bg-blue-500/10 text-blue-600",
+  "Checked In": "bg-indigo-500/10 text-indigo-600",
+  "Picked Up": "bg-purple-500/10 text-purple-600",
   "Completed": "bg-muted text-muted-foreground",
+  "No-Show": "bg-orange-500/10 text-orange-600",
   "Cancelled": "bg-destructive/10 text-destructive",
 };
 
-const ALL_STATUSES = ["Pending", "Confirmed", "Completed", "Cancelled"];
+const ALL_STATUSES = ["Pending", "Confirmed", "Notified", "Checked In", "Picked Up", "Completed", "No-Show", "Cancelled"];
+
+const NEXT_STEP = {
+  "Pending": { status: "Confirmed", label: "Confirm", icon: CheckCircle },
+  "Confirmed": { status: "Notified", label: "Notify Passenger", icon: BellRing },
+  "Notified": { status: "Checked In", label: "Mark Checked In", icon: UserCheck },
+  "Checked In": { status: "Picked Up", label: "Mark Picked Up", icon: CarFront },
+  "Picked Up": { status: "Completed", label: "Mark Completed", icon: CheckCircle },
+};
+
+const CHECKIN_STEPS = ["Confirmed", "Notified", "Checked In", "Picked Up", "Completed"];
+const STEP_TIMESTAMP_KEY = {
+  "Notified": "notified_at",
+  "Checked In": "checked_in_at",
+  "Picked Up": "picked_up_at",
+};
 
 export default function Transportation() {
   const { user, isAdmin, leaderUnits } = useAuth();
@@ -56,7 +76,7 @@ export default function Transportation() {
     queryFn: async () => {
       const { data, error } = await scopeQuery(supabase
         .from("transportation")
-        .select("*, members(first_name, last_name)")
+        .select("*, members(first_name, last_name, phone, email)")
         .order("request_date", { ascending: false }));
       if (error) throw error;
       return data;
@@ -140,6 +160,49 @@ export default function Transportation() {
     },
     onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
+
+  // Quick status update (used by check-in workflow; keeps detail panel open)
+  const statusMutation = useMutation({
+    mutationFn: async ({ id, status, extra = {} }) => {
+      const { data, error } = await supabase.from("transportation")
+        .update({ status, ...extra }).eq("id", id).eq("tenant_id", tenantId)
+        .select("*, members(first_name, last_name, phone, email)").single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["transportation"] });
+      if (data) setDetailBooking(data);
+      toast({ title: `Status updated to ${data?.status}` });
+    },
+    onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+  });
+
+  // Send a passenger notification (email + SMS) without changing status
+  const notifyPassengerMutation = useMutation({
+    mutationFn: async (booking) => {
+      const { error } = await supabase.functions.invoke("notify-transport-booking", {
+        body: {
+          notification_type: "passenger_status",
+          status: booking.status,
+          booking_id: booking.id,
+          member_id: booking.member_id,
+          member_name: booking.members ? `${booking.members.first_name} ${booking.members.last_name}` : "Passenger",
+          pickup: booking.pickup_address,
+          destination: booking.destination || "Church",
+          request_date: booking.request_date,
+          pickup_time: booking.pickup_time,
+          driver_name: booking.assigned_driver,
+          driver_phone: booking.driver_phone,
+          tenant_id: tenantId,
+        },
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => toast({ title: "Passenger notified" }),
+    onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+  });
+
 
   const deleteBookingMutation = useMutation({
     mutationFn: async (id) => {
@@ -363,47 +426,141 @@ export default function Transportation() {
 
       {/* Booking Detail Dialog */}
       <Dialog open={!!detailBooking} onOpenChange={(v) => !v && setDetailBooking(null)}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="font-display">
               {detailBooking?.members ? `${detailBooking.members.first_name} ${detailBooking.members.last_name}` : "Booking Details"}
             </DialogTitle>
           </DialogHeader>
-          {detailBooking && (
-            <div className="space-y-3 text-sm">
-              <Badge className={`border-0 ${statusColors[detailBooking.status] || ""}`}>{detailBooking.status}</Badge>
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <MapPin className="h-4 w-4" />
-                <span>{detailBooking.pickup_address} → {detailBooking.destination || "Church"}</span>
-              </div>
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <Clock className="h-4 w-4" />
-                <span>{detailBooking.request_date}{detailBooking.pickup_time ? ` · ${detailBooking.pickup_time}` : ""}</span>
-              </div>
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <User className="h-4 w-4" />
-                <span>{detailBooking.passengers || 1} passenger{(detailBooking.passengers || 1) > 1 ? "s" : ""}</span>
-              </div>
-              {detailBooking.assigned_to && assigneeMap[detailBooking.assigned_to] && (
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <UserCheck className="h-4 w-4" />
-                  <span>Assigned to {assigneeMap[detailBooking.assigned_to]}</span>
+          {detailBooking && (() => {
+            const passengerName = detailBooking.members ? `${detailBooking.members.first_name} ${detailBooking.members.last_name}` : "Passenger";
+            const passengerPhone = detailBooking.members?.phone || "";
+            const passengerEmail = detailBooking.members?.email || "";
+            const e164 = normalizePhone(passengerPhone);
+            const waNumber = e164 ? e164.replace(/^\+/, "") : "";
+            const smsBody = `Hi ${detailBooking.members?.first_name || "there"}, this is the church transport team about your ${detailBooking.pickup_time || ""} pickup from ${detailBooking.pickup_address}.`;
+            const next = NEXT_STEP[detailBooking.status];
+            const terminal = ["Completed", "Cancelled", "No-Show"].includes(detailBooking.status);
+            const currentStepIdx = CHECKIN_STEPS.indexOf(detailBooking.status);
+            return (
+              <div className="space-y-4 text-sm">
+                <Badge className={`border-0 ${statusColors[detailBooking.status] || ""}`}>{detailBooking.status}</Badge>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <MapPin className="h-4 w-4" />
+                    <span>{detailBooking.pickup_address} → {detailBooking.destination || "Church"}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <Clock className="h-4 w-4" />
+                    <span>{detailBooking.request_date}{detailBooking.pickup_time ? ` · ${detailBooking.pickup_time}` : ""}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <User className="h-4 w-4" />
+                    <span>{detailBooking.passengers || 1} passenger{(detailBooking.passengers || 1) > 1 ? "s" : ""}</span>
+                  </div>
+                  {detailBooking.assigned_to && assigneeMap[detailBooking.assigned_to] && (
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <UserCheck className="h-4 w-4" />
+                      <span>Assigned to {assigneeMap[detailBooking.assigned_to]}</span>
+                    </div>
+                  )}
+                  {detailBooking.assigned_driver && (
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Car className="h-4 w-4" />
+                      <span>Driver: {detailBooking.assigned_driver}{detailBooking.driver_phone ? ` · ${detailBooking.driver_phone}` : ""}</span>
+                    </div>
+                  )}
+                  {detailBooking.notes && (
+                    <div>
+                      <p className="font-medium text-foreground mb-1">Notes</p>
+                      <p className="whitespace-pre-wrap text-muted-foreground">{detailBooking.notes}</p>
+                    </div>
+                  )}
                 </div>
-              )}
-              {detailBooking.assigned_driver && (
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <Car className="h-4 w-4" />
-                  <span>Driver: {detailBooking.assigned_driver}{detailBooking.driver_phone ? ` · ${detailBooking.driver_phone}` : ""}</span>
-                </div>
-              )}
-              {detailBooking.notes && (
-                <div>
-                  <p className="font-medium text-foreground mb-1">Notes</p>
-                  <p className="whitespace-pre-wrap text-muted-foreground">{detailBooking.notes}</p>
-                </div>
-              )}
-            </div>
-          )}
+
+                {canManage && (
+                  <div className="rounded-lg border border-border p-3 space-y-3">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Check-In Workflow</p>
+                    <ol className="flex items-center justify-between gap-1">
+                      {CHECKIN_STEPS.map((step, idx) => {
+                        const done = currentStepIdx >= idx && currentStepIdx !== -1;
+                        const active = currentStepIdx === idx;
+                        const ts = STEP_TIMESTAMP_KEY[step] ? detailBooking[STEP_TIMESTAMP_KEY[step]] : null;
+                        return (
+                          <li key={step} className="flex-1 text-center">
+                            <div className={`mx-auto h-7 w-7 rounded-full flex items-center justify-center text-xs font-semibold ${done ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"} ${active ? "ring-2 ring-primary/40" : ""}`}>
+                              {idx + 1}
+                            </div>
+                            <p className={`mt-1 text-[10px] leading-tight ${done ? "text-foreground" : "text-muted-foreground"}`}>{step}</p>
+                            {ts && <p className="text-[9px] text-muted-foreground">{new Date(ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</p>}
+                          </li>
+                        );
+                      })}
+                    </ol>
+                    {!terminal && (
+                      <div className="flex flex-wrap gap-2 pt-1">
+                        {next && (
+                          <Button size="sm" onClick={() => statusMutation.mutate({ id: detailBooking.id, status: next.status })} disabled={statusMutation.isPending} className="bg-primary">
+                            <next.icon className="h-3.5 w-3.5 mr-1" /> {next.label}
+                          </Button>
+                        )}
+                        {["Notified", "Checked In", "Confirmed"].includes(detailBooking.status) && (
+                          <Button size="sm" variant="outline" className="text-orange-600 border-orange-200 hover:bg-orange-50"
+                            onClick={() => statusMutation.mutate({ id: detailBooking.id, status: "No-Show" })} disabled={statusMutation.isPending}>
+                            <XCircle className="h-3.5 w-3.5 mr-1" /> No-Show
+                          </Button>
+                        )}
+                        <Button size="sm" variant="outline" className="text-destructive border-destructive/30 hover:bg-destructive/5"
+                          onClick={() => statusMutation.mutate({ id: detailBooking.id, status: "Cancelled" })} disabled={statusMutation.isPending}>
+                          Cancel Booking
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {canManage && (passengerPhone || passengerEmail) && (
+                  <div className="rounded-lg border border-border p-3 space-y-2">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Contact {passengerName}</p>
+                    <div className="flex flex-wrap gap-2">
+                      {passengerPhone && (
+                        <a href={`tel:${passengerPhone}`}>
+                          <Button size="sm" variant="outline"><Phone className="h-3.5 w-3.5 mr-1" /> Call</Button>
+                        </a>
+                      )}
+                      {passengerPhone && (
+                        <a href={`sms:${passengerPhone}?body=${encodeURIComponent(smsBody)}`}>
+                          <Button size="sm" variant="outline"><MessageSquare className="h-3.5 w-3.5 mr-1" /> SMS</Button>
+                        </a>
+                      )}
+                      {waNumber && (
+                        <a href={`https://wa.me/${waNumber}?text=${encodeURIComponent(smsBody)}`} target="_blank" rel="noopener noreferrer">
+                          <Button size="sm" variant="outline" className="text-green-600 border-green-200 hover:bg-green-50">
+                            <MessageSquare className="h-3.5 w-3.5 mr-1" /> WhatsApp
+                          </Button>
+                        </a>
+                      )}
+                      {passengerEmail && (
+                        <a href={`mailto:${passengerEmail}`}>
+                          <Button size="sm" variant="outline"><Mail className="h-3.5 w-3.5 mr-1" /> Email</Button>
+                        </a>
+                      )}
+                      <Button size="sm" variant="outline" onClick={() => notifyPassengerMutation.mutate(detailBooking)} disabled={notifyPassengerMutation.isPending} className="text-primary border-primary/30 hover:bg-primary/5">
+                        <Send className="h-3.5 w-3.5 mr-1" /> Send Notification
+                      </Button>
+                    </div>
+                    {(passengerPhone || passengerEmail) && (
+                      <p className="text-[11px] text-muted-foreground">
+                        {passengerPhone && <span>{passengerPhone}</span>}
+                        {passengerPhone && passengerEmail && <span> · </span>}
+                        {passengerEmail && <span>{passengerEmail}</span>}
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
         </DialogContent>
       </Dialog>
 
