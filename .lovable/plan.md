@@ -1,28 +1,27 @@
-## Add Single / Round Trip option to Transport Bookings
+# Fix: Transport booking & unit task emails DLQ'd
 
-Let members specify whether a booking is a one-way (single) trip or a round trip, and surface that throughout the UI and notifications.
+## Why
+Tenant name "Winners Chapel International, Cardiff" contains a comma. Edge functions build the From header as `${name} <noreply@domain>`, which is invalid per RFC 5322 when the display name contains a comma, so the email provider rejects it with `400 invalid_email`. After 5 retries the message lands in DLQ.
 
-### Changes
+## Fix
+RFC-quote and escape the display name before composing the From header in every notifier that uses this pattern.
 
-1. **Database (migration)**
-   - Add `journey_type` text column to `transportation` (values: `Single`, `Round Trip`, default `Single`).
-   - For round trips, add `return_date` (date) and `return_time` (time) nullable columns so passengers can specify the return pickup.
+Helper (inline in each function, no shared file change needed):
+```ts
+const quoteName = (n: string) => `"${String(n ?? "").replace(/[\\"]/g, "\\$&")}"`;
+const fromAddress = `${quoteName(churchShortName)} <noreply@${senderDomain}>`;
+```
 
-2. **Booking form** (`src/components/transportation/TransportBookingDialog.jsx`)
-   - Add a "Journey Type" radio/select with **Single Trip** and **Round Trip**.
-   - When **Round Trip** is selected, reveal **Return Date** and **Return Pickup Time** fields (required in that mode).
-   - Persist `journey_type`, `return_date`, `return_time` on save.
+## Files to update
+- `supabase/functions/notify-transport-booking/index.ts`
+- `supabase/functions/notify-unit-task-assignment/index.ts`
+- `supabase/functions/notify-pastoral-assignment/index.ts` (latent same bug)
+- Sweep and patch any other `supabase/functions/notify-*` and `send-*` functions using the same `${churchShortName} <noreply@...>` pattern (e.g. follow-up, join-request, wsf-leader, welcome, event-reminders, birthday, course-registration).
 
-3. **Booking detail panel** (`src/components/transportation/TransportDetailPanel.jsx`)
-   - Show Journey Type badge.
-   - If round trip, display Return Date & Time row.
+## Verification
+- After deploy, trigger a transport booking on the Cardiff tenant.
+- Check `email_send_log`: new rows should reach `sent`, not `failed`/`dlq`.
+- Optional: requeue or manually resend the DLQ'd transport messages once the fix is live.
 
-4. **Transportation list/cards** (`src/pages/Transportation.jsx`)
-   - Show a small "Round Trip" / "Single" tag on each booking row.
-   - Include journey info in the detail dialog already used for the passenger view.
-
-5. **Notifications** (`supabase/functions/notify-transport-booking/index.ts` + the two trigger functions)
-   - Include `journey_type` and `return_date` / `return_time` in the payload sent to passengers, leaders, and assigned drivers so messages mention return leg when applicable.
-
-### Out of scope
-No changes to assignment logic, status workflow, or reports — just capturing and surfacing the trip type.
+## Not in scope
+- Email queue/cron/Vault config — infrastructure is healthy; only the From header is malformed.
