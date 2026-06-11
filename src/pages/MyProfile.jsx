@@ -1028,20 +1028,22 @@ function DynamicExamButtons({ memberId, onSelect, tenantId }) {
     const aggPct = totalPoints > 0 ? Math.round((totalScore / totalPoints) * 100) : 0;
     const passed = aggPct >= course.pass_mark_percentage;
 
-    const html = `<!DOCTYPE html><html><head><title>${course.name} Score Report</title>
+    const escHtml = (s) => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+    const html = `<!DOCTYPE html><html><head><title>${escHtml(course.name)} Score Report</title>
     <style>body{font-family:Arial,sans-serif;font-size:12px;color:#111;margin:24px}h1{font-size:18px;color:#1e3a5f}
     table{width:100%;border-collapse:collapse;margin-top:16px}th{background:#1e3a5f;color:#fff;text-align:left;padding:8px 10px;font-size:11px}
     td{padding:7px 10px;border-bottom:1px solid #e5e7eb}tr:nth-child(even) td{background:#f8fafc}
     .summary{margin-top:20px;padding:12px;border-radius:8px;font-size:14px}
     .pass{background:#ecfdf5;border:1px solid #a7f3d0;color:#065f46}.fail{background:#fef2f2;border:1px solid #fecaca;color:#991b1b}
     @media print{body{margin:0}}</style></head><body>
-    <h1>${course.name} — Score Report</h1>
-    <p style="font-size:11px;color:#666">Generated: ${new Date().toLocaleString("en-GB")}</p>
+    <h1>${escHtml(course.name)} — Score Report</h1>
+    <p style="font-size:11px;color:#666">Generated: ${escHtml(new Date().toLocaleString("en-GB"))}</p>
     <table><thead><tr><th>Subject</th><th>Score</th><th>%</th></tr></thead>
-    <tbody>${rows.map(r => `<tr><td>${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td></tr>`).join("")}</tbody></table>
+    <tbody>${rows.map(r => `<tr><td>${escHtml(r[0])}</td><td>${escHtml(r[1])}</td><td>${escHtml(r[2])}</td></tr>`).join("")}</tbody></table>
     <div class="summary ${passed ? 'pass' : 'fail'}">
-    <strong>Aggregate: ${totalScore}/${totalPoints} (${aggPct}%)</strong> — Pass mark: ${course.pass_mark_percentage}% — <strong>${passed ? "PASSED ✓" : "NOT PASSED"}</strong>
+    <strong>Aggregate: ${totalScore}/${totalPoints} (${aggPct}%)</strong> — Pass mark: ${escHtml(course.pass_mark_percentage)}% — <strong>${passed ? "PASSED ✓" : "NOT PASSED"}</strong>
     </div></body></html>`;
+
 
     const win = window.open("", "_blank", "width=700,height=500");
     win.document.write(html);

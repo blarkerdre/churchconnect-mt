@@ -45,17 +45,7 @@ Deno.serve(async (req) => {
   // Authorize: either pg_cron with service-role bearer, OR an admin JWT scoped to the tenant being acted on
   const bearer = (req.headers.get("Authorization") ?? "").replace("Bearer ", "");
   let authorized = bearer === serviceKey;
-  // Also accept any valid service_role JWT (e.g. when the cron-stored vault key
-  // differs from the current SUPABASE_SERVICE_ROLE_KEY env var after a rotation).
-  if (!authorized && bearer) {
-    try {
-      const parts = bearer.split(".");
-      if (parts.length === 3) {
-        const payload = JSON.parse(atob(parts[1].replace(/-/g, "+").replace(/_/g, "/")));
-        if (payload?.role === "service_role") authorized = true;
-      }
-    } catch (_e) { /* ignored */ }
-  }
+
   if (!authorized && bearer) {
     try {
       const userClient = createClient(supabaseUrl, anonKey, { global: { headers: { Authorization: `Bearer ${bearer}` } } });

@@ -358,9 +358,13 @@ async function sendResultEmail_fn(
       }
     }
 
+    const escHtml = (s: unknown) => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
     const memberName = `${member.first_name || ""} ${member.last_name || ""}`.trim() || "Student";
     const statusColor = result.passed ? "#38a169" : "#e53e3e";
     const statusText = result.passed ? "PASSED" : "NOT YET PASSED";
+    const safeMemberName = escHtml(memberName);
+    const safeSubject = escHtml(result.subjectName);
+    const safeTenantUrl = escHtml(tenantSiteUrl);
 
     const html = `<!DOCTYPE html><html><head><meta charset="utf-8"></head>
 <body style="margin:0;padding:0;background:#ffffff;font-family:Georgia,'Times New Roman',serif;">
@@ -369,22 +373,22 @@ async function sendResultEmail_fn(
     <p style="color:#fff;font-size:20px;font-weight:700;margin:0;">Exam Result Statement</p>
   </div>
   <div style="padding:32px;background:#f8f9fa;">
-    <h1 style="color:#1a2d4d;font-size:22px;font-weight:700;margin:0 0 20px;">Hello ${memberName},</h1>
+    <h1 style="color:#1a2d4d;font-size:22px;font-weight:700;margin:0 0 20px;">Hello ${safeMemberName},</h1>
     <p style="color:#4a5568;font-size:15px;line-height:1.6;margin:0 0 16px;">
-      Your exam for <strong>${result.subjectName}</strong> has been graded. Here are your results:
+      Your exam for <strong>${safeSubject}</strong> has been graded. Here are your results:
     </p>
     <table style="width:100%;border-collapse:collapse;margin:20px 0;">
-      <tr><td style="padding:10px 16px;border:1px solid #e2e8f0;font-weight:600;background:#edf2f7;color:#1a2d4d;">Subject / Course</td><td style="padding:10px 16px;border:1px solid #e2e8f0;">${result.subjectName}</td></tr>
+      <tr><td style="padding:10px 16px;border:1px solid #e2e8f0;font-weight:600;background:#edf2f7;color:#1a2d4d;">Subject / Course</td><td style="padding:10px 16px;border:1px solid #e2e8f0;">${safeSubject}</td></tr>
       <tr><td style="padding:10px 16px;border:1px solid #e2e8f0;font-weight:600;background:#edf2f7;color:#1a2d4d;">Score</td><td style="padding:10px 16px;border:1px solid #e2e8f0;">${result.score} / ${result.totalPoints}</td></tr>
       <tr><td style="padding:10px 16px;border:1px solid #e2e8f0;font-weight:600;background:#edf2f7;color:#1a2d4d;">Percentage</td><td style="padding:10px 16px;border:1px solid #e2e8f0;">${result.percentage}%</td></tr>
       <tr><td style="padding:10px 16px;border:1px solid #e2e8f0;font-weight:600;background:#edf2f7;color:#1a2d4d;">Pass Mark</td><td style="padding:10px 16px;border:1px solid #e2e8f0;">${result.passThreshold}%</td></tr>
       <tr><td style="padding:10px 16px;border:1px solid #e2e8f0;font-weight:600;background:#edf2f7;color:#1a2d4d;">Status</td><td style="padding:10px 16px;border:1px solid #e2e8f0;font-weight:700;color:${statusColor};">${statusText}</td></tr>
     </table>
     <div style="text-align:center;margin:24px 0;">
-      <a href="${tenantSiteUrl}/auth" style="background:#1a2d4d;border-radius:6px;color:#fff;display:inline-block;font-size:15px;font-weight:600;padding:12px 32px;text-decoration:none;">View Full Results</a>
+      <a href="${safeTenantUrl}/auth" style="background:#1a2d4d;border-radius:6px;color:#fff;display:inline-block;font-size:15px;font-weight:600;padding:12px 32px;text-decoration:none;">View Full Results</a>
     </div>
     <p style="color:#4a5568;font-size:14px;line-height:1.6;margin:0;">
-      ${result.passed ? "Congratulations on passing! Keep up the great work." : "Don't be discouraged — you can retake the exam when ready."}
+      ${result.passed ? "Congratulations on passing! Keep up the great work." : "Don&#39;t be discouraged — you can retake the exam when ready."}
     </p>
   </div>
   <hr style="border-color:#e2e8f0;margin:0;" />
@@ -392,6 +396,7 @@ async function sendResultEmail_fn(
     <p style="color:#a0aec0;font-size:12px;margin:0 0 4px;">Bible School — Exam Results</p>
   </div>
 </div></body></html>`;
+
 
     const text = `Exam Result Statement\n\nHello ${memberName},\n\nYour exam for ${result.subjectName} has been graded.\n\nScore: ${result.score} / ${result.totalPoints} (${result.percentage}%)\nPass Mark: ${result.passThreshold}%\nStatus: ${statusText}\n\n${result.passed ? "Congratulations on passing!" : "You can retake the exam when ready."}\n\nView your results: ${tenantSiteUrl}/auth`;
 
