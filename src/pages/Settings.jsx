@@ -1,4 +1,13 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
+
+const DEFAULT_SERVICE_TYPES = ["Sunday Service", "Midweek Service", "Special Program", "Thanksgiving Service", "Other"];
+const DEFAULT_EVENT_CATEGORIES = ["Conference", "Special Service", "Revival", "Youth Event", "Women's Event", "Men's Event", "Children's Event", "Outreach", "Training", "Social", "Other"];
+const DEFAULT_TRAINING_TYPES = ["Water Baptism", "Holy Spirit Baptism", "BFC", "WIT", "BCC", "LCC", "LDC"];
+const DEFAULT_PASTORAL_CARE_TYPES = [
+  "Prayer Request", "Counselling Session", "Visitation", "Hospital Visit",
+  "Bereavement Support", "Marriage Support", "Financial Support",
+  "Spiritual Direction", "General Pastoral Need", "Other"
+];
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -357,15 +366,16 @@ function StorageUsageCard() {
 }
 
 /* ─── Reusable list section backed by app_settings ─── */
-function SettingsListSection({ settingsKey, title, icon: Icon, description }) {
+function SettingsListSection({ settingsKey, title, icon: Icon, description, defaults }) {
   const qc = useQueryClient();
   const { tenantId, scopeQuery, withTenant } = useTenantQuery();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingIdx, setEditingIdx] = useState(null);
   const [itemName, setItemName] = useState("");
   const [deleteIdx, setDeleteIdx] = useState(null);
+  const seededRef = useRef(false);
 
-  const { data: items = [], isLoading } = useQuery({
+  const { data: queryResult, isLoading } = useQuery({
     queryKey: ["app-settings", settingsKey, tenantId],
     queryFn: async () => {
       let q = supabase
@@ -375,9 +385,15 @@ function SettingsListSection({ settingsKey, title, icon: Icon, description }) {
       if (tenantId) q = q.eq("tenant_id", tenantId);
       const { data, error } = await q.maybeSingle();
       if (error) throw error;
-      return Array.isArray(data?.value) ? data.value : [];
+      return {
+        rowExists: !!data,
+        items: Array.isArray(data?.value) ? data.value : [],
+      };
     },
   });
+
+  const items = queryResult?.items ?? [];
+  const rowExists = queryResult?.rowExists ?? false;
 
   const saveMutation = useMutation({
     mutationFn: async (newItems) => {
@@ -391,6 +407,17 @@ function SettingsListSection({ settingsKey, title, icon: Icon, description }) {
     },
     onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
+
+  // Auto-seed defaults the first time a tenant admin opens a tab with no saved row
+  useEffect(() => {
+    if (seededRef.current) return;
+    if (isLoading) return;
+    if (!tenantId) return;
+    if (rowExists) return;
+    if (!defaults || defaults.length === 0) return;
+    seededRef.current = true;
+    saveMutation.mutate(defaults);
+  }, [isLoading, rowExists, tenantId, defaults]);
 
   const openCreate = () => { setEditingIdx(null); setItemName(""); setDialogOpen(true); };
   const openEdit = (idx) => { setEditingIdx(idx); setItemName(items[idx]); setDialogOpen(true); };
@@ -1642,6 +1669,7 @@ export default function Settings() {
             title="Service Types"
             icon={Church}
             description="Types of church services for attendance recording"
+            defaults={DEFAULT_SERVICE_TYPES}
           />
         </TabsContent>
 
@@ -1651,6 +1679,7 @@ export default function Settings() {
             title="Event Categories"
             icon={CalendarDays}
             description="Categories for church events"
+            defaults={DEFAULT_EVENT_CATEGORIES}
           />
         </TabsContent>
 
@@ -1660,6 +1689,7 @@ export default function Settings() {
             title="Training Programme Types"
             icon={TrendingUp}
             description="Church growth programme types for BFC & training reports"
+            defaults={DEFAULT_TRAINING_TYPES}
           />
         </TabsContent>
 
@@ -1669,6 +1699,7 @@ export default function Settings() {
             title="Pastoral Care Types"
             icon={Heart}
             description="Types of pastoral care requests"
+            defaults={DEFAULT_PASTORAL_CARE_TYPES}
           />
         </TabsContent>
 
