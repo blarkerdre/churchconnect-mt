@@ -111,13 +111,18 @@ Deno.serve(async (req) => {
     const isNewBooking = notification_type === "new_booking";
     const passengerStatus: string | undefined = body.status;
     const stopNumber: number | undefined = typeof body.stop_number === "number" ? body.stop_number : undefined;
+    const driverName: string = (body.driver_name || "").toString().trim();
+    const driverPhone: string = (body.driver_phone || "").toString().trim();
+    const driverSuffix = driverName
+      ? ` Driver: ${driverName}${driverPhone ? ` (${driverPhone})` : ""}.`
+      : "";
     const pickupAtPhrase = pickup ? ` from ${pickup}` : "";
     const pickupDescPhrase = pickupLocationDescription ? ` — ${pickupLocationDescription}` : "";
     const passengerHeadings: Record<string, { subject: string; heading: string; bodyLine: string }> = {
       "Pickup Scheduled": {
         subject: `Your pickup time is scheduled`,
         heading: "Your Pickup Time",
-        bodyLine: `Your driver will pick you up at ${pickup_time || "the scheduled time"}${pickupAtPhrase}${pickupDescPhrase}${stopNumber ? ` (Stop #${stopNumber} on the route)` : ""}. Please be ready a few minutes early.`,
+        bodyLine: `Your driver will pick you up at ${pickup_time || "the scheduled time"}${pickupAtPhrase}${pickupDescPhrase}${stopNumber ? ` (Stop #${stopNumber} on the route)` : ""}.${driverSuffix} Please be ready a few minutes early.`,
       },
       "Confirmed": {
         subject: `Your transport is confirmed`,
