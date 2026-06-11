@@ -1,0 +1,2 @@
+ALTER TABLE public.transportation ADD COLUMN IF NOT EXISTS pickup_order INTEGER;
+CREATE INDEX IF NOT EXISTS idx_transportation_driver_route ON public.transportation (tenant_id, driver_user_id, request_date, pickup_order);
