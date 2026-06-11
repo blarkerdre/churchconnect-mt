@@ -1669,6 +1669,7 @@ export default function Settings() {
             title="Service Types"
             icon={Church}
             description="Types of church services for attendance recording"
+            defaults={DEFAULT_SERVICE_TYPES}
           />
         </TabsContent>
 
@@ -1678,6 +1679,7 @@ export default function Settings() {
             title="Event Categories"
             icon={CalendarDays}
             description="Categories for church events"
+            defaults={DEFAULT_EVENT_CATEGORIES}
           />
         </TabsContent>
 
@@ -1687,6 +1689,7 @@ export default function Settings() {
             title="Training Programme Types"
             icon={TrendingUp}
             description="Church growth programme types for BFC & training reports"
+            defaults={DEFAULT_TRAINING_TYPES}
           />
         </TabsContent>
 
@@ -1696,6 +1699,7 @@ export default function Settings() {
             title="Pastoral Care Types"
             icon={Heart}
             description="Types of pastoral care requests"
+            defaults={DEFAULT_PASTORAL_CARE_TYPES}
           />
         </TabsContent>
 
