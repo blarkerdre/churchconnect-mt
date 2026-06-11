@@ -1,15 +1,28 @@
 ## Goal
-When a Transport unit leader uses "Notify Passengers" from the Plan Driver Route dialog, the passenger's notification (email, SMS, in‑app) should clearly state **where** the driver will pick them up — pickup address plus the optional pickup location description — not just the time and stop number.
+1. Include the assigned driver's name and phone in passenger notifications (in‑app, email, SMS) for the "Pickup Scheduled" message sent from Plan Driver Route.
+2. Shorten the passenger SMS so a typical "Pickup Scheduled" message fits within a single SMS segment (160 GSM-7 chars), with safe truncation when fields are long.
 
 ## Changes
+
+**`src/components/transportation/RoutePlannerDialog.jsx` — `handleNotify`**
+- Look up the selected driver's phone from `transportMembers` (using `driverId`) and pass `driver_name` + `driver_phone` in the `notify-transport-booking` invoke body (currently only `driver_name` is passed).
+
 **`supabase/functions/notify-transport-booking/index.ts`**
-- In the `passengerHeadings["Pickup Scheduled"]` preset, change `bodyLine` to include the pickup address and description, e.g.:
-  > "Your driver will pick you up at **{pickup_time}** from **{pickup_address}**{description ? ' — {description}' : ''}{stopNumber ? ' (Stop #{n} on the route)' : ''}. Please be ready a few minutes early."
-- Since `bodyLine` is currently a static string built once at the top of the request, move the "Pickup Scheduled" preset to be computed after `pickup`, `pickupLocationDescription`, `pickup_time`, and `stopNumber` are known (already are by line 113), so the address/description interpolate correctly.
-- The email detail block and SMS body already include pickup address + description, so no change needed there — only the headline `bodyLine` (which drives the in‑app notification message and the email/SMS lead sentence for "Pickup Scheduled").
-- Redeploy the function.
+- Driver line is already rendered in the email detail block when `body.driver_name` is present — no change.
+- In-app notification: extend the `passengerHeadings["Pickup Scheduled"]` `bodyLine` so it mentions the driver, e.g. append ` Driver: {driver_name} ({driver_phone}).` when provided.
+- SMS body for `passengerMode`: rewrite to a compact single-segment template. New format (no emojis, ASCII only to stay GSM-7):
+  ```
+  {ChurchShort}: Pickup {date} {time} from {pickup}. {desc?}Driver {name} {phone}. Stop #{n}.
+  ```
+  Apply per-field caps so total ≤ 160 chars:
+  - church short name capped at 16
+  - pickup address capped at 40 (ellipsis if longer)
+  - pickup_location_description capped at 30 (omitted if it would push past 160)
+  - driver name capped at 20
+  - After building, if still > 160, drop fields in this order: description, stop number, driver phone, driver name — until it fits, then hard‑truncate with `…` as final safety net.
+- Keep current verbose SMS for non-passenger modes (leader/assignee) unchanged.
 
 ## Out of scope
-- No UI/route planner changes.
 - No DB/schema changes.
-- No changes to other status presets.
+- No UI changes outside `RoutePlannerDialog`.
+- No changes to email layout (already shows driver row).
