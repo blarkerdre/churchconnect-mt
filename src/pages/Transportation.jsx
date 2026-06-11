@@ -450,6 +450,7 @@ export default function Transportation() {
                         {b.members ? `${b.members.first_name} ${b.members.last_name}` : "Member"}
                       </h3>
                       <Badge className={`border-0 ${statusColors[b.status] || ""}`}>{b.status}</Badge>
+                      {b.journey_type === "Round Trip" && <Badge variant="outline" className="text-xs">Round Trip</Badge>}
                     </div>
                     <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
                       <span className="flex items-center gap-1"><MapPin className="h-3.5 w-3.5" /> {b.pickup_address} → {b.destination || "Church"}</span>
