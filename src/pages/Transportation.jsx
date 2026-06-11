@@ -505,7 +505,10 @@ export default function Transportation() {
                   {detailBooking.assigned_to && assigneeMap[detailBooking.assigned_to] && (
                     <div className="flex items-center gap-2 text-muted-foreground">
                       <UserCheck className="h-4 w-4" />
-                      <span>Assigned to {assigneeMap[detailBooking.assigned_to]}</span>
+                      <span>
+                        Assigned to {assigneeMap[detailBooking.assigned_to]}
+                        {assigneePhoneMap[detailBooking.assigned_to] ? ` · ${assigneePhoneMap[detailBooking.assigned_to]}` : ""}
+                      </span>
                     </div>
                   )}
                   {detailBooking.assigned_driver && (
