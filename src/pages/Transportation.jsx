@@ -95,12 +95,11 @@ export default function Transportation() {
   // Fetch Transportation unit members for assign-to dropdown
   const { data: transportMembers = [] } = useQuery({
     queryKey: ["transport-unit-members", tenantId],
-    enabled: canManage,
     queryFn: async () => {
       // Get members who are in the Transportation unit
       const { data, error } = await scopeQuery(
         supabase.from("members")
-          .select("id, user_id, first_name, last_name")
+          .select("id, user_id, first_name, last_name, phone")
           .ilike("church_unit", "%Transport%")
       );
       if (error) throw error;
@@ -108,10 +107,14 @@ export default function Transportation() {
     },
   });
 
-  // Build a map of user_id -> name for display
+  // Build maps for display
   const assigneeMap = {};
+  const assigneePhoneMap = {};
   transportMembers.forEach(m => {
-    if (m.user_id) assigneeMap[m.user_id] = `${m.first_name} ${m.last_name}`;
+    if (m.user_id) {
+      assigneeMap[m.user_id] = `${m.first_name} ${m.last_name}`;
+      assigneePhoneMap[m.user_id] = m.phone || "";
+    }
   });
 
   const visibleBookings = canManage ? bookings : bookings.filter(b => b.user_id === user?.id);
