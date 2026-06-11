@@ -842,8 +842,17 @@ export default function Transportation() {
             </div>
             <div><Label>Driver Name</Label><Input value={manageForm.assigned_driver} onChange={e => setManageForm(f => ({ ...f, assigned_driver: e.target.value, driver_user_id: "" }))} placeholder="Driver name" /></div>
             <div><Label>Driver Phone</Label><Input value={manageForm.driver_phone} onChange={e => setManageForm(f => ({ ...f, driver_phone: e.target.value }))} placeholder="Phone number" /></div>
+            <div>
+              <Label>Pickup Location Description</Label>
+              <Textarea
+                value={manageForm.pickup_location_description}
+                onChange={e => setManageForm(f => ({ ...f, pickup_location_description: e.target.value }))}
+                placeholder="Passenger's description of pickup spot"
+                rows={2}
+              />
+            </div>
             <div className="flex gap-2">
-              <Button onClick={() => manageMutation.mutate({ id: selectedBooking.id, updates: { status: "Confirmed", assigned_driver: manageForm.assigned_driver, driver_phone: manageForm.driver_phone, driver_user_id: manageForm.driver_user_id || null, assigned_to: manageForm.assigned_to || null } })} className="flex-1 bg-chart-3 hover:bg-chart-3/90">
+              <Button onClick={() => manageMutation.mutate({ id: selectedBooking.id, updates: { status: "Confirmed", assigned_driver: manageForm.assigned_driver, driver_phone: manageForm.driver_phone, driver_user_id: manageForm.driver_user_id || null, assigned_to: manageForm.assigned_to || null, pickup_location_description: manageForm.pickup_location_description || null } })} className="flex-1 bg-chart-3 hover:bg-chart-3/90">
                 <CheckCircle className="h-4 w-4 mr-2" /> Approve
               </Button>
               <Button variant="destructive" onClick={() => manageMutation.mutate({ id: selectedBooking.id, updates: { status: "Cancelled" } })} className="flex-1">
