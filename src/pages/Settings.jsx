@@ -366,15 +366,16 @@ function StorageUsageCard() {
 }
 
 /* ─── Reusable list section backed by app_settings ─── */
-function SettingsListSection({ settingsKey, title, icon: Icon, description }) {
+function SettingsListSection({ settingsKey, title, icon: Icon, description, defaults }) {
   const qc = useQueryClient();
   const { tenantId, scopeQuery, withTenant } = useTenantQuery();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingIdx, setEditingIdx] = useState(null);
   const [itemName, setItemName] = useState("");
   const [deleteIdx, setDeleteIdx] = useState(null);
+  const seededRef = useRef(false);
 
-  const { data: items = [], isLoading } = useQuery({
+  const { data: queryResult, isLoading } = useQuery({
     queryKey: ["app-settings", settingsKey, tenantId],
     queryFn: async () => {
       let q = supabase
@@ -384,9 +385,15 @@ function SettingsListSection({ settingsKey, title, icon: Icon, description }) {
       if (tenantId) q = q.eq("tenant_id", tenantId);
       const { data, error } = await q.maybeSingle();
       if (error) throw error;
-      return Array.isArray(data?.value) ? data.value : [];
+      return {
+        rowExists: !!data,
+        items: Array.isArray(data?.value) ? data.value : [],
+      };
     },
   });
+
+  const items = queryResult?.items ?? [];
+  const rowExists = queryResult?.rowExists ?? false;
 
   const saveMutation = useMutation({
     mutationFn: async (newItems) => {
@@ -400,6 +407,17 @@ function SettingsListSection({ settingsKey, title, icon: Icon, description }) {
     },
     onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
+
+  // Auto-seed defaults the first time a tenant admin opens a tab with no saved row
+  useEffect(() => {
+    if (seededRef.current) return;
+    if (isLoading) return;
+    if (!tenantId) return;
+    if (rowExists) return;
+    if (!defaults || defaults.length === 0) return;
+    seededRef.current = true;
+    saveMutation.mutate(defaults);
+  }, [isLoading, rowExists, tenantId, defaults]);
 
   const openCreate = () => { setEditingIdx(null); setItemName(""); setDialogOpen(true); };
   const openEdit = (idx) => { setEditingIdx(idx); setItemName(items[idx]); setDialogOpen(true); };
