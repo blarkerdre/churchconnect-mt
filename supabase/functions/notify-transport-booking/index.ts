@@ -126,6 +126,16 @@ Deno.serve(async (req) => {
         heading: "Trip Completed",
         bodyLine: "Thanks for travelling with us. God bless.",
       },
+      "No-Show": {
+        subject: `Transport booking marked as no-show`,
+        heading: "Marked as No-Show",
+        bodyLine: "Your transport booking was marked as a no-show. Please contact us if this is incorrect.",
+      },
+      "Cancelled": {
+        subject: `Transport booking cancelled`,
+        heading: "Booking Cancelled",
+        bodyLine: "Your transport booking has been cancelled. Please get in touch if you still need a ride.",
+      },
     };
     const psPreset = passengerMode && passengerStatus ? passengerHeadings[passengerStatus] : null;
 
