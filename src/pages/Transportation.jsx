@@ -374,11 +374,12 @@ export default function Transportation() {
   };
 
   const downloadCSV = () => {
-    const headers = ["Stop #", "Member", "Pickup", "Destination", "Date", "Time", "Passengers", "Status", "Assigned To", "Driver", "Driver Phone", "Notes"];
+    const headers = ["Stop #", "Member", "Pickup", "Pickup Description", "Destination", "Date", "Time", "Passengers", "Status", "Assigned To", "Driver", "Driver Phone", "Notes"];
     const rows = filtered.map(b => [
       b.pickup_order ?? "",
       b.members ? `${b.members.first_name} ${b.members.last_name}` : "",
       b.pickup_address,
+      b.pickup_location_description || "",
       b.destination || "Church",
       b.request_date,
       b.pickup_time || "",
