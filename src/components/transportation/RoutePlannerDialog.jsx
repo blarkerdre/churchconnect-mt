@@ -205,6 +205,11 @@ export default function RoutePlannerDialog({ open, onOpenChange, bookings, trans
                           {b.members?.phone && <span className="flex items-center gap-1"><Phone className="h-3 w-3" /> {b.members.phone}</span>}
                           {b.passengers > 1 && <span>{b.passengers} pax</span>}
                         </div>
+                        {b.pickup_location_description && (
+                          <p className="text-[11px] text-foreground/80 italic mt-1 bg-primary/5 border-l-2 border-primary/40 pl-2 py-0.5">
+                            “{b.pickup_location_description}”
+                          </p>
+                        )}
                         <div className="flex items-center gap-2 mt-2">
                           <Clock className="h-3.5 w-3.5 text-muted-foreground" />
                           <Input
