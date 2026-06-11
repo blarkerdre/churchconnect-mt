@@ -248,6 +248,7 @@ export default function Transportation() {
             member_id: data.member_id,
             member_name: data.members ? `${data.members.first_name} ${data.members.last_name}` : "Passenger",
             pickup: data.pickup_address,
+            pickup_location_description: data.pickup_location_description,
             destination: data.destination || "Church",
             request_date: data.request_date,
             pickup_time: data.pickup_time,
