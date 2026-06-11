@@ -275,7 +275,7 @@ Deno.serve(async (req) => {
   </table>
 </body></html>`;
 
-        const textContent = `Hi ${recipientName},\n\n${heading}\n\nPickup: ${pickup}\nDestination: ${destination}\nDate: ${request_date}${pickup_time ? ` at ${pickup_time}` : ""}\n\n${ctaLine}\n\n${churchName}`;
+        const textContent = `Hi ${recipientName},\n\n${heading}\n\nJourney: ${journeyLabel}\nPickup: ${pickup}\nDestination: ${destination}\nDate: ${request_date}${pickup_time ? ` at ${pickup_time}` : ""}${returnLine ? `\n${returnLine}` : ""}\n\n${ctaLine}\n\n${churchName}`;
 
         const payload = {
           to: recipientEmail,
