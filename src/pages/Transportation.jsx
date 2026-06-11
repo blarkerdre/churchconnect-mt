@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Car, MapPin, Clock, User, Plus, Loader2, CheckCircle, XCircle, Trash2, Edit, Settings, Search, Download, UserCheck } from "lucide-react";
+import { Car, MapPin, Clock, User, Plus, Loader2, CheckCircle, XCircle, Trash2, Edit, Settings, Search, Download, UserCheck, Phone, Mail, MessageSquare, Send, BellRing, CarFront } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
@@ -17,15 +17,35 @@ import { useSubFeature } from "@/hooks/useSubFeature";
 import PrintReportButton from "@/components/PrintReportButton";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
 import PasswordConfirmDialog from "@/components/shared/PasswordConfirmDialog";
+import { normalizePhone } from "@/lib/phone-utils";
 
 const statusColors = {
-  "Confirmed": "bg-chart-3/10 text-chart-3",
   "Pending": "bg-accent/10 text-accent",
+  "Confirmed": "bg-chart-3/10 text-chart-3",
+  "Notified": "bg-blue-500/10 text-blue-600",
+  "Checked In": "bg-indigo-500/10 text-indigo-600",
+  "Picked Up": "bg-purple-500/10 text-purple-600",
   "Completed": "bg-muted text-muted-foreground",
+  "No-Show": "bg-orange-500/10 text-orange-600",
   "Cancelled": "bg-destructive/10 text-destructive",
 };
 
-const ALL_STATUSES = ["Pending", "Confirmed", "Completed", "Cancelled"];
+const ALL_STATUSES = ["Pending", "Confirmed", "Notified", "Checked In", "Picked Up", "Completed", "No-Show", "Cancelled"];
+
+const NEXT_STEP = {
+  "Pending": { status: "Confirmed", label: "Confirm", icon: CheckCircle },
+  "Confirmed": { status: "Notified", label: "Notify Passenger", icon: BellRing },
+  "Notified": { status: "Checked In", label: "Mark Checked In", icon: UserCheck },
+  "Checked In": { status: "Picked Up", label: "Mark Picked Up", icon: CarFront },
+  "Picked Up": { status: "Completed", label: "Mark Completed", icon: CheckCircle },
+};
+
+const CHECKIN_STEPS = ["Confirmed", "Notified", "Checked In", "Picked Up", "Completed"];
+const STEP_TIMESTAMP_KEY = {
+  "Notified": "notified_at",
+  "Checked In": "checked_in_at",
+  "Picked Up": "picked_up_at",
+};
 
 export default function Transportation() {
   const { user, isAdmin, leaderUnits } = useAuth();
