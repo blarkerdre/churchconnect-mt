@@ -48,6 +48,14 @@ Deno.serve(async (req) => {
     }
     const body = await req.json();
     const { notification_type, booking_id, member_name, pickup, destination, request_date, pickup_time, tenant_id } = body;
+    const journeyType: string = body.journey_type || "Single";
+    const returnDate: string | null = body.return_date || null;
+    const returnTime: string | null = body.return_time || null;
+    const isRoundTrip = journeyType === "Round Trip";
+    const journeyLabel = isRoundTrip ? "Round Trip" : "Single Trip";
+    const returnLine = isRoundTrip && (returnDate || returnTime)
+      ? `Return: ${returnDate || "TBC"}${returnTime ? ` at ${returnTime}` : ""}`
+      : "";
 
     // Fetch tenant branding
     let churchName = "Church";
@@ -228,9 +236,11 @@ Deno.serve(async (req) => {
 
         const messageId = `transport-${crypto.randomUUID()}`;
         const detailBlock = `
+          <p style="margin:0 0 8px;color:#555;font-size:14px;"><strong>Journey:</strong> ${escHtml(journeyLabel)}</p>
           <p style="margin:0 0 8px;color:#555;font-size:14px;"><strong>Pickup:</strong> ${escHtml(pickup || "TBC")}</p>
           <p style="margin:0 0 8px;color:#555;font-size:14px;"><strong>Destination:</strong> ${escHtml(destination || "Church")}</p>
           <p style="margin:0 0 8px;color:#555;font-size:14px;"><strong>Date:</strong> ${escHtml(request_date || "TBC")}${pickup_time ? ` at ${escHtml(pickup_time)}` : ""}</p>
+          ${isRoundTrip ? `<p style="margin:0 0 8px;color:#555;font-size:14px;"><strong>Return:</strong> ${escHtml(returnDate || "TBC")}${returnTime ? ` at ${escHtml(returnTime)}` : ""}</p>` : ""}
           ${body.driver_name ? `<p style="margin:0 0 8px;color:#555;font-size:14px;"><strong>Driver:</strong> ${escHtml(body.driver_name)}${body.driver_phone ? ` (${escHtml(body.driver_phone)})` : ""}</p>` : ""}
           ${!passengerMode ? `<p style="margin:0 0 8px;color:#555;font-size:14px;"><strong>Passenger:</strong> ${escHtml(member_name || "Unknown")}</p>` : ""}`;
 
@@ -265,7 +275,7 @@ Deno.serve(async (req) => {
   </table>
 </body></html>`;
 
-        const textContent = `Hi ${recipientName},\n\n${heading}\n\nPickup: ${pickup}\nDestination: ${destination}\nDate: ${request_date}${pickup_time ? ` at ${pickup_time}` : ""}\n\n${ctaLine}\n\n${churchName}`;
+        const textContent = `Hi ${recipientName},\n\n${heading}\n\nJourney: ${journeyLabel}\nPickup: ${pickup}\nDestination: ${destination}\nDate: ${request_date}${pickup_time ? ` at ${pickup_time}` : ""}${returnLine ? `\n${returnLine}` : ""}\n\n${ctaLine}\n\n${churchName}`;
 
         const payload = {
           to: recipientEmail,
@@ -310,10 +320,10 @@ Deno.serve(async (req) => {
 
         if (/^\+[1-9]\d{6,14}$/.test(cleaned)) {
           const smsBody = passengerMode
-            ? `Hi ${recipientName}, ${(psPreset?.bodyLine || "there is an update on your transport booking.")} Pickup: ${pickup} on ${request_date}${pickup_time ? ` at ${pickup_time}` : ""}. - ${churchShortName}`
+            ? `Hi ${recipientName}, ${(psPreset?.bodyLine || "there is an update on your transport booking.")} (${journeyLabel}) Pickup: ${pickup} on ${request_date}${pickup_time ? ` at ${pickup_time}` : ""}${returnLine ? `. ${returnLine}` : ""}. - ${churchShortName}`
             : isNewBooking
-              ? `Hi ${recipientName}, new transport booking from ${member_name}: ${pickup} → ${destination} on ${request_date}. Please check the system. - ${churchShortName}`
-              : `Hi ${recipientName}, you've been assigned a transport booking for ${member_name}: ${pickup} → ${destination} on ${request_date}. - ${churchShortName}`;
+              ? `Hi ${recipientName}, new transport booking from ${member_name} (${journeyLabel}): ${pickup} → ${destination} on ${request_date}${returnLine ? `. ${returnLine}` : ""}. Please check the system. - ${churchShortName}`
+              : `Hi ${recipientName}, you've been assigned a transport booking for ${member_name} (${journeyLabel}): ${pickup} → ${destination} on ${request_date}${returnLine ? `. ${returnLine}` : ""}. - ${churchShortName}`;
 
           try {
             const webhookUrl = `${supabaseUrl}/functions/v1/twilio-webhook`;

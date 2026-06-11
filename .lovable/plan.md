@@ -1,27 +1,28 @@
-## Root cause
+## Add Single / Round Trip option to Transport Bookings
 
-The error `invalid input syntax for type time: ""` is thrown by the database trigger functions `notify_transport_leaders_on_new_booking` and `notify_transport_assignment` (in migration `20260330131834_...sql`, also re-applied in `20260331002402_...sql`).
+Let members specify whether a booking is a one-way (single) trip or a round trip, and surface that throughout the UI and notifications.
 
-Both build a JSON payload with:
+### Changes
 
-```sql
-'pickup_time', COALESCE(NEW.pickup_time, '')
-```
+1. **Database (migration)**
+   - Add `journey_type` text column to `transportation` (values: `Single`, `Round Trip`, default `Single`).
+   - For round trips, add `return_date` (date) and `return_time` (time) nullable columns so passengers can specify the return pickup.
 
-`NEW.pickup_time` is `TIME`, so PostgreSQL tries to cast the `''` fallback to `TIME` and fails whenever a booking is inserted/updated without a pickup time. This blocks the transaction, so users see the error when creating or updating a booking with no time set.
+2. **Booking form** (`src/components/transportation/TransportBookingDialog.jsx`)
+   - Add a "Journey Type" radio/select with **Single Trip** and **Round Trip**.
+   - When **Round Trip** is selected, reveal **Return Date** and **Return Pickup Time** fields (required in that mode).
+   - Persist `journey_type`, `return_date`, `return_time` on save.
 
-## Fix
+3. **Booking detail panel** (`src/components/transportation/TransportDetailPanel.jsx`)
+   - Show Journey Type badge.
+   - If round trip, display Return Date & Time row.
 
-Add a new migration that re-creates both trigger functions with `pickup_time` cast to text before COALESCE:
+4. **Transportation list/cards** (`src/pages/Transportation.jsx`)
+   - Show a small "Round Trip" / "Single" tag on each booking row.
+   - Include journey info in the detail dialog already used for the passenger view.
 
-```sql
-'pickup_time', COALESCE(NEW.pickup_time::text, '')
-```
+5. **Notifications** (`supabase/functions/notify-transport-booking/index.ts` + the two trigger functions)
+   - Include `journey_type` and `return_date` / `return_time` in the payload sent to passengers, leaders, and assigned drivers so messages mention return leg when applicable.
 
-No other logic changes. Triggers stay attached; we just `CREATE OR REPLACE FUNCTION` the two functions.
-
-## Files
-
-- New migration `supabase/migrations/<timestamp>_fix_transport_trigger_time_cast.sql` containing the two updated `CREATE OR REPLACE FUNCTION` definitions (identical to current, with `NEW.pickup_time::text` on the two COALESCE lines).
-
-No frontend changes required — `bookMutation` already sends `null` for empty times, and `manageForm` doesn't touch `pickup_time`.
+### Out of scope
+No changes to assignment logic, status workflow, or reports — just capturing and surfacing the trip type.
