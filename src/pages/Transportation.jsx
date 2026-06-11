@@ -72,6 +72,7 @@ export default function Transportation() {
   const [locationForm, setLocationForm] = useState({ name: "", address: "", notes: "" });
   const [confirmDelete, setConfirmDelete] = useState(null); // { title, description, run }
   const [detailBooking, setDetailBooking] = useState(null);
+  const [reportOpen, setReportOpen] = useState(false);
 
   const { data: bookings = [], isLoading } = useQuery({
     queryKey: ["transportation", tenantId],
