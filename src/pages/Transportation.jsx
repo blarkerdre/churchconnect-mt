@@ -645,6 +645,22 @@ export default function Transportation() {
               <div><Label>Date</Label><Input type="date" value={form.request_date} onChange={e => setForm(f => ({ ...f, request_date: e.target.value }))} /></div>
               <div><Label>Pickup Time</Label><Input type="time" value={form.pickup_time} onChange={e => setForm(f => ({ ...f, pickup_time: e.target.value }))} /></div>
             </div>
+            <div>
+              <Label>Journey Type</Label>
+              <Select value={form.journey_type} onValueChange={v => setForm(f => ({ ...f, journey_type: v }))}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Single">Single Trip (one-way)</SelectItem>
+                  <SelectItem value="Round Trip">Round Trip (return pickup)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            {form.journey_type === "Round Trip" && (
+              <div className="grid grid-cols-2 gap-3">
+                <div><Label>Return Date</Label><Input type="date" value={form.return_date} onChange={e => setForm(f => ({ ...f, return_date: e.target.value }))} /></div>
+                <div><Label>Return Pickup Time</Label><Input type="time" value={form.return_time} onChange={e => setForm(f => ({ ...f, return_time: e.target.value }))} /></div>
+              </div>
+            )}
             <div><Label>Passengers</Label><Input type="number" min="1" value={form.passengers} onChange={e => setForm(f => ({ ...f, passengers: e.target.value }))} /></div>
             <div><Label>Notes</Label><Textarea value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} rows={2} /></div>
             <Button onClick={() => bookMutation.mutate(form)} disabled={bookMutation.isPending || !form.pickup_address || !form.request_date} className="w-full bg-primary">
