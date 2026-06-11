@@ -164,6 +164,7 @@ export default function Transportation() {
       const { data: member } = await supabase.from("members").select("id").eq("user_id", user.id).eq("tenant_id", tenantId).single();
       const { error } = await supabase.from("transportation").insert(withTenant({
         pickup_address: formData.pickup_address,
+        pickup_location_description: formData.pickup_location_description || null,
         destination: formData.destination || "Church",
         request_date: formData.request_date,
         pickup_time: formData.pickup_time || null,
