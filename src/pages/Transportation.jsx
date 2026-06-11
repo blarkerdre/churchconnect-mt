@@ -101,7 +101,7 @@ export default function Transportation() {
       const { data, error } = await scopeQuery(
         supabase.from("members")
           .select("id, user_id, first_name, last_name")
-          .ilike("church_unit", "%Transportation%")
+          .ilike("church_unit", "%Transport%")
       );
       if (error) throw error;
       return (data || []).filter(m => m.user_id);
