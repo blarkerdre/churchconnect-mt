@@ -48,6 +48,7 @@ Deno.serve(async (req) => {
     }
     const body = await req.json();
     const { notification_type, booking_id, member_name, pickup, destination, request_date, pickup_time, tenant_id } = body;
+    const pickupLocationDescription: string = (body.pickup_location_description || "").toString().trim();
     const journeyType: string = body.journey_type || "Single";
     const returnDate: string | null = body.return_date || null;
     const returnTime: string | null = body.return_time || null;
@@ -245,6 +246,7 @@ Deno.serve(async (req) => {
         const detailBlock = `
           <p style="margin:0 0 8px;color:#555;font-size:14px;"><strong>Journey:</strong> ${escHtml(journeyLabel)}</p>
           <p style="margin:0 0 8px;color:#555;font-size:14px;"><strong>Pickup:</strong> ${escHtml(pickup || "TBC")}</p>
+          ${pickupLocationDescription ? `<p style="margin:0 0 8px;color:#1a2d4d;font-size:14px;background:#eef3fb;border-left:3px solid #1a2d4d;padding:8px 10px;border-radius:4px;"><strong>Pickup location description:</strong><br/>${escHtml(pickupLocationDescription)}</p>` : ""}
           <p style="margin:0 0 8px;color:#555;font-size:14px;"><strong>Destination:</strong> ${escHtml(destination || "Church")}</p>
           <p style="margin:0 0 8px;color:#555;font-size:14px;"><strong>Date:</strong> ${escHtml(request_date || "TBC")}${pickup_time ? ` at ${escHtml(pickup_time)}` : ""}</p>
           ${isRoundTrip ? `<p style="margin:0 0 8px;color:#555;font-size:14px;"><strong>Return:</strong> ${escHtml(returnDate || "TBC")}${returnTime ? ` at ${escHtml(returnTime)}` : ""}</p>` : ""}
@@ -283,7 +285,7 @@ Deno.serve(async (req) => {
   </table>
 </body></html>`;
 
-        const textContent = `Hi ${recipientName},\n\n${heading}\n\nJourney: ${journeyLabel}\nPickup: ${pickup}\nDestination: ${destination}\nDate: ${request_date}${pickup_time ? ` at ${pickup_time}` : ""}${returnLine ? `\n${returnLine}` : ""}\n\n${ctaLine}\n\n${churchName}`;
+        const textContent = `Hi ${recipientName},\n\n${heading}\n\nJourney: ${journeyLabel}\nPickup: ${pickup}${pickupLocationDescription ? `\nPickup location: ${pickupLocationDescription}` : ""}\nDestination: ${destination}\nDate: ${request_date}${pickup_time ? ` at ${pickup_time}` : ""}${returnLine ? `\n${returnLine}` : ""}\n\n${ctaLine}\n\n${churchName}`;
 
         const payload = {
           to: recipientEmail,
@@ -327,11 +329,12 @@ Deno.serve(async (req) => {
         if (!cleaned.startsWith("+")) cleaned = "+" + cleaned;
 
         if (/^\+[1-9]\d{6,14}$/.test(cleaned)) {
+          const locLine = pickupLocationDescription ? ` Location: ${pickupLocationDescription}.` : "";
           const smsBody = passengerMode
-            ? `Hi ${recipientName}, ${(psPreset?.bodyLine || "there is an update on your transport booking.")} (${journeyLabel}) Pickup: ${pickup} on ${request_date}${pickup_time ? ` at ${pickup_time}` : ""}${returnLine ? `. ${returnLine}` : ""}. - ${churchShortName}`
+            ? `Hi ${recipientName}, ${(psPreset?.bodyLine || "there is an update on your transport booking.")} (${journeyLabel}) Pickup: ${pickup} on ${request_date}${pickup_time ? ` at ${pickup_time}` : ""}.${locLine}${returnLine ? ` ${returnLine}.` : ""} - ${churchShortName}`
             : isNewBooking
-              ? `Hi ${recipientName}, new transport booking from ${member_name} (${journeyLabel}): ${pickup} → ${destination} on ${request_date}${returnLine ? `. ${returnLine}` : ""}. Please check the system. - ${churchShortName}`
-              : `Hi ${recipientName}, you've been assigned a transport booking for ${member_name} (${journeyLabel}): ${pickup} → ${destination} on ${request_date}${returnLine ? `. ${returnLine}` : ""}. - ${churchShortName}`;
+              ? `Hi ${recipientName}, new transport booking from ${member_name} (${journeyLabel}): ${pickup} → ${destination} on ${request_date}.${locLine}${returnLine ? ` ${returnLine}.` : ""} Please check the system. - ${churchShortName}`
+              : `Hi ${recipientName}, you've been assigned a transport booking for ${member_name} (${journeyLabel}): ${pickup} → ${destination} on ${request_date}.${locLine}${returnLine ? ` ${returnLine}.` : ""} - ${churchShortName}`;
 
           try {
             const webhookUrl = `${supabaseUrl}/functions/v1/twilio-webhook`;

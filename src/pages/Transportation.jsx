@@ -68,8 +68,8 @@ export default function Transportation() {
   const [editLocationDialogOpen, setEditLocationDialogOpen] = useState(false);
   const [selectedBooking, setSelectedBooking] = useState(null);
   const [editingLocation, setEditingLocation] = useState(null);
-  const [form, setForm] = useState({ pickup_address: "", destination: "Church", request_date: "", pickup_time: "", notes: "", passengers: 1, journey_type: "Single", return_date: "", return_time: "" });
-  const [manageForm, setManageForm] = useState({ status: "", assigned_driver: "", driver_phone: "", driver_user_id: "", assigned_to: "" });
+  const [form, setForm] = useState({ pickup_address: "", pickup_location_description: "", destination: "Church", request_date: "", pickup_time: "", notes: "", passengers: 1, journey_type: "Single", return_date: "", return_time: "" });
+  const [manageForm, setManageForm] = useState({ status: "", assigned_driver: "", driver_phone: "", driver_user_id: "", assigned_to: "", pickup_location_description: "" });
   const [locationForm, setLocationForm] = useState({ name: "", address: "", notes: "" });
   const [confirmDelete, setConfirmDelete] = useState(null); // { title, description, run }
   const [detailBooking, setDetailBooking] = useState(null);
@@ -164,6 +164,7 @@ export default function Transportation() {
       const { data: member } = await supabase.from("members").select("id").eq("user_id", user.id).eq("tenant_id", tenantId).single();
       const { error } = await supabase.from("transportation").insert(withTenant({
         pickup_address: formData.pickup_address,
+        pickup_location_description: formData.pickup_location_description || null,
         destination: formData.destination || "Church",
         request_date: formData.request_date,
         pickup_time: formData.pickup_time || null,
@@ -206,6 +207,7 @@ export default function Transportation() {
             member_id: data.member_id,
             member_name: data.members ? `${data.members.first_name} ${data.members.last_name}` : "Passenger",
             pickup: data.pickup_address,
+            pickup_location_description: data.pickup_location_description,
             destination: data.destination || "Church",
             request_date: data.request_date,
             pickup_time: data.pickup_time,
@@ -246,6 +248,7 @@ export default function Transportation() {
             member_id: data.member_id,
             member_name: data.members ? `${data.members.first_name} ${data.members.last_name}` : "Passenger",
             pickup: data.pickup_address,
+            pickup_location_description: data.pickup_location_description,
             destination: data.destination || "Church",
             request_date: data.request_date,
             pickup_time: data.pickup_time,
@@ -273,6 +276,7 @@ export default function Transportation() {
           member_id: booking.member_id,
           member_name: booking.members ? `${booking.members.first_name} ${booking.members.last_name}` : "Passenger",
           pickup: booking.pickup_address,
+          pickup_location_description: booking.pickup_location_description,
           destination: booking.destination || "Church",
           request_date: booking.request_date,
           pickup_time: booking.pickup_time,
@@ -335,7 +339,7 @@ export default function Transportation() {
 
   const openManage = (b) => {
     setSelectedBooking(b);
-    setManageForm({ status: b.status, assigned_driver: b.assigned_driver || "", driver_phone: b.driver_phone || "", driver_user_id: b.driver_user_id || "", assigned_to: b.assigned_to || "" });
+    setManageForm({ status: b.status, assigned_driver: b.assigned_driver || "", driver_phone: b.driver_phone || "", driver_user_id: b.driver_user_id || "", assigned_to: b.assigned_to || "", pickup_location_description: b.pickup_location_description || "" });
     setManageDialogOpen(true);
   };
 
@@ -370,11 +374,12 @@ export default function Transportation() {
   };
 
   const downloadCSV = () => {
-    const headers = ["Stop #", "Member", "Pickup", "Destination", "Date", "Time", "Passengers", "Status", "Assigned To", "Driver", "Driver Phone", "Notes"];
+    const headers = ["Stop #", "Member", "Pickup", "Pickup Description", "Destination", "Date", "Time", "Passengers", "Status", "Assigned To", "Driver", "Driver Phone", "Notes"];
     const rows = filtered.map(b => [
       b.pickup_order ?? "",
       b.members ? `${b.members.first_name} ${b.members.last_name}` : "",
       b.pickup_address,
+      b.pickup_location_description || "",
       b.destination || "Church",
       b.request_date,
       b.pickup_time || "",
@@ -416,7 +421,7 @@ export default function Transportation() {
               </Button>
             )}
             {canCreateBooking && (
-              <Button onClick={() => { setForm({ pickup_address: "", destination: "Church", request_date: "", pickup_time: "", notes: "", passengers: 1, journey_type: "Single", return_date: "", return_time: "" }); setBookDialogOpen(true); }} className="bg-primary hover:bg-primary/90">
+              <Button onClick={() => { setForm({ pickup_address: "", pickup_location_description: "", destination: "Church", request_date: "", pickup_time: "", notes: "", passengers: 1, journey_type: "Single", return_date: "", return_time: "" }); setBookDialogOpen(true); }} className="bg-primary hover:bg-primary/90">
                 <Plus className="h-4 w-4 mr-2" /> Book Transport
               </Button>
             )}
@@ -575,6 +580,12 @@ export default function Transportation() {
                     <MapPin className="h-4 w-4" />
                     <span>{detailBooking.pickup_address} → {detailBooking.destination || "Church"}</span>
                   </div>
+                  {detailBooking.pickup_location_description && (
+                    <div className="rounded-md bg-primary/5 border border-primary/15 p-2 ml-6">
+                      <p className="text-[11px] uppercase tracking-wide text-primary font-semibold mb-1">Pickup Location Description</p>
+                      <p className="text-sm text-foreground whitespace-pre-wrap">{detailBooking.pickup_location_description}</p>
+                    </div>
+                  )}
                   <div className="flex items-center gap-2 text-muted-foreground">
                     <Clock className="h-4 w-4" />
                     <span>{detailBooking.request_date}{detailBooking.pickup_time ? ` · ${detailBooking.pickup_time}` : ""}</span>
@@ -743,6 +754,16 @@ export default function Transportation() {
               ) : null}
               <Input value={form.pickup_address} onChange={e => setForm(f => ({ ...f, pickup_address: e.target.value }))} placeholder="Or type custom address" className="mt-2" />
             </div>
+            <div>
+              <Label>Pickup Location Description <span className="text-xs text-muted-foreground">(optional)</span></Label>
+              <Textarea
+                value={form.pickup_location_description}
+                onChange={e => setForm(f => ({ ...f, pickup_location_description: e.target.value }))}
+                placeholder="e.g. Blue house with red door, opposite Tesco. Wait by the gate."
+                rows={2}
+              />
+              <p className="text-[11px] text-muted-foreground mt-1">Helps the driver find you. Will be shared with your driver.</p>
+            </div>
             <div><Label>Destination</Label><Input value={form.destination} onChange={e => setForm(f => ({ ...f, destination: e.target.value }))} /></div>
             <div className="grid grid-cols-2 gap-3">
               <div><Label>Date</Label><Input type="date" value={form.request_date} onChange={e => setForm(f => ({ ...f, request_date: e.target.value }))} /></div>
@@ -827,8 +848,17 @@ export default function Transportation() {
             </div>
             <div><Label>Driver Name</Label><Input value={manageForm.assigned_driver} onChange={e => setManageForm(f => ({ ...f, assigned_driver: e.target.value, driver_user_id: "" }))} placeholder="Driver name" /></div>
             <div><Label>Driver Phone</Label><Input value={manageForm.driver_phone} onChange={e => setManageForm(f => ({ ...f, driver_phone: e.target.value }))} placeholder="Phone number" /></div>
+            <div>
+              <Label>Pickup Location Description</Label>
+              <Textarea
+                value={manageForm.pickup_location_description}
+                onChange={e => setManageForm(f => ({ ...f, pickup_location_description: e.target.value }))}
+                placeholder="Passenger's description of pickup spot"
+                rows={2}
+              />
+            </div>
             <div className="flex gap-2">
-              <Button onClick={() => manageMutation.mutate({ id: selectedBooking.id, updates: { status: "Confirmed", assigned_driver: manageForm.assigned_driver, driver_phone: manageForm.driver_phone, driver_user_id: manageForm.driver_user_id || null, assigned_to: manageForm.assigned_to || null } })} className="flex-1 bg-chart-3 hover:bg-chart-3/90">
+              <Button onClick={() => manageMutation.mutate({ id: selectedBooking.id, updates: { status: "Confirmed", assigned_driver: manageForm.assigned_driver, driver_phone: manageForm.driver_phone, driver_user_id: manageForm.driver_user_id || null, assigned_to: manageForm.assigned_to || null, pickup_location_description: manageForm.pickup_location_description || null } })} className="flex-1 bg-chart-3 hover:bg-chart-3/90">
                 <CheckCircle className="h-4 w-4 mr-2" /> Approve
               </Button>
               <Button variant="destructive" onClick={() => manageMutation.mutate({ id: selectedBooking.id, updates: { status: "Cancelled" } })} className="flex-1">
