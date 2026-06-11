@@ -138,7 +138,7 @@ export default function Transportation() {
       ? bookings
       : bookings.filter(b => b.user_id === user?.id || b.assigned_to === user?.id || b.driver_user_id === user?.id);
 
-  const filtered = visibleBookings.filter(b => {
+  const filteredBase = visibleBookings.filter(b => {
     const name = b.members ? `${b.members.first_name} ${b.members.last_name}` : "";
     const matchSearch = `${name} ${b.pickup_address} ${b.destination || ""}`.toLowerCase().includes(search.toLowerCase());
     const matchStatus = filterStatus === "All" || b.status === filterStatus;
@@ -146,6 +146,17 @@ export default function Transportation() {
     const matchAssignee = filterAssignee === "All" || (filterAssignee === "Unassigned" ? !b.assigned_to : b.assigned_to === filterAssignee);
     return matchSearch && matchStatus && matchDate && matchAssignee;
   });
+
+  // When a specific driver + a single date are selected, sort by pickup_order so leaders see the planned route.
+  const useRouteSort = filterAssignee !== "All" && filterAssignee !== "Unassigned" && dateFrom && dateFrom === dateTo;
+  const filtered = useRouteSort
+    ? [...filteredBase].sort((a, b) => {
+        const ao = a.pickup_order ?? 9999;
+        const bo = b.pickup_order ?? 9999;
+        if (ao !== bo) return ao - bo;
+        return (a.pickup_time || "").localeCompare(b.pickup_time || "");
+      })
+    : filteredBase;
 
 
   const bookMutation = useMutation({
