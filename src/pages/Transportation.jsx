@@ -442,6 +442,9 @@ export default function Transportation() {
               </Select>
             </div>
           )}
+          <Button variant="outline" onClick={() => setReportOpen(true)} disabled={filtered.length === 0}>
+            <BarChart3 className="h-4 w-4 mr-2" /> Report
+          </Button>
           <Button variant="outline" onClick={downloadCSV} disabled={filtered.length === 0}>
             <Download className="h-4 w-4 mr-2" /> CSV
           </Button>
