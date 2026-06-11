@@ -246,6 +246,7 @@ Deno.serve(async (req) => {
         const detailBlock = `
           <p style="margin:0 0 8px;color:#555;font-size:14px;"><strong>Journey:</strong> ${escHtml(journeyLabel)}</p>
           <p style="margin:0 0 8px;color:#555;font-size:14px;"><strong>Pickup:</strong> ${escHtml(pickup || "TBC")}</p>
+          ${pickupLocationDescription ? `<p style="margin:0 0 8px;color:#1a2d4d;font-size:14px;background:#eef3fb;border-left:3px solid #1a2d4d;padding:8px 10px;border-radius:4px;"><strong>Pickup location description:</strong><br/>${escHtml(pickupLocationDescription)}</p>` : ""}
           <p style="margin:0 0 8px;color:#555;font-size:14px;"><strong>Destination:</strong> ${escHtml(destination || "Church")}</p>
           <p style="margin:0 0 8px;color:#555;font-size:14px;"><strong>Date:</strong> ${escHtml(request_date || "TBC")}${pickup_time ? ` at ${escHtml(pickup_time)}` : ""}</p>
           ${isRoundTrip ? `<p style="margin:0 0 8px;color:#555;font-size:14px;"><strong>Return:</strong> ${escHtml(returnDate || "TBC")}${returnTime ? ` at ${escHtml(returnTime)}` : ""}</p>` : ""}
