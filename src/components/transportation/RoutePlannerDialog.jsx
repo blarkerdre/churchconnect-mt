@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { GripVertical, MapPin, Clock, Phone, ArrowUp, ArrowDown, Loader2, Route } from "lucide-react";
+import { GripVertical, MapPin, Clock, Phone, ArrowUp, ArrowDown, Loader2, Route, Bell } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
@@ -55,6 +55,10 @@ export default function RoutePlannerDialog({ open, onOpenChange, bookings, trans
     setOrder(next);
   };
 
+  const setTime = (idx, time) => {
+    setOrder(prev => prev.map((b, i) => i === idx ? { ...b, pickup_time: time } : b));
+  };
+
   const handleSave = async () => {
     if (!order.length) return;
     setSaving(true);
@@ -62,16 +66,60 @@ export default function RoutePlannerDialog({ open, onOpenChange, bookings, trans
       await Promise.all(
         order.map((b, idx) =>
           supabase.from("transportation")
-            .update({ pickup_order: idx + 1 })
+            .update({ pickup_order: idx + 1, pickup_time: b.pickup_time || null })
             .eq("id", b.id)
             .eq("tenant_id", tenantId)
         )
       );
       queryClient.invalidateQueries({ queryKey: ["transportation"] });
       toast({ title: "Pickup order saved", description: `${order.length} stop(s) sequenced.` });
-      onOpenChange(false);
     } catch (err) {
       toast({ title: "Error saving order", description: err.message, variant: "destructive" });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleNotify = async () => {
+    const eligible = order.filter(b => b.pickup_time);
+    if (!eligible.length) {
+      toast({ title: "No pickup times set", description: "Set a pickup time on at least one stop first.", variant: "destructive" });
+      return;
+    }
+    setSaving(true);
+    let sent = 0, failed = 0;
+    try {
+      for (let i = 0; i < order.length; i++) {
+        const b = order[i];
+        if (!b.pickup_time) continue;
+        const passengerName = b.members ? `${b.members.first_name} ${b.members.last_name}` : "Passenger";
+        const driverName = driverOptions.find(d => d.id === driverId)?.name || "";
+        const { error } = await supabase.functions.invoke("notify-transport-booking", {
+          body: {
+            notification_type: "passenger_status",
+            status: "Pickup Scheduled",
+            booking_id: b.id,
+            member_id: b.member_id,
+            member_name: passengerName,
+            pickup: b.pickup_address,
+            destination: b.destination,
+            request_date: b.request_date,
+            pickup_time: b.pickup_time,
+            journey_type: b.journey_type || "Single",
+            return_date: b.return_date,
+            return_time: b.return_time,
+            driver_name: driverName,
+            stop_number: i + 1,
+            tenant_id: tenantId,
+          },
+        });
+        if (error) failed++; else sent++;
+      }
+      toast({
+        title: "Passengers notified",
+        description: `${sent} sent${failed ? `, ${failed} failed` : ""}.`,
+        variant: failed ? "destructive" : "default",
+      });
     } finally {
       setSaving(false);
     }
@@ -154,9 +202,18 @@ export default function RoutePlannerDialog({ open, onOpenChange, bookings, trans
                         <p className="font-medium text-foreground text-sm">{passenger}</p>
                         <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground mt-1">
                           <span className="flex items-center gap-1"><MapPin className="h-3 w-3" /> {b.pickup_address}</span>
-                          {b.pickup_time && <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> {b.pickup_time}</span>}
                           {b.members?.phone && <span className="flex items-center gap-1"><Phone className="h-3 w-3" /> {b.members.phone}</span>}
                           {b.passengers > 1 && <span>{b.passengers} pax</span>}
+                        </div>
+                        <div className="flex items-center gap-2 mt-2">
+                          <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+                          <Input
+                            type="time"
+                            value={b.pickup_time || ""}
+                            onChange={(e) => setTime(idx, e.target.value)}
+                            className="h-8 w-32 text-xs"
+                          />
+                          <span className="text-[11px] text-muted-foreground">Pickup time</span>
                         </div>
                       </div>
                       <div className="flex flex-col gap-1 shrink-0">
@@ -172,10 +229,14 @@ export default function RoutePlannerDialog({ open, onOpenChange, bookings, trans
                 })}
               </ol>
 
-              <div className="flex gap-2 mt-4">
+              <div className="flex flex-wrap gap-2 mt-4">
                 <Button onClick={handleSave} disabled={saving} className="flex-1 bg-primary hover:bg-primary/90">
                   {saving && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-                  Save Pickup Order
+                  Save Order & Times
+                </Button>
+                <Button onClick={handleNotify} disabled={saving} variant="secondary">
+                  <Bell className="h-4 w-4 mr-2" />
+                  Notify Passengers
                 </Button>
                 <Button variant="outline" onClick={handleClear} disabled={saving}>
                   Clear Order

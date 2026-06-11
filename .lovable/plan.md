@@ -1,35 +1,30 @@
 ## Goal
-Let Transport unit leaders set a pickup order per driver, so each driver sees their assigned bookings in the sequence to pick passengers.
+Let Transport unit leaders set/adjust the pickup time per passenger booking (alongside route ordering) and notify the passenger of their confirmed pickup time via email/SMS/in-app.
 
-## Database
-Add `pickup_order INTEGER` column to `public.transportation` (nullable, default null). Index on `(tenant_id, driver_user_id, request_date, pickup_order)` to support sorted reads.
+## Changes
 
-## UI — Transportation page (`src/pages/Transportation.jsx`)
-1. **New "Route Planner" dialog** (leader-only), opened from a new "Plan Route" button next to "Report".
-   - Filters: Date (default today/next service date) + Driver dropdown (populated from bookings' `driver_user_id` / `assigned_driver`).
-   - Shows all bookings for the chosen driver+date as a drag-and-drop ordered list (using existing drag pattern; HTML5 native DnD — no new dep). Each row shows passenger name, pickup address, pickup time, phone.
-   - "Save Order" persists `pickup_order` (1..N) for those rows via a single update batch, scoped by `tenant_id`.
-   - "Notify Driver" optional button: invokes existing `notify-transport-booking` (passenger_status not needed) — out of scope for v1; just save order.
+### 1. Route Planner Dialog (`src/components/transportation/RoutePlannerDialog.jsx`)
+- Add an editable **Pickup Time** input next to each booking row in the drag-and-drop list.
+- "Save Pickup Order" persists both `pickup_order` and the (possibly updated) `pickup_time` per row in the same batched update.
+- Add a **"Notify Passengers"** button (leader-only) that, for each ordered booking with a `pickup_time`, invokes the existing `notify-transport-booking` edge function with `notification_type: "passenger_status"` and a new status `"Pickup Scheduled"` so the passenger receives email + SMS + in-app notification with their assigned pickup time.
+- Show per-row send state (sent / skipped if no time).
 
-2. **Booking list ordering**: when `filterAssignee` is set to a specific driver AND a single date is selected, sort by `pickup_order NULLS LAST, pickup_time`. Otherwise keep current `request_date desc` ordering.
+### 2. Edge function (`supabase/functions/notify-transport-booking/index.ts`)
+- Extend the `passengerHeadings` preset map with a new `"Pickup Scheduled"` entry:
+  - subject: "Your pickup time is scheduled"
+  - heading: "Your Pickup Time"
+  - body line includes the assigned pickup time and stop number when present.
+- Accept optional `stop_number` in the body and include it in email detail block + SMS body when provided.
+- No auth/CORS changes.
 
-3. **Detail panel + driver view**: show "Stop #N" badge when `pickup_order` is set, so drivers (and assignees) see their sequence at a glance.
-
-4. **CSV export**: add `Stop #` column.
-
-## Access control
-- Only `isLeader` (admin or Transportation unit leader) sees the "Plan Route" button and can save order. Drivers/passengers see the stop number read-only.
+### 3. Transportation page (`src/pages/Transportation.jsx`)
+- No business-logic change; route-sorted list already shows Stop # and pickup_time. Detail panel already reflects pickup_time updates.
 
 ## Out of scope
-- No route optimization, mapping, or ETA calc.
-- No changes to notification edge functions.
+- No new DB columns (uses existing `pickup_time` and `pickup_order`).
+- No driver-facing notification (already covered by assignment flow).
+- No ETA calculation or maps.
 
-## Technical notes
-- Drag-and-drop: native HTML5 (`draggable`, `onDragStart`, `onDragOver`, `onDrop`) — keeps bundle lean, no new packages.
-- Batch save: `Promise.all` of `.update({ pickup_order: idx+1 }).eq("id", id).eq("tenant_id", tenantId)`.
-- Invalidate `["transportation", tenantId]` after save.
-
-## Files
-- New: `src/components/transportation/RoutePlannerDialog.jsx`
-- Edit: `src/pages/Transportation.jsx` (button, sort, stop badge, CSV column)
-- Migration: add `pickup_order` column + index.
+## Files touched
+- `src/components/transportation/RoutePlannerDialog.jsx` (edit time inline, notify button, invoke edge fn)
+- `supabase/functions/notify-transport-booking/index.ts` (new "Pickup Scheduled" preset + stop number)
