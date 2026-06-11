@@ -111,7 +111,8 @@ Deno.serve(async (req) => {
     // Send email notification via queue
     if (recipientEmail) {
       const senderDomain = "notify.app.churchmanagementsuite.org";
-      const fromAddress = `${churchShortName} <noreply@${senderDomain}>`;
+      const safeFromName = `"${String(churchShortName).replace(/[\\"]/g, "\\$&")}"`;
+      const fromAddress = `${safeFromName} <noreply@${senderDomain}>`;
       const messageId = `pastoral-assign-${crypto.randomUUID()}`;
 
       const htmlContent = `
