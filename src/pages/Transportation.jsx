@@ -276,6 +276,7 @@ export default function Transportation() {
           member_id: booking.member_id,
           member_name: booking.members ? `${booking.members.first_name} ${booking.members.last_name}` : "Passenger",
           pickup: booking.pickup_address,
+          pickup_location_description: booking.pickup_location_description,
           destination: booking.destination || "Church",
           request_date: booking.request_date,
           pickup_time: booking.pickup_time,
