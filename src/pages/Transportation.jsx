@@ -7,7 +7,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Car, MapPin, Clock, User, Plus, Loader2, CheckCircle, XCircle, Trash2, Edit, Settings, Search, Download, UserCheck, Phone, Mail, MessageSquare, Send, BellRing, CarFront } from "lucide-react";
+import { Car, MapPin, Clock, User, Plus, Loader2, CheckCircle, XCircle, Trash2, Edit, Settings, Search, Download, UserCheck, Phone, Mail, MessageSquare, Send, BellRing, CarFront, BarChart3 } from "lucide-react";
+import TransportReportDialog from "@/components/transportation/TransportReportDialog";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
@@ -71,6 +72,7 @@ export default function Transportation() {
   const [locationForm, setLocationForm] = useState({ name: "", address: "", notes: "" });
   const [confirmDelete, setConfirmDelete] = useState(null); // { title, description, run }
   const [detailBooking, setDetailBooking] = useState(null);
+  const [reportOpen, setReportOpen] = useState(false);
 
   const { data: bookings = [], isLoading } = useQuery({
     queryKey: ["transportation", tenantId],
@@ -440,6 +442,9 @@ export default function Transportation() {
               </Select>
             </div>
           )}
+          <Button variant="outline" onClick={() => setReportOpen(true)} disabled={filtered.length === 0}>
+            <BarChart3 className="h-4 w-4 mr-2" /> Report
+          </Button>
           <Button variant="outline" onClick={downloadCSV} disabled={filtered.length === 0}>
             <Download className="h-4 w-4 mr-2" /> CSV
           </Button>
@@ -859,6 +864,14 @@ export default function Transportation() {
         description={confirmDelete?.description}
         isPending={deleteBookingMutation.isPending || deleteLocationMutation.isPending}
         onConfirm={() => confirmDelete?.run?.()}
+      />
+      <TransportReportDialog
+        open={reportOpen}
+        onOpenChange={setReportOpen}
+        bookings={filtered}
+        assigneeMap={assigneeMap}
+        dateFrom={dateFrom}
+        dateTo={dateTo}
       />
     </div>
   );
