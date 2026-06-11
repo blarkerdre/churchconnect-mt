@@ -50,7 +50,8 @@ const STEP_TIMESTAMP_KEY = {
 export default function Transportation() {
   const { user, isAdmin, leaderUnits } = useAuth();
   const { isMemberOfUnit: isTransportUnit } = useUnitMembership("Transportation");
-  const canManage = isAdmin || leaderUnits.includes("Transportation") || isTransportUnit;
+  const isLeader = isAdmin || leaderUnits.includes("Transportation");
+  const canManage = isLeader; // Only leaders can manage bookings (approve/assign/edit/delete)
   const { enabled: canCreateBooking } = useSubFeature("transportation.create_booking");
   const queryClient = useQueryClient();
   const { tenantId, scopeQuery, withTenant } = useTenantQuery();
@@ -66,7 +67,7 @@ export default function Transportation() {
   const [selectedBooking, setSelectedBooking] = useState(null);
   const [editingLocation, setEditingLocation] = useState(null);
   const [form, setForm] = useState({ pickup_address: "", destination: "Church", request_date: "", pickup_time: "", notes: "", passengers: 1, journey_type: "Single", return_date: "", return_time: "" });
-  const [manageForm, setManageForm] = useState({ status: "", assigned_driver: "", driver_phone: "", assigned_to: "" });
+  const [manageForm, setManageForm] = useState({ status: "", assigned_driver: "", driver_phone: "", driver_user_id: "", assigned_to: "" });
   const [locationForm, setLocationForm] = useState({ name: "", address: "", notes: "" });
   const [confirmDelete, setConfirmDelete] = useState(null); // { title, description, run }
   const [detailBooking, setDetailBooking] = useState(null);
@@ -117,7 +118,21 @@ export default function Transportation() {
     }
   });
 
-  const visibleBookings = canManage ? bookings : bookings.filter(b => b.user_id === user?.id);
+  // Role helpers per booking
+  const isPassenger = (b) => b.user_id === user?.id;
+  const isAssignee = (b) => b.assigned_to && b.assigned_to === user?.id;
+  const isDriverUser = (b) => b.driver_user_id && b.driver_user_id === user?.id;
+  // Unit members see all bookings but only act on their own assignments
+  const canRunCheckin = (b) => isLeader || isAssignee(b) || isDriverUser(b);
+  const canContactPassenger = (b) => canRunCheckin(b);
+  const canAcknowledge = (b) =>
+    isPassenger(b) && ["Confirmed", "Notified", "Checked In", "Picked Up", "Completed"].includes(b.status);
+
+  // Visibility: leaders & unit members see all; otherwise own bookings + assignments + driver jobs
+  const visibleBookings =
+    isLeader || isTransportUnit
+      ? bookings
+      : bookings.filter(b => b.user_id === user?.id || b.assigned_to === user?.id || b.driver_user_id === user?.id);
 
   const filtered = visibleBookings.filter(b => {
     const name = b.members ? `${b.members.first_name} ${b.members.last_name}` : "";
@@ -127,6 +142,7 @@ export default function Transportation() {
     const matchAssignee = filterAssignee === "All" || (filterAssignee === "Unassigned" ? !b.assigned_to : b.assigned_to === filterAssignee);
     return matchSearch && matchStatus && matchDate && matchAssignee;
   });
+
 
   const bookMutation = useMutation({
     mutationFn: async (formData) => {
