@@ -3642,13 +3642,18 @@ export type Database = {
         Row: {
           assigned_driver: string | null
           assigned_to: string | null
+          checked_in_at: string | null
+          checkin_notes: string | null
           created_at: string
           destination: string | null
           driver_phone: string | null
           id: string
           member_id: string | null
+          no_show_at: string | null
           notes: string | null
+          notified_at: string | null
           passengers: number | null
+          picked_up_at: string | null
           pickup_address: string
           pickup_time: string | null
           request_date: string
@@ -3660,13 +3665,18 @@ export type Database = {
         Insert: {
           assigned_driver?: string | null
           assigned_to?: string | null
+          checked_in_at?: string | null
+          checkin_notes?: string | null
           created_at?: string
           destination?: string | null
           driver_phone?: string | null
           id?: string
           member_id?: string | null
+          no_show_at?: string | null
           notes?: string | null
+          notified_at?: string | null
           passengers?: number | null
+          picked_up_at?: string | null
           pickup_address: string
           pickup_time?: string | null
           request_date: string
@@ -3678,13 +3688,18 @@ export type Database = {
         Update: {
           assigned_driver?: string | null
           assigned_to?: string | null
+          checked_in_at?: string | null
+          checkin_notes?: string | null
           created_at?: string
           destination?: string | null
           driver_phone?: string | null
           id?: string
           member_id?: string | null
+          no_show_at?: string | null
           notes?: string | null
+          notified_at?: string | null
           passengers?: number | null
+          picked_up_at?: string | null
           pickup_address?: string
           pickup_time?: string | null
           request_date?: string
@@ -4704,7 +4719,15 @@ export type Database = {
         | "Home Cell Meeting"
         | "Other"
       tenant_role: "owner" | "admin" | "member"
-      transport_status: "Pending" | "Confirmed" | "Completed" | "Cancelled"
+      transport_status:
+        | "Pending"
+        | "Confirmed"
+        | "Completed"
+        | "Cancelled"
+        | "Notified"
+        | "Checked In"
+        | "Picked Up"
+        | "No-Show"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -4894,7 +4917,16 @@ export const Constants = {
         "Other",
       ],
       tenant_role: ["owner", "admin", "member"],
-      transport_status: ["Pending", "Confirmed", "Completed", "Cancelled"],
+      transport_status: [
+        "Pending",
+        "Confirmed",
+        "Completed",
+        "Cancelled",
+        "Notified",
+        "Checked In",
+        "Picked Up",
+        "No-Show",
+      ],
     },
   },
 } as const
