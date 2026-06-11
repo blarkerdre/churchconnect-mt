@@ -3647,12 +3647,14 @@ export type Database = {
           created_at: string
           destination: string | null
           driver_phone: string | null
+          driver_user_id: string | null
           id: string
           journey_type: string
           member_id: string | null
           no_show_at: string | null
           notes: string | null
           notified_at: string | null
+          passenger_acknowledged_at: string | null
           passengers: number | null
           picked_up_at: string | null
           pickup_address: string
@@ -3673,12 +3675,14 @@ export type Database = {
           created_at?: string
           destination?: string | null
           driver_phone?: string | null
+          driver_user_id?: string | null
           id?: string
           journey_type?: string
           member_id?: string | null
           no_show_at?: string | null
           notes?: string | null
           notified_at?: string | null
+          passenger_acknowledged_at?: string | null
           passengers?: number | null
           picked_up_at?: string | null
           pickup_address: string
@@ -3699,12 +3703,14 @@ export type Database = {
           created_at?: string
           destination?: string | null
           driver_phone?: string | null
+          driver_user_id?: string | null
           id?: string
           journey_type?: string
           member_id?: string | null
           no_show_at?: string | null
           notes?: string | null
           notified_at?: string | null
+          passenger_acknowledged_at?: string | null
           passengers?: number | null
           picked_up_at?: string | null
           pickup_address?: string
@@ -4471,6 +4477,10 @@ export type Database = {
         Returns: boolean
       }
       is_training_rep_member: {
+        Args: { _tenant_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_transport_unit_member: {
         Args: { _tenant_id: string; _user_id: string }
         Returns: boolean
       }
