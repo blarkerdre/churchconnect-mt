@@ -767,16 +767,13 @@ export default function Transportation() {
             <div>
               <Label>Driver (Transport Unit)</Label>
               <Select
-                value={(() => {
-                  const match = transportMembers.find(m => `${m.first_name} ${m.last_name}` === manageForm.assigned_driver);
-                  return match ? match.user_id : "manual";
-                })()}
+                value={manageForm.driver_user_id || "manual"}
                 onValueChange={v => {
                   if (v === "manual") {
-                    setManageForm(f => ({ ...f, assigned_driver: "", driver_phone: "" }));
+                    setManageForm(f => ({ ...f, driver_user_id: "", assigned_driver: "", driver_phone: "" }));
                   } else {
                     const m = transportMembers.find(x => x.user_id === v);
-                    if (m) setManageForm(f => ({ ...f, assigned_driver: `${m.first_name} ${m.last_name}`, driver_phone: m.phone || "" }));
+                    if (m) setManageForm(f => ({ ...f, driver_user_id: m.user_id, assigned_driver: `${m.first_name} ${m.last_name}`, driver_phone: m.phone || "" }));
                   }
                 }}
               >
@@ -792,17 +789,17 @@ export default function Transportation() {
               </Select>
               <p className="text-[11px] text-muted-foreground mt-1">Pick a Transport unit member to auto-fill, or type a name and phone below.</p>
             </div>
-            <div><Label>Driver Name</Label><Input value={manageForm.assigned_driver} onChange={e => setManageForm(f => ({ ...f, assigned_driver: e.target.value }))} placeholder="Driver name" /></div>
+            <div><Label>Driver Name</Label><Input value={manageForm.assigned_driver} onChange={e => setManageForm(f => ({ ...f, assigned_driver: e.target.value, driver_user_id: "" }))} placeholder="Driver name" /></div>
             <div><Label>Driver Phone</Label><Input value={manageForm.driver_phone} onChange={e => setManageForm(f => ({ ...f, driver_phone: e.target.value }))} placeholder="Phone number" /></div>
             <div className="flex gap-2">
-              <Button onClick={() => manageMutation.mutate({ id: selectedBooking.id, updates: { status: "Confirmed", assigned_driver: manageForm.assigned_driver, driver_phone: manageForm.driver_phone, assigned_to: manageForm.assigned_to || null } })} className="flex-1 bg-chart-3 hover:bg-chart-3/90">
+              <Button onClick={() => manageMutation.mutate({ id: selectedBooking.id, updates: { status: "Confirmed", assigned_driver: manageForm.assigned_driver, driver_phone: manageForm.driver_phone, driver_user_id: manageForm.driver_user_id || null, assigned_to: manageForm.assigned_to || null } })} className="flex-1 bg-chart-3 hover:bg-chart-3/90">
                 <CheckCircle className="h-4 w-4 mr-2" /> Approve
               </Button>
               <Button variant="destructive" onClick={() => manageMutation.mutate({ id: selectedBooking.id, updates: { status: "Cancelled" } })} className="flex-1">
                 <XCircle className="h-4 w-4 mr-2" /> Reject
               </Button>
             </div>
-            <Button variant="outline" onClick={() => manageMutation.mutate({ id: selectedBooking.id, updates: { ...manageForm, assigned_to: manageForm.assigned_to || null } })} disabled={manageMutation.isPending} className="w-full">
+            <Button variant="outline" onClick={() => manageMutation.mutate({ id: selectedBooking.id, updates: { ...manageForm, driver_user_id: manageForm.driver_user_id || null, assigned_to: manageForm.assigned_to || null } })} disabled={manageMutation.isPending} className="w-full">
               {manageMutation.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
               Save Changes
             </Button>
