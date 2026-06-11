@@ -150,13 +150,34 @@ export default function Transportation() {
 
   const manageMutation = useMutation({
     mutationFn: async ({ id, updates }) => {
-      const { error } = await supabase.from("transportation").update(updates).eq("id", id).eq("tenant_id", tenantId);
+      const { data, error } = await supabase.from("transportation").update(updates).eq("id", id).eq("tenant_id", tenantId)
+        .select("*, members(first_name, last_name, phone, email)").single();
       if (error) throw error;
+      return data;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["transportation"] });
       toast({ title: "Booking updated" });
       setManageDialogOpen(false);
+      const notifyStatuses = ["Confirmed", "Notified", "Checked In", "Picked Up", "Completed", "No-Show", "Cancelled"];
+      if (data && notifyStatuses.includes(data.status)) {
+        supabase.functions.invoke("notify-transport-booking", {
+          body: {
+            notification_type: "passenger_status",
+            status: data.status,
+            booking_id: data.id,
+            member_id: data.member_id,
+            member_name: data.members ? `${data.members.first_name} ${data.members.last_name}` : "Passenger",
+            pickup: data.pickup_address,
+            destination: data.destination || "Church",
+            request_date: data.request_date,
+            pickup_time: data.pickup_time,
+            driver_name: data.assigned_driver,
+            driver_phone: data.driver_phone,
+            tenant_id: tenantId,
+          },
+        }).catch((err) => console.error("Passenger notify failed:", err));
+      }
     },
     onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
