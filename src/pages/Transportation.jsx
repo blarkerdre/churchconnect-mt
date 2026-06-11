@@ -138,6 +138,9 @@ export default function Transportation() {
         pickup_time: formData.pickup_time || null,
         notes: formData.notes || null,
         passengers: parseInt(formData.passengers) || 1,
+        journey_type: formData.journey_type || "Single",
+        return_date: formData.journey_type === "Round Trip" ? (formData.return_date || null) : null,
+        return_time: formData.journey_type === "Round Trip" ? (formData.return_time || null) : null,
         user_id: user.id,
         member_id: member?.id || null,
       }));
