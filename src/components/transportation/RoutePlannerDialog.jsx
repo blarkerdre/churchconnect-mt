@@ -89,11 +89,13 @@ export default function RoutePlannerDialog({ open, onOpenChange, bookings, trans
     setSaving(true);
     let sent = 0, failed = 0;
     try {
+      const driverMember = transportMembers.find(m => m.user_id === driverId);
+      const driverName = driverMember ? `${driverMember.first_name} ${driverMember.last_name}` : "";
+      const driverPhone = driverMember?.phone || "";
       for (let i = 0; i < order.length; i++) {
         const b = order[i];
         if (!b.pickup_time) continue;
         const passengerName = b.members ? `${b.members.first_name} ${b.members.last_name}` : "Passenger";
-        const driverName = driverOptions.find(d => d.id === driverId)?.name || "";
         const { error } = await supabase.functions.invoke("notify-transport-booking", {
           body: {
             notification_type: "passenger_status",
@@ -110,6 +112,7 @@ export default function RoutePlannerDialog({ open, onOpenChange, bookings, trans
             return_date: b.return_date,
             return_time: b.return_time,
             driver_name: driverName,
+            driver_phone: driverPhone,
             stop_number: i + 1,
             tenant_id: tenantId,
           },
