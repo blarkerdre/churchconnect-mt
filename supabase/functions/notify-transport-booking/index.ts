@@ -90,9 +90,41 @@ Deno.serve(async (req) => {
     const fromAddress = `${churchShortName} <noreply@${senderDomain}>`;
 
     const isNewBooking = notification_type === "new_booking";
-    const emailSubject = isNewBooking
-      ? `New Transport Booking: ${member_name}`
-      : `Transport Booking Assigned to You`;
+    const passengerStatus: string | undefined = body.status;
+    const passengerHeadings: Record<string, { subject: string; heading: string; bodyLine: string }> = {
+      "Confirmed": {
+        subject: `Your transport is confirmed`,
+        heading: "Your Transport Booking is Confirmed",
+        bodyLine: "We've confirmed your transport booking. We'll be in touch closer to the time.",
+      },
+      "Notified": {
+        subject: `Your ride is on the way`,
+        heading: "Your Ride is on the Way",
+        bodyLine: "Your driver is on the way. Please be ready at your pickup point.",
+      },
+      "Checked In": {
+        subject: `Pickup confirmed`,
+        heading: "Pickup Confirmed",
+        bodyLine: "Thanks for confirming. Your driver will be with you shortly.",
+      },
+      "Picked Up": {
+        subject: `You're on your way`,
+        heading: "You're On Your Way",
+        bodyLine: "You've been picked up — see you soon at the destination.",
+      },
+      "Completed": {
+        subject: `Trip completed`,
+        heading: "Trip Completed",
+        bodyLine: "Thanks for travelling with us. God bless.",
+      },
+    };
+    const psPreset = passengerMode && passengerStatus ? passengerHeadings[passengerStatus] : null;
+
+    const emailSubject = passengerMode
+      ? (psPreset?.subject || `Transport booking update`)
+      : isNewBooking
+        ? `New Transport Booking: ${member_name}`
+        : `Transport Booking Assigned to You`;
 
     for (const userId of userIds) {
       // Get contact info
@@ -105,20 +137,27 @@ Deno.serve(async (req) => {
 
       const recipientEmail = profile?.email || memberRow?.email;
       const recipientPhone = memberRow?.phone;
-      const recipientName = profile?.full_name || memberRow?.first_name || "Team Member";
+      const recipientName = profile?.full_name || memberRow?.first_name || (passengerMode ? "there" : "Team Member");
 
       // Send email
       if (recipientEmail) {
         const messageId = `transport-${crypto.randomUUID()}`;
         const detailBlock = `
-          <p style="margin:0 0 8px;color:#555;font-size:14px;"><strong>Passenger:</strong> ${escHtml(member_name || "Unknown")}</p>
           <p style="margin:0 0 8px;color:#555;font-size:14px;"><strong>Pickup:</strong> ${escHtml(pickup || "TBC")}</p>
           <p style="margin:0 0 8px;color:#555;font-size:14px;"><strong>Destination:</strong> ${escHtml(destination || "Church")}</p>
-          <p style="margin:0 0 8px;color:#555;font-size:14px;"><strong>Date:</strong> ${escHtml(request_date || "TBC")}${pickup_time ? ` at ${escHtml(pickup_time)}` : ""}</p>`;
+          <p style="margin:0 0 8px;color:#555;font-size:14px;"><strong>Date:</strong> ${escHtml(request_date || "TBC")}${pickup_time ? ` at ${escHtml(pickup_time)}` : ""}</p>
+          ${body.driver_name ? `<p style="margin:0 0 8px;color:#555;font-size:14px;"><strong>Driver:</strong> ${escHtml(body.driver_name)}${body.driver_phone ? ` (${escHtml(body.driver_phone)})` : ""}</p>` : ""}
+          ${!passengerMode ? `<p style="margin:0 0 8px;color:#555;font-size:14px;"><strong>Passenger:</strong> ${escHtml(member_name || "Unknown")}</p>` : ""}`;
 
-        const heading = isNewBooking
-          ? "New Transport Booking Request"
-          : "Transport Booking Assigned to You";
+        const heading = passengerMode
+          ? (psPreset?.heading || "Transport Booking Update")
+          : isNewBooking
+            ? "New Transport Booking Request"
+            : "Transport Booking Assigned to You";
+
+        const ctaLine = passengerMode
+          ? (psPreset?.bodyLine || "There is an update on your transport booking.")
+          : "Please log in to manage this booking.";
 
         const htmlContent = `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
 <body style="margin:0;padding:0;background-color:#f4f5f7;font-family:Arial,Helvetica,sans-serif;">
@@ -132,7 +171,7 @@ Deno.serve(async (req) => {
           <p style="margin:0 0 16px;color:#333;font-size:16px;">Dear ${escHtml(recipientName)},</p>
           <h2 style="margin:0 0 16px;color:#1a2d4d;font-size:18px;">${heading}</h2>
           <div style="background-color:#f0f4f8;border-radius:8px;padding:16px;margin:0 0 24px;">${detailBlock}</div>
-          <p style="margin:0 0 16px;color:#555;font-size:15px;">Please log in to manage this booking.</p>
+          <p style="margin:0 0 16px;color:#555;font-size:15px;">${escHtml(ctaLine)}</p>
           <hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0;">
           <p style="margin:0;color:#999;font-size:12px;text-align:center;">Automated notification from Transportation.</p>
         </td></tr>
@@ -141,7 +180,7 @@ Deno.serve(async (req) => {
   </table>
 </body></html>`;
 
-        const textContent = `Hi ${recipientName},\n\n${heading}\n\nPassenger: ${member_name}\nPickup: ${pickup}\nDestination: ${destination}\nDate: ${request_date}${pickup_time ? ` at ${pickup_time}` : ""}\n\nPlease log in to manage this booking.\n\n${churchName}`;
+        const textContent = `Hi ${recipientName},\n\n${heading}\n\nPickup: ${pickup}\nDestination: ${destination}\nDate: ${request_date}${pickup_time ? ` at ${pickup_time}` : ""}\n\n${ctaLine}\n\n${churchName}`;
 
         const payload = {
           to: recipientEmail,
