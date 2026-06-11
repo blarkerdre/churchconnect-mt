@@ -55,6 +55,10 @@ export default function RoutePlannerDialog({ open, onOpenChange, bookings, trans
     setOrder(next);
   };
 
+  const setTime = (idx, time) => {
+    setOrder(prev => prev.map((b, i) => i === idx ? { ...b, pickup_time: time } : b));
+  };
+
   const handleSave = async () => {
     if (!order.length) return;
     setSaving(true);
@@ -62,16 +66,60 @@ export default function RoutePlannerDialog({ open, onOpenChange, bookings, trans
       await Promise.all(
         order.map((b, idx) =>
           supabase.from("transportation")
-            .update({ pickup_order: idx + 1 })
+            .update({ pickup_order: idx + 1, pickup_time: b.pickup_time || null })
             .eq("id", b.id)
             .eq("tenant_id", tenantId)
         )
       );
       queryClient.invalidateQueries({ queryKey: ["transportation"] });
       toast({ title: "Pickup order saved", description: `${order.length} stop(s) sequenced.` });
-      onOpenChange(false);
     } catch (err) {
       toast({ title: "Error saving order", description: err.message, variant: "destructive" });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleNotify = async () => {
+    const eligible = order.filter(b => b.pickup_time);
+    if (!eligible.length) {
+      toast({ title: "No pickup times set", description: "Set a pickup time on at least one stop first.", variant: "destructive" });
+      return;
+    }
+    setSaving(true);
+    let sent = 0, failed = 0;
+    try {
+      for (let i = 0; i < order.length; i++) {
+        const b = order[i];
+        if (!b.pickup_time) continue;
+        const passengerName = b.members ? `${b.members.first_name} ${b.members.last_name}` : "Passenger";
+        const driverName = driverOptions.find(d => d.id === driverId)?.name || "";
+        const { error } = await supabase.functions.invoke("notify-transport-booking", {
+          body: {
+            notification_type: "passenger_status",
+            status: "Pickup Scheduled",
+            booking_id: b.id,
+            member_id: b.member_id,
+            member_name: passengerName,
+            pickup: b.pickup_address,
+            destination: b.destination,
+            request_date: b.request_date,
+            pickup_time: b.pickup_time,
+            journey_type: b.journey_type || "Single",
+            return_date: b.return_date,
+            return_time: b.return_time,
+            driver_name: driverName,
+            stop_number: i + 1,
+            tenant_id: tenantId,
+          },
+        });
+        if (error) failed++; else sent++;
+      }
+      toast({
+        title: "Passengers notified",
+        description: `${sent} sent${failed ? `, ${failed} failed` : ""}.`,
+        variant: failed ? "destructive" : "default",
+      });
     } finally {
       setSaving(false);
     }
