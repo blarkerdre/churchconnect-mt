@@ -229,10 +229,14 @@ export default function RoutePlannerDialog({ open, onOpenChange, bookings, trans
                 })}
               </ol>
 
-              <div className="flex gap-2 mt-4">
+              <div className="flex flex-wrap gap-2 mt-4">
                 <Button onClick={handleSave} disabled={saving} className="flex-1 bg-primary hover:bg-primary/90">
                   {saving && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-                  Save Pickup Order
+                  Save Order & Times
+                </Button>
+                <Button onClick={handleNotify} disabled={saving} variant="secondary">
+                  <Bell className="h-4 w-4 mr-2" />
+                  Notify Passengers
                 </Button>
                 <Button variant="outline" onClick={handleClear} disabled={saving}>
                   Clear Order
