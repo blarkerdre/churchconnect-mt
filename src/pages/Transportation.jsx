@@ -366,7 +366,7 @@ export default function Transportation() {
               </Button>
             )}
             {canCreateBooking && (
-              <Button onClick={() => { setForm({ pickup_address: "", destination: "Church", request_date: "", pickup_time: "", notes: "", passengers: 1 }); setBookDialogOpen(true); }} className="bg-primary hover:bg-primary/90">
+              <Button onClick={() => { setForm({ pickup_address: "", destination: "Church", request_date: "", pickup_time: "", notes: "", passengers: 1, journey_type: "Single", return_date: "", return_time: "" }); setBookDialogOpen(true); }} className="bg-primary hover:bg-primary/90">
                 <Plus className="h-4 w-4 mr-2" /> Book Transport
               </Button>
             )}
