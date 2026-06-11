@@ -580,7 +580,7 @@ export default function Transportation() {
                   )}
                 </div>
 
-                {canManage && (
+                {canRunCheckin(detailBooking) && (
                   <div className="rounded-lg border border-border p-3 space-y-3">
                     <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Check-In Workflow</p>
                     <ol className="flex items-center justify-between gap-1">
@@ -612,16 +612,40 @@ export default function Transportation() {
                             <XCircle className="h-3.5 w-3.5 mr-1" /> No-Show
                           </Button>
                         )}
-                        <Button size="sm" variant="outline" className="text-destructive border-destructive/30 hover:bg-destructive/5"
-                          onClick={() => statusMutation.mutate({ id: detailBooking.id, status: "Cancelled" })} disabled={statusMutation.isPending}>
-                          Cancel Booking
-                        </Button>
+                        {isLeader && (
+                          <Button size="sm" variant="outline" className="text-destructive border-destructive/30 hover:bg-destructive/5"
+                            onClick={() => statusMutation.mutate({ id: detailBooking.id, status: "Cancelled" })} disabled={statusMutation.isPending}>
+                            Cancel Booking
+                          </Button>
+                        )}
                       </div>
                     )}
                   </div>
                 )}
 
-                {canManage && (passengerPhone || passengerEmail) && (
+                {/* Passenger acknowledgement */}
+                {isPassenger(detailBooking) && (
+                  <div className="rounded-lg border border-border p-3 space-y-2">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Your Booking</p>
+                    {detailBooking.passenger_acknowledged_at ? (
+                      <p className="text-sm text-chart-3 flex items-center gap-1">
+                        <CheckCircle className="h-4 w-4" />
+                        Acknowledged on {new Date(detailBooking.passenger_acknowledged_at).toLocaleString()}
+                      </p>
+                    ) : canAcknowledge(detailBooking) ? (
+                      <>
+                        <p className="text-xs text-muted-foreground">Please confirm you've received this update from the Transport team.</p>
+                        <Button size="sm" onClick={() => acknowledgeMutation.mutate(detailBooking.id)} disabled={acknowledgeMutation.isPending} className="bg-primary">
+                          <CheckCircle className="h-3.5 w-3.5 mr-1" /> Acknowledge
+                        </Button>
+                      </>
+                    ) : (
+                      <p className="text-xs text-muted-foreground">Your booking is awaiting team review.</p>
+                    )}
+                  </div>
+                )}
+
+                {canContactPassenger(detailBooking) && (passengerPhone || passengerEmail) && (
                   <div className="rounded-lg border border-border p-3 space-y-2">
                     <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Contact {passengerName}</p>
                     <div className="flex flex-wrap gap-2">
