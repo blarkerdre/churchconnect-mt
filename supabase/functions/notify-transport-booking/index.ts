@@ -223,9 +223,11 @@ Deno.serve(async (req) => {
         if (!cleaned.startsWith("+")) cleaned = "+" + cleaned;
 
         if (/^\+[1-9]\d{6,14}$/.test(cleaned)) {
-          const smsBody = isNewBooking
-            ? `Hi ${recipientName}, new transport booking from ${member_name}: ${pickup} → ${destination} on ${request_date}. Please check the system. - ${churchShortName}`
-            : `Hi ${recipientName}, you've been assigned a transport booking for ${member_name}: ${pickup} → ${destination} on ${request_date}. - ${churchShortName}`;
+          const smsBody = passengerMode
+            ? `Hi ${recipientName}, ${(psPreset?.bodyLine || "there is an update on your transport booking.")} Pickup: ${pickup} on ${request_date}${pickup_time ? ` at ${pickup_time}` : ""}. - ${churchShortName}`
+            : isNewBooking
+              ? `Hi ${recipientName}, new transport booking from ${member_name}: ${pickup} → ${destination} on ${request_date}. Please check the system. - ${churchShortName}`
+              : `Hi ${recipientName}, you've been assigned a transport booking for ${member_name}: ${pickup} → ${destination} on ${request_date}. - ${churchShortName}`;
 
           try {
             const webhookUrl = `${supabaseUrl}/functions/v1/twilio-webhook`;
