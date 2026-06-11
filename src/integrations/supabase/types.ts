@@ -3784,21 +3784,21 @@ export type Database = {
         Row: {
           created_at: string
           id: string
-          tenant_id: string | null
+          tenant_id: string
           unit_name: string
           user_id: string
         }
         Insert: {
           created_at?: string
           id?: string
-          tenant_id?: string | null
+          tenant_id: string
           unit_name: string
           user_id: string
         }
         Update: {
           created_at?: string
           id?: string
-          tenant_id?: string | null
+          tenant_id?: string
           unit_name?: string
           user_id?: string
         }
