@@ -102,6 +102,7 @@ export default function RoutePlannerDialog({ open, onOpenChange, bookings, trans
             member_id: b.member_id,
             member_name: passengerName,
             pickup: b.pickup_address,
+            pickup_location_description: b.pickup_location_description,
             destination: b.destination,
             request_date: b.request_date,
             pickup_time: b.pickup_time,
