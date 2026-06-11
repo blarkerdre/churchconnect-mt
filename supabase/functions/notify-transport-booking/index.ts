@@ -249,7 +249,8 @@ Deno.serve(async (req) => {
           <p style="margin:0 0 8px;color:#555;font-size:14px;"><strong>Date:</strong> ${escHtml(request_date || "TBC")}${pickup_time ? ` at ${escHtml(pickup_time)}` : ""}</p>
           ${isRoundTrip ? `<p style="margin:0 0 8px;color:#555;font-size:14px;"><strong>Return:</strong> ${escHtml(returnDate || "TBC")}${returnTime ? ` at ${escHtml(returnTime)}` : ""}</p>` : ""}
           ${body.driver_name ? `<p style="margin:0 0 8px;color:#555;font-size:14px;"><strong>Driver:</strong> ${escHtml(body.driver_name)}${body.driver_phone ? ` (${escHtml(body.driver_phone)})` : ""}</p>` : ""}
-          ${!passengerMode ? `<p style="margin:0 0 8px;color:#555;font-size:14px;"><strong>Passenger:</strong> ${escHtml(member_name || "Unknown")}</p>` : ""}`;
+          ${!passengerMode ? `<p style="margin:0 0 8px;color:#555;font-size:14px;"><strong>Passenger:</strong> ${escHtml(member_name || "Unknown")}</p>` : ""}
+          ${stopNumber ? `<p style="margin:0 0 8px;color:#555;font-size:14px;"><strong>Stop #:</strong> ${stopNumber}</p>` : ""}`;
 
         const heading = passengerMode
           ? (psPreset?.heading || "Transport Booking Update")
