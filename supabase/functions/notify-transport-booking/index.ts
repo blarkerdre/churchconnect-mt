@@ -104,7 +104,8 @@ Deno.serve(async (req) => {
     const TWILIO_FROM = Deno.env.get("TWILIO_FROM_NUMBER");
 
     const senderDomain = "notify.app.churchmanagementsuite.org";
-    const fromAddress = `${churchShortName} <noreply@${senderDomain}>`;
+    const safeFromName = `"${String(churchShortName).replace(/[\\"]/g, "\\$&")}"`;
+    const fromAddress = `${safeFromName} <noreply@${senderDomain}>`;
 
     const isNewBooking = notification_type === "new_booking";
     const passengerStatus: string | undefined = body.status;
