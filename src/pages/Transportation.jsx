@@ -506,6 +506,9 @@ export default function Transportation() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex flex-wrap items-center gap-2 mb-1">
+                      {b.pickup_order != null && (
+                        <Badge className="bg-primary text-primary-foreground border-0">Stop {b.pickup_order}</Badge>
+                      )}
                       <h3 className="font-display font-bold text-foreground">
                         {b.members ? `${b.members.first_name} ${b.members.last_name}` : "Member"}
                       </h3>
