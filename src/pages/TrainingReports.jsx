@@ -27,14 +27,14 @@ import { useSubFeature } from "@/hooks/useSubFeature";
 const ICON_MAP = {
   "Water Baptism": { icon: Droplets, color: "text-blue-500" },
   "Holy Spirit Baptism": { icon: Flame, color: "text-orange-500" },
-  "BFC": { icon: BookOpen, color: "text-cyan-500" },
+  "Believers Foundation Class (BFC)": { icon: BookOpen, color: "text-cyan-500" },
   "WIT": { icon: BookOpen, color: "text-emerald-500" },
   "BCC": { icon: BookOpen, color: "text-teal-500" },
   "LCC": { icon: BookOpen, color: "text-indigo-500" },
   "LDC": { icon: BookOpen, color: "text-rose-500" },
 };
 
-const DEFAULT_TRAINING_TYPES = ["Water Baptism", "Holy Spirit Baptism", "BFC", "WIT", "BCC", "LCC", "LDC"];
+const DEFAULT_TRAINING_TYPES = ["Water Baptism", "Holy Spirit Baptism", "Believers Foundation Class (BFC)", "WIT", "BCC", "LCC", "LDC"];
 
 const emptyForm = {
   training_type: "",
