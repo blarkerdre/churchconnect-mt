@@ -48,6 +48,7 @@ Deno.serve(async (req) => {
     }
     const body = await req.json();
     const { notification_type, booking_id, member_name, pickup, destination, request_date, pickup_time, tenant_id } = body;
+    const pickupLocationDescription: string = (body.pickup_location_description || "").toString().trim();
     const journeyType: string = body.journey_type || "Single";
     const returnDate: string | null = body.return_date || null;
     const returnTime: string | null = body.return_time || null;
