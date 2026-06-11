@@ -202,9 +202,18 @@ export default function RoutePlannerDialog({ open, onOpenChange, bookings, trans
                         <p className="font-medium text-foreground text-sm">{passenger}</p>
                         <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground mt-1">
                           <span className="flex items-center gap-1"><MapPin className="h-3 w-3" /> {b.pickup_address}</span>
-                          {b.pickup_time && <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> {b.pickup_time}</span>}
                           {b.members?.phone && <span className="flex items-center gap-1"><Phone className="h-3 w-3" /> {b.members.phone}</span>}
                           {b.passengers > 1 && <span>{b.passengers} pax</span>}
+                        </div>
+                        <div className="flex items-center gap-2 mt-2">
+                          <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+                          <Input
+                            type="time"
+                            value={b.pickup_time || ""}
+                            onChange={(e) => setTime(idx, e.target.value)}
+                            className="h-8 w-32 text-xs"
+                          />
+                          <span className="text-[11px] text-muted-foreground">Pickup time</span>
                         </div>
                       </div>
                       <div className="flex flex-col gap-1 shrink-0">
