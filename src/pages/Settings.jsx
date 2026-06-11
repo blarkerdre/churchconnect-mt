@@ -1,4 +1,13 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
+
+const DEFAULT_SERVICE_TYPES = ["Sunday Service", "Midweek Service", "Special Program", "Thanksgiving Service", "Other"];
+const DEFAULT_EVENT_CATEGORIES = ["Conference", "Special Service", "Revival", "Youth Event", "Women's Event", "Men's Event", "Children's Event", "Outreach", "Training", "Social", "Other"];
+const DEFAULT_TRAINING_TYPES = ["Water Baptism", "Holy Spirit Baptism", "BFC", "WIT", "BCC", "LCC", "LDC"];
+const DEFAULT_PASTORAL_CARE_TYPES = [
+  "Prayer Request", "Counselling Session", "Visitation", "Hospital Visit",
+  "Bereavement Support", "Marriage Support", "Financial Support",
+  "Spiritual Direction", "General Pastoral Need", "Other"
+];
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
