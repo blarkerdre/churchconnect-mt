@@ -904,6 +904,13 @@ export default function Transportation() {
         dateFrom={dateFrom}
         dateTo={dateTo}
       />
+      <RoutePlannerDialog
+        open={routePlannerOpen}
+        onOpenChange={setRoutePlannerOpen}
+        bookings={bookings}
+        transportMembers={transportMembers}
+        tenantId={tenantId}
+      />
     </div>
   );
 }
