@@ -7,8 +7,9 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Car, MapPin, Clock, User, Plus, Loader2, CheckCircle, XCircle, Trash2, Edit, Settings, Search, Download, UserCheck, Phone, Mail, MessageSquare, Send, BellRing, CarFront, BarChart3 } from "lucide-react";
+import { Car, MapPin, Clock, User, Plus, Loader2, CheckCircle, XCircle, Trash2, Edit, Settings, Search, Download, UserCheck, Phone, Mail, MessageSquare, Send, BellRing, CarFront, BarChart3, Route } from "lucide-react";
 import TransportReportDialog from "@/components/transportation/TransportReportDialog";
+import RoutePlannerDialog from "@/components/transportation/RoutePlannerDialog";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
@@ -73,6 +74,7 @@ export default function Transportation() {
   const [confirmDelete, setConfirmDelete] = useState(null); // { title, description, run }
   const [detailBooking, setDetailBooking] = useState(null);
   const [reportOpen, setReportOpen] = useState(false);
+  const [routePlannerOpen, setRoutePlannerOpen] = useState(false);
 
   const { data: bookings = [], isLoading } = useQuery({
     queryKey: ["transportation", tenantId],
@@ -136,7 +138,7 @@ export default function Transportation() {
       ? bookings
       : bookings.filter(b => b.user_id === user?.id || b.assigned_to === user?.id || b.driver_user_id === user?.id);
 
-  const filtered = visibleBookings.filter(b => {
+  const filteredBase = visibleBookings.filter(b => {
     const name = b.members ? `${b.members.first_name} ${b.members.last_name}` : "";
     const matchSearch = `${name} ${b.pickup_address} ${b.destination || ""}`.toLowerCase().includes(search.toLowerCase());
     const matchStatus = filterStatus === "All" || b.status === filterStatus;
@@ -144,6 +146,17 @@ export default function Transportation() {
     const matchAssignee = filterAssignee === "All" || (filterAssignee === "Unassigned" ? !b.assigned_to : b.assigned_to === filterAssignee);
     return matchSearch && matchStatus && matchDate && matchAssignee;
   });
+
+  // When a specific driver + a single date are selected, sort by pickup_order so leaders see the planned route.
+  const useRouteSort = filterAssignee !== "All" && filterAssignee !== "Unassigned" && dateFrom && dateFrom === dateTo;
+  const filtered = useRouteSort
+    ? [...filteredBase].sort((a, b) => {
+        const ao = a.pickup_order ?? 9999;
+        const bo = b.pickup_order ?? 9999;
+        if (ao !== bo) return ao - bo;
+        return (a.pickup_time || "").localeCompare(b.pickup_time || "");
+      })
+    : filteredBase;
 
 
   const bookMutation = useMutation({
@@ -357,8 +370,9 @@ export default function Transportation() {
   };
 
   const downloadCSV = () => {
-    const headers = ["Member", "Pickup", "Destination", "Date", "Time", "Passengers", "Status", "Assigned To", "Driver", "Driver Phone", "Notes"];
+    const headers = ["Stop #", "Member", "Pickup", "Destination", "Date", "Time", "Passengers", "Status", "Assigned To", "Driver", "Driver Phone", "Notes"];
     const rows = filtered.map(b => [
+      b.pickup_order ?? "",
       b.members ? `${b.members.first_name} ${b.members.last_name}` : "",
       b.pickup_address,
       b.destination || "Church",
@@ -444,6 +458,9 @@ export default function Transportation() {
           )}
           {isLeader && (
             <>
+              <Button variant="outline" onClick={() => setRoutePlannerOpen(true)}>
+                <Route className="h-4 w-4 mr-2" /> Plan Route
+              </Button>
               <Button variant="outline" onClick={() => setReportOpen(true)} disabled={filtered.length === 0}>
                 <BarChart3 className="h-4 w-4 mr-2" /> Report
               </Button>
@@ -489,6 +506,9 @@ export default function Transportation() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex flex-wrap items-center gap-2 mb-1">
+                      {b.pickup_order != null && (
+                        <Badge className="bg-primary text-primary-foreground border-0">Stop {b.pickup_order}</Badge>
+                      )}
                       <h3 className="font-display font-bold text-foreground">
                         {b.members ? `${b.members.first_name} ${b.members.last_name}` : "Member"}
                       </h3>
@@ -544,7 +564,12 @@ export default function Transportation() {
             const currentStepIdx = CHECKIN_STEPS.indexOf(detailBooking.status);
             return (
               <div className="space-y-4 text-sm">
-                <Badge className={`border-0 ${statusColors[detailBooking.status] || ""}`}>{detailBooking.status}</Badge>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge className={`border-0 ${statusColors[detailBooking.status] || ""}`}>{detailBooking.status}</Badge>
+                  {detailBooking.pickup_order != null && (
+                    <Badge className="bg-primary text-primary-foreground border-0">Stop {detailBooking.pickup_order}</Badge>
+                  )}
+                </div>
                 <div className="space-y-2">
                   <div className="flex items-center gap-2 text-muted-foreground">
                     <MapPin className="h-4 w-4" />
@@ -878,6 +903,13 @@ export default function Transportation() {
         assigneeMap={assigneeMap}
         dateFrom={dateFrom}
         dateTo={dateTo}
+      />
+      <RoutePlannerDialog
+        open={routePlannerOpen}
+        onOpenChange={setRoutePlannerOpen}
+        bookings={bookings}
+        transportMembers={transportMembers}
+        tenantId={tenantId}
       />
     </div>
   );
