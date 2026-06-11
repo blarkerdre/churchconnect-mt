@@ -748,6 +748,16 @@ export default function Transportation() {
               ) : null}
               <Input value={form.pickup_address} onChange={e => setForm(f => ({ ...f, pickup_address: e.target.value }))} placeholder="Or type custom address" className="mt-2" />
             </div>
+            <div>
+              <Label>Pickup Location Description <span className="text-xs text-muted-foreground">(optional)</span></Label>
+              <Textarea
+                value={form.pickup_location_description}
+                onChange={e => setForm(f => ({ ...f, pickup_location_description: e.target.value }))}
+                placeholder="e.g. Blue house with red door, opposite Tesco. Wait by the gate."
+                rows={2}
+              />
+              <p className="text-[11px] text-muted-foreground mt-1">Helps the driver find you. Will be shared with your driver.</p>
+            </div>
             <div><Label>Destination</Label><Input value={form.destination} onChange={e => setForm(f => ({ ...f, destination: e.target.value }))} /></div>
             <div className="grid grid-cols-2 gap-3">
               <div><Label>Date</Label><Input type="date" value={form.request_date} onChange={e => setForm(f => ({ ...f, request_date: e.target.value }))} /></div>
