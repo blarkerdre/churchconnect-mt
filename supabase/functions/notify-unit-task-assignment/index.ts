@@ -97,7 +97,8 @@ Deno.serve(async (req) => {
     const TWILIO_API_KEY = Deno.env.get("TWILIO_API_KEY");
     const TWILIO_FROM = Deno.env.get("TWILIO_FROM_NUMBER");
     const senderDomain = "notify.app.churchmanagementsuite.org";
-    const fromAddress = `${churchShort} <noreply@${senderDomain}>`;
+    const safeFromName = `"${String(churchShort).replace(/[\\"]/g, "\\$&")}"`;
+    const fromAddress = `${safeFromName} <noreply@${senderDomain}>`;
 
     let sent = 0;
     for (const a of (assignments as Array<{ user_id: string | null; member_id: string | null }>)) {
