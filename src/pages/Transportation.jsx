@@ -161,6 +161,49 @@ export default function Transportation() {
     onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
 
+  // Quick status update (used by check-in workflow; keeps detail panel open)
+  const statusMutation = useMutation({
+    mutationFn: async ({ id, status, extra = {} }) => {
+      const { data, error } = await supabase.from("transportation")
+        .update({ status, ...extra }).eq("id", id).eq("tenant_id", tenantId)
+        .select("*, members(first_name, last_name, phone, email)").single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["transportation"] });
+      if (data) setDetailBooking(data);
+      toast({ title: `Status updated to ${data?.status}` });
+    },
+    onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+  });
+
+  // Send a passenger notification (email + SMS) without changing status
+  const notifyPassengerMutation = useMutation({
+    mutationFn: async (booking) => {
+      const { error } = await supabase.functions.invoke("notify-transport-booking", {
+        body: {
+          notification_type: "passenger_status",
+          status: booking.status,
+          booking_id: booking.id,
+          member_id: booking.member_id,
+          member_name: booking.members ? `${booking.members.first_name} ${booking.members.last_name}` : "Passenger",
+          pickup: booking.pickup_address,
+          destination: booking.destination || "Church",
+          request_date: booking.request_date,
+          pickup_time: booking.pickup_time,
+          driver_name: booking.assigned_driver,
+          driver_phone: booking.driver_phone,
+          tenant_id: tenantId,
+        },
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => toast({ title: "Passenger notified" }),
+    onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+  });
+
+
   const deleteBookingMutation = useMutation({
     mutationFn: async (id) => {
       const { error } = await supabase.from("transportation").delete().eq("id", id).eq("tenant_id", tenantId);
