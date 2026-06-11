@@ -669,7 +669,35 @@ export default function Transportation() {
                 </SelectContent>
               </Select>
             </div>
-            <div><Label>Assigned Driver</Label><Input value={manageForm.assigned_driver} onChange={e => setManageForm(f => ({ ...f, assigned_driver: e.target.value }))} placeholder="Driver name" /></div>
+            <div>
+              <Label>Driver (Transport Unit)</Label>
+              <Select
+                value={(() => {
+                  const match = transportMembers.find(m => `${m.first_name} ${m.last_name}` === manageForm.assigned_driver);
+                  return match ? match.user_id : "manual";
+                })()}
+                onValueChange={v => {
+                  if (v === "manual") {
+                    setManageForm(f => ({ ...f, assigned_driver: "", driver_phone: "" }));
+                  } else {
+                    const m = transportMembers.find(x => x.user_id === v);
+                    if (m) setManageForm(f => ({ ...f, assigned_driver: `${m.first_name} ${m.last_name}`, driver_phone: m.phone || "" }));
+                  }
+                }}
+              >
+                <SelectTrigger><SelectValue placeholder="Select a unit member or enter manually" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="manual">— Enter manually below —</SelectItem>
+                  {transportMembers.map(m => (
+                    <SelectItem key={m.user_id} value={m.user_id}>
+                      {m.first_name} {m.last_name}{m.phone ? ` · ${m.phone}` : ""}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-[11px] text-muted-foreground mt-1">Pick a Transport unit member to auto-fill, or type a name and phone below.</p>
+            </div>
+            <div><Label>Driver Name</Label><Input value={manageForm.assigned_driver} onChange={e => setManageForm(f => ({ ...f, assigned_driver: e.target.value }))} placeholder="Driver name" /></div>
             <div><Label>Driver Phone</Label><Input value={manageForm.driver_phone} onChange={e => setManageForm(f => ({ ...f, driver_phone: e.target.value }))} placeholder="Phone number" /></div>
             <div className="flex gap-2">
               <Button onClick={() => manageMutation.mutate({ id: selectedBooking.id, updates: { status: "Confirmed", assigned_driver: manageForm.assigned_driver, driver_phone: manageForm.driver_phone, assigned_to: manageForm.assigned_to || null } })} className="flex-1 bg-chart-3 hover:bg-chart-3/90">
