@@ -339,7 +339,7 @@ export default function Transportation() {
 
   const openManage = (b) => {
     setSelectedBooking(b);
-    setManageForm({ status: b.status, assigned_driver: b.assigned_driver || "", driver_phone: b.driver_phone || "", driver_user_id: b.driver_user_id || "", assigned_to: b.assigned_to || "" });
+    setManageForm({ status: b.status, assigned_driver: b.assigned_driver || "", driver_phone: b.driver_phone || "", driver_user_id: b.driver_user_id || "", assigned_to: b.assigned_to || "", pickup_location_description: b.pickup_location_description || "" });
     setManageDialogOpen(true);
   };
 
