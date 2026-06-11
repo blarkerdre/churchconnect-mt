@@ -865,6 +865,14 @@ export default function Transportation() {
         isPending={deleteBookingMutation.isPending || deleteLocationMutation.isPending}
         onConfirm={() => confirmDelete?.run?.()}
       />
+      <TransportReportDialog
+        open={reportOpen}
+        onOpenChange={setReportOpen}
+        bookings={filtered}
+        assigneeMap={assigneeMap}
+        dateFrom={dateFrom}
+        dateTo={dateTo}
+      />
     </div>
   );
 }
