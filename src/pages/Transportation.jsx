@@ -442,28 +442,32 @@ export default function Transportation() {
               </Select>
             </div>
           )}
-          <Button variant="outline" onClick={() => setReportOpen(true)} disabled={filtered.length === 0}>
-            <BarChart3 className="h-4 w-4 mr-2" /> Report
-          </Button>
-          <Button variant="outline" onClick={downloadCSV} disabled={filtered.length === 0}>
-            <Download className="h-4 w-4 mr-2" /> CSV
-          </Button>
-          <PrintReportButton label="Print" buildRows={() => ({
-            title: "Transportation Report",
-            headers: ["Member", "Pickup", "Destination", "Date", "Time", "Passengers", "Status", "Assigned To", "Driver", "Notes"],
-            rows: filtered.map(b => [
-              b.members ? `${b.members.first_name} ${b.members.last_name}` : "",
-              b.pickup_address,
-              b.destination || "Church",
-              b.request_date,
-              b.pickup_time || "",
-              b.passengers || 1,
-              b.status,
-              b.assigned_to ? (assigneeMap[b.assigned_to] || "Assigned") : "",
-              b.assigned_driver || "",
-              b.notes || "",
-            ]),
-          })} />
+          {isLeader && (
+            <>
+              <Button variant="outline" onClick={() => setReportOpen(true)} disabled={filtered.length === 0}>
+                <BarChart3 className="h-4 w-4 mr-2" /> Report
+              </Button>
+              <Button variant="outline" onClick={downloadCSV} disabled={filtered.length === 0}>
+                <Download className="h-4 w-4 mr-2" /> CSV
+              </Button>
+              <PrintReportButton label="Print" buildRows={() => ({
+                title: "Transportation Report",
+                headers: ["Member", "Pickup", "Destination", "Date", "Time", "Passengers", "Status", "Assigned To", "Driver", "Notes"],
+                rows: filtered.map(b => [
+                  b.members ? `${b.members.first_name} ${b.members.last_name}` : "",
+                  b.pickup_address,
+                  b.destination || "Church",
+                  b.request_date,
+                  b.pickup_time || "",
+                  b.passengers || 1,
+                  b.status,
+                  b.assigned_to ? (assigneeMap[b.assigned_to] || "Assigned") : "",
+                  b.assigned_driver || "",
+                  b.notes || "",
+                ]),
+              })} />
+            </>
+          )}
         </div>
       </div>
 
