@@ -55,10 +55,19 @@ Deno.serve(async (req) => {
 
     // Determine recipients
     const userIds: string[] = [];
+    let passengerMode = false;
     if (notification_type === "new_booking" && Array.isArray(body.leader_user_ids)) {
       userIds.push(...body.leader_user_ids);
     } else if (notification_type === "assignment" && body.assigned_user_id) {
       userIds.push(body.assigned_user_id);
+    } else if (notification_type === "passenger_status") {
+      passengerMode = true;
+      // Look up the passenger's user_id from the member record
+      if (body.member_id) {
+        const { data: m } = await supabase
+          .from("members").select("user_id").eq("id", body.member_id).eq("tenant_id", tenant_id).maybeSingle();
+        if (m?.user_id) userIds.push(m.user_id);
+      }
     }
 
     if (userIds.length === 0) {
