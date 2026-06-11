@@ -1,56 +1,32 @@
-## Goal
+# Auto-seed default option lists in Settings
 
-Extend the existing training workflow so attendees can be searched and added **inside the "Record Training Session" dialog** (not only via the post-creation expandable panel), and give the Training Rep Unit leader a dedicated **report view** for certificate approvals.
+## Problem
+The Settings tabs **Services**, **Events**, **Training**, and **Pastoral** show "No items configured" because no `app_settings` row exists for these keys for the tenant. Forms across the app fall back to hardcoded `DEFAULT_*` lists, but the Settings UI doesn't surface those defaults.
 
-The rest of the workflow (signpost → approve/decline → issue certificate) already exists from the previous implementation and is reused unchanged.
+## Fix
+When a tenant admin opens one of these tabs and the `app_settings` row is missing, automatically write the in-code defaults to `app_settings` for that tenant. The list then renders the standard options and admins can add/edit/remove from there.
 
 ## Changes
 
-### 1. Record Training Session dialog (`src/pages/TrainingReports.jsx`)
+**File:** `src/pages/Settings.jsx` (only)
 
-Add a new **Attendees** section to the create form, visible only to Training Rep members / admins:
+1. Extend `SettingsListSection` to accept an optional `defaults` prop (string array).
+2. After the `useQuery` resolves, if the row didn't exist (we'll detect via a `rowExists` flag returned from the query) and `defaults` is non-empty, trigger a one-time upsert of `{ key, tenant_id, value: defaults }`. Guard with a `useRef` so it fires once per mount/tenant.
+3. Pass the appropriate defaults to each of the four `<SettingsListSection>` instances, sourced from the same constants the forms already use:
+   - `service_types` → existing default service list (mirrors `ChurchAttendance.jsx` defaults)
+   - `event_categories` → categories from `EventFormDialog.jsx` / `EventCard.jsx`
+   - `training_types` → BFC/BCC/LCC/LDC + existing training defaults
+   - `pastoral_care_types` → `DEFAULT_CATEGORIES` from `PastoralCareFormDialog.jsx`
 
-- Search input that filters tenant `members` by name/email (debounced, capped at 200 results).
-- Checkbox list of matching members; selected rows show inline in a chip strip with a remove (×) button.
-- Per-row **Completed** toggle (defaults to true). When unchecked, an optional **Reason** input appears.
-- Empty list is allowed (existing behaviour preserved — you can save a session with no attendees and add them later).
+Defaults will be declared as `const` arrays at the top of `Settings.jsx` to keep this self-contained.
 
-On submit:
-
-- Insert the `training_reports` row as today.
-- Then insert one `training_attendees` row per selected member (`training_report_id` = new id, `training_type`, `attended: true`, `completed`, `not_completed_reason`, `signpost_status: 'none'`).
-- Both inserts happen in the same mutation; failure of the attendee insert surfaces a toast but the session row is kept (already saved).
-
-No DB / RLS changes — the `training_attendees` table, policies, and triggers from the prior migration cover this.
-
-### 2. Signpost from inside the dialog (optional convenience)
-
-In the same Attendees section, completed rows get a **Signpost** checkbox. If ticked at save time, the attendee insert sets `signpost_status: 'pending'`, `signposted_by`, `signposted_at`, triggering the existing notification flow to Training Rep Unit leaders.
-
-### 3. Leader report (`src/pages/CertificateApprovals.jsx`)
-
-Add a **Report** tab alongside the existing Pending / Approved / Declined / Issued / All tabs. The report tab shows:
-
-- Filters: status (multi), training type, date range (signposted_at), decision-maker.
-- Summary cards: total signposted, pending, approved, declined, issued, average days to decision.
-- Grouped table by Training Type with per-group counts.
-- Reuse existing CSV export + `PrintReportButton`.
-
-Visible only to Training Rep Unit leaders and admins (existing route guard already enforces this).
-
-### 4. `TrainingAttendeesPanel.jsx`
-
-No functional change — remains the post-creation editor for sessions already saved. Stays in sync with the new in-form path because both write to `training_attendees`.
+## Behavior
+- First admin to open the tab seeds the list; subsequent visits read the saved row.
+- Admins can edit or delete any item afterwards (including down to an empty list — we won't re-seed once a row exists, even if emptied).
+- No schema changes, no edge function, no migration.
+- Scoped per tenant via the existing `withTenant` / `tenant_id` guards.
 
 ## Out of scope
-
-- No new tables, RLS, or edge functions (all already in place).
-- No changes to `issue-certificate` or notification function.
-- No bulk CSV import of attendees.
-- No new app role — unit-membership check continues to gate access.
-
-## Files
-
-**Edited**
-- `src/pages/TrainingReports.jsx` — extend create dialog with attendee search/select + save-time inserts.
-- `src/pages/CertificateApprovals.jsx` — add Report tab with filters, summary, grouped table, CSV/Print.
+- Backfilling other tenants in bulk.
+- Changing the form fallbacks (they remain as safety nets).
+- Any UI restyle of the tabs themselves.
