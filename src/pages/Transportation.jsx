@@ -564,7 +564,12 @@ export default function Transportation() {
             const currentStepIdx = CHECKIN_STEPS.indexOf(detailBooking.status);
             return (
               <div className="space-y-4 text-sm">
-                <Badge className={`border-0 ${statusColors[detailBooking.status] || ""}`}>{detailBooking.status}</Badge>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge className={`border-0 ${statusColors[detailBooking.status] || ""}`}>{detailBooking.status}</Badge>
+                  {detailBooking.pickup_order != null && (
+                    <Badge className="bg-primary text-primary-foreground border-0">Stop {detailBooking.pickup_order}</Badge>
+                  )}
+                </div>
                 <div className="space-y-2">
                   <div className="flex items-center gap-2 text-muted-foreground">
                     <MapPin className="h-4 w-4" />
