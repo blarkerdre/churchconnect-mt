@@ -65,7 +65,7 @@ export default function Transportation() {
   const [editLocationDialogOpen, setEditLocationDialogOpen] = useState(false);
   const [selectedBooking, setSelectedBooking] = useState(null);
   const [editingLocation, setEditingLocation] = useState(null);
-  const [form, setForm] = useState({ pickup_address: "", destination: "Church", request_date: "", pickup_time: "", notes: "", passengers: 1 });
+  const [form, setForm] = useState({ pickup_address: "", destination: "Church", request_date: "", pickup_time: "", notes: "", passengers: 1, journey_type: "Single", return_date: "", return_time: "" });
   const [manageForm, setManageForm] = useState({ status: "", assigned_driver: "", driver_phone: "", assigned_to: "" });
   const [locationForm, setLocationForm] = useState({ name: "", address: "", notes: "" });
   const [confirmDelete, setConfirmDelete] = useState(null); // { title, description, run }
@@ -138,6 +138,9 @@ export default function Transportation() {
         pickup_time: formData.pickup_time || null,
         notes: formData.notes || null,
         passengers: parseInt(formData.passengers) || 1,
+        journey_type: formData.journey_type || "Single",
+        return_date: formData.journey_type === "Round Trip" ? (formData.return_date || null) : null,
+        return_time: formData.journey_type === "Round Trip" ? (formData.return_time || null) : null,
         user_id: user.id,
         member_id: member?.id || null,
       }));
@@ -175,6 +178,9 @@ export default function Transportation() {
             destination: data.destination || "Church",
             request_date: data.request_date,
             pickup_time: data.pickup_time,
+            journey_type: data.journey_type,
+            return_date: data.return_date,
+            return_time: data.return_time,
             driver_name: data.assigned_driver,
             driver_phone: data.driver_phone,
             tenant_id: tenantId,
@@ -212,6 +218,9 @@ export default function Transportation() {
             destination: data.destination || "Church",
             request_date: data.request_date,
             pickup_time: data.pickup_time,
+            journey_type: data.journey_type,
+            return_date: data.return_date,
+            return_time: data.return_time,
             driver_name: data.assigned_driver,
             driver_phone: data.driver_phone,
             tenant_id: tenantId,
@@ -236,6 +245,9 @@ export default function Transportation() {
           destination: booking.destination || "Church",
           request_date: booking.request_date,
           pickup_time: booking.pickup_time,
+          journey_type: booking.journey_type,
+          return_date: booking.return_date,
+          return_time: booking.return_time,
           driver_name: booking.assigned_driver,
           driver_phone: booking.driver_phone,
           tenant_id: tenantId,
@@ -354,7 +366,7 @@ export default function Transportation() {
               </Button>
             )}
             {canCreateBooking && (
-              <Button onClick={() => { setForm({ pickup_address: "", destination: "Church", request_date: "", pickup_time: "", notes: "", passengers: 1 }); setBookDialogOpen(true); }} className="bg-primary hover:bg-primary/90">
+              <Button onClick={() => { setForm({ pickup_address: "", destination: "Church", request_date: "", pickup_time: "", notes: "", passengers: 1, journey_type: "Single", return_date: "", return_time: "" }); setBookDialogOpen(true); }} className="bg-primary hover:bg-primary/90">
                 <Plus className="h-4 w-4 mr-2" /> Book Transport
               </Button>
             )}
@@ -438,6 +450,7 @@ export default function Transportation() {
                         {b.members ? `${b.members.first_name} ${b.members.last_name}` : "Member"}
                       </h3>
                       <Badge className={`border-0 ${statusColors[b.status] || ""}`}>{b.status}</Badge>
+                      {b.journey_type === "Round Trip" && <Badge variant="outline" className="text-xs">Round Trip</Badge>}
                     </div>
                     <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
                       <span className="flex items-center gap-1"><MapPin className="h-3.5 w-3.5" /> {b.pickup_address} → {b.destination || "Church"}</span>
@@ -497,6 +510,14 @@ export default function Transportation() {
                   <div className="flex items-center gap-2 text-muted-foreground">
                     <Clock className="h-4 w-4" />
                     <span>{detailBooking.request_date}{detailBooking.pickup_time ? ` · ${detailBooking.pickup_time}` : ""}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <Badge variant="outline" className="text-xs">
+                      {detailBooking.journey_type === "Round Trip" ? "Round Trip" : "Single Trip"}
+                    </Badge>
+                    {detailBooking.journey_type === "Round Trip" && (detailBooking.return_date || detailBooking.return_time) && (
+                      <span className="text-xs">Return: {detailBooking.return_date || ""}{detailBooking.return_time ? ` · ${detailBooking.return_time}` : ""}</span>
+                    )}
                   </div>
                   <div className="flex items-center gap-2 text-muted-foreground">
                     <User className="h-4 w-4" />
@@ -633,6 +654,22 @@ export default function Transportation() {
               <div><Label>Date</Label><Input type="date" value={form.request_date} onChange={e => setForm(f => ({ ...f, request_date: e.target.value }))} /></div>
               <div><Label>Pickup Time</Label><Input type="time" value={form.pickup_time} onChange={e => setForm(f => ({ ...f, pickup_time: e.target.value }))} /></div>
             </div>
+            <div>
+              <Label>Journey Type</Label>
+              <Select value={form.journey_type} onValueChange={v => setForm(f => ({ ...f, journey_type: v }))}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Single">Single Trip (one-way)</SelectItem>
+                  <SelectItem value="Round Trip">Round Trip (return pickup)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            {form.journey_type === "Round Trip" && (
+              <div className="grid grid-cols-2 gap-3">
+                <div><Label>Return Date</Label><Input type="date" value={form.return_date} onChange={e => setForm(f => ({ ...f, return_date: e.target.value }))} /></div>
+                <div><Label>Return Pickup Time</Label><Input type="time" value={form.return_time} onChange={e => setForm(f => ({ ...f, return_time: e.target.value }))} /></div>
+              </div>
+            )}
             <div><Label>Passengers</Label><Input type="number" min="1" value={form.passengers} onChange={e => setForm(f => ({ ...f, passengers: e.target.value }))} /></div>
             <div><Label>Notes</Label><Textarea value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} rows={2} /></div>
             <Button onClick={() => bookMutation.mutate(form)} disabled={bookMutation.isPending || !form.pickup_address || !form.request_date} className="w-full bg-primary">
