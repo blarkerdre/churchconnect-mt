@@ -48,7 +48,7 @@ const allNavItems = [
   { name: "Transportation", icon: Car, path: "/transportation", access: null },
   { name: "Reports Hub", icon: FileText, path: "/reports", access: "reports" },
   { name: "Training Report", icon: TrendingUp, path: "/training-reports", access: "training_report" },
-  { name: "Certificate Approvals", icon: ClipboardList, path: "/certificate-approvals", access: "training_rep_leader" },
+  
   { name: "Church Attendance", icon: ClipboardList, path: "/church-attendance", access: "training" },
   { name: "Bible School", icon: BookOpen, path: "/exam-management", access: null },
   { name: "Sermon Notes", icon: FileText, path: "/sermon-notes", access: null },
@@ -111,14 +111,6 @@ export default function Layout({ children }) {
   const tenantLogoUrl = currentTenant?.logo_url || null;
   const { isMemberOfUnit: isFollowupMember } = useUnitMembership("Follow-up");
   const { isMemberOfUnit: isTrainingRepMember } = useUnitMembership("Training Rep");
-  const { data: isTrainingRepLeader = false } = useQuery({
-    queryKey: ["is-training-rep-leader-nav", user?.id, tenantId],
-    enabled: !!user?.id && !!tenantId,
-    queryFn: async () => {
-      const { data } = await supabase.rpc("is_training_rep_leader", { _user_id: user.id, _tenant_id: tenantId });
-      return !!data;
-    },
-  });
 
   // Filter nav items based on role and disabled features
   const navItems = allNavItems.filter(item => {
@@ -133,7 +125,6 @@ export default function Layout({ children }) {
     if (item.access === "followup_member") return isAdmin || isFollowupUnit || isFollowupMember || isReportsOfficer;
     if (item.access === "training") return isAdmin || isSuperAdmin || isTrainingAccess || isReportsOfficer;
     if (item.access === "training_report") return isAdmin || isSuperAdmin || isUnitLeader || isTrainingRepMember || isReportsOfficer;
-    if (item.access === "training_rep_leader") return isAdmin || isTrainingRepLeader;
     return false;
   });
 

@@ -14,7 +14,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "@/components/ui/use-toast";
 import { format, parseISO } from "date-fns";
-import { Loader2, Plus, Droplets, Flame, BookOpen, Users, TrendingUp, Paperclip, Download, Printer, Award, Search, X, Send } from "lucide-react";
+import { Loader2, Plus, Droplets, Flame, BookOpen, Users, TrendingUp, Paperclip, Download, Printer, Award, Search, X, Send, ClipboardList } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
 import { useAppSetting } from "@/hooks/useAppSetting";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
@@ -67,10 +67,20 @@ export default function TrainingReports() {
   const { user, isAdmin } = useAuth();
   const { tenantSlug } = useParams();
   const certReportPath = tenantSlug ? `/t/${tenantSlug}/certificates-report` : "/certificates-report";
+  const certApprovalsPath = tenantSlug ? `/t/${tenantSlug}/certificate-approvals` : "/certificate-approvals";
   const qc = useQueryClient();
   const { tenantId, scopeQuery, withTenant } = useTenantQuery();
   const { isMemberOfUnit: isTrainingRep } = useUnitMembership("Training Rep");
+  const { data: isTrainingRepLeader = false } = useQuery({
+    queryKey: ["is-training-rep-leader", user?.id, tenantId],
+    enabled: !!user?.id && !!tenantId,
+    queryFn: async () => {
+      const { data } = await supabase.rpc("is_training_rep_leader", { _user_id: user.id, _tenant_id: tenantId });
+      return !!data;
+    },
+  });
   const canManageAttendees = isAdmin || isTrainingRep;
+  const canManageCertificates = isAdmin || isTrainingRepLeader;
 
   const { enabled: canRecordSession } = useSubFeature("training.record_session");
   const { enabled: canCsvExport } = useSubFeature("training.csv_export");
@@ -256,9 +266,16 @@ export default function TrainingReports() {
           <p className="text-sm text-muted-foreground mt-1">Record attendance and outcomes for training sessions</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button asChild size="sm" variant="outline" className="gap-1.5">
-            <Link to={certReportPath}><Award className="h-4 w-4" /> Certificates Report</Link>
-          </Button>
+          {canManageCertificates && (
+            <>
+              <Button asChild size="sm" variant="outline" className="gap-1.5">
+                <Link to={certReportPath}><Award className="h-4 w-4" /> Certificates Report</Link>
+              </Button>
+              <Button asChild size="sm" variant="outline" className="gap-1.5">
+                <Link to={certApprovalsPath}><ClipboardList className="h-4 w-4" /> Certificate Approvals</Link>
+              </Button>
+            </>
+          )}
         {canRecordSession && (
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
