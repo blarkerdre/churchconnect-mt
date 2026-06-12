@@ -627,7 +627,7 @@ export default function Transportation() {
                   )}
                   {detailBooking.pickup_location_description && (
                     <div className="rounded-md bg-primary/5 border border-primary/15 p-2 ml-6">
-                      <p className="text-[11px] uppercase tracking-wide text-primary font-semibold mb-1">Pickup Location Description</p>
+                      <p className="text-[11px] uppercase tracking-wide text-primary font-semibold mb-1">Pickup Location</p>
                       <p className="text-sm text-foreground whitespace-pre-wrap">{detailBooking.pickup_location_description}</p>
                     </div>
                   )}
