@@ -20,6 +20,9 @@ import PrintReportButton from "@/components/PrintReportButton";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
 import PasswordConfirmDialog from "@/components/shared/PasswordConfirmDialog";
 import { normalizePhone } from "@/lib/phone-utils";
+import { useAppSetting } from "@/hooks/useAppSetting";
+
+const DEFAULT_SERVICE_TYPES = ["Sunday Service", "Midweek Service", "Special Program", "Thanksgiving Service", "Other"];
 
 const statusColors = {
   "Pending": "bg-accent/10 text-accent",
@@ -57,6 +60,7 @@ export default function Transportation() {
   const { enabled: canCreateBooking } = useSubFeature("transportation.create_booking");
   const queryClient = useQueryClient();
   const { tenantId, scopeQuery, withTenant } = useTenantQuery();
+  const { data: SERVICE_TYPES } = useAppSetting("service_types", DEFAULT_SERVICE_TYPES);
   const [search, setSearch] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
@@ -68,7 +72,7 @@ export default function Transportation() {
   const [editLocationDialogOpen, setEditLocationDialogOpen] = useState(false);
   const [selectedBooking, setSelectedBooking] = useState(null);
   const [editingLocation, setEditingLocation] = useState(null);
-  const [form, setForm] = useState({ pickup_postcode: "", pickup_address: "", pickup_location_description: "", destination: "Church", request_date: "", pickup_time: "", notes: "", passengers: 1, journey_type: "Single", return_date: "", return_time: "" });
+  const [form, setForm] = useState({ pickup_postcode: "", pickup_address: "", service_type: "", destination: "Church", request_date: "", notes: "", passengers: 1, journey_type: "Single", return_date: "", return_time: "" });
   const [manageForm, setManageForm] = useState({ status: "", assigned_driver: "", driver_phone: "", driver_user_id: "", assigned_to: "", pickup_location_description: "" });
   const [locationForm, setLocationForm] = useState({ name: "", address: "", postcode: "", notes: "" });
   const [confirmDelete, setConfirmDelete] = useState(null); // { title, description, run }
@@ -130,7 +134,7 @@ export default function Transportation() {
   const canRunCheckin = (b) => isLeader || isAssignee(b) || isDriverUser(b);
   const canContactPassenger = (b) => canRunCheckin(b);
   const canAcknowledge = (b) =>
-    isPassenger(b) && ["Confirmed", "Notified", "Checked In", "Picked Up", "Completed"].includes(b.status);
+    isPassenger(b) && !!b.notified_at && ["Notified", "Checked In", "Picked Up", "Completed"].includes(b.status);
 
   // Visibility: only admins / unit leaders see all bookings.
   // Drivers, assignees, and transport unit members see only bookings tied to them.
@@ -179,16 +183,16 @@ export default function Transportation() {
         } catch (e) { /* swallow; save booking anyway */ }
       }
 
-      const mergedDesc = [formData.pickup_location_description, extraDesc].filter(Boolean).join("\n");
+      const mergedDesc = [extraDesc].filter(Boolean).join("\n");
 
       const { error } = await supabase.from("transportation").insert(withTenant({
         pickup_address: formData.pickup_address || nearest?.address || "",
         pickup_postcode: formData.pickup_postcode || null,
         nearest_pickup_location_id: nearest?.id || null,
         pickup_location_description: mergedDesc || null,
+        service_type: formData.service_type || null,
         destination: formData.destination || "Church",
         request_date: formData.request_date,
-        pickup_time: formData.pickup_time || null,
         notes: formData.notes || null,
         passengers: parseInt(formData.passengers) || 1,
         journey_type: formData.journey_type || "Single",
@@ -450,7 +454,7 @@ export default function Transportation() {
               </Button>
             )}
             {canCreateBooking && (
-              <Button onClick={() => { setForm({ pickup_postcode: "", pickup_address: "", pickup_location_description: "", destination: "Church", request_date: "", pickup_time: "", notes: "", passengers: 1, journey_type: "Single", return_date: "", return_time: "" }); setBookDialogOpen(true); }} className="bg-primary hover:bg-primary/90">
+              <Button onClick={() => { setForm({ pickup_postcode: "", pickup_address: "", service_type: "", destination: "Church", request_date: "", notes: "", passengers: 1, journey_type: "Single", return_date: "", return_time: "" }); setBookDialogOpen(true); }} className="bg-primary hover:bg-primary/90">
                 <Plus className="h-4 w-4 mr-2" /> Book Transport
               </Button>
             )}
@@ -623,7 +627,7 @@ export default function Transportation() {
                   )}
                   {detailBooking.pickup_location_description && (
                     <div className="rounded-md bg-primary/5 border border-primary/15 p-2 ml-6">
-                      <p className="text-[11px] uppercase tracking-wide text-primary font-semibold mb-1">Pickup Location Description</p>
+                      <p className="text-[11px] uppercase tracking-wide text-primary font-semibold mb-1">Pickup Location</p>
                       <p className="text-sm text-foreground whitespace-pre-wrap">{detailBooking.pickup_location_description}</p>
                     </div>
                   )}
@@ -631,10 +635,13 @@ export default function Transportation() {
                     <Clock className="h-4 w-4" />
                     <span>{detailBooking.request_date}{detailBooking.pickup_time ? ` · ${detailBooking.pickup_time}` : ""}</span>
                   </div>
-                  <div className="flex items-center gap-2 text-muted-foreground">
+                  <div className="flex items-center gap-2 text-muted-foreground flex-wrap">
                     <Badge variant="outline" className="text-xs">
                       {detailBooking.journey_type === "Round Trip" ? "Round Trip" : "Single Trip"}
                     </Badge>
+                    {detailBooking.service_type && (
+                      <Badge variant="outline" className="text-xs">{detailBooking.service_type}</Badge>
+                    )}
                     {detailBooking.journey_type === "Round Trip" && (detailBooking.return_date || detailBooking.return_time) && (
                       <span className="text-xs">Return: {detailBooking.return_date || ""}{detailBooking.return_time ? ` · ${detailBooking.return_time}` : ""}</span>
                     )}
@@ -728,7 +735,7 @@ export default function Transportation() {
                         </Button>
                       </>
                     ) : (
-                      <p className="text-xs text-muted-foreground">Your booking is awaiting team review.</p>
+                      <p className="text-xs text-muted-foreground">You'll be able to acknowledge once the Transport team notifies you with your pickup details.</p>
                     )}
                   </div>
                 )}
@@ -806,20 +813,16 @@ export default function Transportation() {
               <Input value={form.pickup_address} onChange={e => setForm(f => ({ ...f, pickup_address: e.target.value }))} placeholder="Or type custom address" className="mt-2" />
             </div>
             <div>
-              <Label>Pickup Location Description <span className="text-xs text-muted-foreground">(optional)</span></Label>
-              <Textarea
-                value={form.pickup_location_description}
-                onChange={e => setForm(f => ({ ...f, pickup_location_description: e.target.value }))}
-                placeholder="e.g. Blue house with red door, opposite Tesco. Wait by the gate."
-                rows={2}
-              />
-              <p className="text-[11px] text-muted-foreground mt-1">Helps the driver find you. Will be shared with your driver.</p>
+              <Label>Service to Attend *</Label>
+              <Select value={form.service_type} onValueChange={v => setForm(f => ({ ...f, service_type: v }))}>
+                <SelectTrigger><SelectValue placeholder="Select service" /></SelectTrigger>
+                <SelectContent>
+                  {(SERVICE_TYPES || []).map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                </SelectContent>
+              </Select>
             </div>
             <div><Label>Destination</Label><Input value={form.destination} onChange={e => setForm(f => ({ ...f, destination: e.target.value }))} /></div>
-            <div className="grid grid-cols-2 gap-3">
-              <div><Label>Date</Label><Input type="date" value={form.request_date} onChange={e => setForm(f => ({ ...f, request_date: e.target.value }))} /></div>
-              <div><Label>Pickup Time</Label><Input type="time" value={form.pickup_time} onChange={e => setForm(f => ({ ...f, pickup_time: e.target.value }))} /></div>
-            </div>
+            <div><Label>Date</Label><Input type="date" value={form.request_date} onChange={e => setForm(f => ({ ...f, request_date: e.target.value }))} /></div>
             <div>
               <Label>Journey Type</Label>
               <Select value={form.journey_type} onValueChange={v => setForm(f => ({ ...f, journey_type: v }))}>
@@ -838,7 +841,7 @@ export default function Transportation() {
             )}
             <div><Label>Passengers</Label><Input type="number" min="1" value={form.passengers} onChange={e => setForm(f => ({ ...f, passengers: e.target.value }))} /></div>
             <div><Label>Notes</Label><Textarea value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} rows={2} /></div>
-            <Button onClick={() => bookMutation.mutate(form)} disabled={bookMutation.isPending || (!form.pickup_address && !form.pickup_postcode) || !form.request_date} className="w-full bg-primary">
+            <Button onClick={() => bookMutation.mutate(form)} disabled={bookMutation.isPending || (!form.pickup_address && !form.pickup_postcode) || !form.request_date || !form.service_type} className="w-full bg-primary">
               {bookMutation.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
               Book Transport
             </Button>
@@ -900,7 +903,7 @@ export default function Transportation() {
             <div><Label>Driver Name</Label><Input value={manageForm.assigned_driver} onChange={e => setManageForm(f => ({ ...f, assigned_driver: e.target.value, driver_user_id: "" }))} placeholder="Driver name" /></div>
             <div><Label>Driver Phone</Label><Input value={manageForm.driver_phone} onChange={e => setManageForm(f => ({ ...f, driver_phone: e.target.value }))} placeholder="Phone number" /></div>
             <div>
-              <Label>Pickup Location Description</Label>
+              <Label>Pickup Location</Label>
               <Textarea
                 value={manageForm.pickup_location_description}
                 onChange={e => setManageForm(f => ({ ...f, pickup_location_description: e.target.value }))}
