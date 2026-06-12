@@ -71,7 +71,7 @@ export default function Transportation() {
   const [editLocationDialogOpen, setEditLocationDialogOpen] = useState(false);
   const [selectedBooking, setSelectedBooking] = useState(null);
   const [editingLocation, setEditingLocation] = useState(null);
-  const [form, setForm] = useState({ pickup_postcode: "", pickup_address: "", pickup_location_description: "", destination: "Church", request_date: "", pickup_time: "", notes: "", passengers: 1, journey_type: "Single", return_date: "", return_time: "" });
+  const [form, setForm] = useState({ pickup_postcode: "", pickup_address: "", service_type: "", destination: "Church", request_date: "", notes: "", passengers: 1, journey_type: "Single", return_date: "", return_time: "" });
   const [manageForm, setManageForm] = useState({ status: "", assigned_driver: "", driver_phone: "", driver_user_id: "", assigned_to: "", pickup_location_description: "" });
   const [locationForm, setLocationForm] = useState({ name: "", address: "", postcode: "", notes: "" });
   const [confirmDelete, setConfirmDelete] = useState(null); // { title, description, run }
