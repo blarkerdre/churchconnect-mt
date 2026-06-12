@@ -22,7 +22,7 @@ const MODULES = [
   { title: "Unit Tasks", description: "Task assignments, acknowledgements and completion.", icon: ClipboardList, path: "/unit-tasks" },
   { title: "Bible School", description: "Exam sessions, course registrations and results.", icon: BookOpen, path: "/exam-management" },
   { title: "Testimonies", description: "Member testimonies and breakthrough reports.", icon: MessageSquareHeart, path: "/testimony" },
-  { title: "Certificates", description: "Issued and reissued training certificates.", icon: Award, path: "/certificates-report" },
+  
 ];
 
 export default function Reports() {
