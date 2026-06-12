@@ -635,10 +635,13 @@ export default function Transportation() {
                     <Clock className="h-4 w-4" />
                     <span>{detailBooking.request_date}{detailBooking.pickup_time ? ` · ${detailBooking.pickup_time}` : ""}</span>
                   </div>
-                  <div className="flex items-center gap-2 text-muted-foreground">
+                  <div className="flex items-center gap-2 text-muted-foreground flex-wrap">
                     <Badge variant="outline" className="text-xs">
                       {detailBooking.journey_type === "Round Trip" ? "Round Trip" : "Single Trip"}
                     </Badge>
+                    {detailBooking.service_type && (
+                      <Badge variant="outline" className="text-xs">{detailBooking.service_type}</Badge>
+                    )}
                     {detailBooking.journey_type === "Round Trip" && (detailBooking.return_date || detailBooking.return_time) && (
                       <span className="text-xs">Return: {detailBooking.return_date || ""}{detailBooking.return_time ? ` · ${detailBooking.return_time}` : ""}</span>
                     )}
