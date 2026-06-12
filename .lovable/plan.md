@@ -1,33 +1,26 @@
-## 1. Certificates Report — show full details for every issued/reissued certificate
+## Goal
+Drivers (Transportation + Kingdom Chariot members) using the **Plan Driver Route** dialog ("My Route") should be able to filter their assigned stops by date range and print the resulting route sheet. Currently only leaders see Save/Notify/Clear actions, and there is no print option at all.
 
-File: `src/pages/CertificatesReport.jsx`
+## File
+`src/components/transportation/RoutePlannerDialog.jsx`
 
-Data is already complete in the database (all 34 completions have `issued_by`; all 34 issue + 20 reissue audit rows carry `certificate_number`, `training_type`, `member_id`, `user_id`). No migration or backfill needed. The fix is purely presentational so the columns actually show on screen, CSV, and print.
+## Changes (UI only, no backend/schema)
 
-**By Certificate tab** — already complete on screen; tighten print to match CSV:
-- Update `buildCertsPrint` headers/rows to: Member, Email, Programme, Cert No, Completion Date, First Issued, Last Reissued, Reissue Count, Issued By.
+1. **Keep existing date-range + driver filters.** Non-leaders are already locked to themselves and to the from/to range — that satisfies "filter".
 
-**Activity Log tab** — currently shows Member from a name-only map. Enrich so each issued/reissued row carries member name + programme + cert no + issuer + readable date for every historical entry:
-- Build `certMemberMap` from `members` table for any `details.member_id` not already covered by `completions` (handles legacy audit rows where the completion was deleted).
-- Add columns to the on-screen table, CSV (`exportActivityCSV`) and print (`buildActivityPrint`): When, Action, Member, Programme, Cert No, Completion Date (from completion lookup when present), Issued By.
+2. **Add a "Print My Route" button** visible to everyone whenever `order.length > 0` (leaders keep their existing action row; non-leaders get a single Print button at the bottom of the stop list).
 
-**By Programme tab** — already aggregates issued/reissued/uniqueMembers per programme; no change.
+3. **Print output** uses `window.open` + inline HTML (same pattern as `PrintReportButton`), titled:
+   - Non-leader: `My Route — {driverName} — {dateFrom} to {dateTo}` (or single date when `dateFrom === dateTo`).
+   - Leader: `Driver Route — {driverName} — {dateFrom} to {dateTo}`.
+   Header meta line: generated timestamp + total stop count + total passenger count.
+   Columns: `Stop #`, `Date` (only when `multiDay`), `Pickup Time`, `Passenger`, `Phone`, `Passengers`, `Pickup Address`, `Postcode`, `Pickup Notes`, `Destination`, `Status`.
+   Rows come from current `order` array (already filtered, sorted by stop number).
+   Reuse the same `escHtml` helper inline.
 
-No schema or audit-log changes.
+4. **Optional CSV** — out of scope for this request (user asked specifically for print). Skip.
 
-## 2. Drivers can filter & print their assigned passengers
-
-File: `src/pages/Transportation.jsx`
-
-Drivers already see only their own bookings via `visibleBookings` and have the date/status/search filters. The gap is the export/print toolbar — currently gated behind `isLeader`.
-
-- Add a `canExport = isLeader || visibleBookings.some(b => b.driver_user_id === user?.id || b.assigned_to === user?.id)` flag.
-- Show the existing **CSV** and **Print** buttons when `canExport` is true (Report dialog stays leader-only).
-- Drivers' print title becomes "My Assigned Passengers — {dateFrom}–{dateTo}" when `!isLeader`; leaders keep "Transportation Report".
-- Reuse the existing `downloadCSV` and `buildRows` — they already operate on `filtered`, so they automatically scope to the driver's own bookings.
-
-No backend, RLS, or schema changes.
+5. **No permission/RLS changes** — drivers already only see their own bookings via `visibleBookings` upstream in `Transportation.jsx`, and the dialog auto-locks the driver selector for non-leaders.
 
 ## Files touched
-- `src/pages/CertificatesReport.jsx`
-- `src/pages/Transportation.jsx`
+- `src/components/transportation/RoutePlannerDialog.jsx`
