@@ -494,11 +494,14 @@ export default function Transportation() {
               </Select>
             </div>
           )}
+          {(isLeader || visibleBookings.some(b => b.driver_user_id === user?.id)) && (
+            <Button variant="outline" onClick={() => setRoutePlannerOpen(true)}>
+              <Route className="h-4 w-4 mr-2" /> {isLeader ? "Plan Route" : "My Route"}
+            </Button>
+          )}
           {isLeader && (
             <>
-              <Button variant="outline" onClick={() => setRoutePlannerOpen(true)}>
-                <Route className="h-4 w-4 mr-2" /> Plan Route
-              </Button>
+
               <Button variant="outline" onClick={() => setReportOpen(true)} disabled={filtered.length === 0}>
                 <BarChart3 className="h-4 w-4 mr-2" /> Report
               </Button>
