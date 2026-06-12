@@ -5,40 +5,52 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { GripVertical, MapPin, Clock, Phone, ArrowUp, ArrowDown, Loader2, Route, Bell } from "lucide-react";
+import { GripVertical, MapPin, Clock, Phone, ArrowUp, ArrowDown, Loader2, Route, Bell, CheckCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 
-export default function RoutePlannerDialog({ open, onOpenChange, bookings, transportMembers, tenantId }) {
+export default function RoutePlannerDialog({ open, onOpenChange, bookings, transportMembers, tenantId, currentUserId, isLeader = false }) {
   const today = new Date().toISOString().split("T")[0];
-  const [date, setDate] = useState(today);
+  const [dateFrom, setDateFrom] = useState(today);
+  const [dateTo, setDateTo] = useState(today);
   const [driverId, setDriverId] = useState("");
   const [order, setOrder] = useState([]); // array of booking objects
   const [saving, setSaving] = useState(false);
   const [dragIdx, setDragIdx] = useState(null);
   const queryClient = useQueryClient();
 
-  // Drivers that actually have assigned bookings (more useful than all unit members)
+  // Drivers: leaders pick from all transport members; non-leaders are locked to themselves.
   const driverOptions = useMemo(() => {
+    if (!isLeader && currentUserId) {
+      const me = transportMembers.find(m => m.user_id === currentUserId);
+      return me ? [{ id: currentUserId, name: `${me.first_name} ${me.last_name} (You)` }] : [];
+    }
     const map = new Map();
     transportMembers.forEach(m => {
       if (m.user_id) map.set(m.user_id, `${m.first_name} ${m.last_name}`);
     });
     return Array.from(map.entries()).map(([id, name]) => ({ id, name }));
-  }, [transportMembers]);
+  }, [transportMembers, isLeader, currentUserId]);
 
-  // Filter bookings for selected driver + date
+  // Auto-select self for non-leaders
+  useEffect(() => {
+    if (!isLeader && currentUserId && !driverId) setDriverId(currentUserId);
+  }, [isLeader, currentUserId, driverId]);
+
+  // Filter bookings for selected driver across the date range
   const candidates = useMemo(() => {
-    if (!driverId || !date) return [];
+    if (!driverId || !dateFrom || !dateTo) return [];
     return bookings
-      .filter(b => b.request_date === date && (b.driver_user_id === driverId || b.assigned_to === driverId))
+      .filter(b => b.request_date >= dateFrom && b.request_date <= dateTo)
+      .filter(b => b.driver_user_id === driverId || b.assigned_to === driverId)
       .filter(b => !["Cancelled", "No-Show", "Completed"].includes(b.status));
-  }, [bookings, driverId, date]);
+  }, [bookings, driverId, dateFrom, dateTo]);
 
   useEffect(() => {
-    // Initialize order from current pickup_order (NULLS LAST), then pickup_time
+    // Sort by date, then pickup_order (NULLS LAST), then pickup_time
     const sorted = [...candidates].sort((a, b) => {
+      if (a.request_date !== b.request_date) return a.request_date.localeCompare(b.request_date);
       const ao = a.pickup_order ?? 9999;
       const bo = b.pickup_order ?? 9999;
       if (ao !== bo) return ao - bo;
@@ -150,6 +162,8 @@ export default function RoutePlannerDialog({ open, onOpenChange, bookings, trans
     }
   };
 
+  const multiDay = dateFrom !== dateTo;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -159,14 +173,18 @@ export default function RoutePlannerDialog({ open, onOpenChange, bookings, trans
           </DialogTitle>
         </DialogHeader>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-2">
           <div>
-            <Label className="text-xs text-muted-foreground">Date</Label>
-            <Input type="date" value={date} onChange={e => setDate(e.target.value)} />
+            <Label className="text-xs text-muted-foreground">From</Label>
+            <Input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} />
+          </div>
+          <div>
+            <Label className="text-xs text-muted-foreground">To</Label>
+            <Input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} min={dateFrom} />
           </div>
           <div>
             <Label className="text-xs text-muted-foreground">Driver</Label>
-            <Select value={driverId} onValueChange={setDriverId}>
+            <Select value={driverId} onValueChange={setDriverId} disabled={!isLeader && driverOptions.length <= 1}>
               <SelectTrigger><SelectValue placeholder="Select driver" /></SelectTrigger>
               <SelectContent>
                 {driverOptions.map(d => (
@@ -179,9 +197,9 @@ export default function RoutePlannerDialog({ open, onOpenChange, bookings, trans
 
         <div className="mt-4">
           {!driverId ? (
-            <p className="text-sm text-muted-foreground text-center py-8">Select a driver and date to plan their pickup route.</p>
+            <p className="text-sm text-muted-foreground text-center py-8">Select a driver and date range to plan their pickup route.</p>
           ) : order.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-8">No active bookings for this driver on the selected date.</p>
+            <p className="text-sm text-muted-foreground text-center py-8">No active bookings for this driver in the selected date range.</p>
           ) : (
             <>
               <p className="text-xs text-muted-foreground mb-2">
@@ -203,15 +221,31 @@ export default function RoutePlannerDialog({ open, onOpenChange, bookings, trans
                       <GripVertical className="h-4 w-4 text-muted-foreground mt-1 shrink-0 cursor-grab" />
                       <Badge className="bg-primary text-primary-foreground shrink-0">Stop {idx + 1}</Badge>
                       <div className="flex-1 min-w-0">
-                        <p className="font-medium text-foreground text-sm">{passenger}</p>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="font-medium text-foreground text-sm">{passenger}</p>
+                          {multiDay && <Badge variant="outline" className="text-[10px]">{b.request_date}</Badge>}
+                          {b.passenger_acknowledged_at ? (
+                            <Badge variant="outline" className="text-[10px] text-chart-3 border-chart-3/40">
+                              <CheckCircle className="h-3 w-3 mr-1" /> Acknowledged
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="text-[10px] text-muted-foreground">Awaiting ack</Badge>
+                          )}
+                        </div>
                         <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground mt-1">
                           <span className="flex items-center gap-1"><MapPin className="h-3 w-3" /> {b.pickup_address}</span>
+                          {b.pickup_postcode && <span className="text-[11px]">[{b.pickup_postcode}]</span>}
                           {b.members?.phone && <span className="flex items-center gap-1"><Phone className="h-3 w-3" /> {b.members.phone}</span>}
                           {b.passengers > 1 && <span>{b.passengers} pax</span>}
                         </div>
                         {b.pickup_location_description && (
-                          <p className="text-[11px] text-foreground/80 italic mt-1 bg-primary/5 border-l-2 border-primary/40 pl-2 py-0.5">
+                          <p className="text-[11px] text-foreground/80 italic mt-1 bg-primary/5 border-l-2 border-primary/40 pl-2 py-0.5 whitespace-pre-wrap">
                             “{b.pickup_location_description}”
+                          </p>
+                        )}
+                        {b.passenger_acknowledged_at && (
+                          <p className="text-[10px] text-chart-3 mt-1">
+                            Acknowledged {new Date(b.passenger_acknowledged_at).toLocaleString()}
                           </p>
                         )}
                         <div className="flex items-center gap-2 mt-2">
