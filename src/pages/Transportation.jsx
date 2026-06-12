@@ -548,6 +548,13 @@ export default function Transportation() {
                       </h3>
                       <Badge className={`border-0 ${statusColors[b.status] || ""}`}>{b.status}</Badge>
                       {b.journey_type === "Round Trip" && <Badge variant="outline" className="text-xs">Round Trip</Badge>}
+                      {(isAssignee(b) || isDriverUser(b)) && (
+                        b.passenger_acknowledged_at ? (
+                          <Badge variant="outline" className="text-xs text-chart-3 border-chart-3/40"><CheckCircle className="h-3 w-3 mr-1" /> Acknowledged</Badge>
+                        ) : (
+                          <Badge variant="outline" className="text-xs text-muted-foreground">Awaiting ack</Badge>
+                        )
+                      )}
                     </div>
                     <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
                       <span className="flex items-center gap-1"><MapPin className="h-3.5 w-3.5" /> {b.pickup_address} → {b.destination || "Church"}</span>
@@ -980,9 +987,11 @@ export default function Transportation() {
       <RoutePlannerDialog
         open={routePlannerOpen}
         onOpenChange={setRoutePlannerOpen}
-        bookings={bookings}
+        bookings={visibleBookings}
         transportMembers={transportMembers}
         tenantId={tenantId}
+        currentUserId={user?.id}
+        isLeader={isLeader}
       />
     </div>
   );
