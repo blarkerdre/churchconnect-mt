@@ -616,6 +616,11 @@ export default function Transportation() {
                     <MapPin className="h-4 w-4" />
                     <span>{detailBooking.pickup_address} → {detailBooking.destination || "Church"}</span>
                   </div>
+                  {detailBooking.pickup_postcode && (
+                    <div className="flex items-center gap-2 text-muted-foreground ml-6 text-xs">
+                      <span>Postcode: <span className="font-medium text-foreground">{detailBooking.pickup_postcode}</span></span>
+                    </div>
+                  )}
                   {detailBooking.pickup_location_description && (
                     <div className="rounded-md bg-primary/5 border border-primary/15 p-2 ml-6">
                       <p className="text-[11px] uppercase tracking-wide text-primary font-semibold mb-1">Pickup Location Description</p>
