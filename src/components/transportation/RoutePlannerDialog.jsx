@@ -19,7 +19,7 @@ function escHtml(str) {
 }
 import { useQueryClient } from "@tanstack/react-query";
 
-export default function RoutePlannerDialog({ open, onOpenChange, bookings, transportMembers, tenantId, currentUserId, isLeader = false }) {
+export default function RoutePlannerDialog({ open, onOpenChange, bookings, transportMembers, tenantId, currentUserId, isLeader = false, availabilityEntries = [] }) {
   const today = new Date().toISOString().split("T")[0];
   const [dateFrom, setDateFrom] = useState(today);
   const [dateTo, setDateTo] = useState(today);
