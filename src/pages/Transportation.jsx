@@ -60,6 +60,7 @@ export default function Transportation() {
   const { enabled: canCreateBooking } = useSubFeature("transportation.create_booking");
   const queryClient = useQueryClient();
   const { tenantId, scopeQuery, withTenant } = useTenantQuery();
+  const { data: SERVICE_TYPES } = useAppSetting("service_types", DEFAULT_SERVICE_TYPES);
   const [search, setSearch] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
