@@ -111,14 +111,6 @@ export default function Layout({ children }) {
   const tenantLogoUrl = currentTenant?.logo_url || null;
   const { isMemberOfUnit: isFollowupMember } = useUnitMembership("Follow-up");
   const { isMemberOfUnit: isTrainingRepMember } = useUnitMembership("Training Rep");
-  const { data: isTrainingRepLeader = false } = useQuery({
-    queryKey: ["is-training-rep-leader-nav", user?.id, tenantId],
-    enabled: !!user?.id && !!tenantId,
-    queryFn: async () => {
-      const { data } = await supabase.rpc("is_training_rep_leader", { _user_id: user.id, _tenant_id: tenantId });
-      return !!data;
-    },
-  });
 
   // Filter nav items based on role and disabled features
   const navItems = allNavItems.filter(item => {
