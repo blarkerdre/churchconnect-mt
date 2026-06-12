@@ -140,6 +140,37 @@ export default function RoutePlannerDialog({ open, onOpenChange, bookings, trans
       setSaving(false);
     }
   };
+  const handleNotifyDriver = async () => {
+    if (!driverId || !order.length) return;
+    setSaving(true);
+    try {
+      const stops = order.map(b => ({
+        passenger_name: b.members ? `${b.members.first_name} ${b.members.last_name}` : "Passenger",
+        pickup_time: b.pickup_time || "",
+        pickup_address: b.pickup_address || "",
+        pickup_postcode: b.pickup_postcode || "",
+        phone: b.members?.phone || "",
+        passengers: b.passengers || 1,
+      }));
+      const { error } = await supabase.functions.invoke("notify-transport-booking", {
+        body: {
+          notification_type: "driver_route",
+          driver_user_id: driverId,
+          tenant_id: tenantId,
+          date_from: dateFrom,
+          date_to: dateTo,
+          stops,
+        },
+      });
+      if (error) throw error;
+      toast({ title: "Driver notified", description: `Sent ${stops.length} stop(s) to driver.` });
+    } catch (err) {
+      toast({ title: "Error notifying driver", description: err.message, variant: "destructive" });
+    } finally {
+      setSaving(false);
+    }
+  };
+
 
   const handleClear = async () => {
     if (!order.length) return;
@@ -203,7 +234,9 @@ export default function RoutePlannerDialog({ open, onOpenChange, bookings, trans
           ) : (
             <>
               <p className="text-xs text-muted-foreground mb-2">
-                Drag stops to reorder, or use the arrows. Stop 1 is the first pickup.
+                {isLeader
+                  ? "Drag stops to reorder, or use the arrows. Stop 1 is the first pickup."
+                  : "Your route is set by your Transportation leader. Stops are shown in pickup order."}
               </p>
               <ol className="space-y-2">
                 {order.map((b, idx) => {
@@ -211,14 +244,14 @@ export default function RoutePlannerDialog({ open, onOpenChange, bookings, trans
                   return (
                     <li
                       key={b.id}
-                      draggable
-                      onDragStart={() => setDragIdx(idx)}
-                      onDragOver={(e) => e.preventDefault()}
-                      onDrop={(e) => { e.preventDefault(); if (dragIdx !== null && dragIdx !== idx) move(dragIdx, idx); setDragIdx(null); }}
+                      draggable={isLeader}
+                      onDragStart={() => isLeader && setDragIdx(idx)}
+                      onDragOver={(e) => isLeader && e.preventDefault()}
+                      onDrop={(e) => { if (!isLeader) return; e.preventDefault(); if (dragIdx !== null && dragIdx !== idx) move(dragIdx, idx); setDragIdx(null); }}
                       onDragEnd={() => setDragIdx(null)}
                       className={`flex items-start gap-3 p-3 rounded-lg border border-border bg-card hover:bg-muted/40 transition-colors ${dragIdx === idx ? "opacity-50" : ""}`}
                     >
-                      <GripVertical className="h-4 w-4 text-muted-foreground mt-1 shrink-0 cursor-grab" />
+                      {isLeader && <GripVertical className="h-4 w-4 text-muted-foreground mt-1 shrink-0 cursor-grab" />}
                       <Badge className="bg-primary text-primary-foreground shrink-0">Stop {idx + 1}</Badge>
                       <div className="flex-1 min-w-0">
                         <div className="flex flex-wrap items-center gap-2">
@@ -250,43 +283,58 @@ export default function RoutePlannerDialog({ open, onOpenChange, bookings, trans
                         )}
                         <div className="flex items-center gap-2 mt-2">
                           <Clock className="h-3.5 w-3.5 text-muted-foreground" />
-                          <Input
-                            type="time"
-                            value={b.pickup_time || ""}
-                            onChange={(e) => setTime(idx, e.target.value)}
-                            className="h-8 w-32 text-xs"
-                          />
-                          <span className="text-[11px] text-muted-foreground">Pickup time</span>
+                          {isLeader ? (
+                            <>
+                              <Input
+                                type="time"
+                                value={b.pickup_time || ""}
+                                onChange={(e) => setTime(idx, e.target.value)}
+                                className="h-8 w-32 text-xs"
+                              />
+                              <span className="text-[11px] text-muted-foreground">Pickup time</span>
+                            </>
+                          ) : (
+                            <span className="text-xs text-foreground font-medium">{b.pickup_time || "Time TBC"}</span>
+                          )}
                         </div>
                       </div>
-                      <div className="flex flex-col gap-1 shrink-0">
-                        <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => move(idx, idx - 1)} disabled={idx === 0}>
-                          <ArrowUp className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => move(idx, idx + 1)} disabled={idx === order.length - 1}>
-                          <ArrowDown className="h-3.5 w-3.5" />
-                        </Button>
-                      </div>
+                      {isLeader && (
+                        <div className="flex flex-col gap-1 shrink-0">
+                          <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => move(idx, idx - 1)} disabled={idx === 0}>
+                            <ArrowUp className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => move(idx, idx + 1)} disabled={idx === order.length - 1}>
+                            <ArrowDown className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      )}
                     </li>
                   );
                 })}
               </ol>
 
-              <div className="flex flex-wrap gap-2 mt-4">
-                <Button onClick={handleSave} disabled={saving} className="flex-1 bg-primary hover:bg-primary/90">
-                  {saving && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-                  Save Order & Times
-                </Button>
-                <Button onClick={handleNotify} disabled={saving} variant="secondary">
-                  <Bell className="h-4 w-4 mr-2" />
-                  Notify Passengers
-                </Button>
-                <Button variant="outline" onClick={handleClear} disabled={saving}>
-                  Clear Order
-                </Button>
-              </div>
+              {isLeader && (
+                <div className="flex flex-wrap gap-2 mt-4">
+                  <Button onClick={handleSave} disabled={saving} className="flex-1 bg-primary hover:bg-primary/90">
+                    {saving && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+                    Save Order & Times
+                  </Button>
+                  <Button onClick={handleNotifyDriver} disabled={saving} variant="secondary">
+                    <Bell className="h-4 w-4 mr-2" />
+                    Notify Driver
+                  </Button>
+                  <Button onClick={handleNotify} disabled={saving} variant="secondary">
+                    <Bell className="h-4 w-4 mr-2" />
+                    Notify Passengers
+                  </Button>
+                  <Button variant="outline" onClick={handleClear} disabled={saving}>
+                    Clear Order
+                  </Button>
+                </div>
+              )}
             </>
           )}
+
         </div>
       </DialogContent>
     </Dialog>

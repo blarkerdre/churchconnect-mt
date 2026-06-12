@@ -47,7 +47,52 @@ Deno.serve(async (req) => {
       }
     }
     const body = await req.json();
+
+    // Short-circuit: driver_route notification (in-app only)
+    if (body.notification_type === "driver_route") {
+      const driverUserId: string | undefined = body.driver_user_id;
+      const stops: Array<Record<string, unknown>> = Array.isArray(body.stops) ? body.stops : [];
+      const tenantIdIn: string = body.tenant_id;
+      const dateFrom: string = body.date_from || "";
+      const dateTo: string = body.date_to || dateFrom;
+      if (!driverUserId || !tenantIdIn || stops.length === 0) {
+        return new Response(JSON.stringify({ error: "Missing driver_user_id, tenant_id, or stops" }), {
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const dateLabel = dateFrom && dateTo && dateFrom !== dateTo ? `${dateFrom} → ${dateTo}` : (dateFrom || "");
+      const lines = stops.map((s, i) => {
+        const name = (s.passenger_name as string) || "Passenger";
+        const time = (s.pickup_time as string) || "TBC";
+        const addr = (s.pickup_address as string) || "";
+        const pc = (s.pickup_postcode as string) || "";
+        const phone = (s.phone as string) || "";
+        const pax = (s.passengers as number) || 1;
+        return `${i + 1}. ${time} — ${name}${pax > 1 ? ` (${pax} pax)` : ""} @ ${addr}${pc ? ` [${pc}]` : ""}${phone ? ` • ${phone}` : ""}`;
+      });
+      const title = `Your pickup route${dateLabel ? ` (${dateLabel})` : ""}`;
+      const message = `You have ${stops.length} pickup${stops.length === 1 ? "" : "s"} scheduled:\n${lines.join("\n")}`;
+      const { error: nErr } = await supabase.from("notifications").insert({
+        user_id: driverUserId,
+        tenant_id: tenantIdIn,
+        title,
+        message,
+        type: "transport",
+        reference_type: "transport",
+        reference_id: null,
+      });
+      if (nErr) {
+        return new Response(JSON.stringify({ error: nErr.message }), {
+          status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      return new Response(JSON.stringify({ ok: true, stops: stops.length }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const { notification_type, booking_id, member_name, pickup, destination, request_date, pickup_time, tenant_id } = body;
+
     const pickupLocationDescription: string = (body.pickup_location_description || "").toString().trim();
     const journeyType: string = body.journey_type || "Single";
     const returnDate: string | null = body.return_date || null;
