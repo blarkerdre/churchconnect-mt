@@ -392,13 +392,13 @@ export default function Transportation() {
 
   const openEditLocation = (loc) => {
     setEditingLocation(loc);
-    setLocationForm({ name: loc.name, address: loc.address, notes: loc.notes || "" });
+    setLocationForm({ name: loc.name, address: loc.address, postcode: loc.postcode || "", notes: loc.notes || "" });
     setEditLocationDialogOpen(true);
   };
 
   const openNewLocation = () => {
     setEditingLocation(null);
-    setLocationForm({ name: "", address: "", notes: "" });
+    setLocationForm({ name: "", address: "", postcode: "", notes: "" });
     setEditLocationDialogOpen(true);
   };
 
