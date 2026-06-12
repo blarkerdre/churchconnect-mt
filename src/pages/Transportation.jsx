@@ -68,9 +68,9 @@ export default function Transportation() {
   const [editLocationDialogOpen, setEditLocationDialogOpen] = useState(false);
   const [selectedBooking, setSelectedBooking] = useState(null);
   const [editingLocation, setEditingLocation] = useState(null);
-  const [form, setForm] = useState({ pickup_address: "", pickup_location_description: "", destination: "Church", request_date: "", pickup_time: "", notes: "", passengers: 1, journey_type: "Single", return_date: "", return_time: "" });
+  const [form, setForm] = useState({ pickup_postcode: "", pickup_address: "", pickup_location_description: "", destination: "Church", request_date: "", pickup_time: "", notes: "", passengers: 1, journey_type: "Single", return_date: "", return_time: "" });
   const [manageForm, setManageForm] = useState({ status: "", assigned_driver: "", driver_phone: "", driver_user_id: "", assigned_to: "", pickup_location_description: "" });
-  const [locationForm, setLocationForm] = useState({ name: "", address: "", notes: "" });
+  const [locationForm, setLocationForm] = useState({ name: "", address: "", postcode: "", notes: "" });
   const [confirmDelete, setConfirmDelete] = useState(null); // { title, description, run }
   const [detailBooking, setDetailBooking] = useState(null);
   const [reportOpen, setReportOpen] = useState(false);
@@ -132,9 +132,10 @@ export default function Transportation() {
   const canAcknowledge = (b) =>
     isPassenger(b) && ["Confirmed", "Notified", "Checked In", "Picked Up", "Completed"].includes(b.status);
 
-  // Visibility: leaders & unit members see all; otherwise own bookings + assignments + driver jobs
+  // Visibility: only admins / unit leaders see all bookings.
+  // Drivers, assignees, and transport unit members see only bookings tied to them.
   const visibleBookings =
-    isLeader || isTransportUnit
+    isLeader
       ? bookings
       : bookings.filter(b => b.user_id === user?.id || b.assigned_to === user?.id || b.driver_user_id === user?.id);
 
@@ -162,9 +163,29 @@ export default function Transportation() {
   const bookMutation = useMutation({
     mutationFn: async (formData) => {
       const { data: member } = await supabase.from("members").select("id").eq("user_id", user.id).eq("tenant_id", tenantId).single();
+
+      // Resolve nearest pickup point from postcode (best-effort, non-blocking)
+      let nearest = null;
+      let extraDesc = "";
+      if (formData.pickup_postcode) {
+        try {
+          const { data: resp } = await supabase.functions.invoke("resolve-nearest-pickup", {
+            body: { tenant_id: tenantId, postcode: formData.pickup_postcode },
+          });
+          if (resp?.match) {
+            nearest = resp.match;
+            extraDesc = `Nearest pickup: ${nearest.name} — ${nearest.address} (${nearest.distance_km} km away)`;
+          }
+        } catch (e) { /* swallow; save booking anyway */ }
+      }
+
+      const mergedDesc = [formData.pickup_location_description, extraDesc].filter(Boolean).join("\n");
+
       const { error } = await supabase.from("transportation").insert(withTenant({
-        pickup_address: formData.pickup_address,
-        pickup_location_description: formData.pickup_location_description || null,
+        pickup_address: formData.pickup_address || nearest?.address || "",
+        pickup_postcode: formData.pickup_postcode || null,
+        nearest_pickup_location_id: nearest?.id || null,
+        pickup_location_description: mergedDesc || null,
         destination: formData.destination || "Church",
         request_date: formData.request_date,
         pickup_time: formData.pickup_time || null,
@@ -177,10 +198,15 @@ export default function Transportation() {
         member_id: member?.id || null,
       }));
       if (error) throw error;
+      return { nearest };
     },
-    onSuccess: () => {
+    onSuccess: ({ nearest }) => {
       queryClient.invalidateQueries({ queryKey: ["transportation"] });
-      toast({ title: "Transport booked" });
+      if (nearest) {
+        toast({ title: "Transport booked", description: `Your pickup point will be ${nearest.name} (${nearest.distance_km} km away).` });
+      } else {
+        toast({ title: "Transport booked" });
+      }
       setBookDialogOpen(false);
     },
     onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
@@ -309,11 +335,14 @@ export default function Transportation() {
 
   const saveLocationMutation = useMutation({
     mutationFn: async (formData) => {
+      // If postcode changed, clear cached lat/lng so the edge function re-geocodes on next use.
+      const postcodeChanged = editingLocation && (editingLocation.postcode || "") !== (formData.postcode || "");
+      const geoReset = postcodeChanged ? { latitude: null, longitude: null } : {};
       if (editingLocation) {
-        const { error } = await supabase.from("pickup_locations").update({ name: formData.name, address: formData.address, notes: formData.notes || null }).eq("id", editingLocation.id).eq("tenant_id", tenantId);
+        const { error } = await supabase.from("pickup_locations").update({ name: formData.name, address: formData.address, postcode: formData.postcode || null, notes: formData.notes || null, ...geoReset }).eq("id", editingLocation.id).eq("tenant_id", tenantId);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("pickup_locations").insert(withTenant({ name: formData.name, address: formData.address, notes: formData.notes || null, created_by: user.id }));
+        const { error } = await supabase.from("pickup_locations").insert(withTenant({ name: formData.name, address: formData.address, postcode: formData.postcode || null, notes: formData.notes || null, created_by: user.id }));
         if (error) throw error;
       }
     },
@@ -363,13 +392,13 @@ export default function Transportation() {
 
   const openEditLocation = (loc) => {
     setEditingLocation(loc);
-    setLocationForm({ name: loc.name, address: loc.address, notes: loc.notes || "" });
+    setLocationForm({ name: loc.name, address: loc.address, postcode: loc.postcode || "", notes: loc.notes || "" });
     setEditLocationDialogOpen(true);
   };
 
   const openNewLocation = () => {
     setEditingLocation(null);
-    setLocationForm({ name: "", address: "", notes: "" });
+    setLocationForm({ name: "", address: "", postcode: "", notes: "" });
     setEditLocationDialogOpen(true);
   };
 
@@ -421,7 +450,7 @@ export default function Transportation() {
               </Button>
             )}
             {canCreateBooking && (
-              <Button onClick={() => { setForm({ pickup_address: "", pickup_location_description: "", destination: "Church", request_date: "", pickup_time: "", notes: "", passengers: 1, journey_type: "Single", return_date: "", return_time: "" }); setBookDialogOpen(true); }} className="bg-primary hover:bg-primary/90">
+              <Button onClick={() => { setForm({ pickup_postcode: "", pickup_address: "", pickup_location_description: "", destination: "Church", request_date: "", pickup_time: "", notes: "", passengers: 1, journey_type: "Single", return_date: "", return_time: "" }); setBookDialogOpen(true); }} className="bg-primary hover:bg-primary/90">
                 <Plus className="h-4 w-4 mr-2" /> Book Transport
               </Button>
             )}
@@ -519,6 +548,13 @@ export default function Transportation() {
                       </h3>
                       <Badge className={`border-0 ${statusColors[b.status] || ""}`}>{b.status}</Badge>
                       {b.journey_type === "Round Trip" && <Badge variant="outline" className="text-xs">Round Trip</Badge>}
+                      {(isAssignee(b) || isDriverUser(b)) && (
+                        b.passenger_acknowledged_at ? (
+                          <Badge variant="outline" className="text-xs text-chart-3 border-chart-3/40"><CheckCircle className="h-3 w-3 mr-1" /> Acknowledged</Badge>
+                        ) : (
+                          <Badge variant="outline" className="text-xs text-muted-foreground">Awaiting ack</Badge>
+                        )
+                      )}
                     </div>
                     <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
                       <span className="flex items-center gap-1"><MapPin className="h-3.5 w-3.5" /> {b.pickup_address} → {b.destination || "Church"}</span>
@@ -580,6 +616,11 @@ export default function Transportation() {
                     <MapPin className="h-4 w-4" />
                     <span>{detailBooking.pickup_address} → {detailBooking.destination || "Church"}</span>
                   </div>
+                  {detailBooking.pickup_postcode && (
+                    <div className="flex items-center gap-2 text-muted-foreground ml-6 text-xs">
+                      <span>Postcode: <span className="font-medium text-foreground">{detailBooking.pickup_postcode}</span></span>
+                    </div>
+                  )}
                   {detailBooking.pickup_location_description && (
                     <div className="rounded-md bg-primary/5 border border-primary/15 p-2 ml-6">
                       <p className="text-[11px] uppercase tracking-wide text-primary font-semibold mb-1">Pickup Location Description</p>
@@ -743,7 +784,17 @@ export default function Transportation() {
           <DialogHeader><DialogTitle className="font-display">Book Transport</DialogTitle></DialogHeader>
           <div className="space-y-4 mt-2">
             <div>
-              <Label>Pickup Location</Label>
+              <Label>Your Postcode *</Label>
+              <Input
+                value={form.pickup_postcode}
+                onChange={e => setForm(f => ({ ...f, pickup_postcode: e.target.value.toUpperCase() }))}
+                placeholder="e.g. CF10 1AA"
+                required
+              />
+              <p className="text-[11px] text-muted-foreground mt-1">We'll match you to the nearest active pickup point.</p>
+            </div>
+            <div>
+              <Label>Pickup Location <span className="text-xs text-muted-foreground">(optional — leave blank to use nearest)</span></Label>
               {pickupLocations.length > 0 ? (
                 <Select value={form.pickup_address} onValueChange={v => setForm(f => ({ ...f, pickup_address: v }))}>
                   <SelectTrigger><SelectValue placeholder="Select or type below" /></SelectTrigger>
@@ -787,7 +838,7 @@ export default function Transportation() {
             )}
             <div><Label>Passengers</Label><Input type="number" min="1" value={form.passengers} onChange={e => setForm(f => ({ ...f, passengers: e.target.value }))} /></div>
             <div><Label>Notes</Label><Textarea value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} rows={2} /></div>
-            <Button onClick={() => bookMutation.mutate(form)} disabled={bookMutation.isPending || !form.pickup_address || !form.request_date} className="w-full bg-primary">
+            <Button onClick={() => bookMutation.mutate(form)} disabled={bookMutation.isPending || (!form.pickup_address && !form.pickup_postcode) || !form.request_date} className="w-full bg-primary">
               {bookMutation.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
               Book Transport
             </Button>
@@ -910,6 +961,10 @@ export default function Transportation() {
           <div className="space-y-4 mt-2">
             <div><Label>Name</Label><Input value={locationForm.name} onChange={e => setLocationForm(f => ({ ...f, name: e.target.value }))} placeholder="e.g. Canton Bus Stop" /></div>
             <div><Label>Address</Label><Input value={locationForm.address} onChange={e => setLocationForm(f => ({ ...f, address: e.target.value }))} placeholder="Full address" /></div>
+            <div>
+              <Label>Postcode <span className="text-xs text-muted-foreground">(recommended — enables nearest-pickup matching)</span></Label>
+              <Input value={locationForm.postcode} onChange={e => setLocationForm(f => ({ ...f, postcode: e.target.value.toUpperCase() }))} placeholder="e.g. CF10 1AA" />
+            </div>
             <div><Label>Notes</Label><Textarea value={locationForm.notes} onChange={e => setLocationForm(f => ({ ...f, notes: e.target.value }))} rows={2} /></div>
             <Button onClick={() => saveLocationMutation.mutate(locationForm)} disabled={saveLocationMutation.isPending || !locationForm.name || !locationForm.address} className="w-full bg-primary">
               {saveLocationMutation.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
@@ -937,9 +992,11 @@ export default function Transportation() {
       <RoutePlannerDialog
         open={routePlannerOpen}
         onOpenChange={setRoutePlannerOpen}
-        bookings={bookings}
+        bookings={visibleBookings}
         transportMembers={transportMembers}
         tenantId={tenantId}
+        currentUserId={user?.id}
+        isLeader={isLeader}
       />
     </div>
   );
