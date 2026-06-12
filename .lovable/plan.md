@@ -1,38 +1,31 @@
 ## Goal
-Four small Transportation changes:
-1. Remove **Pickup Location Description** and **Pickup Time** fields from the passenger booking form.
-2. Add a **Service to attend** dropdown sourced from the tenant's `service_types` app setting (Settings → Services).
-3. In the **Manage Booking** dialog (admin/leader), rename the *Pickup Location Description* field label to **Pickup Location**.
-4. Passengers can only see/use the **Acknowledge** button after the booking has been notified (i.e. `notified_at` is set).
+1. Drivers receive a notification with their full pickup list (in stop order) when the leader publishes a route.
+2. Drivers can view that ordered passenger list in the app.
+3. Only **unit leaders** (Transportation leaders / admins) can open Plan Driver Route in edit mode — drivers see it as read-only.
 
 ## Changes
 
-### Database (migration)
-- `transportation`: add `service_type text` (nullable). No new policies — existing ones cover it.
+### `src/components/transportation/RoutePlannerDialog.jsx`
+- **Edit lock**: when `!isLeader`, render the dialog in read-only mode:
+  - Hide drag handles, arrow buttons, time inputs, Save/Clear/Notify buttons.
+  - Show a banner: "Route set by your Transportation leader."
+  - Keep the date range + stops list visible so drivers can review their schedule.
+- **Notify Driver button** (leaders only): new secondary button next to "Notify Passengers". Sends a single in-app notification to the selected driver containing the ordered stop list (passenger name, pickup time, address, postcode, phone, pax count) for the date range. Implementation: call `notify-transport-booking` once with a new `notification_type: "driver_route"` payload containing the stops array, or insert directly into `notifications` table for the driver.
 
-### `src/pages/Transportation.jsx` (passenger booking form, lines ~71, 182‑191, 453, ~800‑825)
-- Remove `pickup_location_description` and `pickup_time` from the passenger form state, payload, reset handler, and the two input fields in the dialog.
-- Add `service_type` to the form state and payload.
-- Insert a **Service to attend** `<Select>` populated via `useAppSetting("service_types", DEFAULT_SERVICE_TYPES)` (same hook/key used by Settings → Services). Required field.
-- Keep the existing `notes` field as-is.
-- Keep return-leg `return_time` (this is a different field from `pickup_time` and the spec only calls out pickup time on the booking form — confirm with caller if they want this removed too; assumption: leave it).
+### `supabase/functions/notify-transport-booking/index.ts`
+- Add a `driver_route` branch that accepts `{ driver_user_id, tenant_id, date_from, date_to, stops: [...] }` and:
+  - Creates one in-app `notifications` row for the driver with a formatted body listing stops in order.
+  - (Email/SMS optional — in-app only per prior decision.)
 
-### `src/pages/Transportation.jsx` (Manage Booking dialog, lines ~903‑907)
-- Change the `<Label>` text from "Pickup Location Description" to **"Pickup Location"**. Field, state, and persistence stay the same.
-
-### `src/pages/Transportation.jsx` (Acknowledge gating, around lines 545‑560 and 715‑725)
-- Update `canAcknowledge(b)` so it returns true **only if** `b.notified_at` is set (in addition to existing checks: passenger is current user and not already acknowledged).
-- Same gate applies to both the list row and the detail panel button.
-
-### Detail / list rendering
-- Surface `service_type` in the booking detail panel and on list rows where trip context is shown (small chip next to date/time).
-- Where `pickup_time` is no longer collected from passengers, the existing list/detail still render it when present (set by Route Planner) — no change needed.
+### `src/pages/Transportation.jsx` — driver view
+- For drivers (non-leaders), the existing list already filters to their own assignments. Add sort-by-`pickup_order` (then `pickup_time`) for the driver's view so the order matches the planned route, and surface a "Stop N" badge (already rendered when `pickup_order != null`).
+- Add a "View My Route" button in the page header for users who have any booking with `driver_user_id === user.id`, opening `RoutePlannerDialog` in read-only mode prefilled to themselves.
 
 ### Out of scope
-- Migrating the old `trip_type` field from `TransportBookingDialog.jsx` (legacy/unused in the current flow).
-- Removing `pickup_time` from the schema (drivers still populate it via Route Planner).
-- Changes to notification edge function (no payload change required; `service_type` can be added later if desired).
+- No DB schema changes (uses existing `notifications` table and `pickup_order`/`pickup_time` columns).
+- No change to passenger notify flow or acknowledgement gating.
 
 ## Files touched
+- `src/components/transportation/RoutePlannerDialog.jsx`
 - `src/pages/Transportation.jsx`
-- Migration adding `transportation.service_type`
+- `supabase/functions/notify-transport-booking/index.ts`
