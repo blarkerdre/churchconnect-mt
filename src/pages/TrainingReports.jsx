@@ -266,9 +266,16 @@ export default function TrainingReports() {
           <p className="text-sm text-muted-foreground mt-1">Record attendance and outcomes for training sessions</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button asChild size="sm" variant="outline" className="gap-1.5">
-            <Link to={certReportPath}><Award className="h-4 w-4" /> Certificates Report</Link>
-          </Button>
+          {canManageCertificates && (
+            <>
+              <Button asChild size="sm" variant="outline" className="gap-1.5">
+                <Link to={certReportPath}><Award className="h-4 w-4" /> Certificates Report</Link>
+              </Button>
+              <Button asChild size="sm" variant="outline" className="gap-1.5">
+                <Link to={certApprovalsPath}><ClipboardList className="h-4 w-4" /> Certificate Approvals</Link>
+              </Button>
+            </>
+          )}
         {canRecordSession && (
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
