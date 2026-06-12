@@ -1116,6 +1116,15 @@ export default function Transportation() {
         currentUserId={user?.id}
         isLeader={isLeader}
       />
+      <DriverAvailabilityDialog
+        open={availabilityDialogOpen}
+        onOpenChange={setAvailabilityDialogOpen}
+        tenantId={tenantId}
+        user={user}
+        driverUnit={isChariotUnit ? "Kingdom Chariot" : "Transportation"}
+        serviceTypes={SERVICE_TYPES || DEFAULT_SERVICE_TYPES}
+        onSaved={refetchAvailability}
+      />
     </div>
   );
 }
