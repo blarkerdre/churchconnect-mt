@@ -567,6 +567,63 @@ export default function Transportation() {
         </div>
       </div>
 
+      {availabilityEntries.length > 0 && (
+        <Card className="border-0 shadow-sm">
+          <CardHeader className="pb-3">
+            <CardTitle className="font-display text-base flex items-center gap-2">
+              <CarFront className="h-4 w-4 text-primary" />
+              {isLeader ? "Driver Availability" : "My Availability"}
+              <Badge variant="outline" className="ml-2 text-xs">{availabilityEntries.length}</Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {availabilityEntries.map(a => {
+              const driverName = assigneeMap[a.driver_user_id] || "Driver";
+              const isOwn = a.driver_user_id === user?.id;
+              return (
+                <div key={a.id} className={`p-3 rounded-lg border flex flex-wrap items-start gap-3 ${a.status === "open" ? "bg-muted/30" : "bg-muted/10 opacity-70"}`}>
+                  <div className="flex-1 min-w-0 space-y-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="font-medium text-sm text-foreground">{driverName}</span>
+                      <DriverUnitBadge unit={a.driver_unit} />
+                      <Badge variant="outline" className="text-[10px]">{a.status}</Badge>
+                      {a.service_type && <Badge variant="outline" className="text-[10px]">{a.service_type}</Badge>}
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      <span className="font-medium text-foreground">{a.available_date}</span> · {a.seats_available} seat{a.seats_available > 1 ? "s" : ""} available
+                    </div>
+                    <div className="text-xs text-muted-foreground flex items-start gap-1">
+                      <MapPin className="h-3 w-3 mt-0.5 shrink-0" />
+                      <span>{a.pickup_area_address}{a.pickup_area_postcode ? ` [${a.pickup_area_postcode}]` : ""}</span>
+                    </div>
+                    {a.notes && <p className="text-xs text-muted-foreground italic">{a.notes}</p>}
+                  </div>
+                  {a.status === "open" && (
+                    <div className="flex gap-1">
+                      {isLeader && (
+                        <Button size="sm" variant="outline" onClick={async () => {
+                          await supabase.from("driver_availability").update({ status: "matched" }).eq("id", a.id).eq("tenant_id", tenantId);
+                          refetchAvailability();
+                          toast({ title: "Marked as matched" });
+                        }}>Mark matched</Button>
+                      )}
+                      {(isLeader || isOwn) && (
+                        <Button size="sm" variant="ghost" className="text-destructive" onClick={async () => {
+                          await supabase.from("driver_availability").update({ status: "cancelled" }).eq("id", a.id).eq("tenant_id", tenantId);
+                          refetchAvailability();
+                        }}>Cancel</Button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </CardContent>
+        </Card>
+      )}
+
+
+
       {isLoading ? (
         <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>
       ) : filtered.length === 0 ? (
