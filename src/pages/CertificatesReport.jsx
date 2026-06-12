@@ -99,16 +99,61 @@ export default function CertificatesReport() {
     return m;
   }, [issuers]);
 
-  // Map certificate_number -> member name (from completions)
-  const certMemberMap = useMemo(() => {
+  // Map certificate_number -> { name, email, member_id } (from completions)
+  const certInfoMap = useMemo(() => {
     const m = new Map();
     completions.forEach((c) => {
       if (!c.certificate_number) return;
       const name = `${c.members?.first_name || ""} ${c.members?.last_name || ""}`.trim() || "—";
-      m.set(c.certificate_number, name);
+      m.set(c.certificate_number, {
+        name,
+        email: c.members?.email || "",
+        member_id: c.member_id,
+        completion_date: c.completion_date,
+      });
     });
     return m;
   }, [completions]);
+
+  // For legacy audit rows whose completion was deleted, look up member by details.member_id
+  const orphanMemberIds = useMemo(() => {
+    const known = new Set([...certInfoMap.values()].map((v) => v.member_id));
+    const ids = new Set();
+    auditRows.forEach((a) => {
+      const mid = a.details?.member_id;
+      if (mid && !known.has(mid)) ids.add(mid);
+    });
+    return [...ids];
+  }, [auditRows, certInfoMap]);
+
+  const { data: orphanMembers = [] } = useQuery({
+    queryKey: ["cert-report-orphan-members", tenantId, orphanMemberIds.join(",")],
+    enabled: !!tenantId && orphanMemberIds.length > 0,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("members")
+        .select("id, first_name, last_name, email")
+        .in("id", orphanMemberIds);
+      if (error) throw error;
+      return data || [];
+    },
+  });
+  const orphanMemberMap = useMemo(() => {
+    const m = new Map();
+    orphanMembers.forEach((p) => m.set(p.id, {
+      name: `${p.first_name || ""} ${p.last_name || ""}`.trim() || "—",
+      email: p.email || "",
+    }));
+    return m;
+  }, [orphanMembers]);
+
+  const resolveAuditMember = (a) => {
+    const info = certInfoMap.get(a.details?.certificate_number);
+    if (info) return info;
+    const mid = a.details?.member_id;
+    if (mid && orphanMemberMap.has(mid)) return { ...orphanMemberMap.get(mid), member_id: mid, completion_date: a.details?.completion_date };
+    return { name: "—", email: "", member_id: mid, completion_date: a.details?.completion_date };
+  };
 
   // Build reissue stats per cert number
   const reissueStats = useMemo(() => {
