@@ -287,28 +287,36 @@ export default function CertificatesReport() {
   const exportActivityCSV = () => {
     downloadCSV(
       `certificate-activity-${fromDate}-to-${toDate}.csv`,
-      ["Timestamp", "Action", "Member", "Cert No", "Programme", "Actor"],
-      filteredAudit.map((a) => [
-        format(parseISO(a.created_at), "yyyy-MM-dd HH:mm:ss"),
-        a.action === "certificate_reissued" ? "Reissued" : "Issued",
-        certMemberMap.get(a.details?.certificate_number) || "—",
-        a.details?.certificate_number || "",
-        a.details?.training_type || "",
-        issuerMap.get(a.user_id) || "",
-      ])
+      ["Timestamp", "Action", "Member", "Email", "Cert No", "Programme", "Completion Date", "Issued By"],
+      filteredAudit.map((a) => {
+        const info = resolveAuditMember(a);
+        return [
+          format(parseISO(a.created_at), "yyyy-MM-dd HH:mm:ss"),
+          a.action === "certificate_reissued" ? "Reissued" : "Issued",
+          info.name,
+          info.email,
+          a.details?.certificate_number || "",
+          a.details?.training_type || "",
+          info.completion_date ? format(parseISO(info.completion_date), "yyyy-MM-dd") : "",
+          issuerMap.get(a.user_id) || "",
+        ];
+      })
     );
   };
 
   const buildCertsPrint = () => ({
     title: `Certificates Report (${fromDate} to ${toDate})`,
-    headers: ["Member", "Programme", "Cert No", "Completion", "Reissues", "Issued By"],
+    headers: ["Member", "Email", "Programme", "Cert No", "Completion", "First Issued", "Last Reissued", "Reissues", "Issued By"],
     rows: filteredCerts.map((c) => {
       const stats = reissueStats.get(c.certificate_number) || {};
       return [
         `${c.members?.first_name || ""} ${c.members?.last_name || ""}`.trim(),
+        c.members?.email || "",
         c.training_type,
         c.certificate_number,
-        c.completion_date,
+        c.completion_date ? format(parseISO(c.completion_date), "dd MMM yyyy") : "",
+        stats.firstIssuedAt ? format(parseISO(stats.firstIssuedAt), "dd MMM yyyy") : (c.created_at ? format(parseISO(c.created_at), "dd MMM yyyy") : ""),
+        stats.lastReissuedAt ? format(parseISO(stats.lastReissuedAt), "dd MMM yyyy") : "—",
         stats.reissued || 0,
         issuerMap.get(c.issued_by) || "—",
       ];
@@ -317,15 +325,19 @@ export default function CertificatesReport() {
 
   const buildActivityPrint = () => ({
     title: `Certificate Activity Log (${fromDate} to ${toDate})`,
-    headers: ["When", "Action", "Member", "Cert No", "Programme", "Actor"],
-    rows: filteredAudit.map((a) => [
-      format(parseISO(a.created_at), "dd MMM yyyy HH:mm"),
-      a.action === "certificate_reissued" ? "Reissued" : "Issued",
-      certMemberMap.get(a.details?.certificate_number) || "—",
-      a.details?.certificate_number || "",
-      a.details?.training_type || "",
-      issuerMap.get(a.user_id) || "—",
-    ]),
+    headers: ["When", "Action", "Member", "Cert No", "Programme", "Completion", "Issued By"],
+    rows: filteredAudit.map((a) => {
+      const info = resolveAuditMember(a);
+      return [
+        format(parseISO(a.created_at), "dd MMM yyyy HH:mm"),
+        a.action === "certificate_reissued" ? "Reissued" : "Issued",
+        info.name,
+        a.details?.certificate_number || "",
+        a.details?.training_type || "",
+        info.completion_date ? format(parseISO(info.completion_date), "dd MMM yyyy") : "—",
+        issuerMap.get(a.user_id) || "—",
+      ];
+    }),
   });
 
   const loading = loadingCerts || loadingAudit;
