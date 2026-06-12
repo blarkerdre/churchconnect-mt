@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import {
   BarChart2, ClipboardList, Users, CalendarDays, HeartHandshake, Heart,
-  Megaphone, Car, TrendingUp, BookOpen, Globe, MessageSquareHeart, ArrowRight, FileText, Award,
+  Megaphone, Car, TrendingUp, BookOpen, Globe, MessageSquareHeart, ArrowRight, FileText,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 
