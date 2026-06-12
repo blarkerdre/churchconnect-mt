@@ -1130,6 +1130,7 @@ export default function Transportation() {
         tenantId={tenantId}
         currentUserId={user?.id}
         isLeader={isLeader}
+        availabilityEntries={availabilityEntries}
       />
       <DriverAvailabilityDialog
         open={availabilityDialogOpen}
