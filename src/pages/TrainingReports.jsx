@@ -67,10 +67,20 @@ export default function TrainingReports() {
   const { user, isAdmin } = useAuth();
   const { tenantSlug } = useParams();
   const certReportPath = tenantSlug ? `/t/${tenantSlug}/certificates-report` : "/certificates-report";
+  const certApprovalsPath = tenantSlug ? `/t/${tenantSlug}/certificate-approvals` : "/certificate-approvals";
   const qc = useQueryClient();
   const { tenantId, scopeQuery, withTenant } = useTenantQuery();
   const { isMemberOfUnit: isTrainingRep } = useUnitMembership("Training Rep");
+  const { data: isTrainingRepLeader = false } = useQuery({
+    queryKey: ["is-training-rep-leader", user?.id, tenantId],
+    enabled: !!user?.id && !!tenantId,
+    queryFn: async () => {
+      const { data } = await supabase.rpc("is_training_rep_leader", { _user_id: user.id, _tenant_id: tenantId });
+      return !!data;
+    },
+  });
   const canManageAttendees = isAdmin || isTrainingRep;
+  const canManageCertificates = isAdmin || isTrainingRepLeader;
 
   const { enabled: canRecordSession } = useSubFeature("training.record_session");
   const { enabled: canCsvExport } = useSubFeature("training.csv_export");
