@@ -10,6 +10,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Car, MapPin, Clock, User, Plus, Loader2, CheckCircle, XCircle, Trash2, Edit, Settings, Search, Download, UserCheck, Phone, Mail, MessageSquare, Send, BellRing, CarFront, BarChart3, Route } from "lucide-react";
 import TransportReportDialog from "@/components/transportation/TransportReportDialog";
 import RoutePlannerDialog from "@/components/transportation/RoutePlannerDialog";
+import DriverAvailabilityDialog from "@/components/transportation/DriverAvailabilityDialog";
+import DriverUnitBadge from "@/components/transportation/DriverUnitBadge";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
@@ -55,7 +57,9 @@ const STEP_TIMESTAMP_KEY = {
 export default function Transportation() {
   const { user, isAdmin, leaderUnits } = useAuth();
   const { isMemberOfUnit: isTransportUnit } = useUnitMembership("Transportation");
-  const isLeader = isAdmin || leaderUnits.includes("Transportation");
+  const { isMemberOfUnit: isChariotUnit } = useUnitMembership("Kingdom Chariot");
+  const isDriverUnitMember = isTransportUnit || isChariotUnit;
+  const isLeader = isAdmin || leaderUnits.includes("Transportation") || leaderUnits.includes("Kingdom Chariot");
   const canManage = isLeader; // Only leaders can manage bookings (approve/assign/edit/delete)
   const { enabled: canCreateBooking } = useSubFeature("transportation.create_booking");
   const queryClient = useQueryClient();
@@ -79,6 +83,7 @@ export default function Transportation() {
   const [detailBooking, setDetailBooking] = useState(null);
   const [reportOpen, setReportOpen] = useState(false);
   const [routePlannerOpen, setRoutePlannerOpen] = useState(false);
+  const [availabilityDialogOpen, setAvailabilityDialogOpen] = useState(false);
 
   const { data: bookings = [], isLoading } = useQuery({
     queryKey: ["transportation", tenantId],
@@ -101,29 +106,53 @@ export default function Transportation() {
     },
   });
 
-  // Fetch Transportation unit members for assign-to dropdown
+  // Fetch members who are drivers (Transportation OR Kingdom Chariot units)
   const { data: transportMembers = [] } = useQuery({
     queryKey: ["transport-unit-members", tenantId],
     queryFn: async () => {
-      // Get members who are in the Transportation unit
       const { data, error } = await scopeQuery(
         supabase.from("members")
-          .select("id, user_id, first_name, last_name, phone")
-          .ilike("church_unit", "%Transport%")
+          .select("id, user_id, first_name, last_name, phone, church_unit")
+          .or("church_unit.ilike.%Transport%,church_unit.ilike.%Kingdom Chariot%")
       );
       if (error) throw error;
-      return (data || []).filter(m => m.user_id);
+      return (data || [])
+        .filter(m => m.user_id)
+        .map(m => ({
+          ...m,
+          unit_label: /kingdom chariot/i.test(m.church_unit || "") ? "Kingdom Chariot" : "Transportation",
+        }));
     },
   });
 
   // Build maps for display
   const assigneeMap = {};
   const assigneePhoneMap = {};
+  const assigneeUnitMap = {};
   transportMembers.forEach(m => {
     if (m.user_id) {
       assigneeMap[m.user_id] = `${m.first_name} ${m.last_name}`;
       assigneePhoneMap[m.user_id] = m.phone || "";
+      assigneeUnitMap[m.user_id] = m.unit_label;
     }
+  });
+
+  // Driver availability entries (leaders see all; drivers see their own future entries)
+  const { data: availabilityEntries = [], refetch: refetchAvailability } = useQuery({
+    queryKey: ["driver-availability", tenantId, user?.id, isLeader],
+    enabled: !!tenantId && !!user?.id,
+    queryFn: async () => {
+      const today = new Date().toISOString().split("T")[0];
+      let q = supabase.from("driver_availability")
+        .select("*")
+        .eq("tenant_id", tenantId)
+        .gte("available_date", today)
+        .order("available_date", { ascending: true });
+      if (!isLeader) q = q.eq("driver_user_id", user.id);
+      const { data, error } = await q;
+      if (error) throw error;
+      return data || [];
+    },
   });
 
   // Role helpers per booking
@@ -457,6 +486,11 @@ export default function Transportation() {
                 <Settings className="h-4 w-4 mr-2" /> Pickup Locations
               </Button>
             )}
+            {isDriverUnitMember && (
+              <Button variant="outline" onClick={() => setAvailabilityDialogOpen(true)}>
+                <CarFront className="h-4 w-4 mr-2" /> Mark Availability
+              </Button>
+            )}
             {canCreateBooking && (
               <Button onClick={() => { setForm({ pickup_postcode: "", pickup_address: "", service_type: "", destination: "Church", request_date: "", notes: "", passengers: 1, journey_type: "Single", return_date: "", return_time: "" }); setBookDialogOpen(true); }} className="bg-primary hover:bg-primary/90">
                 <Plus className="h-4 w-4 mr-2" /> Book Transport
@@ -533,6 +567,63 @@ export default function Transportation() {
         </div>
       </div>
 
+      {availabilityEntries.length > 0 && (
+        <Card className="border-0 shadow-sm">
+          <CardHeader className="pb-3">
+            <CardTitle className="font-display text-base flex items-center gap-2">
+              <CarFront className="h-4 w-4 text-primary" />
+              {isLeader ? "Driver Availability" : "My Availability"}
+              <Badge variant="outline" className="ml-2 text-xs">{availabilityEntries.length}</Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {availabilityEntries.map(a => {
+              const driverName = assigneeMap[a.driver_user_id] || "Driver";
+              const isOwn = a.driver_user_id === user?.id;
+              return (
+                <div key={a.id} className={`p-3 rounded-lg border flex flex-wrap items-start gap-3 ${a.status === "open" ? "bg-muted/30" : "bg-muted/10 opacity-70"}`}>
+                  <div className="flex-1 min-w-0 space-y-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="font-medium text-sm text-foreground">{driverName}</span>
+                      <DriverUnitBadge unit={a.driver_unit} />
+                      <Badge variant="outline" className="text-[10px]">{a.status}</Badge>
+                      {a.service_type && <Badge variant="outline" className="text-[10px]">{a.service_type}</Badge>}
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      <span className="font-medium text-foreground">{a.available_date}</span> · {a.seats_available} seat{a.seats_available > 1 ? "s" : ""} available
+                    </div>
+                    <div className="text-xs text-muted-foreground flex items-start gap-1">
+                      <MapPin className="h-3 w-3 mt-0.5 shrink-0" />
+                      <span>{a.pickup_area_address}{a.pickup_area_postcode ? ` [${a.pickup_area_postcode}]` : ""}</span>
+                    </div>
+                    {a.notes && <p className="text-xs text-muted-foreground italic">{a.notes}</p>}
+                  </div>
+                  {a.status === "open" && (
+                    <div className="flex gap-1">
+                      {isLeader && (
+                        <Button size="sm" variant="outline" onClick={async () => {
+                          await supabase.from("driver_availability").update({ status: "matched" }).eq("id", a.id).eq("tenant_id", tenantId);
+                          refetchAvailability();
+                          toast({ title: "Marked as matched" });
+                        }}>Mark matched</Button>
+                      )}
+                      {(isLeader || isOwn) && (
+                        <Button size="sm" variant="ghost" className="text-destructive" onClick={async () => {
+                          await supabase.from("driver_availability").update({ status: "cancelled" }).eq("id", a.id).eq("tenant_id", tenantId);
+                          refetchAvailability();
+                        }}>Cancel</Button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </CardContent>
+        </Card>
+      )}
+
+
+
       {isLoading ? (
         <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>
       ) : filtered.length === 0 ? (
@@ -571,9 +662,17 @@ export default function Transportation() {
                       <span className="flex items-center gap-1"><MapPin className="h-3.5 w-3.5" /> {b.pickup_address} → {b.destination || "Church"}</span>
                       <span className="flex items-center gap-1"><Clock className="h-3.5 w-3.5" /> {b.request_date}{b.pickup_time ? ` · ${b.pickup_time}` : ""}</span>
                       {b.assigned_to && assigneeMap[b.assigned_to] && (
-                        <span className="flex items-center gap-1"><UserCheck className="h-3.5 w-3.5 text-primary" /> {assigneeMap[b.assigned_to]}</span>
+                        <span className="flex items-center gap-1">
+                          <UserCheck className="h-3.5 w-3.5 text-primary" /> {assigneeMap[b.assigned_to]}
+                          {assigneeUnitMap[b.assigned_to] && <DriverUnitBadge unit={assigneeUnitMap[b.assigned_to]} />}
+                        </span>
                       )}
-                      {b.assigned_driver && <span className="flex items-center gap-1"><User className="h-3.5 w-3.5" /> {b.assigned_driver}</span>}
+                      {b.assigned_driver && (
+                        <span className="flex items-center gap-1">
+                          <User className="h-3.5 w-3.5" /> {b.assigned_driver}
+                          {b.driver_user_id && assigneeUnitMap[b.driver_user_id] && <DriverUnitBadge unit={assigneeUnitMap[b.driver_user_id]} />}
+                        </span>
+                      )}
                     </div>
                   </div>
                   {canManage && (
@@ -883,7 +982,7 @@ export default function Transportation() {
               </Select>
             </div>
             <div>
-              <Label>Driver (Transport Unit)</Label>
+              <Label>Driver (Kingdom Chariot / Transport)</Label>
               <Select
                 value={manageForm.driver_user_id || "manual"}
                 onValueChange={v => {
@@ -898,14 +997,23 @@ export default function Transportation() {
                 <SelectTrigger><SelectValue placeholder="Select a unit member or enter manually" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="manual">— Enter manually below —</SelectItem>
-                  {transportMembers.map(m => (
-                    <SelectItem key={m.user_id} value={m.user_id}>
-                      {m.first_name} {m.last_name}{m.phone ? ` · ${m.phone}` : ""}
-                    </SelectItem>
-                  ))}
+                  {["Kingdom Chariot", "Transportation"].map(group => {
+                    const members = transportMembers.filter(m => m.unit_label === group);
+                    if (members.length === 0) return null;
+                    return (
+                      <div key={group}>
+                        <div className="px-2 py-1 text-[10px] uppercase tracking-wide text-muted-foreground font-semibold">{group}</div>
+                        {members.map(m => (
+                          <SelectItem key={m.user_id} value={m.user_id}>
+                            {m.first_name} {m.last_name}{m.phone ? ` · ${m.phone}` : ""}
+                          </SelectItem>
+                        ))}
+                      </div>
+                    );
+                  })}
                 </SelectContent>
               </Select>
-              <p className="text-[11px] text-muted-foreground mt-1">Pick a Transport unit member to auto-fill, or type a name and phone below.</p>
+              <p className="text-[11px] text-muted-foreground mt-1">Pick a Kingdom Chariot or Transport member to auto-fill, or type a name and phone below.</p>
             </div>
             <div><Label>Driver Name</Label><Input value={manageForm.assigned_driver} onChange={e => setManageForm(f => ({ ...f, assigned_driver: e.target.value, driver_user_id: "" }))} placeholder="Driver name" /></div>
             <div><Label>Driver Phone</Label><Input value={manageForm.driver_phone} onChange={e => setManageForm(f => ({ ...f, driver_phone: e.target.value }))} placeholder="Phone number" /></div>
@@ -1007,6 +1115,15 @@ export default function Transportation() {
         tenantId={tenantId}
         currentUserId={user?.id}
         isLeader={isLeader}
+      />
+      <DriverAvailabilityDialog
+        open={availabilityDialogOpen}
+        onOpenChange={setAvailabilityDialogOpen}
+        tenantId={tenantId}
+        user={user}
+        driverUnit={isChariotUnit ? "Kingdom Chariot" : "Transportation"}
+        serviceTypes={SERVICE_TYPES || DEFAULT_SERVICE_TYPES}
+        onSaved={refetchAvailability}
       />
     </div>
   );

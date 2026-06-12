@@ -20,17 +20,17 @@ export default function RoutePlannerDialog({ open, onOpenChange, bookings, trans
   const [dragIdx, setDragIdx] = useState(null);
   const queryClient = useQueryClient();
 
-  // Drivers: leaders pick from all transport members; non-leaders are locked to themselves.
+  // Drivers: leaders pick from all transport/chariot members; non-leaders are locked to themselves.
   const driverOptions = useMemo(() => {
     if (!isLeader && currentUserId) {
       const me = transportMembers.find(m => m.user_id === currentUserId);
-      return me ? [{ id: currentUserId, name: `${me.first_name} ${me.last_name} (You)` }] : [];
+      return me ? [{ id: currentUserId, name: `${me.first_name} ${me.last_name} (You)`, unit: me.unit_label }] : [];
     }
     const map = new Map();
     transportMembers.forEach(m => {
-      if (m.user_id) map.set(m.user_id, `${m.first_name} ${m.last_name}`);
+      if (m.user_id) map.set(m.user_id, { name: `${m.first_name} ${m.last_name}`, unit: m.unit_label });
     });
-    return Array.from(map.entries()).map(([id, name]) => ({ id, name }));
+    return Array.from(map.entries()).map(([id, v]) => ({ id, name: v.name, unit: v.unit }));
   }, [transportMembers, isLeader, currentUserId]);
 
   // Auto-select self for non-leaders
@@ -218,7 +218,19 @@ export default function RoutePlannerDialog({ open, onOpenChange, bookings, trans
             <Select value={driverId} onValueChange={setDriverId} disabled={!isLeader && driverOptions.length <= 1}>
               <SelectTrigger><SelectValue placeholder="Select driver" /></SelectTrigger>
               <SelectContent>
-                {driverOptions.map(d => (
+                {["Kingdom Chariot", "Transportation"].map(group => {
+                  const opts = driverOptions.filter(d => d.unit === group);
+                  if (opts.length === 0) return null;
+                  return (
+                    <div key={group}>
+                      <div className="px-2 py-1 text-[10px] uppercase tracking-wide text-muted-foreground font-semibold">{group}</div>
+                      {opts.map(d => (
+                        <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
+                      ))}
+                    </div>
+                  );
+                })}
+                {driverOptions.filter(d => !["Kingdom Chariot", "Transportation"].includes(d.unit)).map(d => (
                   <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
                 ))}
               </SelectContent>
