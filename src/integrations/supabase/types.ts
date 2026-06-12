@@ -1023,6 +1023,57 @@ export type Database = {
           },
         ]
       }
+      driver_availability: {
+        Row: {
+          available_date: string
+          created_at: string
+          driver_member_id: string | null
+          driver_unit: string
+          driver_user_id: string
+          id: string
+          notes: string | null
+          pickup_area_address: string
+          pickup_area_postcode: string | null
+          seats_available: number
+          service_type: string | null
+          status: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          available_date: string
+          created_at?: string
+          driver_member_id?: string | null
+          driver_unit: string
+          driver_user_id: string
+          id?: string
+          notes?: string | null
+          pickup_area_address: string
+          pickup_area_postcode?: string | null
+          seats_available?: number
+          service_type?: string | null
+          status?: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          available_date?: string
+          created_at?: string
+          driver_member_id?: string | null
+          driver_unit?: string
+          driver_user_id?: string
+          id?: string
+          notes?: string | null
+          pickup_area_address?: string
+          pickup_area_postcode?: string | null
+          seats_available?: number
+          service_type?: string | null
+          status?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       email_send_log: {
         Row: {
           created_at: string
