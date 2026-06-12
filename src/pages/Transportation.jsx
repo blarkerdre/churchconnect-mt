@@ -183,16 +183,16 @@ export default function Transportation() {
         } catch (e) { /* swallow; save booking anyway */ }
       }
 
-      const mergedDesc = [formData.pickup_location_description, extraDesc].filter(Boolean).join("\n");
+      const mergedDesc = [extraDesc].filter(Boolean).join("\n");
 
       const { error } = await supabase.from("transportation").insert(withTenant({
         pickup_address: formData.pickup_address || nearest?.address || "",
         pickup_postcode: formData.pickup_postcode || null,
         nearest_pickup_location_id: nearest?.id || null,
         pickup_location_description: mergedDesc || null,
+        service_type: formData.service_type || null,
         destination: formData.destination || "Church",
         request_date: formData.request_date,
-        pickup_time: formData.pickup_time || null,
         notes: formData.notes || null,
         passengers: parseInt(formData.passengers) || 1,
         journey_type: formData.journey_type || "Single",
