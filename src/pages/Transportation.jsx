@@ -152,16 +152,20 @@ export default function Transportation() {
     return matchSearch && matchStatus && matchDate && matchAssignee;
   });
 
-  // When a specific driver + a single date are selected, sort by pickup_order so leaders see the planned route.
-  const useRouteSort = filterAssignee !== "All" && filterAssignee !== "Unassigned" && dateFrom && dateFrom === dateTo;
+  // Leaders: sort by route when a single driver + single date is selected.
+  // Drivers: always sort their own list by pickup_order so it matches the planned route.
+  const leaderRouteSort = filterAssignee !== "All" && filterAssignee !== "Unassigned" && dateFrom && dateFrom === dateTo;
+  const useRouteSort = leaderRouteSort || !isLeader;
   const filtered = useRouteSort
     ? [...filteredBase].sort((a, b) => {
+        if (a.request_date !== b.request_date) return a.request_date.localeCompare(b.request_date);
         const ao = a.pickup_order ?? 9999;
         const bo = b.pickup_order ?? 9999;
         if (ao !== bo) return ao - bo;
         return (a.pickup_time || "").localeCompare(b.pickup_time || "");
       })
     : filteredBase;
+
 
 
   const bookMutation = useMutation({
@@ -494,11 +498,14 @@ export default function Transportation() {
               </Select>
             </div>
           )}
+          {(isLeader || visibleBookings.some(b => b.driver_user_id === user?.id)) && (
+            <Button variant="outline" onClick={() => setRoutePlannerOpen(true)}>
+              <Route className="h-4 w-4 mr-2" /> {isLeader ? "Plan Route" : "My Route"}
+            </Button>
+          )}
           {isLeader && (
             <>
-              <Button variant="outline" onClick={() => setRoutePlannerOpen(true)}>
-                <Route className="h-4 w-4 mr-2" /> Plan Route
-              </Button>
+
               <Button variant="outline" onClick={() => setReportOpen(true)} disabled={filtered.length === 0}>
                 <BarChart3 className="h-4 w-4 mr-2" /> Report
               </Button>
