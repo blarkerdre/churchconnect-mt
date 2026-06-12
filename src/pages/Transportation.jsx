@@ -538,19 +538,23 @@ export default function Transportation() {
             </Button>
           )}
           {isLeader && (
+            <Button variant="outline" onClick={() => setReportOpen(true)} disabled={filtered.length === 0}>
+              <BarChart3 className="h-4 w-4 mr-2" /> Report
+            </Button>
+          )}
+          {(isLeader || visibleBookings.some(b => b.driver_user_id === user?.id || b.assigned_to === user?.id)) && (
             <>
-
-              <Button variant="outline" onClick={() => setReportOpen(true)} disabled={filtered.length === 0}>
-                <BarChart3 className="h-4 w-4 mr-2" /> Report
-              </Button>
               <Button variant="outline" onClick={downloadCSV} disabled={filtered.length === 0}>
                 <Download className="h-4 w-4 mr-2" /> CSV
               </Button>
               <PrintReportButton label="Print" buildRows={() => ({
-                title: "Transportation Report",
-                headers: ["Member", "Pickup", "Destination", "Date", "Time", "Passengers", "Status", "Assigned To", "Driver", "Notes"],
+                title: isLeader
+                  ? `Transportation Report${dateFrom || dateTo ? ` (${dateFrom || "…"} → ${dateTo || "…"})` : ""}`
+                  : `My Assigned Passengers${dateFrom || dateTo ? ` (${dateFrom || "…"} → ${dateTo || "…"})` : ""}`,
+                headers: ["Member", "Phone", "Pickup", "Destination", "Date", "Time", "Passengers", "Status", "Assigned To", "Driver", "Notes"],
                 rows: filtered.map(b => [
                   b.members ? `${b.members.first_name} ${b.members.last_name}` : "",
+                  b.members?.phone || "",
                   b.pickup_address,
                   b.destination || "Church",
                   b.request_date,
