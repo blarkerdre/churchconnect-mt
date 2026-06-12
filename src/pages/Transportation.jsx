@@ -57,7 +57,9 @@ const STEP_TIMESTAMP_KEY = {
 export default function Transportation() {
   const { user, isAdmin, leaderUnits } = useAuth();
   const { isMemberOfUnit: isTransportUnit } = useUnitMembership("Transportation");
-  const isLeader = isAdmin || leaderUnits.includes("Transportation");
+  const { isMemberOfUnit: isChariotUnit } = useUnitMembership("Kingdom Chariot");
+  const isDriverUnitMember = isTransportUnit || isChariotUnit;
+  const isLeader = isAdmin || leaderUnits.includes("Transportation") || leaderUnits.includes("Kingdom Chariot");
   const canManage = isLeader; // Only leaders can manage bookings (approve/assign/edit/delete)
   const { enabled: canCreateBooking } = useSubFeature("transportation.create_booking");
   const queryClient = useQueryClient();
