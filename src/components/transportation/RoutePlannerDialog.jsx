@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { GripVertical, MapPin, Clock, Phone, ArrowUp, ArrowDown, Loader2, Route, Bell, CheckCircle, Printer } from "lucide-react";
+import { GripVertical, MapPin, Clock, Phone, ArrowUp, ArrowDown, Loader2, Route, Bell, CheckCircle, Printer, Sparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 
@@ -255,6 +255,37 @@ export default function RoutePlannerDialog({ open, onOpenChange, bookings, trans
     }
   };
 
+  const handleAutoMatch = async () => {
+    if (!dateFrom || !dateTo) return;
+    const unassigned = bookings.filter(b =>
+      b.request_date >= dateFrom && b.request_date <= dateTo &&
+      !b.driver_user_id && !b.assigned_to &&
+      !["Cancelled", "No-Show", "Completed"].includes(b.status)
+    );
+    if (!unassigned.length) {
+      toast({ title: "Nothing to match", description: "No unassigned bookings in this date range." });
+      return;
+    }
+    setSaving(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("match-driver-by-postcode", {
+        body: { tenant_id: tenantId, booking_ids: unassigned.map(b => b.id) },
+      });
+      if (error) throw error;
+      const matched = (data?.matches || []).filter(m => m.driver_user_id).length;
+      queryClient.invalidateQueries({ queryKey: ["transportation"] });
+      toast({
+        title: "Auto-match complete",
+        description: `Matched ${matched} of ${unassigned.length} passenger(s).`,
+        variant: matched === 0 ? "destructive" : "default",
+      });
+    } catch (err) {
+      toast({ title: "Auto-match failed", description: err.message, variant: "destructive" });
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const multiDay = dateFrom !== dateTo;
 
   return (
@@ -299,6 +330,18 @@ export default function RoutePlannerDialog({ open, onOpenChange, bookings, trans
             </Select>
           </div>
         </div>
+
+        {isLeader && (
+          <div className="mt-3">
+            <Button onClick={handleAutoMatch} disabled={saving} variant="secondary" size="sm">
+              <Sparkles className="h-4 w-4 mr-2" />
+              Auto-match Unassigned Passengers
+            </Button>
+            <p className="text-[11px] text-muted-foreground mt-1">
+              Matches unassigned bookings in the date range to drivers using their availability postcode.
+            </p>
+          </div>
+        )}
 
         <div className="mt-4">
           {!driverId ? (
