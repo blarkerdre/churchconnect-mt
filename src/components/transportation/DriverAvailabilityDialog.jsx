@@ -79,10 +79,11 @@ export default function DriverAvailabilityDialog({
         .single();
       if (error) throw error;
 
-      // Look up leader user ids for Transportation + Kingdom Chariot
+      // Look up leader user ids for Transportation + Kingdom Chariot in this tenant
       const { data: leaders } = await supabase
         .from("unit_leader_assignments")
         .select("user_id, unit_name")
+        .eq("tenant_id", tenantId)
         .in("unit_name", ["Transportation", "Kingdom Chariot"]);
       const leaderUserIds = Array.from(new Set((leaders || []).map((l) => l.user_id))).filter(Boolean);
 
