@@ -900,7 +900,7 @@ export default function Transportation() {
             <div><Label>Driver Name</Label><Input value={manageForm.assigned_driver} onChange={e => setManageForm(f => ({ ...f, assigned_driver: e.target.value, driver_user_id: "" }))} placeholder="Driver name" /></div>
             <div><Label>Driver Phone</Label><Input value={manageForm.driver_phone} onChange={e => setManageForm(f => ({ ...f, driver_phone: e.target.value }))} placeholder="Phone number" /></div>
             <div>
-              <Label>Pickup Location Description</Label>
+              <Label>Pickup Location</Label>
               <Textarea
                 value={manageForm.pickup_location_description}
                 onChange={e => setManageForm(f => ({ ...f, pickup_location_description: e.target.value }))}
