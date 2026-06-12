@@ -99,16 +99,61 @@ export default function CertificatesReport() {
     return m;
   }, [issuers]);
 
-  // Map certificate_number -> member name (from completions)
-  const certMemberMap = useMemo(() => {
+  // Map certificate_number -> { name, email, member_id } (from completions)
+  const certInfoMap = useMemo(() => {
     const m = new Map();
     completions.forEach((c) => {
       if (!c.certificate_number) return;
       const name = `${c.members?.first_name || ""} ${c.members?.last_name || ""}`.trim() || "—";
-      m.set(c.certificate_number, name);
+      m.set(c.certificate_number, {
+        name,
+        email: c.members?.email || "",
+        member_id: c.member_id,
+        completion_date: c.completion_date,
+      });
     });
     return m;
   }, [completions]);
+
+  // For legacy audit rows whose completion was deleted, look up member by details.member_id
+  const orphanMemberIds = useMemo(() => {
+    const known = new Set([...certInfoMap.values()].map((v) => v.member_id));
+    const ids = new Set();
+    auditRows.forEach((a) => {
+      const mid = a.details?.member_id;
+      if (mid && !known.has(mid)) ids.add(mid);
+    });
+    return [...ids];
+  }, [auditRows, certInfoMap]);
+
+  const { data: orphanMembers = [] } = useQuery({
+    queryKey: ["cert-report-orphan-members", tenantId, orphanMemberIds.join(",")],
+    enabled: !!tenantId && orphanMemberIds.length > 0,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("members")
+        .select("id, first_name, last_name, email")
+        .in("id", orphanMemberIds);
+      if (error) throw error;
+      return data || [];
+    },
+  });
+  const orphanMemberMap = useMemo(() => {
+    const m = new Map();
+    orphanMembers.forEach((p) => m.set(p.id, {
+      name: `${p.first_name || ""} ${p.last_name || ""}`.trim() || "—",
+      email: p.email || "",
+    }));
+    return m;
+  }, [orphanMembers]);
+
+  const resolveAuditMember = (a) => {
+    const info = certInfoMap.get(a.details?.certificate_number);
+    if (info) return info;
+    const mid = a.details?.member_id;
+    if (mid && orphanMemberMap.has(mid)) return { ...orphanMemberMap.get(mid), member_id: mid, completion_date: a.details?.completion_date };
+    return { name: "—", email: "", member_id: mid, completion_date: a.details?.completion_date };
+  };
 
   // Build reissue stats per cert number
   const reissueStats = useMemo(() => {
@@ -242,28 +287,36 @@ export default function CertificatesReport() {
   const exportActivityCSV = () => {
     downloadCSV(
       `certificate-activity-${fromDate}-to-${toDate}.csv`,
-      ["Timestamp", "Action", "Member", "Cert No", "Programme", "Actor"],
-      filteredAudit.map((a) => [
-        format(parseISO(a.created_at), "yyyy-MM-dd HH:mm:ss"),
-        a.action === "certificate_reissued" ? "Reissued" : "Issued",
-        certMemberMap.get(a.details?.certificate_number) || "—",
-        a.details?.certificate_number || "",
-        a.details?.training_type || "",
-        issuerMap.get(a.user_id) || "",
-      ])
+      ["Timestamp", "Action", "Member", "Email", "Cert No", "Programme", "Completion Date", "Issued By"],
+      filteredAudit.map((a) => {
+        const info = resolveAuditMember(a);
+        return [
+          format(parseISO(a.created_at), "yyyy-MM-dd HH:mm:ss"),
+          a.action === "certificate_reissued" ? "Reissued" : "Issued",
+          info.name,
+          info.email,
+          a.details?.certificate_number || "",
+          a.details?.training_type || "",
+          info.completion_date ? format(parseISO(info.completion_date), "yyyy-MM-dd") : "",
+          issuerMap.get(a.user_id) || "",
+        ];
+      })
     );
   };
 
   const buildCertsPrint = () => ({
     title: `Certificates Report (${fromDate} to ${toDate})`,
-    headers: ["Member", "Programme", "Cert No", "Completion", "Reissues", "Issued By"],
+    headers: ["Member", "Email", "Programme", "Cert No", "Completion", "First Issued", "Last Reissued", "Reissues", "Issued By"],
     rows: filteredCerts.map((c) => {
       const stats = reissueStats.get(c.certificate_number) || {};
       return [
         `${c.members?.first_name || ""} ${c.members?.last_name || ""}`.trim(),
+        c.members?.email || "",
         c.training_type,
         c.certificate_number,
-        c.completion_date,
+        c.completion_date ? format(parseISO(c.completion_date), "dd MMM yyyy") : "",
+        stats.firstIssuedAt ? format(parseISO(stats.firstIssuedAt), "dd MMM yyyy") : (c.created_at ? format(parseISO(c.created_at), "dd MMM yyyy") : ""),
+        stats.lastReissuedAt ? format(parseISO(stats.lastReissuedAt), "dd MMM yyyy") : "—",
         stats.reissued || 0,
         issuerMap.get(c.issued_by) || "—",
       ];
@@ -272,15 +325,19 @@ export default function CertificatesReport() {
 
   const buildActivityPrint = () => ({
     title: `Certificate Activity Log (${fromDate} to ${toDate})`,
-    headers: ["When", "Action", "Member", "Cert No", "Programme", "Actor"],
-    rows: filteredAudit.map((a) => [
-      format(parseISO(a.created_at), "dd MMM yyyy HH:mm"),
-      a.action === "certificate_reissued" ? "Reissued" : "Issued",
-      certMemberMap.get(a.details?.certificate_number) || "—",
-      a.details?.certificate_number || "",
-      a.details?.training_type || "",
-      issuerMap.get(a.user_id) || "—",
-    ]),
+    headers: ["When", "Action", "Member", "Cert No", "Programme", "Completion", "Issued By"],
+    rows: filteredAudit.map((a) => {
+      const info = resolveAuditMember(a);
+      return [
+        format(parseISO(a.created_at), "dd MMM yyyy HH:mm"),
+        a.action === "certificate_reissued" ? "Reissued" : "Issued",
+        info.name,
+        a.details?.certificate_number || "",
+        a.details?.training_type || "",
+        info.completion_date ? format(parseISO(info.completion_date), "dd MMM yyyy") : "—",
+        issuerMap.get(a.user_id) || "—",
+      ];
+    }),
   });
 
   const loading = loadingCerts || loadingAudit;
@@ -426,28 +483,36 @@ export default function CertificatesReport() {
                     <TableHead>Member</TableHead>
                     <TableHead>Cert No</TableHead>
                     <TableHead>Programme</TableHead>
-                    <TableHead>Actor</TableHead>
+                    <TableHead>Completion</TableHead>
+                    <TableHead>Issued By</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {loading && <TableRow><TableCell colSpan={6} className="text-center py-6 text-muted-foreground">Loading…</TableCell></TableRow>}
+                  {loading && <TableRow><TableCell colSpan={7} className="text-center py-6 text-muted-foreground">Loading…</TableCell></TableRow>}
                   {!loading && filteredAudit.length === 0 && (
-                    <TableRow><TableCell colSpan={6} className="text-center py-6 text-muted-foreground">No activity in this range.</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={7} className="text-center py-6 text-muted-foreground">No activity in this range.</TableCell></TableRow>
                   )}
-                  {filteredAudit.map((a) => (
-                    <TableRow key={a.id}>
-                      <TableCell className="text-sm">{format(parseISO(a.created_at), "dd MMM yyyy HH:mm")}</TableCell>
-                      <TableCell>
-                        {a.action === "certificate_reissued"
-                          ? <Badge variant="secondary"><RotateCw className="h-3 w-3 mr-1" /> Reissued</Badge>
-                          : <Badge><Award className="h-3 w-3 mr-1" /> Issued</Badge>}
-                      </TableCell>
-                      <TableCell className="font-medium">{certMemberMap.get(a.details?.certificate_number) || "—"}</TableCell>
-                      <TableCell><Badge variant="outline" className="text-[10px]">{a.details?.certificate_number || "—"}</Badge></TableCell>
-                      <TableCell>{a.details?.training_type || "—"}</TableCell>
-                      <TableCell className="text-sm text-muted-foreground">{issuerMap.get(a.user_id) || "—"}</TableCell>
-                    </TableRow>
-                  ))}
+                  {filteredAudit.map((a) => {
+                    const info = resolveAuditMember(a);
+                    return (
+                      <TableRow key={a.id}>
+                        <TableCell className="text-sm">{format(parseISO(a.created_at), "dd MMM yyyy HH:mm")}</TableCell>
+                        <TableCell>
+                          {a.action === "certificate_reissued"
+                            ? <Badge variant="secondary"><RotateCw className="h-3 w-3 mr-1" /> Reissued</Badge>
+                            : <Badge><Award className="h-3 w-3 mr-1" /> Issued</Badge>}
+                        </TableCell>
+                        <TableCell className="font-medium">
+                          <div>{info.name}</div>
+                          {info.email && <div className="text-xs text-muted-foreground">{info.email}</div>}
+                        </TableCell>
+                        <TableCell><Badge variant="outline" className="text-[10px]">{a.details?.certificate_number || "—"}</Badge></TableCell>
+                        <TableCell>{a.details?.training_type || "—"}</TableCell>
+                        <TableCell className="text-sm">{info.completion_date ? format(parseISO(info.completion_date), "dd MMM yyyy") : "—"}</TableCell>
+                        <TableCell className="text-sm text-muted-foreground">{issuerMap.get(a.user_id) || "—"}</TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             </CardContent>
