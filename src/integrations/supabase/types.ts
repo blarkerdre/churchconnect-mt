@@ -2528,8 +2528,11 @@ export type Database = {
           created_by: string | null
           id: string
           is_active: boolean
+          latitude: number | null
+          longitude: number | null
           name: string
           notes: string | null
+          postcode: string | null
           tenant_id: string | null
           updated_at: string
         }
@@ -2539,8 +2542,11 @@ export type Database = {
           created_by?: string | null
           id?: string
           is_active?: boolean
+          latitude?: number | null
+          longitude?: number | null
           name: string
           notes?: string | null
+          postcode?: string | null
           tenant_id?: string | null
           updated_at?: string
         }
@@ -2550,8 +2556,11 @@ export type Database = {
           created_by?: string | null
           id?: string
           is_active?: boolean
+          latitude?: number | null
+          longitude?: number | null
           name?: string
           notes?: string | null
+          postcode?: string | null
           tenant_id?: string | null
           updated_at?: string
         }
@@ -3651,6 +3660,7 @@ export type Database = {
           id: string
           journey_type: string
           member_id: string | null
+          nearest_pickup_location_id: string | null
           no_show_at: string | null
           notes: string | null
           notified_at: string | null
@@ -3660,6 +3670,7 @@ export type Database = {
           pickup_address: string
           pickup_location_description: string | null
           pickup_order: number | null
+          pickup_postcode: string | null
           pickup_time: string | null
           request_date: string
           return_date: string | null
@@ -3681,6 +3692,7 @@ export type Database = {
           id?: string
           journey_type?: string
           member_id?: string | null
+          nearest_pickup_location_id?: string | null
           no_show_at?: string | null
           notes?: string | null
           notified_at?: string | null
@@ -3690,6 +3702,7 @@ export type Database = {
           pickup_address: string
           pickup_location_description?: string | null
           pickup_order?: number | null
+          pickup_postcode?: string | null
           pickup_time?: string | null
           request_date: string
           return_date?: string | null
@@ -3711,6 +3724,7 @@ export type Database = {
           id?: string
           journey_type?: string
           member_id?: string | null
+          nearest_pickup_location_id?: string | null
           no_show_at?: string | null
           notes?: string | null
           notified_at?: string | null
@@ -3720,6 +3734,7 @@ export type Database = {
           pickup_address?: string
           pickup_location_description?: string | null
           pickup_order?: number | null
+          pickup_postcode?: string | null
           pickup_time?: string | null
           request_date?: string
           return_date?: string | null
@@ -3735,6 +3750,13 @@ export type Database = {
             columns: ["member_id"]
             isOneToOne: false
             referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transportation_nearest_pickup_location_id_fkey"
+            columns: ["nearest_pickup_location_id"]
+            isOneToOne: false
+            referencedRelation: "pickup_locations"
             referencedColumns: ["id"]
           },
           {
