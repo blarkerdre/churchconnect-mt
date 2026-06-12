@@ -91,6 +91,119 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Short-circuit: driver_availability notification (in-app + email; no SMS)
+    if (body.notification_type === "driver_availability") {
+      const tenantIdIn: string = body.tenant_id;
+      const leaderIds: string[] = Array.isArray(body.leader_user_ids) ? body.leader_user_ids : [];
+      if (!tenantIdIn || leaderIds.length === 0) {
+        return new Response(JSON.stringify({ error: "Missing tenant_id or leader_user_ids" }), {
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const driverName = (body.driver_name || "A driver").toString();
+      const driverUnit = (body.driver_unit || "Transportation").toString();
+      const dateStr = (body.available_date || "").toString();
+      const service = (body.service_type || "").toString();
+      const area = (body.pickup_area || "").toString();
+      const seats = Number(body.seats || 1);
+      const notes = (body.notes || "").toString();
+
+      const title = `Driver availability: ${driverName}`;
+      const message = `${driverName} (${driverUnit}) is available on ${dateStr}${service ? ` for ${service}` : ""}. Pickup area: ${area}. Seats: ${seats}.${notes ? ` Notes: ${notes}` : ""}`;
+
+      // Fetch tenant branding for email
+      let churchName = "Church";
+      {
+        const { data: tenantRow } = await supabase
+          .from("tenants").select("name, settings").eq("id", tenantIdIn).single();
+        if (tenantRow) {
+          const s = tenantRow.settings as Record<string, unknown> | null;
+          churchName = (s?.email_sender_name as string) || tenantRow.name || churchName;
+        }
+      }
+
+      const senderDomain = "notify.app.churchmanagementsuite.org";
+      const safeFromName = `"${String(churchName).replace(/[\\"]/g, "\\$&")}"`;
+      const fromAddress = `${safeFromName} <noreply@${senderDomain}>`;
+
+      for (const leaderId of leaderIds) {
+        // In-app notification
+        await supabase.from("notifications").insert({
+          user_id: leaderId,
+          tenant_id: tenantIdIn,
+          title,
+          message,
+          type: "transport",
+          reference_type: "transport",
+          reference_id: body.availability_id || null,
+        });
+
+        // Email
+        const { data: profile } = await supabase
+          .from("profiles").select("full_name, email")
+          .eq("user_id", leaderId).eq("tenant_id", tenantIdIn).maybeSingle();
+        const recipientEmail = profile?.email;
+        const recipientName = profile?.full_name || "Leader";
+        if (!recipientEmail) continue;
+        const normalizedEmail = recipientEmail.trim().toLowerCase();
+        let unsubscribeToken: string | null = null;
+        const { data: existingToken } = await supabase
+          .from("email_unsubscribe_tokens")
+          .select("token").eq("email", normalizedEmail).is("used_at", null)
+          .order("created_at", { ascending: false }).limit(1).maybeSingle();
+        if (existingToken?.token) {
+          unsubscribeToken = existingToken.token;
+        } else {
+          const newToken = crypto.randomUUID();
+          const { error: tErr } = await supabase
+            .from("email_unsubscribe_tokens")
+            .insert({ email: normalizedEmail, token: newToken });
+          if (!tErr) unsubscribeToken = newToken;
+        }
+        if (!unsubscribeToken) continue;
+
+        const messageId = `driver-avail-${crypto.randomUUID()}`;
+        const html = `<!DOCTYPE html><html><body style="font-family:Arial,sans-serif;background:#f4f5f7;padding:24px;">
+<div style="max-width:560px;margin:0 auto;background:#fff;border-radius:8px;overflow:hidden;">
+  <div style="background:#1a2d4d;padding:20px;text-align:center;color:#fff;"><h1 style="margin:0;font-size:18px;">${escHtml(churchName)}</h1></div>
+  <div style="padding:24px;color:#333;">
+    <p>Dear ${escHtml(recipientName)},</p>
+    <h2 style="color:#1a2d4d;font-size:16px;margin:12px 0;">Driver availability submitted</h2>
+    <p><strong>${escHtml(driverName)}</strong> (${escHtml(driverUnit)}) has marked themselves available to pick passengers.</p>
+    <div style="background:#f0f4f8;border-radius:6px;padding:12px;margin:12px 0;font-size:14px;">
+      <p style="margin:4px 0;"><strong>Date:</strong> ${escHtml(dateStr)}</p>
+      ${service ? `<p style="margin:4px 0;"><strong>Service:</strong> ${escHtml(service)}</p>` : ""}
+      <p style="margin:4px 0;"><strong>Pickup area:</strong> ${escHtml(area)}</p>
+      <p style="margin:4px 0;"><strong>Seats available:</strong> ${seats}</p>
+      ${notes ? `<p style="margin:4px 0;"><strong>Notes:</strong> ${escHtml(notes)}</p>` : ""}
+    </div>
+    <p style="color:#555;font-size:13px;">Log in to the Transportation page to match this driver to a pending booking.</p>
+  </div>
+</div></body></html>`;
+        const text = `${driverName} (${driverUnit}) is available on ${dateStr}${service ? ` for ${service}` : ""}.\nPickup area: ${area}\nSeats: ${seats}${notes ? `\nNotes: ${notes}` : ""}`;
+        await supabase.rpc("enqueue_email", {
+          queue_name: "transactional_emails",
+          payload: {
+            to: recipientEmail,
+            from: fromAddress,
+            sender_domain: senderDomain,
+            subject: `Driver availability: ${driverName}`,
+            html, text,
+            purpose: "transactional",
+            label: "driver-availability-notification",
+            message_id: messageId,
+            idempotency_key: messageId,
+            unsubscribe_token: unsubscribeToken,
+            queued_at: new Date().toISOString(),
+            tenant_id: tenantIdIn,
+          },
+        });
+      }
+      return new Response(JSON.stringify({ ok: true, notified: leaderIds.length }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const { notification_type, booking_id, member_name, pickup, destination, request_date, pickup_time, tenant_id } = body;
 
     const pickupLocationDescription: string = (body.pickup_location_description || "").toString().trim();
