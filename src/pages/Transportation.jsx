@@ -605,9 +605,17 @@ export default function Transportation() {
                       <span className="flex items-center gap-1"><MapPin className="h-3.5 w-3.5" /> {b.pickup_address} → {b.destination || "Church"}</span>
                       <span className="flex items-center gap-1"><Clock className="h-3.5 w-3.5" /> {b.request_date}{b.pickup_time ? ` · ${b.pickup_time}` : ""}</span>
                       {b.assigned_to && assigneeMap[b.assigned_to] && (
-                        <span className="flex items-center gap-1"><UserCheck className="h-3.5 w-3.5 text-primary" /> {assigneeMap[b.assigned_to]}</span>
+                        <span className="flex items-center gap-1">
+                          <UserCheck className="h-3.5 w-3.5 text-primary" /> {assigneeMap[b.assigned_to]}
+                          {assigneeUnitMap[b.assigned_to] && <DriverUnitBadge unit={assigneeUnitMap[b.assigned_to]} />}
+                        </span>
                       )}
-                      {b.assigned_driver && <span className="flex items-center gap-1"><User className="h-3.5 w-3.5" /> {b.assigned_driver}</span>}
+                      {b.assigned_driver && (
+                        <span className="flex items-center gap-1">
+                          <User className="h-3.5 w-3.5" /> {b.assigned_driver}
+                          {b.driver_user_id && assigneeUnitMap[b.driver_user_id] && <DriverUnitBadge unit={assigneeUnitMap[b.driver_user_id]} />}
+                        </span>
+                      )}
                     </div>
                   </div>
                   {canManage && (
