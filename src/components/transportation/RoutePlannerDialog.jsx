@@ -218,7 +218,19 @@ export default function RoutePlannerDialog({ open, onOpenChange, bookings, trans
             <Select value={driverId} onValueChange={setDriverId} disabled={!isLeader && driverOptions.length <= 1}>
               <SelectTrigger><SelectValue placeholder="Select driver" /></SelectTrigger>
               <SelectContent>
-                {driverOptions.map(d => (
+                {["Kingdom Chariot", "Transportation"].map(group => {
+                  const opts = driverOptions.filter(d => d.unit === group);
+                  if (opts.length === 0) return null;
+                  return (
+                    <div key={group}>
+                      <div className="px-2 py-1 text-[10px] uppercase tracking-wide text-muted-foreground font-semibold">{group}</div>
+                      {opts.map(d => (
+                        <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
+                      ))}
+                    </div>
+                  );
+                })}
+                {driverOptions.filter(d => !["Kingdom Chariot", "Transportation"].includes(d.unit)).map(d => (
                   <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
                 ))}
               </SelectContent>
