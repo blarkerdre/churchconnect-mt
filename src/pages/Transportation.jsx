@@ -917,7 +917,7 @@ export default function Transportation() {
               </Select>
             </div>
             <div>
-              <Label>Driver (Transport Unit)</Label>
+              <Label>Driver (Kingdom Chariot / Transport)</Label>
               <Select
                 value={manageForm.driver_user_id || "manual"}
                 onValueChange={v => {
@@ -932,14 +932,23 @@ export default function Transportation() {
                 <SelectTrigger><SelectValue placeholder="Select a unit member or enter manually" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="manual">— Enter manually below —</SelectItem>
-                  {transportMembers.map(m => (
-                    <SelectItem key={m.user_id} value={m.user_id}>
-                      {m.first_name} {m.last_name}{m.phone ? ` · ${m.phone}` : ""}
-                    </SelectItem>
-                  ))}
+                  {["Kingdom Chariot", "Transportation"].map(group => {
+                    const members = transportMembers.filter(m => m.unit_label === group);
+                    if (members.length === 0) return null;
+                    return (
+                      <div key={group}>
+                        <div className="px-2 py-1 text-[10px] uppercase tracking-wide text-muted-foreground font-semibold">{group}</div>
+                        {members.map(m => (
+                          <SelectItem key={m.user_id} value={m.user_id}>
+                            {m.first_name} {m.last_name}{m.phone ? ` · ${m.phone}` : ""}
+                          </SelectItem>
+                        ))}
+                      </div>
+                    );
+                  })}
                 </SelectContent>
               </Select>
-              <p className="text-[11px] text-muted-foreground mt-1">Pick a Transport unit member to auto-fill, or type a name and phone below.</p>
+              <p className="text-[11px] text-muted-foreground mt-1">Pick a Kingdom Chariot or Transport member to auto-fill, or type a name and phone below.</p>
             </div>
             <div><Label>Driver Name</Label><Input value={manageForm.assigned_driver} onChange={e => setManageForm(f => ({ ...f, assigned_driver: e.target.value, driver_user_id: "" }))} placeholder="Driver name" /></div>
             <div><Label>Driver Phone</Label><Input value={manageForm.driver_phone} onChange={e => setManageForm(f => ({ ...f, driver_phone: e.target.value }))} placeholder="Phone number" /></div>
