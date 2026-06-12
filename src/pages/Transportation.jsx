@@ -105,29 +105,53 @@ export default function Transportation() {
     },
   });
 
-  // Fetch Transportation unit members for assign-to dropdown
+  // Fetch members who are drivers (Transportation OR Kingdom Chariot units)
   const { data: transportMembers = [] } = useQuery({
     queryKey: ["transport-unit-members", tenantId],
     queryFn: async () => {
-      // Get members who are in the Transportation unit
       const { data, error } = await scopeQuery(
         supabase.from("members")
-          .select("id, user_id, first_name, last_name, phone")
-          .ilike("church_unit", "%Transport%")
+          .select("id, user_id, first_name, last_name, phone, church_unit")
+          .or("church_unit.ilike.%Transport%,church_unit.ilike.%Kingdom Chariot%")
       );
       if (error) throw error;
-      return (data || []).filter(m => m.user_id);
+      return (data || [])
+        .filter(m => m.user_id)
+        .map(m => ({
+          ...m,
+          unit_label: /kingdom chariot/i.test(m.church_unit || "") ? "Kingdom Chariot" : "Transportation",
+        }));
     },
   });
 
   // Build maps for display
   const assigneeMap = {};
   const assigneePhoneMap = {};
+  const assigneeUnitMap = {};
   transportMembers.forEach(m => {
     if (m.user_id) {
       assigneeMap[m.user_id] = `${m.first_name} ${m.last_name}`;
       assigneePhoneMap[m.user_id] = m.phone || "";
+      assigneeUnitMap[m.user_id] = m.unit_label;
     }
+  });
+
+  // Driver availability entries (leaders see all; drivers see their own future entries)
+  const { data: availabilityEntries = [], refetch: refetchAvailability } = useQuery({
+    queryKey: ["driver-availability", tenantId, user?.id, isLeader],
+    enabled: !!tenantId && !!user?.id,
+    queryFn: async () => {
+      const today = new Date().toISOString().split("T")[0];
+      let q = supabase.from("driver_availability")
+        .select("*")
+        .eq("tenant_id", tenantId)
+        .gte("available_date", today)
+        .order("available_date", { ascending: true });
+      if (!isLeader) q = q.eq("driver_user_id", user.id);
+      const { data, error } = await q;
+      if (error) throw error;
+      return data || [];
+    },
   });
 
   // Role helpers per booking
