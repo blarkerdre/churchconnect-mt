@@ -62,10 +62,10 @@ serve(async (req) => {
     });
 
     if (action === "portal") {
-      const origin = req.headers.get("origin") || "https://churchconnect-mt.lovable.app";
+      const RETURN_BASE = "https://app.churchmanagementsuite.org";
       const portalSession = await stripe.billingPortal.sessions.create({
         customer: sub.stripe_customer_id,
-        return_url: `${origin}/settings`,
+        return_url: `${RETURN_BASE}/settings`,
       });
 
       return new Response(JSON.stringify({ url: portalSession.url }), {
