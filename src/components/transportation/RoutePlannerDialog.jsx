@@ -179,6 +179,59 @@ export default function RoutePlannerDialog({ open, onOpenChange, bookings, trans
       setSaving(false);
     }
   };
+  const handlePrint = () => {
+    if (!order.length) return;
+    const driverMember = transportMembers.find(m => m.user_id === driverId);
+    const driverName = driverMember ? `${driverMember.first_name} ${driverMember.last_name}` : "Driver";
+    const dateLabel = dateFrom === dateTo ? dateFrom : `${dateFrom} to ${dateTo}`;
+    const title = `${isLeader ? "Driver Route" : "My Route"} — ${driverName} — ${dateLabel}`;
+    const totalPax = order.reduce((s, b) => s + (b.passengers || 1), 0);
+
+    const headers = ["Stop #", ...(multiDay ? ["Date"] : []), "Pickup Time", "Passenger", "Phone", "Pax", "Pickup Address", "Postcode", "Pickup Notes", "Destination", "Status"];
+    const rows = order.map((b, i) => {
+      const passenger = b.members ? `${b.members.first_name} ${b.members.last_name}` : "Passenger";
+      const cells = [
+        i + 1,
+        ...(multiDay ? [b.request_date || ""] : []),
+        b.pickup_time || "TBC",
+        passenger,
+        b.members?.phone || "",
+        b.passengers || 1,
+        b.pickup_address || "",
+        b.pickup_postcode || "",
+        b.pickup_location_description || "",
+        b.destination || "",
+        b.status || "",
+      ];
+      return `<tr>${cells.map(c => `<td>${escHtml(c)}</td>`).join("")}</tr>`;
+    }).join("");
+
+    const html = `<!DOCTYPE html><html><head><title>${escHtml(title)}</title><style>
+      body{font-family:Arial,sans-serif;font-size:12px;color:#111;margin:24px}
+      h1{font-size:18px;margin-bottom:4px;color:#1e3a5f}
+      p.meta{font-size:11px;color:#666;margin-bottom:16px}
+      table{width:100%;border-collapse:collapse}
+      th{background:#1e3a5f;color:#fff;text-align:left;padding:8px 10px;font-size:11px}
+      td{padding:7px 10px;border-bottom:1px solid #e5e7eb;vertical-align:top}
+      tr:nth-child(even) td{background:#f8fafc}
+      @media print{body{margin:0}}
+    </style></head><body>
+      <h1>${escHtml(title)}</h1>
+      <p class="meta">Generated: ${escHtml(new Date().toLocaleString("en-GB"))} · ${order.length} stop(s) · ${totalPax} passenger(s)</p>
+      <table><thead><tr>${headers.map(h => `<th>${escHtml(h)}</th>`).join("")}</tr></thead><tbody>${rows}</tbody></table>
+    </body></html>`;
+
+    const win = window.open("", "_blank", "width=900,height=700");
+    if (!win) {
+      toast({ title: "Pop-up blocked", description: "Please allow pop-ups to print your route.", variant: "destructive" });
+      return;
+    }
+    win.document.write(html);
+    win.document.close();
+    win.focus();
+    win.print();
+  };
+
 
 
   const handleClear = async () => {
