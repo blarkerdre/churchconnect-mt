@@ -10,6 +10,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Car, MapPin, Clock, User, Plus, Loader2, CheckCircle, XCircle, Trash2, Edit, Settings, Search, Download, UserCheck, Phone, Mail, MessageSquare, Send, BellRing, CarFront, BarChart3, Route } from "lucide-react";
 import TransportReportDialog from "@/components/transportation/TransportReportDialog";
 import RoutePlannerDialog from "@/components/transportation/RoutePlannerDialog";
+import DriverAvailabilityDialog from "@/components/transportation/DriverAvailabilityDialog";
+import DriverUnitBadge from "@/components/transportation/DriverUnitBadge";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
