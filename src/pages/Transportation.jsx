@@ -826,7 +826,7 @@ export default function Transportation() {
             )}
             <div><Label>Passengers</Label><Input type="number" min="1" value={form.passengers} onChange={e => setForm(f => ({ ...f, passengers: e.target.value }))} /></div>
             <div><Label>Notes</Label><Textarea value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} rows={2} /></div>
-            <Button onClick={() => bookMutation.mutate(form)} disabled={bookMutation.isPending || !form.pickup_address || !form.request_date} className="w-full bg-primary">
+            <Button onClick={() => bookMutation.mutate(form)} disabled={bookMutation.isPending || (!form.pickup_address && !form.pickup_postcode) || !form.request_date} className="w-full bg-primary">
               {bookMutation.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
               Book Transport
             </Button>
@@ -949,6 +949,10 @@ export default function Transportation() {
           <div className="space-y-4 mt-2">
             <div><Label>Name</Label><Input value={locationForm.name} onChange={e => setLocationForm(f => ({ ...f, name: e.target.value }))} placeholder="e.g. Canton Bus Stop" /></div>
             <div><Label>Address</Label><Input value={locationForm.address} onChange={e => setLocationForm(f => ({ ...f, address: e.target.value }))} placeholder="Full address" /></div>
+            <div>
+              <Label>Postcode <span className="text-xs text-muted-foreground">(recommended — enables nearest-pickup matching)</span></Label>
+              <Input value={locationForm.postcode} onChange={e => setLocationForm(f => ({ ...f, postcode: e.target.value.toUpperCase() }))} placeholder="e.g. CF10 1AA" />
+            </div>
             <div><Label>Notes</Label><Textarea value={locationForm.notes} onChange={e => setLocationForm(f => ({ ...f, notes: e.target.value }))} rows={2} /></div>
             <Button onClick={() => saveLocationMutation.mutate(locationForm)} disabled={saveLocationMutation.isPending || !locationForm.name || !locationForm.address} className="w-full bg-primary">
               {saveLocationMutation.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
