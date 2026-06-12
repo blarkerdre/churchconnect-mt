@@ -1038,7 +1038,7 @@ export default function Transportation() {
                   })}
                 </SelectContent>
               </Select>
-              <p className="text-[11px] text-muted-foreground mt-1">Pick a Kingdom Chariot or Transport member to auto-fill, or type a name and phone below.</p>
+              <p className="text-[11px] text-muted-foreground mt-1">Kingdom Chariot drivers only appear when they've marked themselves available for the booking date. Transportation members are always listed.</p>
             </div>
             <div><Label>Driver Name</Label><Input value={manageForm.assigned_driver} onChange={e => setManageForm(f => ({ ...f, assigned_driver: e.target.value, driver_user_id: "" }))} placeholder="Driver name" /></div>
             <div><Label>Driver Phone</Label><Input value={manageForm.driver_phone} onChange={e => setManageForm(f => ({ ...f, driver_phone: e.target.value }))} placeholder="Phone number" /></div>
