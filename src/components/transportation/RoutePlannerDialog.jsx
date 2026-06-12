@@ -140,6 +140,37 @@ export default function RoutePlannerDialog({ open, onOpenChange, bookings, trans
       setSaving(false);
     }
   };
+  const handleNotifyDriver = async () => {
+    if (!driverId || !order.length) return;
+    setSaving(true);
+    try {
+      const stops = order.map(b => ({
+        passenger_name: b.members ? `${b.members.first_name} ${b.members.last_name}` : "Passenger",
+        pickup_time: b.pickup_time || "",
+        pickup_address: b.pickup_address || "",
+        pickup_postcode: b.pickup_postcode || "",
+        phone: b.members?.phone || "",
+        passengers: b.passengers || 1,
+      }));
+      const { error } = await supabase.functions.invoke("notify-transport-booking", {
+        body: {
+          notification_type: "driver_route",
+          driver_user_id: driverId,
+          tenant_id: tenantId,
+          date_from: dateFrom,
+          date_to: dateTo,
+          stops,
+        },
+      });
+      if (error) throw error;
+      toast({ title: "Driver notified", description: `Sent ${stops.length} stop(s) to driver.` });
+    } catch (err) {
+      toast({ title: "Error notifying driver", description: err.message, variant: "destructive" });
+    } finally {
+      setSaving(false);
+    }
+  };
+
 
   const handleClear = async () => {
     if (!order.length) return;
