@@ -450,7 +450,7 @@ export default function Transportation() {
               </Button>
             )}
             {canCreateBooking && (
-              <Button onClick={() => { setForm({ pickup_address: "", pickup_location_description: "", destination: "Church", request_date: "", pickup_time: "", notes: "", passengers: 1, journey_type: "Single", return_date: "", return_time: "" }); setBookDialogOpen(true); }} className="bg-primary hover:bg-primary/90">
+              <Button onClick={() => { setForm({ pickup_postcode: "", pickup_address: "", pickup_location_description: "", destination: "Church", request_date: "", pickup_time: "", notes: "", passengers: 1, journey_type: "Single", return_date: "", return_time: "" }); setBookDialogOpen(true); }} className="bg-primary hover:bg-primary/90">
                 <Plus className="h-4 w-4 mr-2" /> Book Transport
               </Button>
             )}
@@ -772,7 +772,17 @@ export default function Transportation() {
           <DialogHeader><DialogTitle className="font-display">Book Transport</DialogTitle></DialogHeader>
           <div className="space-y-4 mt-2">
             <div>
-              <Label>Pickup Location</Label>
+              <Label>Your Postcode *</Label>
+              <Input
+                value={form.pickup_postcode}
+                onChange={e => setForm(f => ({ ...f, pickup_postcode: e.target.value.toUpperCase() }))}
+                placeholder="e.g. CF10 1AA"
+                required
+              />
+              <p className="text-[11px] text-muted-foreground mt-1">We'll match you to the nearest active pickup point.</p>
+            </div>
+            <div>
+              <Label>Pickup Location <span className="text-xs text-muted-foreground">(optional — leave blank to use nearest)</span></Label>
               {pickupLocations.length > 0 ? (
                 <Select value={form.pickup_address} onValueChange={v => setForm(f => ({ ...f, pickup_address: v }))}>
                   <SelectTrigger><SelectValue placeholder="Select or type below" /></SelectTrigger>
