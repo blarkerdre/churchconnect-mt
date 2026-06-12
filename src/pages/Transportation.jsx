@@ -134,7 +134,7 @@ export default function Transportation() {
   const canRunCheckin = (b) => isLeader || isAssignee(b) || isDriverUser(b);
   const canContactPassenger = (b) => canRunCheckin(b);
   const canAcknowledge = (b) =>
-    isPassenger(b) && ["Confirmed", "Notified", "Checked In", "Picked Up", "Completed"].includes(b.status);
+    isPassenger(b) && !!b.notified_at && ["Notified", "Checked In", "Picked Up", "Completed"].includes(b.status);
 
   // Visibility: only admins / unit leaders see all bookings.
   // Drivers, assignees, and transport unit members see only bookings tied to them.
