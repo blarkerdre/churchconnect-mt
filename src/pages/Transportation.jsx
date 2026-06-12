@@ -68,9 +68,9 @@ export default function Transportation() {
   const [editLocationDialogOpen, setEditLocationDialogOpen] = useState(false);
   const [selectedBooking, setSelectedBooking] = useState(null);
   const [editingLocation, setEditingLocation] = useState(null);
-  const [form, setForm] = useState({ pickup_address: "", pickup_location_description: "", destination: "Church", request_date: "", pickup_time: "", notes: "", passengers: 1, journey_type: "Single", return_date: "", return_time: "" });
+  const [form, setForm] = useState({ pickup_postcode: "", pickup_address: "", pickup_location_description: "", destination: "Church", request_date: "", pickup_time: "", notes: "", passengers: 1, journey_type: "Single", return_date: "", return_time: "" });
   const [manageForm, setManageForm] = useState({ status: "", assigned_driver: "", driver_phone: "", driver_user_id: "", assigned_to: "", pickup_location_description: "" });
-  const [locationForm, setLocationForm] = useState({ name: "", address: "", notes: "" });
+  const [locationForm, setLocationForm] = useState({ name: "", address: "", postcode: "", notes: "" });
   const [confirmDelete, setConfirmDelete] = useState(null); // { title, description, run }
   const [detailBooking, setDetailBooking] = useState(null);
   const [reportOpen, setReportOpen] = useState(false);
@@ -132,9 +132,10 @@ export default function Transportation() {
   const canAcknowledge = (b) =>
     isPassenger(b) && ["Confirmed", "Notified", "Checked In", "Picked Up", "Completed"].includes(b.status);
 
-  // Visibility: leaders & unit members see all; otherwise own bookings + assignments + driver jobs
+  // Visibility: only admins / unit leaders see all bookings.
+  // Drivers, assignees, and transport unit members see only bookings tied to them.
   const visibleBookings =
-    isLeader || isTransportUnit
+    isLeader
       ? bookings
       : bookings.filter(b => b.user_id === user?.id || b.assigned_to === user?.id || b.driver_user_id === user?.id);
 
@@ -162,9 +163,29 @@ export default function Transportation() {
   const bookMutation = useMutation({
     mutationFn: async (formData) => {
       const { data: member } = await supabase.from("members").select("id").eq("user_id", user.id).eq("tenant_id", tenantId).single();
+
+      // Resolve nearest pickup point from postcode (best-effort, non-blocking)
+      let nearest = null;
+      let extraDesc = "";
+      if (formData.pickup_postcode) {
+        try {
+          const { data: resp } = await supabase.functions.invoke("resolve-nearest-pickup", {
+            body: { tenant_id: tenantId, postcode: formData.pickup_postcode },
+          });
+          if (resp?.match) {
+            nearest = resp.match;
+            extraDesc = `Nearest pickup: ${nearest.name} — ${nearest.address} (${nearest.distance_km} km away)`;
+          }
+        } catch (e) { /* swallow; save booking anyway */ }
+      }
+
+      const mergedDesc = [formData.pickup_location_description, extraDesc].filter(Boolean).join("\n");
+
       const { error } = await supabase.from("transportation").insert(withTenant({
-        pickup_address: formData.pickup_address,
-        pickup_location_description: formData.pickup_location_description || null,
+        pickup_address: formData.pickup_address || nearest?.address || "",
+        pickup_postcode: formData.pickup_postcode || null,
+        nearest_pickup_location_id: nearest?.id || null,
+        pickup_location_description: mergedDesc || null,
         destination: formData.destination || "Church",
         request_date: formData.request_date,
         pickup_time: formData.pickup_time || null,
@@ -177,10 +198,15 @@ export default function Transportation() {
         member_id: member?.id || null,
       }));
       if (error) throw error;
+      return { nearest };
     },
-    onSuccess: () => {
+    onSuccess: ({ nearest }) => {
       queryClient.invalidateQueries({ queryKey: ["transportation"] });
-      toast({ title: "Transport booked" });
+      if (nearest) {
+        toast({ title: "Transport booked", description: `Your pickup point will be ${nearest.name} (${nearest.distance_km} km away).` });
+      } else {
+        toast({ title: "Transport booked" });
+      }
       setBookDialogOpen(false);
     },
     onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
@@ -309,11 +335,14 @@ export default function Transportation() {
 
   const saveLocationMutation = useMutation({
     mutationFn: async (formData) => {
+      // If postcode changed, clear cached lat/lng so the edge function re-geocodes on next use.
+      const postcodeChanged = editingLocation && (editingLocation.postcode || "") !== (formData.postcode || "");
+      const geoReset = postcodeChanged ? { latitude: null, longitude: null } : {};
       if (editingLocation) {
-        const { error } = await supabase.from("pickup_locations").update({ name: formData.name, address: formData.address, notes: formData.notes || null }).eq("id", editingLocation.id).eq("tenant_id", tenantId);
+        const { error } = await supabase.from("pickup_locations").update({ name: formData.name, address: formData.address, postcode: formData.postcode || null, notes: formData.notes || null, ...geoReset }).eq("id", editingLocation.id).eq("tenant_id", tenantId);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("pickup_locations").insert(withTenant({ name: formData.name, address: formData.address, notes: formData.notes || null, created_by: user.id }));
+        const { error } = await supabase.from("pickup_locations").insert(withTenant({ name: formData.name, address: formData.address, postcode: formData.postcode || null, notes: formData.notes || null, created_by: user.id }));
         if (error) throw error;
       }
     },
