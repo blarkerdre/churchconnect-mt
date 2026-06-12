@@ -1013,7 +1013,17 @@ export default function Transportation() {
                 <SelectContent>
                   <SelectItem value="manual">— Enter manually below —</SelectItem>
                   {["Kingdom Chariot", "Transportation"].map(group => {
-                    const members = transportMembers.filter(m => m.unit_label === group);
+                    let members = transportMembers.filter(m => m.unit_label === group);
+                    if (group === "Kingdom Chariot") {
+                      const bookingDate = selectedBooking?.request_date;
+                      const availableIds = new Set(
+                        (availabilityEntries || [])
+                          .filter(a => !bookingDate || a.available_date === bookingDate)
+                          .map(a => a.driver_user_id)
+                          .filter(Boolean)
+                      );
+                      members = members.filter(m => availableIds.has(m.user_id));
+                    }
                     if (members.length === 0) return null;
                     return (
                       <div key={group}>
