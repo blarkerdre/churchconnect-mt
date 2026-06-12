@@ -735,7 +735,7 @@ export default function Transportation() {
                         </Button>
                       </>
                     ) : (
-                      <p className="text-xs text-muted-foreground">Your booking is awaiting team review.</p>
+                      <p className="text-xs text-muted-foreground">You'll be able to acknowledge once the Transport team notifies you with your pickup details.</p>
                     )}
                   </div>
                 )}
