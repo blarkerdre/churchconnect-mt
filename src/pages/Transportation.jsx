@@ -218,7 +218,7 @@ export default function Transportation() {
 
       const mergedDesc = [extraDesc].filter(Boolean).join("\n");
 
-      const { error } = await supabase.from("transportation").insert(withTenant({
+      const { data: inserted, error } = await supabase.from("transportation").insert(withTenant({
         pickup_address: formData.pickup_address || nearest?.address || "",
         pickup_postcode: formData.pickup_postcode || null,
         nearest_pickup_location_id: nearest?.id || null,
@@ -233,17 +233,28 @@ export default function Transportation() {
         return_time: formData.journey_type === "Round Trip" ? (formData.return_time || null) : null,
         user_id: user.id,
         member_id: member?.id || null,
-      }));
+      })).select("id").single();
       if (error) throw error;
-      return { nearest };
-    },
-    onSuccess: ({ nearest }) => {
-      queryClient.invalidateQueries({ queryKey: ["transportation"] });
-      if (nearest) {
-        toast({ title: "Transport booked", description: `Your pickup point will be ${nearest.name} (${nearest.distance_km} km away).` });
-      } else {
-        toast({ title: "Transport booked" });
+
+      // Best-effort auto-match to an available driver
+      let autoMatch = null;
+      if (inserted?.id) {
+        try {
+          const { data: mResp } = await supabase.functions.invoke("match-driver-by-postcode", {
+            body: { tenant_id: tenantId, booking_id: inserted.id },
+          });
+          const m = mResp?.matches?.[0];
+          if (m?.driver_user_id) autoMatch = m;
+        } catch (e) { /* ignore */ }
       }
+      return { nearest, autoMatch };
+    },
+    onSuccess: ({ nearest, autoMatch }) => {
+      queryClient.invalidateQueries({ queryKey: ["transportation"] });
+      const parts = [];
+      if (nearest) parts.push(`Pickup point: ${nearest.name} (${nearest.distance_km} km).`);
+      if (autoMatch?.driver_name) parts.push(`Auto-matched to driver ${autoMatch.driver_name}.`);
+      toast({ title: "Transport booked", description: parts.join(" ") || undefined });
       setBookDialogOpen(false);
     },
     onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
