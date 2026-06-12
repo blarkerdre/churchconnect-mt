@@ -483,28 +483,36 @@ export default function CertificatesReport() {
                     <TableHead>Member</TableHead>
                     <TableHead>Cert No</TableHead>
                     <TableHead>Programme</TableHead>
-                    <TableHead>Actor</TableHead>
+                    <TableHead>Completion</TableHead>
+                    <TableHead>Issued By</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {loading && <TableRow><TableCell colSpan={6} className="text-center py-6 text-muted-foreground">Loading…</TableCell></TableRow>}
+                  {loading && <TableRow><TableCell colSpan={7} className="text-center py-6 text-muted-foreground">Loading…</TableCell></TableRow>}
                   {!loading && filteredAudit.length === 0 && (
-                    <TableRow><TableCell colSpan={6} className="text-center py-6 text-muted-foreground">No activity in this range.</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={7} className="text-center py-6 text-muted-foreground">No activity in this range.</TableCell></TableRow>
                   )}
-                  {filteredAudit.map((a) => (
-                    <TableRow key={a.id}>
-                      <TableCell className="text-sm">{format(parseISO(a.created_at), "dd MMM yyyy HH:mm")}</TableCell>
-                      <TableCell>
-                        {a.action === "certificate_reissued"
-                          ? <Badge variant="secondary"><RotateCw className="h-3 w-3 mr-1" /> Reissued</Badge>
-                          : <Badge><Award className="h-3 w-3 mr-1" /> Issued</Badge>}
-                      </TableCell>
-                      <TableCell className="font-medium">{certMemberMap.get(a.details?.certificate_number) || "—"}</TableCell>
-                      <TableCell><Badge variant="outline" className="text-[10px]">{a.details?.certificate_number || "—"}</Badge></TableCell>
-                      <TableCell>{a.details?.training_type || "—"}</TableCell>
-                      <TableCell className="text-sm text-muted-foreground">{issuerMap.get(a.user_id) || "—"}</TableCell>
-                    </TableRow>
-                  ))}
+                  {filteredAudit.map((a) => {
+                    const info = resolveAuditMember(a);
+                    return (
+                      <TableRow key={a.id}>
+                        <TableCell className="text-sm">{format(parseISO(a.created_at), "dd MMM yyyy HH:mm")}</TableCell>
+                        <TableCell>
+                          {a.action === "certificate_reissued"
+                            ? <Badge variant="secondary"><RotateCw className="h-3 w-3 mr-1" /> Reissued</Badge>
+                            : <Badge><Award className="h-3 w-3 mr-1" /> Issued</Badge>}
+                        </TableCell>
+                        <TableCell className="font-medium">
+                          <div>{info.name}</div>
+                          {info.email && <div className="text-xs text-muted-foreground">{info.email}</div>}
+                        </TableCell>
+                        <TableCell><Badge variant="outline" className="text-[10px]">{a.details?.certificate_number || "—"}</Badge></TableCell>
+                        <TableCell>{a.details?.training_type || "—"}</TableCell>
+                        <TableCell className="text-sm">{info.completion_date ? format(parseISO(info.completion_date), "dd MMM yyyy") : "—"}</TableCell>
+                        <TableCell className="text-sm text-muted-foreground">{issuerMap.get(a.user_id) || "—"}</TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             </CardContent>
