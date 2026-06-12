@@ -3675,6 +3675,7 @@ export type Database = {
           request_date: string
           return_date: string | null
           return_time: string | null
+          service_type: string | null
           status: Database["public"]["Enums"]["transport_status"]
           tenant_id: string | null
           updated_at: string
@@ -3707,6 +3708,7 @@ export type Database = {
           request_date: string
           return_date?: string | null
           return_time?: string | null
+          service_type?: string | null
           status?: Database["public"]["Enums"]["transport_status"]
           tenant_id?: string | null
           updated_at?: string
@@ -3739,6 +3741,7 @@ export type Database = {
           request_date?: string
           return_date?: string | null
           return_time?: string | null
+          service_type?: string | null
           status?: Database["public"]["Enums"]["transport_status"]
           tenant_id?: string | null
           updated_at?: string

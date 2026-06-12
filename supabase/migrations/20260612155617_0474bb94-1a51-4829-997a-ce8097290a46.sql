@@ -1,0 +1,1 @@
+ALTER TABLE public.transportation ADD COLUMN IF NOT EXISTS service_type text;
