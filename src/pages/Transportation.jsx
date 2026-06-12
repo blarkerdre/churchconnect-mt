@@ -20,6 +20,9 @@ import PrintReportButton from "@/components/PrintReportButton";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
 import PasswordConfirmDialog from "@/components/shared/PasswordConfirmDialog";
 import { normalizePhone } from "@/lib/phone-utils";
+import { useAppSetting } from "@/hooks/useAppSetting";
+
+const DEFAULT_SERVICE_TYPES = ["Sunday Service", "Midweek Service", "Special Program", "Thanksgiving Service", "Other"];
 
 const statusColors = {
   "Pending": "bg-accent/10 text-accent",
