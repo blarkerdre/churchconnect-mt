@@ -19,7 +19,7 @@ function escHtml(str) {
 }
 import { useQueryClient } from "@tanstack/react-query";
 
-export default function RoutePlannerDialog({ open, onOpenChange, bookings, transportMembers, tenantId, currentUserId, isLeader = false }) {
+export default function RoutePlannerDialog({ open, onOpenChange, bookings, transportMembers, tenantId, currentUserId, isLeader = false, availabilityEntries = [] }) {
   const today = new Date().toISOString().split("T")[0];
   const [dateFrom, setDateFrom] = useState(today);
   const [dateTo, setDateTo] = useState(today);
@@ -29,23 +29,48 @@ export default function RoutePlannerDialog({ open, onOpenChange, bookings, trans
   const [dragIdx, setDragIdx] = useState(null);
   const queryClient = useQueryClient();
 
+  // Kingdom Chariot drivers must have an availability entry within the selected date range.
+  // Transportation drivers are always available.
+  const chariotAvailableUserIds = useMemo(() => {
+    const set = new Set();
+    (availabilityEntries || []).forEach((a) => {
+      if (!a.driver_user_id || !a.available_date) return;
+      if (dateFrom && a.available_date < dateFrom) return;
+      if (dateTo && a.available_date > dateTo) return;
+      set.add(a.driver_user_id);
+    });
+    return set;
+  }, [availabilityEntries, dateFrom, dateTo]);
+
   // Drivers: leaders pick from all transport/chariot members; non-leaders are locked to themselves.
   const driverOptions = useMemo(() => {
+    const isEligible = (m) =>
+      m.unit_label !== "Kingdom Chariot" || chariotAvailableUserIds.has(m.user_id);
     if (!isLeader && currentUserId) {
       const me = transportMembers.find(m => m.user_id === currentUserId);
-      return me ? [{ id: currentUserId, name: `${me.first_name} ${me.last_name} (You)`, unit: me.unit_label }] : [];
+      if (!me || !isEligible(me)) return [];
+      return [{ id: currentUserId, name: `${me.first_name} ${me.last_name} (You)`, unit: me.unit_label }];
     }
     const map = new Map();
     transportMembers.forEach(m => {
-      if (m.user_id) map.set(m.user_id, { name: `${m.first_name} ${m.last_name}`, unit: m.unit_label });
+      if (m.user_id && isEligible(m)) map.set(m.user_id, { name: `${m.first_name} ${m.last_name}`, unit: m.unit_label });
     });
     return Array.from(map.entries()).map(([id, v]) => ({ id, name: v.name, unit: v.unit }));
-  }, [transportMembers, isLeader, currentUserId]);
+  }, [transportMembers, isLeader, currentUserId, chariotAvailableUserIds]);
+
+  // Clear driver selection if previously chosen driver is no longer eligible (e.g. date range changed).
+  useEffect(() => {
+    if (driverId && !driverOptions.some((d) => d.id === driverId)) {
+      setDriverId("");
+    }
+  }, [driverOptions, driverId]);
 
   // Auto-select self for non-leaders
   useEffect(() => {
-    if (!isLeader && currentUserId && !driverId) setDriverId(currentUserId);
-  }, [isLeader, currentUserId, driverId]);
+    if (!isLeader && currentUserId && !driverId && driverOptions.some(d => d.id === currentUserId)) {
+      setDriverId(currentUserId);
+    }
+  }, [isLeader, currentUserId, driverId, driverOptions]);
 
   // Filter bookings for selected driver across the date range
   const candidates = useMemo(() => {
