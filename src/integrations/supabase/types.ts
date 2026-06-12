@@ -3700,8 +3700,10 @@ export type Database = {
       }
       transportation: {
         Row: {
+          assigned_at: string | null
           assigned_driver: string | null
           assigned_to: string | null
+          auto_matched: boolean
           checked_in_at: string | null
           checkin_notes: string | null
           created_at: string
@@ -3733,8 +3735,10 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          assigned_at?: string | null
           assigned_driver?: string | null
           assigned_to?: string | null
+          auto_matched?: boolean
           checked_in_at?: string | null
           checkin_notes?: string | null
           created_at?: string
@@ -3766,8 +3770,10 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          assigned_at?: string | null
           assigned_driver?: string | null
           assigned_to?: string | null
+          auto_matched?: boolean
           checked_in_at?: string | null
           checkin_notes?: string | null
           created_at?: string
