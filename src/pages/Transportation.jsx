@@ -838,7 +838,7 @@ export default function Transportation() {
             )}
             <div><Label>Passengers</Label><Input type="number" min="1" value={form.passengers} onChange={e => setForm(f => ({ ...f, passengers: e.target.value }))} /></div>
             <div><Label>Notes</Label><Textarea value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} rows={2} /></div>
-            <Button onClick={() => bookMutation.mutate(form)} disabled={bookMutation.isPending || (!form.pickup_address && !form.pickup_postcode) || !form.request_date} className="w-full bg-primary">
+            <Button onClick={() => bookMutation.mutate(form)} disabled={bookMutation.isPending || (!form.pickup_address && !form.pickup_postcode) || !form.request_date || !form.service_type} className="w-full bg-primary">
               {bookMutation.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
               Book Transport
             </Button>
