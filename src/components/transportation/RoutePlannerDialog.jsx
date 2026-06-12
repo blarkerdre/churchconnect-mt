@@ -387,7 +387,7 @@ export default function RoutePlannerDialog({ open, onOpenChange, bookings, trans
                 })}
               </ol>
 
-              {isLeader && (
+              {isLeader ? (
                 <div className="flex flex-wrap gap-2 mt-4">
                   <Button onClick={handleSave} disabled={saving} className="flex-1 bg-primary hover:bg-primary/90">
                     {saving && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
@@ -401,8 +401,19 @@ export default function RoutePlannerDialog({ open, onOpenChange, bookings, trans
                     <Bell className="h-4 w-4 mr-2" />
                     Notify Passengers
                   </Button>
+                  <Button variant="outline" onClick={handlePrint} disabled={saving}>
+                    <Printer className="h-4 w-4 mr-2" />
+                    Print Route
+                  </Button>
                   <Button variant="outline" onClick={handleClear} disabled={saving}>
                     Clear Order
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex flex-wrap gap-2 mt-4">
+                  <Button onClick={handlePrint} className="flex-1 bg-primary hover:bg-primary/90">
+                    <Printer className="h-4 w-4 mr-2" />
+                    Print My Route
                   </Button>
                 </div>
               )}
