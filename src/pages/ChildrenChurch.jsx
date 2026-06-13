@@ -16,6 +16,109 @@ import { Baby, Search, LogIn, LogOut, ShieldAlert, Clock, FileBarChart2, Downloa
 import { toast } from "sonner";
 import { format, formatDistanceToNow } from "date-fns";
 
+function ChildProfileDialog({ open, onOpenChange, childId, tenantId }) {
+  const { data: profile, isLoading } = useQuery({
+    queryKey: ["cc-child-profile", tenantId, childId],
+    enabled: !!open && !!childId && !!tenantId,
+    queryFn: async () => {
+      const { data: child } = await supabase.from("children")
+        .select("*, primary_guardian:primary_guardian_member_id(id, first_name, last_name, phone, email)")
+        .eq("id", childId).eq("tenant_id", tenantId).maybeSingle();
+      const { data: guardians = [] } = await supabase.from("child_guardians")
+        .select("id, relationship, can_pickup, members:member_id(first_name, last_name, phone, email)")
+        .eq("child_id", childId).eq("tenant_id", tenantId);
+      const { data: history = [] } = await supabase.from("child_checkins")
+        .select("id, status, dropoff_at, pickup_at")
+        .eq("child_id", childId).eq("tenant_id", tenantId)
+        .order("dropoff_at", { ascending: false }).limit(5);
+      return { child, guardians, history };
+    },
+  });
+
+  const child = profile?.child;
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>{child ? `${child.first_name} ${child.last_name}` : "Child profile"}</DialogTitle>
+          <DialogDescription>Children Church worker view — handle this information confidentially.</DialogDescription>
+        </DialogHeader>
+        {isLoading || !child ? (
+          <p className="text-sm text-muted-foreground py-4">Loading…</p>
+        ) : (
+          <div className="space-y-4 text-sm">
+            <div className="flex flex-wrap gap-2">
+              {child.age_group && <Badge variant="outline">{child.age_group}</Badge>}
+              {child.gender && <Badge variant="outline">{child.gender}</Badge>}
+              {child.date_of_birth && <Badge variant="outline">DOB {format(new Date(child.date_of_birth), "d MMM yyyy")}</Badge>}
+            </div>
+            {child.allergies && (
+              <div className="border border-destructive/30 bg-destructive/5 rounded p-2">
+                <p className="text-xs font-semibold text-destructive">⚠ Allergies</p>
+                <p className="text-sm">{child.allergies}</p>
+              </div>
+            )}
+            {child.medical_notes && (
+              <div>
+                <p className="text-xs font-semibold text-muted-foreground">Medical notes</p>
+                <p>{child.medical_notes}</p>
+              </div>
+            )}
+            {child.notes && (
+              <div>
+                <p className="text-xs font-semibold text-muted-foreground">Notes for workers</p>
+                <p>{child.notes}</p>
+              </div>
+            )}
+            <div>
+              <p className="text-xs font-semibold text-muted-foreground mb-1">Primary guardian</p>
+              {child.primary_guardian ? (
+                <div className="border rounded p-2">
+                  <p className="font-medium">{child.primary_guardian.first_name} {child.primary_guardian.last_name}</p>
+                  <p className="text-xs text-muted-foreground">{child.primary_guardian.phone || child.primary_guardian.email || "No contact"}</p>
+                </div>
+              ) : <p className="text-muted-foreground text-xs">Not set</p>}
+            </div>
+            <div>
+              <p className="text-xs font-semibold text-muted-foreground mb-1">Authorised pickup adults</p>
+              {profile.guardians.length === 0 ? (
+                <p className="text-muted-foreground text-xs">None registered.</p>
+              ) : (
+                <div className="space-y-1">
+                  {profile.guardians.map(g => (
+                    <div key={g.id} className="border rounded p-2 flex justify-between items-start">
+                      <div>
+                        <p className="font-medium">{g.members?.first_name} {g.members?.last_name}</p>
+                        <p className="text-xs text-muted-foreground">{g.relationship}{g.members?.phone ? ` · ${g.members.phone}` : ""}</p>
+                      </div>
+                      {!g.can_pickup && <Badge variant="outline" className="text-[10px]">Info only</Badge>}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div>
+              <p className="text-xs font-semibold text-muted-foreground mb-1">Recent check-ins</p>
+              {profile.history.length === 0 ? (
+                <p className="text-muted-foreground text-xs">No history.</p>
+              ) : (
+                <ul className="text-xs space-y-1">
+                  {profile.history.map(h => (
+                    <li key={h.id} className="flex justify-between border-b last:border-0 py-1">
+                      <span>{format(new Date(h.dropoff_at), "d MMM yyyy HH:mm")}</span>
+                      <Badge variant={h.status === "flagged" ? "destructive" : h.status === "picked_up" ? "default" : "outline"} className="text-[10px]">{h.status}</Badge>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function CheckInPanel({ tenantId }) {
   const qc = useQueryClient();
   const [search, setSearch] = useState("");
