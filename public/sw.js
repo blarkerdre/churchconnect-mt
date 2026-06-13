@@ -5,7 +5,7 @@
  * - Push notification handlers preserved
  */
 
-const VERSION = 'v4';
+const VERSION = 'v5';
 const HTML_CACHE = `html-${VERSION}`;
 const ASSET_CACHE = `assets-${VERSION}`;
 
@@ -68,8 +68,27 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Static assets -> StaleWhileRevalidate
-  if (/\.(?:js|css|woff2?|ttf|otf|png|jpg|jpeg|gif|svg|webp|ico)$/i.test(url.pathname)) {
+  // JS modules must be network-first so a stale hashed chunk can never keep a
+  // broken React hook order alive after a deployment.
+  if (/\.js$/i.test(url.pathname)) {
+    event.respondWith(
+      fetch(req)
+        .then((res) => {
+          if (res && res.status === 200) {
+            caches.open(ASSET_CACHE).then((cache) => cache.put(req, res.clone())).catch(() => {});
+          }
+          return res;
+        })
+        .catch(async () => {
+          const cache = await caches.open(ASSET_CACHE);
+          return (await cache.match(req)) || Response.error();
+        })
+    );
+    return;
+  }
+
+  // Other static assets -> StaleWhileRevalidate
+  if (/\.(?:css|woff2?|ttf|otf|png|jpg|jpeg|gif|svg|webp|ico)$/i.test(url.pathname)) {
     event.respondWith(
       (async () => {
         const cache = await caches.open(ASSET_CACHE);
