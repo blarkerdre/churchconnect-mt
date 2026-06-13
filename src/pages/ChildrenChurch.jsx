@@ -679,6 +679,7 @@ function CheckInPanel({ tenantId, tenantSlug }) {
         )}
       </CardContent>
       <ChildProfileDialog open={!!profileChildId} onOpenChange={(o) => !o && setProfileChildId(null)} childId={profileChildId} tenantId={tenantId} />
+      <WalkInRegisterDialog open={walkInOpen} onOpenChange={setWalkInOpen} tenantId={tenantId} onRegistered={handleWalkInRegistered} />
     </Card>
   );
 }
