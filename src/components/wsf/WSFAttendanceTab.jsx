@@ -24,6 +24,7 @@ export default function WSFAttendanceTab({ centres }) {
   const [editing, setEditing] = useState(null);
   const [selectedCentre, setSelectedCentre] = useState(null);
   const [filterCentreId, setFilterCentreId] = useState("all");
+  const [filterVenue, setFilterVenue] = useState("all");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [deleteTarget, setDeleteTarget] = useState(null);
