@@ -640,7 +640,7 @@ function ReportPanel({ tenantId }) {
     enabled: !!tenantId,
     queryFn: async () => {
       const { data } = await supabase.from("child_checkins")
-        .select("*, children:child_id(first_name, last_name, age_group), dropoff_parent:dropoff_parent_member_id(first_name, last_name), pickup_adult:pickup_adult_member_id(first_name, last_name)")
+        .select("*, children:child_id(first_name, last_name, age_group), dropoff_parent:dropoff_parent_member_id(first_name, last_name), pickup_adult:pickup_adult_member_id(first_name, last_name), pickup_delegation:pickup_delegation_id(delegate_name)")
         .eq("tenant_id", tenantId)
         .gte("service_date", from).lte("service_date", to)
         .order("service_date", { ascending: false }).limit(500);
@@ -658,13 +658,19 @@ function ReportPanel({ tenantId }) {
           .in("user_id", workerIds);
         workerMap = new Map((workers || []).map(w => [w.user_id, `${w.first_name} ${w.last_name}`]));
       }
-      return list.map(r => ({
-        ...r,
-        _dropoff_worker_name: workerMap.get(r.dropoff_worker_user_id) || "—",
-        _pickup_worker_name: r.pickup_worker_user_id ? (workerMap.get(r.pickup_worker_user_id) || "—") : "",
-        _dropoff_parent_name: r.dropoff_parent ? `${r.dropoff_parent.first_name} ${r.dropoff_parent.last_name}` : "",
-        _pickup_adult_name: r.pickup_adult ? `${r.pickup_adult.first_name} ${r.pickup_adult.last_name}` : "",
-      }));
+      return list.map(r => {
+        const legacyDelegate = r.pickup_method === "delegation_code" && r.notes
+          ? r.notes.replace(/^Delegate:\s*/i, "").trim()
+          : "";
+        return {
+          ...r,
+          _dropoff_worker_name: workerMap.get(r.dropoff_worker_user_id) || "—",
+          _pickup_worker_name: r.pickup_worker_user_id ? (workerMap.get(r.pickup_worker_user_id) || "—") : "",
+          _dropoff_parent_name: r.dropoff_parent ? `${r.dropoff_parent.first_name} ${r.dropoff_parent.last_name}` : "",
+          _pickup_adult_name: r.pickup_adult ? `${r.pickup_adult.first_name} ${r.pickup_adult.last_name}` : "",
+          _delegation_name: r.pickup_delegation?.delegate_name || legacyDelegate || "",
+        };
+      });
     },
   });
 
