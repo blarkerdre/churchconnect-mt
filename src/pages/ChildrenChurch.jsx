@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { Baby, Search, LogIn, LogOut, ShieldAlert, Clock, FileBarChart2, Download } from "lucide-react";
+import { Baby, Search, LogIn, LogOut, ShieldAlert, Clock, FileBarChart2, Download, Copy, Share2 } from "lucide-react";
 import { toast } from "sonner";
 import { format, formatDistanceToNow } from "date-fns";
 
@@ -190,14 +190,43 @@ function CheckInPanel({ tenantId }) {
     <Card>
       <CardHeader><CardTitle className="text-base">Drop-off</CardTitle><CardDescription>Search by child name, parent name, or phone — then select who to check in.</CardDescription></CardHeader>
       <CardContent className="space-y-3">
-        {issuedPin ? (
+        {issuedPin ? (() => {
+          const childNames = (issuedFor || []).map(c => `${c.first_name} ${c.last_name}`).join(", ");
+          const shareText = `Pickup code for ${childNames}: ${issuedPin}\nShow this PIN at pickup. Do not share publicly.`;
+          const canNativeShare = typeof navigator !== "undefined" && typeof navigator.share === "function";
+          const copy = async () => {
+            try {
+              await navigator.clipboard.writeText(shareText);
+              toast.success("Code copied");
+            } catch {
+              toast.error("Couldn't copy");
+            }
+          };
+          const share = async () => {
+            try {
+              await navigator.share({ title: "Children Church pickup code", text: shareText });
+            } catch (e) {
+              if (e?.name !== "AbortError") {
+                // Fallback to copy if share is blocked
+                copy();
+              }
+            }
+          };
+          return (
           <div className="text-center space-y-3 py-2">
             <p className="text-sm text-muted-foreground">Show this PIN to the parent. Needed for pickup.</p>
             <div className="text-5xl font-display font-bold tracking-widest border-2 border-primary rounded-lg p-6 text-primary">{issuedPin}</div>
-            <p className="text-sm">{issuedFor.map(c => `${c.first_name} ${c.last_name}`).join(", ")}</p>
+            <p className="text-sm">{childNames}</p>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={copy} className="flex-1"><Copy className="h-4 w-4 mr-2" />Copy</Button>
+              {canNativeShare && (
+                <Button variant="outline" onClick={share} className="flex-1"><Share2 className="h-4 w-4 mr-2" />Share</Button>
+              )}
+            </div>
             <Button onClick={reset} className="w-full">Done</Button>
           </div>
-        ) : !selectedFamily ? (
+          );
+        })() : !selectedFamily ? (
           <div className="space-y-2">
             <Label>Find child or parent</Label>
             <div className="relative">
