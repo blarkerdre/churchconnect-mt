@@ -29,6 +29,7 @@ export default function WSFAttendanceFormDialog({ open, onOpenChange, centre, re
         first_timers: report.first_timers || 0,
         testimonies: report.testimonies || 0,
         notes: report.notes || "",
+        held_at_home_cell: report.held_at_home_cell !== false,
       });
     } else {
       setForm({ ...empty, date: new Date().toISOString().split("T")[0] });
