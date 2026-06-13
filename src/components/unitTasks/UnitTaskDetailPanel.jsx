@@ -54,16 +54,21 @@ export default function UnitTaskDetailPanel({ open, onOpenChange, task, canManag
     },
   });
 
-  // Realtime updates for this task
+  // Realtime updates for this task — filter by tenant_id at the server (single-column
+  // Realtime limit); task_id is naturally scoped because we only refetch this task's queries.
   useEffect(() => {
-    if (!taskId || !open) return;
+    if (!taskId || !open || !tenantId) return;
     const ch = supabase
-      .channel(`task-${taskId}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "unit_task_assignments", filter: `task_id=eq.${taskId}` }, () => refetchA())
-      .on("postgres_changes", { event: "*", schema: "public", table: "unit_task_comments", filter: `task_id=eq.${taskId}` }, () => refetchC())
+      .channel(`task-${taskId}-${tenantId}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "unit_task_assignments", filter: `tenant_id=eq.${tenantId}` }, (p) => {
+        if (p.new?.task_id === taskId || p.old?.task_id === taskId) refetchA();
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "unit_task_comments", filter: `tenant_id=eq.${tenantId}` }, (p) => {
+        if (p.new?.task_id === taskId || p.old?.task_id === taskId) refetchC();
+      })
       .subscribe();
     return () => { supabase.removeChannel(ch); };
-  }, [taskId, open, refetchA, refetchC]);
+  }, [taskId, open, tenantId, refetchA, refetchC]);
 
   const myAssignment = assignments.find((a) => a.user_id === user?.id);
 

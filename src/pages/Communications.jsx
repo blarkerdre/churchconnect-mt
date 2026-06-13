@@ -194,6 +194,7 @@ function MemberSmsListView({ memberId, tenantId, channel, onSelect }) {
         .select("*")
         .eq("recipient_member_id", memberId)
         .eq("channel", channel)
+        .eq("tenant_id", tenantId)
         .order("created_at", { ascending: false })
         .limit(100);
       if (error) throw error;
@@ -239,6 +240,7 @@ function MemberEmailList({ memberId, memberEmail, tenantId, onSelect }) {
         .from("email_send_log")
         .select("*")
         .eq("recipient_email", memberEmail)
+        .eq("tenant_id", tenantId)
         .order("created_at", { ascending: false })
         .limit(200);
       if (error) throw error;
@@ -302,23 +304,25 @@ export default function Communications() {
 
   // Get WSF centre names for WSF leader scoping
   const { data: myWsfCentres = [] } = useQuery({
-    queryKey: ["my-wsf-centres-comms", user?.id],
+    queryKey: ["my-wsf-centres-comms", user?.id, tenantId],
     queryFn: async () => {
       const { data: memberData } = await supabase
         .from("members")
         .select("id")
         .eq("user_id", user.id)
+        .eq("tenant_id", tenantId)
         .maybeSingle();
       if (!memberData) return [];
       const { data, error } = await supabase
         .from("wsf_centres")
         .select("id, name")
         .eq("leader_id", memberData.id)
+        .eq("tenant_id", tenantId)
         .eq("is_active", true);
       if (error) throw error;
       return data || [];
     },
-    enabled: !!user?.id && isWSFLeader,
+    enabled: !!user?.id && !!tenantId && isWSFLeader,
   });
 
   // Build dynamic AUDIENCES
@@ -344,13 +348,16 @@ export default function Communications() {
   ] : undefined;
 
   const { data: myMember } = useQuery({
-    queryKey: ["my-member-comms", user?.id],
+    queryKey: ["my-member-comms", user?.id, tenantId],
     queryFn: async () => {
       const { data } = await supabase
-        .from("members").select("id, email, phone, church_unit").eq("user_id", user.id).single();
+        .from("members").select("id, email, phone, church_unit")
+        .eq("user_id", user.id)
+        .eq("tenant_id", tenantId)
+        .single();
       return data;
     },
-    enabled: !!user?.id,
+    enabled: !!user?.id && !!tenantId,
   });
 
   // Count queries for tab badges

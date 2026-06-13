@@ -110,7 +110,8 @@ export default function SermonNoteFormDialog({ open, onOpenChange, note, folders
             folder_id: payload.folder_id,
           })
           .eq("id", note.id)
-          .eq("user_id", user.id);
+          .eq("user_id", user.id)
+          .eq("tenant_id", tenantId);
         if (error) throw error;
         toast.success("Note updated.");
       } else {
