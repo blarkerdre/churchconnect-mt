@@ -55,6 +55,7 @@ export default function WSFAttendanceFormDialog({ open, onOpenChange, centre, re
       children: form.children,
       first_timers: form.first_timers,
       testimonies: form.testimonies,
+      held_at_home_cell: form.held_at_home_cell,
       notes: form.notes || null,
     });
     setSaving(false);
