@@ -101,7 +101,34 @@ export default function Auth() {
     );
   }
 
+  const claimToken = typeof window !== "undefined"
+    ? new URLSearchParams(window.location.search).get("claim")
+    : null;
+  const [claimDone, setClaimDone] = useState(false);
+
+  useEffect(() => {
+    if (!user || !claimToken || claimDone) return;
+    (async () => {
+      try {
+        const { error } = await supabase.rpc("claim_member", { _token: claimToken });
+        if (error) throw error;
+        toast({ title: "Profile linked", description: "Your family record is now attached to your account." });
+      } catch (e) {
+        toast({ title: "Could not link profile", description: e.message, variant: "destructive" });
+      } finally {
+        setClaimDone(true);
+      }
+    })();
+  }, [user, claimToken, claimDone, toast]);
+
   if (user) {
+    if (claimToken && !claimDone) {
+      return (
+        <div className="min-h-screen bg-background flex items-center justify-center">
+          <div className="animate-pulse text-muted-foreground">Linking your profile…</div>
+        </div>
+      );
+    }
     if (tenantSlug) {
       return <Navigate to={`/t/${tenantSlug}`} replace />;
     }

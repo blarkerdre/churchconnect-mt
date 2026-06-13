@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { Baby, Search, LogIn, LogOut, ShieldAlert, Clock, FileBarChart2, Download, Eye, User } from "lucide-react";
+import { Baby, Search, LogIn, LogOut, ShieldAlert, Clock, FileBarChart2, Download, Eye, User, UserPlus, Copy, Plus, Trash2, Mail } from "lucide-react";
 import { toast } from "sonner";
 import { format, formatDistanceToNow } from "date-fns";
 
@@ -119,7 +119,221 @@ function ChildProfileDialog({ open, onOpenChange, childId, tenantId }) {
   );
 }
 
-function CheckInPanel({ tenantId }) {
+const AGE_GROUPS = ["Nursery", "Toddler", "Primary", "Pre-Teen"];
+
+function buildClaimUrl(tenantSlug, token) {
+  const base = window.location.origin;
+  if (tenantSlug) return `${base}/t/${tenantSlug}/auth?claim=${token}`;
+  return `${base}/auth?claim=${token}`;
+}
+
+function ClaimInviteButton({ tenantId, memberId, defaultPhone, defaultEmail, tenantSlug, label = "Send claim invite", size = "sm", variant = "outline" }) {
+  const [open, setOpen] = useState(false);
+  const [phone, setPhone] = useState(defaultPhone || "");
+  const [email, setEmail] = useState(defaultEmail || "");
+  const [link, setLink] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const generate = async () => {
+    setBusy(true);
+    try {
+      const token = (crypto.randomUUID() + crypto.randomUUID()).replace(/-/g, "").slice(0, 40);
+      const { error } = await supabase.from("member_claim_invites").insert({
+        tenant_id: tenantId,
+        member_id: memberId,
+        token,
+        phone: phone || null,
+        email: email || null,
+      });
+      if (error) throw error;
+      setLink(buildClaimUrl(tenantSlug, token));
+      toast.success("Invite link ready — share it with the parent.");
+    } catch (e) {
+      toast.error(e.message || "Could not create invite");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const copy = async () => {
+    try { await navigator.clipboard.writeText(link); toast.success("Link copied"); }
+    catch { toast.error("Could not copy"); }
+  };
+
+  return (
+    <>
+      <Button size={size} variant={variant} onClick={() => setOpen(true)}>
+        <Mail className="h-4 w-4 mr-1" /> {label}
+      </Button>
+      <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) { setLink(""); } }}>
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Invite parent to claim profile</DialogTitle>
+            <DialogDescription>Generates a one-time link (valid 14 days). Share it via SMS, WhatsApp, or email.</DialogDescription>
+          </DialogHeader>
+          {!link ? (
+            <div className="space-y-3">
+              <div><Label>Mobile</Label><Input value={phone} onChange={e => setPhone(e.target.value)} placeholder="+44…" /></div>
+              <div><Label>Email</Label><Input type="email" value={email} onChange={e => setEmail(e.target.value)} /></div>
+              <p className="text-[11px] text-muted-foreground">Used to remember who the invite was for. The parent claims by signing up with any email.</p>
+              <DialogFooter>
+                <Button onClick={generate} disabled={busy} className="w-full">{busy ? "Generating…" : "Generate link"}</Button>
+              </DialogFooter>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <p className="text-sm">Share this link with the parent:</p>
+              <div className="border rounded p-2 bg-muted text-xs break-all">{link}</div>
+              <div className="flex gap-2">
+                <Button size="sm" variant="outline" className="flex-1" onClick={copy}><Copy className="h-3.5 w-3.5 mr-1" /> Copy</Button>
+                {phone && (
+                  <Button size="sm" variant="outline" className="flex-1" asChild>
+                    <a href={`sms:${phone}?body=${encodeURIComponent("Claim your family profile: " + link)}`}>SMS</a>
+                  </Button>
+                )}
+                {email && (
+                  <Button size="sm" variant="outline" className="flex-1" asChild>
+                    <a href={`mailto:${email}?subject=${encodeURIComponent("Claim your profile")}&body=${encodeURIComponent("Tap to claim your family profile: " + link)}`}>Email</a>
+                  </Button>
+                )}
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
+
+function WalkInRegisterDialog({ open, onOpenChange, tenantId, onRegistered }) {
+  const empty = { first_name: "", last_name: "", date_of_birth: "", gender: "", age_group: "", allergies: "", medical_notes: "" };
+  const [parent, setParent] = useState({ first_name: "", last_name: "", phone: "", email: "", notes: "" });
+  const [photoIdSeen, setPhotoIdSeen] = useState(false);
+  const [children, setChildren] = useState([{ ...empty }]);
+  const [busy, setBusy] = useState(false);
+
+  const reset = () => {
+    setParent({ first_name: "", last_name: "", phone: "", email: "", notes: "" });
+    setPhotoIdSeen(false);
+    setChildren([{ ...empty }]);
+  };
+
+  const updateChild = (i, patch) => setChildren(cs => cs.map((c, idx) => idx === i ? { ...c, ...patch } : c));
+  const addChild = () => setChildren(cs => [...cs, { ...empty }]);
+  const removeChild = (i) => setChildren(cs => cs.length > 1 ? cs.filter((_, idx) => idx !== i) : cs);
+
+  const submit = async () => {
+    if (!parent.first_name.trim() || !parent.last_name.trim()) return toast.error("Parent name is required");
+    if (!photoIdSeen) return toast.error("Confirm photo ID has been seen");
+    const cleanChildren = children.filter(c => c.first_name.trim() && c.last_name.trim());
+    if (cleanChildren.length === 0) return toast.error("Add at least one child with a name");
+    for (const c of cleanChildren) {
+      if (!c.date_of_birth && !c.age_group) return toast.error(`Age group or DOB required for ${c.first_name}`);
+    }
+    setBusy(true);
+    try {
+      const { data, error } = await supabase.rpc("register_walkin_family", {
+        _tenant_id: tenantId,
+        _parent: {
+          first_name: parent.first_name, last_name: parent.last_name,
+          phone: parent.phone, email: parent.email,
+          notes: [parent.notes, "Photo ID seen at drop-off"].filter(Boolean).join(" — "),
+        },
+        _children: cleanChildren,
+      });
+      if (error) throw error;
+      toast.success("Walk-in family registered");
+      onRegistered?.({
+        parent: { id: data.member_id, first_name: parent.first_name, last_name: parent.last_name, phone: parent.phone, email: parent.email },
+        children: (data.children || []).map(c => ({
+          id: c.id, first_name: c.first_name, last_name: c.last_name,
+          age_group: c.age_group, allergies: c.allergies,
+        })),
+      });
+      reset();
+      onOpenChange(false);
+    } catch (e) {
+      toast.error(e.message || "Could not register family");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => { if (!o) reset(); onOpenChange(o); }}>
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Register walk-in family</DialogTitle>
+          <DialogDescription>For parents without an app account. Creates a visitor record and the child(ren) so check-in can proceed.</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <p className="text-sm font-semibold">Parent / guardian</p>
+            <div className="grid grid-cols-2 gap-2">
+              <div><Label>First name *</Label><Input value={parent.first_name} onChange={e => setParent({ ...parent, first_name: e.target.value })} /></div>
+              <div><Label>Last name *</Label><Input value={parent.last_name} onChange={e => setParent({ ...parent, last_name: e.target.value })} /></div>
+              <div><Label>Mobile</Label><Input value={parent.phone} onChange={e => setParent({ ...parent, phone: e.target.value })} placeholder="+44…" /></div>
+              <div><Label>Email</Label><Input type="email" value={parent.email} onChange={e => setParent({ ...parent, email: e.target.value })} /></div>
+            </div>
+            <div><Label>Notes</Label><Textarea rows={2} value={parent.notes} onChange={e => setParent({ ...parent, notes: e.target.value })} placeholder="Relationship to child, etc." /></div>
+            <label className="flex items-center gap-2 text-sm border border-amber-500/40 bg-amber-500/5 rounded p-2">
+              <input type="checkbox" checked={photoIdSeen} onChange={e => setPhotoIdSeen(e.target.checked)} />
+              I have seen the parent's photo ID
+            </label>
+          </div>
+
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-semibold">Children</p>
+              <Button type="button" size="sm" variant="ghost" onClick={addChild}><Plus className="h-3.5 w-3.5 mr-1" /> Add child</Button>
+            </div>
+            {children.map((c, i) => (
+              <div key={i} className="border rounded p-2 space-y-2">
+                <div className="flex justify-between items-center">
+                  <p className="text-xs text-muted-foreground">Child {i + 1}</p>
+                  {children.length > 1 && (
+                    <Button type="button" size="sm" variant="ghost" onClick={() => removeChild(i)}><Trash2 className="h-3.5 w-3.5" /></Button>
+                  )}
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div><Label>First name *</Label><Input value={c.first_name} onChange={e => updateChild(i, { first_name: e.target.value })} /></div>
+                  <div><Label>Last name *</Label><Input value={c.last_name} onChange={e => updateChild(i, { last_name: e.target.value })} /></div>
+                  <div><Label>Date of birth</Label><Input type="date" value={c.date_of_birth} onChange={e => updateChild(i, { date_of_birth: e.target.value })} /></div>
+                  <div>
+                    <Label>Age group</Label>
+                    <Select value={c.age_group} onValueChange={(v) => updateChild(i, { age_group: v })}>
+                      <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
+                      <SelectContent>{AGE_GROUPS.map(g => <SelectItem key={g} value={g}>{g}</SelectItem>)}</SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label>Gender</Label>
+                    <Select value={c.gender} onValueChange={(v) => updateChild(i, { gender: v })}>
+                      <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Male">Male</SelectItem>
+                        <SelectItem value="Female">Female</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div><Label>Allergies</Label><Input value={c.allergies} onChange={e => updateChild(i, { allergies: e.target.value })} placeholder="e.g. nuts" /></div>
+                <div><Label>Medical notes</Label><Textarea rows={2} value={c.medical_notes} onChange={e => updateChild(i, { medical_notes: e.target.value })} /></div>
+              </div>
+            ))}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+            <Button onClick={submit} disabled={busy}>{busy ? "Saving…" : "Register & continue check-in"}</Button>
+          </DialogFooter>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function CheckInPanel({ tenantId, tenantSlug }) {
   const qc = useQueryClient();
   const [search, setSearch] = useState("");
   const [selectedFamily, setSelectedFamily] = useState(null); // { parent, children }
@@ -128,6 +342,8 @@ function CheckInPanel({ tenantId }) {
   const [issuedPin, setIssuedPin] = useState(null);
   const [issuedFor, setIssuedFor] = useState(null);
   const [profileChildId, setProfileChildId] = useState(null);
+  const [walkInOpen, setWalkInOpen] = useState(false);
+  const [walkInMemberId, setWalkInMemberId] = useState(null); // for invite after PIN
 
   // Eligible drop-off adults for currently selected children: primary parents + authorised guardians.
   const { data: broughtByOptions = [] } = useQuery({
@@ -334,7 +550,13 @@ function CheckInPanel({ tenantId }) {
     onError: (e) => toast.error(e.message || "Check-in failed"),
   });
 
-  const reset = () => { setSearch(""); setSelectedFamily(null); setSelectedChildIds([]); setBroughtById(""); setIssuedPin(null); setIssuedFor(null); };
+  const reset = () => { setSearch(""); setSelectedFamily(null); setSelectedChildIds([]); setBroughtById(""); setIssuedPin(null); setIssuedFor(null); setWalkInMemberId(null); };
+
+  const handleWalkInRegistered = (family) => {
+    setSelectedFamily(family);
+    setSelectedChildIds(family.children.map(c => c.id));
+    setWalkInMemberId(family.parent.id);
+  };
 
   return (
     <Card>
@@ -345,6 +567,21 @@ function CheckInPanel({ tenantId }) {
             <p className="text-sm text-muted-foreground">Show this PIN to the parent. Needed for pickup.</p>
             <div className="text-5xl font-display font-bold tracking-widest border-2 border-primary rounded-lg p-6 text-primary">{issuedPin}</div>
             <p className="text-sm">{issuedFor.map(c => `${c.first_name} ${c.last_name}`).join(", ")}</p>
+            {walkInMemberId && (
+              <div className="border rounded p-3 text-left space-y-2 bg-muted/40">
+                <p className="text-xs font-semibold">Walk-in family</p>
+                <p className="text-[11px] text-muted-foreground">Optional: invite the parent to claim their profile so next time they can register children themselves.</p>
+                <ClaimInviteButton
+                  tenantId={tenantId}
+                  tenantSlug={tenantSlug}
+                  memberId={walkInMemberId}
+                  defaultPhone={selectedFamily?.parent?.phone}
+                  defaultEmail={selectedFamily?.parent?.email}
+                  label="Send claim invite to parent"
+                  size="sm"
+                />
+              </div>
+            )}
             <Button onClick={reset} className="w-full">Done</Button>
           </div>
         ) : !selectedFamily ? (
@@ -356,7 +593,12 @@ function CheckInPanel({ tenantId }) {
             </div>
             <div className="space-y-2 max-h-80 overflow-y-auto">
               {search.trim().length >= 2 && !searching && families.length === 0 && (
-                <p className="text-sm text-muted-foreground text-center py-3">No matching child or parent found. Check spelling, or ask the parent to register the child under "My Family".</p>
+                <div className="text-center py-3 space-y-2">
+                  <p className="text-sm text-muted-foreground">No matching child or parent found.</p>
+                  <Button size="sm" variant="outline" onClick={() => setWalkInOpen(true)}>
+                    <UserPlus className="h-3.5 w-3.5 mr-1" /> Register walk-in family
+                  </Button>
+                </div>
               )}
               {families.map(f => (
                 <div key={f.parent.id} className="border rounded p-2 hover:bg-muted text-sm cursor-pointer"
@@ -375,6 +617,11 @@ function CheckInPanel({ tenantId }) {
                   </div>
                 </div>
               ))}
+            </div>
+            <div className="pt-2 border-t">
+              <Button size="sm" variant="ghost" onClick={() => setWalkInOpen(true)} className="w-full">
+                <UserPlus className="h-3.5 w-3.5 mr-1" /> Parent without an app account? Register walk-in family
+              </Button>
             </div>
           </div>
         ) : (
@@ -432,6 +679,7 @@ function CheckInPanel({ tenantId }) {
         )}
       </CardContent>
       <ChildProfileDialog open={!!profileChildId} onOpenChange={(o) => !o && setProfileChildId(null)} childId={profileChildId} tenantId={tenantId} />
+      <WalkInRegisterDialog open={walkInOpen} onOpenChange={setWalkInOpen} tenantId={tenantId} onRegistered={handleWalkInRegistered} />
     </Card>
   );
 }
@@ -785,6 +1033,9 @@ function ReportPanel({ tenantId }) {
 export default function ChildrenChurch() {
   const { tenantId } = useTenantQuery();
   const { user, isAdmin } = useAuth();
+  const tenantSlug = typeof window !== "undefined"
+    ? (window.location.pathname.match(/^\/t\/([^/]+)/)?.[1] || null)
+    : null;
 
   const { data: isLeader = false } = useQuery({
     queryKey: ["is-cc-leader", tenantId, user?.id],
@@ -807,7 +1058,7 @@ export default function ChildrenChurch() {
           <TabsTrigger value="pickup">Pickup</TabsTrigger>
           {(isLeader || isAdmin) && <TabsTrigger value="report">Report</TabsTrigger>}
         </TabsList>
-        <TabsContent value="checkin"><CheckInPanel tenantId={tenantId} /></TabsContent>
+        <TabsContent value="checkin"><CheckInPanel tenantId={tenantId} tenantSlug={tenantSlug} /></TabsContent>
         <TabsContent value="pickup"><PickupPanel tenantId={tenantId} isLeader={isLeader || isAdmin} /></TabsContent>
         {(isLeader || isAdmin) && <TabsContent value="report"><ReportPanel tenantId={tenantId} /></TabsContent>}
       </Tabs>
