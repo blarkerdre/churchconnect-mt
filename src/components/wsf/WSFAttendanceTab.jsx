@@ -235,6 +235,16 @@ export default function WSFAttendanceTab({ centres }) {
           </Select>
           <Input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="w-36" />
           <Input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="w-36" />
+          <Select value={filterVenue} onValueChange={setFilterVenue}>
+            <SelectTrigger className="w-44">
+              <SelectValue placeholder="All venues" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Venues</SelectItem>
+              <SelectItem value="home">At Home Cell</SelectItem>
+              <SelectItem value="off">Not at Home Cell</SelectItem>
+            </SelectContent>
+          </Select>
           {filteredReports.length > 0 && (
             <>
               <Button variant="outline" size="sm" onClick={downloadReport}>
