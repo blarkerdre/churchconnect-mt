@@ -1,4 +1,5 @@
 import { Toaster } from "@/components/ui/toaster";
+import { Toaster as SonnerToaster } from "@/components/ui/sonner";
 import { QueryClientProvider, useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { queryClientInstance } from "@/lib/query-client";
@@ -288,6 +289,7 @@ function App() {
         <AppRoutes />
       </Router>
       <Toaster />
+      <SonnerToaster />
     </QueryClientProvider>
   );
 }
