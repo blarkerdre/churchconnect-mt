@@ -343,6 +343,7 @@ export default function WSFAttendanceTab({ centres }) {
                 <TableRow>
                   <TableHead>Date</TableHead>
                   <TableHead>Centre</TableHead>
+                  <TableHead>Venue</TableHead>
                   <TableHead className="text-center">Male</TableHead>
                   <TableHead className="text-center">Female</TableHead>
                   <TableHead className="text-center">Adults</TableHead>
