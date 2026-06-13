@@ -98,19 +98,6 @@ export default function Auth() {
     }
   }, [tenant?.settings]);
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="animate-pulse text-muted-foreground">Loading...</div>
-      </div>
-    );
-  }
-
-  const claimToken = typeof window !== "undefined"
-    ? new URLSearchParams(window.location.search).get("claim")
-    : null;
-  const [claimDone, setClaimDone] = useState(false);
-
   useEffect(() => {
     if (!user || !claimToken || claimDone) return;
     (async () => {
@@ -125,6 +112,16 @@ export default function Auth() {
       }
     })();
   }, [user, claimToken, claimDone, toast]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="animate-pulse text-muted-foreground">Loading...</div>
+      </div>
+    );
+  }
+
+
 
   if (user) {
     if (claimToken && !claimDone) {
