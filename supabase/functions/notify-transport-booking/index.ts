@@ -264,7 +264,8 @@ Deno.serve(async (req) => {
     const TWILIO_FROM = Deno.env.get("TWILIO_FROM_NUMBER");
 
     const senderDomain = "notify.app.churchmanagementsuite.org";
-    const safeFromName = `"${String(churchShortName).replace(/[\\"]/g, "\\$&")}"`;
+    const cleanedFromName = String(churchShortName || "").replace(/[\x00-\x1F\x7F]/g, "").replace(/\s+/g, " ").trim() || "Church";
+    const safeFromName = `"${cleanedFromName.replace(/[\\"]/g, "\\$&")}"`;
     const fromAddress = `${safeFromName} <noreply@${senderDomain}>`;
 
     const isNewBooking = notification_type === "new_booking";
