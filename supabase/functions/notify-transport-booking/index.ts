@@ -123,7 +123,8 @@ Deno.serve(async (req) => {
       }
 
       const senderDomain = "notify.app.churchmanagementsuite.org";
-      const safeFromName = `"${String(churchName).replace(/[\\"]/g, "\\$&")}"`;
+      const cleanedFromName = String(churchName || "").replace(/[\x00-\x1F\x7F]/g, "").replace(/\s+/g, " ").trim() || "Church";
+      const safeFromName = `"${cleanedFromName.replace(/[\\"]/g, "\\$&")}"`;
       const fromAddress = `${safeFromName} <noreply@${senderDomain}>`;
 
       for (const leaderId of leaderIds) {
