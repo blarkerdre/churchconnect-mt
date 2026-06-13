@@ -1033,6 +1033,9 @@ function ReportPanel({ tenantId }) {
 export default function ChildrenChurch() {
   const { tenantId } = useTenantQuery();
   const { user, isAdmin } = useAuth();
+  const tenantSlug = typeof window !== "undefined"
+    ? (window.location.pathname.match(/^\/t\/([^/]+)/)?.[1] || null)
+    : null;
 
   const { data: isLeader = false } = useQuery({
     queryKey: ["is-cc-leader", tenantId, user?.id],
@@ -1055,7 +1058,7 @@ export default function ChildrenChurch() {
           <TabsTrigger value="pickup">Pickup</TabsTrigger>
           {(isLeader || isAdmin) && <TabsTrigger value="report">Report</TabsTrigger>}
         </TabsList>
-        <TabsContent value="checkin"><CheckInPanel tenantId={tenantId} /></TabsContent>
+        <TabsContent value="checkin"><CheckInPanel tenantId={tenantId} tenantSlug={tenantSlug} /></TabsContent>
         <TabsContent value="pickup"><PickupPanel tenantId={tenantId} isLeader={isLeader || isAdmin} /></TabsContent>
         {(isLeader || isAdmin) && <TabsContent value="report"><ReportPanel tenantId={tenantId} /></TabsContent>}
       </Tabs>
