@@ -640,7 +640,7 @@ function ReportPanel({ tenantId }) {
     enabled: !!tenantId,
     queryFn: async () => {
       const { data } = await supabase.from("child_checkins")
-        .select("*, children:child_id(first_name, last_name, age_group), dropoff_parent:dropoff_parent_member_id(first_name, last_name), pickup_adult:pickup_adult_member_id(first_name, last_name)")
+        .select("*, children:child_id(first_name, last_name, age_group), dropoff_parent:dropoff_parent_member_id(first_name, last_name), pickup_adult:pickup_adult_member_id(first_name, last_name), pickup_delegation:pickup_delegation_id(delegate_name)")
         .eq("tenant_id", tenantId)
         .gte("service_date", from).lte("service_date", to)
         .order("service_date", { ascending: false }).limit(500);
@@ -658,13 +658,19 @@ function ReportPanel({ tenantId }) {
           .in("user_id", workerIds);
         workerMap = new Map((workers || []).map(w => [w.user_id, `${w.first_name} ${w.last_name}`]));
       }
-      return list.map(r => ({
-        ...r,
-        _dropoff_worker_name: workerMap.get(r.dropoff_worker_user_id) || "—",
-        _pickup_worker_name: r.pickup_worker_user_id ? (workerMap.get(r.pickup_worker_user_id) || "—") : "",
-        _dropoff_parent_name: r.dropoff_parent ? `${r.dropoff_parent.first_name} ${r.dropoff_parent.last_name}` : "",
-        _pickup_adult_name: r.pickup_adult ? `${r.pickup_adult.first_name} ${r.pickup_adult.last_name}` : "",
-      }));
+      return list.map(r => {
+        const legacyDelegate = r.pickup_method === "delegation_code" && r.notes
+          ? r.notes.replace(/^Delegate:\s*/i, "").trim()
+          : "";
+        return {
+          ...r,
+          _dropoff_worker_name: workerMap.get(r.dropoff_worker_user_id) || "—",
+          _pickup_worker_name: r.pickup_worker_user_id ? (workerMap.get(r.pickup_worker_user_id) || "—") : "",
+          _dropoff_parent_name: r.dropoff_parent ? `${r.dropoff_parent.first_name} ${r.dropoff_parent.last_name}` : "",
+          _pickup_adult_name: r.pickup_adult ? `${r.pickup_adult.first_name} ${r.pickup_adult.last_name}` : "",
+          _delegation_name: r.pickup_delegation?.delegate_name || legacyDelegate || "",
+        };
+      });
     },
   });
 
@@ -681,7 +687,7 @@ function ReportPanel({ tenantId }) {
 
   const downloadCSV = () => {
     const q = (v) => `"${String(v ?? "").replace(/"/g,'""')}"`;
-    const headers = ["service_date","child","age_group","dropoff_at","dropoff_worker","brought_by","pickup_at","pickup_method","pickup_worker_or_leader","collected_by","status","override_reason"];
+    const headers = ["service_date","child","age_group","dropoff_at","dropoff_worker","brought_by","pickup_at","pickup_method","pickup_worker_or_leader","collected_by","delegated_to","status","override_reason"];
     const lines = [headers.join(",")];
     for (const r of rows) {
       const isOverride = r.pickup_method === "leader_override";
@@ -696,6 +702,7 @@ function ReportPanel({ tenantId }) {
         r.pickup_method || "",
         q(isOverride && r._pickup_worker_name ? `LEADER: ${r._pickup_worker_name}` : r._pickup_worker_name),
         q(r._pickup_adult_name),
+        q(r._delegation_name),
         r.status,
         q(r.override_reason || ""),
       ].join(","));
@@ -738,6 +745,7 @@ function ReportPanel({ tenantId }) {
               <th className="p-2 text-left">Method</th>
               <th className="p-2 text-left">Released by</th>
               <th className="p-2 text-left">Collected by</th>
+              <th className="p-2 text-left">Delegated to</th>
               <th className="p-2 text-left">Status</th>
             </tr></thead>
             <tbody>
@@ -760,11 +768,12 @@ function ReportPanel({ tenantId }) {
                       ) : "—"}
                     </td>
                     <td className="p-2">{r._pickup_adult_name || "—"}{r.override_reason ? <div className="text-[10px] text-muted-foreground mt-0.5" title={r.override_reason}>Reason: {r.override_reason.length > 40 ? r.override_reason.slice(0,40)+"…" : r.override_reason}</div> : null}</td>
+                    <td className="p-2">{r._delegation_name || "—"}</td>
                     <td className="p-2"><Badge variant={r.status === "flagged" ? "destructive" : r.status === "picked_up" ? "default" : "outline"}>{r.status}</Badge></td>
                   </tr>
                 );
               })}
-              {rows.length === 0 && <tr><td colSpan="9" className="p-4 text-center text-muted-foreground">No records.</td></tr>}
+              {rows.length === 0 && <tr><td colSpan="11" className="p-4 text-center text-muted-foreground">No records.</td></tr>}
             </tbody>
           </table>
         </div>
