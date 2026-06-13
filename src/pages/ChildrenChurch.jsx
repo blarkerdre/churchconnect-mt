@@ -745,6 +745,7 @@ function ReportPanel({ tenantId }) {
               <th className="p-2 text-left">Method</th>
               <th className="p-2 text-left">Released by</th>
               <th className="p-2 text-left">Collected by</th>
+              <th className="p-2 text-left">Delegated to</th>
               <th className="p-2 text-left">Status</th>
             </tr></thead>
             <tbody>
@@ -767,11 +768,12 @@ function ReportPanel({ tenantId }) {
                       ) : "—"}
                     </td>
                     <td className="p-2">{r._pickup_adult_name || "—"}{r.override_reason ? <div className="text-[10px] text-muted-foreground mt-0.5" title={r.override_reason}>Reason: {r.override_reason.length > 40 ? r.override_reason.slice(0,40)+"…" : r.override_reason}</div> : null}</td>
+                    <td className="p-2">{r._delegation_name || "—"}</td>
                     <td className="p-2"><Badge variant={r.status === "flagged" ? "destructive" : r.status === "picked_up" ? "default" : "outline"}>{r.status}</Badge></td>
                   </tr>
                 );
               })}
-              {rows.length === 0 && <tr><td colSpan="9" className="p-4 text-center text-muted-foreground">No records.</td></tr>}
+              {rows.length === 0 && <tr><td colSpan="11" className="p-4 text-center text-muted-foreground">No records.</td></tr>}
             </tbody>
           </table>
         </div>
