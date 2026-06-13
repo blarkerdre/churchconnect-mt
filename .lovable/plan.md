@@ -1,27 +1,51 @@
-## Goal
-Add worker/leader names to the Children Church Report (table + CSV) so admins can see who handled each drop-off and pickup, and which leader authorised any override.
+# Notify parent with pickup code on check-in
 
-## Changes (Report panel only, `src/pages/ChildrenChurch.jsx` → `ReportPanel`)
+When a Children Church worker completes drop-off, send the selected parent an in-app notification containing the 6-digit pickup PIN and the children it covers, in addition to the on-screen PIN shown to the worker.
 
-1. **Extend the query** to resolve worker users (Children Church team members) to member names by joining `members` via `user_id`:
-   - `dropoff_worker:members!child_checkins_dropoff_worker_user_id_fkey(...)` — if no FK exists, fetch worker user_ids separately and look up `members` (`first_name`, `last_name`) by `user_id` in a second lightweight query, then merge in memory.
-   - Same for `pickup_worker_user_id`.
-   - Also resolve `dropoff_parent_member_id` and `pickup_adult_member_id` to names (these already FK to `members`).
+## Behaviour
 
-2. **Table columns** (after existing ones):
-   - Drop-off by (worker)
-   - Released by (pickup worker) — shown as **Leader (override)** in red/destructive badge when `pickup_method = 'leader_override'`
-   - Collected by (pickup adult / delegation)
-   - Override reason (truncated, full on hover) — only when present
+- Trigger: successful `checkin_child` RPC for all selected children (existing flow in `src/pages/ChildrenChurch.jsx`).
+- Recipient: the parent chosen during drop-off (`selectedFamily.parent`). Only sent when that parent has a linked `user_id` (i.e. an app account). If they don't, the worker still sees the PIN on screen and we silently skip — no error toast.
+- Channel: in-app notification (existing `notifications` table). The bell and `useMessageAlerts`-style realtime feed already handle delivery + chime; push delivery follows automatically via the existing trigger → `send-push` pipeline.
+- Content:
+  - title: `"Pickup code for <child names>"` (truncated for many children)
+  - message: `"Your pickup PIN is <PIN>. Show this at pickup. Do not share."`
+  - `type: "children_church"`, `reference_type: "children_church"`, `reference_id: <first child_checkin id or child id>`, `tenant_id`.
+- Worker UX unchanged: the PIN card still displays for the worker to verbally confirm.
 
-3. **CSV export** — add columns: `dropoff_worker`, `pickup_worker`, `pickup_adult`, plus keep existing `override_reason`. Header row updated to match.
+## Implementation
 
-4. **No schema or business-logic changes.** Purely presentation: same RLS, same data source, no new mutations.
+Edit `src/pages/ChildrenChurch.jsx` only — no schema or RPC changes.
 
-## Technical notes
-- Workers are auth users, not members directly. Approach: fetch distinct `dropoff_worker_user_id` + `pickup_worker_user_id` from the result rows, then `supabase.from("members").select("user_id, first_name, last_name").in("user_id", ids).eq("tenant_id", tenantId)` and build a `Map`. Fallback to "Unknown" when a worker has no member record.
-- Adult names: fetch via `.in("id", adultIds)` against `members`.
-- All lookups are tenant-scoped.
+In the `checkIn` mutation's `mutationFn`, after the per-child RPC loop succeeds:
+
+1. Look up the parent's `user_id`:
+   ```js
+   const { data: parent } = await supabase
+     .from("members")
+     .select("user_id")
+     .eq("id", selectedFamily.parent.id)
+     .eq("tenant_id", tenantId)
+     .maybeSingle();
+   ```
+2. If `parent?.user_id`, insert one notification (tenant-scoped):
+   ```js
+   await supabase.from("notifications").insert({
+     user_id: parent.user_id,
+     tenant_id: tenantId,
+     title: `Pickup code for ${snapshot.map(c => c.first_name).join(", ").slice(0, 80)}`,
+     message: `Your pickup PIN is ${pin}. Show this at pickup. Do not share.`,
+     type: "children_church",
+     reference_type: "children_church",
+   });
+   ```
+   Wrap in try/catch and log on failure — never block the check-in success path.
+3. Return `{ pin, children: snapshot }` as today.
+
+RLS already allows tenant admins / unit leaders to insert notifications, which matches who operates the drop-off panel. No policy changes.
 
 ## Out of scope
-Drop-off/pickup UI, override workflow, PIN logic, schema changes.
+
+- SMS / email delivery of the PIN (can be added later behind a tenant toggle).
+- Changing PIN format, expiry, or hashing.
+- Pickup-side notifications.
