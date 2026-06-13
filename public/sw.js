@@ -1,150 +1,30 @@
-/* Auto-updating service worker
- * - skipWaiting + clients.claim so new versions activate immediately
- * - NetworkFirst for HTML navigations (never lock to a stale shell)
- * - StaleWhileRevalidate for static assets (JS/CSS/images)
- * - Push notification handlers preserved
- */
-
-const VERSION = 'v5';
-const HTML_CACHE = `html-${VERSION}`;
-const ASSET_CACHE = `assets-${VERSION}`;
-
-self.addEventListener('install', (event) => {
-  // Activate this worker as soon as it finishes installing
-  self.skipWaiting();
-});
-
-self.addEventListener('activate', (event) => {
-  event.waitUntil(
-    (async () => {
-      // Clean up old caches from previous versions
-      const names = await caches.keys();
-      await Promise.all(
-        names
-          .filter((n) => n !== HTML_CACHE && n !== ASSET_CACHE)
-          .map((n) => caches.delete(n))
-      );
-      // Take control of all open clients immediately
-      await self.clients.claim();
-    })()
+// Temporary app-shell service worker kill switch.
+// It replaces the previous /sw.js so returning browsers discard stale cached
+// React chunks, then unregisters itself.
+function isLegacyAppCache(name) {
+  return (
+    /^html-v\d+$/.test(name) ||
+    /^assets-v\d+$/.test(name) ||
+    ((/(^|-)precache-v\d+-|(^|-)runtime-|(^|-)googleAnalytics-/).test(name) &&
+      name.endsWith(self.registration.scope))
   );
-});
-
-// Allow the page to trigger an immediate activation if needed
-self.addEventListener('message', (event) => {
-  if (event.data === 'SKIP_WAITING') self.skipWaiting();
-});
-
-self.addEventListener('fetch', (event) => {
-  const req = event.request;
-  if (req.method !== 'GET') return;
-
-  const url = new URL(req.url);
-
-  // Skip cross-origin, Supabase API calls, and anything non-http(s)
-  if (url.origin !== self.location.origin) return;
-  if (url.pathname.startsWith('/api/')) return;
-
-  // HTML navigations -> NetworkFirst (3s timeout, fall back to cache, then offline shell)
-  const isNavigation =
-    req.mode === 'navigate' ||
-    (req.headers.get('accept') || '').includes('text/html');
-
-  if (isNavigation) {
-    event.respondWith(
-      (async () => {
-        try {
-          const fresh = await fetchWithTimeout(req, 3000);
-          const cache = await caches.open(HTML_CACHE);
-          cache.put(req, fresh.clone()).catch(() => {});
-          return fresh;
-        } catch {
-          const cache = await caches.open(HTML_CACHE);
-          const cached = await cache.match(req);
-          return cached || (await cache.match('/')) || Response.error();
-        }
-      })()
-    );
-    return;
-  }
-
-  // JS modules must be network-first so a stale hashed chunk can never keep a
-  // broken React hook order alive after a deployment.
-  if (/\.js$/i.test(url.pathname)) {
-    event.respondWith(
-      fetch(req)
-        .then((res) => {
-          if (res && res.status === 200) {
-            caches.open(ASSET_CACHE).then((cache) => cache.put(req, res.clone())).catch(() => {});
-          }
-          return res;
-        })
-        .catch(async () => {
-          const cache = await caches.open(ASSET_CACHE);
-          return (await cache.match(req)) || Response.error();
-        })
-    );
-    return;
-  }
-
-  // Other static assets -> StaleWhileRevalidate
-  if (/\.(?:css|woff2?|ttf|otf|png|jpg|jpeg|gif|svg|webp|ico)$/i.test(url.pathname)) {
-    event.respondWith(
-      (async () => {
-        const cache = await caches.open(ASSET_CACHE);
-        const cached = await cache.match(req);
-        const network = fetch(req)
-          .then((res) => {
-            if (res && res.status === 200) cache.put(req, res.clone()).catch(() => {});
-            return res;
-          })
-          .catch(() => null);
-        return cached || (await network) || Response.error();
-      })()
-    );
-  }
-});
-
-function fetchWithTimeout(request, ms) {
-  return new Promise((resolve, reject) => {
-    const timer = setTimeout(() => reject(new Error('timeout')), ms);
-    fetch(request).then(
-      (res) => { clearTimeout(timer); resolve(res); },
-      (err) => { clearTimeout(timer); reject(err); }
-    );
-  });
 }
 
-/* ---------- Push notifications (unchanged) ---------- */
+self.addEventListener("install", () => self.skipWaiting());
 
-self.addEventListener('push', (event) => {
-  let data = {};
-  try { data = event.data?.json?.() ?? {}; }
-  catch { data = { title: 'New Notification', message: event.data?.text?.() || '' }; }
-  const title = data.title || 'New Notification';
-  const options = {
-    body: data.message || data.body || '',
-    icon: '/icon-192.png',
-    badge: '/icon-192.png',
-    vibrate: [300, 150, 300, 150, 500],
-    tag: data.tag || 'pwa-notification',
-    renotify: true,
-    data: { url: data.url || '/' },
-  };
-  event.waitUntil(self.registration.showNotification(title, options));
-});
-
-self.addEventListener('notificationclick', (event) => {
-  event.notification.close();
-  const url = event.notification.data?.url || '/';
+self.addEventListener("activate", (event) =>
   event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
-      for (const client of windowClients) {
-        if (client.url.includes(self.location.origin) && 'focus' in client) {
-          return client.focus();
-        }
+    (async () => {
+      try {
+        const cacheNames = await caches.keys();
+        const appCacheNames = cacheNames.filter(isLegacyAppCache);
+        await Promise.allSettled(appCacheNames.map((name) => caches.delete(name)));
+        await self.clients.claim();
+        const windowClients = await self.clients.matchAll({ type: "window" });
+        await Promise.allSettled(windowClients.map((client) => client.navigate(client.url)));
+      } finally {
+        await self.registration.unregister();
       }
-      return clients.openWindow(url);
-    })
-  );
-});
+    })(),
+  ),
+);
