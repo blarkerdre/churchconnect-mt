@@ -313,16 +313,21 @@ function CheckInPanel({ tenantId }) {
                 <p className="text-sm text-muted-foreground text-center py-3">No matching child or parent found. Check spelling, or ask the parent to register the child under "My Family".</p>
               )}
               {families.map(f => (
-                <button key={f.parent.id} className="w-full text-left border rounded p-2 hover:bg-muted text-sm"
+                <div key={f.parent.id} className="border rounded p-2 hover:bg-muted text-sm cursor-pointer"
                   onClick={() => { setSelectedFamily(f); setSelectedChildIds(f.children.map(c => c.id)); }}>
                   <p className="font-medium">{f.parent.first_name} {f.parent.last_name}</p>
                   <p className="text-xs text-muted-foreground">{f.parent.phone || f.parent.email || "No contact"}</p>
                   <div className="flex flex-wrap gap-1 mt-1">
                     {f.children.map(c => (
-                      <Badge key={c.id} variant="outline" className="text-[10px]">{c.first_name} {c.last_name}</Badge>
+                      <button key={c.id} type="button"
+                        onClick={(e) => { e.stopPropagation(); setProfileChildId(c.id); }}
+                        className="inline-flex items-center gap-1 rounded border px-1.5 py-0.5 text-[10px] hover:bg-background"
+                        title="View profile">
+                        <Eye className="h-3 w-3" />{c.first_name} {c.last_name}
+                      </button>
                     ))}
                   </div>
-                </button>
+                </div>
               ))}
             </div>
           </div>
