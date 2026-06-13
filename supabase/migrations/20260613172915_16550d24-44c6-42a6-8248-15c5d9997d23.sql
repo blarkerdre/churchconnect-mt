@@ -1,0 +1,1 @@
+ALTER TABLE public.wsf_attendance_reports ADD COLUMN IF NOT EXISTS held_at_home_cell BOOLEAN NOT NULL DEFAULT true;

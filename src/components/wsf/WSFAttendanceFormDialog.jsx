@@ -10,7 +10,8 @@ import { Loader2 } from "lucide-react";
 
 const empty = {
   date: "", male: 0, female: 0, children: 0,
-  first_timers: 0, testimonies: 0, notes: ""
+  first_timers: 0, testimonies: 0, notes: "",
+  held_at_home_cell: true,
 };
 
 export default function WSFAttendanceFormDialog({ open, onOpenChange, centre, report, onSave, allCentres = [] }) {
@@ -28,6 +29,7 @@ export default function WSFAttendanceFormDialog({ open, onOpenChange, centre, re
         first_timers: report.first_timers || 0,
         testimonies: report.testimonies || 0,
         notes: report.notes || "",
+        held_at_home_cell: report.held_at_home_cell !== false,
       });
     } else {
       setForm({ ...empty, date: new Date().toISOString().split("T")[0] });
@@ -53,6 +55,7 @@ export default function WSFAttendanceFormDialog({ open, onOpenChange, centre, re
       children: form.children,
       first_timers: form.first_timers,
       testimonies: form.testimonies,
+      held_at_home_cell: form.held_at_home_cell,
       notes: form.notes || null,
     });
     setSaving(false);
@@ -84,6 +87,18 @@ export default function WSFAttendanceFormDialog({ open, onOpenChange, centre, re
             <Label>Meeting Date *</Label>
             <Input type="date" value={form.date} onChange={e => set("date", e.target.value)} />
           </div>
+          <label className="flex items-start gap-2 p-3 rounded-lg border bg-muted/30 cursor-pointer">
+            <input
+              type="checkbox"
+              className="mt-1 h-4 w-4 accent-primary"
+              checked={form.held_at_home_cell}
+              onChange={e => set("held_at_home_cell", e.target.checked)}
+            />
+            <div className="flex-1">
+              <p className="text-sm font-medium">Meeting held at home cell venue</p>
+              <p className="text-xs text-muted-foreground">Uncheck if the meeting was held elsewhere (e.g. main church).</p>
+            </div>
+          </label>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <Label>Male</Label>

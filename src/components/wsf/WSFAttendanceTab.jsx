@@ -24,6 +24,7 @@ export default function WSFAttendanceTab({ centres }) {
   const [editing, setEditing] = useState(null);
   const [selectedCentre, setSelectedCentre] = useState(null);
   const [filterCentreId, setFilterCentreId] = useState("all");
+  const [filterVenue, setFilterVenue] = useState("all");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [deleteTarget, setDeleteTarget] = useState(null);
@@ -117,7 +118,8 @@ export default function WSFAttendanceTab({ centres }) {
   const filteredReports = reports.filter(r =>
     (filterCentreId === "all" || r.centre_id === filterCentreId) &&
     (!dateFrom || r.meeting_date >= dateFrom) &&
-    (!dateTo || r.meeting_date <= dateTo)
+    (!dateTo || r.meeting_date <= dateTo) &&
+    (filterVenue === "all" || (filterVenue === "home" ? r.held_at_home_cell !== false : r.held_at_home_cell === false))
   );
 
   const availableCentres = isAdmin ? centres : ledCentres;
@@ -126,6 +128,7 @@ export default function WSFAttendanceTab({ centres }) {
   const summaryStats = (() => {
     const centresInScope = filterCentreId === "all" ? availableCentres.length : 1;
     const held = filteredReports.length;
+    const offVenue = filteredReports.filter(r => r.held_at_home_cell === false).length;
     const totalMale = filteredReports.reduce((s, r) => s + (r.male || 0), 0);
     const totalFemale = filteredReports.reduce((s, r) => s + (r.female || 0), 0);
     const totalChildren = filteredReports.reduce((s, r) => s + (r.children || 0), 0);
@@ -149,28 +152,30 @@ export default function WSFAttendanceTab({ centres }) {
     const expected = weeks * centresInScope;
     const notHeld = weeks > 0 ? Math.max(0, expected - held) : null;
 
-    return { centresInScope, held, totalAttendance, notHeld, avgAttendance, hasRange, totalMale, totalFemale, totalAdults, totalChildren, totalFirstTimers, totalTestimonies };
+    return { centresInScope, held, offVenue, totalAttendance, notHeld, avgAttendance, hasRange, totalMale, totalFemale, totalAdults, totalChildren, totalFirstTimers, totalTestimonies };
   })();
 
   const buildPrintRows = () => ({
     title: "Home Cell Attendance Report",
-    headers: ["Date", "Centre", "Male", "Female", "Adults", "Children", "Total", "1st Timers", "Testimonies"],
+    headers: ["Date", "Centre", "Venue", "Male", "Female", "Adults", "Children", "Total", "1st Timers", "Testimonies"],
     rows: filteredReports.map(r => {
       const adults = r.male + r.female;
       const total = adults + r.children;
-      return [format(new Date(r.meeting_date), "dd MMM yyyy"), r.wsf_centres?.name || "—", r.male, r.female, adults, r.children, total, r.first_timers, r.testimonies];
+      const venue = r.held_at_home_cell === false ? "Off-venue" : "At cell";
+      return [format(new Date(r.meeting_date), "dd MMM yyyy"), r.wsf_centres?.name || "—", venue, r.male, r.female, adults, r.children, total, r.first_timers, r.testimonies];
     }),
   });
 
   const downloadReport = () => {
     const esc = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
     const rows = [
-      ["Date","Centre","Male","Female","Adults","Children","Total","First Timers","Testimonies","Notes"].join(","),
+      ["Date","Centre","Venue","Male","Female","Adults","Children","Total","First Timers","Testimonies","Notes"].join(","),
       ...filteredReports.map(r => {
         const adults = r.male + r.female;
         const total = adults + r.children;
+        const venue = r.held_at_home_cell === false ? "Off-venue" : "At cell";
         return [
-          r.meeting_date, esc(r.wsf_centres?.name || ""), r.male, r.female, adults, r.children, total, r.first_timers, r.testimonies, esc(r.notes || "")
+          r.meeting_date, esc(r.wsf_centres?.name || ""), venue, r.male, r.female, adults, r.children, total, r.first_timers, r.testimonies, esc(r.notes || "")
         ].join(",");
       }),
     ];
@@ -230,6 +235,16 @@ export default function WSFAttendanceTab({ centres }) {
           </Select>
           <Input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="w-36" />
           <Input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="w-36" />
+          <Select value={filterVenue} onValueChange={setFilterVenue}>
+            <SelectTrigger className="w-44">
+              <SelectValue placeholder="All venues" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Venues</SelectItem>
+              <SelectItem value="home">At Home Cell</SelectItem>
+              <SelectItem value="off">Not at Home Cell</SelectItem>
+            </SelectContent>
+          </Select>
           {filteredReports.length > 0 && (
             <>
               <Button variant="outline" size="sm" onClick={downloadReport}>
@@ -255,10 +270,11 @@ export default function WSFAttendanceTab({ centres }) {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
               {[
                 { title: "Cell Centres", value: summaryStats.centresInScope, sub: filterCentreId === "all" ? "All centres" : "Filtered", icon: Home, color: "text-primary" },
                 { title: "Meetings Held", value: summaryStats.held, sub: `${filteredReports.length} report${filteredReports.length === 1 ? "" : "s"}`, icon: CheckCircle2, color: "text-accent" },
+                { title: "Off-Venue", value: summaryStats.offVenue, sub: "Not at home cell", icon: Home, color: "text-chart-2" },
                 { title: "Meetings Not Held", value: summaryStats.notHeld ?? "—", sub: summaryStats.hasRange ? "Weekly cadence" : (summaryStats.notHeld === null ? "Set a date range" : "Estimated"), icon: AlertCircle, color: "text-destructive" },
                 { title: "Avg Attendance", value: summaryStats.avgAttendance, sub: "Per meeting", icon: TrendingUp, color: "text-chart-3" },
                 { title: "Total Attendance", value: summaryStats.totalAttendance, sub: "All meetings", icon: Users, color: "text-chart-4" },
@@ -327,6 +343,7 @@ export default function WSFAttendanceTab({ centres }) {
                 <TableRow>
                   <TableHead>Date</TableHead>
                   <TableHead>Centre</TableHead>
+                  <TableHead>Venue</TableHead>
                   <TableHead className="text-center">Male</TableHead>
                   <TableHead className="text-center">Female</TableHead>
                   <TableHead className="text-center">Adults</TableHead>
@@ -345,6 +362,13 @@ export default function WSFAttendanceTab({ centres }) {
                     <TableRow key={r.id}>
                       <TableCell className="font-medium">{format(new Date(r.meeting_date), "dd MMM yyyy")}</TableCell>
                       <TableCell>{r.wsf_centres?.name || "—"}</TableCell>
+                      <TableCell>
+                        {r.held_at_home_cell === false ? (
+                          <Badge variant="outline" className="text-muted-foreground">Off-venue</Badge>
+                        ) : (
+                          <Badge className="bg-accent/10 text-accent border-0">At cell</Badge>
+                        )}
+                      </TableCell>
                       <TableCell className="text-center">{r.male}</TableCell>
                       <TableCell className="text-center">{r.female}</TableCell>
                       <TableCell className="text-center">

@@ -1,37 +1,33 @@
 ## Goal
-Add the pickup delegation name to the Children Church report table and CSV export.
+Allow Home Cell leaders to record when a meeting was **not held at the home cell** (e.g. relocated to church or alternate venue), and add a filter in the Home Cell report to view only those records.
 
-## Background
-When a child is released via a one-time delegation code, the collector's name is stored in `child_pickup_delegations.delegate_name` and linked via `child_checkins.pickup_delegation_id`. The report currently shows:
-- Brought by (drop-off adult)
-- Collected by (member who picked up via PIN)
-- But **not** the delegation name (non-member who collected via delegation code)
+## Changes
 
-## Changes — `src/pages/ChildrenChurch.jsx` (`ReportPanel`)
+### 1. Database — `wsf_attendance_reports`
+Add a new column:
+- `held_at_home_cell BOOLEAN NOT NULL DEFAULT true`
 
-### 1. Query: fetch delegation name
-In the `child_checkins` query, add a join:
-```
-pickup_delegation:pickup_delegation_id(delegate_name)
-```
-After mapping worker names, compute:
-```
-_delegation_name: r.pickup_delegation?.delegate_name || r.notes?.replace(/^Delegate:\s*/, "") || ""
-```
-This uses the explicit `delegate_name` field when available, and falls back to parsing the legacy `notes` column for older records.
+Migration only adds the column; existing rows default to `true`.
 
-### 2. On-screen table: add "Delegated to" column
-Insert a new `<th>` and `<td>` after "Collected by" in the sticky-header table:
-- Header: **Delegated to**
-- Cell: `{r._delegation_name || "—"}`
+### 2. Attendance form — `src/components/wsf/WSFAttendanceFormDialog.jsx`
+- Add a checkbox/switch "Meeting held at home cell venue" (default: checked).
+- When unchecked, show a short helper note: "Mark this when the meeting was held elsewhere (e.g. main church)."
+- Include `held_at_home_cell` in the saved payload.
 
-Update the `colSpan` on the empty-state row from `9` to `10`.
+### 3. Report tab — `src/components/wsf/WSFAttendanceTab.jsx`
 
-### 3. CSV export: add delegation column
-Add `delegated_to` to the `headers` array (after `collected_by`).
-Include `q(r._delegation_name)` in each data row.
+**Filter bar**: add a new Select next to the centre filter:
+- Options: `All venues` (default), `At home cell`, `Not at home cell`.
+- Apply alongside existing centre + date filters.
+
+**Summary stats**: add a "Off-venue" stat card showing the count of filtered reports where `held_at_home_cell === false`.
+
+**Table**: add a "Venue" column showing a badge:
+- `At cell` (default styling) or `Off-venue` (muted/outlined).
+
+**CSV + print**: include a `Venue` column in both `downloadReport()` and `buildPrintRows()` output.
 
 ## Out of scope
-- No database schema changes.
-- No changes to the check-in, pickup, or delegation-creation flows.
-- No changes to notification logic.
+- No changes to analytics page aggregates.
+- No notifications or workflow changes.
+- The existing "Meetings Not Held" stat (estimated missing weeks) is unchanged — this new field captures meetings that *did* happen but at a different venue.
