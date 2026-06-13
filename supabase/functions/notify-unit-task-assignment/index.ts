@@ -160,8 +160,35 @@ Deno.serve(async (req) => {
 
         // Email
         if (email) {
-          const messageId = `unit-task-${task.id}-${a.user_id || a.member_id}`;
-          const html = `<!DOCTYPE html><html><head><meta charset="utf-8"></head>
+          // Resolve unsubscribe token (required by transactional send API)
+          const normalizedEmail = email.trim().toLowerCase();
+          let unsubscribeToken: string | null = null;
+          const { data: existingToken } = await supabase
+            .from("email_unsubscribe_tokens")
+            .select("token").eq("email", normalizedEmail).is("used_at", null)
+            .order("created_at", { ascending: false }).limit(1).maybeSingle();
+          if (existingToken?.token) {
+            unsubscribeToken = existingToken.token;
+          } else {
+            const newToken = crypto.randomUUID();
+            const { error: tErr } = await supabase
+              .from("email_unsubscribe_tokens")
+              .insert({ email: normalizedEmail, token: newToken });
+            if (tErr) {
+              const { data: retry } = await supabase
+                .from("email_unsubscribe_tokens")
+                .select("token").eq("email", normalizedEmail).is("used_at", null)
+                .order("created_at", { ascending: false }).limit(1).maybeSingle();
+              unsubscribeToken = retry?.token || null;
+            } else {
+              unsubscribeToken = newToken;
+            }
+          }
+          if (!unsubscribeToken) {
+            console.error("Skipping unit-task email: missing unsubscribe token", { email });
+          } else {
+            const messageId = `unit-task-${task.id}-${a.user_id || a.member_id}`;
+            const html = `<!DOCTYPE html><html><head><meta charset="utf-8"></head>
 <body style="margin:0;padding:0;background:#f4f5f7;font-family:Arial,Helvetica,sans-serif;">
 <table width="100%" cellpadding="0" cellspacing="0" style="padding:32px 16px;background:#f4f5f7;"><tr><td align="center">
 <table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;background:#fff;border-radius:8px;overflow:hidden;">
@@ -179,23 +206,25 @@ ${task.description ? `<p style="margin:8px 0 0;color:#555;font-size:14px;">${esc
 <p style="margin:0;color:#555;font-size:15px;">Please log in to acknowledge and complete this task.</p>
 </td></tr></table></td></tr></table></body></html>`;
 
-          const { error: enqErr } = await supabase.rpc("enqueue_email", {
-            queue_name: "transactional_emails",
-            payload: {
-              to: email, from: fromAddress, sender_domain: senderDomain,
-              subject: `New task: ${task.title}`,
-              html, text: `New task assigned in ${task.unit_name}: ${task.title}`,
-              purpose: "transactional", label: "unit-task-assignment",
-              message_id: messageId, idempotency_key: messageId,
-              queued_at: new Date().toISOString(),
-              ...(task.tenant_id ? { tenant_id: task.tenant_id } : {}),
-            },
-          });
-          if (!enqErr) {
-            await supabase.from("email_send_log").insert({
-              message_id: messageId, template_name: "unit-task-assignment",
-              recipient_email: email, status: "pending", tenant_id: task.tenant_id,
+            const { error: enqErr } = await supabase.rpc("enqueue_email", {
+              queue_name: "transactional_emails",
+              payload: {
+                to: email, from: fromAddress, sender_domain: senderDomain,
+                subject: `New task: ${task.title}`,
+                html, text: `New task assigned in ${task.unit_name}: ${task.title}`,
+                purpose: "transactional", label: "unit-task-assignment",
+                message_id: messageId, idempotency_key: messageId,
+                unsubscribe_token: unsubscribeToken,
+                queued_at: new Date().toISOString(),
+                ...(task.tenant_id ? { tenant_id: task.tenant_id } : {}),
+              },
             });
+            if (!enqErr) {
+              await supabase.from("email_send_log").insert({
+                message_id: messageId, template_name: "unit-task-assignment",
+                recipient_email: email, status: "pending", tenant_id: task.tenant_id,
+              });
+            }
           }
         }
 
