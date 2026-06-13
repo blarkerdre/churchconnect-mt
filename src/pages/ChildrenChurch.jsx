@@ -641,7 +641,7 @@ function ReportPanel({ tenantId }) {
 
   const downloadCSV = () => {
     const q = (v) => `"${String(v ?? "").replace(/"/g,'""')}"`;
-    const headers = ["service_date","child","age_group","dropoff_at","dropoff_worker","dropoff_parent","pickup_at","pickup_method","pickup_worker_or_leader","collected_by","status","override_reason"];
+    const headers = ["service_date","child","age_group","dropoff_at","dropoff_worker","brought_by","pickup_at","pickup_method","pickup_worker_or_leader","collected_by","status","override_reason"];
     const lines = [headers.join(",")];
     for (const r of rows) {
       const isOverride = r.pickup_method === "leader_override";
