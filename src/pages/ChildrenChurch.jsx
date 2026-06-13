@@ -369,6 +369,7 @@ function CheckInPanel({ tenantId }) {
           </div>
         )}
       </CardContent>
+      <ChildProfileDialog open={!!profileChildId} onOpenChange={(o) => !o && setProfileChildId(null)} childId={profileChildId} tenantId={tenantId} />
     </Card>
   );
 }
