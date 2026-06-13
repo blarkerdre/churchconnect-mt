@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Navigate, useParams } from "react-router-dom";
 import { DEFAULT_TENANT_ID } from "@/contexts/TenantContext";
 import { useAuth } from "@/hooks/useAuth";
@@ -34,9 +34,10 @@ export default function Auth() {
   const [signupSuccess, setSignupSuccess] = useState(false);
   const [waitedForData, setWaitedForData] = useState(false);
   const [claimDone, setClaimDone] = useState(false);
-  const claimToken = typeof window !== "undefined"
-    ? new URLSearchParams(window.location.search).get("claim")
-    : null;
+  const claimToken = useMemo(() => {
+    if (typeof window === "undefined") return null;
+    return new URLSearchParams(window.location.search).get("claim");
+  }, []);
 
 
   // Fallback: if dataLoaded never flips (e.g., preview proxy hangs Supabase
