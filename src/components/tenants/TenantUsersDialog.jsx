@@ -214,6 +214,7 @@ export default function TenantUsersDialog({ tenant, open, onOpenChange }) {
       toast({ title: "Invitation cancelled" });
       queryClient.invalidateQueries({ queryKey: ["tenant-invitations", tenant?.id] });
     },
+    onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
 
   const handleInvite = (e) => {
