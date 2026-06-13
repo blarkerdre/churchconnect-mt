@@ -128,6 +128,7 @@ export default function Layout({ children }) {
     if (item.access === "followup_member") return isAdmin || isFollowupUnit || isFollowupMember || isReportsOfficer;
     if (item.access === "training") return isAdmin || isSuperAdmin || isTrainingAccess || isReportsOfficer;
     if (item.access === "training_report") return isAdmin || isSuperAdmin || isUnitLeader || isTrainingRepMember || isReportsOfficer;
+    if (item.access === "children_church") return isAdmin || isChildrenChurchMember || (isUnitLeader && (leaderUnits || []).some(u => /children/i.test(u))) || isReportsOfficer;
     return false;
   });
 
