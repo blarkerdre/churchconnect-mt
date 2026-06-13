@@ -155,6 +155,20 @@ export default function WSFAttendanceTab({ centres }) {
     return { centresInScope, held, offVenue, totalAttendance, notHeld, avgAttendance, hasRange, totalMale, totalFemale, totalAdults, totalChildren, totalFirstTimers, totalTestimonies };
   })();
 
+  // Centres in scope that recorded no attendance within the current filters
+  const nonReportingCentres = (() => {
+    if (filterCentreId !== "all") return [];
+    const reportedIds = new Set(filteredReports.map(r => r.centre_id));
+    return availableCentres
+      .filter(c => !reportedIds.has(c.id))
+      .map(c => ({ ...c, zoneName: zones.find(z => z.id === c.zone_id)?.name || "" }))
+      .sort((a, b) => (a.zoneName || "zzz").localeCompare(b.zoneName || "zzz") || a.name.localeCompare(b.name));
+  })();
+
+  const rangeLabel = dateFrom || dateTo
+    ? `${dateFrom || "…"} → ${dateTo || "…"}`
+    : "All time";
+
   const buildPrintRows = () => ({
     title: "Home Cell Attendance Report",
     headers: ["Date", "Centre", "Venue", "Male", "Female", "Adults", "Children", "Total", "1st Timers", "Testimonies"],
