@@ -1,32 +1,27 @@
 ## Goal
-1. Let a parent permanently delete one of their children from "My Family".
-2. Give Children Church workers (unit members and leaders) a way to view a child's full profile in the Children Church page.
+Let the Children Church worker record **who actually brought the child** (could be the primary parent, another parent, or any authorised adult) at check-in — instead of always defaulting to the searched parent.
 
 ## Current state
-- DB already allows it:
-  - `children` DELETE policy: primary guardian or admin.
-  - `children` SELECT policy: primary guardian, `is_children_church_member`, or admin.
-- No UI today exposes either capability.
+- `checkin_child` RPC already accepts `_parent_member_id` and stores it in `child_checkins.dropoff_parent_member_id` (NOT NULL). It's already surfaced in reports as "dropoff_parent".
+- The UI in `src/pages/ChildrenChurch.jsx` (`CheckInPanel`) hard-codes this to `selectedFamily.parent.id`, so the column always equals the searched family parent — even when a grandparent, other parent, or authorised adult drops the child off.
 
-## Changes (frontend only — no DB migration)
+## Change (frontend only — no DB migration)
 
-### 1. Parent delete child — `src/pages/MyFamily.jsx`
-- Add a small destructive "Delete" button on each child card (next to Edit / Authorised adults / One-time code).
-- Confirm via an AlertDialog ("Delete {name}? This permanently removes the child and their guardians, delegations, and check-in history references.").
-- On confirm: `supabase.from("children").delete().eq("id", child.id).eq("tenant_id", tenantId)`.
-- Block deletion if the child currently has an active check-in (`activeCheckins` already loaded) — show a toast asking to release first.
-- Invalidate `my-children` query and toast success.
-
-### 2. Children Church worker — view child profile — `src/pages/ChildrenChurch.jsx`
-- Add a new `ChildProfileDialog` component (in the same file, consistent with the existing dialogs).
-- Loads: child record (name, DOB, age group, gender, allergies, medical notes, notes, photo), primary guardian (member name + phone/email), authorised adults from `child_guardians` joined to `members`, and the latest 5 check-in history rows from `child_checkins`.
-- Trigger points (worker-only — page is already gated to `is_children_church_member` / leader):
-  - Family search results: make each child chip clickable to open the profile dialog.
-  - "In care" list: add an "View profile" icon button on each row.
-- All queries scoped with `.eq("tenant_id", tenantId)` per multi-tenant rules. RLS already permits the read.
+### `src/pages/ChildrenChurch.jsx` → `CheckInPanel`
+1. After a family is selected, fetch the list of **eligible drop-off adults** for the selected children:
+   - the primary guardian of each selected child (from `children.primary_guardian_member_id`)
+   - plus every authorised adult linked via `child_guardians` for the selected children
+   - join to `members(id, first_name, last_name, phone)` scoped by `.eq("tenant_id", tenantId)`
+   - de-duplicate by member id
+2. Add a new required field above the Check-in button: **"Brought by"** (`Select` component).
+   - Default value: `selectedFamily.parent.id` if present in the list, otherwise first eligible adult.
+   - Re-compute the list whenever `selectedChildIds` changes.
+   - If no eligible adults are found (shouldn't happen — primary parent is always one), disable check-in with a helper message.
+3. Pass the selected member id as `_parent_member_id` to `supabase.rpc("checkin_child", …)` instead of `selectedFamily.parent.id`.
+4. Notification logic: still notify the **primary parent** (`selectedFamily.parent`) of the PIN — keep current behaviour. Optionally also notify the "brought by" adult if different and they have a `user_id` (best-effort, silent on failure).
+5. Reset the "Brought by" selection in `reset()` and when the family is changed.
 
 ## Out of scope
-- No schema or policy changes.
-- No changes to check-in/release logic, PINs, or delegation codes.
-- No bulk delete, no soft-delete/archive (hard delete per request).
-- Admin-side child deletion UI (parents only for now).
+- No schema/RPC changes (column and parameter already exist).
+- No changes to pickup flow, PIN, delegation, or reports (report already shows `dropoff_parent`).
+- No edit-after-the-fact UI for an already-recorded drop-off adult.
