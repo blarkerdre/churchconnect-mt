@@ -412,6 +412,7 @@ export default function Transportation() {
       queryClient.invalidateQueries({ queryKey: ["pickup-locations"] });
       toast({ title: "Location removed" });
     },
+    onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
 
   const openManage = (b) => {

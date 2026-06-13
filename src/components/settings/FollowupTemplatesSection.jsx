@@ -93,6 +93,7 @@ export default function FollowupTemplatesSection() {
       qc.invalidateQueries({ queryKey: ["followup-message-templates"] });
       toast({ title: "Template deleted" });
     },
+    onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
 
   const toggleMutation = useMutation({
@@ -104,6 +105,7 @@ export default function FollowupTemplatesSection() {
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["followup-message-templates"] }),
+    onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
 
   const openNew = () => {

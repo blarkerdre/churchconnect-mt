@@ -67,6 +67,7 @@ export default function ApiKeysSection() {
       queryClient.invalidateQueries({ queryKey: ["tenant-api-keys"] });
       toast({ title: "API key revoked" });
     },
+    onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
 
   const deleteMutation = useMutation({
@@ -82,6 +83,7 @@ export default function ApiKeysSection() {
       queryClient.invalidateQueries({ queryKey: ["tenant-api-keys"] });
       toast({ title: "API key deleted" });
     },
+    onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
 
   const copyKey = (key) => {

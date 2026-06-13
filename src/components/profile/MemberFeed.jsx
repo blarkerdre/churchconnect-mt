@@ -55,6 +55,7 @@ function AnnouncementItem({ a, onRead, onOpen, user, tenantId, withTenant }) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["announcement-reactions", a.id] });
     },
+    onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
 
   const handleExpand = () => {
@@ -151,6 +152,7 @@ function EventItem({ event, member, onRead, onOpen, user, tenantId, withTenant }
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["event-reactions", event.id] });
     },
+    onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
 
   const registerMutation = useMutation({

@@ -139,6 +139,7 @@ function GuardianManager({ open, onOpenChange, child }) {
       if (error) throw error;
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["child-guardians", child.id] }); toast.success("Removed"); },
+    onError: (e) => toast.error(e.message),
   });
 
   return (
