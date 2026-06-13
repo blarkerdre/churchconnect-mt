@@ -7,6 +7,33 @@ if (window.location.pathname === '/index' || window.location.pathname === '/inde
   window.history.replaceState(null, '', '/')
 }
 
+const isPreviewLikeHost = () => {
+  const isInIframe = (() => {
+    try { return window.self !== window.top; } catch { return true; }
+  })();
+  const host = window.location.hostname;
+  return (
+    isInIframe ||
+    host.includes('id-preview--') ||
+    host.includes('lovableproject.com') ||
+    host === 'localhost' ||
+    host === '127.0.0.1'
+  );
+};
+
+const clearPreviewServiceWorkerState = () => {
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.getRegistrations().then((regs) =>
+      regs.forEach((r) => r.unregister())
+    );
+  }
+  if ('caches' in window) {
+    caches.keys().then((keys) => keys.forEach((key) => caches.delete(key)));
+  }
+};
+
+if (isPreviewLikeHost()) clearPreviewServiceWorkerState();
+
 createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <App />
@@ -18,21 +45,9 @@ createRoot(document.getElementById('root')).render(
 ;(() => {
   if (!('serviceWorker' in navigator)) return;
 
-  const isInIframe = (() => {
-    try { return window.self !== window.top; } catch { return true; }
-  })();
-  const host = window.location.hostname;
-  const isPreviewHost =
-    host.includes('id-preview--') ||
-    host.includes('lovableproject.com') ||
-    host === 'localhost' ||
-    host === '127.0.0.1';
-
-  if (isInIframe || isPreviewHost) {
+  if (isPreviewLikeHost()) {
     // Make sure no stale SW is running in the editor preview
-    navigator.serviceWorker.getRegistrations().then((regs) =>
-      regs.forEach((r) => r.unregister())
-    );
+    clearPreviewServiceWorkerState();
     return;
   }
 
