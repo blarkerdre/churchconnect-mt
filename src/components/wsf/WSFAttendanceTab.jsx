@@ -362,6 +362,13 @@ export default function WSFAttendanceTab({ centres }) {
                     <TableRow key={r.id}>
                       <TableCell className="font-medium">{format(new Date(r.meeting_date), "dd MMM yyyy")}</TableCell>
                       <TableCell>{r.wsf_centres?.name || "—"}</TableCell>
+                      <TableCell>
+                        {r.held_at_home_cell === false ? (
+                          <Badge variant="outline" className="text-muted-foreground">Off-venue</Badge>
+                        ) : (
+                          <Badge className="bg-accent/10 text-accent border-0">At cell</Badge>
+                        )}
+                      </TableCell>
                       <TableCell className="text-center">{r.male}</TableCell>
                       <TableCell className="text-center">{r.female}</TableCell>
                       <TableCell className="text-center">
