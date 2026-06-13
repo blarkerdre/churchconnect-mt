@@ -46,6 +46,8 @@ const allNavItems = [
   { name: "Pastoral Care", icon: Heart, path: "/pastoral-care", access: null },
   { name: "Communications", icon: Megaphone, path: "/communications", access: null },
   { name: "Transportation", icon: Car, path: "/transportation", access: null },
+  { name: "Children Church", icon: Users, path: "/children-church", access: "children_church" },
+  { name: "My Family", icon: Users, path: "/my-family", access: null },
   { name: "Reports Hub", icon: FileText, path: "/reports", access: "reports" },
   { name: "Training Report", icon: TrendingUp, path: "/training-reports", access: "training_report" },
   
@@ -111,6 +113,7 @@ export default function Layout({ children }) {
   const tenantLogoUrl = currentTenant?.logo_url || null;
   const { isMemberOfUnit: isFollowupMember } = useUnitMembership("Follow-up");
   const { isMemberOfUnit: isTrainingRepMember } = useUnitMembership("Training Rep");
+  const { isMemberOfUnit: isChildrenChurchMember } = useUnitMembership("Children Church");
 
   // Filter nav items based on role and disabled features
   const navItems = allNavItems.filter(item => {
@@ -125,6 +128,7 @@ export default function Layout({ children }) {
     if (item.access === "followup_member") return isAdmin || isFollowupUnit || isFollowupMember || isReportsOfficer;
     if (item.access === "training") return isAdmin || isSuperAdmin || isTrainingAccess || isReportsOfficer;
     if (item.access === "training_report") return isAdmin || isSuperAdmin || isUnitLeader || isTrainingRepMember || isReportsOfficer;
+    if (item.access === "children_church") return isAdmin || isChildrenChurchMember || (isUnitLeader && (leaderUnits || []).some(u => /children/i.test(u))) || isReportsOfficer;
     return false;
   });
 

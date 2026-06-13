@@ -46,6 +46,8 @@ const UnitTasks = lazy(() => import("@/pages/UnitTasks"));
 const Reports = lazy(() => import("@/pages/Reports"));
 const CertificatesReport = lazy(() => import("@/pages/CertificatesReport"));
 const CertificateApprovals = lazy(() => import("@/pages/CertificateApprovals"));
+const ChildrenChurch = lazy(() => import("@/pages/ChildrenChurch"));
+const MyFamily = lazy(() => import("@/pages/MyFamily"));
 
 function PageFallback() {
   return (
@@ -180,6 +182,8 @@ function AppPages() {
         <Route path="/pastoral-care" element={<FeatureGate path="/pastoral-care"><PastoralCare /></FeatureGate>} />
         <Route path="/communications" element={<FeatureGate path="/communications"><Communications /></FeatureGate>} />
         <Route path="/transportation" element={<FeatureGate path="/transportation"><Transportation /></FeatureGate>} />
+        <Route path="/children-church" element={<FeatureGate path="/children-church"><ProtectedRoute><ChildrenChurch /></ProtectedRoute></FeatureGate>} />
+        <Route path="/my-family" element={<ProtectedRoute><MyFamily /></ProtectedRoute>} />
         <Route path="/analytics" element={<FeatureGate path="/analytics"><ReportsRoute><Analytics /></ReportsRoute></FeatureGate>} />
         <Route path="/training-reports" element={<FeatureGate path="/training-reports"><TrainingReportRoute><TrainingReports /></TrainingReportRoute></FeatureGate>} />
         <Route path="/exam-management" element={<FeatureGate path="/exam-management"><ProtectedRoute><ExamManagement /></ProtectedRoute></FeatureGate>} />
