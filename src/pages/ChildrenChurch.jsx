@@ -124,9 +124,50 @@ function CheckInPanel({ tenantId }) {
   const [search, setSearch] = useState("");
   const [selectedFamily, setSelectedFamily] = useState(null); // { parent, children }
   const [selectedChildIds, setSelectedChildIds] = useState([]);
+  const [broughtById, setBroughtById] = useState("");
   const [issuedPin, setIssuedPin] = useState(null);
   const [issuedFor, setIssuedFor] = useState(null);
   const [profileChildId, setProfileChildId] = useState(null);
+
+  // Eligible drop-off adults for currently selected children: primary parents + authorised guardians.
+  const { data: broughtByOptions = [] } = useQuery({
+    queryKey: ["cc-brought-by", tenantId, selectedChildIds],
+    enabled: !!tenantId && selectedChildIds.length > 0,
+    queryFn: async () => {
+      const childIds = selectedChildIds;
+      const [childRes, guardRes] = await Promise.all([
+        supabase.from("children")
+          .select("primary_guardian_member_id")
+          .eq("tenant_id", tenantId)
+          .in("id", childIds),
+        supabase.from("child_guardians")
+          .select("member_id")
+          .eq("tenant_id", tenantId)
+          .in("child_id", childIds),
+      ]);
+      const ids = new Set([
+        ...(childRes.data || []).map(r => r.primary_guardian_member_id).filter(Boolean),
+        ...(guardRes.data || []).map(r => r.member_id).filter(Boolean),
+      ]);
+      if (selectedFamily?.parent?.id) ids.add(selectedFamily.parent.id);
+      if (ids.size === 0) return [];
+      const { data } = await supabase.from("members")
+        .select("id, first_name, last_name, phone")
+        .eq("tenant_id", tenantId)
+        .in("id", Array.from(ids));
+      return data || [];
+    },
+  });
+
+  // Default "Brought by" to the searched family parent when options load/change.
+  React.useEffect(() => {
+    if (broughtByOptions.length === 0) { setBroughtById(""); return; }
+    const stillValid = broughtByOptions.some(o => o.id === broughtById);
+    if (stillValid) return;
+    const parentId = selectedFamily?.parent?.id;
+    const fallback = broughtByOptions.find(o => o.id === parentId)?.id || broughtByOptions[0].id;
+    setBroughtById(fallback);
+  }, [broughtByOptions, selectedFamily, broughtById]);
 
   // Search across members (parents), children, and guardian links — return grouped families.
   const { data: families = [], isFetching: searching } = useQuery({
