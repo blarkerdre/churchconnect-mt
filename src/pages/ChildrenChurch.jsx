@@ -398,11 +398,31 @@ function ReportPanel({ tenantId }) {
     enabled: !!tenantId,
     queryFn: async () => {
       const { data } = await supabase.from("child_checkins")
-        .select("*, children:child_id(first_name, last_name, age_group)")
+        .select("*, children:child_id(first_name, last_name, age_group), dropoff_parent:dropoff_parent_member_id(first_name, last_name), pickup_adult:pickup_adult_member_id(first_name, last_name)")
         .eq("tenant_id", tenantId)
         .gte("service_date", from).lte("service_date", to)
         .order("service_date", { ascending: false }).limit(500);
-      return data || [];
+      const list = data || [];
+
+      // Resolve worker user_ids → member names (tenant-scoped)
+      const workerIds = Array.from(new Set(
+        list.flatMap(r => [r.dropoff_worker_user_id, r.pickup_worker_user_id]).filter(Boolean)
+      ));
+      let workerMap = new Map();
+      if (workerIds.length) {
+        const { data: workers } = await supabase.from("members")
+          .select("user_id, first_name, last_name")
+          .eq("tenant_id", tenantId)
+          .in("user_id", workerIds);
+        workerMap = new Map((workers || []).map(w => [w.user_id, `${w.first_name} ${w.last_name}`]));
+      }
+      return list.map(r => ({
+        ...r,
+        _dropoff_worker_name: workerMap.get(r.dropoff_worker_user_id) || "—",
+        _pickup_worker_name: r.pickup_worker_user_id ? (workerMap.get(r.pickup_worker_user_id) || "—") : "",
+        _dropoff_parent_name: r.dropoff_parent ? `${r.dropoff_parent.first_name} ${r.dropoff_parent.last_name}` : "",
+        _pickup_adult_name: r.pickup_adult ? `${r.pickup_adult.first_name} ${r.pickup_adult.last_name}` : "",
+      }));
     },
   });
 
@@ -418,17 +438,24 @@ function ReportPanel({ tenantId }) {
   }, [rows]);
 
   const downloadCSV = () => {
-    const headers = ["service_date","child","age_group","dropoff_at","pickup_at","pickup_method","status","override_reason"];
+    const q = (v) => `"${String(v ?? "").replace(/"/g,'""')}"`;
+    const headers = ["service_date","child","age_group","dropoff_at","dropoff_worker","dropoff_parent","pickup_at","pickup_method","pickup_worker_or_leader","collected_by","status","override_reason"];
     const lines = [headers.join(",")];
     for (const r of rows) {
+      const isOverride = r.pickup_method === "leader_override";
       lines.push([
         r.service_date,
-        `"${r.children?.first_name} ${r.children?.last_name}"`,
-        r.children?.age_group || "",
-        r.dropoff_at, r.pickup_at || "",
+        q(`${r.children?.first_name || ""} ${r.children?.last_name || ""}`.trim()),
+        q(r.children?.age_group || ""),
+        r.dropoff_at,
+        q(r._dropoff_worker_name),
+        q(r._dropoff_parent_name),
+        r.pickup_at || "",
         r.pickup_method || "",
+        q(isOverride && r._pickup_worker_name ? `LEADER: ${r._pickup_worker_name}` : r._pickup_worker_name),
+        q(r._pickup_adult_name),
         r.status,
-        `"${(r.override_reason || "").replace(/"/g,'""')}"`,
+        q(r.override_reason || ""),
       ].join(","));
     }
     const blob = new Blob([lines.join("\n")], { type: "text/csv" });

@@ -1,29 +1,27 @@
-## Diagnosis
+## Goal
+Add worker/leader names to the Children Church Report (table + CSV) so admins can see who handled each drop-off and pickup, and which leader authorised any override.
 
-Dominion’s check-in button is working at the UI level, but the backend check-in function fails before creating the PIN record.
+## Changes (Report panel only, `src/pages/ChildrenChurch.jsx` → `ReportPanel`)
 
-The actual error is:
+1. **Extend the query** to resolve worker users (Children Church team members) to member names by joining `members` via `user_id`:
+   - `dropoff_worker:members!child_checkins_dropoff_worker_user_id_fkey(...)` — if no FK exists, fetch worker user_ids separately and look up `members` (`first_name`, `last_name`) by `user_id` in a second lightweight query, then merge in memory.
+   - Same for `pickup_worker_user_id`.
+   - Also resolve `dropoff_parent_member_id` and `pickup_adult_member_id` to names (these already FK to `members`).
 
-```text
-function digest(text, unknown) does not exist
-```
+2. **Table columns** (after existing ones):
+   - Drop-off by (worker)
+   - Released by (pickup worker) — shown as **Leader (override)** in red/destructive badge when `pickup_method = 'leader_override'`
+   - Collected by (pickup adult / delegation)
+   - Override reason (truncated, full on hover) — only when present
 
-That means the `checkin_child` database function is trying to hash the generated PIN with `digest(...)`, but the required database crypto extension/function is not available in the function’s current context.
+3. **CSV export** — add columns: `dropoff_worker`, `pickup_worker`, `pickup_adult`, plus keep existing `override_reason`. Header row updated to match.
 
-## Plan
+4. **No schema or business-logic changes.** Purely presentation: same RLS, same data source, no new mutations.
 
-1. **Enable the required crypto support**
-   - Add a migration to ensure the backend crypto extension used for PIN hashing is available.
+## Technical notes
+- Workers are auth users, not members directly. Approach: fetch distinct `dropoff_worker_user_id` + `pickup_worker_user_id` from the result rows, then `supabase.from("members").select("user_id, first_name, last_name").in("user_id", ids).eq("tenant_id", tenantId)` and build a `Map`. Fallback to "Unknown" when a worker has no member record.
+- Adult names: fetch via `.in("id", adultIds)` against `members`.
+- All lookups are tenant-scoped.
 
-2. **Harden the check-in function**
-   - Update `checkin_child` so the PIN hash call is explicit and stable.
-   - Keep the existing protections:
-     - only Children Church workers/admins can check in children
-     - PIN must be 6 digits
-     - a child cannot be checked in twice without pickup first
-     - all data stays tenant-scoped
-
-3. **Verify Dominion can check in**
-   - Re-check the `checkin_child` function definition after migration.
-   - Confirm Dominion has no open duplicate check-in blocking her.
-   - The button should then generate the 6-digit pickup code instead of silently failing.
+## Out of scope
+Drop-off/pickup UI, override workflow, PIN logic, schema changes.
