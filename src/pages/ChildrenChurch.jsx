@@ -486,19 +486,41 @@ function ReportPanel({ tenantId }) {
         </div>
         <div className="border rounded overflow-x-auto max-h-96">
           <table className="w-full text-xs">
-            <thead className="bg-muted sticky top-0"><tr><th className="p-2 text-left">Date</th><th className="p-2 text-left">Child</th><th className="p-2 text-left">Drop-off</th><th className="p-2 text-left">Pickup</th><th className="p-2 text-left">Method</th><th className="p-2 text-left">Status</th></tr></thead>
+            <thead className="bg-muted sticky top-0"><tr>
+              <th className="p-2 text-left">Date</th>
+              <th className="p-2 text-left">Child</th>
+              <th className="p-2 text-left">Drop-off</th>
+              <th className="p-2 text-left">Drop-off by</th>
+              <th className="p-2 text-left">Pickup</th>
+              <th className="p-2 text-left">Method</th>
+              <th className="p-2 text-left">Released by</th>
+              <th className="p-2 text-left">Collected by</th>
+              <th className="p-2 text-left">Status</th>
+            </tr></thead>
             <tbody>
-              {rows.map(r => (
-                <tr key={r.id} className="border-t">
-                  <td className="p-2">{r.service_date}</td>
-                  <td className="p-2">{r.children?.first_name} {r.children?.last_name}</td>
-                  <td className="p-2">{format(new Date(r.dropoff_at), "HH:mm")}</td>
-                  <td className="p-2">{r.pickup_at ? format(new Date(r.pickup_at), "HH:mm") : "—"}</td>
-                  <td className="p-2">{r.pickup_method || "—"}</td>
-                  <td className="p-2"><Badge variant={r.status === "flagged" ? "destructive" : r.status === "picked_up" ? "default" : "outline"}>{r.status}</Badge></td>
-                </tr>
-              ))}
-              {rows.length === 0 && <tr><td colSpan="6" className="p-4 text-center text-muted-foreground">No records.</td></tr>}
+              {rows.map(r => {
+                const isOverride = r.pickup_method === "leader_override";
+                return (
+                  <tr key={r.id} className="border-t align-top">
+                    <td className="p-2 whitespace-nowrap">{r.service_date}</td>
+                    <td className="p-2">{r.children?.first_name} {r.children?.last_name}</td>
+                    <td className="p-2 whitespace-nowrap">{format(new Date(r.dropoff_at), "HH:mm")}</td>
+                    <td className="p-2">{r._dropoff_worker_name}</td>
+                    <td className="p-2 whitespace-nowrap">{r.pickup_at ? format(new Date(r.pickup_at), "HH:mm") : "—"}</td>
+                    <td className="p-2">{r.pickup_method || "—"}</td>
+                    <td className="p-2">
+                      {r._pickup_worker_name ? (
+                        isOverride ? (
+                          <Badge variant="destructive" className="text-[10px]">Leader: {r._pickup_worker_name}</Badge>
+                        ) : r._pickup_worker_name
+                      ) : "—"}
+                    </td>
+                    <td className="p-2">{r._pickup_adult_name || "—"}{r.override_reason ? <div className="text-[10px] text-muted-foreground mt-0.5" title={r.override_reason}>Reason: {r.override_reason.length > 40 ? r.override_reason.slice(0,40)+"…" : r.override_reason}</div> : null}</td>
+                    <td className="p-2"><Badge variant={r.status === "flagged" ? "destructive" : r.status === "picked_up" ? "default" : "outline"}>{r.status}</Badge></td>
+                  </tr>
+                );
+              })}
+              {rows.length === 0 && <tr><td colSpan="9" className="p-4 text-center text-muted-foreground">No records.</td></tr>}
             </tbody>
           </table>
         </div>
