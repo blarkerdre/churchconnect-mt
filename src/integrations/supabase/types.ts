@@ -638,6 +638,265 @@ export type Database = {
           },
         ]
       }
+      child_checkins: {
+        Row: {
+          child_id: string
+          created_at: string
+          dropoff_at: string
+          dropoff_parent_member_id: string
+          dropoff_worker_user_id: string
+          id: string
+          notes: string | null
+          override_reason: string | null
+          pickup_adult_member_id: string | null
+          pickup_at: string | null
+          pickup_delegation_id: string | null
+          pickup_method: string | null
+          pickup_worker_user_id: string | null
+          pin_code_hash: string
+          service_date: string
+          status: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          child_id: string
+          created_at?: string
+          dropoff_at?: string
+          dropoff_parent_member_id: string
+          dropoff_worker_user_id: string
+          id?: string
+          notes?: string | null
+          override_reason?: string | null
+          pickup_adult_member_id?: string | null
+          pickup_at?: string | null
+          pickup_delegation_id?: string | null
+          pickup_method?: string | null
+          pickup_worker_user_id?: string | null
+          pin_code_hash: string
+          service_date?: string
+          status?: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          child_id?: string
+          created_at?: string
+          dropoff_at?: string
+          dropoff_parent_member_id?: string
+          dropoff_worker_user_id?: string
+          id?: string
+          notes?: string | null
+          override_reason?: string | null
+          pickup_adult_member_id?: string | null
+          pickup_at?: string | null
+          pickup_delegation_id?: string | null
+          pickup_method?: string | null
+          pickup_worker_user_id?: string | null
+          pin_code_hash?: string
+          service_date?: string
+          status?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "child_checkins_child_id_fkey"
+            columns: ["child_id"]
+            isOneToOne: false
+            referencedRelation: "children"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "child_checkins_dropoff_parent_member_id_fkey"
+            columns: ["dropoff_parent_member_id"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "child_checkins_pickup_adult_member_id_fkey"
+            columns: ["pickup_adult_member_id"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "child_checkins_pickup_delegation_id_fkey"
+            columns: ["pickup_delegation_id"]
+            isOneToOne: false
+            referencedRelation: "child_pickup_delegations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      child_guardians: {
+        Row: {
+          can_pickup: boolean
+          child_id: string
+          created_at: string
+          id: string
+          member_id: string
+          relationship: string | null
+          tenant_id: string
+        }
+        Insert: {
+          can_pickup?: boolean
+          child_id: string
+          created_at?: string
+          id?: string
+          member_id: string
+          relationship?: string | null
+          tenant_id: string
+        }
+        Update: {
+          can_pickup?: boolean
+          child_id?: string
+          created_at?: string
+          id?: string
+          member_id?: string
+          relationship?: string | null
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "child_guardians_child_id_fkey"
+            columns: ["child_id"]
+            isOneToOne: false
+            referencedRelation: "children"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "child_guardians_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      child_pickup_delegations: {
+        Row: {
+          child_id: string
+          code_hash: string
+          created_at: string
+          delegate_name: string
+          delegate_phone: string | null
+          expires_at: string
+          id: string
+          issued_by_member_id: string
+          tenant_id: string
+          used_at: string | null
+          used_by_worker_user_id: string | null
+          valid_on: string
+        }
+        Insert: {
+          child_id: string
+          code_hash: string
+          created_at?: string
+          delegate_name: string
+          delegate_phone?: string | null
+          expires_at: string
+          id?: string
+          issued_by_member_id: string
+          tenant_id: string
+          used_at?: string | null
+          used_by_worker_user_id?: string | null
+          valid_on: string
+        }
+        Update: {
+          child_id?: string
+          code_hash?: string
+          created_at?: string
+          delegate_name?: string
+          delegate_phone?: string | null
+          expires_at?: string
+          id?: string
+          issued_by_member_id?: string
+          tenant_id?: string
+          used_at?: string | null
+          used_by_worker_user_id?: string | null
+          valid_on?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "child_pickup_delegations_child_id_fkey"
+            columns: ["child_id"]
+            isOneToOne: false
+            referencedRelation: "children"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "child_pickup_delegations_issued_by_member_id_fkey"
+            columns: ["issued_by_member_id"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      children: {
+        Row: {
+          age_group: string | null
+          allergies: string | null
+          created_at: string
+          date_of_birth: string | null
+          first_name: string
+          gender: string | null
+          id: string
+          is_active: boolean
+          last_name: string
+          medical_notes: string | null
+          notes: string | null
+          photo_url: string | null
+          primary_guardian_member_id: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          age_group?: string | null
+          allergies?: string | null
+          created_at?: string
+          date_of_birth?: string | null
+          first_name: string
+          gender?: string | null
+          id?: string
+          is_active?: boolean
+          last_name: string
+          medical_notes?: string | null
+          notes?: string | null
+          photo_url?: string | null
+          primary_guardian_member_id: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          age_group?: string | null
+          allergies?: string | null
+          created_at?: string
+          date_of_birth?: string | null
+          first_name?: string
+          gender?: string | null
+          id?: string
+          is_active?: boolean
+          last_name?: string
+          medical_notes?: string | null
+          notes?: string | null
+          photo_url?: string | null
+          primary_guardian_member_id?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "children_primary_guardian_member_id_fkey"
+            columns: ["primary_guardian_member_id"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       church_attendance_reports: {
         Row: {
           adult_female: number
@@ -4390,6 +4649,35 @@ export type Database = {
         Args: { _added_bytes?: number; _tenant_id: string }
         Returns: boolean
       }
+      checkin_child: {
+        Args: { _child_id: string; _parent_member_id: string; _pin: string }
+        Returns: {
+          child_id: string
+          created_at: string
+          dropoff_at: string
+          dropoff_parent_member_id: string
+          dropoff_worker_user_id: string
+          id: string
+          notes: string | null
+          override_reason: string | null
+          pickup_adult_member_id: string | null
+          pickup_at: string | null
+          pickup_delegation_id: string | null
+          pickup_method: string | null
+          pickup_worker_user_id: string | null
+          pin_code_hash: string
+          service_date: string
+          status: string
+          tenant_id: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "child_checkins"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       count_pending_join_requests_for_user: {
         Args: { _tenant_id: string; _user_id: string }
         Returns: number
@@ -4544,6 +4832,14 @@ export type Database = {
         Args: { _task_id: string; _tenant_id: string; _user_id: string }
         Returns: boolean
       }
+      is_children_church_leader: {
+        Args: { _tenant_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_children_church_member: {
+        Args: { _tenant_id: string; _user_id: string }
+        Returns: boolean
+      }
       is_followup_team_member: {
         Args: { _tenant_id: string; _user_id: string }
         Returns: boolean
@@ -4638,6 +4934,43 @@ export type Database = {
           msg_id: number
           read_ct: number
         }[]
+      }
+      release_child: {
+        Args: {
+          _adult_member_id?: string
+          _checkin_id: string
+          _delegation_code?: string
+          _method: string
+          _notes?: string
+          _override_reason?: string
+          _pin?: string
+        }
+        Returns: {
+          child_id: string
+          created_at: string
+          dropoff_at: string
+          dropoff_parent_member_id: string
+          dropoff_worker_user_id: string
+          id: string
+          notes: string | null
+          override_reason: string | null
+          pickup_adult_member_id: string | null
+          pickup_at: string | null
+          pickup_delegation_id: string | null
+          pickup_method: string | null
+          pickup_worker_user_id: string | null
+          pin_code_hash: string
+          service_date: string
+          status: string
+          tenant_id: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "child_checkins"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       task_is_in_user_unit: {
         Args: { _task_id: string; _tenant_id: string; _user_id: string }
