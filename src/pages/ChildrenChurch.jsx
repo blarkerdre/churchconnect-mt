@@ -124,9 +124,50 @@ function CheckInPanel({ tenantId }) {
   const [search, setSearch] = useState("");
   const [selectedFamily, setSelectedFamily] = useState(null); // { parent, children }
   const [selectedChildIds, setSelectedChildIds] = useState([]);
+  const [broughtById, setBroughtById] = useState("");
   const [issuedPin, setIssuedPin] = useState(null);
   const [issuedFor, setIssuedFor] = useState(null);
   const [profileChildId, setProfileChildId] = useState(null);
+
+  // Eligible drop-off adults for currently selected children: primary parents + authorised guardians.
+  const { data: broughtByOptions = [] } = useQuery({
+    queryKey: ["cc-brought-by", tenantId, selectedChildIds],
+    enabled: !!tenantId && selectedChildIds.length > 0,
+    queryFn: async () => {
+      const childIds = selectedChildIds;
+      const [childRes, guardRes] = await Promise.all([
+        supabase.from("children")
+          .select("primary_guardian_member_id")
+          .eq("tenant_id", tenantId)
+          .in("id", childIds),
+        supabase.from("child_guardians")
+          .select("member_id")
+          .eq("tenant_id", tenantId)
+          .in("child_id", childIds),
+      ]);
+      const ids = new Set([
+        ...(childRes.data || []).map(r => r.primary_guardian_member_id).filter(Boolean),
+        ...(guardRes.data || []).map(r => r.member_id).filter(Boolean),
+      ]);
+      if (selectedFamily?.parent?.id) ids.add(selectedFamily.parent.id);
+      if (ids.size === 0) return [];
+      const { data } = await supabase.from("members")
+        .select("id, first_name, last_name, phone")
+        .eq("tenant_id", tenantId)
+        .in("id", Array.from(ids));
+      return data || [];
+    },
+  });
+
+  // Default "Brought by" to the searched family parent when options load/change.
+  React.useEffect(() => {
+    if (broughtByOptions.length === 0) { setBroughtById(""); return; }
+    const stillValid = broughtByOptions.some(o => o.id === broughtById);
+    if (stillValid) return;
+    const parentId = selectedFamily?.parent?.id;
+    const fallback = broughtByOptions.find(o => o.id === parentId)?.id || broughtByOptions[0].id;
+    setBroughtById(fallback);
+  }, [broughtByOptions, selectedFamily, broughtById]);
 
   // Search across members (parents), children, and guardian links — return grouped families.
   const { data: families = [], isFetching: searching } = useQuery({
@@ -245,35 +286,40 @@ function CheckInPanel({ tenantId }) {
     mutationFn: async () => {
       if (!selectedFamily?.parent?.id) throw new Error("Select a family first");
       if (selectedChildIds.length === 0) throw new Error("Select at least one child");
+      if (!broughtById) throw new Error("Select who brought the child");
       const pin = Math.floor(100000 + Math.random() * 900000).toString();
       const snapshot = (selectedFamily.children || []).filter(c => selectedChildIds.includes(c.id));
       for (const cid of selectedChildIds) {
         const { error } = await supabase.rpc("checkin_child", {
-          _child_id: cid, _pin: pin, _parent_member_id: selectedFamily.parent.id,
+          _child_id: cid, _pin: pin, _parent_member_id: broughtById,
         });
         if (error) {
           console.error("checkin_child failed", { child_id: cid, error });
           throw new Error(error.message || "Check-in failed");
         }
       }
-      // Notify parent in-app with the pickup PIN (best-effort)
+      // Notify primary parent in-app with the pickup PIN (best-effort)
       try {
-        const { data: parent } = await supabase
+        const notifyIds = new Set([selectedFamily.parent.id]);
+        if (broughtById && broughtById !== selectedFamily.parent.id) notifyIds.add(broughtById);
+        const { data: recipients } = await supabase
           .from("members")
           .select("user_id")
-          .eq("id", selectedFamily.parent.id)
           .eq("tenant_id", tenantId)
-          .maybeSingle();
-        if (parent?.user_id) {
+          .in("id", Array.from(notifyIds));
+        const userIds = (recipients || []).map(r => r.user_id).filter(Boolean);
+        if (userIds.length) {
           const names = snapshot.map(c => c.first_name).join(", ").slice(0, 80);
-          await supabase.from("notifications").insert({
-            user_id: parent.user_id,
-            tenant_id: tenantId,
-            title: `Pickup code for ${names}`,
-            message: `Your pickup PIN is ${pin}. Show this at pickup. Do not share.`,
-            type: "children_church",
-            reference_type: "children_church",
-          });
+          await supabase.from("notifications").insert(
+            userIds.map(uid => ({
+              user_id: uid,
+              tenant_id: tenantId,
+              title: `Pickup code for ${names}`,
+              message: `Your pickup PIN is ${pin}. Show this at pickup. Do not share.`,
+              type: "children_church",
+              reference_type: "children_church",
+            }))
+          );
         }
       } catch (e) {
         console.warn("checkin parent notification failed", e);
@@ -288,7 +334,7 @@ function CheckInPanel({ tenantId }) {
     onError: (e) => toast.error(e.message || "Check-in failed"),
   });
 
-  const reset = () => { setSearch(""); setSelectedFamily(null); setSelectedChildIds([]); setIssuedPin(null); setIssuedFor(null); };
+  const reset = () => { setSearch(""); setSelectedFamily(null); setSelectedChildIds([]); setBroughtById(""); setIssuedPin(null); setIssuedFor(null); };
 
   return (
     <Card>
@@ -363,7 +409,23 @@ function CheckInPanel({ tenantId }) {
                 })}
               </div>
             )}
-            <Button onClick={() => checkIn.mutate()} disabled={selectedChildIds.length === 0 || checkIn.isPending} className="w-full">
+            {selectedChildIds.length > 0 && (
+              <div className="space-y-1">
+                <Label>Brought by</Label>
+                <Select value={broughtById} onValueChange={setBroughtById}>
+                  <SelectTrigger><SelectValue placeholder="Select the adult dropping off..." /></SelectTrigger>
+                  <SelectContent>
+                    {broughtByOptions.map(o => (
+                      <SelectItem key={o.id} value={o.id}>
+                        {o.first_name} {o.last_name}{o.phone ? ` · ${o.phone}` : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-[11px] text-muted-foreground">Recorded against the check-in for safeguarding.</p>
+              </div>
+            )}
+            <Button onClick={() => checkIn.mutate()} disabled={selectedChildIds.length === 0 || !broughtById || checkIn.isPending} className="w-full">
               <LogIn className="h-4 w-4 mr-2" /> Check in {selectedChildIds.length || ""}
             </Button>
           </div>
