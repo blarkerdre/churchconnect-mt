@@ -48,19 +48,21 @@ export default function useMessageAlerts() {
   useEffect(() => {
     if (!user?.id || !tenantId) return;
 
+    // Server-side filter by tenant_id (single-column Realtime limit);
+    // recipient_id is verified client-side.
     const messagesChannel = supabase
-      .channel(`msg-alerts-${user.id}`)
+      .channel(`msg-alerts-${user.id}-${tenantId}`)
       .on(
         "postgres_changes",
         {
           event: "INSERT",
           schema: "public",
           table: "messages",
-          filter: `recipient_id=eq.${user.id}`,
+          filter: `tenant_id=eq.${tenantId}`,
         },
         async (payload) => {
           const row = payload.new || {};
-          if (row.tenant_id && row.tenant_id !== tenantId) return;
+          if (row.recipient_id !== user.id) return;
           if (row.sender_id === user.id) return;
           const sender = await getDisplayName(row.sender_id, tenantId);
           triggerNotificationAlert(

@@ -51,12 +51,17 @@ export default function CheckInPanel({ session, onClose }) {
   });
 
   const { data: records = [] } = useQuery({
-    queryKey: ["attendance-records", session.id],
+    queryKey: ["attendance-records", session.id, tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("attendance_records").select("*").eq("session_id", session.id);
+      const { data, error } = await supabase
+        .from("attendance_records")
+        .select("*")
+        .eq("session_id", session.id)
+        .eq("tenant_id", tenantId);
       if (error) throw error;
       return data;
     },
+    enabled: !!tenantId,
   });
 
   const upsertMutation = useMutation({
