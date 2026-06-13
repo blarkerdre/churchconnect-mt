@@ -155,6 +155,20 @@ export default function WSFAttendanceTab({ centres }) {
     return { centresInScope, held, offVenue, totalAttendance, notHeld, avgAttendance, hasRange, totalMale, totalFemale, totalAdults, totalChildren, totalFirstTimers, totalTestimonies };
   })();
 
+  // Centres in scope that recorded no attendance within the current filters
+  const nonReportingCentres = (() => {
+    if (filterCentreId !== "all") return [];
+    const reportedIds = new Set(filteredReports.map(r => r.centre_id));
+    return availableCentres
+      .filter(c => !reportedIds.has(c.id))
+      .map(c => ({ ...c, zoneName: zones.find(z => z.id === c.zone_id)?.name || "" }))
+      .sort((a, b) => (a.zoneName || "zzz").localeCompare(b.zoneName || "zzz") || a.name.localeCompare(b.name));
+  })();
+
+  const rangeLabel = dateFrom || dateTo
+    ? `${dateFrom || "…"} → ${dateTo || "…"}`
+    : "All time";
+
   const buildPrintRows = () => ({
     title: "Home Cell Attendance Report",
     headers: ["Date", "Centre", "Venue", "Male", "Female", "Adults", "Children", "Total", "1st Timers", "Testimonies"],
@@ -179,6 +193,12 @@ export default function WSFAttendanceTab({ centres }) {
         ].join(",");
       }),
     ];
+    if (nonReportingCentres.length > 0) {
+      rows.push("");
+      rows.push(`"Centres With No Attendance Reported (${rangeLabel})"`);
+      rows.push(["Centre","Zone"].join(","));
+      nonReportingCentres.forEach(c => rows.push([esc(c.name), esc(c.zoneName || "")].join(",")));
+    }
     const blob = new Blob([rows.join("\n")], { type: "text/csv" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
@@ -290,6 +310,39 @@ export default function WSFAttendanceTab({ centres }) {
                   </div>
                 </div>
               ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {canAccess && filterCentreId === "all" && nonReportingCentres.length > 0 && (
+        <Card className="border-0 shadow-sm border-l-4 border-l-destructive">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base font-display flex items-center gap-2">
+              <AlertCircle className="h-4 w-4 text-destructive" />
+              Centres With No Attendance Reported
+              <Badge variant="outline" className="ml-1 font-mono">{nonReportingCentres.length}</Badge>
+            </CardTitle>
+            <p className="text-xs text-muted-foreground mt-1">{rangeLabel}</p>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {nonReportingCentres.map(c => {
+                const canRecordHere = isAdmin || ledCentres.some(lc => lc.id === c.id);
+                return (
+                  <div key={c.id} className="flex items-center justify-between gap-2 p-2 rounded-md bg-muted/40">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium truncate">{c.name}</p>
+                      {c.zoneName && <p className="text-[10px] text-muted-foreground truncate">{c.zoneName}</p>}
+                    </div>
+                    {canRecordHere && canWrite && (
+                      <Button size="sm" variant="outline" className="h-7 px-2 text-xs shrink-0" onClick={() => openNew(c)}>
+                        <Plus className="h-3 w-3 mr-1" /> Record
+                      </Button>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </CardContent>
         </Card>
