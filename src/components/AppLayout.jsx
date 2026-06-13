@@ -46,6 +46,8 @@ const allNavItems = [
   { name: "Pastoral Care", icon: Heart, path: "/pastoral-care", access: null },
   { name: "Communications", icon: Megaphone, path: "/communications", access: null },
   { name: "Transportation", icon: Car, path: "/transportation", access: null },
+  { name: "Children Church", icon: Users, path: "/children-church", access: "children_church" },
+  { name: "My Family", icon: Users, path: "/my-family", access: null },
   { name: "Reports Hub", icon: FileText, path: "/reports", access: "reports" },
   { name: "Training Report", icon: TrendingUp, path: "/training-reports", access: "training_report" },
   
