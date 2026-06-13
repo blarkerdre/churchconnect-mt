@@ -50,23 +50,26 @@ function CheckInPanel({ tenantId }) {
     mutationFn: async () => {
       if (selectedChildIds.length === 0) throw new Error("Select at least one child");
       const pin = Math.floor(100000 + Math.random() * 900000).toString();
-      const results = [];
+      const snapshot = parentChildren.filter(c => selectedChildIds.includes(c.id));
       for (const cid of selectedChildIds) {
-        const { data, error } = await supabase.rpc("checkin_child", {
+        const { error } = await supabase.rpc("checkin_child", {
           _child_id: cid, _pin: pin, _parent_member_id: selectedParent.id,
         });
-        if (error) throw error;
-        results.push(data);
+        if (error) {
+          console.error("checkin_child failed", { child_id: cid, error });
+          throw new Error(error.message || "Check-in failed");
+        }
       }
-      return { pin, children: parentChildren.filter(c => selectedChildIds.includes(c.id)) };
+      return { pin, children: snapshot };
     },
     onSuccess: ({ pin, children }) => {
       setIssuedPin(pin); setIssuedFor(children);
       qc.invalidateQueries({ queryKey: ["cc-in-care"] });
       toast.success("Checked in");
     },
-    onError: (e) => toast.error(e.message),
+    onError: (e) => toast.error(e.message || "Check-in failed"),
   });
+
 
   const reset = () => { setParentSearch(""); setSelectedParent(null); setSelectedChildIds([]); setIssuedPin(null); setIssuedFor(null); };
 
