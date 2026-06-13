@@ -118,7 +118,8 @@ export default function WSFAttendanceTab({ centres }) {
   const filteredReports = reports.filter(r =>
     (filterCentreId === "all" || r.centre_id === filterCentreId) &&
     (!dateFrom || r.meeting_date >= dateFrom) &&
-    (!dateTo || r.meeting_date <= dateTo)
+    (!dateTo || r.meeting_date <= dateTo) &&
+    (filterVenue === "all" || (filterVenue === "home" ? r.held_at_home_cell !== false : r.held_at_home_cell === false))
   );
 
   const availableCentres = isAdmin ? centres : ledCentres;
