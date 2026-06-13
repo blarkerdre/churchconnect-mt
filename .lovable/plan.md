@@ -1,32 +1,30 @@
 ## Goal
-Stop `unit-task-assignment` and `transport-booking-notification` emails from being rejected and DLQ'd by the transactional send API.
+Make the birthday-messages scheduler honor the tenant's local UK time so the configured `send_hour_local` (default 8) means 08:00 **Europe/London**, not 08:00 UTC. Today during BST the messages go out at 09:00 local; in winter they correctly send at 08:00.
 
-## Root causes (from email_send_log)
-1. `unit-task-assignment` → API 400 `missing_unsubscribe`: the enqueue payload omits `unsubscribe_token`.
-2. `transport-booking-notification` → mostly resolved; some old DLQs from `invalid_email "from"` caused by an empty/whitespace tenant sender name producing `"" <noreply@…>`.
+## Root cause
+`supabase/functions/send-birthday-messages/index.ts` compares `todayUtc.getUTCHours()` directly against `t.send_hour_local`. There is no timezone conversion, so "8" is interpreted as UTC.
 
-## Changes
+Also: the "is it the member's birthday" check uses UTC date (`todayMM/todayDD`). Near midnight UK time that can shift the birthday by a day when the UTC date has already rolled over but London hasn't (winter) or hasn't yet (summer near midnight). For an 08:00-local send window this is currently benign, but we'll fix it in the same pass so future hour changes don't introduce a regression.
 
-### 1. `supabase/functions/notify-unit-task-assignment/index.ts`
-Before each email enqueue (inside the `if (email)` block):
-- Normalize the recipient: `const normalizedEmail = email.trim().toLowerCase()`.
-- Look up an existing unused token in `email_unsubscribe_tokens` for that email; if none, insert a new `crypto.randomUUID()` token and use it; on insert error, re-query.
-- If no token can be resolved, log and `continue` (skip the send) instead of enqueuing a doomed message.
-- Add `unsubscribe_token: unsubscribeToken` to the `enqueue_email` payload.
+## Changes (single edit, one file)
+`supabase/functions/send-birthday-messages/index.ts`:
 
-### 2. `supabase/functions/notify-transport-booking/index.ts`
-Harden From-address construction in both branches (driver-availability and main):
-- Trim `churchName` / `churchShortName`; if blank, fall back to `"Church"`.
-- Strip control chars and collapse whitespace before quoting.
-- Keep existing backslash-escape of `\` and `"`.
+1. Replace the UTC clock/date with London-local equivalents using `Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', ... })`:
+   - `londonHour` (0-23) — used for the cron-mode gate.
+   - `londonMM` / `londonDD` / `londonDate` (YYYY-MM-DD) — used for the birthday match, the idempotency `sent_on`, and the failed-row update.
+2. Gate becomes: `if (!isManual && londonHour !== (t.send_hour_local ?? 8)) continue;`
+3. Birthday filter uses `londonMM` / `londonDD`.
+4. Log insert/update uses `londonDate` for `sent_on`.
 
-No other modules, schemas, or UI touched.
+No DB migration, no UI change, no other functions touched. Cron continues to fire hourly; the function self-gates on the correct local hour.
 
 ## Verification
-- Redeploy both edge functions.
-- Trigger one unit-task assignment and one transport booking; confirm new rows in `email_send_log` go `pending → sent` (no `missing_unsubscribe` / `invalid_email`).
-- Re-check `status='dlq'` rows for these templates after 24h — none should appear with the same error.
+- Redeploy `send-birthday-messages`.
+- Manually invoke at a non-8 UTC hour with `{ tenant_id }`: still works (manual path bypasses the gate).
+- At 08:00 London (07:00 UTC in BST) the next hourly cron tick runs the send; confirm a new row in `birthday_message_log` with `sent_on` = today's London date.
+- Confirm no double-send by re-running cron within the same London day — unique `(tenant_id, member_id, channel, sent_on)` blocks it.
 
 ## Out of scope
-- Replaying the historic DLQ messages.
-- Refactoring shared unsubscribe-token logic into `_shared/` (can follow later if more functions need it).
+- Per-tenant timezone (all current tenants are UK; can be added later by reading a `timezone` column on `tenants`).
+- Retrying failed channels.
+- Fixing per-member data gaps (missing `user_id`, `phone`, `email`).
