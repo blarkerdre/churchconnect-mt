@@ -126,6 +126,7 @@ function CheckInPanel({ tenantId }) {
   const [selectedChildIds, setSelectedChildIds] = useState([]);
   const [issuedPin, setIssuedPin] = useState(null);
   const [issuedFor, setIssuedFor] = useState(null);
+  const [profileChildId, setProfileChildId] = useState(null);
 
   // Search across members (parents), children, and guardian links — return grouped families.
   const { data: families = [], isFetching: searching } = useQuery({
