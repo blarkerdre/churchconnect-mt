@@ -1,27 +1,25 @@
 ## Root cause
 
-The Release button on **Children Church → Pickup** does call its mutation when clicked, but the result is invisible:
+`register_walkin_family` creates the parent `members` row and the `children` rows (with `primary_guardian_member_id`) but **never inserts a `child_guardians` row** linking the parent to each child. At pickup time:
 
-- `src/pages/ChildrenChurch.jsx` reports success/errors via `toast` from `sonner` (e.g. `toast.error(e.message)` in the `release` mutation's `onError`).
-- `src/App.jsx` only mounts the shadcn Toaster (`<Toaster />` from `@/components/ui/toaster`). The **Sonner** Toaster (`src/components/ui/sonner.jsx`) is **never mounted**.
-- Result: every `sonner` toast call in this page (and anywhere else in the app that uses `sonner`) is a silent no-op, so the user sees no error, no success, no spinner change — exactly the "Release button does nothing" symptom.
+- The Release panel reads from `child_guardians` → "⚠ No authorised adults registered." appears, and the "Who is collecting?" select is empty.
+- The `release_child` RPC's PIN path requires the chosen adult to exist in `child_guardians` with `can_pickup = true` → it rejects with "Adult is not on the authorised pickup list".
 
-The underlying RPC call (`release_child`) most likely is throwing a validation error like `Incorrect PIN`, `PIN and adult required`, or `Not authorised to release children`, but the message never reaches the screen.
+Net effect: walk-in family children can only be released via leader override, even though a parent member record exists.
 
 ## Fix
 
-1. **Mount the Sonner Toaster globally** in `src/App.jsx`:
-   - Import `Toaster as SonnerToaster` from `@/components/ui/sonner`.
-   - Render `<SonnerToaster />` next to the existing `<Toaster />` inside the app root so toasts from both libraries display.
+1. **Migration — patch `register_walkin_family`**: after each child INSERT, also insert a `child_guardians` row for the walk-in parent:
+   - `tenant_id = _tenant_id`, `child_id = v_child_id`, `member_id = v_member_id`
+   - `relationship = 'Parent'`, `can_pickup = true`, `is_primary = true`
 
-2. **Verify the fix** by:
-   - Reloading the page, selecting a child in the Pickup tab, leaving PIN/adult empty, and clicking Release → expect a visible error toast (e.g. "PIN and adult required").
-   - Entering a wrong PIN → expect "Incorrect PIN".
-   - Entering correct PIN + authorised adult → expect "Child released" and the row to disappear.
+2. **Backfill** existing walk-in families: insert missing `child_guardians` rows for every child whose `primary_guardian_member_id` is set but has no matching `child_guardians` entry (scoped to members with `source = 'children_church_walkin'` to be conservative).
 
-No other code changes are needed — the Release flow, the RPC, and the mutation wiring are all correct; only the missing toaster is hiding the feedback.
+3. **Verification**:
+   - Register a new walk-in family → pickup tab shows the parent under "Authorised adults" and in the collector dropdown.
+   - Existing walk-in checked-in children now show their parent as authorised; PIN + parent release succeeds.
 
 ## Out of scope
 
-- No changes to `release_child` RPC, RLS, or the PickupPanel UI.
-- No migration of existing `sonner` calls to shadcn `useToast` (mounting Sonner is the smaller, safer fix and matches the rest of the codebase that already uses `sonner`).
+- No UI changes to `PickupPanel` or `WalkInRegisterDialog`.
+- No changes to `release_child` logic, RLS, or other pickup methods.
