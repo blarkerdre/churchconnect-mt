@@ -708,6 +708,7 @@ function ReportPanel({ tenantId }) {
                     <td className="p-2 whitespace-nowrap">{r.service_date}</td>
                     <td className="p-2">{r.children?.first_name} {r.children?.last_name}</td>
                     <td className="p-2 whitespace-nowrap">{format(new Date(r.dropoff_at), "HH:mm")}</td>
+                    <td className="p-2">{r._dropoff_parent_name || "—"}</td>
                     <td className="p-2">{r._dropoff_worker_name}</td>
                     <td className="p-2 whitespace-nowrap">{r.pickup_at ? format(new Date(r.pickup_at), "HH:mm") : "—"}</td>
                     <td className="p-2">{r.pickup_method || "—"}</td>
