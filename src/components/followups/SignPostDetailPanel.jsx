@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useTenant } from "@/contexts/TenantContext";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
@@ -35,6 +36,7 @@ const STATUS_OPTIONS = [
 
 export default function SignPostDetailPanel({ open, onClose, referralId, onCreateFollowup }) {
   const { user, profile } = useAuth();
+  const { tenantId } = useTenant();
   const queryClient = useQueryClient();
   const [updateText, setUpdateText] = useState("");
   const [statusChange, setStatusChange] = useState("");
@@ -42,8 +44,8 @@ export default function SignPostDetailPanel({ open, onClose, referralId, onCreat
 
   // Fetch full referral with member + centre
   const { data: referral, isLoading } = useQuery({
-    queryKey: ["signpost-detail", referralId],
-    enabled: !!referralId && open,
+    queryKey: ["signpost-detail", referralId, tenantId],
+    enabled: !!referralId && !!tenantId && open,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("followup_referrals")
@@ -57,6 +59,7 @@ export default function SignPostDetailPanel({ open, onClose, referralId, onCreat
           )
         `)
         .eq("id", referralId)
+        .eq("tenant_id", tenantId)
         .maybeSingle();
       if (error) throw error;
       if (data?.referred_by) {
@@ -72,13 +75,14 @@ export default function SignPostDetailPanel({ open, onClose, referralId, onCreat
   });
 
   const { data: updates = [] } = useQuery({
-    queryKey: ["signpost-updates", referralId],
-    enabled: !!referralId && open,
+    queryKey: ["signpost-updates", referralId, tenantId],
+    enabled: !!referralId && !!tenantId && open,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("followup_referral_updates")
         .select("*")
         .eq("referral_id", referralId)
+        .eq("tenant_id", tenantId)
         .order("created_at", { ascending: false });
       if (error) throw error;
       const authorIds = [...new Set((data || []).map(u => u.author_id).filter(Boolean))];

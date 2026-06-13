@@ -68,10 +68,18 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Enforce tenant boundary: caller-supplied tenant_id must match the task's tenant.
+    if (tenant_id && task.tenant_id && task.tenant_id !== tenant_id) {
+      return new Response(JSON.stringify({ error: "Tenant mismatch" }), {
+        status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const { data: assignments = [] } = await supabase
       .from("unit_task_assignments")
       .select("user_id, member_id")
-      .eq("task_id", task_id);
+      .eq("task_id", task_id)
+      .eq("tenant_id", task.tenant_id);
 
     // Tenant branding
     let churchName = "Church Management Suite";
