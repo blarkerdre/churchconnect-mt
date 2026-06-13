@@ -286,35 +286,40 @@ function CheckInPanel({ tenantId }) {
     mutationFn: async () => {
       if (!selectedFamily?.parent?.id) throw new Error("Select a family first");
       if (selectedChildIds.length === 0) throw new Error("Select at least one child");
+      if (!broughtById) throw new Error("Select who brought the child");
       const pin = Math.floor(100000 + Math.random() * 900000).toString();
       const snapshot = (selectedFamily.children || []).filter(c => selectedChildIds.includes(c.id));
       for (const cid of selectedChildIds) {
         const { error } = await supabase.rpc("checkin_child", {
-          _child_id: cid, _pin: pin, _parent_member_id: selectedFamily.parent.id,
+          _child_id: cid, _pin: pin, _parent_member_id: broughtById,
         });
         if (error) {
           console.error("checkin_child failed", { child_id: cid, error });
           throw new Error(error.message || "Check-in failed");
         }
       }
-      // Notify parent in-app with the pickup PIN (best-effort)
+      // Notify primary parent in-app with the pickup PIN (best-effort)
       try {
-        const { data: parent } = await supabase
+        const notifyIds = new Set([selectedFamily.parent.id]);
+        if (broughtById && broughtById !== selectedFamily.parent.id) notifyIds.add(broughtById);
+        const { data: recipients } = await supabase
           .from("members")
           .select("user_id")
-          .eq("id", selectedFamily.parent.id)
           .eq("tenant_id", tenantId)
-          .maybeSingle();
-        if (parent?.user_id) {
+          .in("id", Array.from(notifyIds));
+        const userIds = (recipients || []).map(r => r.user_id).filter(Boolean);
+        if (userIds.length) {
           const names = snapshot.map(c => c.first_name).join(", ").slice(0, 80);
-          await supabase.from("notifications").insert({
-            user_id: parent.user_id,
-            tenant_id: tenantId,
-            title: `Pickup code for ${names}`,
-            message: `Your pickup PIN is ${pin}. Show this at pickup. Do not share.`,
-            type: "children_church",
-            reference_type: "children_church",
-          });
+          await supabase.from("notifications").insert(
+            userIds.map(uid => ({
+              user_id: uid,
+              tenant_id: tenantId,
+              title: `Pickup code for ${names}`,
+              message: `Your pickup PIN is ${pin}. Show this at pickup. Do not share.`,
+              type: "children_church",
+              reference_type: "children_church",
+            }))
+          );
         }
       } catch (e) {
         console.warn("checkin parent notification failed", e);
@@ -329,7 +334,7 @@ function CheckInPanel({ tenantId }) {
     onError: (e) => toast.error(e.message || "Check-in failed"),
   });
 
-  const reset = () => { setSearch(""); setSelectedFamily(null); setSelectedChildIds([]); setIssuedPin(null); setIssuedFor(null); };
+  const reset = () => { setSearch(""); setSelectedFamily(null); setSelectedChildIds([]); setBroughtById(""); setIssuedPin(null); setIssuedFor(null); };
 
   return (
     <Card>
