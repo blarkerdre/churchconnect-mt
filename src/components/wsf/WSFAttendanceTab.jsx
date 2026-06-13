@@ -157,23 +157,25 @@ export default function WSFAttendanceTab({ centres }) {
 
   const buildPrintRows = () => ({
     title: "Home Cell Attendance Report",
-    headers: ["Date", "Centre", "Male", "Female", "Adults", "Children", "Total", "1st Timers", "Testimonies"],
+    headers: ["Date", "Centre", "Venue", "Male", "Female", "Adults", "Children", "Total", "1st Timers", "Testimonies"],
     rows: filteredReports.map(r => {
       const adults = r.male + r.female;
       const total = adults + r.children;
-      return [format(new Date(r.meeting_date), "dd MMM yyyy"), r.wsf_centres?.name || "—", r.male, r.female, adults, r.children, total, r.first_timers, r.testimonies];
+      const venue = r.held_at_home_cell === false ? "Off-venue" : "At cell";
+      return [format(new Date(r.meeting_date), "dd MMM yyyy"), r.wsf_centres?.name || "—", venue, r.male, r.female, adults, r.children, total, r.first_timers, r.testimonies];
     }),
   });
 
   const downloadReport = () => {
     const esc = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
     const rows = [
-      ["Date","Centre","Male","Female","Adults","Children","Total","First Timers","Testimonies","Notes"].join(","),
+      ["Date","Centre","Venue","Male","Female","Adults","Children","Total","First Timers","Testimonies","Notes"].join(","),
       ...filteredReports.map(r => {
         const adults = r.male + r.female;
         const total = adults + r.children;
+        const venue = r.held_at_home_cell === false ? "Off-venue" : "At cell";
         return [
-          r.meeting_date, esc(r.wsf_centres?.name || ""), r.male, r.female, adults, r.children, total, r.first_timers, r.testimonies, esc(r.notes || "")
+          r.meeting_date, esc(r.wsf_centres?.name || ""), venue, r.male, r.female, adults, r.children, total, r.first_timers, r.testimonies, esc(r.notes || "")
         ].join(",");
       }),
     ];
