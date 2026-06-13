@@ -356,6 +356,10 @@ export default function MyFamily() {
                     <Button size="sm" variant="outline" onClick={() => { setEditChild(c); setChildOpen(true); }}>Edit</Button>
                     <Button size="sm" variant="outline" onClick={() => setGuardianFor(c)}><ShieldCheck className="h-4 w-4 mr-1" /> Authorised adults</Button>
                     <Button size="sm" variant="outline" onClick={() => setDelegateFor(c)}><KeyRound className="h-4 w-4 mr-1" /> One-time code</Button>
+                    <Button size="sm" variant="destructive" onClick={() => {
+                      if (active) { toast.error("Release child from care before deleting"); return; }
+                      setDeleteChild(c);
+                    }}><Trash2 className="h-4 w-4 mr-1" /> Delete</Button>
                   </div>
                 </CardContent>
               </Card>
@@ -367,6 +371,25 @@ export default function MyFamily() {
       <ChildForm open={childOpen} onOpenChange={setChildOpen} child={editChild} memberId={meMember.id} onSaved={refetch} />
       {guardianFor && <GuardianManager open={!!guardianFor} onOpenChange={() => setGuardianFor(null)} child={guardianFor} />}
       {delegateFor && <DelegationDialog open={!!delegateFor} onOpenChange={() => setDelegateFor(null)} child={delegateFor} />}
+
+      <AlertDialog open={!!deleteChild} onOpenChange={(o) => !o && setDeleteChild(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete {deleteChild?.first_name} {deleteChild?.last_name}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This permanently removes this child's profile, authorised adults, and pickup delegations. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={(e) => { e.preventDefault(); removeChild.mutate(deleteChild); }}
+              disabled={removeChild.isPending}
+            >Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
