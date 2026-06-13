@@ -110,7 +110,8 @@ export default function IssueCertificateDialog({ open, onOpenChange, member }) {
         body: {
           member_id: member.id,
           training_type: completion.training_type,
-          tenant_id: tenantId,
+          tenant_id: completion.tenant_id || tenantId,
+          completion_id: completion.id,
           reissue: true,
         },
       });
