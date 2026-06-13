@@ -1,33 +1,22 @@
 ## Goal
-Allow Home Cell leaders to record when a meeting was **not held at the home cell** (e.g. relocated to church or alternate venue), and add a filter in the Home Cell report to view only those records.
+In the Home Cell report, list cell centres that did **not** record any attendance within the selected date range.
 
-## Changes
+## Changes — `src/components/wsf/WSFAttendanceTab.jsx`
 
-### 1. Database — `wsf_attendance_reports`
-Add a new column:
-- `held_at_home_cell BOOLEAN NOT NULL DEFAULT true`
+### 1. Compute "non-reporting centres"
+Within scope of the current centre + date filters, derive:
+- A set of centre IDs that have at least one report in `filteredReports`.
+- `nonReportingCentres = availableCentres.filter(c => !reportedIds.has(c.id))` — skipping the loop when `filterCentreId !== "all"` (no list needed for a single centre filter).
 
-Migration only adds the column; existing rows default to `true`.
+### 2. New panel: "Centres With No Report"
+Add a card below the Summary stats (only when `filterCentreId === "all"` and there is at least one such centre):
+- Title: **Centres With No Attendance Reported** + count badge.
+- Helper text: "Within the selected date range" (or "All time" when no dates set).
+- Compact list of centre names (with zone label if present). Each row has a small "Record Attendance" button (admin / leader of that centre) that opens the existing dialog pre-selected to that centre.
 
-### 2. Attendance form — `src/components/wsf/WSFAttendanceFormDialog.jsx`
-- Add a checkbox/switch "Meeting held at home cell venue" (default: checked).
-- When unchecked, show a short helper note: "Mark this when the meeting was held elsewhere (e.g. main church)."
-- Include `held_at_home_cell` in the saved payload.
-
-### 3. Report tab — `src/components/wsf/WSFAttendanceTab.jsx`
-
-**Filter bar**: add a new Select next to the centre filter:
-- Options: `All venues` (default), `At home cell`, `Not at home cell`.
-- Apply alongside existing centre + date filters.
-
-**Summary stats**: add a "Off-venue" stat card showing the count of filtered reports where `held_at_home_cell === false`.
-
-**Table**: add a "Venue" column showing a badge:
-- `At cell` (default styling) or `Off-venue` (muted/outlined).
-
-**CSV + print**: include a `Venue` column in both `downloadReport()` and `buildPrintRows()` output.
+### 3. CSV + print
+Append a second section to both exports listing the non-reporting centres (centre name, zone).
 
 ## Out of scope
-- No changes to analytics page aggregates.
-- No notifications or workflow changes.
-- The existing "Meetings Not Held" stat (estimated missing weeks) is unchanged — this new field captures meetings that *did* happen but at a different venue.
+- No DB changes.
+- The existing "Meetings Not Held" estimated stat and the "At cell / Off-venue" filter remain unchanged.
