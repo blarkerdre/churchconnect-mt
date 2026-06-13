@@ -2482,6 +2482,60 @@ export type Database = {
           },
         ]
       }
+      member_claim_invites: {
+        Row: {
+          claimed_at: string | null
+          created_at: string
+          created_by: string | null
+          email: string | null
+          expires_at: string
+          id: string
+          member_id: string
+          phone: string | null
+          tenant_id: string
+          token: string
+        }
+        Insert: {
+          claimed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          email?: string | null
+          expires_at?: string
+          id?: string
+          member_id: string
+          phone?: string | null
+          tenant_id: string
+          token: string
+        }
+        Update: {
+          claimed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          email?: string | null
+          expires_at?: string
+          id?: string
+          member_id?: string
+          phone?: string | null
+          tenant_id?: string
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "member_claim_invites_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "member_claim_invites_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       member_status_history: {
         Row: {
           changed_at: string
@@ -2560,6 +2614,7 @@ export type Database = {
           photo_url: string | null
           postcode: string | null
           preferred_contact_modes: string | null
+          source: string | null
           tenant_id: string | null
           updated_at: string
           user_id: string | null
@@ -2605,6 +2660,7 @@ export type Database = {
           photo_url?: string | null
           postcode?: string | null
           preferred_contact_modes?: string | null
+          source?: string | null
           tenant_id?: string | null
           updated_at?: string
           user_id?: string | null
@@ -2650,6 +2706,7 @@ export type Database = {
           photo_url?: string | null
           postcode?: string | null
           preferred_contact_modes?: string | null
+          source?: string | null
           tenant_id?: string | null
           updated_at?: string
           user_id?: string | null
@@ -4681,6 +4738,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      claim_member: { Args: { _token: string }; Returns: Json }
       count_pending_join_requests_for_user: {
         Args: { _tenant_id: string; _user_id: string }
         Returns: number
@@ -4937,6 +4995,10 @@ export type Database = {
           msg_id: number
           read_ct: number
         }[]
+      }
+      register_walkin_family: {
+        Args: { _children: Json; _parent: Json; _tenant_id: string }
+        Returns: Json
       }
       release_child: {
         Args: {
