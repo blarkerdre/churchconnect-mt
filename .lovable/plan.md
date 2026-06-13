@@ -1,17 +1,21 @@
-## Problem
-The `checkin_child` RPC rejects workers with the error "Only Children Church workers can check in" because `is_children_church_member` only recognises units literally named "Children Church", "Childrens Church", or "Children's Church". The tenant's unit is called "Children", so valid workers are denied.
+## Plan
 
-## Fix
-Update the `is_children_church_member` and `is_children_church_leader` database functions to also match the aliases:
-- `children`
-- `children ministry`
-- `childrens ministry`
-- `children's ministry`
+The check-in backend path is now accepting your Children Church permissions, but the UI currently depends on the selected child list staying available after the RPC returns. If that list refreshes/changes at the wrong moment, the check-in can complete without visibly showing the generated PIN.
 
-Matching stays case-insensitive and trim-safe (`lower(btrim(...))`). The functions continue to check both the member's `church_unit` CSV field and `unit_leader_assignments.unit_name`.
+### Changes
+1. Update the Children Church check-in button flow to:
+   - Generate one PIN for the selected children.
+   - Keep a stable snapshot of the selected children before making the backend calls.
+   - Show the PIN from that snapshot immediately after success.
 
-## Migration
-A single SQL migration will redefine both functions with the expanded alias lists. No table changes, no RLS changes, no UI changes.
+2. Improve error visibility on check-in:
+   - Show a clear message if the backend rejects the check-in.
+   - Log the detailed backend error to the console for diagnosis.
 
-## Verification
-After applying, `SELECT public.is_children_church_member('<user_id>', '<tenant_id>')` should return `true` for members of the "Children" unit, and the Check-in tab will successfully issue PINs.
+3. Prevent confusing duplicate check-ins:
+   - Before inserting a new check-in, update the backend `checkin_child` function to reject a child who is already currently checked in, with a clear “already checked in” message.
+
+### Technical details
+- Frontend file: `src/pages/ChildrenChurch.jsx`
+- Backend migration: redefine `public.checkin_child(...)` with an existing-active-check-in guard.
+- No changes to the children registration schema or pickup rules.
