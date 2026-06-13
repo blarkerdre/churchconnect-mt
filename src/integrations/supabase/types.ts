@@ -4446,6 +4446,7 @@ export type Database = {
           created_at: string
           female: number
           first_timers: number
+          held_at_home_cell: boolean
           id: string
           male: number
           meeting_date: string
@@ -4461,6 +4462,7 @@ export type Database = {
           created_at?: string
           female?: number
           first_timers?: number
+          held_at_home_cell?: boolean
           id?: string
           male?: number
           meeting_date: string
@@ -4476,6 +4478,7 @@ export type Database = {
           created_at?: string
           female?: number
           first_timers?: number
+          held_at_home_cell?: boolean
           id?: string
           male?: number
           meeting_date?: string
