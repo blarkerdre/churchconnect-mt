@@ -102,11 +102,9 @@ Deno.serve(async (req) => {
   for (const t of tenants || []) {
     if ((t as any).tenants?.is_archived) continue;
 
-    // Skip in cron mode if it's not the configured local hour.
-    // We use UTC for now; tenants in the project are UK so 8 BST/GMT ≈ same.
+    // Skip in cron mode if it's not the configured local hour (Europe/London).
     if (!isManual) {
-      const nowHour = todayUtc.getUTCHours();
-      if (nowHour !== (t.send_hour_local ?? 8)) continue;
+      if (londonHour !== (t.send_hour_local ?? 8)) continue;
     }
 
     const channels: string[] = body.channels?.length
