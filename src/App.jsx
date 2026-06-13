@@ -289,6 +289,7 @@ function App() {
         <AppRoutes />
       </Router>
       <Toaster />
+      <SonnerToaster />
     </QueryClientProvider>
   );
 }
