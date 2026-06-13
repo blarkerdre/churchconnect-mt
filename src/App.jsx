@@ -46,6 +46,8 @@ const UnitTasks = lazy(() => import("@/pages/UnitTasks"));
 const Reports = lazy(() => import("@/pages/Reports"));
 const CertificatesReport = lazy(() => import("@/pages/CertificatesReport"));
 const CertificateApprovals = lazy(() => import("@/pages/CertificateApprovals"));
+const ChildrenChurch = lazy(() => import("@/pages/ChildrenChurch"));
+const MyFamily = lazy(() => import("@/pages/MyFamily"));
 
 function PageFallback() {
   return (
