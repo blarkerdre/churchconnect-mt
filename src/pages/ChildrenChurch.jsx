@@ -409,7 +409,23 @@ function CheckInPanel({ tenantId }) {
                 })}
               </div>
             )}
-            <Button onClick={() => checkIn.mutate()} disabled={selectedChildIds.length === 0 || checkIn.isPending} className="w-full">
+            {selectedChildIds.length > 0 && (
+              <div className="space-y-1">
+                <Label>Brought by</Label>
+                <Select value={broughtById} onValueChange={setBroughtById}>
+                  <SelectTrigger><SelectValue placeholder="Select the adult dropping off..." /></SelectTrigger>
+                  <SelectContent>
+                    {broughtByOptions.map(o => (
+                      <SelectItem key={o.id} value={o.id}>
+                        {o.first_name} {o.last_name}{o.phone ? ` · ${o.phone}` : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-[11px] text-muted-foreground">Recorded against the check-in for safeguarding.</p>
+              </div>
+            )}
+            <Button onClick={() => checkIn.mutate()} disabled={selectedChildIds.length === 0 || !broughtById || checkIn.isPending} className="w-full">
               <LogIn className="h-4 w-4 mr-2" /> Check in {selectedChildIds.length || ""}
             </Button>
           </div>
