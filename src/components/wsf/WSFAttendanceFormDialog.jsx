@@ -10,7 +10,8 @@ import { Loader2 } from "lucide-react";
 
 const empty = {
   date: "", male: 0, female: 0, children: 0,
-  first_timers: 0, testimonies: 0, notes: ""
+  first_timers: 0, testimonies: 0, notes: "",
+  held_at_home_cell: true,
 };
 
 export default function WSFAttendanceFormDialog({ open, onOpenChange, centre, report, onSave, allCentres = [] }) {
