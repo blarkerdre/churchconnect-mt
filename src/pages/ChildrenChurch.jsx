@@ -18,42 +18,134 @@ import { format, formatDistanceToNow } from "date-fns";
 
 function CheckInPanel({ tenantId }) {
   const qc = useQueryClient();
-  const [parentSearch, setParentSearch] = useState("");
-  const [selectedParent, setSelectedParent] = useState(null);
+  const [search, setSearch] = useState("");
+  const [selectedFamily, setSelectedFamily] = useState(null); // { parent, children }
   const [selectedChildIds, setSelectedChildIds] = useState([]);
   const [issuedPin, setIssuedPin] = useState(null);
   const [issuedFor, setIssuedFor] = useState(null);
 
-  const { data: parents = [] } = useQuery({
-    queryKey: ["cc-parent-search", tenantId, parentSearch],
-    enabled: !!tenantId && parentSearch.length >= 2,
+  // Search across members (parents), children, and guardian links — return grouped families.
+  const { data: families = [], isFetching: searching } = useQuery({
+    queryKey: ["cc-family-search", tenantId, search],
+    enabled: !!tenantId && search.trim().length >= 2,
     queryFn: async () => {
-      const { data } = await supabase.from("members").select("id, first_name, last_name, phone, email")
-        .eq("tenant_id", tenantId)
-        .or(`first_name.ilike.%${parentSearch}%,last_name.ilike.%${parentSearch}%,phone.ilike.%${parentSearch}%`)
-        .limit(8);
-      return data || [];
-    },
-  });
+      const term = search.trim();
+      const like = `%${term}%`;
 
-  const { data: parentChildren = [] } = useQuery({
-    queryKey: ["cc-parent-children", tenantId, selectedParent?.id],
-    enabled: !!tenantId && !!selectedParent?.id,
-    queryFn: async () => {
-      const { data } = await supabase.from("children").select("*")
-        .eq("tenant_id", tenantId).eq("primary_guardian_member_id", selectedParent.id).eq("is_active", true);
-      return data || [];
+      // 1) Matching members (potential parents)
+      const memberQ = supabase.from("members")
+        .select("id, first_name, last_name, phone, email")
+        .eq("tenant_id", tenantId)
+        .or(`first_name.ilike.${like},last_name.ilike.${like},phone.ilike.${like}`)
+        .limit(20);
+
+      // 2) Matching active children by name
+      const childQ = supabase.from("children")
+        .select("id, first_name, last_name, age_group, allergies, primary_guardian_member_id")
+        .eq("tenant_id", tenantId).eq("is_active", true)
+        .or(`first_name.ilike.${like},last_name.ilike.${like}`)
+        .limit(20);
+
+      // 3) Matching guardians (authorised adults) — find the child via child_guardians.member_id
+      const guardQ = supabase.from("child_guardians")
+        .select("child_id, member_id, members:member_id(id, first_name, last_name, phone, email)")
+        .eq("tenant_id", tenantId);
+
+      const [m, c, g] = await Promise.all([memberQ, childQ, guardQ]);
+      const members = m.data || [];
+      const childrenMatched = c.data || [];
+      const guardiansAll = (g.data || []).filter(row => {
+        const mem = row.members;
+        if (!mem) return false;
+        const t = term.toLowerCase();
+        return (mem.first_name || "").toLowerCase().includes(t)
+          || (mem.last_name || "").toLowerCase().includes(t)
+          || (mem.phone || "").toLowerCase().includes(t);
+      });
+
+      // Collect all parent member ids we've matched (either directly or via guardian rows)
+      const parentIds = new Set([
+        ...members.map(x => x.id),
+        ...guardiansAll.map(x => x.member_id),
+      ]);
+      // Also include parent ids of matched children so we can group those families
+      childrenMatched.forEach(ch => { if (ch.primary_guardian_member_id) parentIds.add(ch.primary_guardian_member_id); });
+
+      if (parentIds.size === 0) return [];
+
+      // Fetch all relevant parent member rows (in case child match brought one in)
+      const { data: allParents = [] } = await supabase.from("members")
+        .select("id, first_name, last_name, phone, email")
+        .eq("tenant_id", tenantId)
+        .in("id", Array.from(parentIds));
+
+      // Fetch all active children for these parents (primary guardian)
+      const { data: childrenByPrimary = [] } = await supabase.from("children")
+        .select("id, first_name, last_name, age_group, allergies, primary_guardian_member_id")
+        .eq("tenant_id", tenantId).eq("is_active", true)
+        .in("primary_guardian_member_id", Array.from(parentIds));
+
+      // Also fetch children where these parents appear as authorised guardians
+      const { data: guardLinks = [] } = await supabase.from("child_guardians")
+        .select("child_id, member_id")
+        .eq("tenant_id", tenantId)
+        .in("member_id", Array.from(parentIds));
+
+      const extraChildIds = Array.from(new Set(guardLinks.map(x => x.child_id)));
+      let extraChildren = [];
+      if (extraChildIds.length) {
+        const { data } = await supabase.from("children")
+          .select("id, first_name, last_name, age_group, allergies, primary_guardian_member_id")
+          .eq("tenant_id", tenantId).eq("is_active", true)
+          .in("id", extraChildIds);
+        extraChildren = data || [];
+      }
+
+      // Build map: parentId -> { parent, children: Map<id, child> }
+      const fam = new Map();
+      const ensure = (parent) => {
+        if (!fam.has(parent.id)) fam.set(parent.id, { parent, children: new Map() });
+        return fam.get(parent.id);
+      };
+      allParents.forEach(p => ensure(p));
+
+      childrenByPrimary.forEach(ch => {
+        const entry = fam.get(ch.primary_guardian_member_id);
+        if (entry) entry.children.set(ch.id, ch);
+      });
+
+      // Link extra children via guardian rows to each matching guardian-parent
+      guardLinks.forEach(link => {
+        const entry = fam.get(link.member_id);
+        if (!entry) return;
+        const ch = extraChildren.find(x => x.id === link.child_id);
+        if (ch) entry.children.set(ch.id, ch);
+      });
+
+      // Ensure a matched child appears under its primary parent even if parent wasn't matched
+      childrenMatched.forEach(ch => {
+        if (!ch.primary_guardian_member_id) return;
+        const entry = fam.get(ch.primary_guardian_member_id);
+        if (entry) entry.children.set(ch.id, ch);
+      });
+
+      // Return families that have at least one child
+      return Array.from(fam.values())
+        .map(f => ({ parent: f.parent, children: Array.from(f.children.values()) }))
+        .filter(f => f.children.length > 0)
+        .slice(0, 12);
     },
   });
 
   const checkIn = useMutation({
     mutationFn: async () => {
+      if (!selectedFamily?.parent?.id) throw new Error("Select a family first");
       if (selectedChildIds.length === 0) throw new Error("Select at least one child");
       const pin = Math.floor(100000 + Math.random() * 900000).toString();
-      const snapshot = parentChildren.filter(c => selectedChildIds.includes(c.id));
+      const snapshot = (selectedFamily.children || []).filter(c => selectedChildIds.includes(c.id));
       for (const cid of selectedChildIds) {
         const { error } = await supabase.rpc("checkin_child", {
-          _child_id: cid, _pin: pin, _parent_member_id: selectedParent.id,
+          _child_id: cid, _pin: pin, _parent_member_id: selectedFamily.parent.id,
         });
         if (error) {
           console.error("checkin_child failed", { child_id: cid, error });
@@ -70,12 +162,11 @@ function CheckInPanel({ tenantId }) {
     onError: (e) => toast.error(e.message || "Check-in failed"),
   });
 
-
-  const reset = () => { setParentSearch(""); setSelectedParent(null); setSelectedChildIds([]); setIssuedPin(null); setIssuedFor(null); };
+  const reset = () => { setSearch(""); setSelectedFamily(null); setSelectedChildIds([]); setIssuedPin(null); setIssuedFor(null); };
 
   return (
     <Card>
-      <CardHeader><CardTitle className="text-base">Drop-off</CardTitle><CardDescription>Find the parent, select the children, give them the PIN.</CardDescription></CardHeader>
+      <CardHeader><CardTitle className="text-base">Drop-off</CardTitle><CardDescription>Search by child name, parent name, or phone — then select who to check in.</CardDescription></CardHeader>
       <CardContent className="space-y-3">
         {issuedPin ? (
           <div className="text-center space-y-3 py-2">
@@ -84,18 +175,27 @@ function CheckInPanel({ tenantId }) {
             <p className="text-sm">{issuedFor.map(c => `${c.first_name} ${c.last_name}`).join(", ")}</p>
             <Button onClick={reset} className="w-full">Done</Button>
           </div>
-        ) : !selectedParent ? (
+        ) : !selectedFamily ? (
           <div className="space-y-2">
-            <Label>Find parent</Label>
+            <Label>Find child or parent</Label>
             <div className="relative">
               <Search className="h-4 w-4 absolute left-2 top-2.5 text-muted-foreground" />
-              <Input className="pl-8" placeholder="Type parent name or phone..." value={parentSearch} onChange={e => setParentSearch(e.target.value)} />
+              <Input className="pl-8" placeholder="Type child name, parent name, or phone..." value={search} onChange={e => setSearch(e.target.value)} />
             </div>
-            <div className="space-y-1 max-h-72 overflow-y-auto">
-              {parents.map(p => (
-                <button key={p.id} className="w-full text-left border rounded p-2 hover:bg-muted text-sm" onClick={() => setSelectedParent(p)}>
-                  <p className="font-medium">{p.first_name} {p.last_name}</p>
-                  <p className="text-xs text-muted-foreground">{p.phone || p.email}</p>
+            <div className="space-y-2 max-h-80 overflow-y-auto">
+              {search.trim().length >= 2 && !searching && families.length === 0 && (
+                <p className="text-sm text-muted-foreground text-center py-3">No matching child or parent found. Check spelling, or ask the parent to register the child under "My Family".</p>
+              )}
+              {families.map(f => (
+                <button key={f.parent.id} className="w-full text-left border rounded p-2 hover:bg-muted text-sm"
+                  onClick={() => { setSelectedFamily(f); setSelectedChildIds(f.children.map(c => c.id)); }}>
+                  <p className="font-medium">{f.parent.first_name} {f.parent.last_name}</p>
+                  <p className="text-xs text-muted-foreground">{f.parent.phone || f.parent.email || "No contact"}</p>
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {f.children.map(c => (
+                      <Badge key={c.id} variant="outline" className="text-[10px]">{c.first_name} {c.last_name}</Badge>
+                    ))}
+                  </div>
                 </button>
               ))}
             </div>
@@ -104,17 +204,17 @@ function CheckInPanel({ tenantId }) {
           <div className="space-y-3">
             <div className="flex items-center justify-between border rounded p-2 bg-muted/30">
               <div>
-                <p className="text-sm font-medium">{selectedParent.first_name} {selectedParent.last_name}</p>
-                <p className="text-xs text-muted-foreground">{selectedParent.phone}</p>
+                <p className="text-sm font-medium">{selectedFamily.parent.first_name} {selectedFamily.parent.last_name}</p>
+                <p className="text-xs text-muted-foreground">{selectedFamily.parent.phone || selectedFamily.parent.email}</p>
               </div>
-              <Button size="sm" variant="ghost" onClick={() => { setSelectedParent(null); setSelectedChildIds([]); }}>Change</Button>
+              <Button size="sm" variant="ghost" onClick={() => { setSelectedFamily(null); setSelectedChildIds([]); }}>Change</Button>
             </div>
             <Label>Select children</Label>
-            {parentChildren.length === 0 ? (
+            {selectedFamily.children.length === 0 ? (
               <p className="text-sm text-muted-foreground">No children registered for this parent. Ask them to add via "My Family".</p>
             ) : (
               <div className="space-y-1">
-                {parentChildren.map(c => {
+                {selectedFamily.children.map(c => {
                   const checked = selectedChildIds.includes(c.id);
                   return (
                     <button key={c.id} className={`w-full text-left border rounded p-2 flex justify-between items-center ${checked ? "border-primary bg-primary/5" : ""}`}
