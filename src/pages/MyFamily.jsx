@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Baby, Plus, ShieldCheck, KeyRound, Trash2, UserPlus, Share2, Clock } from "lucide-react";
 import { toast } from "sonner";
@@ -274,6 +275,16 @@ export default function MyFamily() {
   const [editChild, setEditChild] = useState(null);
   const [guardianFor, setGuardianFor] = useState(null);
   const [delegateFor, setDelegateFor] = useState(null);
+  const [deleteChild, setDeleteChild] = useState(null);
+
+  const removeChild = useMutation({
+    mutationFn: async (child) => {
+      const { error } = await supabase.from("children").delete().eq("id", child.id).eq("tenant_id", tenantId);
+      if (error) throw error;
+    },
+    onSuccess: () => { toast.success("Child removed"); setDeleteChild(null); qc.invalidateQueries({ queryKey: ["my-children", tenantId, meMember?.id] }); },
+    onError: (e) => toast.error(e.message),
+  });
 
   const { data: meMember } = useQuery({
     queryKey: ["me-member-id", tenantId, user?.id],
@@ -345,6 +356,10 @@ export default function MyFamily() {
                     <Button size="sm" variant="outline" onClick={() => { setEditChild(c); setChildOpen(true); }}>Edit</Button>
                     <Button size="sm" variant="outline" onClick={() => setGuardianFor(c)}><ShieldCheck className="h-4 w-4 mr-1" /> Authorised adults</Button>
                     <Button size="sm" variant="outline" onClick={() => setDelegateFor(c)}><KeyRound className="h-4 w-4 mr-1" /> One-time code</Button>
+                    <Button size="sm" variant="destructive" onClick={() => {
+                      if (active) { toast.error("Release child from care before deleting"); return; }
+                      setDeleteChild(c);
+                    }}><Trash2 className="h-4 w-4 mr-1" /> Delete</Button>
                   </div>
                 </CardContent>
               </Card>
@@ -356,6 +371,25 @@ export default function MyFamily() {
       <ChildForm open={childOpen} onOpenChange={setChildOpen} child={editChild} memberId={meMember.id} onSaved={refetch} />
       {guardianFor && <GuardianManager open={!!guardianFor} onOpenChange={() => setGuardianFor(null)} child={guardianFor} />}
       {delegateFor && <DelegationDialog open={!!delegateFor} onOpenChange={() => setDelegateFor(null)} child={delegateFor} />}
+
+      <AlertDialog open={!!deleteChild} onOpenChange={(o) => !o && setDeleteChild(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete {deleteChild?.first_name} {deleteChild?.last_name}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This permanently removes this child's profile, authorised adults, and pickup delegations. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={(e) => { e.preventDefault(); removeChild.mutate(deleteChild); }}
+              disabled={removeChild.isPending}
+            >Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
