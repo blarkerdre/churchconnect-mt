@@ -118,7 +118,7 @@ Deno.serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     const body = await req.json();
-    const { member_id, training_type, completion_date, notes, tenant_id, reissue } = body;
+    const { member_id, training_type, completion_date, notes, tenant_id, reissue, completion_id } = body;
 
     if (!member_id || !training_type || !tenant_id) {
       return new Response(
@@ -154,14 +154,26 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Check existing completion (tenant-scoped)
-    const { data: existing } = await supabase
-      .from("training_completions")
-      .select("*")
-      .eq("member_id", member_id)
-      .eq("training_type", training_type)
-      .eq("tenant_id", tenant_id)
-      .maybeSingle();
+    // Look up existing completion. For reissue prefer completion_id (robust against
+    // tenant-context drift); otherwise use tenant-scoped (member, training_type).
+    let existing: any = null;
+    if (reissue && completion_id) {
+      const { data } = await supabase
+        .from("training_completions")
+        .select("*")
+        .eq("id", completion_id)
+        .maybeSingle();
+      existing = data;
+    } else {
+      const { data } = await supabase
+        .from("training_completions")
+        .select("*")
+        .eq("member_id", member_id)
+        .eq("training_type", training_type)
+        .eq("tenant_id", tenant_id)
+        .maybeSingle();
+      existing = data;
+    }
 
     if (existing && !reissue) {
       return new Response(
