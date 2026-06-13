@@ -692,7 +692,8 @@ function ReportPanel({ tenantId }) {
               <th className="p-2 text-left">Date</th>
               <th className="p-2 text-left">Child</th>
               <th className="p-2 text-left">Drop-off</th>
-              <th className="p-2 text-left">Drop-off by</th>
+              <th className="p-2 text-left">Brought by</th>
+              <th className="p-2 text-left">Drop-off worker</th>
               <th className="p-2 text-left">Pickup</th>
               <th className="p-2 text-left">Method</th>
               <th className="p-2 text-left">Released by</th>
