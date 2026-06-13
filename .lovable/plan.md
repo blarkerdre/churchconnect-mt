@@ -1,28 +1,37 @@
 ## Goal
-1. Show "Brought by" (the adult who dropped the child off) in the Children Church report — both the on-screen table and the CSV.
-2. When a child is released at pickup, send an in-app notification to the parent(s).
+Add the pickup delegation name to the Children Church report table and CSV export.
 
-## Changes — `src/pages/ChildrenChurch.jsx`
+## Background
+When a child is released via a one-time delegation code, the collector's name is stored in `child_pickup_delegations.delegate_name` and linked via `child_checkins.pickup_delegation_id`. The report currently shows:
+- Brought by (drop-off adult)
+- Collected by (member who picked up via PIN)
+- But **not** the delegation name (non-member who collected via delegation code)
 
-### 1. Report — "Brought by" column
-The query already returns `_dropoff_parent_name`; CSV already includes it as `dropoff_parent`. Only the on-screen table is missing it.
-- Add a new column header **"Brought by"** in the `ReportPanel` table, placed right after "Drop-off".
-- Render `{r._dropoff_parent_name || "—"}` in each row.
-- Rename the existing "Drop-off by" header to **"Drop-off worker"** so the two are unambiguous.
-- Rename the CSV column header `dropoff_parent` → `brought_by` for clarity (data already populated).
+## Changes — `src/pages/ChildrenChurch.jsx` (`ReportPanel`)
 
-### 2. Notify parents on pickup
-In `PickupPanel`'s `release` mutation:
-- After `supabase.rpc("release_child", args)` succeeds, look up the check-in row to get `child_id`, `pickup_at`, `pickup_method`, `pickup_adult_member_id` and the child's name + `primary_guardian_member_id`. Also pull `child_guardians` rows for that child to collect all linked adult member ids (best-effort safeguarding fan-out).
-- Resolve those member ids → `user_id` via `members` (`.eq("tenant_id", tenantId)`).
-- Insert one `notifications` row per distinct `user_id`:
-  - `type: "children_church"`, `reference_type: "children_church"`, `reference_id: checkin.id`
-  - title: `"{Child first name} has been picked up"`
-  - message: includes pickup time (HH:mm), method (PIN / delegation code / leader override), and the collecting adult's name when available.
-  - For `leader_override`, prefix the message with "Leader override:" and include the worker's name.
-- All inserts include `tenant_id`. Wrap in try/catch — toast still says "Child released" even if notify fails (logged via `console.warn`).
+### 1. Query: fetch delegation name
+In the `child_checkins` query, add a join:
+```
+pickup_delegation:pickup_delegation_id(delegate_name)
+```
+After mapping worker names, compute:
+```
+_delegation_name: r.pickup_delegation?.delegate_name || r.notes?.replace(/^Delegate:\s*/, "") || ""
+```
+This uses the explicit `delegate_name` field when available, and falls back to parsing the legacy `notes` column for older records.
+
+### 2. On-screen table: add "Delegated to" column
+Insert a new `<th>` and `<td>` after "Collected by" in the sticky-header table:
+- Header: **Delegated to**
+- Cell: `{r._delegation_name || "—"}`
+
+Update the `colSpan` on the empty-state row from `9` to `10`.
+
+### 3. CSV export: add delegation column
+Add `delegated_to` to the `headers` array (after `collected_by`).
+Include `q(r._delegation_name)` in each data row.
 
 ## Out of scope
-- No schema changes — `dropoff_parent_member_id` and `notifications` already exist.
-- No email/SMS/push — in-app notifications only (matches existing PIN-issue notification pattern).
-- No changes to release RPC or business rules.
+- No database schema changes.
+- No changes to the check-in, pickup, or delegation-creation flows.
+- No changes to notification logic.
