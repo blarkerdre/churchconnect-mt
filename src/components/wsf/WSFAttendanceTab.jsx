@@ -315,6 +315,39 @@ export default function WSFAttendanceTab({ centres }) {
         </Card>
       )}
 
+      {canAccess && filterCentreId === "all" && nonReportingCentres.length > 0 && (
+        <Card className="border-0 shadow-sm border-l-4 border-l-destructive">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base font-display flex items-center gap-2">
+              <AlertCircle className="h-4 w-4 text-destructive" />
+              Centres With No Attendance Reported
+              <Badge variant="outline" className="ml-1 font-mono">{nonReportingCentres.length}</Badge>
+            </CardTitle>
+            <p className="text-xs text-muted-foreground mt-1">{rangeLabel}</p>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {nonReportingCentres.map(c => {
+                const canRecordHere = isAdmin || ledCentres.some(lc => lc.id === c.id);
+                return (
+                  <div key={c.id} className="flex items-center justify-between gap-2 p-2 rounded-md bg-muted/40">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium truncate">{c.name}</p>
+                      {c.zoneName && <p className="text-[10px] text-muted-foreground truncate">{c.zoneName}</p>}
+                    </div>
+                    {canRecordHere && canWrite && (
+                      <Button size="sm" variant="outline" className="h-7 px-2 text-xs shrink-0" onClick={() => openNew(c)}>
+                        <Plus className="h-3 w-3 mr-1" /> Record
+                      </Button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {canAccess && filteredReports.length > 0 && (
         <Card className="border-0 shadow-sm">
           <CardHeader className="pb-3">
