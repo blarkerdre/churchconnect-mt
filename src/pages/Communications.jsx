@@ -82,6 +82,7 @@ function ScheduledList({ channel, tenantId }) {
       queryClient.invalidateQueries({ queryKey: ["scheduled-communications"] });
       toast({ title: "Scheduled message cancelled" });
     },
+    onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
 
   if (isLoading || scheduled.length === 0) return null;
@@ -519,6 +520,7 @@ export default function Communications() {
       queryClient.invalidateQueries({ queryKey: ["announcements"] });
       toast({ title: "Communication deleted" });
     },
+    onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
 
   const handleEdit = (a) => {
