@@ -550,7 +550,13 @@ function CheckInPanel({ tenantId, tenantSlug }) {
     onError: (e) => toast.error(e.message || "Check-in failed"),
   });
 
-  const reset = () => { setSearch(""); setSelectedFamily(null); setSelectedChildIds([]); setBroughtById(""); setIssuedPin(null); setIssuedFor(null); };
+  const reset = () => { setSearch(""); setSelectedFamily(null); setSelectedChildIds([]); setBroughtById(""); setIssuedPin(null); setIssuedFor(null); setWalkInMemberId(null); };
+
+  const handleWalkInRegistered = (family) => {
+    setSelectedFamily(family);
+    setSelectedChildIds(family.children.map(c => c.id));
+    setWalkInMemberId(family.parent.id);
+  };
 
   return (
     <Card>
@@ -561,6 +567,21 @@ function CheckInPanel({ tenantId, tenantSlug }) {
             <p className="text-sm text-muted-foreground">Show this PIN to the parent. Needed for pickup.</p>
             <div className="text-5xl font-display font-bold tracking-widest border-2 border-primary rounded-lg p-6 text-primary">{issuedPin}</div>
             <p className="text-sm">{issuedFor.map(c => `${c.first_name} ${c.last_name}`).join(", ")}</p>
+            {walkInMemberId && (
+              <div className="border rounded p-3 text-left space-y-2 bg-muted/40">
+                <p className="text-xs font-semibold">Walk-in family</p>
+                <p className="text-[11px] text-muted-foreground">Optional: invite the parent to claim their profile so next time they can register children themselves.</p>
+                <ClaimInviteButton
+                  tenantId={tenantId}
+                  tenantSlug={tenantSlug}
+                  memberId={walkInMemberId}
+                  defaultPhone={selectedFamily?.parent?.phone}
+                  defaultEmail={selectedFamily?.parent?.email}
+                  label="Send claim invite to parent"
+                  size="sm"
+                />
+              </div>
+            )}
             <Button onClick={reset} className="w-full">Done</Button>
           </div>
         ) : !selectedFamily ? (
@@ -572,7 +593,12 @@ function CheckInPanel({ tenantId, tenantSlug }) {
             </div>
             <div className="space-y-2 max-h-80 overflow-y-auto">
               {search.trim().length >= 2 && !searching && families.length === 0 && (
-                <p className="text-sm text-muted-foreground text-center py-3">No matching child or parent found. Check spelling, or ask the parent to register the child under "My Family".</p>
+                <div className="text-center py-3 space-y-2">
+                  <p className="text-sm text-muted-foreground">No matching child or parent found.</p>
+                  <Button size="sm" variant="outline" onClick={() => setWalkInOpen(true)}>
+                    <UserPlus className="h-3.5 w-3.5 mr-1" /> Register walk-in family
+                  </Button>
+                </div>
               )}
               {families.map(f => (
                 <div key={f.parent.id} className="border rounded p-2 hover:bg-muted text-sm cursor-pointer"
@@ -591,6 +617,11 @@ function CheckInPanel({ tenantId, tenantSlug }) {
                   </div>
                 </div>
               ))}
+            </div>
+            <div className="pt-2 border-t">
+              <Button size="sm" variant="ghost" onClick={() => setWalkInOpen(true)} className="w-full">
+                <UserPlus className="h-3.5 w-3.5 mr-1" /> Parent without an app account? Register walk-in family
+              </Button>
             </div>
           </div>
         ) : (
