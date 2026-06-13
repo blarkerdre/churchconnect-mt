@@ -484,6 +484,46 @@ function PickupPanel({ tenantId, isLeader }) {
       };
       const { error } = await supabase.rpc("release_child", args);
       if (error) throw error;
+
+      // Notify the child's primary guardian + authorised adults in-app (best-effort)
+      try {
+        const { data: ci } = await supabase.from("child_checkins")
+          .select("id, child_id, pickup_at, pickup_method, pickup_adult:pickup_adult_member_id(first_name, last_name), children:child_id(first_name, primary_guardian_member_id)")
+          .eq("id", selected.id).eq("tenant_id", tenantId).maybeSingle();
+        if (ci) {
+          const childFirst = ci.children?.first_name || "Your child";
+          const memberIds = new Set();
+          if (ci.children?.primary_guardian_member_id) memberIds.add(ci.children.primary_guardian_member_id);
+          const { data: gs } = await supabase.from("child_guardians")
+            .select("member_id").eq("tenant_id", tenantId).eq("child_id", ci.child_id);
+          (gs || []).forEach(g => g.member_id && memberIds.add(g.member_id));
+          if (memberIds.size) {
+            const { data: mems } = await supabase.from("members")
+              .select("user_id").eq("tenant_id", tenantId).in("id", Array.from(memberIds));
+            const userIds = Array.from(new Set((mems || []).map(m => m.user_id).filter(Boolean)));
+            if (userIds.length) {
+              const time = ci.pickup_at ? format(new Date(ci.pickup_at), "HH:mm") : format(new Date(), "HH:mm");
+              const collector = ci.pickup_adult ? `${ci.pickup_adult.first_name} ${ci.pickup_adult.last_name}` : null;
+              const methodLabel = ci.pickup_method === "delegation_code" ? "delegation code"
+                : ci.pickup_method === "leader_override" ? "leader override"
+                : ci.pickup_method === "pin" ? "PIN" : (ci.pickup_method || "pickup");
+              const prefix = ci.pickup_method === "leader_override" ? "Leader override: " : "";
+              const msg = `${prefix}${childFirst} was collected at ${time} via ${methodLabel}${collector ? ` by ${collector}` : ""}.`;
+              await supabase.from("notifications").insert(userIds.map(uid => ({
+                user_id: uid,
+                tenant_id: tenantId,
+                title: `${childFirst} has been picked up`,
+                message: msg,
+                type: "children_church",
+                reference_type: "children_church",
+                reference_id: ci.id,
+              })));
+            }
+          }
+        }
+      } catch (e) {
+        console.warn("pickup notification failed", e);
+      }
     },
     onSuccess: () => {
       toast.success("Child released");
