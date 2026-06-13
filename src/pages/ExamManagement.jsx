@@ -899,10 +899,14 @@ function WofbiAboutEditor() {
 
   const { data: aboutText = WOFBI_DEFAULT_ABOUT } = useQuery({
     queryKey: ["app-settings", "wofbi_about", tenantId],
+    enabled: !!tenantId,
     queryFn: async () => {
-      let q = supabase.from("app_settings").select("value").eq("key", "wofbi_about");
-      if (tenantId) q = q.eq("tenant_id", tenantId);
-      const { data, error } = await q.maybeSingle();
+      const { data, error } = await supabase
+        .from("app_settings")
+        .select("value")
+        .eq("key", "wofbi_about")
+        .eq("tenant_id", tenantId)
+        .maybeSingle();
       if (error) throw error;
       return typeof data?.value === "string" ? data.value : WOFBI_DEFAULT_ABOUT;
     },
@@ -959,10 +963,14 @@ function WofbiAboutDisplay() {
   const { tenantId } = useTenantQuery();
   const { data: aboutText = WOFBI_DEFAULT_ABOUT } = useQuery({
     queryKey: ["app-settings", "wofbi_about", tenantId],
+    enabled: !!tenantId,
     queryFn: async () => {
-      let q = supabase.from("app_settings").select("value").eq("key", "wofbi_about");
-      if (tenantId) q = q.eq("tenant_id", tenantId);
-      const { data, error } = await q.maybeSingle();
+      const { data, error } = await supabase
+        .from("app_settings")
+        .select("value")
+        .eq("key", "wofbi_about")
+        .eq("tenant_id", tenantId)
+        .maybeSingle();
       if (error) throw error;
       return typeof data?.value === "string" ? data.value : WOFBI_DEFAULT_ABOUT;
     },

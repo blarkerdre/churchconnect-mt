@@ -80,7 +80,8 @@ Deno.serve(async (req) => {
     // exam_question_answers and is only readable via service role / admins.
     let questionsQuery = adminClient
       .from("exam_questions")
-      .select("id, training_type, subject_id, question_text, question_type, option_a, option_b, option_c, option_d, answer_count, points, sort_order, created_at, tenant_id");
+      .select("id, training_type, subject_id, question_text, question_type, option_a, option_b, option_c, option_d, answer_count, points, sort_order, created_at, tenant_id")
+      .eq("tenant_id", member.tenant_id);
     // NOTE: correct_answer column was removed from exam_questions; answer keys are loaded from exam_question_answers below.
     if (subject_id) {
       questionsQuery = questionsQuery.eq("subject_id", subject_id);

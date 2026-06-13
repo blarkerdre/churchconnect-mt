@@ -116,18 +116,20 @@ export default function NotificationBell() {
 
   useEffect(() => {
     if (!user?.id || !tenantId) return;
+    // Server-side filter by tenant_id (the higher-cardinality tenant guard);
+    // user_id is verified client-side. Supabase Realtime accepts a single
+    // column filter, so the tenant boundary is the safer one to enforce upstream.
     const channel = supabase
-      .channel("my-notifications")
+      .channel(`my-notifications-${user.id}-${tenantId}`)
       .on("postgres_changes", {
         event: "INSERT",
         schema: "public",
         table: "notifications",
-        filter: `user_id=eq.${user.id}`,
+        filter: `tenant_id=eq.${tenantId}`,
       }, (payload) => {
-        if (payload.new?.tenant_id === tenantId) {
-          queryClient.invalidateQueries({ queryKey: ["notifications", user.id, tenantId] });
-          triggerNotificationAlert(payload.new.title, payload.new.message);
-        }
+        if (payload.new?.user_id !== user.id) return;
+        queryClient.invalidateQueries({ queryKey: ["notifications", user.id, tenantId] });
+        triggerNotificationAlert(payload.new.title, payload.new.message);
       })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
