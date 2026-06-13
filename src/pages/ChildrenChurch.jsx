@@ -342,6 +342,8 @@ function CheckInPanel({ tenantId, tenantSlug }) {
   const [issuedPin, setIssuedPin] = useState(null);
   const [issuedFor, setIssuedFor] = useState(null);
   const [profileChildId, setProfileChildId] = useState(null);
+  const [walkInOpen, setWalkInOpen] = useState(false);
+  const [walkInMemberId, setWalkInMemberId] = useState(null); // for invite after PIN
 
   // Eligible drop-off adults for currently selected children: primary parents + authorised guardians.
   const { data: broughtByOptions = [] } = useQuery({
