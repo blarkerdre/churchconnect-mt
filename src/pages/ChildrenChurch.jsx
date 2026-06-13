@@ -383,6 +383,7 @@ function PickupPanel({ tenantId, isLeader }) {
   const [delegationCode, setDelegationCode] = useState("");
   const [delegationAdult, setDelegationAdult] = useState("");
   const [overrideReason, setOverrideReason] = useState("");
+  const [profileChildId, setProfileChildId] = useState(null);
 
   const { data: inCare = [] } = useQuery({
     queryKey: ["cc-in-care", tenantId],
