@@ -141,25 +141,10 @@ export async function requestNotificationPermission() {
 export async function registerServiceWorker() {
   try {
     if (!('serviceWorker' in navigator)) return;
-
-    const isInIframe = window.self !== window.top;
-    const host = window.location.hostname;
-    const isPreview =
-      host.includes('id-preview--') ||
-      host.includes('lovableproject.com') ||
-      host === 'localhost' ||
-      host === '127.0.0.1';
-
-    if (isInIframe || isPreview) {
-      const regs = await navigator.serviceWorker.getRegistrations();
-      regs.forEach((r) => r.unregister());
-      return;
-    }
-
-    const reg = await navigator.serviceWorker.register('/sw.js');
+    const reg = await navigator.serviceWorker.ready;
     swRegistration = reg;
   } catch {
-    // SW registration failed
+    // No notification service worker is active
   }
 }
 
