@@ -113,6 +113,7 @@ export default function Layout({ children }) {
   const tenantLogoUrl = currentTenant?.logo_url || null;
   const { isMemberOfUnit: isFollowupMember } = useUnitMembership("Follow-up");
   const { isMemberOfUnit: isTrainingRepMember } = useUnitMembership("Training Rep");
+  const { isMemberOfUnit: isChildrenChurchMember } = useUnitMembership("Children Church");
 
   // Filter nav items based on role and disabled features
   const navItems = allNavItems.filter(item => {
