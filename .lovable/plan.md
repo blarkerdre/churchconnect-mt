@@ -1,27 +1,28 @@
 ## Goal
-Let the Children Church worker record **who actually brought the child** (could be the primary parent, another parent, or any authorised adult) at check-in — instead of always defaulting to the searched parent.
+1. Show "Brought by" (the adult who dropped the child off) in the Children Church report — both the on-screen table and the CSV.
+2. When a child is released at pickup, send an in-app notification to the parent(s).
 
-## Current state
-- `checkin_child` RPC already accepts `_parent_member_id` and stores it in `child_checkins.dropoff_parent_member_id` (NOT NULL). It's already surfaced in reports as "dropoff_parent".
-- The UI in `src/pages/ChildrenChurch.jsx` (`CheckInPanel`) hard-codes this to `selectedFamily.parent.id`, so the column always equals the searched family parent — even when a grandparent, other parent, or authorised adult drops the child off.
+## Changes — `src/pages/ChildrenChurch.jsx`
 
-## Change (frontend only — no DB migration)
+### 1. Report — "Brought by" column
+The query already returns `_dropoff_parent_name`; CSV already includes it as `dropoff_parent`. Only the on-screen table is missing it.
+- Add a new column header **"Brought by"** in the `ReportPanel` table, placed right after "Drop-off".
+- Render `{r._dropoff_parent_name || "—"}` in each row.
+- Rename the existing "Drop-off by" header to **"Drop-off worker"** so the two are unambiguous.
+- Rename the CSV column header `dropoff_parent` → `brought_by` for clarity (data already populated).
 
-### `src/pages/ChildrenChurch.jsx` → `CheckInPanel`
-1. After a family is selected, fetch the list of **eligible drop-off adults** for the selected children:
-   - the primary guardian of each selected child (from `children.primary_guardian_member_id`)
-   - plus every authorised adult linked via `child_guardians` for the selected children
-   - join to `members(id, first_name, last_name, phone)` scoped by `.eq("tenant_id", tenantId)`
-   - de-duplicate by member id
-2. Add a new required field above the Check-in button: **"Brought by"** (`Select` component).
-   - Default value: `selectedFamily.parent.id` if present in the list, otherwise first eligible adult.
-   - Re-compute the list whenever `selectedChildIds` changes.
-   - If no eligible adults are found (shouldn't happen — primary parent is always one), disable check-in with a helper message.
-3. Pass the selected member id as `_parent_member_id` to `supabase.rpc("checkin_child", …)` instead of `selectedFamily.parent.id`.
-4. Notification logic: still notify the **primary parent** (`selectedFamily.parent`) of the PIN — keep current behaviour. Optionally also notify the "brought by" adult if different and they have a `user_id` (best-effort, silent on failure).
-5. Reset the "Brought by" selection in `reset()` and when the family is changed.
+### 2. Notify parents on pickup
+In `PickupPanel`'s `release` mutation:
+- After `supabase.rpc("release_child", args)` succeeds, look up the check-in row to get `child_id`, `pickup_at`, `pickup_method`, `pickup_adult_member_id` and the child's name + `primary_guardian_member_id`. Also pull `child_guardians` rows for that child to collect all linked adult member ids (best-effort safeguarding fan-out).
+- Resolve those member ids → `user_id` via `members` (`.eq("tenant_id", tenantId)`).
+- Insert one `notifications` row per distinct `user_id`:
+  - `type: "children_church"`, `reference_type: "children_church"`, `reference_id: checkin.id`
+  - title: `"{Child first name} has been picked up"`
+  - message: includes pickup time (HH:mm), method (PIN / delegation code / leader override), and the collecting adult's name when available.
+  - For `leader_override`, prefix the message with "Leader override:" and include the worker's name.
+- All inserts include `tenant_id`. Wrap in try/catch — toast still says "Child released" even if notify fails (logged via `console.warn`).
 
 ## Out of scope
-- No schema/RPC changes (column and parameter already exist).
-- No changes to pickup flow, PIN, delegation, or reports (report already shows `dropoff_parent`).
-- No edit-after-the-fact UI for an already-recorded drop-off adult.
+- No schema changes — `dropoff_parent_member_id` and `notifications` already exist.
+- No email/SMS/push — in-app notifications only (matches existing PIN-issue notification pattern).
+- No changes to release RPC or business rules.
