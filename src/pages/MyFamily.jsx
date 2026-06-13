@@ -275,6 +275,16 @@ export default function MyFamily() {
   const [editChild, setEditChild] = useState(null);
   const [guardianFor, setGuardianFor] = useState(null);
   const [delegateFor, setDelegateFor] = useState(null);
+  const [deleteChild, setDeleteChild] = useState(null);
+
+  const removeChild = useMutation({
+    mutationFn: async (child) => {
+      const { error } = await supabase.from("children").delete().eq("id", child.id).eq("tenant_id", tenantId);
+      if (error) throw error;
+    },
+    onSuccess: () => { toast.success("Child removed"); setDeleteChild(null); qc.invalidateQueries({ queryKey: ["my-children", tenantId, meMember?.id] }); },
+    onError: (e) => toast.error(e.message),
+  });
 
   const { data: meMember } = useQuery({
     queryKey: ["me-member-id", tenantId, user?.id],
