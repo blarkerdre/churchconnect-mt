@@ -524,6 +524,7 @@ function PickupPanel({ tenantId, isLeader }) {
           )}
         </CardContent>
       </Card>
+      <ChildProfileDialog open={!!profileChildId} onOpenChange={(o) => !o && setProfileChildId(null)} childId={profileChildId} tenantId={tenantId} />
     </div>
   );
 }
