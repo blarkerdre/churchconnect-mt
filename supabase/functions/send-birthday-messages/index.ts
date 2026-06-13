@@ -64,10 +64,20 @@ Deno.serve(async (req) => {
   }
 
   const isManual = Boolean(body.member_id);
-  const todayUtc = new Date();
-  const todayMM = String(todayUtc.getUTCMonth() + 1).padStart(2, "0");
-  const todayDD = String(todayUtc.getUTCDate()).padStart(2, "0");
-  const todayDate = `${todayUtc.getUTCFullYear()}-${todayMM}-${todayDD}`;
+  // Compute "today" in Europe/London so send_hour_local and birthday matching
+  // honor UK local time (BST in summer, GMT in winter) instead of UTC.
+  const now = new Date();
+  const londonParts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Europe/London",
+    year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", hour12: false,
+  }).formatToParts(now).reduce<Record<string, string>>((acc, p) => {
+    if (p.type !== "literal") acc[p.type] = p.value;
+    return acc;
+  }, {});
+  const londonHour = Number(londonParts.hour === "24" ? "0" : londonParts.hour);
+  const todayMM = londonParts.month;
+  const todayDD = londonParts.day;
+  const todayDate = `${londonParts.year}-${todayMM}-${todayDD}`;
 
   // 1. Pick tenants
   let tenantsQ = svc
