@@ -193,6 +193,12 @@ export default function WSFAttendanceTab({ centres }) {
         ].join(",");
       }),
     ];
+    if (nonReportingCentres.length > 0) {
+      rows.push("");
+      rows.push(`"Centres With No Attendance Reported (${rangeLabel})"`);
+      rows.push(["Centre","Zone"].join(","));
+      nonReportingCentres.forEach(c => rows.push([esc(c.name), esc(c.zoneName || "")].join(",")));
+    }
     const blob = new Blob([rows.join("\n")], { type: "text/csv" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
