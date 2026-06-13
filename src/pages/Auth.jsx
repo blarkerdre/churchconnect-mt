@@ -33,6 +33,11 @@ export default function Auth() {
   const [cooldownSeconds, setCooldownSeconds] = useState(0);
   const [signupSuccess, setSignupSuccess] = useState(false);
   const [waitedForData, setWaitedForData] = useState(false);
+  const [claimDone, setClaimDone] = useState(false);
+  const claimToken = typeof window !== "undefined"
+    ? new URLSearchParams(window.location.search).get("claim")
+    : null;
+
 
   // Fallback: if dataLoaded never flips (e.g., preview proxy hangs Supabase
   // calls), unblock the redirect after 4s so the user isn't stranded on /auth.
