@@ -33,6 +33,11 @@ export default function Auth() {
   const [cooldownSeconds, setCooldownSeconds] = useState(0);
   const [signupSuccess, setSignupSuccess] = useState(false);
   const [waitedForData, setWaitedForData] = useState(false);
+  const [claimDone, setClaimDone] = useState(false);
+  const claimToken = typeof window !== "undefined"
+    ? new URLSearchParams(window.location.search).get("claim")
+    : null;
+
 
   // Fallback: if dataLoaded never flips (e.g., preview proxy hangs Supabase
   // calls), unblock the redirect after 4s so the user isn't stranded on /auth.
@@ -93,19 +98,6 @@ export default function Auth() {
     }
   }, [tenant?.settings]);
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="animate-pulse text-muted-foreground">Loading...</div>
-      </div>
-    );
-  }
-
-  const claimToken = typeof window !== "undefined"
-    ? new URLSearchParams(window.location.search).get("claim")
-    : null;
-  const [claimDone, setClaimDone] = useState(false);
-
   useEffect(() => {
     if (!user || !claimToken || claimDone) return;
     (async () => {
@@ -120,6 +112,16 @@ export default function Auth() {
       }
     })();
   }, [user, claimToken, claimDone, toast]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="animate-pulse text-muted-foreground">Loading...</div>
+      </div>
+    );
+  }
+
+
 
   if (user) {
     if (claimToken && !claimDone) {
