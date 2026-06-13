@@ -270,10 +270,11 @@ export default function WSFAttendanceTab({ centres }) {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
               {[
                 { title: "Cell Centres", value: summaryStats.centresInScope, sub: filterCentreId === "all" ? "All centres" : "Filtered", icon: Home, color: "text-primary" },
                 { title: "Meetings Held", value: summaryStats.held, sub: `${filteredReports.length} report${filteredReports.length === 1 ? "" : "s"}`, icon: CheckCircle2, color: "text-accent" },
+                { title: "Off-Venue", value: summaryStats.offVenue, sub: "Not at home cell", icon: Home, color: "text-chart-2" },
                 { title: "Meetings Not Held", value: summaryStats.notHeld ?? "—", sub: summaryStats.hasRange ? "Weekly cadence" : (summaryStats.notHeld === null ? "Set a date range" : "Estimated"), icon: AlertCircle, color: "text-destructive" },
                 { title: "Avg Attendance", value: summaryStats.avgAttendance, sub: "Per meeting", icon: TrendingUp, color: "text-chart-3" },
                 { title: "Total Attendance", value: summaryStats.totalAttendance, sub: "All meetings", icon: Users, color: "text-chart-4" },
