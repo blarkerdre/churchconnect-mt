@@ -128,6 +128,7 @@ export default function WSFAttendanceTab({ centres }) {
   const summaryStats = (() => {
     const centresInScope = filterCentreId === "all" ? availableCentres.length : 1;
     const held = filteredReports.length;
+    const offVenue = filteredReports.filter(r => r.held_at_home_cell === false).length;
     const totalMale = filteredReports.reduce((s, r) => s + (r.male || 0), 0);
     const totalFemale = filteredReports.reduce((s, r) => s + (r.female || 0), 0);
     const totalChildren = filteredReports.reduce((s, r) => s + (r.children || 0), 0);
@@ -151,7 +152,7 @@ export default function WSFAttendanceTab({ centres }) {
     const expected = weeks * centresInScope;
     const notHeld = weeks > 0 ? Math.max(0, expected - held) : null;
 
-    return { centresInScope, held, totalAttendance, notHeld, avgAttendance, hasRange, totalMale, totalFemale, totalAdults, totalChildren, totalFirstTimers, totalTestimonies };
+    return { centresInScope, held, offVenue, totalAttendance, notHeld, avgAttendance, hasRange, totalMale, totalFemale, totalAdults, totalChildren, totalFirstTimers, totalTestimonies };
   })();
 
   const buildPrintRows = () => ({
