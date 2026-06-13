@@ -152,6 +152,28 @@ function CheckInPanel({ tenantId }) {
           throw new Error(error.message || "Check-in failed");
         }
       }
+      // Notify parent in-app with the pickup PIN (best-effort)
+      try {
+        const { data: parent } = await supabase
+          .from("members")
+          .select("user_id")
+          .eq("id", selectedFamily.parent.id)
+          .eq("tenant_id", tenantId)
+          .maybeSingle();
+        if (parent?.user_id) {
+          const names = snapshot.map(c => c.first_name).join(", ").slice(0, 80);
+          await supabase.from("notifications").insert({
+            user_id: parent.user_id,
+            tenant_id: tenantId,
+            title: `Pickup code for ${names}`,
+            message: `Your pickup PIN is ${pin}. Show this at pickup. Do not share.`,
+            type: "children_church",
+            reference_type: "children_church",
+          });
+        }
+      } catch (e) {
+        console.warn("checkin parent notification failed", e);
+      }
       return { pin, children: snapshot };
     },
     onSuccess: ({ pin, children }) => {
