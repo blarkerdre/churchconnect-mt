@@ -290,7 +290,7 @@ export default function FollowupDetailPanel({ followup, onClose, onUpdate, curre
               <p className="text-xs font-semibold text-muted-foreground flex items-center gap-1">
                 <User className="h-3 w-3" /> Assigned To
               </p>
-              {(isAdmin || isUnitLeader) && followup.status !== "Completed" && (
+              {canManage && followup.status !== "Completed" && (
                 <Button variant="ghost" size="sm" className="h-6 text-xs px-2" onClick={() => setShowReassign(!showReassign)}>
                   <RefreshCw className="h-3 w-3 mr-1" /> Reassign
                 </Button>
