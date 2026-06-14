@@ -19,7 +19,7 @@ import ReportAttachments from "@/components/reports/ReportAttachments";
 import CheckInPanel from "@/components/attendance/CheckInPanel";
 
 export default function Attendance() {
-  const { isAdmin, isUnitLeader, isWSFLeader, leaderUnits = [], leaderCentres = [] } = useAuth();
+  const { user, isAdmin, isUnitLeader, isWSFLeader, leaderUnits = [], leaderCentres = [] } = useAuth();
   const { tenantId, scopeQuery, withTenant } = useTenantQuery();
   const { data: churchUnits = [] } = useChurchUnits();
   const canManage = isAdmin || isUnitLeader || isWSFLeader;
@@ -38,7 +38,7 @@ export default function Attendance() {
   const { data: sessions = [], isLoading } = useQuery({
     queryKey: ["attendance-sessions", tenantId],
     queryFn: async () => {
-      const { data, error } = await scopeQuery(supabase.from("attendance_sessions").select("*").order("session_date", { ascending: false }));
+      const { data, error } = await scopeQuery(supabase.from("attendance_sessions").select("*, profiles:created_by(full_name)").order("session_date", { ascending: false }));
       if (error) throw error;
       return data;
     },
@@ -104,6 +104,7 @@ export default function Attendance() {
         session_date: formData.session_date,
         notes: formData.notes || null,
         unit: formData.unit || null,
+        created_by: user?.id || null,
       }));
       if (error) throw error;
     },
@@ -316,6 +317,11 @@ export default function Attendance() {
                       {s.status === "closed" && <Lock className="h-3 w-3 text-muted-foreground shrink-0" />}
                     </p>
                     <p className="text-xs text-muted-foreground">{s.session_type} · {s.session_date}</p>
+                    {(s.unit || s.profiles?.full_name) && (
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {[s.unit, s.profiles?.full_name && `Created by ${s.profiles.full_name}`].filter(Boolean).join(" · ")}
+                      </p>
+                    )}
                     {(s.male_count > 0 || s.female_count > 0) && (
                       <p className="text-xs text-muted-foreground mt-0.5">
                         M: {s.male_count} · F: {s.female_count} · T: {s.total_count}
