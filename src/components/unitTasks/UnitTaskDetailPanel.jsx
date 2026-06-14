@@ -1,15 +1,18 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Dialog, DialogContent, DialogFooter } from "@/components/ui/dialog";
 import TenantDialogHeader from "@/components/ui/TenantDialogHeader";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, CheckCircle2, MessageSquare, Trash2, XCircle } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Loader2, CheckCircle2, MessageSquare, Trash2, XCircle, Pencil, UserPlus, X } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
 import { toast } from "sonner";
+import { logAudit } from "@/lib/audit";
 
 const statusBadge = {
   Pending: "bg-accent/10 text-accent",
@@ -17,12 +20,15 @@ const statusBadge = {
   Completed: "bg-chart-3/10 text-chart-3",
 };
 
-export default function UnitTaskDetailPanel({ open, onOpenChange, task, canManage, onChanged }) {
+export default function UnitTaskDetailPanel({ open, onOpenChange, task, canManage, onEdit, onChanged }) {
   const { user } = useAuth();
   const { tenantId } = useTenantQuery();
   const qc = useQueryClient();
   const [comment, setComment] = useState("");
   const [posting, setPosting] = useState(false);
+  const [showAdd, setShowAdd] = useState(false);
+  const [picked, setPicked] = useState(new Set());
+  const [adding, setAdding] = useState(false);
 
   const taskId = task?.id;
 
@@ -54,8 +60,31 @@ export default function UnitTaskDetailPanel({ open, onOpenChange, task, canManag
     },
   });
 
-  // Realtime updates for this task — filter by tenant_id at the server (single-column
-  // Realtime limit); task_id is naturally scoped because we only refetch this task's queries.
+  // Candidates for reassignment: unit members not already assigned
+  const assignedMemberIds = useMemo(
+    () => new Set(assignments.map((a) => a.member_id).filter(Boolean)),
+    [assignments]
+  );
+  const { data: candidates = [], isLoading: candidatesLoading } = useQuery({
+    queryKey: ["task-candidates", tenantId, task?.unit_name, assignedMemberIds.size],
+    enabled: !!tenantId && !!task?.unit_name && showAdd && canManage,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("members")
+        .select("id, first_name, last_name, user_id, church_unit")
+        .eq("tenant_id", tenantId)
+        .ilike("church_unit", `%${task.unit_name}%`)
+        .order("first_name");
+      if (error) throw error;
+      const needle = (task.unit_name || "").trim().toLowerCase();
+      return (data || []).filter((m) =>
+        (m.church_unit || "").split(",").map((s) => s.trim().toLowerCase()).includes(needle)
+        && !assignedMemberIds.has(m.id)
+      );
+    },
+  });
+
+  // Realtime
   useEffect(() => {
     if (!taskId || !open || !tenantId) return;
     const ch = supabase
@@ -69,6 +98,10 @@ export default function UnitTaskDetailPanel({ open, onOpenChange, task, canManag
       .subscribe();
     return () => { supabase.removeChannel(ch); };
   }, [taskId, open, tenantId, refetchA, refetchC]);
+
+  useEffect(() => {
+    if (!open) { setShowAdd(false); setPicked(new Set()); }
+  }, [open]);
 
   const myAssignment = assignments.find((a) => a.user_id === user?.id);
 
@@ -124,6 +157,65 @@ export default function UnitTaskDetailPanel({ open, onOpenChange, task, canManag
     onOpenChange(false);
   };
 
+  const togglePick = (id) => {
+    setPicked((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const addAssignees = async () => {
+    if (picked.size === 0) return;
+    setAdding(true);
+    try {
+      const rows = candidates
+        .filter((m) => picked.has(m.id))
+        .map((m) => ({
+          tenant_id: tenantId,
+          task_id: taskId,
+          member_id: m.id,
+          user_id: m.user_id || null,
+          status: "Pending",
+        }));
+      const { error } = await supabase.from("unit_task_assignments").insert(rows);
+      if (error) throw error;
+
+      // Best-effort notification
+      try {
+        supabase.functions.invoke("notify-unit-task-assignment", {
+          body: { task_id: taskId, tenant_id: tenantId },
+        }).catch(() => {});
+      } catch { /* noop */ }
+
+      try { logAudit("unit_task.reassigned", "unit_task", taskId, { added: rows.length }, tenantId); } catch { /* noop */ }
+
+      toast.success(`Added ${rows.length} assignee${rows.length === 1 ? "" : "s"}`);
+      setPicked(new Set());
+      setShowAdd(false);
+      refetchA();
+      qc.invalidateQueries({ queryKey: ["leading-tasks"] });
+    } catch (err) {
+      toast.error(err?.message || "Failed to add assignees");
+    } finally {
+      setAdding(false);
+    }
+  };
+
+  const removeAssignee = async (a) => {
+    if (a.status !== "Pending" && !confirm(`Remove ${a.members ? `${a.members.first_name} ${a.members.last_name}` : "this assignee"}? Their progress will be lost.`)) return;
+    const { error } = await supabase
+      .from("unit_task_assignments")
+      .delete()
+      .eq("id", a.id)
+      .eq("tenant_id", tenantId);
+    if (error) return toast.error(error.message);
+    try { logAudit("unit_task.reassigned", "unit_task", taskId, { removed: 1, member_id: a.member_id }, tenantId); } catch { /* noop */ }
+    toast.success("Assignee removed");
+    refetchA();
+    qc.invalidateQueries({ queryKey: ["leading-tasks"] });
+  };
+
   if (!task) return null;
 
   const counts = assignments.reduce(
@@ -165,23 +257,62 @@ export default function UnitTaskDetailPanel({ open, onOpenChange, task, canManag
             </div>
           )}
 
-          {/* Assignees list (leader/admin view) */}
           {canManage && (
             <div className="space-y-2">
-              <h4 className="text-sm font-semibold">Assignees</h4>
+              <div className="flex items-center justify-between">
+                <h4 className="text-sm font-semibold">Assignees</h4>
+                {task.status === "Open" && (
+                  <Button size="sm" variant="outline" onClick={() => setShowAdd((v) => !v)}>
+                    <UserPlus className="h-4 w-4 mr-1" /> {showAdd ? "Close" : "Add members"}
+                  </Button>
+                )}
+              </div>
               <div className="border border-border rounded-md divide-y divide-border max-h-64 overflow-y-auto">
                 {assignments.map((a) => (
-                  <div key={a.id} className="flex items-center justify-between px-3 py-2 text-sm">
-                    <span>{a.members ? `${a.members.first_name} ${a.members.last_name}` : "—"}</span>
+                  <div key={a.id} className="flex items-center justify-between px-3 py-2 text-sm gap-2">
+                    <span className="min-w-0 truncate">{a.members ? `${a.members.first_name} ${a.members.last_name}` : "—"}</span>
                     <div className="flex items-center gap-2 text-xs">
                       <Badge className={statusBadge[a.status]}>{a.status}</Badge>
-                      {a.acknowledged_at && <span className="text-muted-foreground">ack {new Date(a.acknowledged_at).toLocaleDateString()}</span>}
-                      {a.completed_at && <span className="text-muted-foreground">done {new Date(a.completed_at).toLocaleDateString()}</span>}
+                      {a.acknowledged_at && <span className="text-muted-foreground hidden sm:inline">ack {new Date(a.acknowledged_at).toLocaleDateString()}</span>}
+                      {a.completed_at && <span className="text-muted-foreground hidden sm:inline">done {new Date(a.completed_at).toLocaleDateString()}</span>}
+                      {task.status === "Open" && (
+                        <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => removeAssignee(a)} title="Remove assignee">
+                          <X className="h-4 w-4" />
+                        </Button>
+                      )}
                     </div>
                   </div>
                 ))}
                 {assignments.length === 0 && <p className="text-center text-sm text-muted-foreground py-4">No assignees.</p>}
               </div>
+
+              {showAdd && task.status === "Open" && (
+                <div className="border border-border rounded-md p-2 space-y-2 bg-muted/20">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-muted-foreground">{picked.size} selected · {candidates.length} available in {task.unit_name}</span>
+                    <Button size="sm" onClick={addAssignees} disabled={adding || picked.size === 0}>
+                      {adding && <Loader2 className="h-4 w-4 mr-1 animate-spin" />} Add {picked.size > 0 ? `(${picked.size})` : ""}
+                    </Button>
+                  </div>
+                  <ScrollArea className="h-48 border border-border rounded bg-background">
+                    {candidatesLoading ? (
+                      <div className="flex justify-center py-6"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
+                    ) : candidates.length === 0 ? (
+                      <p className="text-center text-sm text-muted-foreground py-6">No other members in this unit.</p>
+                    ) : (
+                      <div className="divide-y divide-border">
+                        {candidates.map((m) => (
+                          <label key={m.id} className="flex items-center gap-3 px-3 py-2 hover:bg-muted/50 cursor-pointer">
+                            <Checkbox checked={picked.has(m.id)} onCheckedChange={() => togglePick(m.id)} />
+                            <span className="text-sm">{m.first_name} {m.last_name}</span>
+                            {!m.user_id && <span className="text-xs text-muted-foreground ml-auto">no login</span>}
+                          </label>
+                        ))}
+                      </div>
+                    )}
+                  </ScrollArea>
+                </div>
+              )}
             </div>
           )}
 
@@ -206,7 +337,12 @@ export default function UnitTaskDetailPanel({ open, onOpenChange, task, canManag
             </div>
           </div>
         </div>
-        <DialogFooter className="gap-2">
+        <DialogFooter className="gap-2 flex-wrap">
+          {canManage && task.status === "Open" && onEdit && (
+            <Button variant="outline" onClick={() => onEdit(task)}>
+              <Pencil className="h-4 w-4 mr-1" /> Edit
+            </Button>
+          )}
           {canManage && task.status === "Open" && (
             <Button variant="outline" onClick={cancelTask}><XCircle className="h-4 w-4 mr-1" /> Cancel Task</Button>
           )}

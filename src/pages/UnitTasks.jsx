@@ -60,6 +60,7 @@ export default function UnitTasks() {
   const [unitFilter, setUnitFilter] = useState("All");
   const [statusFilter, setStatusFilter] = useState("Open");
   const [formOpen, setFormOpen] = useState(false);
+  const [editing, setEditing] = useState(null);
   const [reportOpen, setReportOpen] = useState(false);
   const [selected, setSelected] = useState(null);
   const didSetInitialLeaderTab = useRef(false);
@@ -140,7 +141,7 @@ export default function UnitTasks() {
               <Button variant="outline" onClick={() => setReportOpen(true)}>
                 <FileBarChart className="h-4 w-4 mr-2" /> Report
               </Button>
-              <Button onClick={() => setFormOpen(true)} disabled={!allUnits.length}>
+              <Button onClick={() => { setEditing(null); setFormOpen(true); }} disabled={!allUnits.length}>
                 <Plus className="h-4 w-4 mr-2" /> New Task
               </Button>
             </>
@@ -259,9 +260,10 @@ export default function UnitTasks() {
 
       <UnitTaskFormDialog
         open={formOpen}
-        onOpenChange={setFormOpen}
+        onOpenChange={(v) => { setFormOpen(v); if (!v) setEditing(null); }}
         unitOptions={allUnits}
         defaultUnit={unitFilter !== "All" ? unitFilter : ""}
+        task={editing}
         onSaved={onChanged}
       />
       <UnitTaskReportDialog open={reportOpen} onOpenChange={setReportOpen} unitOptions={allUnits} />
@@ -270,6 +272,7 @@ export default function UnitTasks() {
         onOpenChange={(v) => !v && setSelected(null)}
         task={selected}
         canManage={canLead && selected && (isAdmin || isSuperAdmin || (leaderUnits || []).some((u) => u.toLowerCase() === (selected.unit_name || "").toLowerCase()))}
+        onEdit={(t) => { setSelected(null); setEditing(t); setFormOpen(true); }}
         onChanged={onChanged}
       />
     </div>
