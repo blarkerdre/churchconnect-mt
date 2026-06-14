@@ -14,7 +14,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "@/components/ui/use-toast";
 import { format, parseISO } from "date-fns";
-import { Loader2, Plus, Droplets, Flame, BookOpen, Users, TrendingUp, Paperclip, Download, Printer, Award, Search, X, Send, ClipboardList } from "lucide-react";
+import { Loader2, Plus, Droplets, Flame, BookOpen, Users, TrendingUp, Paperclip, Download, Printer, Award, Search, X, Send, ClipboardList, Pencil, Trash2 } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
 import { useAppSetting } from "@/hooks/useAppSetting";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
@@ -57,6 +57,7 @@ export default function TrainingReports() {
     color: ICON_MAP[v]?.color || "text-muted-foreground",
   }));
   const [open, setOpen] = useState(false);
+  const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState(emptyForm);
   const [filterType, setFilterType] = useState("all");
   const [filterFrom, setFilterFrom] = useState("");
@@ -145,6 +146,30 @@ export default function TrainingReports() {
     setForm(emptyForm);
     setAttendees({});
     setAttendeeSearch("");
+    setEditingId(null);
+  };
+
+  const handleDialogOpenChange = (v) => {
+    setOpen(v);
+    if (!v) resetForm();
+  };
+
+  const openEdit = (r) => {
+    setEditingId(r.id);
+    setForm({
+      training_type: r.training_type || "",
+      session_date: r.session_date || format(new Date(), "yyyy-MM-dd"),
+      title: r.title || "",
+      total_attendance: r.total_attendance ?? "",
+      male: r.male ?? "",
+      female: r.female ?? "",
+      holy_ghost_baptism: r.holy_ghost_baptism ?? "",
+      water_baptism: r.water_baptism ?? "",
+      notes: r.notes || "",
+    });
+    setAttendees({});
+    setAttendeeSearch("");
+    setOpen(true);
   };
 
   const saveMutation = useMutation({
@@ -183,13 +208,55 @@ export default function TrainingReports() {
     onError: (err) => toast({ title: "Error saving report", description: err.message, variant: "destructive" }),
   });
 
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, payload }) => {
+      const { error } = await supabase
+        .from("training_reports")
+        .update(payload)
+        .eq("id", id)
+        .eq("tenant_id", tenantId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["training-reports"] });
+      qc.invalidateQueries({ queryKey: ["certificate-approvals"] });
+      toast({ title: "Session updated" });
+      resetForm();
+      setOpen(false);
+    },
+    onError: (err) => toast({ title: "Update failed", description: err.message, variant: "destructive" }),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id) => {
+      const { error: aErr } = await supabase
+        .from("training_attendees")
+        .delete()
+        .eq("training_report_id", id)
+        .eq("tenant_id", tenantId);
+      if (aErr) throw aErr;
+      const { error } = await supabase
+        .from("training_reports")
+        .delete()
+        .eq("id", id)
+        .eq("tenant_id", tenantId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["training-reports"] });
+      qc.invalidateQueries({ queryKey: ["certificate-approvals"] });
+      toast({ title: "Session deleted" });
+    },
+    onError: (err) => toast({ title: "Delete failed", description: err.message, variant: "destructive" }),
+  });
+
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!form.training_type || !form.session_date) {
       toast({ title: "Please select training type and date", variant: "destructive" });
       return;
     }
-    saveMutation.mutate({
+    const payload = {
       training_type: form.training_type,
       session_date: form.session_date,
       title: form.title || null,
@@ -199,8 +266,12 @@ export default function TrainingReports() {
       holy_ghost_baptism: parseInt(form.holy_ghost_baptism) || 0,
       water_baptism: parseInt(form.water_baptism) || 0,
       notes: form.notes || null,
-      recorded_by: user?.id,
-    });
+    };
+    if (editingId) {
+      updateMutation.mutate({ id: editingId, payload });
+    } else {
+      saveMutation.mutate({ ...payload, recorded_by: user?.id });
+    }
   };
 
   const set = (key, val) => setForm((f) => ({ ...f, [key]: val }));
@@ -277,13 +348,13 @@ export default function TrainingReports() {
             </>
           )}
         {canRecordSession && (
-          <Dialog open={open} onOpenChange={setOpen}>
+          <Dialog open={open} onOpenChange={handleDialogOpenChange}>
             <DialogTrigger asChild>
               <Button size="sm" className="gap-1.5"><Plus className="h-4 w-4" /> Record Session</Button>
             </DialogTrigger>
           <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Record Training Session</DialogTitle>
+              <DialogTitle>{editingId ? "Edit Training Session" : "Record Training Session"}</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-2 gap-3">
@@ -421,9 +492,9 @@ export default function TrainingReports() {
                 <Textarea value={form.notes} onChange={(e) => set("notes", e.target.value)} rows={2} />
               </div>
 
-              <Button type="submit" className="w-full" disabled={saveMutation.isPending}>
-                {saveMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-                Save Report
+              <Button type="submit" className="w-full" disabled={saveMutation.isPending || updateMutation.isPending}>
+                {(saveMutation.isPending || updateMutation.isPending) ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                {editingId ? "Update Session" : "Save Report"}
               </Button>
             </form>
           </DialogContent>
@@ -504,9 +575,31 @@ export default function TrainingReports() {
                           <TableCell className="text-center">{r.holy_ghost_baptism}</TableCell>
                           <TableCell className="text-center">{r.water_baptism}</TableCell>
                           <TableCell>
-                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setExpandedRow(expandedRow === r.id ? null : r.id)}>
-                              <Users className="h-3.5 w-3.5" />
-                            </Button>
+                            <div className="flex items-center justify-end gap-1">
+                              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setExpandedRow(expandedRow === r.id ? null : r.id)} title="Attendees">
+                                <Users className="h-3.5 w-3.5" />
+                              </Button>
+                              {isAdmin && (
+                                <>
+                                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(r)} title="Edit">
+                                    <Pencil className="h-3.5 w-3.5" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-7 w-7 text-destructive hover:text-destructive"
+                                    onClick={() => {
+                                      if (window.confirm("Delete this training session and its attendee records? This cannot be undone.")) {
+                                        deleteMutation.mutate(r.id);
+                                      }
+                                    }}
+                                    title="Delete"
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                  </Button>
+                                </>
+                              )}
+                            </div>
                           </TableCell>
                         </TableRow>
                         {expandedRow === r.id && (
