@@ -348,13 +348,13 @@ export default function TrainingReports() {
             </>
           )}
         {canRecordSession && (
-          <Dialog open={open} onOpenChange={setOpen}>
+          <Dialog open={open} onOpenChange={handleDialogOpenChange}>
             <DialogTrigger asChild>
               <Button size="sm" className="gap-1.5"><Plus className="h-4 w-4" /> Record Session</Button>
             </DialogTrigger>
           <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Record Training Session</DialogTitle>
+              <DialogTitle>{editingId ? "Edit Training Session" : "Record Training Session"}</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-2 gap-3">
