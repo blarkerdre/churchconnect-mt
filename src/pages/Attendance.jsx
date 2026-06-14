@@ -143,6 +143,31 @@ export default function Attendance() {
     onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
 
+  const deleteSessionMutation = useMutation({
+    mutationFn: async () => {
+      if (!selectedSession?.id) throw new Error("No meeting selected");
+      const { error: recErr } = await supabase
+        .from("attendance_records")
+        .delete()
+        .eq("session_id", selectedSession.id)
+        .eq("tenant_id", tenantId);
+      if (recErr) throw recErr;
+      const { error: sessErr } = await supabase
+        .from("attendance_sessions")
+        .delete()
+        .eq("id", selectedSession.id)
+        .eq("tenant_id", tenantId);
+      if (sessErr) throw sessErr;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["attendance-sessions"] });
+      queryClient.invalidateQueries({ queryKey: ["attendance-records"] });
+      setSelectedSessionId(null);
+      toast({ title: "Meeting deleted" });
+    },
+    onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+  });
+
   const presentCount = records.length;
   const attendanceRate = totalMembers > 0 ? Math.round((presentCount / totalMembers) * 100) : 0;
   const isClosed = selectedSession?.status === "closed";
