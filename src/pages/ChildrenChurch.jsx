@@ -515,12 +515,13 @@ function CheckInPanel({ tenantId, tenantSlug }) {
         }
       }
       // Notify primary parent in-app with the pickup PIN (best-effort)
+      let walkInContacts = [];
       try {
         const notifyIds = new Set([selectedFamily.parent.id]);
         if (broughtById && broughtById !== selectedFamily.parent.id) notifyIds.add(broughtById);
         const { data: recipients } = await supabase
           .from("members")
-          .select("user_id")
+          .select("id, user_id, first_name, email, phone")
           .eq("tenant_id", tenantId)
           .in("id", Array.from(notifyIds));
         const userIds = (recipients || []).map(r => r.user_id).filter(Boolean);
@@ -537,8 +538,80 @@ function CheckInPanel({ tenantId, tenantSlug }) {
             }))
           );
         }
+        // Walk-in adults: no app account, or this is the freshly-registered walk-in parent
+        walkInContacts = (recipients || []).filter(
+          r => !r.user_id || r.id === walkInMemberId
+        );
       } catch (e) {
         console.warn("checkin parent notification failed", e);
+      }
+
+      // Email + SMS pickup PIN for walk-in parents (best-effort, never blocks check-in)
+      try {
+        const childNames = snapshot.map(c => c.first_name).join(", ").slice(0, 120);
+        let emailedCount = 0;
+        let smsCount = 0;
+        for (const adult of walkInContacts) {
+          const firstName = adult.first_name || "there";
+          if (adult.email) {
+            try {
+              await supabase.functions.invoke("send-email-alert", {
+                body: {
+                  subject: "Children's Church Pickup PIN",
+                  body:
+                    `Hi ${firstName},\n\n` +
+                    `${childNames} has been checked in to Children's Church.\n\n` +
+                    `Your pickup PIN is: ${pin}\n\n` +
+                    `Please keep this PIN private and show it at pickup. ` +
+                    `It will be required to collect your child.\n\nThank you.`,
+                  tenant_id: tenantId,
+                  member_ids: [adult.id],
+                  audience_label: "Walk-in parent",
+                },
+              });
+              emailedCount++;
+            } catch (err) {
+              console.warn("walk-in PIN email failed", { member_id: adult.id, err });
+            }
+          }
+          if (adult.phone) {
+            try {
+              const { data: sessionData } = await supabase.auth.getSession();
+              const token = sessionData?.session?.access_token;
+              const res = await fetch(
+                `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-sms`,
+                {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${token}`,
+                  },
+                  body: JSON.stringify({
+                    recipients: [{ phone: adult.phone, member_id: adult.id }],
+                    message:
+                      `Children's Church: ${childNames} checked in. ` +
+                      `Pickup PIN: ${pin}. Keep private — needed at pickup.`,
+                    sms_type: "children_church",
+                    reference_id: null,
+                    channel: "sms",
+                    tenant_id: tenantId,
+                  }),
+                }
+              );
+              if (res.ok) smsCount++;
+            } catch (err) {
+              console.warn("walk-in PIN SMS failed", { member_id: adult.id, err });
+            }
+          }
+        }
+        if (emailedCount || smsCount) {
+          const parts = [];
+          if (emailedCount) parts.push(`email${emailedCount > 1 ? "s" : ""}`);
+          if (smsCount) parts.push("SMS");
+          toast.success(`Pickup PIN sent to walk-in parent by ${parts.join(" & ")}`);
+        }
+      } catch (e) {
+        console.warn("walk-in PIN delivery failed", e);
       }
       return { pin, children: snapshot };
     },
