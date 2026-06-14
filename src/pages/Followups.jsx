@@ -88,6 +88,9 @@ export default function Followups() {
     },
   });
 
+  const isFollowupTeam = !!user?.id && followupUnitMembers.includes(user.id);
+  const canManageFollowups = isAdmin || isFollowupTeam;
+
   // Fetch followups with member info
   const { data: followups = [], isLoading } = useQuery({
     queryKey: ["followups", tenantId],
