@@ -1054,7 +1054,7 @@ function ReportPanel({ tenantId }) {
     const q = (v) => `"${String(v ?? "").replace(/"/g,'""')}"`;
     const headers = ["service_date","child","age_group","dropoff_at","dropoff_worker","brought_by","pickup_at","pickup_method","pickup_worker_or_leader","collected_by","delegated_to","status","override_reason"];
     const lines = [headers.join(",")];
-    for (const r of rows) {
+    for (const r of filteredRows) {
       const isOverride = r.pickup_method === "leader_override";
       lines.push([
         r.service_date,
