@@ -18,6 +18,7 @@ import OverdueReminder from "@/components/followups/OverdueReminder";
 import FollowupMessageDialog from "@/components/followups/FollowupMessageDialog";
 import { useSubFeature } from "@/hooks/useSubFeature";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
+import PasswordConfirmDialog from "@/components/shared/PasswordConfirmDialog";
 
 const priorityColors = { "Urgent": "bg-destructive/10 text-destructive", "High": "bg-chart-5/10 text-chart-5", "Medium": "bg-accent/10 text-accent", "Low": "bg-muted text-muted-foreground" };
 const statusColors = { "Pending": "bg-accent/10 text-accent", "In Progress": "bg-primary/10 text-primary", "Completed": "bg-chart-3/10 text-chart-3", "Overdue": "bg-destructive/10 text-destructive" };
@@ -33,6 +34,7 @@ export default function Followups() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingFollowup, setEditingFollowup] = useState(null);
   const [selectedFollowup, setSelectedFollowup] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null);
   
   const [messageDialogOpen, setMessageDialogOpen] = useState(false);
   const [messageFollowup, setMessageFollowup] = useState(null);
@@ -411,9 +413,7 @@ export default function Followups() {
                         className="h-8 w-8 text-destructive hover:text-destructive shrink-0"
                         onClick={(e) => {
                           e.stopPropagation();
-                          if (window.confirm("Delete this follow-up? This cannot be undone.")) {
-                            deleteMutation.mutate(f.id);
-                          }
+                          setDeleteTarget(f);
                         }}
                         title="Delete follow-up"
                       >
@@ -480,6 +480,21 @@ export default function Followups() {
         onOpenChange={setReportOpen}
         followups={followups}
         profileMap={profileMap}
+      />
+
+      <PasswordConfirmDialog
+        open={!!deleteTarget}
+        onOpenChange={(v) => { if (!v) setDeleteTarget(null); }}
+        title="Delete follow-up"
+        description={deleteTarget ? (
+          <>Permanently delete the follow-up for <strong>{deleteTarget.person_name}</strong> and any related referrals and scheduled messages. This cannot be undone.</>
+        ) : "This cannot be undone."}
+        isPending={deleteMutation.isPending}
+        onConfirm={async () => {
+          if (!deleteTarget) return;
+          await deleteMutation.mutateAsync(deleteTarget.id);
+          setDeleteTarget(null);
+        }}
       />
 
     </div>
