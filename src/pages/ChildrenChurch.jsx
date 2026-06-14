@@ -1167,7 +1167,7 @@ function ReportPanel({ tenantId }) {
                   </tr>
                 );
               })}
-              {rows.length === 0 && <tr><td colSpan="11" className="p-4 text-center text-muted-foreground">No records.</td></tr>}
+              {filteredRows.length === 0 && <tr><td colSpan="11" className="p-4 text-center text-muted-foreground">No records.</td></tr>}
             </tbody>
           </table>
         </div>
