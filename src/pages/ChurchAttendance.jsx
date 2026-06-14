@@ -75,10 +75,73 @@ export default function ChurchAttendance() {
       qc.invalidateQueries({ queryKey: ["church-attendance-reports"] });
       toast({ title: "Attendance report saved" });
       setForm(emptyForm);
+      setEditingId(null);
       setOpen(false);
     },
     onError: (err) => toast({ title: "Error saving report", description: err.message, variant: "destructive" }),
   });
+
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, payload }) => {
+      const { error } = await supabase
+        .from("church_attendance_reports")
+        .update(payload)
+        .eq("id", id)
+        .eq("tenant_id", tenantId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["church-attendance-reports"] });
+      toast({ title: "Attendance report updated" });
+      setForm(emptyForm);
+      setEditingId(null);
+      setOpen(false);
+    },
+    onError: (err) => toast({ title: "Error updating report", description: err.message, variant: "destructive" }),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id) => {
+      const { error } = await supabase
+        .from("church_attendance_reports")
+        .delete()
+        .eq("id", id)
+        .eq("tenant_id", tenantId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["church-attendance-reports"] });
+      toast({ title: "Attendance report deleted" });
+    },
+    onError: (err) => toast({ title: "Error deleting report", description: err.message, variant: "destructive" }),
+  });
+
+  const openEdit = (r) => {
+    setEditingId(r.id);
+    setForm({
+      service_type: r.service_type || "Sunday Service",
+      service_date: r.service_date || format(new Date(), "yyyy-MM-dd"),
+      title: r.title || "",
+      adult_male: String(r.adult_male ?? ""),
+      adult_female: String(r.adult_female ?? ""),
+      children: String(r.children ?? ""),
+      teens: String(r.teens ?? ""),
+      converts: String(r.converts ?? ""),
+      first_timers: String(r.first_timers ?? ""),
+      testimonies: String(r.testimonies ?? ""),
+      cars: String(r.cars ?? ""),
+      notes: r.notes || "",
+    });
+    setOpen(true);
+  };
+
+  const handleDialogOpenChange = (v) => {
+    setOpen(v);
+    if (!v) {
+      setEditingId(null);
+      setForm(emptyForm);
+    }
+  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -94,7 +157,7 @@ export default function ChurchAttendance() {
     const first_timers = parseInt(form.first_timers) || 0;
     const testimonies = parseInt(form.testimonies) || 0;
     const cars = parseInt(form.cars) || 0;
-    saveMutation.mutate({
+    const payload = {
       service_type: form.service_type,
       service_date: form.service_date,
       title: form.title || null,
@@ -108,8 +171,12 @@ export default function ChurchAttendance() {
       cars,
       total_attendance: adultMale + adultFemale + children + teens,
       notes: form.notes || null,
-      recorded_by: user?.id,
-    });
+    };
+    if (editingId) {
+      updateMutation.mutate({ id: editingId, payload });
+    } else {
+      saveMutation.mutate({ ...payload, recorded_by: user?.id });
+    }
   };
 
   const set = (key, val) => setForm((f) => ({ ...f, [key]: val }));
