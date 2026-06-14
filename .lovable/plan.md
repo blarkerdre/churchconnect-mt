@@ -1,27 +1,28 @@
 ## Goal
-Allow admins to edit (and delete) existing church attendance records on the Church Attendance page.
+Allow admins to edit and delete training session records on the Training Report page.
 
-## Changes (single file: `src/pages/ChurchAttendance.jsx`)
+## Changes (single file: `src/pages/TrainingReports.jsx`)
 
-1. **Reuse the existing dialog for both create and edit**
-   - Add `editingId` state. When set, the dialog title becomes "Edit Church Attendance" and submit calls update instead of insert.
-   - Add `openEdit(report)` that pre-fills `form` from the row and opens the dialog.
-   - Reset `editingId` to `null` when dialog closes or after save.
+1. **Reuse the existing Record Session dialog for edit**
+   - Add `editingId` state. When set, dialog title becomes "Edit Training Session" and submit routes to update instead of insert.
+   - Add `openEdit(report)` that pre-fills `form` from the row and opens the dialog. Attendees panel remains scoped to add-new flow only — edits of attendees continue via the existing `TrainingAttendeesPanel` in the expanded row.
+   - Reset `editingId` and form when dialog closes.
 
 2. **Update mutation**
-   - Add `updateMutation` that runs `supabase.from("church_attendance_reports").update(payload).eq("id", editingId).eq("tenant_id", tenantId)`.
-   - `handleSubmit` routes to update vs insert based on `editingId`. Payload recomputes `total_attendance`.
+   - Add `updateMutation` that runs `supabase.from("training_reports").update(payload).eq("id", editingId).eq("tenant_id", tenantId)`. Recomputes `total_attendance` from male+female.
+   - `handleSubmit` calls update when `editingId` is set, otherwise the existing insert path.
 
 3. **Delete mutation**
-   - Add `deleteMutation` with a `window.confirm` guard. Scoped via `.eq("id", id).eq("tenant_id", tenantId)`.
+   - Add `deleteMutation` with `window.confirm` guard, scoped via `.eq("id", id).eq("tenant_id", tenantId)`. RLS already allows admins.
+   - Cascading attendee/attachment rows: delete child rows in `training_attendees` for that report first (scoped by tenant) so the parent delete succeeds regardless of FK config.
 
 4. **Row actions (admin only)**
-   - In each table row, when `isAdmin`, render a small Pencil and Trash icon button alongside the existing Paperclip toggle.
-   - Pencil → `openEdit(r)`; Trash → `deleteMutation.mutate(r.id)`.
+   - Add Pencil and Trash icon buttons in the actions cell alongside the existing Users (expand) button, gated on `isAdmin`.
+   - Pencil → `openEdit(r)`; Trash → confirm → `deleteMutation.mutate(r.id)`.
 
-5. **Cache invalidation + toasts** for both update and delete, matching the existing save flow.
+5. **Cache invalidation + toasts** for both update and delete, matching the existing save flow (`training-reports` + `certificate-approvals`).
 
 ## Out of scope
-- No schema changes (existing RLS already allows admins to update/delete tenant-scoped rows).
-- No changes to attachments, charts, filters, CSV/print, or summary cards.
-- Non-admins keep read-only view.
+- No schema/RLS changes.
+- No changes to filters, summary cards, CSV/print, attendees panel, or attachments.
+- Non-admins keep current view (Training Reps can still manage attendees but not edit/delete the session record).
