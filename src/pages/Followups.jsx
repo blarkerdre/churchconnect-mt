@@ -413,9 +413,7 @@ export default function Followups() {
                         className="h-8 w-8 text-destructive hover:text-destructive shrink-0"
                         onClick={(e) => {
                           e.stopPropagation();
-                          if (window.confirm("Delete this follow-up? This cannot be undone.")) {
-                            deleteMutation.mutate(f.id);
-                          }
+                          setDeleteTarget(f);
                         }}
                         title="Delete follow-up"
                       >
