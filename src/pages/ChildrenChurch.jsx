@@ -1087,8 +1087,37 @@ function ReportPanel({ tenantId }) {
         <div className="flex flex-wrap gap-2 items-end">
           <div><Label>From</Label><Input type="date" value={from} onChange={e => setFrom(e.target.value)} /></div>
           <div><Label>To</Label><Input type="date" value={to} onChange={e => setTo(e.target.value)} /></div>
-          <Button variant="outline" size="sm" onClick={downloadCSV} disabled={rows.length === 0}><Download className="h-4 w-4 mr-1" /> CSV</Button>
+          <div className="min-w-[140px]">
+            <Label>Age group</Label>
+            <Select value={ageGroup} onValueChange={setAgeGroup}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All age groups</SelectItem>
+                {AGE_GROUPS.map(g => <SelectItem key={g} value={g}>{g}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="min-w-[140px]">
+            <Label>Status</Label>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All statuses</SelectItem>
+                <SelectItem value="checked_in">Checked in</SelectItem>
+                <SelectItem value="picked_up">Picked up</SelectItem>
+                <SelectItem value="flagged">Flagged</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="min-w-[180px] flex-1">
+            <Label>Child name</Label>
+            <Input placeholder="Search child..." value={nameQuery} onChange={e => setNameQuery(e.target.value)} />
+          </div>
+          <Button variant="outline" size="sm" onClick={downloadCSV} disabled={filteredRows.length === 0}><Download className="h-4 w-4 mr-1" /> CSV</Button>
         </div>
+        {(nameQuery.trim() || ageGroup !== "all" || statusFilter !== "all") && (
+          <p className="text-[11px] text-muted-foreground">Showing {filteredRows.length} of {rows.length}</p>
+        )}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           <div className="border rounded p-3 text-center"><p className="text-2xl font-bold">{stats.total}</p><p className="text-[10px] uppercase text-muted-foreground">Check-ins</p></div>
           <div className="border rounded p-3 text-center"><p className="text-2xl font-bold text-chart-3">{stats.picked}</p><p className="text-[10px] uppercase text-muted-foreground">Picked up</p></div>
