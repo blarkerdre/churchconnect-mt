@@ -88,6 +88,9 @@ export default function Followups() {
     },
   });
 
+  const isFollowupTeam = !!user?.id && followupUnitMembers.includes(user.id);
+  const canManageFollowups = isAdmin || isFollowupTeam;
+
   // Fetch followups with member info
   const { data: followups = [], isLoading } = useQuery({
     queryKey: ["followups", tenantId],
@@ -309,7 +312,7 @@ export default function Followups() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input placeholder="Search follow-ups..." value={search} onChange={e => setSearch(e.target.value)} className="pl-10" />
           </div>
-          {(isAdmin || isUnitLeader) && (
+          {canManageFollowups && (
             <>
               <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger className="w-full sm:w-40"><SelectValue /></SelectTrigger>
@@ -324,7 +327,7 @@ export default function Followups() {
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {canCreateFollowup && <Button onClick={openNew} className="bg-primary hover:bg-primary/90"><Plus className="h-4 w-4 mr-2" /> New Follow-up</Button>}
-          {(isAdmin || isUnitLeader) && (
+          {canManageFollowups && (
             <>
               <Button variant="outline" onClick={() => setReportOpen(true)}>
                 <FileBarChart className="h-4 w-4 mr-2" /> Generate Report
@@ -452,6 +455,7 @@ export default function Followups() {
           currentUser={profile}
           isAdmin={isAdmin}
           isUnitLeader={isUnitLeader}
+          canManage={canManageFollowups}
           profileMap={profileMap}
           followupUnitMembers={followupUnitMembers}
           onConverted={() => {
