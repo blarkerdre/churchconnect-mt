@@ -575,9 +575,31 @@ export default function TrainingReports() {
                           <TableCell className="text-center">{r.holy_ghost_baptism}</TableCell>
                           <TableCell className="text-center">{r.water_baptism}</TableCell>
                           <TableCell>
-                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setExpandedRow(expandedRow === r.id ? null : r.id)}>
-                              <Users className="h-3.5 w-3.5" />
-                            </Button>
+                            <div className="flex items-center justify-end gap-1">
+                              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setExpandedRow(expandedRow === r.id ? null : r.id)} title="Attendees">
+                                <Users className="h-3.5 w-3.5" />
+                              </Button>
+                              {isAdmin && (
+                                <>
+                                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(r)} title="Edit">
+                                    <Pencil className="h-3.5 w-3.5" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-7 w-7 text-destructive hover:text-destructive"
+                                    onClick={() => {
+                                      if (window.confirm("Delete this training session and its attendee records? This cannot be undone.")) {
+                                        deleteMutation.mutate(r.id);
+                                      }
+                                    }}
+                                    title="Delete"
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                  </Button>
+                                </>
+                              )}
+                            </div>
                           </TableCell>
                         </TableRow>
                         {expandedRow === r.id && (
