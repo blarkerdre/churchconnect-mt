@@ -191,6 +191,33 @@ export default function Followups() {
     onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: async (id) => {
+      // Best-effort cleanup of child rows
+      const { data: refs } = await supabase
+        .from("followup_referrals")
+        .select("id")
+        .eq("followup_id", id)
+        .eq("tenant_id", tenantId);
+      const refIds = (refs || []).map(r => r.id);
+      if (refIds.length > 0) {
+        await supabase.from("followup_referral_updates").delete().in("referral_id", refIds).eq("tenant_id", tenantId);
+        await supabase.from("followup_referrals").delete().in("id", refIds).eq("tenant_id", tenantId);
+      }
+      await supabase.from("followup_scheduled_messages").delete().eq("followup_id", id).eq("tenant_id", tenantId);
+
+      const { error } = await supabase.from("followups").delete().eq("id", id).eq("tenant_id", tenantId);
+      if (error) throw error;
+      return id;
+    },
+    onSuccess: (id) => {
+      queryClient.invalidateQueries({ queryKey: ["followups"] });
+      if (selectedFollowup?.id === id) setSelectedFollowup(null);
+      toast({ title: "Follow-up deleted" });
+    },
+    onError: (err) => toast({ title: "Delete failed", description: err.message, variant: "destructive" }),
+  });
+
   const filtered = followups.filter(f => {
     const matchSearch = `${f.person_name} ${f.followup_type} ${f.description || ""}`.toLowerCase().includes(search.toLowerCase());
     const matchStatus = statusFilter === "All" || f.status === statusFilter;
