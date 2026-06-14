@@ -236,6 +236,9 @@ Deno.serve(async (req) => {
     let certificateNumber: string;
     if (existing?.certificate_number) {
       certificateNumber = existing.certificate_number;
+    } else if (isPreview) {
+      // Don't burn a sequence number on previews — clearly mark as preview.
+      certificateNumber = "PREVIEW-XXXX-XXXX-XXXX";
     } else {
       const year = new Date().getFullYear();
       const prefix = training_type
