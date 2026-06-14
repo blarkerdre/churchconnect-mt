@@ -1,25 +1,33 @@
-## Walk-in parent PIN notifications (Email + SMS)
+## Show unit name and created-by for unit meetings
 
-Extend the existing check-in flow in `src/pages/ChildrenChurch.jsx` so walk-in parents also receive their pickup PIN by **email** and **SMS**, in addition to the in-app notification already sent.
+Extend the Attendance page so that every **Unit Meeting** and **Home Cell Meeting** in the meeting list clearly shows the church unit it belongs to and the person who created it.
 
-### Detection
-A parent is treated as walk-in when either:
-- The selected family's parent has **no `user_id`** (no app account), or
-- `selectedFamily.parent.id === walkInMemberId` (freshly registered walk-in family).
+### Database
+- Add a foreign key on `attendance_sessions.created_by` referencing `profiles(user_id)`.
+  - This enables Supabase's `profiles:created_by(full_name)` join syntax, which is already used by the `announcements` table.
+  - No new columns needed — `created_by` already exists.
 
-### Changes (frontend only)
-File: `src/pages/ChildrenChurch.jsx` — inside the `checkIn` mutation, immediately after the existing in-app notification block (~lines 517–542):
+### Frontend — `src/pages/Attendance.jsx`
 
-1. Fetch the primary parent and the "brought by" adult from `members` (`id, user_id, first_name, email, phone, tenant_id`), scoped by `tenant_id`.
-2. For each walk-in adult that has contact details:
-   - **Email** via `supabase.functions.invoke("send-email-alert", …)` with subject "Children's Church Pickup PIN" and a short body containing the child's name, PIN, and reminder to keep it private. Targeted with `member_ids: [adultMemberId]`.
-   - **SMS** via `supabase.functions.invoke("send-sms", …)` with a short PIN reminder message, targeted to the adult member.
-3. Wrap each send in try/catch — delivery failures must never block check-in. Show a soft success toast like "PIN sent to walk-in parent by email/SMS".
+1. **Capture creator on insert**
+   - Destructure `user` from `useAuth()`.
+   - In `createSessionMutation`, add `created_by: user?.id` to the payload alongside the existing fields.
 
-### Out of scope
-- No new edge functions, schema changes, RLS, or templates.
-- Registered (app-account) parents continue to receive in-app notification only, unchanged.
-- Pickup (sign-out) flow is unchanged.
+2. **Fetch creator names**
+   - Change the `attendance_sessions` select from `*` to `*, profiles:created_by(full_name)`.
+   - This returns `profiles.full_name` for each session (null when `created_by` is empty).
+
+3. **Display in the meeting list**
+   - In the "All Meetings" card, for each session button, add a third info line:
+     - Show the unit name when `s.unit` exists (e.g. "Youth Unit").
+     - Show "Created by {name}" when `s.profiles?.full_name` exists.
+     - Combine them as: `{s.unit} · Created by {full_name}`.
+   - For non-unit meetings (Sunday Service, etc.) the unit line remains hidden, preserving existing layout.
 
 ### Files touched
-- `src/pages/ChildrenChurch.jsx` (single mutation extended).
+- `src/pages/Attendance.jsx` (query, mutation, and list UI)
+- Database migration for the foreign key
+
+### Out of scope
+- No changes to `SessionFormDialog.jsx` (it only collects form data).
+- Existing meeting types that have no `unit` value are visually unchanged apart from adding the creator name when available.
