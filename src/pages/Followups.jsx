@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { HeartHandshake, Search, Phone, MessageSquare, CalendarCheck, Plus, AlertCircle, Loader2, UserCheck, User, Download, Mail, FileBarChart } from "lucide-react";
+import { HeartHandshake, Search, Phone, MessageSquare, CalendarCheck, Plus, AlertCircle, Loader2, UserCheck, User, Download, Mail, FileBarChart, Trash2 } from "lucide-react";
 import PrintReportButton from "@/components/PrintReportButton";
 import FollowupReportDialog from "@/components/followups/FollowupReportDialog";
 
@@ -189,6 +189,33 @@ export default function Followups() {
       setSelectedFollowup(null);
     },
     onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id) => {
+      // Best-effort cleanup of child rows
+      const { data: refs } = await supabase
+        .from("followup_referrals")
+        .select("id")
+        .eq("followup_id", id)
+        .eq("tenant_id", tenantId);
+      const refIds = (refs || []).map(r => r.id);
+      if (refIds.length > 0) {
+        await supabase.from("followup_referral_updates").delete().in("referral_id", refIds).eq("tenant_id", tenantId);
+        await supabase.from("followup_referrals").delete().in("id", refIds).eq("tenant_id", tenantId);
+      }
+      await supabase.from("followup_scheduled_messages").delete().eq("followup_id", id).eq("tenant_id", tenantId);
+
+      const { error } = await supabase.from("followups").delete().eq("id", id).eq("tenant_id", tenantId);
+      if (error) throw error;
+      return id;
+    },
+    onSuccess: (id) => {
+      queryClient.invalidateQueries({ queryKey: ["followups"] });
+      if (selectedFollowup?.id === id) setSelectedFollowup(null);
+      toast({ title: "Follow-up deleted" });
+    },
+    onError: (err) => toast({ title: "Delete failed", description: err.message, variant: "destructive" }),
   });
 
   const filtered = followups.filter(f => {
@@ -377,6 +404,22 @@ export default function Followups() {
                         )}
                       </div>
                     </div>
+                    {isAdmin && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-destructive hover:text-destructive shrink-0"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (window.confirm("Delete this follow-up? This cannot be undone.")) {
+                            deleteMutation.mutate(f.id);
+                          }
+                        }}
+                        title="Delete follow-up"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
                   </div>
                 </CardContent>
               </Card>
