@@ -158,7 +158,7 @@ Deno.serve(async (req) => {
     // Look up existing completion. For reissue prefer completion_id (robust against
     // tenant-context drift); otherwise use tenant-scoped (member, training_type).
     let existing: any = null;
-    if (reissue && completion_id) {
+    if ((reissue || isPreview) && completion_id) {
       const { data } = await supabase
         .from("training_completions")
         .select("*")
@@ -176,7 +176,7 @@ Deno.serve(async (req) => {
       existing = data;
     }
 
-    if (existing && !reissue) {
+    if (existing && !reissue && !isPreview) {
       return new Response(
         JSON.stringify({ error: "Certificate already issued for this training" }),
         { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } }
