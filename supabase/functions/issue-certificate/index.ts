@@ -371,6 +371,25 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Preview mode: return image without persisting, uploading, emailing, or auditing.
+    if (isPreview) {
+      const base64 = encodeBase64(pngBytes);
+      return new Response(
+        JSON.stringify({
+          preview: true,
+          image_base64: base64,
+          content_type: "image/png",
+          certificate_number: certificateNumber,
+          training_type,
+          completion_date: certDate,
+          member_name: memberName,
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+
+
     const filePath = `${tenant_id}/certificates/${member_id}/${certificateNumber}.png`;
     const { error: uploadErr } = await supabase.storage
       .from("church-documents")
