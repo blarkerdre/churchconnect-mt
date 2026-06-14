@@ -1026,16 +1026,29 @@ function ReportPanel({ tenantId }) {
     },
   });
 
+  const filteredRows = useMemo(() => {
+    const q = nameQuery.trim().toLowerCase();
+    return rows.filter(r => {
+      if (ageGroup !== "all" && (r.children?.age_group || "") !== ageGroup) return false;
+      if (statusFilter !== "all" && r.status !== statusFilter) return false;
+      if (q) {
+        const name = `${r.children?.first_name || ""} ${r.children?.last_name || ""}`.toLowerCase();
+        if (!name.includes(q)) return false;
+      }
+      return true;
+    });
+  }, [rows, nameQuery, ageGroup, statusFilter]);
+
   const stats = useMemo(() => {
-    const total = rows.length;
-    const picked = rows.filter(r => r.status === "picked_up").length;
-    const flagged = rows.filter(r => r.status === "flagged").length;
-    const stillIn = rows.filter(r => r.status === "checked_in").length;
-    const durations = rows.filter(r => r.pickup_at).map(r => (new Date(r.pickup_at).getTime() - new Date(r.dropoff_at).getTime()) / 60000);
+    const total = filteredRows.length;
+    const picked = filteredRows.filter(r => r.status === "picked_up").length;
+    const flagged = filteredRows.filter(r => r.status === "flagged").length;
+    const stillIn = filteredRows.filter(r => r.status === "checked_in").length;
+    const durations = filteredRows.filter(r => r.pickup_at).map(r => (new Date(r.pickup_at).getTime() - new Date(r.dropoff_at).getTime()) / 60000);
     const avg = durations.length ? Math.round(durations.reduce((s,n) => s+n, 0) / durations.length) : 0;
-    const byMethod = rows.reduce((acc, r) => { if (r.pickup_method) acc[r.pickup_method] = (acc[r.pickup_method]||0)+1; return acc; }, {});
+    const byMethod = filteredRows.reduce((acc, r) => { if (r.pickup_method) acc[r.pickup_method] = (acc[r.pickup_method]||0)+1; return acc; }, {});
     return { total, picked, flagged, stillIn, avg, byMethod };
-  }, [rows]);
+  }, [filteredRows]);
 
   const downloadCSV = () => {
     const q = (v) => `"${String(v ?? "").replace(/"/g,'""')}"`;
