@@ -1,27 +1,25 @@
-## Why Mercy Itoro didn't get a birthday message
+## Walk-in parent PIN notifications (Email + SMS)
 
-Mercy's record is fine:
-- DOB `1997-06-14` (matches today), status Active, email + phone present, linked user account.
-- Tenant settings: enabled, channels `in_app/email/sms`, send hour 08:00 local.
-- Hourly cron `send-birthday-messages-hourly` is active and fired at 07:00 UTC (= 08:00 BST, the configured hour).
+Extend the existing check-in flow in `src/pages/ChildrenChurch.jsx` so walk-in parents also receive their pickup PIN by **email** and **SMS**, in addition to the in-app notification already sent.
 
-But every cron invocation today is failing with **HTTP 403 `{"error":"Forbidden"}`** (confirmed in `net._http_response` — 20+ consecutive 403s, including 07:00, 07:05, 08:00, 08:05, 08:10). Because the function rejects the call before any work runs, no rows are written to `birthday_message_log` and nobody with a birthday today received anything — this is not specific to Mercy.
+### Detection
+A parent is treated as walk-in when either:
+- The selected family's parent has **no `user_id`** (no app account), or
+- `selectedFamily.parent.id === walkInMemberId` (freshly registered walk-in family).
 
-The 403 comes from the auth check in `send-birthday-messages/index.ts`:
-```
-let authorized = bearer === serviceKey;
-```
-The cron sends `Bearer <vault: email_queue_service_role_key>`; the function compares against the `SUPABASE_SERVICE_ROLE_KEY` env. They no longer match — classic symptom of a Supabase service-role key rotation (the Vault copy went stale).
+### Changes (frontend only)
+File: `src/pages/ChildrenChurch.jsx` — inside the `checkIn` mutation, immediately after the existing in-app notification block (~lines 517–542):
 
-## Fix plan
+1. Fetch the primary parent and the "brought by" adult from `members` (`id, user_id, first_name, email, phone, tenant_id`), scoped by `tenant_id`.
+2. For each walk-in adult that has contact details:
+   - **Email** via `supabase.functions.invoke("send-email-alert", …)` with subject "Children's Church Pickup PIN" and a short body containing the child's name, PIN, and reminder to keep it private. Targeted with `member_ids: [adultMemberId]`.
+   - **SMS** via `supabase.functions.invoke("send-sms", …)` with a short PIN reminder message, targeted to the adult member.
+3. Wrap each send in try/catch — delivery failures must never block check-in. Show a soft success toast like "PIN sent to walk-in parent by email/SMS".
 
-1. **Refresh the Vault service-role secret** by re-running the email infrastructure setup tool (`email_domain--setup_email_infra`). This is idempotent and exists specifically to refresh `email_queue_service_role_key` after a key rotation — no cron/SQL/Vault edits by hand.
-2. **Verify**: re-check `net._http_response` for the next cron tick — expect `200` with a JSON `{processed, sent, failed}` payload instead of 403.
-3. **Manual catch-up for today's birthdays** (Mercy + anyone else born 14 June): invoke `send-birthday-messages` once with body `{ "tenant_id": "95e53cc3-…" }` (cron mode, not manual/test mode) so real `birthday_message_log` rows are written and the unique constraint prevents double-sends when the next hourly tick runs.
-4. **Confirm delivery** by reading `birthday_message_log` for `member_id = 227919a7-4ba7-44d4-947e-70a49a91275c` — expect rows with `status='sent'` for `in_app`, `email`, `sms`.
+### Out of scope
+- No new edge functions, schema changes, RLS, or templates.
+- Registered (app-account) parents continue to receive in-app notification only, unchanged.
+- Pickup (sign-out) flow is unchanged.
 
-## Out of scope
-
-- No code changes to `send-birthday-messages` (logic is correct; only the secret is stale).
-- No change to cron schedule, templates, or settings.
-- No changes to other functions, even though the same rotated key likely affects `process-email-queue` etc. — the setup-infra refresh covers all functions that read this Vault secret in one shot.
+### Files touched
+- `src/pages/ChildrenChurch.jsx` (single mutation extended).
