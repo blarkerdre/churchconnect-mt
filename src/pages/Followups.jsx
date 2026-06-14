@@ -404,6 +404,22 @@ export default function Followups() {
                         )}
                       </div>
                     </div>
+                    {isAdmin && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-destructive hover:text-destructive shrink-0"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (window.confirm("Delete this follow-up? This cannot be undone.")) {
+                            deleteMutation.mutate(f.id);
+                          }
+                        }}
+                        title="Delete follow-up"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
                   </div>
                 </CardContent>
               </Card>
