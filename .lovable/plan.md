@@ -1,33 +1,27 @@
-## Goal
-Allow unit leaders (in addition to admins/super admins) to **edit task details** and **reassign members** on tasks for units they lead, directly from the Unit Task detail panel.
+## Why Mercy Itoro didn't get a birthday message
 
-## Current state
-- Unit leaders can already **create** tasks (`create-unit-task` edge function checks `user_leads_unit`) and **cancel/delete** tasks (RLS + `canManage` in `UnitTasks.jsx` already include `leaderUnits`).
-- Database RLS on `unit_tasks` and `unit_task_assignments` already permits unit leaders to UPDATE/INSERT/DELETE — so **no migration or edge function is required**.
-- What's missing: UI surfaces for editing the task and changing the assignee list.
+Mercy's record is fine:
+- DOB `1997-06-14` (matches today), status Active, email + phone present, linked user account.
+- Tenant settings: enabled, channels `in_app/email/sms`, send hour 08:00 local.
+- Hourly cron `send-birthday-messages-hourly` is active and fired at 07:00 UTC (= 08:00 BST, the configured hour).
 
-## Changes
+But every cron invocation today is failing with **HTTP 403 `{"error":"Forbidden"}`** (confirmed in `net._http_response` — 20+ consecutive 403s, including 07:00, 07:05, 08:00, 08:05, 08:10). Because the function rejects the call before any work runs, no rows are written to `birthday_message_log` and nobody with a birthday today received anything — this is not specific to Mercy.
 
-### 1. `src/components/unitTasks/UnitTaskFormDialog.jsx`
-Make this dialog double as an editor:
-- Accept an optional `task` prop. When present, prefill form fields, disable the **Unit** selector (changing unit would invalidate assignments), and submit via direct `supabase.from("unit_tasks").update(...)` scoped by `id` + `tenant_id` instead of calling `create-unit-task`.
-- Title becomes "Edit Unit Task" when editing.
-- Hide the assignees section in edit mode (managed separately, see #3) so the form stays focused on task fields.
-- Audit log: emit `unit_task.updated` with the changed fields.
+The 403 comes from the auth check in `send-birthday-messages/index.ts`:
+```
+let authorized = bearer === serviceKey;
+```
+The cron sends `Bearer <vault: email_queue_service_role_key>`; the function compares against the `SUPABASE_SERVICE_ROLE_KEY` env. They no longer match — classic symptom of a Supabase service-role key rotation (the Vault copy went stale).
 
-### 2. `src/pages/UnitTasks.jsx`
-- Reuse `UnitTaskFormDialog` for editing by adding an `editing` state and passing it as `task`.
-- Wire a new `onEdit` callback into `UnitTaskDetailPanel` that closes the panel and opens the form in edit mode.
+## Fix plan
 
-### 3. `src/components/unitTasks/UnitTaskDetailPanel.jsx`
-When `canManage` is true and `task.status === "Open"`:
-- Add an **Edit** button in the footer that calls the new `onEdit(task)` prop.
-- Add a **Reassign** control in the Assignees section:
-  - "Add members" button opens a lightweight picker (same query as the form: members in `task.unit_name` for this tenant, excluding existing assignees). Selected members are inserted into `unit_task_assignments` (`tenant_id`, `task_id`, `member_id`, `user_id`, `status: "Pending"`). After insert, best-effort invoke `notify-unit-task-assignment` so new assignees get notified.
-  - Each existing assignee row gets a small **Remove** button that deletes the assignment row (scoped by `id` + `tenant_id`). Skip the confirmation if the assignment is already `Pending`; confirm otherwise.
-- Refetch assignments after each change; audit log `unit_task.reassigned` with added/removed counts.
+1. **Refresh the Vault service-role secret** by re-running the email infrastructure setup tool (`email_domain--setup_email_infra`). This is idempotent and exists specifically to refresh `email_queue_service_role_key` after a key rotation — no cron/SQL/Vault edits by hand.
+2. **Verify**: re-check `net._http_response` for the next cron tick — expect `200` with a JSON `{processed, sent, failed}` payload instead of 403.
+3. **Manual catch-up for today's birthdays** (Mercy + anyone else born 14 June): invoke `send-birthday-messages` once with body `{ "tenant_id": "95e53cc3-…" }` (cron mode, not manual/test mode) so real `birthday_message_log` rows are written and the unique constraint prevents double-sends when the next hourly tick runs.
+4. **Confirm delivery** by reading `birthday_message_log` for `member_id = 227919a7-4ba7-44d4-947e-70a49a91275c` — expect rows with `status='sent'` for `in_app`, `email`, `sms`.
 
 ## Out of scope
-- No DB migration, no new edge function — existing RLS covers leader writes.
-- No changes to `create-unit-task`, notifications infra, or the report dialog.
-- No bulk reassign across multiple tasks.
+
+- No code changes to `send-birthday-messages` (logic is correct; only the secret is stale).
+- No change to cron schedule, templates, or settings.
+- No changes to other functions, even though the same rotated key likely affects `process-email-queue` etc. — the setup-infra refresh covers all functions that read this Vault secret in one shot.
