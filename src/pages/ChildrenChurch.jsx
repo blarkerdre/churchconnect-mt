@@ -209,7 +209,8 @@ function ClaimInviteButton({ tenantId, memberId, defaultPhone, defaultEmail, ten
 }
 
 function WalkInRegisterDialog({ open, onOpenChange, tenantId, onRegistered }) {
-  const { data: AGE_GROUPS = DEFAULT_AGE_GROUPS } = useAppSetting("children_age_groups", DEFAULT_AGE_GROUPS);
+  const { data: ageGroupsSetting } = useAppSetting("children_age_groups", DEFAULT_AGE_GROUPS);
+  const AGE_GROUPS = Array.isArray(ageGroupsSetting) && ageGroupsSetting.length ? ageGroupsSetting : DEFAULT_AGE_GROUPS;
   const empty = { first_name: "", last_name: "", date_of_birth: "", gender: "", age_group: "", allergies: "", medical_notes: "" };
   const [parent, setParent] = useState({ first_name: "", last_name: "", phone: "", email: "", notes: "" });
   const [photoIdSeen, setPhotoIdSeen] = useState(false);
