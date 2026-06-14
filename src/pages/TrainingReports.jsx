@@ -57,6 +57,7 @@ export default function TrainingReports() {
     color: ICON_MAP[v]?.color || "text-muted-foreground",
   }));
   const [open, setOpen] = useState(false);
+  const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState(emptyForm);
   const [filterType, setFilterType] = useState("all");
   const [filterFrom, setFilterFrom] = useState("");
