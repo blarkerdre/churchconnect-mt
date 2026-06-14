@@ -258,13 +258,13 @@ export default function ChurchAttendance() {
           <p className="text-sm text-muted-foreground mt-1">Record and track total church service attendance</p>
         </div>
         {canRecordAttendance && (
-          <Dialog open={open} onOpenChange={setOpen}>
+          <Dialog open={open} onOpenChange={handleDialogOpenChange}>
             <DialogTrigger asChild>
               <Button size="sm" className="gap-1.5"><Plus className="h-4 w-4" /> Record Attendance</Button>
             </DialogTrigger>
           <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Record Church Attendance</DialogTitle>
+              <DialogTitle>{editingId ? "Edit Church Attendance" : "Record Church Attendance"}</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-2 gap-3">
