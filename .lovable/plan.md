@@ -1,28 +1,18 @@
 ## Goal
-Allow admins to edit and delete training session records on the Training Report page.
+Allow admins to delete follow-ups from the Follow-ups page.
 
-## Changes (single file: `src/pages/TrainingReports.jsx`)
+## Changes (single file: `src/pages/Followups.jsx`)
 
-1. **Reuse the existing Record Session dialog for edit**
-   - Add `editingId` state. When set, dialog title becomes "Edit Training Session" and submit routes to update instead of insert.
-   - Add `openEdit(report)` that pre-fills `form` from the row and opens the dialog. Attendees panel remains scoped to add-new flow only — edits of attendees continue via the existing `TrainingAttendeesPanel` in the expanded row.
-   - Reset `editingId` and form when dialog closes.
+1. **Delete mutation**
+   - Add `deleteMutation` that runs `supabase.from("followups").delete().eq("id", id).eq("tenant_id", tenantId)`.
+   - Best-effort cleanup first of child rows scoped by `tenant_id`: `followup_referrals`, `followup_referral_updates` (via referral ids), and `followup_scheduled_messages` for that `followup_id`, so the parent delete succeeds regardless of FK config.
+   - Invalidate `["followups"]`, close detail panel if the deleted row was selected, toast success/error.
 
-2. **Update mutation**
-   - Add `updateMutation` that runs `supabase.from("training_reports").update(payload).eq("id", editingId).eq("tenant_id", tenantId)`. Recomputes `total_attendance` from male+female.
-   - `handleSubmit` calls update when `editingId` is set, otherwise the existing insert path.
-
-3. **Delete mutation**
-   - Add `deleteMutation` with `window.confirm` guard, scoped via `.eq("id", id).eq("tenant_id", tenantId)`. RLS already allows admins.
-   - Cascading attendee/attachment rows: delete child rows in `training_attendees` for that report first (scoped by tenant) so the parent delete succeeds regardless of FK config.
-
-4. **Row actions (admin only)**
-   - Add Pencil and Trash icon buttons in the actions cell alongside the existing Users (expand) button, gated on `isAdmin`.
-   - Pencil → `openEdit(r)`; Trash → confirm → `deleteMutation.mutate(r.id)`.
-
-5. **Cache invalidation + toasts** for both update and delete, matching the existing save flow (`training-reports` + `certificate-approvals`).
+2. **Row action (admin only)**
+   - In the list card, add a small Trash icon button in the top-right of each row, gated on `isAdmin`.
+   - `onClick` with `e.stopPropagation()` and `window.confirm("Delete this follow-up? This cannot be undone.")` → `deleteMutation.mutate(f.id)`.
 
 ## Out of scope
-- No schema/RLS changes.
-- No changes to filters, summary cards, CSV/print, attendees panel, or attachments.
-- Non-admins keep current view (Training Reps can still manage attendees but not edit/delete the session record).
+- No schema/RLS changes (existing admin policies allow delete).
+- No changes to edit, convert-to-member, filters, CSV/print, messaging, or detail panel.
+- Non-admins keep current view.
