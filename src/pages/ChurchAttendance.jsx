@@ -13,7 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "@/components/ui/use-toast";
 import { format, parseISO } from "date-fns";
-import { Loader2, Plus, Users, Church, Baby, UserCheck, Paperclip, FileText, Printer, BarChart3 } from "lucide-react";
+import { Loader2, Plus, Users, Church, Baby, UserCheck, Paperclip, FileText, Printer, BarChart3, Pencil, Trash2 } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { useAppSetting } from "@/hooks/useAppSetting";
 import ReportAttachments from "@/components/reports/ReportAttachments";
@@ -41,6 +41,7 @@ const emptyForm = {
 export default function ChurchAttendance() {
   const { data: SERVICE_TYPES } = useAppSetting("service_types", DEFAULT_SERVICE_TYPES);
   const [open, setOpen] = useState(false);
+  const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState(emptyForm);
   const [filterType, setFilterType] = useState("all");
   const [dateFrom, setDateFrom] = useState("");
@@ -74,10 +75,73 @@ export default function ChurchAttendance() {
       qc.invalidateQueries({ queryKey: ["church-attendance-reports"] });
       toast({ title: "Attendance report saved" });
       setForm(emptyForm);
+      setEditingId(null);
       setOpen(false);
     },
     onError: (err) => toast({ title: "Error saving report", description: err.message, variant: "destructive" }),
   });
+
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, payload }) => {
+      const { error } = await supabase
+        .from("church_attendance_reports")
+        .update(payload)
+        .eq("id", id)
+        .eq("tenant_id", tenantId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["church-attendance-reports"] });
+      toast({ title: "Attendance report updated" });
+      setForm(emptyForm);
+      setEditingId(null);
+      setOpen(false);
+    },
+    onError: (err) => toast({ title: "Error updating report", description: err.message, variant: "destructive" }),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id) => {
+      const { error } = await supabase
+        .from("church_attendance_reports")
+        .delete()
+        .eq("id", id)
+        .eq("tenant_id", tenantId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["church-attendance-reports"] });
+      toast({ title: "Attendance report deleted" });
+    },
+    onError: (err) => toast({ title: "Error deleting report", description: err.message, variant: "destructive" }),
+  });
+
+  const openEdit = (r) => {
+    setEditingId(r.id);
+    setForm({
+      service_type: r.service_type || "Sunday Service",
+      service_date: r.service_date || format(new Date(), "yyyy-MM-dd"),
+      title: r.title || "",
+      adult_male: String(r.adult_male ?? ""),
+      adult_female: String(r.adult_female ?? ""),
+      children: String(r.children ?? ""),
+      teens: String(r.teens ?? ""),
+      converts: String(r.converts ?? ""),
+      first_timers: String(r.first_timers ?? ""),
+      testimonies: String(r.testimonies ?? ""),
+      cars: String(r.cars ?? ""),
+      notes: r.notes || "",
+    });
+    setOpen(true);
+  };
+
+  const handleDialogOpenChange = (v) => {
+    setOpen(v);
+    if (!v) {
+      setEditingId(null);
+      setForm(emptyForm);
+    }
+  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -93,7 +157,7 @@ export default function ChurchAttendance() {
     const first_timers = parseInt(form.first_timers) || 0;
     const testimonies = parseInt(form.testimonies) || 0;
     const cars = parseInt(form.cars) || 0;
-    saveMutation.mutate({
+    const payload = {
       service_type: form.service_type,
       service_date: form.service_date,
       title: form.title || null,
@@ -107,8 +171,12 @@ export default function ChurchAttendance() {
       cars,
       total_attendance: adultMale + adultFemale + children + teens,
       notes: form.notes || null,
-      recorded_by: user?.id,
-    });
+    };
+    if (editingId) {
+      updateMutation.mutate({ id: editingId, payload });
+    } else {
+      saveMutation.mutate({ ...payload, recorded_by: user?.id });
+    }
   };
 
   const set = (key, val) => setForm((f) => ({ ...f, [key]: val }));
@@ -190,13 +258,13 @@ export default function ChurchAttendance() {
           <p className="text-sm text-muted-foreground mt-1">Record and track total church service attendance</p>
         </div>
         {canRecordAttendance && (
-          <Dialog open={open} onOpenChange={setOpen}>
+          <Dialog open={open} onOpenChange={handleDialogOpenChange}>
             <DialogTrigger asChild>
               <Button size="sm" className="gap-1.5"><Plus className="h-4 w-4" /> Record Attendance</Button>
             </DialogTrigger>
           <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Record Church Attendance</DialogTitle>
+              <DialogTitle>{editingId ? "Edit Church Attendance" : "Record Church Attendance"}</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-2 gap-3">
@@ -270,9 +338,9 @@ export default function ChurchAttendance() {
                 <Textarea value={form.notes} onChange={(e) => set("notes", e.target.value)} rows={2} />
               </div>
 
-              <Button type="submit" className="w-full" disabled={saveMutation.isPending}>
-                {saveMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-                Save Report
+              <Button type="submit" className="w-full" disabled={saveMutation.isPending || updateMutation.isPending}>
+                {(saveMutation.isPending || updateMutation.isPending) ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                {editingId ? "Update Report" : "Save Report"}
               </Button>
             </form>
           </DialogContent>
@@ -402,9 +470,31 @@ export default function ChurchAttendance() {
                         <TableCell className="text-center">{r.cars || 0}</TableCell>
                         <TableCell className="text-center font-semibold">{r.total_attendance}</TableCell>
                         <TableCell>
-                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setExpandedRow(expandedRow === r.id ? null : r.id)}>
-                            <Paperclip className="h-3.5 w-3.5" />
-                          </Button>
+                          <div className="flex items-center gap-0.5 justify-end">
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setExpandedRow(expandedRow === r.id ? null : r.id)} title="Attachments">
+                              <Paperclip className="h-3.5 w-3.5" />
+                            </Button>
+                            {isAdmin && (
+                              <>
+                                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(r)} title="Edit">
+                                  <Pencil className="h-3.5 w-3.5" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7 text-destructive hover:text-destructive"
+                                  onClick={() => {
+                                    if (window.confirm("Delete this attendance report? This cannot be undone.")) {
+                                      deleteMutation.mutate(r.id);
+                                    }
+                                  }}
+                                  title="Delete"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </Button>
+                              </>
+                            )}
+                          </div>
                         </TableCell>
                       </TableRow>
                       {expandedRow === r.id && (
