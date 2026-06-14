@@ -981,6 +981,11 @@ function PickupPanel({ tenantId, isLeader }) {
 function ReportPanel({ tenantId }) {
   const [from, setFrom] = useState(format(new Date(Date.now() - 30*86400000), "yyyy-MM-dd"));
   const [to, setTo] = useState(format(new Date(), "yyyy-MM-dd"));
+  const [nameQuery, setNameQuery] = useState("");
+  const [ageGroup, setAgeGroup] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const { data: ageGroupsSetting } = useAppSetting("children_age_groups", DEFAULT_AGE_GROUPS);
+  const AGE_GROUPS = Array.isArray(ageGroupsSetting) && ageGroupsSetting.length ? ageGroupsSetting : DEFAULT_AGE_GROUPS;
 
   const { data: rows = [] } = useQuery({
     queryKey: ["cc-report", tenantId, from, to],
