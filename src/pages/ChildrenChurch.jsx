@@ -772,6 +772,7 @@ function PickupPanel({ tenantId, isLeader }) {
   const [delegationAdult, setDelegationAdult] = useState("");
   const [overrideReason, setOverrideReason] = useState("");
   const [profileChildId, setProfileChildId] = useState(null);
+  const [search, setSearch] = useState("");
 
   const { data: inCare = [] } = useQuery({
     queryKey: ["cc-in-care", tenantId],
@@ -864,28 +865,48 @@ function PickupPanel({ tenantId, isLeader }) {
       <Card>
         <CardHeader><CardTitle className="text-base">Currently in care ({inCare.length})</CardTitle></CardHeader>
         <CardContent className="space-y-2 max-h-[60vh] overflow-y-auto">
-          {inCare.length === 0 && <p className="text-sm text-muted-foreground">No children currently checked in.</p>}
-          {inCare.map(row => (
-            <div key={row.id} className={`border rounded p-2 cursor-pointer ${selected?.id === row.id ? "border-primary bg-primary/5" : ""}`}
-              onClick={() => setSelected(row)}>
-              <div className="flex justify-between items-start gap-2">
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium">{row.children?.first_name} {row.children?.last_name}</p>
-                  <div className="flex gap-1 mt-0.5 flex-wrap">
-                    {row.children?.age_group && <Badge variant="outline" className="text-[10px]">{row.children.age_group}</Badge>}
-                    {row.children?.allergies && <Badge variant="destructive" className="text-[10px]">⚠</Badge>}
+          <div className="relative">
+            <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              className="pl-8 h-9"
+              placeholder="Search child by name..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+          {(() => {
+            const q = search.trim().toLowerCase();
+            const filtered = q
+              ? inCare.filter(row => `${row.children?.first_name || ""} ${row.children?.last_name || ""}`.toLowerCase().includes(q))
+              : inCare;
+            if (inCare.length === 0) {
+              return <p className="text-sm text-muted-foreground">No children currently checked in.</p>;
+            }
+            if (filtered.length === 0) {
+              return <p className="text-sm text-muted-foreground">No matches for "{search}".</p>;
+            }
+            return filtered.map(row => (
+              <div key={row.id} className={`border rounded p-2 cursor-pointer ${selected?.id === row.id ? "border-primary bg-primary/5" : ""}`}
+                onClick={() => setSelected(row)}>
+                <div className="flex justify-between items-start gap-2">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium">{row.children?.first_name} {row.children?.last_name}</p>
+                    <div className="flex gap-1 mt-0.5 flex-wrap">
+                      {row.children?.age_group && <Badge variant="outline" className="text-[10px]">{row.children.age_group}</Badge>}
+                      {row.children?.allergies && <Badge variant="destructive" className="text-[10px]">⚠</Badge>}
+                    </div>
+                  </div>
+                  <div className="flex flex-col items-end gap-1">
+                    <span className="text-[10px] text-muted-foreground"><Clock className="h-3 w-3 inline" /> {formatDistanceToNow(new Date(row.dropoff_at), { addSuffix: false })}</span>
+                    <Button size="sm" variant="ghost" className="h-6 px-2 text-[10px]"
+                      onClick={(e) => { e.stopPropagation(); setProfileChildId(row.child_id); }}>
+                      <Eye className="h-3 w-3 mr-1" /> Profile
+                    </Button>
                   </div>
                 </div>
-                <div className="flex flex-col items-end gap-1">
-                  <span className="text-[10px] text-muted-foreground"><Clock className="h-3 w-3 inline" /> {formatDistanceToNow(new Date(row.dropoff_at), { addSuffix: false })}</span>
-                  <Button size="sm" variant="ghost" className="h-6 px-2 text-[10px]"
-                    onClick={(e) => { e.stopPropagation(); setProfileChildId(row.child_id); }}>
-                    <Eye className="h-3 w-3 mr-1" /> Profile
-                  </Button>
-                </div>
               </div>
-            </div>
-          ))}
+            ));
+          })()}
         </CardContent>
       </Card>
 
@@ -960,6 +981,11 @@ function PickupPanel({ tenantId, isLeader }) {
 function ReportPanel({ tenantId }) {
   const [from, setFrom] = useState(format(new Date(Date.now() - 30*86400000), "yyyy-MM-dd"));
   const [to, setTo] = useState(format(new Date(), "yyyy-MM-dd"));
+  const [nameQuery, setNameQuery] = useState("");
+  const [ageGroup, setAgeGroup] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const { data: ageGroupsSetting } = useAppSetting("children_age_groups", DEFAULT_AGE_GROUPS);
+  const AGE_GROUPS = Array.isArray(ageGroupsSetting) && ageGroupsSetting.length ? ageGroupsSetting : DEFAULT_AGE_GROUPS;
 
   const { data: rows = [] } = useQuery({
     queryKey: ["cc-report", tenantId, from, to],
@@ -1000,22 +1026,35 @@ function ReportPanel({ tenantId }) {
     },
   });
 
+  const filteredRows = useMemo(() => {
+    const q = nameQuery.trim().toLowerCase();
+    return rows.filter(r => {
+      if (ageGroup !== "all" && (r.children?.age_group || "") !== ageGroup) return false;
+      if (statusFilter !== "all" && r.status !== statusFilter) return false;
+      if (q) {
+        const name = `${r.children?.first_name || ""} ${r.children?.last_name || ""}`.toLowerCase();
+        if (!name.includes(q)) return false;
+      }
+      return true;
+    });
+  }, [rows, nameQuery, ageGroup, statusFilter]);
+
   const stats = useMemo(() => {
-    const total = rows.length;
-    const picked = rows.filter(r => r.status === "picked_up").length;
-    const flagged = rows.filter(r => r.status === "flagged").length;
-    const stillIn = rows.filter(r => r.status === "checked_in").length;
-    const durations = rows.filter(r => r.pickup_at).map(r => (new Date(r.pickup_at).getTime() - new Date(r.dropoff_at).getTime()) / 60000);
+    const total = filteredRows.length;
+    const picked = filteredRows.filter(r => r.status === "picked_up").length;
+    const flagged = filteredRows.filter(r => r.status === "flagged").length;
+    const stillIn = filteredRows.filter(r => r.status === "checked_in").length;
+    const durations = filteredRows.filter(r => r.pickup_at).map(r => (new Date(r.pickup_at).getTime() - new Date(r.dropoff_at).getTime()) / 60000);
     const avg = durations.length ? Math.round(durations.reduce((s,n) => s+n, 0) / durations.length) : 0;
-    const byMethod = rows.reduce((acc, r) => { if (r.pickup_method) acc[r.pickup_method] = (acc[r.pickup_method]||0)+1; return acc; }, {});
+    const byMethod = filteredRows.reduce((acc, r) => { if (r.pickup_method) acc[r.pickup_method] = (acc[r.pickup_method]||0)+1; return acc; }, {});
     return { total, picked, flagged, stillIn, avg, byMethod };
-  }, [rows]);
+  }, [filteredRows]);
 
   const downloadCSV = () => {
     const q = (v) => `"${String(v ?? "").replace(/"/g,'""')}"`;
     const headers = ["service_date","child","age_group","dropoff_at","dropoff_worker","brought_by","pickup_at","pickup_method","pickup_worker_or_leader","collected_by","delegated_to","status","override_reason"];
     const lines = [headers.join(",")];
-    for (const r of rows) {
+    for (const r of filteredRows) {
       const isOverride = r.pickup_method === "leader_override";
       lines.push([
         r.service_date,
@@ -1048,8 +1087,37 @@ function ReportPanel({ tenantId }) {
         <div className="flex flex-wrap gap-2 items-end">
           <div><Label>From</Label><Input type="date" value={from} onChange={e => setFrom(e.target.value)} /></div>
           <div><Label>To</Label><Input type="date" value={to} onChange={e => setTo(e.target.value)} /></div>
-          <Button variant="outline" size="sm" onClick={downloadCSV} disabled={rows.length === 0}><Download className="h-4 w-4 mr-1" /> CSV</Button>
+          <div className="min-w-[140px]">
+            <Label>Age group</Label>
+            <Select value={ageGroup} onValueChange={setAgeGroup}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All age groups</SelectItem>
+                {AGE_GROUPS.map(g => <SelectItem key={g} value={g}>{g}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="min-w-[140px]">
+            <Label>Status</Label>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All statuses</SelectItem>
+                <SelectItem value="checked_in">Checked in</SelectItem>
+                <SelectItem value="picked_up">Picked up</SelectItem>
+                <SelectItem value="flagged">Flagged</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="min-w-[180px] flex-1">
+            <Label>Child name</Label>
+            <Input placeholder="Search child..." value={nameQuery} onChange={e => setNameQuery(e.target.value)} />
+          </div>
+          <Button variant="outline" size="sm" onClick={downloadCSV} disabled={filteredRows.length === 0}><Download className="h-4 w-4 mr-1" /> CSV</Button>
         </div>
+        {(nameQuery.trim() || ageGroup !== "all" || statusFilter !== "all") && (
+          <p className="text-[11px] text-muted-foreground">Showing {filteredRows.length} of {rows.length}</p>
+        )}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           <div className="border rounded p-3 text-center"><p className="text-2xl font-bold">{stats.total}</p><p className="text-[10px] uppercase text-muted-foreground">Check-ins</p></div>
           <div className="border rounded p-3 text-center"><p className="text-2xl font-bold text-chart-3">{stats.picked}</p><p className="text-[10px] uppercase text-muted-foreground">Picked up</p></div>
@@ -1075,7 +1143,7 @@ function ReportPanel({ tenantId }) {
               <th className="p-2 text-left">Status</th>
             </tr></thead>
             <tbody>
-              {rows.map(r => {
+              {filteredRows.map(r => {
                 const isOverride = r.pickup_method === "leader_override";
                 return (
                   <tr key={r.id} className="border-t align-top">
@@ -1099,7 +1167,7 @@ function ReportPanel({ tenantId }) {
                   </tr>
                 );
               })}
-              {rows.length === 0 && <tr><td colSpan="11" className="p-4 text-center text-muted-foreground">No records.</td></tr>}
+              {filteredRows.length === 0 && <tr><td colSpan="11" className="p-4 text-center text-muted-foreground">No records.</td></tr>}
             </tbody>
           </table>
         </div>
