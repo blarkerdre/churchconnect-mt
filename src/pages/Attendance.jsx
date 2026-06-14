@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { CheckCircle2, Clock, Users, CalendarCheck, Plus, Loader2, Lock, FileText, Filter, Download, Printer, UserCog } from "lucide-react";
+import { CheckCircle2, Clock, Users, CalendarCheck, Plus, Loader2, Lock, FileText, Filter, Download, Printer, UserCog, Trash2 } from "lucide-react";
 import PrintReportButton from "@/components/PrintReportButton";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -17,6 +17,7 @@ import { useTenantQuery } from "@/hooks/useTenantQuery";
 import { useChurchUnits } from "@/hooks/useChurchUnits";
 import ReportAttachments from "@/components/reports/ReportAttachments";
 import CheckInPanel from "@/components/attendance/CheckInPanel";
+import PasswordConfirmDialog from "@/components/shared/PasswordConfirmDialog";
 
 export default function Attendance() {
   const { user, isAdmin, isUnitLeader, isWSFLeader, leaderUnits = [], leaderCentres = [] } = useAuth();
@@ -29,6 +30,7 @@ export default function Attendance() {
   const [selectedSessionId, setSelectedSessionId] = useState(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [manageOpen, setManageOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const [form, setForm] = useState({ title: "", session_type: "Sunday Service", session_date: "", notes: "", unit: "" });
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
@@ -137,6 +139,31 @@ export default function Attendance() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["attendance-sessions"] });
       toast({ title: "Meeting closed" });
+    },
+    onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+  });
+
+  const deleteSessionMutation = useMutation({
+    mutationFn: async () => {
+      if (!selectedSession?.id) throw new Error("No meeting selected");
+      const { error: recErr } = await supabase
+        .from("attendance_records")
+        .delete()
+        .eq("session_id", selectedSession.id)
+        .eq("tenant_id", tenantId);
+      if (recErr) throw recErr;
+      const { error: sessErr } = await supabase
+        .from("attendance_sessions")
+        .delete()
+        .eq("id", selectedSession.id)
+        .eq("tenant_id", tenantId);
+      if (sessErr) throw sessErr;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["attendance-sessions"] });
+      queryClient.invalidateQueries({ queryKey: ["attendance-records"] });
+      setSelectedSessionId(null);
+      toast({ title: "Meeting deleted" });
     },
     onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
@@ -272,6 +299,11 @@ export default function Attendance() {
               }
             }} className="text-destructive border-destructive/30 hover:bg-destructive/10">
               <Lock className="h-4 w-4" /><span className="hidden sm:inline ml-2">Close Meeting</span>
+            </Button>
+          )}
+          {canManage && selectedSession && (
+            <Button variant="outline" size="sm" onClick={() => setDeleteOpen(true)} className="text-destructive border-destructive/30 hover:bg-destructive/10">
+              <Trash2 className="h-4 w-4" /><span className="hidden sm:inline ml-2">Delete Meeting</span>
             </Button>
           )}
           {canManage && (
@@ -538,6 +570,20 @@ export default function Attendance() {
           )}
         </DialogContent>
       </Dialog>
+
+      <PasswordConfirmDialog
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        title="Delete meeting"
+        description={selectedSession ? (
+          <>
+            Permanently delete <strong>{selectedSession.title || selectedSession.session_type}</strong> on {selectedSession.session_date}? All check-ins and the meeting report will be removed. This cannot be undone.
+          </>
+        ) : "This cannot be undone."}
+        confirmLabel="Delete meeting"
+        isPending={deleteSessionMutation.isPending}
+        onConfirm={() => deleteSessionMutation.mutateAsync()}
+      />
     </div>
   );
 }
