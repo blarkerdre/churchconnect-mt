@@ -304,6 +304,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "attendance_sessions_created_by_profiles_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
             foreignKeyName: "attendance_sessions_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
