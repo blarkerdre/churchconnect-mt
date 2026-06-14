@@ -141,7 +141,7 @@ export default function UnitTasks() {
               <Button variant="outline" onClick={() => setReportOpen(true)}>
                 <FileBarChart className="h-4 w-4 mr-2" /> Report
               </Button>
-              <Button onClick={() => setFormOpen(true)} disabled={!allUnits.length}>
+              <Button onClick={() => { setEditing(null); setFormOpen(true); }} disabled={!allUnits.length}>
                 <Plus className="h-4 w-4 mr-2" /> New Task
               </Button>
             </>
