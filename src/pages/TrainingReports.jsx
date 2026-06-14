@@ -492,9 +492,9 @@ export default function TrainingReports() {
                 <Textarea value={form.notes} onChange={(e) => set("notes", e.target.value)} rows={2} />
               </div>
 
-              <Button type="submit" className="w-full" disabled={saveMutation.isPending}>
-                {saveMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-                Save Report
+              <Button type="submit" className="w-full" disabled={saveMutation.isPending || updateMutation.isPending}>
+                {(saveMutation.isPending || updateMutation.isPending) ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                {editingId ? "Update Session" : "Save Report"}
               </Button>
             </form>
           </DialogContent>
