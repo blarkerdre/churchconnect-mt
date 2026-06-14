@@ -1,32 +1,27 @@
-# Plan: Search in Pickup + Filters in Report
+## Goal
+Allow admins to edit (and delete) existing church attendance records on the Church Attendance page.
 
-## Pickup panel (`PickupPanel` in `src/pages/ChildrenChurch.jsx`)
-- Add a search `Input` above the "Currently in care" list with a Search icon.
-- Filter `inCare` client-side by child first/last name (case-insensitive substring match). No DB changes — list is already loaded.
-- Show "No matches" hint when search has a value but the filtered list is empty.
+## Changes (single file: `src/pages/ChurchAttendance.jsx`)
 
-## Report panel (`ReportPanel` in same file)
-Existing filters: From / To dates only.
+1. **Reuse the existing dialog for both create and edit**
+   - Add `editingId` state. When set, the dialog title becomes "Edit Church Attendance" and submit calls update instead of insert.
+   - Add `openEdit(report)` that pre-fills `form` from the row and opens the dialog.
+   - Reset `editingId` to `null` when dialog closes or after save.
 
-Add three more filters in the same toolbar row:
-1. **Age group** — `Select` populated from the `children_age_groups` app setting (via existing `useAppSetting`), plus an "All" option.
-2. **Child name** — text `Input` with placeholder "Search child…".
-3. **Status** — `Select` with All / checked_in / picked_up / flagged (small bonus, common ask alongside name/age filters).
+2. **Update mutation**
+   - Add `updateMutation` that runs `supabase.from("church_attendance_reports").update(payload).eq("id", editingId).eq("tenant_id", tenantId)`.
+   - `handleSubmit` routes to update vs insert based on `editingId`. Payload recomputes `total_attendance`.
 
-Apply all three client-side over `rows` via a `useMemo` `filteredRows`:
-- name: case-insensitive substring on `first_name + " " + last_name`
-- age group: exact match on `children.age_group`
-- status: exact match on `r.status`
+3. **Delete mutation**
+   - Add `deleteMutation` with a `window.confirm` guard. Scoped via `.eq("id", id).eq("tenant_id", tenantId)`.
 
-Use `filteredRows` (not `rows`) for:
-- the stats `useMemo`
-- the CSV download (file name keeps date range)
-- the table body & "No records" empty state
-- the CSV/disabled check
+4. **Row actions (admin only)**
+   - In each table row, when `isAdmin`, render a small Pencil and Trash icon button alongside the existing Paperclip toggle.
+   - Pencil → `openEdit(r)`; Trash → `deleteMutation.mutate(r.id)`.
 
-Add a small muted "Showing X of Y" counter next to the toolbar when filters are active.
+5. **Cache invalidation + toasts** for both update and delete, matching the existing save flow.
 
 ## Out of scope
-- No DB changes, no new columns.
-- No changes to drop-off/check-in logic.
-- No changes to report export columns.
+- No schema changes (existing RLS already allows admins to update/delete tenant-scoped rows).
+- No changes to attachments, charts, filters, CSV/print, or summary cards.
+- Non-admins keep read-only view.
