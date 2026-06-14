@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { CheckCircle2, Clock, Users, CalendarCheck, Plus, Loader2, Lock, FileText, Filter, Download, Printer, UserCog } from "lucide-react";
+import { CheckCircle2, Clock, Users, CalendarCheck, Plus, Loader2, Lock, FileText, Filter, Download, Printer, UserCog, Trash2 } from "lucide-react";
 import PrintReportButton from "@/components/PrintReportButton";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -17,6 +17,7 @@ import { useTenantQuery } from "@/hooks/useTenantQuery";
 import { useChurchUnits } from "@/hooks/useChurchUnits";
 import ReportAttachments from "@/components/reports/ReportAttachments";
 import CheckInPanel from "@/components/attendance/CheckInPanel";
+import PasswordConfirmDialog from "@/components/shared/PasswordConfirmDialog";
 
 export default function Attendance() {
   const { user, isAdmin, isUnitLeader, isWSFLeader, leaderUnits = [], leaderCentres = [] } = useAuth();
