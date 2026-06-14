@@ -301,6 +301,11 @@ export default function Attendance() {
               <Lock className="h-4 w-4" /><span className="hidden sm:inline ml-2">Close Meeting</span>
             </Button>
           )}
+          {canManage && selectedSession && (
+            <Button variant="outline" size="sm" onClick={() => setDeleteOpen(true)} className="text-destructive border-destructive/30 hover:bg-destructive/10">
+              <Trash2 className="h-4 w-4" /><span className="hidden sm:inline ml-2">Delete Meeting</span>
+            </Button>
+          )}
           {canManage && (
             <Button onClick={() => {
               const defaultType = isWSFLeaderOnly ? "Home Cell Meeting" : isUnitLeaderOnly ? "Unit Meeting" : "Sunday Service";
