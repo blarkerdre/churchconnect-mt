@@ -260,9 +260,10 @@ export default function UnitTasks() {
 
       <UnitTaskFormDialog
         open={formOpen}
-        onOpenChange={setFormOpen}
+        onOpenChange={(v) => { setFormOpen(v); if (!v) setEditing(null); }}
         unitOptions={allUnits}
         defaultUnit={unitFilter !== "All" ? unitFilter : ""}
+        task={editing}
         onSaved={onChanged}
       />
       <UnitTaskReportDialog open={reportOpen} onOpenChange={setReportOpen} unitOptions={allUnits} />
@@ -271,6 +272,7 @@ export default function UnitTasks() {
         onOpenChange={(v) => !v && setSelected(null)}
         task={selected}
         canManage={canLead && selected && (isAdmin || isSuperAdmin || (leaderUnits || []).some((u) => u.toLowerCase() === (selected.unit_name || "").toLowerCase()))}
+        onEdit={(t) => { setSelected(null); setEditing(t); setFormOpen(true); }}
         onChanged={onChanged}
       />
     </div>
