@@ -455,6 +455,7 @@ export default function Followups() {
           currentUser={profile}
           isAdmin={isAdmin}
           isUnitLeader={isUnitLeader}
+          canManage={canManageFollowups}
           profileMap={profileMap}
           followupUnitMembers={followupUnitMembers}
           onConverted={() => {
