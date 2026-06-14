@@ -72,7 +72,12 @@ export default function IssueCertificateDialog({ open, onOpenChange, member }) {
     },
   });
 
-  const allTypes = [...new Set([...examTitles, ...customTypes, ...DEFAULT_TRAINING_TYPES])];
+  const toName = (v) => (typeof v === "string" ? v : v?.name || v?.title || v?.label || "");
+  const allTypes = [...new Set(
+    [...examTitles, ...customTypes, ...DEFAULT_TRAINING_TYPES]
+      .map(toName)
+      .filter(Boolean)
+  )];
   const completedTypes = completions.map(c => c.training_type);
 
   const issueMutation = useMutation({
