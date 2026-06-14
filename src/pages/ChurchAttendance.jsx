@@ -470,9 +470,31 @@ export default function ChurchAttendance() {
                         <TableCell className="text-center">{r.cars || 0}</TableCell>
                         <TableCell className="text-center font-semibold">{r.total_attendance}</TableCell>
                         <TableCell>
-                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setExpandedRow(expandedRow === r.id ? null : r.id)}>
-                            <Paperclip className="h-3.5 w-3.5" />
-                          </Button>
+                          <div className="flex items-center gap-0.5 justify-end">
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setExpandedRow(expandedRow === r.id ? null : r.id)} title="Attachments">
+                              <Paperclip className="h-3.5 w-3.5" />
+                            </Button>
+                            {isAdmin && (
+                              <>
+                                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(r)} title="Edit">
+                                  <Pencil className="h-3.5 w-3.5" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7 text-destructive hover:text-destructive"
+                                  onClick={() => {
+                                    if (window.confirm("Delete this attendance report? This cannot be undone.")) {
+                                      deleteMutation.mutate(r.id);
+                                    }
+                                  }}
+                                  title="Delete"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </Button>
+                              </>
+                            )}
+                          </div>
                         </TableCell>
                       </TableRow>
                       {expandedRow === r.id && (
