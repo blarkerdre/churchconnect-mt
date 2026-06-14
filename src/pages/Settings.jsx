@@ -8,6 +8,7 @@ const DEFAULT_PASTORAL_CARE_TYPES = [
   "Bereavement Support", "Marriage Support", "Financial Support",
   "Spiritual Direction", "General Pastoral Need", "Other"
 ];
+const DEFAULT_CHILDREN_AGE_GROUPS = ["Nursery", "Toddler", "Primary", "Pre-Teen"];
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -24,7 +25,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 import {
   Settings as SettingsIcon, Plus, Pencil, Trash2, Loader2,
-  Users, Church, CalendarDays, TrendingUp, Heart, Globe, Bell, Award, Link2, ShieldAlert, Upload, X, ImageIcon, Mail, Phone, CreditCard, Send, Key, ChevronDown, SlidersHorizontal
+  Users, Church, CalendarDays, TrendingUp, Heart, Globe, Bell, Award, Link2, ShieldAlert, Upload, X, ImageIcon, Mail, Phone, CreditCard, Send, Key, ChevronDown, SlidersHorizontal, Baby
 } from "lucide-react";
 
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -1609,6 +1610,7 @@ export default function Settings() {
           <TabsTrigger value="events" className="gap-1.5 text-xs"><CalendarDays className="h-3.5 w-3.5" /><span className="hidden sm:inline"> Events</span></TabsTrigger>
           <TabsTrigger value="training" className="gap-1.5 text-xs"><TrendingUp className="h-3.5 w-3.5" /><span className="hidden sm:inline"> Training</span></TabsTrigger>
           <TabsTrigger value="pastoral" className="gap-1.5 text-xs"><Heart className="h-3.5 w-3.5" /><span className="hidden sm:inline"> Pastoral</span></TabsTrigger>
+          <TabsTrigger value="children" className="gap-1.5 text-xs"><Baby className="h-3.5 w-3.5" /><span className="hidden sm:inline"> Children</span></TabsTrigger>
           <TabsTrigger value="followup-templates" className="gap-1.5 text-xs"><Send className="h-3.5 w-3.5" /><span className="hidden sm:inline"> Follow-ups</span></TabsTrigger>
           {canManageTenant && (
             <TabsTrigger value="features" className="gap-1.5 text-xs"><SlidersHorizontal className="h-3.5 w-3.5" /><span className="hidden sm:inline"> Features</span></TabsTrigger>
@@ -1700,6 +1702,16 @@ export default function Settings() {
             icon={Heart}
             description="Types of pastoral care requests"
             defaults={DEFAULT_PASTORAL_CARE_TYPES}
+          />
+        </TabsContent>
+
+        <TabsContent value="children">
+          <SettingsListSection
+            settingsKey="children_age_groups"
+            title="Children's Church Age Groups"
+            icon={Baby}
+            description="Age groups available when adding a child"
+            defaults={DEFAULT_CHILDREN_AGE_GROUPS}
           />
         </TabsContent>
 
