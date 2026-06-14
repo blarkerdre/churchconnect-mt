@@ -570,6 +570,20 @@ export default function Attendance() {
           )}
         </DialogContent>
       </Dialog>
+
+      <PasswordConfirmDialog
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        title="Delete meeting"
+        description={selectedSession ? (
+          <>
+            Permanently delete <strong>{selectedSession.title || selectedSession.session_type}</strong> on {selectedSession.session_date}? All check-ins and the meeting report will be removed. This cannot be undone.
+          </>
+        ) : "This cannot be undone."}
+        confirmLabel="Delete meeting"
+        isPending={deleteSessionMutation.isPending}
+        onConfirm={() => deleteSessionMutation.mutateAsync()}
+      />
     </div>
   );
 }
