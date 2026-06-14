@@ -146,6 +146,30 @@ export default function TrainingReports() {
     setForm(emptyForm);
     setAttendees({});
     setAttendeeSearch("");
+    setEditingId(null);
+  };
+
+  const handleDialogOpenChange = (v) => {
+    setOpen(v);
+    if (!v) resetForm();
+  };
+
+  const openEdit = (r) => {
+    setEditingId(r.id);
+    setForm({
+      training_type: r.training_type || "",
+      session_date: r.session_date || format(new Date(), "yyyy-MM-dd"),
+      title: r.title || "",
+      total_attendance: r.total_attendance ?? "",
+      male: r.male ?? "",
+      female: r.female ?? "",
+      holy_ghost_baptism: r.holy_ghost_baptism ?? "",
+      water_baptism: r.water_baptism ?? "",
+      notes: r.notes || "",
+    });
+    setAttendees({});
+    setAttendeeSearch("");
+    setOpen(true);
   };
 
   const saveMutation = useMutation({
@@ -184,13 +208,55 @@ export default function TrainingReports() {
     onError: (err) => toast({ title: "Error saving report", description: err.message, variant: "destructive" }),
   });
 
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, payload }) => {
+      const { error } = await supabase
+        .from("training_reports")
+        .update(payload)
+        .eq("id", id)
+        .eq("tenant_id", tenantId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["training-reports"] });
+      qc.invalidateQueries({ queryKey: ["certificate-approvals"] });
+      toast({ title: "Session updated" });
+      resetForm();
+      setOpen(false);
+    },
+    onError: (err) => toast({ title: "Update failed", description: err.message, variant: "destructive" }),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id) => {
+      const { error: aErr } = await supabase
+        .from("training_attendees")
+        .delete()
+        .eq("training_report_id", id)
+        .eq("tenant_id", tenantId);
+      if (aErr) throw aErr;
+      const { error } = await supabase
+        .from("training_reports")
+        .delete()
+        .eq("id", id)
+        .eq("tenant_id", tenantId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["training-reports"] });
+      qc.invalidateQueries({ queryKey: ["certificate-approvals"] });
+      toast({ title: "Session deleted" });
+    },
+    onError: (err) => toast({ title: "Delete failed", description: err.message, variant: "destructive" }),
+  });
+
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!form.training_type || !form.session_date) {
       toast({ title: "Please select training type and date", variant: "destructive" });
       return;
     }
-    saveMutation.mutate({
+    const payload = {
       training_type: form.training_type,
       session_date: form.session_date,
       title: form.title || null,
@@ -200,8 +266,12 @@ export default function TrainingReports() {
       holy_ghost_baptism: parseInt(form.holy_ghost_baptism) || 0,
       water_baptism: parseInt(form.water_baptism) || 0,
       notes: form.notes || null,
-      recorded_by: user?.id,
-    });
+    };
+    if (editingId) {
+      updateMutation.mutate({ id: editingId, payload });
+    } else {
+      saveMutation.mutate({ ...payload, recorded_by: user?.id });
+    }
   };
 
   const set = (key, val) => setForm((f) => ({ ...f, [key]: val }));
