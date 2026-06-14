@@ -14,7 +14,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "@/components/ui/use-toast";
 import { format, parseISO } from "date-fns";
-import { Loader2, Plus, Droplets, Flame, BookOpen, Users, TrendingUp, Paperclip, Download, Printer, Award, Search, X, Send, ClipboardList } from "lucide-react";
+import { Loader2, Plus, Droplets, Flame, BookOpen, Users, TrendingUp, Paperclip, Download, Printer, Award, Search, X, Send, ClipboardList, Pencil, Trash2 } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
 import { useAppSetting } from "@/hooks/useAppSetting";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
