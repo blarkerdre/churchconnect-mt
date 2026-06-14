@@ -118,7 +118,8 @@ Deno.serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     const body = await req.json();
-    const { member_id, training_type, completion_date, notes, tenant_id, reissue, completion_id } = body;
+    const { member_id, training_type, completion_date, notes, tenant_id, reissue, completion_id, preview } = body;
+    const isPreview = preview === true;
 
     if (!member_id || !training_type || !tenant_id) {
       return new Response(
@@ -157,7 +158,7 @@ Deno.serve(async (req) => {
     // Look up existing completion. For reissue prefer completion_id (robust against
     // tenant-context drift); otherwise use tenant-scoped (member, training_type).
     let existing: any = null;
-    if (reissue && completion_id) {
+    if ((reissue || isPreview) && completion_id) {
       const { data } = await supabase
         .from("training_completions")
         .select("*")
@@ -175,7 +176,7 @@ Deno.serve(async (req) => {
       existing = data;
     }
 
-    if (existing && !reissue) {
+    if (existing && !reissue && !isPreview) {
       return new Response(
         JSON.stringify({ error: "Certificate already issued for this training" }),
         { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -235,6 +236,9 @@ Deno.serve(async (req) => {
     let certificateNumber: string;
     if (existing?.certificate_number) {
       certificateNumber = existing.certificate_number;
+    } else if (isPreview) {
+      // Don't burn a sequence number on previews — clearly mark as preview.
+      certificateNumber = "PREVIEW-XXXX-XXXX-XXXX";
     } else {
       const year = new Date().getFullYear();
       const prefix = training_type
@@ -366,6 +370,25 @@ Deno.serve(async (req) => {
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    // Preview mode: return image without persisting, uploading, emailing, or auditing.
+    if (isPreview) {
+      const base64 = encodeBase64(pngBytes);
+      return new Response(
+        JSON.stringify({
+          preview: true,
+          image_base64: base64,
+          content_type: "image/png",
+          certificate_number: certificateNumber,
+          training_type,
+          completion_date: certDate,
+          member_name: memberName,
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+
 
     const filePath = `${tenant_id}/certificates/${member_id}/${certificateNumber}.png`;
     const { error: uploadErr } = await supabase.storage
