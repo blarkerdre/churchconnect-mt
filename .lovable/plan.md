@@ -1,28 +1,33 @@
-Regenerate `/mnt/documents/children-church-guide.png` as a single-page A4 poster (2480×3508, 300dpi) with bolder typography and two clear process flows side-by-side.
+## Goal
+Let admins manage the Children's Church **Age Groups** list instead of being stuck with the hardcoded four (`Nursery`, `Toddler`, `Primary`, `Pre-Teen`).
 
-## Layout (single page)
-- **Header**: Navy band, oversized Playfair Display Black title "Children's Church — Drop-off & Pickup", gold underline bar, subtitle.
-- **Two-column process flows** (the main change):
-  - **Left column — Parent / Guardian**
-    1. Before Sunday — open *My Family*, confirm child profile, add **Authorised Pickup Adults**, generate **One-time Pickup Code** for one-off pickups.
-    2. At Drop-off — bring child to Children's Church desk, receive in-app + email + SMS confirmation with **4-digit Pickup PIN**.
-    3. At Pickup — show PIN at desk; if someone else collects, they show the One-time Code + photo ID.
-    4. Lost PIN — speak to a leader for re-issue.
-  - **Right column — Children's Church Worker**
-    1. Check-in — verify child against family record, tag child, trigger PIN dispatch to parent.
-    2. During service — supervise, log incidents/medical notes in app.
-    3. Pickup — verify PIN against record; for non-parent, verify One-time Code + photo ID against Authorised Adults list.
-    4. Release — mark child **Checked Out** in app; use **Leader Override** only in emergencies (auto-logged).
-- **Bottom band — Safety Notes** (full-width gold strip): authorised adults only · overrides logged · PIN private.
-- **Footer**: "WCI Cardiff · Children's Church".
+## Approach
+Mirror the pattern already used for `event_categories` (stored in `app_settings`, read via `useAppSetting`).
 
-## Bolder visual treatment
-- Gold-filled square step badges with navy numerals (replacing thin circles).
-- Section headings in Playfair Display Black, larger size.
-- Body in Source Sans 3 SemiBold.
-- Thick gold dividers, navy column headers ("PARENT" / "WORKER") in cream uppercase tracking.
+### 1. Settings UI
+In `src/pages/Settings.jsx` (Children's Church / Configuration section — wherever children-related toggles live; otherwise add a small card alongside `WSFCentresSection`-style components):
+- New small section "Children's Church Age Groups".
+- List current groups as chips with delete (×).
+- Input + "Add" button to append a new group.
+- Save persists to `app_settings` key `children_age_groups` (default `["Nursery","Toddler","Primary","Pre-Teen"]`) using the existing `useAppSetting` write helper / supabase upsert pattern.
+- Only visible to tenant admins/owners (same gating as other settings sections).
 
-## Technical
-- Python + Pillow, reuse `/tmp/fonts/`; download Playfair Display Black weight if missing.
-- Overwrite `/mnt/documents/children-church-guide.png`.
-- QA: open the rendered PNG, verify both columns fit with margins, no clipping/overlap, regenerate if issues. Surface via `<presentation-artifact>`.
+### 2. Consume the setting
+Replace the hardcoded `AGE_GROUPS` constant in:
+- `src/pages/ChildrenChurch.jsx` (line 122)
+- `src/pages/MyFamily.jsx` (line 20)
+
+with:
+```js
+const { data: AGE_GROUPS = [] } = useAppSetting("children_age_groups", ["Nursery","Toddler","Primary","Pre-Teen"]);
+```
+All existing `<Select>` usages keep working since they just map over the array.
+
+### 3. Backward compatibility
+- Existing children rows keep their stored `age_group` string even if an admin removes that label later (we don't rewrite data).
+- Default fallback ensures tenants without the setting still see the original four.
+
+## Out of scope
+- No DB schema change (uses existing `app_settings` table).
+- No change to how `age_group` is stored on the `children` table.
+- No bulk-rename of historical values.

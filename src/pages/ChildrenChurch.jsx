@@ -15,6 +15,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Baby, Search, LogIn, LogOut, ShieldAlert, Clock, FileBarChart2, Download, Eye, User, UserPlus, Copy, Plus, Trash2, Mail } from "lucide-react";
 import { toast } from "sonner";
 import { format, formatDistanceToNow } from "date-fns";
+import { useAppSetting } from "@/hooks/useAppSetting";
+
+const DEFAULT_AGE_GROUPS = ["Nursery", "Toddler", "Primary", "Pre-Teen"];
 
 function ChildProfileDialog({ open, onOpenChange, childId, tenantId }) {
   const { data: profile, isLoading } = useQuery({
@@ -119,7 +122,7 @@ function ChildProfileDialog({ open, onOpenChange, childId, tenantId }) {
   );
 }
 
-const AGE_GROUPS = ["Nursery", "Toddler", "Primary", "Pre-Teen"];
+
 
 function buildClaimUrl(tenantSlug, token) {
   const base = window.location.origin;
@@ -206,6 +209,7 @@ function ClaimInviteButton({ tenantId, memberId, defaultPhone, defaultEmail, ten
 }
 
 function WalkInRegisterDialog({ open, onOpenChange, tenantId, onRegistered }) {
+  const { data: AGE_GROUPS = DEFAULT_AGE_GROUPS } = useAppSetting("children_age_groups", DEFAULT_AGE_GROUPS);
   const empty = { first_name: "", last_name: "", date_of_birth: "", gender: "", age_group: "", allergies: "", medical_notes: "" };
   const [parent, setParent] = useState({ first_name: "", last_name: "", phone: "", email: "", notes: "" });
   const [photoIdSeen, setPhotoIdSeen] = useState(false);

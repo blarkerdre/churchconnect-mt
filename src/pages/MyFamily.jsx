@@ -16,10 +16,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Baby, Plus, ShieldCheck, KeyRound, Trash2, UserPlus, Share2, Clock } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { useAppSetting } from "@/hooks/useAppSetting";
 
-const AGE_GROUPS = ["Nursery", "Toddler", "Primary", "Pre-Teen"];
+const DEFAULT_AGE_GROUPS = ["Nursery", "Toddler", "Primary", "Pre-Teen"];
 
 function ChildForm({ open, onOpenChange, child, memberId, onSaved }) {
+  const { data: AGE_GROUPS = DEFAULT_AGE_GROUPS } = useAppSetting("children_age_groups", DEFAULT_AGE_GROUPS);
   const { tenantId, withTenant } = useTenantQuery();
   const [form, setForm] = useState(() => child || {
     first_name: "", last_name: "", date_of_birth: "", gender: "", age_group: "",
