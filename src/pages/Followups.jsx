@@ -482,6 +482,21 @@ export default function Followups() {
         profileMap={profileMap}
       />
 
+      <PasswordConfirmDialog
+        open={!!deleteTarget}
+        onOpenChange={(v) => { if (!v) setDeleteTarget(null); }}
+        title="Delete follow-up"
+        description={deleteTarget ? (
+          <>Permanently delete the follow-up for <strong>{deleteTarget.person_name}</strong> and any related referrals and scheduled messages. This cannot be undone.</>
+        ) : "This cannot be undone."}
+        isPending={deleteMutation.isPending}
+        onConfirm={async () => {
+          if (!deleteTarget) return;
+          await deleteMutation.mutateAsync(deleteTarget.id);
+          setDeleteTarget(null);
+        }}
+      />
+
     </div>
   );
 }
