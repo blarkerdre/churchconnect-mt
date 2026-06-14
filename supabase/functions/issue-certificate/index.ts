@@ -118,7 +118,8 @@ Deno.serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     const body = await req.json();
-    const { member_id, training_type, completion_date, notes, tenant_id, reissue, completion_id } = body;
+    const { member_id, training_type, completion_date, notes, tenant_id, reissue, completion_id, preview } = body;
+    const isPreview = preview === true;
 
     if (!member_id || !training_type || !tenant_id) {
       return new Response(
