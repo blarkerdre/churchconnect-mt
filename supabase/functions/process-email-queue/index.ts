@@ -306,6 +306,7 @@ Deno.serve(async (req) => {
             recipient_email: payload.to,
             status: 'rate_limited',
             error_message: errorMsg.slice(0, 1000),
+            ...(payload.tenant_id ? { tenant_id: payload.tenant_id as string } : {}),
           })
 
           const retryAfterSecs = getRetryAfterSeconds(error)
