@@ -1143,7 +1143,7 @@ function ReportPanel({ tenantId }) {
               <th className="p-2 text-left">Status</th>
             </tr></thead>
             <tbody>
-              {rows.map(r => {
+              {filteredRows.map(r => {
                 const isOverride = r.pickup_method === "leader_override";
                 return (
                   <tr key={r.id} className="border-t align-top">
