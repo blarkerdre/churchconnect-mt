@@ -46,7 +46,7 @@ const priorityColors = {
   Urgent: "bg-destructive/10 text-destructive",
 };
 
-export default function FollowupDetailPanel({ followup, onClose, onUpdate, currentUser, onConverted, isAdmin, isUnitLeader, profileMap = {}, followupUnitMembers = [], onOpenMessageDialog }) {
+export default function FollowupDetailPanel({ followup, onClose, onUpdate, currentUser, onConverted, isAdmin, isUnitLeader, canManage = false, profileMap = {}, followupUnitMembers = [], onOpenMessageDialog }) {
   const [progressNote, setProgressNote] = useState("");
   const [saving, setSaving] = useState(false);
   const [converting, setConverting] = useState(false);
