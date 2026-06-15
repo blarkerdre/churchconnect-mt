@@ -109,21 +109,21 @@ export default function PastoralCare() {
     enabled: !!tenantId,
     queryFn: async () => {
       const { data, error } = await scopeQuery(
-        supabase.from("life_event_requests").select("*").order("created_at", { ascending: false })
+        supabase.from("life_event_requests")
+          .select("*, members(first_name, last_name)")
+          .order("created_at", { ascending: false })
       );
       if (error) throw error;
       return data || [];
     },
   });
 
-  const lifeEventByCaseId = {};
-  lifeEvents.forEach(le => { if (le.pastoral_care_id) lifeEventByCaseId[le.pastoral_care_id] = le; });
+  const lifeEventCaseIds = new Set(lifeEvents.map(le => le.pastoral_care_id).filter(Boolean));
 
-  // Cases the user can see: own, or pastoral leaders/admins. For Life Events,
-  // RLS already filters server-side; surface them when the pastoral_care row is visible.
-  const visibleCases = canManage ? cases : cases.filter(c =>
-    c.created_by === user?.id || (lifeEventByCaseId[c.id] && (isAltarMember || isAltarLeader))
-  );
+  // Exclude life-event-linked pastoral_care rows from the regular list — life events
+  // get their own dedicated cards below.
+  const regularCases = cases.filter(c => !lifeEventCaseIds.has(c.id));
+  const visibleCases = canManage ? regularCases : regularCases.filter(c => c.created_by === user?.id);
 
   const filtered = visibleCases.filter(r => {
     const matchSearch = `${r.subject} ${r.members?.first_name || ""} ${r.members?.last_name || ""} ${r.care_type}`.toLowerCase().includes(search.toLowerCase());
