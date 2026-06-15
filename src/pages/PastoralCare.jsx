@@ -31,7 +31,7 @@ const CARE_TYPES = ["Counselling", "Visitation", "Prayer Request", "Hospital Vis
 const ALL_STATUSES = ["Open", "In Progress", "Resolved", "Closed"];
 
 export default function PastoralCare() {
-  const { user, isAdmin, leaderUnits } = useAuth();
+  const { user, isAdmin, leaderUnits, myMember } = useAuth();
   const { tenantId, scopeQuery, withTenant } = useTenantQuery();
   const { isMemberOfUnit: isPastoralUnit } = useUnitMembership("Pastoral Care");
   const { unitName: altarUnitName, isMember: isAltarMember, isLeader: isAltarLeader } = useAltarMinistry();
