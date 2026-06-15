@@ -315,29 +315,79 @@ export default function PastoralCare() {
         </div>
       )}
 
+      {/* Life Events */}
+      {lifeEvents.length > 0 && (
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <Sparkles className="h-4 w-4 text-primary" />
+            <h2 className="font-display font-bold text-foreground">Life Events</h2>
+            <Badge variant="outline">{lifeEvents.length}</Badge>
+          </div>
+          {lifeEvents.map(le => {
+            const isRoutedLeader = (le.route_user_ids || []).includes(user?.id);
+            const canOpen = isRoutedLeader || isAltarMember || isAltarLeader || isAdmin
+              || le.created_by === user?.id || le.assigned_owner_id === user?.id
+              || (le.assigned_pastor_ids || []).includes(user?.id);
+            return (
+              <Card key={le.id} className="border-0 shadow-sm hover:shadow-md transition-shadow cursor-pointer" onClick={() => canOpen && setActiveLifeEvent(le)}>
+                <CardContent className="p-5">
+                  <div className="flex items-start gap-4">
+                    <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                      <Sparkles className="h-5 w-5 text-primary" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex flex-wrap items-center gap-2 mb-1">
+                        <h3 className="font-display font-bold text-foreground">
+                          {le.subtype.replace("_", " / ").replace(/\b\w/g, c => c.toUpperCase())}: {le.subject_name}
+                        </h3>
+                        <LifeEventStageBadge stage={le.stage} />
+                        {le.pastor_requested && <Badge variant="outline">Pastor requested</Badge>}
+                      </div>
+                      <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
+                        {le.members && <span className="flex items-center gap-1"><User className="h-3.5 w-3.5" /> {le.members.first_name} {le.members.last_name}</span>}
+                        {le.event_date && <span className="flex items-center gap-1"><CalendarDays className="h-3.5 w-3.5" /> {new Date(le.event_date).toLocaleDateString("en-GB")}</span>}
+                        <span>Submitted {new Date(le.created_at).toLocaleDateString("en-GB")}</span>
+                      </div>
+                    </div>
+                    {canOpen && (
+                      <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); setActiveLifeEvent(le); }}>Open</Button>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      )}
+
       {/* New Request Dialog */}
-      <Dialog open={requestDialogOpen} onOpenChange={setRequestDialogOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader><DialogTitle className="font-display">New Pastoral Care Request</DialogTitle></DialogHeader>
-          <div className="space-y-4 mt-2">
-            <div><Label>Subject</Label><Input value={form.subject} onChange={e => setForm(f => ({ ...f, subject: e.target.value }))} placeholder="Brief subject" /></div>
-            <div>
-              <Label>Type</Label>
-              <Select value={form.care_type} onValueChange={v => setForm(f => ({ ...f, care_type: v }))}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {CARE_TYPES.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div><Label>Description</Label><Textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={3} placeholder="Describe your request..." /></div>
-            <div className="flex items-center gap-2">
-              <input type="checkbox" id="confidential" checked={form.confidential} onChange={e => setForm(f => ({ ...f, confidential: e.target.checked }))} className="rounded border-border" />
-              <Label htmlFor="confidential" className="text-sm">Mark as confidential</Label>
-            </div>
-            <Button onClick={() => requestMutation.mutate(form)} disabled={requestMutation.isPending || !form.subject} className="w-full bg-primary">
-              {requestMutation.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-              Submit Request
+      <PastoralCareRequestDialog
+        open={requestDialogOpen}
+        onOpenChange={setRequestDialogOpen}
+        myMember={myMember}
+      />
+
+      {/* Life Event Approval Dialog */}
+      <LifeEventApprovalDialog
+        open={!!activeLifeEvent}
+        onOpenChange={(v) => !v && setActiveLifeEvent(null)}
+        request={activeLifeEvent}
+        isRoutedLeader={activeLifeEvent ? (activeLifeEvent.route_user_ids || []).includes(user?.id) : false}
+      />
+
+      {/* Altar Ministry unit setting */}
+      <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader><DialogTitle className="font-display">Altar Ministry unit</DialogTitle></DialogHeader>
+          <div className="space-y-3 mt-2">
+            <p className="text-xs text-muted-foreground">
+              Pick the church unit responsible for life-event pastoral coverage. Members of this unit will see approved life events; the unit's leaders give final approval and assign pastors.
+            </p>
+            <Label className="text-xs">Unit name</Label>
+            <Input value={altarSetting} onChange={e => setAltarSetting(e.target.value)} placeholder="Altar Ministry" />
+            <Button onClick={() => saveAltarSetting.mutate(altarSetting || "Altar Ministry")} disabled={saveAltarSetting.isPending} className="w-full">
+              {saveAltarSetting.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+              Save
             </Button>
           </div>
         </DialogContent>
