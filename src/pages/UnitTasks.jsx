@@ -144,6 +144,9 @@ export default function UnitTasks() {
               <Button variant="outline" onClick={() => setReportOpen(true)}>
                 <FileBarChart className="h-4 w-4 mr-2" /> Report
               </Button>
+              <Button variant="outline" onClick={() => setRosterOpen(true)} disabled={!allUnits.length}>
+                <Users className="h-4 w-4 mr-2" /> New Service Roster
+              </Button>
               <Button onClick={() => { setEditing(null); setFormOpen(true); }} disabled={!allUnits.length}>
                 <Plus className="h-4 w-4 mr-2" /> New Task
               </Button>
