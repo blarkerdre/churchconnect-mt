@@ -115,6 +115,7 @@ export default function Layout({ children }) {
   const { isMemberOfUnit: isFollowupMember } = useUnitMembership("Follow-up");
   const { isMemberOfUnit: isTrainingRepMember } = useUnitMembership("Training Rep");
   const { isMemberOfUnit: isChildrenChurchMember } = useUnitMembership("Children Church");
+  const { isMemberOfUnit: isChurchOfficeMember } = useUnitMembership("Church Office");
 
   // Filter nav items based on role and disabled features
   const navItems = allNavItems.filter(item => {
@@ -130,6 +131,7 @@ export default function Layout({ children }) {
     if (item.access === "training") return isAdmin || isSuperAdmin || isTrainingAccess || isReportsOfficer;
     if (item.access === "training_report") return isAdmin || isSuperAdmin || isUnitLeader || isTrainingRepMember || isReportsOfficer;
     if (item.access === "children_church") return isAdmin || isChildrenChurchMember || (isUnitLeader && (leaderUnits || []).some(u => /children/i.test(u))) || isReportsOfficer;
+    if (item.access === "inventory") return isAdmin || isSuperAdmin || isChurchOfficeMember;
     return false;
   });
 
