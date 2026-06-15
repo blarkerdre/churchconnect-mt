@@ -49,6 +49,7 @@ const CertificatesReport = lazy(() => import("@/pages/CertificatesReport"));
 const CertificateApprovals = lazy(() => import("@/pages/CertificateApprovals"));
 const ChildrenChurch = lazy(() => import("@/pages/ChildrenChurch"));
 const MyFamily = lazy(() => import("@/pages/MyFamily"));
+const Inventory = lazy(() => import("@/pages/Inventory"));
 
 function PageFallback() {
   return (
@@ -194,6 +195,7 @@ function AppPages() {
         <Route path="/sermon-notes" element={<FeatureGate path="/sermon-notes"><SermonNotes /></FeatureGate>} />
         <Route path="/testimony" element={<FeatureGate path="/testimony"><Testimony /></FeatureGate>} />
         <Route path="/unit-tasks" element={<ProtectedRoute><UnitTasks /></ProtectedRoute>} />
+        <Route path="/inventory" element={<ProtectedRoute><Inventory /></ProtectedRoute>} />
         <Route path="/reports" element={<ReportsRoute><Reports /></ReportsRoute>} />
         <Route path="/certificates-report" element={<CertificateApprovalsRoute><CertificatesReport /></CertificateApprovalsRoute>} />
         <Route path="/certificate-approvals" element={<CertificateApprovalsRoute><CertificateApprovals /></CertificateApprovalsRoute>} />
