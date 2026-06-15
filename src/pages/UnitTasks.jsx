@@ -327,6 +327,13 @@ export default function UnitTasks() {
         onSaved={onChanged}
       />
       <UnitTaskReportDialog open={reportOpen} onOpenChange={setReportOpen} unitOptions={allUnits} />
+      <ServiceRosterDialog
+        open={rosterOpen}
+        onOpenChange={setRosterOpen}
+        unitOptions={allUnits}
+        defaultUnit={unitFilter !== "All" ? unitFilter : ""}
+        onSaved={onChanged}
+      />
       <UnitTaskDetailPanel
         open={!!selected}
         onOpenChange={(v) => !v && setSelected(null)}
