@@ -137,23 +137,19 @@ export default function PastoralCare() {
   const assigneeMap = {};
   pastoralUnitMembers.forEach(p => { assigneeMap[p.user_id] = p.full_name || p.email || "Unknown"; });
 
-  const requestMutation = useMutation({
-    mutationFn: async (formData) => {
-      const { data: member } = await supabase.from("members").select("id").eq("user_id", user.id).eq("tenant_id", tenantId).single();
-      const { error } = await supabase.from("pastoral_care").insert(withTenant({
-        subject: formData.subject,
-        care_type: formData.care_type,
-        description: formData.description || null,
-        confidential: formData.confidential,
-        created_by: user.id,
-        member_id: member?.id || null,
-      }));
+  const saveAltarSetting = useMutation({
+    mutationFn: async (value) => {
+      const { error } = await supabase.from("app_settings").upsert(withTenant({
+        key: "pastoral.altar_ministry_unit",
+        value,
+      }), { onConflict: "tenant_id,key" });
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["pastoral-care"] });
-      toast({ title: "Request submitted" });
-      setRequestDialogOpen(false);
+      queryClient.invalidateQueries({ queryKey: ["altar-ministry-unit"] });
+      queryClient.invalidateQueries({ queryKey: ["altar-ministry-people"] });
+      toast({ title: "Altar Ministry unit updated" });
+      setSettingsOpen(false);
     },
     onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
