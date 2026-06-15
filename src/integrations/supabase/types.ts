@@ -4741,14 +4741,61 @@ export type Database = {
           },
         ]
       }
+      unit_task_groups: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          service_date: string
+          service_type: string
+          tenant_id: string
+          title: string | null
+          unit_name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          service_date: string
+          service_type: string
+          tenant_id: string
+          title?: string | null
+          unit_name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          service_date?: string
+          service_type?: string
+          tenant_id?: string
+          title?: string | null
+          unit_name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "unit_task_groups_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       unit_tasks: {
         Row: {
           created_at: string
           created_by: string
           description: string | null
           due_date: string | null
+          group_id: string | null
           id: string
           priority: string
+          service_date: string | null
+          service_type: string | null
           status: string
           tenant_id: string
           title: string
@@ -4760,8 +4807,11 @@ export type Database = {
           created_by: string
           description?: string | null
           due_date?: string | null
+          group_id?: string | null
           id?: string
           priority?: string
+          service_date?: string | null
+          service_type?: string | null
           status?: string
           tenant_id: string
           title: string
@@ -4773,8 +4823,11 @@ export type Database = {
           created_by?: string
           description?: string | null
           due_date?: string | null
+          group_id?: string | null
           id?: string
           priority?: string
+          service_date?: string | null
+          service_type?: string | null
           status?: string
           tenant_id?: string
           title?: string
@@ -4782,6 +4835,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "unit_tasks_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "unit_task_groups"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "unit_tasks_tenant_id_fkey"
             columns: ["tenant_id"]

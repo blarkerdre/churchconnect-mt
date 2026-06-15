@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ClipboardList, Plus, FileBarChart, Loader2, ChevronRight } from "lucide-react";
+import { ClipboardList, Plus, FileBarChart, Loader2, ChevronRight, Users, ChevronDown } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -12,6 +12,7 @@ import { useTenantQuery } from "@/hooks/useTenantQuery";
 import UnitTaskFormDialog from "@/components/unitTasks/UnitTaskFormDialog";
 import UnitTaskDetailPanel from "@/components/unitTasks/UnitTaskDetailPanel";
 import UnitTaskReportDialog from "@/components/unitTasks/UnitTaskReportDialog";
+import ServiceRosterDialog from "@/components/unitTasks/ServiceRosterDialog";
 
 const priorityColor = {
   Urgent: "bg-destructive/10 text-destructive",
@@ -60,6 +61,8 @@ export default function UnitTasks() {
   const [unitFilter, setUnitFilter] = useState("All");
   const [statusFilter, setStatusFilter] = useState("Open");
   const [formOpen, setFormOpen] = useState(false);
+  const [rosterOpen, setRosterOpen] = useState(false);
+  const [expandedGroups, setExpandedGroups] = useState({});
   const [editing, setEditing] = useState(null);
   const [reportOpen, setReportOpen] = useState(false);
   const [selected, setSelected] = useState(null);
@@ -141,6 +144,9 @@ export default function UnitTasks() {
               <Button variant="outline" onClick={() => setReportOpen(true)}>
                 <FileBarChart className="h-4 w-4 mr-2" /> Report
               </Button>
+              <Button variant="outline" onClick={() => setRosterOpen(true)} disabled={!allUnits.length}>
+                <Users className="h-4 w-4 mr-2" /> New Service Roster
+              </Button>
               <Button onClick={() => { setEditing(null); setFormOpen(true); }} disabled={!allUnits.length}>
                 <Plus className="h-4 w-4 mr-2" /> New Task
               </Button>
@@ -186,34 +192,88 @@ export default function UnitTasks() {
               <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
             ) : leadTasks.length === 0 ? (
               <Card><CardContent className="py-12 text-center text-muted-foreground">No tasks yet. Create one to get started.</CardContent></Card>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {leadTasks.map((t) => {
-                  const total = t.unit_task_assignments?.length || 0;
-                  const done = (t.unit_task_assignments || []).filter((a) => a.status === "Completed").length;
-                  const ack = (t.unit_task_assignments || []).filter((a) => a.status !== "Pending").length;
-                  return (
-                    <Card key={t.id} className="cursor-pointer hover:shadow-md transition" onClick={() => setSelected(t)}>
-                      <CardContent className="p-4 space-y-2">
-                        <div className="flex items-start gap-2">
+            ) : (() => {
+              // Split into ungrouped tasks and rosters keyed by group_id
+              const ungrouped = [];
+              const groupsMap = new Map();
+              for (const t of leadTasks) {
+                if (t.group_id) {
+                  if (!groupsMap.has(t.group_id)) groupsMap.set(t.group_id, []);
+                  groupsMap.get(t.group_id).push(t);
+                } else {
+                  ungrouped.push(t);
+                }
+              }
+              const groups = Array.from(groupsMap.entries()).map(([id, tasks]) => {
+                const sample = tasks[0];
+                const ts = new Date(sample.created_at || 0).getTime();
+                return { id, tasks, sample, ts };
+              }).sort((a, b) => b.ts - a.ts);
+
+              const renderTaskCard = (t) => {
+                const total = t.unit_task_assignments?.length || 0;
+                const done = (t.unit_task_assignments || []).filter((a) => a.status === "Completed").length;
+                const ack = (t.unit_task_assignments || []).filter((a) => a.status !== "Pending").length;
+                return (
+                  <Card key={t.id} className="cursor-pointer hover:shadow-md transition" onClick={() => setSelected(t)}>
+                    <CardContent className="p-4 space-y-2">
+                      <div className="flex items-start gap-2">
+                        <div className="min-w-0 flex-1">
+                          <h3 className="font-semibold truncate">{t.title}</h3>
+                          <p className="text-xs text-muted-foreground">{t.unit_name}{t.due_date ? ` · due ${t.due_date}` : ""}</p>
+                        </div>
+                        <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                      </div>
+                      {t.description && <p className="text-sm text-muted-foreground line-clamp-2">{t.description}</p>}
+                      <div className="flex flex-wrap items-center gap-2 text-xs">
+                        <Badge className={priorityColor[t.priority]}>{t.priority}</Badge>
+                        <Badge className={statusColor[t.status]}>{t.status}</Badge>
+                        <span className="text-muted-foreground ml-auto">{ack}/{total} ack · {done} done</span>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              };
+
+              return (
+                <div className="space-y-4">
+                  {groups.map((g) => {
+                    const isOpen = !!expandedGroups[g.id];
+                    const totalDone = g.tasks.filter((t) => t.status === "Completed").length;
+                    return (
+                      <div key={g.id} className="border border-border rounded-md overflow-hidden">
+                        <button
+                          type="button"
+                          onClick={() => setExpandedGroups((p) => ({ ...p, [g.id]: !p[g.id] }))}
+                          className="w-full flex items-center gap-3 px-4 py-3 bg-muted/40 hover:bg-muted/60 text-left"
+                        >
+                          <Users className="h-4 w-4 text-primary" />
                           <div className="min-w-0 flex-1">
-                            <h3 className="font-semibold truncate">{t.title}</h3>
-                            <p className="text-xs text-muted-foreground">{t.unit_name}{t.due_date ? ` · due ${t.due_date}` : ""}</p>
+                            <div className="font-semibold text-sm truncate">
+                              {g.sample.service_type || "Service"} — {g.sample.service_date || ""}
+                            </div>
+                            <div className="text-xs text-muted-foreground truncate">
+                              {g.sample.unit_name} · {g.tasks.length} member{g.tasks.length === 1 ? "" : "s"} · {totalDone}/{g.tasks.length} done
+                            </div>
                           </div>
-                          <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                        </div>
-                        {t.description && <p className="text-sm text-muted-foreground line-clamp-2">{t.description}</p>}
-                        <div className="flex flex-wrap items-center gap-2 text-xs">
-                          <Badge className={priorityColor[t.priority]}>{t.priority}</Badge>
-                          <Badge className={statusColor[t.status]}>{t.status}</Badge>
-                          <span className="text-muted-foreground ml-auto">{ack}/{total} ack · {done} done</span>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  );
-                })}
-              </div>
-            )}
+                          {isOpen ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
+                        </button>
+                        {isOpen && (
+                          <div className="p-3 grid grid-cols-1 md:grid-cols-2 gap-3 bg-background">
+                            {g.tasks.map(renderTaskCard)}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                  {ungrouped.length > 0 && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {ungrouped.map(renderTaskCard)}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
           </TabsContent>
         )}
 
@@ -267,6 +327,13 @@ export default function UnitTasks() {
         onSaved={onChanged}
       />
       <UnitTaskReportDialog open={reportOpen} onOpenChange={setReportOpen} unitOptions={allUnits} />
+      <ServiceRosterDialog
+        open={rosterOpen}
+        onOpenChange={setRosterOpen}
+        unitOptions={allUnits}
+        defaultUnit={unitFilter !== "All" ? unitFilter : ""}
+        onSaved={onChanged}
+      />
       <UnitTaskDetailPanel
         open={!!selected}
         onOpenChange={(v) => !v && setSelected(null)}
