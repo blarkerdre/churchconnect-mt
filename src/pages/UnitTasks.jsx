@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ClipboardList, Plus, FileBarChart, Loader2, ChevronRight } from "lucide-react";
+import { ClipboardList, Plus, FileBarChart, Loader2, ChevronRight, Users, ChevronDown } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -12,6 +12,7 @@ import { useTenantQuery } from "@/hooks/useTenantQuery";
 import UnitTaskFormDialog from "@/components/unitTasks/UnitTaskFormDialog";
 import UnitTaskDetailPanel from "@/components/unitTasks/UnitTaskDetailPanel";
 import UnitTaskReportDialog from "@/components/unitTasks/UnitTaskReportDialog";
+import ServiceRosterDialog from "@/components/unitTasks/ServiceRosterDialog";
 
 const priorityColor = {
   Urgent: "bg-destructive/10 text-destructive",
