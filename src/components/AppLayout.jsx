@@ -9,7 +9,7 @@ import {
   LayoutDashboard, Users, CalendarDays, HeartHandshake,
   Heart, Megaphone, Menu, LogOut,
   ClipboardList, Car, BarChart2, ChevronLeft, Globe, Shield, FileText, TrendingUp, Settings, Mail, AlertTriangle,
-  BookOpen, ChevronsUpDown, Check, Lock, MessageSquareHeart, Star
+  BookOpen, ChevronsUpDown, Check, Lock, MessageSquareHeart, Star, Package
 } from "lucide-react";
 import AppFeedbackDialog from "@/components/feedback/AppFeedbackDialog";
 import SignPostInboxDialog from "@/components/followups/SignPostInboxDialog";
