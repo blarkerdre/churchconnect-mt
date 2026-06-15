@@ -18,6 +18,7 @@ import { useTenantQuery } from "@/hooks/useTenantQuery";
 import { useAltarMinistry } from "@/hooks/useAltarMinistry";
 import PrintReportButton from "@/components/PrintReportButton";
 import LifeEventApprovalDialog, { LifeEventStageBadge } from "@/components/pastoralcare/LifeEventApprovalDialog";
+import PastoralCareRequestDialog from "@/components/pastoralcare/PastoralCareRequestDialog";
 
 const statusColors = {
   "Open": "bg-accent/10 text-accent",
