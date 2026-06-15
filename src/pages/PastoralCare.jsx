@@ -33,6 +33,7 @@ export default function PastoralCare() {
   const { user, isAdmin, leaderUnits } = useAuth();
   const { tenantId, scopeQuery, withTenant } = useTenantQuery();
   const { isMemberOfUnit: isPastoralUnit } = useUnitMembership("Pastoral Care");
+  const { unitName: altarUnitName, isMember: isAltarMember, isLeader: isAltarLeader } = useAltarMinistry();
   const canManage = isAdmin || leaderUnits.includes("Pastoral Care") || isPastoralUnit;
   const isPastoralLeader = isAdmin || leaderUnits.includes("Pastoral Care");
   const { enabled: canCreateRequest } = useSubFeature("pastoral.create_request");
@@ -48,6 +49,9 @@ export default function PastoralCare() {
   const [form, setForm] = useState({ subject: "", care_type: "Prayer Request", description: "", confidential: false });
   const [statusUpdate, setStatusUpdate] = useState({ status: "", resolution_notes: "", assigned_to: "" });
   const [detailCase, setDetailCase] = useState(null);
+  const [activeLifeEvent, setActiveLifeEvent] = useState(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [altarSetting, setAltarSetting] = useState("");
 
   const { data: cases = [], isLoading } = useQuery({
     queryKey: ["pastoral-care", tenantId],
