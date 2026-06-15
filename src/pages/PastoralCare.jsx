@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Heart, Search, Lock, User, CalendarDays, Plus, Loader2, UserCheck, Download } from "lucide-react";
+import { Heart, Search, Lock, User, CalendarDays, Plus, Loader2, UserCheck, Download, Sparkles, Settings } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
@@ -15,7 +15,10 @@ import { useAuth } from "@/hooks/useAuth";
 import { useUnitMembership } from "@/hooks/useUnitMembership";
 import { useSubFeature } from "@/hooks/useSubFeature";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
+import { useAltarMinistry } from "@/hooks/useAltarMinistry";
 import PrintReportButton from "@/components/PrintReportButton";
+import LifeEventApprovalDialog, { LifeEventStageBadge } from "@/components/pastoralcare/LifeEventApprovalDialog";
+import PastoralCareRequestDialog from "@/components/pastoralcare/PastoralCareRequestDialog";
 
 const statusColors = {
   "Open": "bg-accent/10 text-accent",
@@ -28,9 +31,10 @@ const CARE_TYPES = ["Counselling", "Visitation", "Prayer Request", "Hospital Vis
 const ALL_STATUSES = ["Open", "In Progress", "Resolved", "Closed"];
 
 export default function PastoralCare() {
-  const { user, isAdmin, leaderUnits } = useAuth();
+  const { user, isAdmin, leaderUnits, myMember } = useAuth();
   const { tenantId, scopeQuery, withTenant } = useTenantQuery();
   const { isMemberOfUnit: isPastoralUnit } = useUnitMembership("Pastoral Care");
+  const { unitName: altarUnitName, isMember: isAltarMember, isLeader: isAltarLeader } = useAltarMinistry();
   const canManage = isAdmin || leaderUnits.includes("Pastoral Care") || isPastoralUnit;
   const isPastoralLeader = isAdmin || leaderUnits.includes("Pastoral Care");
   const { enabled: canCreateRequest } = useSubFeature("pastoral.create_request");
@@ -46,6 +50,9 @@ export default function PastoralCare() {
   const [form, setForm] = useState({ subject: "", care_type: "Prayer Request", description: "", confidential: false });
   const [statusUpdate, setStatusUpdate] = useState({ status: "", resolution_notes: "", assigned_to: "" });
   const [detailCase, setDetailCase] = useState(null);
+  const [activeLifeEvent, setActiveLifeEvent] = useState(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [altarSetting, setAltarSetting] = useState("");
 
   const { data: cases = [], isLoading } = useQuery({
     queryKey: ["pastoral-care", tenantId],
@@ -98,7 +105,26 @@ export default function PastoralCare() {
     },
   });
 
-  const visibleCases = canManage ? cases : cases.filter(c => c.created_by === user?.id);
+  const { data: lifeEvents = [] } = useQuery({
+    queryKey: ["life-events", tenantId],
+    enabled: !!tenantId,
+    queryFn: async () => {
+      const { data, error } = await scopeQuery(
+        supabase.from("life_event_requests")
+          .select("*, members(first_name, last_name)")
+          .order("created_at", { ascending: false })
+      );
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  const lifeEventCaseIds = new Set(lifeEvents.map(le => le.pastoral_care_id).filter(Boolean));
+
+  // Exclude life-event-linked pastoral_care rows from the regular list — life events
+  // get their own dedicated cards below.
+  const regularCases = cases.filter(c => !lifeEventCaseIds.has(c.id));
+  const visibleCases = canManage ? regularCases : regularCases.filter(c => c.created_by === user?.id);
 
   const filtered = visibleCases.filter(r => {
     const matchSearch = `${r.subject} ${r.members?.first_name || ""} ${r.members?.last_name || ""} ${r.care_type}`.toLowerCase().includes(search.toLowerCase());
@@ -111,23 +137,19 @@ export default function PastoralCare() {
   const assigneeMap = {};
   pastoralUnitMembers.forEach(p => { assigneeMap[p.user_id] = p.full_name || p.email || "Unknown"; });
 
-  const requestMutation = useMutation({
-    mutationFn: async (formData) => {
-      const { data: member } = await supabase.from("members").select("id").eq("user_id", user.id).eq("tenant_id", tenantId).single();
-      const { error } = await supabase.from("pastoral_care").insert(withTenant({
-        subject: formData.subject,
-        care_type: formData.care_type,
-        description: formData.description || null,
-        confidential: formData.confidential,
-        created_by: user.id,
-        member_id: member?.id || null,
-      }));
+  const saveAltarSetting = useMutation({
+    mutationFn: async (value) => {
+      const { error } = await supabase.from("app_settings").upsert(withTenant({
+        key: "pastoral.altar_ministry_unit",
+        value,
+      }), { onConflict: "tenant_id,key" });
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["pastoral-care"] });
-      toast({ title: "Request submitted" });
-      setRequestDialogOpen(false);
+      queryClient.invalidateQueries({ queryKey: ["altar-ministry-unit"] });
+      queryClient.invalidateQueries({ queryKey: ["altar-ministry-people"] });
+      toast({ title: "Altar Ministry unit updated" });
+      setSettingsOpen(false);
     },
     onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
@@ -198,11 +220,18 @@ export default function PastoralCare() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input placeholder="Search cases..." value={search} onChange={e => setSearch(e.target.value)} className="pl-10" />
           </div>
-          {canCreateRequest && (
-            <Button onClick={() => { setForm({ subject: "", care_type: "Prayer Request", description: "", confidential: false }); setRequestDialogOpen(true); }} className="bg-primary hover:bg-primary/90">
-              <Plus className="h-4 w-4 mr-2" /> New Request
-            </Button>
-          )}
+          <div className="flex items-center gap-2">
+            {isAdmin && (
+              <Button variant="outline" size="sm" onClick={() => { setAltarSetting(altarUnitName); setSettingsOpen(true); }}>
+                <Settings className="h-4 w-4 mr-2" /> Altar Ministry unit
+              </Button>
+            )}
+            {canCreateRequest && (
+              <Button onClick={() => setRequestDialogOpen(true)} className="bg-primary hover:bg-primary/90">
+                <Plus className="h-4 w-4 mr-2" /> New Request
+              </Button>
+            )}
+          </div>
         </div>
         {canManage && (
           <div className="flex flex-wrap items-end gap-3">
@@ -286,29 +315,79 @@ export default function PastoralCare() {
         </div>
       )}
 
+      {/* Life Events */}
+      {lifeEvents.length > 0 && (
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <Sparkles className="h-4 w-4 text-primary" />
+            <h2 className="font-display font-bold text-foreground">Life Events</h2>
+            <Badge variant="outline">{lifeEvents.length}</Badge>
+          </div>
+          {lifeEvents.map(le => {
+            const isRoutedLeader = (le.route_user_ids || []).includes(user?.id);
+            const canOpen = isRoutedLeader || isAltarMember || isAltarLeader || isAdmin
+              || le.created_by === user?.id || le.assigned_owner_id === user?.id
+              || (le.assigned_pastor_ids || []).includes(user?.id);
+            return (
+              <Card key={le.id} className="border-0 shadow-sm hover:shadow-md transition-shadow cursor-pointer" onClick={() => canOpen && setActiveLifeEvent(le)}>
+                <CardContent className="p-5">
+                  <div className="flex items-start gap-4">
+                    <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                      <Sparkles className="h-5 w-5 text-primary" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex flex-wrap items-center gap-2 mb-1">
+                        <h3 className="font-display font-bold text-foreground">
+                          {le.subtype.replace("_", " / ").replace(/\b\w/g, c => c.toUpperCase())}: {le.subject_name}
+                        </h3>
+                        <LifeEventStageBadge stage={le.stage} />
+                        {le.pastor_requested && <Badge variant="outline">Pastor requested</Badge>}
+                      </div>
+                      <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
+                        {le.members && <span className="flex items-center gap-1"><User className="h-3.5 w-3.5" /> {le.members.first_name} {le.members.last_name}</span>}
+                        {le.event_date && <span className="flex items-center gap-1"><CalendarDays className="h-3.5 w-3.5" /> {new Date(le.event_date).toLocaleDateString("en-GB")}</span>}
+                        <span>Submitted {new Date(le.created_at).toLocaleDateString("en-GB")}</span>
+                      </div>
+                    </div>
+                    {canOpen && (
+                      <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); setActiveLifeEvent(le); }}>Open</Button>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      )}
+
       {/* New Request Dialog */}
-      <Dialog open={requestDialogOpen} onOpenChange={setRequestDialogOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader><DialogTitle className="font-display">New Pastoral Care Request</DialogTitle></DialogHeader>
-          <div className="space-y-4 mt-2">
-            <div><Label>Subject</Label><Input value={form.subject} onChange={e => setForm(f => ({ ...f, subject: e.target.value }))} placeholder="Brief subject" /></div>
-            <div>
-              <Label>Type</Label>
-              <Select value={form.care_type} onValueChange={v => setForm(f => ({ ...f, care_type: v }))}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {CARE_TYPES.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div><Label>Description</Label><Textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={3} placeholder="Describe your request..." /></div>
-            <div className="flex items-center gap-2">
-              <input type="checkbox" id="confidential" checked={form.confidential} onChange={e => setForm(f => ({ ...f, confidential: e.target.checked }))} className="rounded border-border" />
-              <Label htmlFor="confidential" className="text-sm">Mark as confidential</Label>
-            </div>
-            <Button onClick={() => requestMutation.mutate(form)} disabled={requestMutation.isPending || !form.subject} className="w-full bg-primary">
-              {requestMutation.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-              Submit Request
+      <PastoralCareRequestDialog
+        open={requestDialogOpen}
+        onOpenChange={setRequestDialogOpen}
+        myMember={myMember}
+      />
+
+      {/* Life Event Approval Dialog */}
+      <LifeEventApprovalDialog
+        open={!!activeLifeEvent}
+        onOpenChange={(v) => !v && setActiveLifeEvent(null)}
+        request={activeLifeEvent}
+        isRoutedLeader={activeLifeEvent ? (activeLifeEvent.route_user_ids || []).includes(user?.id) : false}
+      />
+
+      {/* Altar Ministry unit setting */}
+      <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader><DialogTitle className="font-display">Altar Ministry unit</DialogTitle></DialogHeader>
+          <div className="space-y-3 mt-2">
+            <p className="text-xs text-muted-foreground">
+              Pick the church unit responsible for life-event pastoral coverage. Members of this unit will see approved life events; the unit's leaders give final approval and assign pastors.
+            </p>
+            <Label className="text-xs">Unit name</Label>
+            <Input value={altarSetting} onChange={e => setAltarSetting(e.target.value)} placeholder="Altar Ministry" />
+            <Button onClick={() => saveAltarSetting.mutate(altarSetting || "Altar Ministry")} disabled={saveAltarSetting.isPending} className="w-full">
+              {saveAltarSetting.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+              Save
             </Button>
           </div>
         </DialogContent>
