@@ -61,6 +61,8 @@ export default function UnitTasks() {
   const [unitFilter, setUnitFilter] = useState("All");
   const [statusFilter, setStatusFilter] = useState("Open");
   const [formOpen, setFormOpen] = useState(false);
+  const [rosterOpen, setRosterOpen] = useState(false);
+  const [expandedGroups, setExpandedGroups] = useState({});
   const [editing, setEditing] = useState(null);
   const [reportOpen, setReportOpen] = useState(false);
   const [selected, setSelected] = useState(null);
