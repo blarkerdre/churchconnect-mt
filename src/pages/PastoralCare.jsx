@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Heart, Search, Lock, User, CalendarDays, Plus, Loader2, UserCheck, Download } from "lucide-react";
+import { Heart, Search, Lock, User, CalendarDays, Plus, Loader2, UserCheck, Download, Sparkles, Settings } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
@@ -15,7 +15,9 @@ import { useAuth } from "@/hooks/useAuth";
 import { useUnitMembership } from "@/hooks/useUnitMembership";
 import { useSubFeature } from "@/hooks/useSubFeature";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
+import { useAltarMinistry } from "@/hooks/useAltarMinistry";
 import PrintReportButton from "@/components/PrintReportButton";
+import LifeEventApprovalDialog, { LifeEventStageBadge } from "@/components/pastoralcare/LifeEventApprovalDialog";
 
 const statusColors = {
   "Open": "bg-accent/10 text-accent",
