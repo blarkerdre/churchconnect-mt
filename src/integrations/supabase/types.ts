@@ -2489,6 +2489,276 @@ export type Database = {
           },
         ]
       }
+      inventory_categories: {
+        Row: {
+          created_at: string
+          default_frequency_days: number | null
+          description: string | null
+          id: string
+          name: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          default_frequency_days?: number | null
+          description?: string | null
+          id?: string
+          name: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          default_frequency_days?: number | null
+          description?: string | null
+          id?: string
+          name?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_categories_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inventory_checklists: {
+        Row: {
+          created_at: string
+          id: string
+          item_id: string
+          position: number
+          prompt: string
+          required: boolean
+          tenant_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          item_id: string
+          position?: number
+          prompt: string
+          required?: boolean
+          tenant_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          item_id?: string
+          position?: number
+          prompt?: string
+          required?: boolean
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_checklists_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_checklists_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inventory_inspection_responses: {
+        Row: {
+          checklist_item_id: string | null
+          comment: string | null
+          created_at: string
+          id: string
+          inspection_id: string
+          position: number
+          prompt_snapshot: string
+          result: Database["public"]["Enums"]["inventory_response_result"]
+          tenant_id: string
+        }
+        Insert: {
+          checklist_item_id?: string | null
+          comment?: string | null
+          created_at?: string
+          id?: string
+          inspection_id: string
+          position?: number
+          prompt_snapshot: string
+          result: Database["public"]["Enums"]["inventory_response_result"]
+          tenant_id: string
+        }
+        Update: {
+          checklist_item_id?: string | null
+          comment?: string | null
+          created_at?: string
+          id?: string
+          inspection_id?: string
+          position?: number
+          prompt_snapshot?: string
+          result?: Database["public"]["Enums"]["inventory_response_result"]
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_inspection_responses_checklist_item_id_fkey"
+            columns: ["checklist_item_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_checklists"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_inspection_responses_inspection_id_fkey"
+            columns: ["inspection_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_inspections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_inspection_responses_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inventory_inspections: {
+        Row: {
+          created_at: string
+          id: string
+          inspected_at: string
+          inspected_by: string | null
+          item_id: string
+          notes: string | null
+          overall_result: Database["public"]["Enums"]["inventory_inspection_result"]
+          signature_name: string | null
+          tenant_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          inspected_at?: string
+          inspected_by?: string | null
+          item_id: string
+          notes?: string | null
+          overall_result: Database["public"]["Enums"]["inventory_inspection_result"]
+          signature_name?: string | null
+          tenant_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          inspected_at?: string
+          inspected_by?: string | null
+          item_id?: string
+          notes?: string | null
+          overall_result?: Database["public"]["Enums"]["inventory_inspection_result"]
+          signature_name?: string | null
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_inspections_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_inspections_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inventory_items: {
+        Row: {
+          category: string | null
+          category_id: string | null
+          condition: Database["public"]["Enums"]["inventory_condition"]
+          created_at: string
+          created_by: string | null
+          id: string
+          inspection_frequency_days: number | null
+          last_inspected_at: string | null
+          location: string | null
+          name: string
+          next_due_at: string | null
+          notes: string | null
+          photo_url: string | null
+          purchase_date: string | null
+          requires_inspection: boolean
+          serial_number: string | null
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          category?: string | null
+          category_id?: string | null
+          condition?: Database["public"]["Enums"]["inventory_condition"]
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          inspection_frequency_days?: number | null
+          last_inspected_at?: string | null
+          location?: string | null
+          name: string
+          next_due_at?: string | null
+          notes?: string | null
+          photo_url?: string | null
+          purchase_date?: string | null
+          requires_inspection?: boolean
+          serial_number?: string | null
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string | null
+          category_id?: string | null
+          condition?: Database["public"]["Enums"]["inventory_condition"]
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          inspection_frequency_days?: number | null
+          last_inspected_at?: string | null
+          location?: string | null
+          name?: string
+          next_due_at?: string | null
+          notes?: string | null
+          photo_url?: string | null
+          purchase_date?: string | null
+          requires_inspection?: boolean
+          serial_number?: string | null
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_items_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_items_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       life_event_requests: {
         Row: {
           approval_route: string[]
@@ -5029,6 +5299,10 @@ export type Database = {
         Args: { _centre_id: string; _tenant_id: string; _user_id: string }
         Returns: boolean
       }
+      is_inventory_manager: {
+        Args: { _tenant_id: string; _user_id: string }
+        Returns: boolean
+      }
       is_reports_officer: {
         Args: { _tenant_id: string; _user_id: string }
         Returns: boolean
@@ -5320,6 +5594,9 @@ export type Database = {
         | "Pastoral"
         | "Visitor"
       gender_type: "Male" | "Female"
+      inventory_condition: "good" | "fair" | "poor" | "out_of_service"
+      inventory_inspection_result: "pass" | "fail" | "needs_attention"
+      inventory_response_result: "pass" | "fail" | "na"
       life_event_stage:
         | "awaiting_leader"
         | "awaiting_altar_ministry"
@@ -5527,6 +5804,9 @@ export const Constants = {
         "Visitor",
       ],
       gender_type: ["Male", "Female"],
+      inventory_condition: ["good", "fair", "poor", "out_of_service"],
+      inventory_inspection_result: ["pass", "fail", "needs_attention"],
+      inventory_response_result: ["pass", "fail", "na"],
       life_event_stage: [
         "awaiting_leader",
         "awaiting_altar_ministry",
