@@ -2489,6 +2489,111 @@ export type Database = {
           },
         ]
       }
+      life_event_requests: {
+        Row: {
+          approval_route: string[]
+          assigned_owner_id: string | null
+          assigned_pastor_ids: string[]
+          completed_at: string | null
+          completed_by: string | null
+          created_at: string
+          created_by: string
+          event_date: string | null
+          final_approved_at: string | null
+          final_approved_by: string | null
+          id: string
+          member_id: string | null
+          notes: string | null
+          pastor_requested: boolean
+          pastoral_care_id: string | null
+          rejected_at: string | null
+          rejected_by: string | null
+          rejection_reason: string | null
+          route_user_ids: string[]
+          stage: Database["public"]["Enums"]["life_event_stage"]
+          stage1_approved_at: string | null
+          stage1_approved_by: string | null
+          stage1_note: string | null
+          subject_name: string
+          subtype: Database["public"]["Enums"]["life_event_subtype"]
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          approval_route?: string[]
+          assigned_owner_id?: string | null
+          assigned_pastor_ids?: string[]
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          created_by: string
+          event_date?: string | null
+          final_approved_at?: string | null
+          final_approved_by?: string | null
+          id?: string
+          member_id?: string | null
+          notes?: string | null
+          pastor_requested?: boolean
+          pastoral_care_id?: string | null
+          rejected_at?: string | null
+          rejected_by?: string | null
+          rejection_reason?: string | null
+          route_user_ids?: string[]
+          stage?: Database["public"]["Enums"]["life_event_stage"]
+          stage1_approved_at?: string | null
+          stage1_approved_by?: string | null
+          stage1_note?: string | null
+          subject_name: string
+          subtype: Database["public"]["Enums"]["life_event_subtype"]
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          approval_route?: string[]
+          assigned_owner_id?: string | null
+          assigned_pastor_ids?: string[]
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          created_by?: string
+          event_date?: string | null
+          final_approved_at?: string | null
+          final_approved_by?: string | null
+          id?: string
+          member_id?: string | null
+          notes?: string | null
+          pastor_requested?: boolean
+          pastoral_care_id?: string | null
+          rejected_at?: string | null
+          rejected_by?: string | null
+          rejection_reason?: string | null
+          route_user_ids?: string[]
+          stage?: Database["public"]["Enums"]["life_event_stage"]
+          stage1_approved_at?: string | null
+          stage1_approved_by?: string | null
+          stage1_note?: string | null
+          subject_name?: string
+          subtype?: Database["public"]["Enums"]["life_event_subtype"]
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "life_event_requests_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "life_event_requests_pastoral_care_id_fkey"
+            columns: ["pastoral_care_id"]
+            isOneToOne: false
+            referencedRelation: "pastoral_care"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       member_claim_invites: {
         Row: {
           claimed_at: string | null
@@ -4892,6 +4997,14 @@ export type Database = {
         Args: { _tenant_id: string; _user_id: string }
         Returns: boolean
       }
+      is_altar_ministry_leader: {
+        Args: { _tenant_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_altar_ministry_member: {
+        Args: { _tenant_id: string; _user_id: string }
+        Returns: boolean
+      }
       is_assigned_referral_leader_for_member: {
         Args: { _member_id: string; _tenant_id: string; _user_id: string }
         Returns: boolean
@@ -5207,6 +5320,17 @@ export type Database = {
         | "Pastoral"
         | "Visitor"
       gender_type: "Male" | "Female"
+      life_event_stage:
+        | "awaiting_leader"
+        | "awaiting_altar_ministry"
+        | "approved"
+        | "rejected"
+        | "completed"
+      life_event_subtype:
+        | "childbirth"
+        | "naming_dedication"
+        | "marriage"
+        | "bereavement"
       membership_status:
         | "Active"
         | "Inactive"
@@ -5223,6 +5347,7 @@ export type Database = {
         | "Marriage"
         | "Financial Support"
         | "Other"
+        | "Life Event"
       session_type:
         | "Sunday Service"
         | "Midweek Service"
@@ -5402,6 +5527,19 @@ export const Constants = {
         "Visitor",
       ],
       gender_type: ["Male", "Female"],
+      life_event_stage: [
+        "awaiting_leader",
+        "awaiting_altar_ministry",
+        "approved",
+        "rejected",
+        "completed",
+      ],
+      life_event_subtype: [
+        "childbirth",
+        "naming_dedication",
+        "marriage",
+        "bereavement",
+      ],
       membership_status: [
         "Active",
         "Inactive",
@@ -5419,6 +5557,7 @@ export const Constants = {
         "Marriage",
         "Financial Support",
         "Other",
+        "Life Event",
       ],
       session_type: [
         "Sunday Service",
