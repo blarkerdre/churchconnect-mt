@@ -232,51 +232,6 @@ function MemberSmsListView({ memberId, tenantId, channel, onSelect }) {
   );
 }
 
-function MemberEmailList({ memberId, memberEmail, tenantId, onSelect }) {
-  const { data: logs = [], isLoading } = useQuery({
-    queryKey: ["member-email-received", memberEmail, tenantId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("email_send_log")
-        .select("*")
-        .eq("recipient_email", memberEmail)
-        .eq("tenant_id", tenantId)
-        .order("created_at", { ascending: false })
-        .limit(200);
-      if (error) throw error;
-      return dedupeByMessageId(data || []).slice(0, 100);
-    },
-    enabled: !!memberEmail && !!tenantId,
-  });
-
-
-  if (isLoading) return <div className="flex justify-center py-16"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>;
-  if (logs.length === 0) return (
-    <Card className="border-0 shadow-sm p-16 text-center text-muted-foreground">
-      <Mail className="h-10 w-10 mx-auto mb-3 opacity-20" />
-      <p className="text-lg font-medium">No emails yet</p>
-      <p className="text-sm">Emails sent to you will appear here.</p>
-    </Card>
-  );
-
-  return (
-    <div className="space-y-2">
-      {logs.map(log => (
-        <Card key={log.id} className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow" onClick={() => onSelect(log)}>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between gap-2 mb-1">
-              <span className="text-sm font-medium text-foreground truncate">{log.metadata?.subject || log.template_name}</span>
-              <Badge className={`border-0 text-xs ${log.status === "sent" || log.status === "delivered" ? "bg-chart-3/10 text-chart-3" : log.status === "failed" ? "bg-destructive/10 text-destructive" : "bg-muted text-muted-foreground"}`}>
-                {log.status}
-              </Badge>
-            </div>
-            <p className="text-xs text-muted-foreground">{format(new Date(log.created_at), "dd MMM yyyy, h:mm a")}</p>
-          </CardContent>
-        </Card>
-      ))}
-    </div>
-  );
-}
 
 export default function Communications() {
   const { user, isAdmin, isUnitLeader, isWSFLeader, leaderUnits, leaderCentres } = useAuth();
@@ -292,7 +247,7 @@ export default function Communications() {
   const [waOpen, setWaOpen] = useState(false);
   const [selectedAnnouncement, setSelectedAnnouncement] = useState(null);
   const [selectedSmsLog, setSelectedSmsLog] = useState(null);
-  const [selectedEmailLog, setSelectedEmailLog] = useState(null);
+  
   const [deleteTarget, setDeleteTarget] = useState(null);
 
   const canManageComms = isAdmin || isUnitLeader || isWSFLeader;
@@ -411,26 +366,17 @@ export default function Communications() {
   });
 
   const { data: emailCount = 0 } = useQuery({
-    queryKey: ["comms-email-count", myMember?.email, canManageComms, tenantId],
+    queryKey: ["comms-email-count", canManageComms, tenantId],
     queryFn: async () => {
-      if (canManageComms) {
-        const { count } = await supabase
-          .from("scheduled_communications")
-          .select("id", { count: "exact", head: true })
-          .eq("tenant_id", tenantId)
-          .eq("channel", "email")
-          .in("status", ["scheduled", "processing"]);
-        return count || 0;
-      }
-      const { data } = await supabase
-        .from("email_send_log")
-        .select("message_id, id, created_at")
-        .eq("recipient_email", myMember.email)
-        .gte("created_at", thirtyDaysAgo);
-      return dedupeByMessageId(data || []).length;
-
+      const { count } = await supabase
+        .from("scheduled_communications")
+        .select("id", { count: "exact", head: true })
+        .eq("tenant_id", tenantId)
+        .eq("channel", "email")
+        .in("status", ["scheduled", "processing"]);
+      return count || 0;
     },
-    enabled: emailEnabled && (canManageComms ? !!tenantId : !!myMember?.email),
+    enabled: emailEnabled && canManageComms && !!tenantId,
   });
 
   // Build effective units/centres for audience scoping
@@ -582,7 +528,7 @@ export default function Communications() {
 
   return (
     <div className="space-y-6">
-      <Tabs defaultValue={announcementsEnabled ? "announcements" : (emailEnabled ? "email" : (smsEnabled ? "sms" : "whatsapp"))} className="space-y-4">
+      <Tabs defaultValue={announcementsEnabled ? "announcements" : ((emailEnabled && canManageComms) ? "email" : (smsEnabled ? "sms" : "whatsapp"))} className="space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <TabsList className="flex flex-nowrap h-auto gap-1 overflow-x-auto w-full justify-start">
             {announcementsEnabled && (
@@ -595,7 +541,7 @@ export default function Communications() {
                 )}
               </TabsTrigger>
             )}
-            {emailEnabled && (
+            {emailEnabled && canManageComms && (
               <TabsTrigger value="email" className="gap-1.5 text-xs">
                 <Mail className="h-3.5 w-3.5" /> Email
                 {emailCount > 0 && (
@@ -666,16 +612,12 @@ export default function Communications() {
           </div>
         </TabsContent>}
 
-        {emailEnabled && (
+        {emailEnabled && canManageComms && (
           <TabsContent value="email">
-            {canManageComms ? (
-              <div className="space-y-4">
-                <EmailAlertForm currentUser={user} myUnits={leaderUnits} isAdmin={isAdmin} restrictedUnits={leaderRestrictedUnits} />
-                <ScheduledList channel="email" tenantId={tenantId} />
-              </div>
-            ) : (
-              <MemberEmailList memberId={myMember?.id} memberEmail={myMember?.email} tenantId={tenantId} onSelect={setSelectedEmailLog} />
-            )}
+            <div className="space-y-4">
+              <EmailAlertForm currentUser={user} myUnits={leaderUnits} isAdmin={isAdmin} restrictedUnits={leaderRestrictedUnits} />
+              <ScheduledList channel="email" tenantId={tenantId} />
+            </div>
           </TabsContent>
         )}
 
@@ -834,52 +776,6 @@ export default function Communications() {
         </DialogContent>
       </Dialog>
 
-      {/* Email Detail Dialog */}
-      <Dialog open={!!selectedEmailLog} onOpenChange={(v) => !v && setSelectedEmailLog(null)}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Mail className="h-5 w-5 text-primary" />
-              Email Details
-            </DialogTitle>
-            <DialogDescription>Full email log details</DialogDescription>
-          </DialogHeader>
-          {selectedEmailLog && (
-            <div className="space-y-4">
-              <div className="flex flex-wrap gap-2">
-                <Badge variant="outline">{selectedEmailLog.template_name}</Badge>
-                <Badge className={`border-0 ${selectedEmailLog.status === "sent" || selectedEmailLog.status === "delivered" ? "bg-chart-3/10 text-chart-3" : selectedEmailLog.status === "failed" ? "bg-destructive/10 text-destructive" : "bg-muted text-muted-foreground"}`}>
-                  {selectedEmailLog.status}
-                </Badge>
-              </div>
-              <div className="space-y-1">
-                <p className="text-xs font-medium text-muted-foreground">Recipient</p>
-                <p className="text-sm font-medium text-foreground">{selectedEmailLog.recipient_email}</p>
-              </div>
-              {selectedEmailLog.metadata?.subject && (
-                <>
-                  <Separator />
-                  <div className="space-y-1">
-                    <p className="text-xs font-medium text-muted-foreground">Subject</p>
-                    <p className="text-sm text-foreground">{selectedEmailLog.metadata.subject}</p>
-                  </div>
-                </>
-              )}
-              <Separator />
-              <div className="text-xs">
-                <p className="text-muted-foreground">Sent</p>
-                <p className="font-medium text-foreground">{format(new Date(selectedEmailLog.created_at), "dd MMM yyyy, h:mm a")}</p>
-              </div>
-              {selectedEmailLog.error_message && (
-                <div className="space-y-1">
-                  <p className="text-xs font-medium text-destructive">Error</p>
-                  <p className="text-sm text-destructive whitespace-pre-wrap">{selectedEmailLog.error_message}</p>
-                </div>
-              )}
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
 
       <PasswordConfirmDialog
         open={!!deleteTarget}
