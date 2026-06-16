@@ -28,7 +28,7 @@ const ACCOUNT_OPTIONS = [
 ];
 
 export default function AudienceFilter({ filters, onChange, className, restrictedUnits }) {
-  const { status = "all", unit = "all", dateFrom = null, dateTo = null, account = "all" } = filters || {};
+  const { status = "all", unit = "all", dateFrom = null, dateTo = null, account = "all", gender = "all", wsfCentreId = "all" } = filters || {};
   const { data: churchUnits = [] } = useChurchUnits();
 
   // When restrictedUnits is provided, only show those units
@@ -38,19 +38,32 @@ export default function AudienceFilter({ filters, onChange, className, restricte
   const showAllUnitsOption = !restrictedUnits || restrictedUnits.length === 0;
   const { tenantId, scopeQuery } = useTenantQuery();
 
-  const update = (patch) => onChange({ status, unit, dateFrom, dateTo, account, ...patch });
+  const { data: wsfCentres = [] } = useQuery({
+    queryKey: ["audience-wsf-centres", tenantId],
+    queryFn: async () => {
+      const { data } = await scopeQuery(
+        supabase.from("wsf_centres").select("id, name").eq("is_active", true).order("name")
+      );
+      return data || [];
+    },
+    enabled: !!tenantId,
+  });
 
-  const hasFilters = status !== "all" || unit !== "all" || dateFrom || dateTo || account !== "all";
+  const update = (patch) => onChange({ status, unit, dateFrom, dateTo, account, gender, wsfCentreId, ...patch });
 
-  const clearAll = () => onChange({ status: "all", unit: "all", dateFrom: null, dateTo: null, account: "all" });
+  const hasFilters = status !== "all" || unit !== "all" || dateFrom || dateTo || account !== "all" || gender !== "all" || wsfCentreId !== "all";
+
+  const clearAll = () => onChange({ status: "all", unit: "all", dateFrom: null, dateTo: null, account: "all", gender: "all", wsfCentreId: "all" });
 
   // Live recipient count
   const { data: recipientCount = null, isFetching } = useQuery({
-    queryKey: ["audience-count", status, unit, dateFrom?.toISOString(), dateTo?.toISOString(), account, tenantId],
+    queryKey: ["audience-count", status, unit, dateFrom?.toISOString(), dateTo?.toISOString(), account, gender, wsfCentreId, tenantId],
     queryFn: async () => {
       let q = supabase.from("members").select("id", { count: "exact", head: true });
       if (status !== "all") q = q.eq("membership_status", status);
       if (unit !== "all") q = q.ilike("church_unit", `%${unit}%`);
+      if (gender !== "all") q = q.eq("gender", gender);
+      if (wsfCentreId !== "all") q = q.eq("wsf_centre_id", wsfCentreId);
       if (dateFrom) q = q.gte("created_at", dateFrom.toISOString());
       if (dateTo) {
         const end = new Date(dateTo);
