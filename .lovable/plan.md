@@ -1,39 +1,34 @@
+
 ## Goal
 
-Collapse the per-channel Email / SMS / WhatsApp tabs in Communications into the existing **Direct Send** flow. After the merge, the Communications page has three tabs:
-
-1. **Announcements** (unchanged)
-2. **Direct Send** (admins only — sole place to compose any outbound message)
-3. **History** (replaces the per-channel tabs)
-
-Non-admin members get a single **My Messages** tab in place of the current per-channel history views.
+Let admins send messages to filtered groups of **members** (in addition to existing Individual and Bulk Non-Members flows) from Communications → Direct Send. Filters: membership status, church unit, sex, home cell (WSF centre), and a registered-date range.
 
 ## Changes
 
-### `src/pages/Communications.jsx`
-- Remove the `email`, `sms`, `whatsapp` `TabsTrigger`s and their `TabsContent` blocks (including the `EmailAlertForm`, `Send Bulk SMS`/`Send Bulk WhatsApp` buttons, and the empty-state cards).
-- Drop the now-unused imports/state: `EmailAlertForm`, `smsOpen`, `waOpen`, `smsAnnouncement`, plus the related dialog mounts at the bottom of the file (the bulk SMS/WhatsApp dialogs are now launched only from inside `DirectSendPanel`).
-- Add a new **History** `TabsTrigger` (icon: `History` from lucide) visible whenever any of email/sms/whatsapp is enabled. Show the combined unread/scheduled count badge (`emailCount + smsCount + whatsappCount`).
-- Add a new **My Messages** `TabsTrigger` for non-admin members (same condition as today's member view of sms/whatsapp tabs, plus email recipients).
-- Default tab logic: if user is admin → `announcements`; otherwise → `announcements` (unchanged), but the inner channel selector lives inside History/My Messages.
+### 1. `src/components/comms/AudienceFilter.jsx` — extend filters
+- Add two new optional filters: `gender` ("all" | "Male" | "Female") and `wsfCentreId` ("all" | centre uuid).
+- Fetch active home-cell centres via `wsf_centres` (tenant-scoped) using `useQuery`.
+- Include the new fields in `update`, `clearAll`, `hasFilters`, and the live-count query:
+  - `if (gender !== "all") q = q.eq("gender", gender)`
+  - `if (wsfCentreId !== "all") q = q.eq("wsf_centre_id", wsfCentreId)`
+- Render two extra selects ("Sex", "Home Cell") in the existing grid.
+- Backward compatible: callers that don't pass these fields keep working ("all" defaults).
 
-### New `src/components/comms/CommunicationsHistory.jsx` (admin)
-- Renders the existing `ScheduledList` for the selected channel plus a sub-tab/segmented control with `Email | SMS | WhatsApp` (only shows enabled channels).
-- Reuses existing `ScheduledList` component as-is (no behavior change). No new queries.
+### 2. `src/components/comms/DirectSendPanel.jsx` — new Bulk Members mode
+- Add a new `BulkMembers` component:
+  - Local `filters` state matching AudienceFilter shape (status/unit/gender/wsfCentreId/date/account).
+  - Channel select: Email, SMS, WhatsApp, In-App.
+  - Subject (email/in-app) + message textarea.
+  - Query members matching the filters (same predicates as the live-count, but selecting `id, user_id, first_name, email, phone`). Compute `emailRecipients`, `phoneValid`/`phoneInvalid` (via `normalizePhone`), and `inAppRecipients` (members with `user_id`).
+  - Send:
+    - Email → loop `send-transactional-email` with `admin-direct-message` (same pattern as `BulkNonMembers`).
+    - SMS / WhatsApp → single `send-sms` call with `sms_type: "bulk_member"`, passing `member_id` per recipient.
+    - In-App → bulk insert into `notifications` (one row per recipient, type `admin_message`).
+  - Show recipient count badge per channel and `InvalidRecipientsPreview` for phone channels.
+  - `logAudit("direct_message_sent", "members", null, { mode: "bulk_members", channel, filters, sent, failed }, tenantId)`.
+- Add a 4th `TabsTrigger` "Bulk Members" (Users icon) and corresponding `TabsContent`. Update `TabsList` to `grid-cols-4`.
 
-### New `src/components/comms/MyMessagesView.jsx` (members)
-- Reuses `MemberSmsListView` for SMS and WhatsApp. For email, reuses whatever component currently surfaces email history to a member (if none exists, omit email here — same as today).
-- Segmented control to switch channel; preserves existing `selectedSmsLog` detail dialog wiring.
-
-### `src/components/comms/DirectSendPanel.jsx`
-- No structural change — it already supports Email / SMS / WhatsApp / In-App for individual sends and Email/SMS/WhatsApp for bulk non-member sends.
-- Minor: ensure the panel is the canonical entry for composing (no other code paths open the bulk SMS/WA dialogs from Communications).
-
-### Cleanup
-- `EmailAlertForm` import + usage removed from `Communications.jsx`. Leave the component file in place (still used elsewhere if applicable; otherwise leave for now to avoid scope creep — deletion not required).
-- Unit-leader Email composing previously available via `EmailAlertForm` in the Email tab: unit leaders already qualify for `canManageComms`, so they can use Direct Send. No new gating needed.
-
-## Out of Scope
-- Renaming "Direct Send" itself.
-- Any change to send pipelines, templates, quotas, or RLS.
-- Deleting `EmailAlertForm.jsx`, `SMSDialog`, or `WhatsAppDialog` files (they're still mounted/used).
+### Out of scope
+- No DB/schema/edge-function changes; reuse `send-transactional-email`, `send-sms`, `notifications` table, and the `admin-direct-message` template.
+- No changes to History, Announcements, or member-side views.
+- No quota or rate-limit changes.
