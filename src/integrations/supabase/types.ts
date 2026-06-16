@@ -1010,6 +1010,59 @@ export type Database = {
           },
         ]
       }
+      contacts: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          email: string | null
+          first_name: string | null
+          id: string
+          last_name: string | null
+          notes: string | null
+          phone: string | null
+          source: string
+          tags: string[]
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          email?: string | null
+          first_name?: string | null
+          id?: string
+          last_name?: string | null
+          notes?: string | null
+          phone?: string | null
+          source?: string
+          tags?: string[]
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          email?: string | null
+          first_name?: string | null
+          id?: string
+          last_name?: string | null
+          notes?: string | null
+          phone?: string | null
+          source?: string
+          tags?: string[]
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contacts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       course_registrations: {
         Row: {
           course_id: string
@@ -3487,6 +3540,7 @@ export type Database = {
       }
       scheduled_communications: {
         Row: {
+          audience_source: string | null
           channel: string
           created_at: string | null
           created_by: string | null
@@ -3501,6 +3555,7 @@ export type Database = {
           tenant_id: string
         }
         Insert: {
+          audience_source?: string | null
           channel: string
           created_at?: string | null
           created_by?: string | null
@@ -3515,6 +3570,7 @@ export type Database = {
           tenant_id: string
         }
         Update: {
+          audience_source?: string | null
           channel?: string
           created_at?: string | null
           created_by?: string | null
