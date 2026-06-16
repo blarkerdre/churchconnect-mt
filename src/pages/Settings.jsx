@@ -25,9 +25,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 import {
   Settings as SettingsIcon, Plus, Pencil, Trash2, Loader2,
-  Users, Church, CalendarDays, TrendingUp, Heart, Globe, Bell, Award, Link2, ShieldAlert, Upload, X, ImageIcon, Mail, Phone, CreditCard, Send, Key, ChevronDown, SlidersHorizontal, Baby, Package
+  Users, Church, CalendarDays, TrendingUp, Heart, Globe, Bell, Award, Link2, ShieldAlert, Upload, X, ImageIcon, Mail, Phone, CreditCard, Send, Key, ChevronDown, SlidersHorizontal, Baby
 } from "lucide-react";
-
 
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -49,8 +48,6 @@ import ApiKeysSection from "@/components/settings/ApiKeysSection";
 import TenantFeaturesSection from "@/components/settings/TenantFeaturesSection";
 
 import DashboardBannerSettings from "@/components/settings/DashboardBannerSettings";
-import InventorySettingsSection from "@/components/settings/InventorySettingsSection";
-
 
 /* ─── Notification Preferences section ─── */
 function NotificationPreferencesSection() {
@@ -1614,11 +1611,7 @@ export default function Settings() {
           <TabsTrigger value="training" className="gap-1.5 text-xs"><TrendingUp className="h-3.5 w-3.5" /><span className="hidden sm:inline"> Training</span></TabsTrigger>
           <TabsTrigger value="pastoral" className="gap-1.5 text-xs"><Heart className="h-3.5 w-3.5" /><span className="hidden sm:inline"> Pastoral</span></TabsTrigger>
           <TabsTrigger value="children" className="gap-1.5 text-xs"><Baby className="h-3.5 w-3.5" /><span className="hidden sm:inline"> Children</span></TabsTrigger>
-          {canManageTenant && (
-            <TabsTrigger value="inventory" className="gap-1.5 text-xs"><Package className="h-3.5 w-3.5" /><span className="hidden sm:inline"> Inventory</span></TabsTrigger>
-          )}
           <TabsTrigger value="followup-templates" className="gap-1.5 text-xs"><Send className="h-3.5 w-3.5" /><span className="hidden sm:inline"> Follow-ups</span></TabsTrigger>
-
           {canManageTenant && (
             <TabsTrigger value="features" className="gap-1.5 text-xs"><SlidersHorizontal className="h-3.5 w-3.5" /><span className="hidden sm:inline"> Features</span></TabsTrigger>
           )}
@@ -1722,16 +1715,9 @@ export default function Settings() {
           />
         </TabsContent>
 
-        {canManageTenant && (
-          <TabsContent value="inventory">
-            <InventorySettingsSection />
-          </TabsContent>
-        )}
-
         <TabsContent value="followup-templates">
           <FollowupTemplatesSection />
         </TabsContent>
-
 
         {canManageTenant && (
           <TabsContent value="features">

@@ -117,7 +117,7 @@ export default function Inventory() {
   const [inspectDialog, setInspectDialog] = useState({ open: false, item: null });
   const [historyDialog, setHistoryDialog] = useState({ open: false, item: null });
   const [catDialog, setCatDialog] = useState({ open: false, cat: null });
-  
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const refresh = () => {
     queryClient.invalidateQueries({ queryKey: ["inv-items", tenantId] });
@@ -149,17 +149,14 @@ export default function Inventory() {
         </div>
         <div className="flex gap-2">
           {isAdmin && (
-            <Button variant="outline" size="sm" asChild>
-              <a href={tenantSlug ? `/t/${tenantSlug}/settings` : "/settings"}>
-                <SettingsIcon className="h-4 w-4 mr-1" /> Settings
-              </a>
+            <Button variant="outline" size="sm" onClick={() => setSettingsOpen(true)}>
+              <SettingsIcon className="h-4 w-4 mr-1" /> Settings
             </Button>
           )}
           <Button size="sm" onClick={() => setItemDialog({ open: true, item: null })}>
             <Plus className="h-4 w-4 mr-1" /> Add Item
           </Button>
         </div>
-
       </div>
 
       <Tabs defaultValue="items" className="w-full">
@@ -350,10 +347,15 @@ export default function Inventory() {
         onSaved={refresh}
       />
 
+      <SettingsDialog
+        open={settingsOpen}
+        onOpenChange={setSettingsOpen}
+        currentUnit={officeUnit}
+        onSaved={() => queryClient.invalidateQueries({ queryKey: ["inv-church-office-unit", tenantId] })}
+      />
     </div>
   );
 }
-
 
 function CategoryDialog({ open, onOpenChange, category, onSaved }) {
   const { tenantId, withTenant } = useTenantQuery();
@@ -417,3 +419,67 @@ function CategoryDialog({ open, onOpenChange, category, onSaved }) {
   );
 }
 
+function SettingsDialog({ open, onOpenChange, currentUnit, onSaved }) {
+  const { tenantId } = useTenantQuery();
+  const { user } = useAuth();
+  const [unit, setUnit] = useState(currentUnit || "Church Office");
+  const [saving, setSaving] = useState(false);
+
+  // List units to choose from
+  const { data: units = [] } = useQuery({
+    queryKey: ["church-units-active", tenantId],
+    enabled: open && !!tenantId,
+    queryFn: async () => {
+      const { data } = await supabase.from("church_units").select("name").eq("tenant_id", tenantId).eq("is_active", true).order("name");
+      return (data || []).map((r) => r.name);
+    },
+  });
+
+  React.useEffect(() => { if (open) setUnit(currentUnit || "Church Office"); }, [open, currentUnit]);
+
+  const save = async () => {
+    setSaving(true);
+    try {
+      const { error } = await supabase.from("app_settings").upsert({
+        key: "inventory.church_office_unit",
+        value: unit,
+        tenant_id: tenantId,
+        updated_by: user?.id,
+      }, { onConflict: "key,tenant_id" });
+      if (error) throw error;
+      toast.success("Settings saved");
+      onSaved?.();
+      onOpenChange(false);
+    } catch (e) { toast.error(e.message); }
+    finally { setSaving(false); }
+  };
+
+  const all = units.includes(unit) ? units : [unit, ...units];
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md">
+        <TenantDialogHeader>
+          <SettingsIcon className="h-4 w-4" />
+          Inventory Settings
+        </TenantDialogHeader>
+        <div className="space-y-3">
+          <div>
+            <Label>Church Office unit</Label>
+            <Select value={unit} onValueChange={setUnit}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {all.map((u) => <SelectItem key={u} value={u}>{u}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground mt-1">Members of this unit can manage inventory and run inspections (in addition to Admins).</p>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+          <Button onClick={save} disabled={saving}>{saving ? "Saving..." : "Save"}</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
