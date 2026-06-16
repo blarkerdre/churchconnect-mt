@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogFooter } from "@/components/ui/dialog";
 import TenantDialogHeader from "@/components/ui/TenantDialogHeader";
 import {
-  Package, Plus, ShieldCheck, AlertTriangle, History, Settings as SettingsIcon,
+  Package, Plus, ShieldCheck, AlertTriangle, History,
   Pencil, Trash2, Tag,
 } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -45,25 +45,12 @@ function dueStatus(item) {
 
 export default function Inventory() {
   const { tenantId, withTenant } = useTenantQuery();
-  const { isAdmin, roles } = useAuth();
   const { tenantSlug } = useParams();
   const queryClient = useQueryClient();
-  const isSuperAdmin = roles.includes("super_admin");
 
-  // Read configured Church Office unit name
-  const { data: unitSetting } = useQuery({
-    queryKey: ["inv-church-office-unit", tenantId],
-    enabled: !!tenantId,
-    queryFn: async () => {
-      const { data } = await supabase.from("app_settings")
-        .select("value").eq("key", "inventory.church_office_unit").eq("tenant_id", tenantId).maybeSingle();
-      return (data?.value && typeof data.value === "string") ? data.value : "Church Office";
-    },
-  });
-  const officeUnit = unitSetting || "Church Office";
-  const { isMemberOfUnit: isOfficeMember, isLoading: officeLoading } = useUnitMembership(officeUnit);
+  const { isMemberOfUnit: isOfficeMember, isLoading: officeLoading } = useUnitMembership("Church Office");
 
-  const canManage = isAdmin || isSuperAdmin || isOfficeMember;
+  const canManage = isOfficeMember;
 
   // Categories
   const { data: categories = [] } = useQuery({
@@ -117,7 +104,6 @@ export default function Inventory() {
   const [inspectDialog, setInspectDialog] = useState({ open: false, item: null });
   const [historyDialog, setHistoryDialog] = useState({ open: false, item: null });
   const [catDialog, setCatDialog] = useState({ open: false, cat: null });
-  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const refresh = () => {
     queryClient.invalidateQueries({ queryKey: ["inv-items", tenantId] });
@@ -148,11 +134,6 @@ export default function Inventory() {
           <p className="text-sm text-muted-foreground">Manage church assets and health & safety inspections.</p>
         </div>
         <div className="flex gap-2">
-          {isAdmin && (
-            <Button variant="outline" size="sm" onClick={() => setSettingsOpen(true)}>
-              <SettingsIcon className="h-4 w-4 mr-1" /> Settings
-            </Button>
-          )}
           <Button size="sm" onClick={() => setItemDialog({ open: true, item: null })}>
             <Plus className="h-4 w-4 mr-1" /> Add Item
           </Button>
@@ -346,13 +327,6 @@ export default function Inventory() {
         category={catDialog.cat}
         onSaved={refresh}
       />
-
-      <SettingsDialog
-        open={settingsOpen}
-        onOpenChange={setSettingsOpen}
-        currentUnit={officeUnit}
-        onSaved={() => queryClient.invalidateQueries({ queryKey: ["inv-church-office-unit", tenantId] })}
-      />
     </div>
   );
 }
@@ -419,67 +393,3 @@ function CategoryDialog({ open, onOpenChange, category, onSaved }) {
   );
 }
 
-function SettingsDialog({ open, onOpenChange, currentUnit, onSaved }) {
-  const { tenantId } = useTenantQuery();
-  const { user } = useAuth();
-  const [unit, setUnit] = useState(currentUnit || "Church Office");
-  const [saving, setSaving] = useState(false);
-
-  // List units to choose from
-  const { data: units = [] } = useQuery({
-    queryKey: ["church-units-active", tenantId],
-    enabled: open && !!tenantId,
-    queryFn: async () => {
-      const { data } = await supabase.from("church_units").select("name").eq("tenant_id", tenantId).eq("is_active", true).order("name");
-      return (data || []).map((r) => r.name);
-    },
-  });
-
-  React.useEffect(() => { if (open) setUnit(currentUnit || "Church Office"); }, [open, currentUnit]);
-
-  const save = async () => {
-    setSaving(true);
-    try {
-      const { error } = await supabase.from("app_settings").upsert({
-        key: "inventory.church_office_unit",
-        value: unit,
-        tenant_id: tenantId,
-        updated_by: user?.id,
-      }, { onConflict: "key,tenant_id" });
-      if (error) throw error;
-      toast.success("Settings saved");
-      onSaved?.();
-      onOpenChange(false);
-    } catch (e) { toast.error(e.message); }
-    finally { setSaving(false); }
-  };
-
-  const all = units.includes(unit) ? units : [unit, ...units];
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
-        <TenantDialogHeader>
-          <SettingsIcon className="h-4 w-4" />
-          Inventory Settings
-        </TenantDialogHeader>
-        <div className="space-y-3">
-          <div>
-            <Label>Church Office unit</Label>
-            <Select value={unit} onValueChange={setUnit}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {all.map((u) => <SelectItem key={u} value={u}>{u}</SelectItem>)}
-              </SelectContent>
-            </Select>
-            <p className="text-xs text-muted-foreground mt-1">Members of this unit can manage inventory and run inspections (in addition to Admins).</p>
-          </div>
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={save} disabled={saving}>{saving ? "Saving..." : "Save"}</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
