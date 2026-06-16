@@ -42,9 +42,23 @@ Deno.serve(async (req) => {
     body = {};
   }
 
-  // Authorize: either pg_cron with service-role bearer, OR an admin JWT scoped to the tenant being acted on
+  // Authorize: either pg_cron with service-role bearer (env match, or any JWT with
+  // role=service_role — covers legacy long JWT stored in Vault while env is the new sb_secret_*),
+  // OR an admin JWT scoped to the tenant being acted on.
   const bearer = (req.headers.get("Authorization") ?? "").replace("Bearer ", "");
   let authorized = bearer === serviceKey;
+
+  if (!authorized && bearer) {
+    try {
+      const parts = bearer.split(".");
+      if (parts.length === 3) {
+        const payload = JSON.parse(
+          atob(parts[1].replace(/-/g, "+").replace(/_/g, "/")),
+        );
+        if (payload?.role === "service_role") authorized = true;
+      }
+    } catch (_e) { /* not a JWT */ }
+  }
 
   if (!authorized && bearer) {
     try {
