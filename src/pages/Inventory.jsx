@@ -17,6 +17,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 import { useTenantQuery } from "@/hooks/useTenantQuery";
 import { useUnitMembership } from "@/hooks/useUnitMembership";
+import { useAuth } from "@/contexts/AuthContext";
 import { Navigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { format, formatDistanceToNowStrict } from "date-fns";
@@ -49,8 +50,9 @@ export default function Inventory() {
   const queryClient = useQueryClient();
 
   const { isMemberOfUnit: isOfficeMember, isLoading: officeLoading } = useUnitMembership("Church Office");
+  const { isAdmin, isSuperAdmin } = useAuth();
 
-  const canManage = isOfficeMember;
+  const canManage = isAdmin || isSuperAdmin || isOfficeMember;
 
   // Categories
   const { data: categories = [] } = useQuery({
