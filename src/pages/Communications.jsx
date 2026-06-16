@@ -542,6 +542,11 @@ export default function Communications() {
                 )}
               </TabsTrigger>
             )}
+            {isAdmin && (
+              <TabsTrigger value="direct" className="gap-1.5 text-xs">
+                <Send className="h-3.5 w-3.5" /> Direct Send
+              </TabsTrigger>
+            )}
             {emailEnabled && canManageComms && (
               <TabsTrigger value="email" className="gap-1.5 text-xs">
                 <Mail className="h-3.5 w-3.5" /> Email
