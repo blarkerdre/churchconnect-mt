@@ -507,10 +507,6 @@ export default function Communications() {
           </div>
           {canManage(a) && canManageComms && (
             <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
-              <Button variant="ghost" size="icon" className="h-8 w-8" title="Send as SMS"
-                onClick={() => { setSmsAnnouncement(a); setSmsOpen(true); }}>
-                <MessageSquare className="h-3.5 w-3.5 text-primary" />
-              </Button>
               <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEdit(a)}>
                 <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
               </Button>
