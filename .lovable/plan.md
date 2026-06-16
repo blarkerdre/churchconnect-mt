@@ -1,26 +1,34 @@
-## Fix: Birthday messages not sending (Tola Rotibi + anyone else with a birthday today)
+## Goal
+Ensure every Inventory and Settings (`app_settings`) read/write is strictly tenant-isolated, matching the Multi-Tenancy Security Guards rule (explicit `.eq("tenant_id", tenantId)` on all queries and updates).
 
-### Root cause
-The hourly cron `send-birthday-messages-hourly` calls `send-birthday-messages` with the Vault-stored `email_queue_service_role_key`. That stored value no longer matches the project's current `SUPABASE_SERVICE_ROLE_KEY`, so every invocation returns 403 before any tenant is processed. No log row is written, no email/in-app/SMS goes out.
+## Findings from audit
 
-### Steps
+**Schema — already correct, no migration needed:**
+- `app_settings`, `inventory_categories`, `inventory_items`, `inventory_checklists`, `inventory_inspections`, `inventory_inspection_responses` all have `tenant_id NOT NULL` with FK to `tenants`.
+- Unique constraints are tenant-scoped: `app_settings(key, tenant_id)`, `inventory_categories(tenant_id, name)`.
+- RLS policies on all six tables already gate on `tenant_id` via `is_inventory_manager(auth.uid(), tenant_id)` / `is_admin(...)` / `user_has_tenant_access(tenant_id)`.
 
-1. **Refresh the Vault service-role key**
-   - Run `email_domain--setup_email_infra` (idempotent). It re-syncs the Vault secret `email_queue_service_role_key` to the current service-role key so the cron's bearer token matches again.
+**Code — mostly tenant-scoped already (Inventory.jsx, InventoryItemDialog, InspectionDialog, InspectionHistoryDialog, useAppSetting, useConsentText, ConsentPrivacySection, ExternalLinksSection, ServiceRosterDialog, useAltarMinistry, PastoralCare, ExamManagement, Settings.jsx, IssueCertificateDialog).**
 
-2. **Add a clear warning log on bearer mismatch in `send-birthday-messages`**
-   - Before returning 403, `console.warn(...)` with: function name, that the incoming bearer did not match `SUPABASE_SERVICE_ROLE_KEY`, length of received token (not the value), and a hint to re-run email infra setup.
-   - This makes future silent 403s visible in function logs instead of only in `net._http_response`.
-   - Redeploy `send-birthday-messages`.
+Gaps to fix:
 
-3. **Manually resend today's birthday messages for WCI Cardiff**
-   - Invoke `send-birthday-messages` with `{ tenant_id: <WCI Cardiff> }` using the (now-correct) service-role bearer.
-   - This greets Tola Rotibi and anyone else whose DOB is 16 June, across in-app + email + SMS per tenant settings.
+1. `src/components/settings/DashboardBannerSettings.jsx` — the `update` branch (lines 41-45) targets only `.eq("id", existing.id)` with no `tenant_id` guard. Refactor the whole save to a single `upsert(withTenant({...}), { onConflict: "key,tenant_id" })`, matching the pattern used elsewhere.
 
-4. **Verify**
-   - Check `net._http_response` for the next hourly tick → expect 200.
-   - Check `birthday_message_log` → expect `sent` rows for Tola on enabled channels (email + in_app; SMS skipped — no phone).
-   - Confirm Tola's inbox / in-app bell shows the greeting.
+2. `src/components/dashboard/DashboardBanner.jsx` and `src/hooks/useAppSetting.jsx` — currently fall back to a global row when `tenantId` is falsy (`if (tenantId) q = q.eq(...)`). Inside an authenticated tenant route this is moot (RLS blocks it), but tighten the read so it returns `fallback`/empty when `tenantId` is unknown instead of issuing a non-scoped query. Set `enabled: !!tenantId` on the React Query and require `tenantId` before issuing the request.
 
-### Out of scope
-No changes to message templates, scheduling cadence, channel logic, or any other cron.
+3. Sweep verification: re-run `rg "from\\(\"(app_settings|inventory_)" src` after edits and confirm every `.update`/`.delete` includes `.eq("tenant_id", tenantId)` and every `.insert`/`.upsert` goes through `withTenant(...)`.
+
+## Out of scope
+- No DB schema changes (column already exists everywhere).
+- No RLS policy changes (already correct).
+- No UI/visual changes.
+- No changes to other modules (only Inventory + app_settings code paths).
+
+## Files to edit
+- `src/components/settings/DashboardBannerSettings.jsx` — switch to tenant-scoped upsert.
+- `src/components/dashboard/DashboardBanner.jsx` — gate query on `!!tenantId`.
+- `src/hooks/useAppSetting.jsx` — gate query on `!!tenantId`, drop the "global fallback" branch.
+
+## Verification
+- Manual: confirm Inventory page loads only this tenant's categories/items, banner slideshow saves once and reloads per tenant, and settings list sections (training types, service types, etc.) remain tenant-isolated.
+- Code grep: no remaining `app_settings`/`inventory_*` mutation without an explicit `tenant_id` guard.
