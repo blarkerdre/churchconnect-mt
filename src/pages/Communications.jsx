@@ -522,7 +522,7 @@ export default function Communications() {
 
   return (
     <div className="space-y-6">
-      <Tabs defaultValue={announcementsEnabled ? "announcements" : ((emailEnabled && canManageComms) ? "email" : (smsEnabled ? "sms" : "whatsapp"))} className="space-y-4">
+      <Tabs defaultValue={announcementsEnabled ? "announcements" : (isAdmin ? "direct" : "messages")} className="space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <TabsList className="flex flex-nowrap h-auto gap-1 overflow-x-auto w-full justify-start">
             {announcementsEnabled && (
