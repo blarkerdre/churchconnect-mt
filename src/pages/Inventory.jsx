@@ -24,6 +24,7 @@ import { format, formatDistanceToNowStrict } from "date-fns";
 import InventoryItemDialog from "@/components/inventory/InventoryItemDialog";
 import InspectionDialog from "@/components/inventory/InspectionDialog";
 import InspectionHistoryDialog from "@/components/inventory/InspectionHistoryDialog";
+import PrintReportButton from "@/components/PrintReportButton";
 import { logAudit } from "@/lib/audit";
 
 const conditionColor = {
@@ -50,14 +51,16 @@ export default function Inventory() {
   const queryClient = useQueryClient();
 
   const { isMemberOfUnit: isOfficeMember, isLoading: officeLoading } = useUnitMembership("Church Office");
-  const { isAdmin, isSuperAdmin } = useAuth();
+  const { isAdmin, isSuperAdmin, leaderUnits = [] } = useAuth();
 
-  const canManage = isAdmin || isSuperAdmin || isOfficeMember;
+  const isOfficeLeader = leaderUnits.some((u) => String(u).toLowerCase() === "church office");
+  const canAccess = isAdmin || isSuperAdmin || isOfficeMember || isOfficeLeader;
+  const canManage = isAdmin || isSuperAdmin || isOfficeLeader;
 
   // Categories
   const { data: categories = [] } = useQuery({
     queryKey: ["inv-categories", tenantId],
-    enabled: !!tenantId && canManage,
+    enabled: !!tenantId && canAccess,
     queryFn: async () => {
       const { data, error } = await supabase.from("inventory_categories")
         .select("*").eq("tenant_id", tenantId).order("name");
@@ -71,7 +74,7 @@ export default function Inventory() {
   const [categoryFilter, setCategoryFilter] = useState("all");
   const { data: items = [], isLoading: itemsLoading } = useQuery({
     queryKey: ["inv-items", tenantId],
-    enabled: !!tenantId && canManage,
+    enabled: !!tenantId && canAccess,
     queryFn: async () => {
       const { data, error } = await supabase.from("inventory_items")
         .select("*").eq("tenant_id", tenantId).order("name");
@@ -122,9 +125,33 @@ export default function Inventory() {
   };
 
   if (officeLoading) return <div className="p-6 text-muted-foreground">Loading...</div>;
-  if (!canManage) {
+  if (!canAccess) {
     return <Navigate to={tenantSlug ? `/t/${tenantSlug}` : "/"} replace />;
   }
+
+  const buildPrintRows = () => {
+    const catName = (id) => categories.find((c) => c.id === id)?.name || "Uncategorised";
+    const fmt = (d) => (d ? format(new Date(d), "dd MMM yyyy") : "—");
+    const sorted = [...items].sort((a, b) => {
+      const ca = catName(a.category_id).localeCompare(catName(b.category_id));
+      return ca !== 0 ? ca : (a.name || "").localeCompare(b.name || "");
+    });
+    const rows = sorted.map((i) => [
+      catName(i.category_id),
+      i.name,
+      i.location || "—",
+      i.serial_number || "—",
+      (i.condition || "").replace("_", " "),
+      i.requires_inspection ? "Yes" : "No",
+      fmt(i.last_inspected_at),
+      fmt(i.next_due_at),
+    ]);
+    return {
+      title: "Inventory Report",
+      headers: ["Category", "Item", "Location", "Serial", "Condition", "H&S", "Last Inspected", "Next Due"],
+      rows,
+    };
+  };
 
   return (
     <div className="p-4 sm:p-6 space-y-4 max-w-7xl mx-auto">
@@ -135,11 +162,14 @@ export default function Inventory() {
           </h1>
           <p className="text-sm text-muted-foreground">Manage church assets and health & safety inspections.</p>
         </div>
-        <div className="flex gap-2">
-          <Button size="sm" onClick={() => setItemDialog({ open: true, item: null })}>
-            <Plus className="h-4 w-4 mr-1" /> Add Item
-          </Button>
-        </div>
+        {canManage && (
+          <div className="flex gap-2 flex-wrap">
+            <PrintReportButton buildRows={buildPrintRows} label="Generate Report" />
+            <Button size="sm" onClick={() => setItemDialog({ open: true, item: null })}>
+              <Plus className="h-4 w-4 mr-1" /> Add Item
+            </Button>
+          </div>
+        )}
       </div>
 
       <Tabs defaultValue="items" className="w-full">
@@ -167,7 +197,7 @@ export default function Inventory() {
           {itemsLoading ? (
             <p className="text-sm text-muted-foreground">Loading...</p>
           ) : filteredItems.length === 0 ? (
-            <Card><CardContent className="p-8 text-center text-muted-foreground">No items yet. Click "Add Item" to begin.</CardContent></Card>
+            <Card><CardContent className="p-8 text-center text-muted-foreground">{canManage ? 'No items yet. Click "Add Item" to begin.' : "No inventory items have been added yet."}</CardContent></Card>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
               {filteredItems.map((item) => {
@@ -209,12 +239,16 @@ export default function Inventory() {
                         <Button size="sm" variant="ghost" onClick={() => setHistoryDialog({ open: true, item })}>
                           <History className="h-3.5 w-3.5 mr-1" /> History
                         </Button>
-                        <Button size="sm" variant="ghost" onClick={() => setItemDialog({ open: true, item })}>
-                          <Pencil className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button size="sm" variant="ghost" onClick={() => handleDeleteItem(item)}>
-                          <Trash2 className="h-3.5 w-3.5 text-destructive" />
-                        </Button>
+                        {canManage && (
+                          <>
+                            <Button size="sm" variant="ghost" onClick={() => setItemDialog({ open: true, item })}>
+                              <Pencil className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button size="sm" variant="ghost" onClick={() => handleDeleteItem(item)}>
+                              <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                            </Button>
+                          </>
+                        )}
                       </div>
                     </CardContent>
                   </Card>
@@ -261,11 +295,13 @@ export default function Inventory() {
 
         {/* Categories */}
         <TabsContent value="categories" className="space-y-3">
-          <div>
-            <Button size="sm" onClick={() => setCatDialog({ open: true, cat: null })}>
-              <Plus className="h-4 w-4 mr-1" /> Add Category
-            </Button>
-          </div>
+          {canManage && (
+            <div>
+              <Button size="sm" onClick={() => setCatDialog({ open: true, cat: null })}>
+                <Plus className="h-4 w-4 mr-1" /> Add Category
+              </Button>
+            </div>
+          )}
           {categories.length === 0 ? (
             <Card><CardContent className="p-8 text-center text-muted-foreground">No categories yet.</CardContent></Card>
           ) : (
@@ -280,20 +316,22 @@ export default function Inventory() {
                       </div>
                       {c.description && <div className="text-xs text-muted-foreground mt-1">{c.description}</div>}
                     </div>
-                    <div className="flex gap-1">
-                      <Button size="sm" variant="ghost" onClick={() => setCatDialog({ open: true, cat: c })}>
-                        <Pencil className="h-3.5 w-3.5" />
-                      </Button>
-                      <Button size="sm" variant="ghost" onClick={async () => {
-                        if (!confirm(`Delete category "${c.name}"?`)) return;
-                        const { error } = await supabase.from("inventory_categories").delete().eq("id", c.id).eq("tenant_id", tenantId);
-                        if (error) { toast.error(error.message); return; }
-                        toast.success("Category deleted");
-                        refresh();
-                      }}>
-                        <Trash2 className="h-3.5 w-3.5 text-destructive" />
-                      </Button>
-                    </div>
+                    {canManage && (
+                      <div className="flex gap-1">
+                        <Button size="sm" variant="ghost" onClick={() => setCatDialog({ open: true, cat: c })}>
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button size="sm" variant="ghost" onClick={async () => {
+                          if (!confirm(`Delete category "${c.name}"?`)) return;
+                          const { error } = await supabase.from("inventory_categories").delete().eq("id", c.id).eq("tenant_id", tenantId);
+                          if (error) { toast.error(error.message); return; }
+                          toast.success("Category deleted");
+                          refresh();
+                        }}>
+                          <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                        </Button>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               ))}
