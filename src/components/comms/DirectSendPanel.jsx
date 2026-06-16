@@ -11,13 +11,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Mail, MessageSquare, Bell, Send, Loader2, User, UserPlus, Users, Search, UsersRound } from "lucide-react";
+import { Mail, MessageSquare, Bell, Send, Loader2, User, UserPlus, Users, Search } from "lucide-react";
 import { z } from "zod";
 import { normalizePhone } from "@/lib/phone-utils";
 import { logAudit } from "@/lib/audit";
 import ContactsManager from "./ContactsManager";
 import InvalidRecipientsPreview from "@/components/sms/InvalidRecipientsPreview";
-import AudienceFilter from "./AudienceFilter";
 
 const WhatsAppIcon = ({ className }) => (
   <svg className={className} viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347"/></svg>
@@ -435,186 +434,19 @@ function BulkNonMembers({ tenantId, churchName, senderName }) {
   );
 }
 
-function BulkMembers({ tenantId, churchName, senderName }) {
-  const { toast } = useToast();
-  const [filters, setFilters] = useState({ status: "all", unit: "all", gender: "all", wsfCentreId: "all", dateFrom: null, dateTo: null, account: "all" });
-  const [channel, setChannel] = useState("email");
-  const [subject, setSubject] = useState("");
-  const [message, setMessage] = useState("");
-  const [sending, setSending] = useState(false);
-
-  const { data: members = [] } = useQuery({
-    queryKey: ["bulk-members", tenantId, filters],
-    queryFn: async () => {
-      let q = supabase
-        .from("members")
-        .select("id, user_id, first_name, last_name, email, phone")
-        .eq("tenant_id", tenantId);
-      if (filters.status !== "all") q = q.eq("membership_status", filters.status);
-      if (filters.unit !== "all") q = q.ilike("church_unit", `%${filters.unit}%`);
-      if (filters.gender !== "all") q = q.eq("gender", filters.gender);
-      if (filters.wsfCentreId !== "all") q = q.eq("wsf_centre_id", filters.wsfCentreId);
-      if (filters.dateFrom) q = q.gte("created_at", filters.dateFrom.toISOString());
-      if (filters.dateTo) {
-        const end = new Date(filters.dateTo);
-        end.setHours(23, 59, 59, 999);
-        q = q.lte("created_at", end.toISOString());
-      }
-      if (filters.account === "linked") q = q.not("user_id", "is", null);
-      if (filters.account === "unlinked") q = q.is("user_id", null);
-      const { data, error } = await q.limit(5000);
-      if (error) throw error;
-      return data || [];
-    },
-    enabled: !!tenantId,
-  });
-
-  const { emailRecipients, phoneValid, phoneInvalid, inAppRecipients } = useMemo(() => {
-    const er = members.filter(m => m.email && m.email.trim());
-    const pv = []; const pi = [];
-    for (const m of members) {
-      if (!m.phone) continue;
-      const n = normalizePhone(m.phone);
-      if (n) pv.push({ ...m, phone: n });
-      else pi.push({ first_name: m.first_name, last_name: m.last_name, rawPhone: m.phone });
-    }
-    const ia = members.filter(m => m.user_id);
-    return { emailRecipients: er, phoneValid: pv, phoneInvalid: pi, inAppRecipients: ia };
-  }, [members]);
-
-  const targetCount = channel === "email" ? emailRecipients.length
-    : channel === "in_app" ? inAppRecipients.length
-    : phoneValid.length;
-
-  const handleSend = async () => {
-    if (!message.trim()) { toast({ title: "Message required", variant: "destructive" }); return; }
-    if ((channel === "email" || channel === "in_app") && !subject.trim()) {
-      toast({ title: channel === "email" ? "Subject required" : "Title required", variant: "destructive" }); return;
-    }
-    if (targetCount === 0) { toast({ title: "No valid recipients", variant: "destructive" }); return; }
-
-    setSending(true);
-    let sent = 0; let failed = 0;
-    try {
-      if (channel === "email") {
-        for (const r of emailRecipients) {
-          try {
-            const { error } = await supabase.functions.invoke("send-transactional-email", {
-              body: {
-                templateName: "admin-direct-message",
-                recipientEmail: r.email,
-                tenant_id: tenantId,
-                idempotencyKey: `bulkmem-${tenantId}-${Date.now()}-${r.id}`,
-                templateData: {
-                  recipientName: r.first_name || "Friend",
-                  churchName,
-                  subject: subject.trim(),
-                  body: message.trim(),
-                  senderName,
-                },
-              },
-            });
-            if (error) throw error;
-            sent++;
-          } catch { failed++; }
-        }
-      } else if (channel === "sms" || channel === "whatsapp") {
-        const { data: sessionData } = await supabase.auth.getSession();
-        const token = sessionData?.session?.access_token;
-        const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-sms`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-          body: JSON.stringify({
-            recipients: phoneValid.map(r => ({ phone: r.phone, member_id: r.id })),
-            message: message.trim(),
-            sms_type: "bulk_member",
-            reference_id: null,
-            channel,
-            tenant_id: tenantId,
-          }),
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || "Send failed");
-        sent = data.sent || 0;
-        failed = data.failed || 0;
-      } else if (channel === "in_app") {
-        const rows = inAppRecipients.map(r => ({
-          user_id: r.user_id,
-          tenant_id: tenantId,
-          title: subject.trim() || "New message",
-          message: message.trim(),
-          type: "admin_message",
-          reference_type: "direct",
-        }));
-        // chunked insert
-        const CHUNK = 500;
-        for (let i = 0; i < rows.length; i += CHUNK) {
-          const { error } = await supabase.from("notifications").insert(rows.slice(i, i + CHUNK));
-          if (error) failed += Math.min(CHUNK, rows.length - i);
-          else sent += Math.min(CHUNK, rows.length - i);
-        }
-      }
-      await logAudit("direct_message_sent", "members", null, { mode: "bulk_members", channel, filters, sent, failed }, tenantId);
-      toast({ title: "Send complete", description: `${sent} sent${failed ? `, ${failed} failed` : ""}.` });
-      setMessage(""); setSubject("");
-    } catch (e) {
-      toast({ title: "Send failed", description: e.message, variant: "destructive" });
-    } finally {
-      setSending(false);
-    }
-  };
-
-  return (
-    <div className="space-y-4">
-      <AudienceFilter filters={filters} onChange={setFilters} />
-
-      <div>
-        <label className="text-sm font-medium block mb-1">Channel</label>
-        <Select value={channel} onValueChange={setChannel}>
-          <SelectTrigger><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="email">Email</SelectItem>
-            <SelectItem value="sms">SMS</SelectItem>
-            <SelectItem value="whatsapp">WhatsApp</SelectItem>
-            <SelectItem value="in_app">In-App</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
-      {(channel === "email" || channel === "in_app") && (
-        <Input placeholder={channel === "email" ? "Subject" : "Title"} value={subject} onChange={e => setSubject(e.target.value)} maxLength={200} />
-      )}
-      <Textarea rows={5} placeholder="Message..." value={message} onChange={e => setMessage(e.target.value)} maxLength={4000} />
-
-      <div className="flex items-center justify-between text-sm">
-        <span className="text-muted-foreground">Recipients ({channel}):</span>
-        <Badge className="bg-primary/10 text-primary border-0">{targetCount}</Badge>
-      </div>
-
-      {(channel === "sms" || channel === "whatsapp") && <InvalidRecipientsPreview invalidRecipients={phoneInvalid} />}
-
-      <Button onClick={handleSend} disabled={sending || targetCount === 0} className="w-full">
-        {sending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Send className="h-4 w-4 mr-2" />}
-        Send to {targetCount} {targetCount === 1 ? "recipient" : "recipients"}
-      </Button>
-    </div>
-  );
-}
-
 export default function DirectSendPanel({ churchName, senderName }) {
   const { tenantId } = useTenantQuery();
   return (
     <Tabs defaultValue="individual" className="space-y-4">
-      <TabsList className="grid grid-cols-4">
+      <TabsList className="grid grid-cols-3">
         <TabsTrigger value="individual" className="gap-1.5 text-xs"><User className="h-3.5 w-3.5" /> Individual</TabsTrigger>
-        <TabsTrigger value="members" className="gap-1.5 text-xs"><UsersRound className="h-3.5 w-3.5" /> Bulk Members</TabsTrigger>
         <TabsTrigger value="bulk" className="gap-1.5 text-xs"><Users className="h-3.5 w-3.5" /> Bulk Non-Members</TabsTrigger>
         <TabsTrigger value="manage" className="gap-1.5 text-xs"><UserPlus className="h-3.5 w-3.5" /> Manage Contacts</TabsTrigger>
       </TabsList>
       <TabsContent value="individual"><IndividualSend tenantId={tenantId} churchName={churchName} senderName={senderName} /></TabsContent>
-      <TabsContent value="members"><BulkMembers tenantId={tenantId} churchName={churchName} senderName={senderName} /></TabsContent>
       <TabsContent value="bulk"><BulkNonMembers tenantId={tenantId} churchName={churchName} senderName={senderName} /></TabsContent>
       <TabsContent value="manage"><ContactsManager /></TabsContent>
     </Tabs>
   );
 }
+
