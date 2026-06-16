@@ -74,7 +74,7 @@ export default function Inventory() {
   const [categoryFilter, setCategoryFilter] = useState("all");
   const { data: items = [], isLoading: itemsLoading } = useQuery({
     queryKey: ["inv-items", tenantId],
-    enabled: !!tenantId && canManage,
+    enabled: !!tenantId && canAccess,
     queryFn: async () => {
       const { data, error } = await supabase.from("inventory_items")
         .select("*").eq("tenant_id", tenantId).order("name");
