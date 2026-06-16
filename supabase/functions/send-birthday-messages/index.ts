@@ -42,9 +42,23 @@ Deno.serve(async (req) => {
     body = {};
   }
 
-  // Authorize: either pg_cron with service-role bearer, OR an admin JWT scoped to the tenant being acted on
+  // Authorize: either pg_cron with service-role bearer (env match, or any JWT with
+  // role=service_role — covers legacy long JWT stored in Vault while env is the new sb_secret_*),
+  // OR an admin JWT scoped to the tenant being acted on.
   const bearer = (req.headers.get("Authorization") ?? "").replace("Bearer ", "");
   let authorized = bearer === serviceKey;
+
+  if (!authorized && bearer) {
+    try {
+      const parts = bearer.split(".");
+      if (parts.length === 3) {
+        const payload = JSON.parse(
+          atob(parts[1].replace(/-/g, "+").replace(/_/g, "/")),
+        );
+        if (payload?.role === "service_role") authorized = true;
+      }
+    } catch (_e) { /* not a JWT */ }
+  }
 
   if (!authorized && bearer) {
     try {
@@ -58,10 +72,21 @@ Deno.serve(async (req) => {
   }
 
   if (!authorized) {
+    console.warn(
+      "[send-birthday-messages] 403 Forbidden: bearer did not match SUPABASE_SERVICE_ROLE_KEY and no admin JWT matched.",
+      {
+        bearer_present: Boolean(bearer),
+        bearer_length: bearer ? bearer.length : 0,
+        service_key_length: serviceKey ? serviceKey.length : 0,
+        has_tenant_id: Boolean(body.tenant_id),
+        hint: "If invoked by pg_cron, the Vault secret 'email_queue_service_role_key' is stale. Re-run email infra setup to refresh it.",
+      },
+    );
     return new Response(JSON.stringify({ error: "Forbidden" }), {
       status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
+
 
   const isManual = Boolean(body.member_id);
   // Compute "today" in Europe/London so send_hour_local and birthday matching
