@@ -125,9 +125,33 @@ export default function Inventory() {
   };
 
   if (officeLoading) return <div className="p-6 text-muted-foreground">Loading...</div>;
-  if (!canManage) {
+  if (!canAccess) {
     return <Navigate to={tenantSlug ? `/t/${tenantSlug}` : "/"} replace />;
   }
+
+  const buildPrintRows = () => {
+    const catName = (id) => categories.find((c) => c.id === id)?.name || "Uncategorised";
+    const fmt = (d) => (d ? format(new Date(d), "dd MMM yyyy") : "—");
+    const sorted = [...items].sort((a, b) => {
+      const ca = catName(a.category_id).localeCompare(catName(b.category_id));
+      return ca !== 0 ? ca : (a.name || "").localeCompare(b.name || "");
+    });
+    const rows = sorted.map((i) => [
+      catName(i.category_id),
+      i.name,
+      i.location || "—",
+      i.serial_number || "—",
+      (i.condition || "").replace("_", " "),
+      i.requires_inspection ? "Yes" : "No",
+      fmt(i.last_inspected_at),
+      fmt(i.next_due_at),
+    ]);
+    return {
+      title: "Inventory Report",
+      headers: ["Category", "Item", "Location", "Serial", "Condition", "H&S", "Last Inspected", "Next Due"],
+      rows,
+    };
+  };
 
   return (
     <div className="p-4 sm:p-6 space-y-4 max-w-7xl mx-auto">
