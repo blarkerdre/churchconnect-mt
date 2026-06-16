@@ -316,20 +316,22 @@ export default function Inventory() {
                       </div>
                       {c.description && <div className="text-xs text-muted-foreground mt-1">{c.description}</div>}
                     </div>
-                    <div className="flex gap-1">
-                      <Button size="sm" variant="ghost" onClick={() => setCatDialog({ open: true, cat: c })}>
-                        <Pencil className="h-3.5 w-3.5" />
-                      </Button>
-                      <Button size="sm" variant="ghost" onClick={async () => {
-                        if (!confirm(`Delete category "${c.name}"?`)) return;
-                        const { error } = await supabase.from("inventory_categories").delete().eq("id", c.id).eq("tenant_id", tenantId);
-                        if (error) { toast.error(error.message); return; }
-                        toast.success("Category deleted");
-                        refresh();
-                      }}>
-                        <Trash2 className="h-3.5 w-3.5 text-destructive" />
-                      </Button>
-                    </div>
+                    {canManage && (
+                      <div className="flex gap-1">
+                        <Button size="sm" variant="ghost" onClick={() => setCatDialog({ open: true, cat: c })}>
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button size="sm" variant="ghost" onClick={async () => {
+                          if (!confirm(`Delete category "${c.name}"?`)) return;
+                          const { error } = await supabase.from("inventory_categories").delete().eq("id", c.id).eq("tenant_id", tenantId);
+                          if (error) { toast.error(error.message); return; }
+                          toast.success("Category deleted");
+                          refresh();
+                        }}>
+                          <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                        </Button>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               ))}
