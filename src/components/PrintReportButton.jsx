@@ -30,7 +30,7 @@ export default function PrintReportButton({ buildRows, label = "Print Report" })
       <!DOCTYPE html>
       <html>
       <head>
-        <title>${title}</title>
+        <title>${escHtml(title)}</title>
         <style>
           body { font-family: Arial, sans-serif; font-size: 12px; color: #111; margin: 24px; }
           h1 { font-size: 18px; margin-bottom: 4px; color: #1e3a5f; }
