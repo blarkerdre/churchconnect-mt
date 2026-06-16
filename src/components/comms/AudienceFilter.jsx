@@ -144,6 +144,38 @@ export default function AudienceFilter({ filters, onChange, className, restricte
           </Select>
         </div>
 
+        {/* Sex */}
+        <div className="space-y-1">
+          <label className="text-xs text-muted-foreground">Sex</label>
+          <Select value={gender} onValueChange={(v) => update({ gender: v })}>
+            <SelectTrigger className="h-9">
+              <SelectValue placeholder="All" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All</SelectItem>
+              <SelectItem value="Male">Male</SelectItem>
+              <SelectItem value="Female">Female</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Home Cell */}
+        <div className="space-y-1">
+          <label className="text-xs text-muted-foreground">Home Cell</label>
+          <Select value={wsfCentreId} onValueChange={(v) => update({ wsfCentreId: v })}>
+            <SelectTrigger className="h-9">
+              <SelectValue placeholder="All Home Cells" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Home Cells</SelectItem>
+              {wsfCentres.map((c) => (
+                <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+
         {/* Date From */}
         <div className="space-y-1">
           <label className="text-xs text-muted-foreground">Registered From</label>
