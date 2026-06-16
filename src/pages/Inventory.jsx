@@ -24,6 +24,7 @@ import { format, formatDistanceToNowStrict } from "date-fns";
 import InventoryItemDialog from "@/components/inventory/InventoryItemDialog";
 import InspectionDialog from "@/components/inventory/InspectionDialog";
 import InspectionHistoryDialog from "@/components/inventory/InspectionHistoryDialog";
+import PrintReportButton from "@/components/PrintReportButton";
 import { logAudit } from "@/lib/audit";
 
 const conditionColor = {
