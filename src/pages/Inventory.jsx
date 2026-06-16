@@ -162,11 +162,14 @@ export default function Inventory() {
           </h1>
           <p className="text-sm text-muted-foreground">Manage church assets and health & safety inspections.</p>
         </div>
-        <div className="flex gap-2">
-          <Button size="sm" onClick={() => setItemDialog({ open: true, item: null })}>
-            <Plus className="h-4 w-4 mr-1" /> Add Item
-          </Button>
-        </div>
+        {canManage && (
+          <div className="flex gap-2 flex-wrap">
+            <PrintReportButton buildRows={buildPrintRows} label="Generate Report" />
+            <Button size="sm" onClick={() => setItemDialog({ open: true, item: null })}>
+              <Plus className="h-4 w-4 mr-1" /> Add Item
+            </Button>
+          </div>
+        )}
       </div>
 
       <Tabs defaultValue="items" className="w-full">
