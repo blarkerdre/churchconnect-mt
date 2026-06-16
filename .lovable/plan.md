@@ -1,23 +1,36 @@
-## Changes to `src/pages/Inventory.jsx`
+## Inventory — refined access tiers
 
-1. **Remove the Settings dialog feature**
-   - Delete the Settings button in the header (currently shown to admins).
-   - Delete the `useQuery` that reads `inventory.church_office_unit` from `app_settings`.
-   - Delete the `SettingsDialog` component and its mount.
-   - Remove `SettingsIcon` import and `settingsOpen` state.
+Introduce two permission levels on the Inventory page:
 
-2. **Hardcode the gating unit to "Church Office Unit"**
-   - Use `useUnitMembership("Church Office Unit")` directly.
+- **View + Inspect (any Church Office member, admins, super admins)** — can open the page, browse items, run inspections, view inspection history.
+- **Manage + Report (Church Office unit *leader* only, plus tenant admins / super admins)** — can add/edit/delete items, add/edit/delete categories, and generate the inventory report.
 
-3. **Restrict access to Church Office Unit members only**
-   - Change `canManage` from `isAdmin || isSuperAdmin || isOfficeMember` to **`isOfficeMember`** only.
-   - Tenant admins / super admins will no longer get automatic access — they must be assigned to the Church Office Unit.
-   - Unauthorised users continue to be redirected to the tenant home via `<Navigate>`.
+### Changes
 
-4. **Sidebar/nav visibility (if applicable)**
-   - Check `src/components/AppLayout.jsx` for the Inventory nav entry and gate it on the same `useUnitMembership("Church Office Unit")` check so non-members don't see the link.
+**`src/pages/Inventory.jsx`**
 
-## Notes
-- No DB/RLS changes. Existing RLS on `inventory_*` tables already restricts by `tenant_id`; client-side gating is the unit-membership check.
-- The orphaned `app_settings` row with key `inventory.church_office_unit` (if any) is left in place — harmless.
-- Confirming the exact unit name as **"Church Office Unit"** (matches your message). If your tenant's unit is actually named "Church Office", say so and I'll use that string instead.
+1. Add a new permission flag alongside `isOfficeMember`:
+   - Read `leaderUnits` from `useAuth()` and compute `isOfficeLeader = leaderUnits.some(u => u.toLowerCase() === "church office")`.
+   - Keep `canAccess = isAdmin || isSuperAdmin || isOfficeMember || isOfficeLeader` for the page-level gate (`Navigate` redirect uses this).
+   - New `canManage = isAdmin || isSuperAdmin || isOfficeLeader` for management actions.
+2. Gate buttons on `canManage`:
+   - Header "Add Item" button.
+   - "Add Category" button on the Categories tab.
+   - Edit (pencil) and Delete (trash) buttons on item cards and category cards.
+   - The "No items yet. Click Add Item to begin." empty-state copy changes to a neutral message when `!canManage`.
+3. Add a new **"Generate Report"** button (gated on `canManage`) in the header next to Add Item:
+   - Opens print view via existing `PrintReportButton` pattern (or `window.print` wrapper) rendering a printable report containing:
+     - All items grouped by category (name, location, serial, condition, last inspected, next due).
+     - "Due / Overdue inspections" section.
+   - Uses `escHtml` for any dynamic strings (project XSS rule).
+4. Keep the data queries enabled whenever `canAccess` is true (currently gated on `canManage`), so plain office members can load items/categories for viewing and inspecting.
+
+**`src/components/AppLayout.jsx`**
+
+- Sidebar Inventory entry visibility: keep current `isAdmin || isSuperAdmin || isChurchOfficeMember` (already covers leaders since leaders are members of the unit). No change needed.
+
+### Non-changes
+
+- No DB / RLS changes — existing tenant-scoped policies on `inventory_*` already cover writes; the new restriction is UI-level gating layered on top.
+- `app_settings` row for `inventory.church_office_unit` remains unused (kept as-is).
+- Inspection writes (`inventory_inspections`, `inventory_inspection_responses`) stay available to office members because they need to run inspections.
