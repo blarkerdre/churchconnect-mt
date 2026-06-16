@@ -10,11 +10,12 @@ import { useChurchUnits } from "@/hooks/useChurchUnits";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
-import { Megaphone, Pin, Search, Plus, Loader2, Trash2, Pencil, MessageSquare, Mail, Clock, XCircle, Users, User, Send } from "lucide-react";
+import { Megaphone, Pin, Search, Plus, Loader2, Trash2, Pencil, MessageSquare, Mail, Clock, XCircle, Users, User, Send, History as HistoryIcon, Inbox } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { format } from "date-fns";
 import AnnouncementForm from "@/components/comms/AnnouncementForm";
-import EmailAlertForm from "@/components/comms/EmailAlertForm";
+import CommunicationsHistory from "@/components/comms/CommunicationsHistory";
+import MyMessagesView from "@/components/comms/MyMessagesView";
 
 const WhatsAppIcon = ({ className }) => (
   <svg className={className} viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
