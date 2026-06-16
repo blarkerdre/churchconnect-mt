@@ -17,6 +17,7 @@ import { template as followupReminder } from './followup-reminder.tsx'
 import { template as paymentReceipt } from './payment-receipt.tsx'
 import { template as tenantInvoice } from './tenant-invoice.tsx'
 import { template as birthdayGreeting } from './birthday-greeting.tsx'
+import { template as adminDirectMessage } from './admin-direct-message.tsx'
 
 export const TEMPLATES: Record<string, TemplateEntry> = {
   'welcome-member': welcomeMember,
@@ -27,4 +28,5 @@ export const TEMPLATES: Record<string, TemplateEntry> = {
   'payment-receipt': paymentReceipt,
   'tenant-invoice': tenantInvoice,
   'birthday-greeting': birthdayGreeting,
+  'admin-direct-message': adminDirectMessage,
 }
