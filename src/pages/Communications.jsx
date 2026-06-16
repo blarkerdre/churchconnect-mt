@@ -10,7 +10,7 @@ import { useChurchUnits } from "@/hooks/useChurchUnits";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
-import { Megaphone, Pin, Search, Plus, Loader2, Trash2, Pencil, MessageSquare, Mail, Clock, XCircle, Users, User } from "lucide-react";
+import { Megaphone, Pin, Search, Plus, Loader2, Trash2, Pencil, MessageSquare, Mail, Clock, XCircle, Users, User, Send } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { format } from "date-fns";
 import AnnouncementForm from "@/components/comms/AnnouncementForm";
@@ -24,6 +24,7 @@ const WhatsAppIcon = ({ className }) => (
 
 import { logAudit } from "@/lib/audit";
 import SMSDialog from "@/components/sms/SMSDialog";
+import DirectSendPanel from "@/components/comms/DirectSendPanel";
 
 import { useSubFeature } from "@/hooks/useSubFeature";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
@@ -541,6 +542,11 @@ export default function Communications() {
                 )}
               </TabsTrigger>
             )}
+            {isAdmin && (
+              <TabsTrigger value="direct" className="gap-1.5 text-xs">
+                <Send className="h-3.5 w-3.5" /> Direct Send
+              </TabsTrigger>
+            )}
             {emailEnabled && canManageComms && (
               <TabsTrigger value="email" className="gap-1.5 text-xs">
                 <Mail className="h-3.5 w-3.5" /> Email
@@ -611,6 +617,12 @@ export default function Communications() {
             )}
           </div>
         </TabsContent>}
+
+        {isAdmin && (
+          <TabsContent value="direct">
+            <DirectSendPanel senderName={user?.email?.split("@")[0] || undefined} />
+          </TabsContent>
+        )}
 
         {emailEnabled && canManageComms && (
           <TabsContent value="email">
