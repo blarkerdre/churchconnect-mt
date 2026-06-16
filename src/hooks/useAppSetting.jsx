@@ -4,17 +4,21 @@ import { useTenantQuery } from "@/hooks/useTenantQuery";
 
 /**
  * Hook to fetch a configurable list from app_settings by key.
- * Returns the array of string values, with a fallback default.
+ * Always tenant-scoped — returns fallback until tenantId is known.
  */
 export function useAppSetting(key, fallback = []) {
-  const { tenantId, scopeQuery } = useTenantQuery();
+  const { tenantId } = useTenantQuery();
 
   const { data, ...rest } = useQuery({
     queryKey: ["app-settings", key, tenantId],
+    enabled: !!tenantId,
     queryFn: async () => {
-      let q = supabase.from("app_settings").select("value").eq("key", key);
-      if (tenantId) q = q.eq("tenant_id", tenantId);
-      const { data, error } = await q.maybeSingle();
+      const { data, error } = await supabase
+        .from("app_settings")
+        .select("value")
+        .eq("key", key)
+        .eq("tenant_id", tenantId)
+        .maybeSingle();
       if (error) throw error;
       if (data?.value && Array.isArray(data.value)) return data.value;
       return fallback;
@@ -23,3 +27,4 @@ export function useAppSetting(key, fallback = []) {
 
   return { data: data ?? fallback, ...rest };
 }
+
