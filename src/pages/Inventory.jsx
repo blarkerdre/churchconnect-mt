@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
+
 import { useTenantQuery } from "@/hooks/useTenantQuery";
 import { useUnitMembership } from "@/hooks/useUnitMembership";
 import { Navigate, useParams } from "react-router-dom";
