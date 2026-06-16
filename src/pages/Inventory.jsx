@@ -117,7 +117,7 @@ export default function Inventory() {
   const [inspectDialog, setInspectDialog] = useState({ open: false, item: null });
   const [historyDialog, setHistoryDialog] = useState({ open: false, item: null });
   const [catDialog, setCatDialog] = useState({ open: false, cat: null });
-  const [settingsOpen, setSettingsOpen] = useState(false);
+  
 
   const refresh = () => {
     queryClient.invalidateQueries({ queryKey: ["inv-items", tenantId] });
