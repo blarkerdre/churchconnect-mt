@@ -640,28 +640,8 @@ export default function Communications() {
         availableAudiences={availableAudiences}
       />
 
-      <SMSDialog
-        open={smsOpen} onOpenChange={setSmsOpen}
-        prefillMessage={smsAnnouncement ? `${smsAnnouncement.title}: ${smsAnnouncement.body}` : ""}
-        prefillAudience={smsAnnouncement?.audience || ""}
-        smsType={smsAnnouncement ? "announcement" : "bulk"}
-        referenceId={smsAnnouncement?.id || null}
-        title={smsAnnouncement ? "Send as SMS" : "Bulk SMS"}
-        unitAudiences={AUDIENCES}
-        restrictedUnits={leaderRestrictedUnits}
-      />
 
-      <SMSDialog
-        open={waOpen} onOpenChange={setWaOpen}
-        prefillMessage=""
-        prefillAudience=""
-        smsType="bulk"
-        referenceId={null}
-        title="Send Bulk WhatsApp"
-        defaultChannel="whatsapp"
-        unitAudiences={AUDIENCES}
-        restrictedUnits={leaderRestrictedUnits}
-      />
+
 
       {/* Announcement Detail Dialog */}
       <Dialog open={!!selectedAnnouncement} onOpenChange={(v) => !v && setSelectedAnnouncement(null)}>
