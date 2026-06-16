@@ -33,21 +33,14 @@ export default function DashboardBannerSettings() {
 
   const saveMutation = useMutation({
     mutationFn: async (newBanners) => {
-      let q = supabase.from("app_settings").select("id").eq("key", "dashboard_banners");
-      if (tenantId) q = q.eq("tenant_id", tenantId);
-      const { data: existing } = await q.maybeSingle();
-
-      if (existing) {
-        const { error } = await supabase
-          .from("app_settings")
-          .update({ value: newBanners, updated_at: new Date().toISOString() })
-          .eq("id", existing.id);
-        if (error) throw error;
-      } else {
-        const row = withTenant({ key: "dashboard_banners", value: newBanners });
-        const { error } = await supabase.from("app_settings").insert(row);
-        if (error) throw error;
-      }
+      if (!tenantId) throw new Error("Missing tenant context");
+      const { error } = await supabase
+        .from("app_settings")
+        .upsert(
+          withTenant({ key: "dashboard_banners", value: newBanners }),
+          { onConflict: "key,tenant_id" }
+        );
+      if (error) throw error;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["app-settings", "dashboard_banners"] });
@@ -55,6 +48,7 @@ export default function DashboardBannerSettings() {
     },
     onError: (e) => toast({ title: "Error saving", description: e.message, variant: "destructive" }),
   });
+
 
   const updateSlide = (index, field, value) => {
     const updated = [...banners];

@@ -12,15 +12,20 @@ export default function DashboardBanner() {
 
   const { data: banners = [] } = useQuery({
     queryKey: ["app-settings", "dashboard_banners", tenantId],
+    enabled: !!tenantId,
     queryFn: async () => {
-      let q = supabase.from("app_settings").select("value").eq("key", "dashboard_banners");
-      if (tenantId) q = q.eq("tenant_id", tenantId);
-      const { data, error } = await q.maybeSingle();
+      const { data, error } = await supabase
+        .from("app_settings")
+        .select("value")
+        .eq("key", "dashboard_banners")
+        .eq("tenant_id", tenantId)
+        .maybeSingle();
       if (error) throw error;
       if (data?.value && Array.isArray(data.value)) return data.value;
       return [];
     },
   });
+
 
   const activeBanners = banners.filter((b) => b?.image_url);
 
