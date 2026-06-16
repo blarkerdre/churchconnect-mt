@@ -197,7 +197,7 @@ export default function Inventory() {
           {itemsLoading ? (
             <p className="text-sm text-muted-foreground">Loading...</p>
           ) : filteredItems.length === 0 ? (
-            <Card><CardContent className="p-8 text-center text-muted-foreground">No items yet. Click "Add Item" to begin.</CardContent></Card>
+            <Card><CardContent className="p-8 text-center text-muted-foreground">{canManage ? 'No items yet. Click "Add Item" to begin.' : "No inventory items have been added yet."}</CardContent></Card>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
               {filteredItems.map((item) => {
