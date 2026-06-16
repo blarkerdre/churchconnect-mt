@@ -149,14 +149,17 @@ export default function Inventory() {
         </div>
         <div className="flex gap-2">
           {isAdmin && (
-            <Button variant="outline" size="sm" onClick={() => setSettingsOpen(true)}>
-              <SettingsIcon className="h-4 w-4 mr-1" /> Settings
+            <Button variant="outline" size="sm" asChild>
+              <a href={tenantSlug ? `/t/${tenantSlug}/settings` : "/settings"}>
+                <SettingsIcon className="h-4 w-4 mr-1" /> Settings
+              </a>
             </Button>
           )}
           <Button size="sm" onClick={() => setItemDialog({ open: true, item: null })}>
             <Plus className="h-4 w-4 mr-1" /> Add Item
           </Button>
         </div>
+
       </div>
 
       <Tabs defaultValue="items" className="w-full">
@@ -347,15 +350,10 @@ export default function Inventory() {
         onSaved={refresh}
       />
 
-      <SettingsDialog
-        open={settingsOpen}
-        onOpenChange={setSettingsOpen}
-        currentUnit={officeUnit}
-        onSaved={() => queryClient.invalidateQueries({ queryKey: ["inv-church-office-unit", tenantId] })}
-      />
     </div>
   );
 }
+
 
 function CategoryDialog({ open, onOpenChange, category, onSaved }) {
   const { tenantId, withTenant } = useTenantQuery();
