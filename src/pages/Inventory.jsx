@@ -17,7 +17,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 import { useTenantQuery } from "@/hooks/useTenantQuery";
 import { useUnitMembership } from "@/hooks/useUnitMembership";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/hooks/useAuth";
 import { Navigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { format, formatDistanceToNowStrict } from "date-fns";
