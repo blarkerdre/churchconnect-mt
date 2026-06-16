@@ -10,11 +10,12 @@ import { useChurchUnits } from "@/hooks/useChurchUnits";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
-import { Megaphone, Pin, Search, Plus, Loader2, Trash2, Pencil, MessageSquare, Mail, Clock, XCircle, Users, User, Send } from "lucide-react";
+import { Megaphone, Pin, Search, Plus, Loader2, Trash2, Pencil, MessageSquare, Mail, Clock, XCircle, Users, User, Send, History as HistoryIcon, Inbox } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { format } from "date-fns";
 import AnnouncementForm from "@/components/comms/AnnouncementForm";
-import EmailAlertForm from "@/components/comms/EmailAlertForm";
+import CommunicationsHistory from "@/components/comms/CommunicationsHistory";
+import MyMessagesView from "@/components/comms/MyMessagesView";
 
 const WhatsAppIcon = ({ className }) => (
   <svg className={className} viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
@@ -23,7 +24,6 @@ const WhatsAppIcon = ({ className }) => (
 );
 
 import { logAudit } from "@/lib/audit";
-import SMSDialog from "@/components/sms/SMSDialog";
 import DirectSendPanel from "@/components/comms/DirectSendPanel";
 
 import { useSubFeature } from "@/hooks/useSubFeature";
@@ -243,9 +243,6 @@ export default function Communications() {
   const [search, setSearch] = useState("");
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState(null);
-  const [smsOpen, setSmsOpen] = useState(false);
-  const [smsAnnouncement, setSmsAnnouncement] = useState(null);
-  const [waOpen, setWaOpen] = useState(false);
   const [selectedAnnouncement, setSelectedAnnouncement] = useState(null);
   const [selectedSmsLog, setSelectedSmsLog] = useState(null);
   
@@ -510,10 +507,6 @@ export default function Communications() {
           </div>
           {canManage(a) && canManageComms && (
             <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
-              <Button variant="ghost" size="icon" className="h-8 w-8" title="Send as SMS"
-                onClick={() => { setSmsAnnouncement(a); setSmsOpen(true); }}>
-                <MessageSquare className="h-3.5 w-3.5 text-primary" />
-              </Button>
               <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEdit(a)}>
                 <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
               </Button>
@@ -529,7 +522,7 @@ export default function Communications() {
 
   return (
     <div className="space-y-6">
-      <Tabs defaultValue={announcementsEnabled ? "announcements" : ((emailEnabled && canManageComms) ? "email" : (smsEnabled ? "sms" : "whatsapp"))} className="space-y-4">
+      <Tabs defaultValue={announcementsEnabled ? "announcements" : (isAdmin ? "direct" : "messages")} className="space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <TabsList className="flex flex-nowrap h-auto gap-1 overflow-x-auto w-full justify-start">
             {announcementsEnabled && (
@@ -547,32 +540,22 @@ export default function Communications() {
                 <Send className="h-3.5 w-3.5" /> Direct Send
               </TabsTrigger>
             )}
-            {emailEnabled && canManageComms && (
-              <TabsTrigger value="email" className="gap-1.5 text-xs">
-                <Mail className="h-3.5 w-3.5" /> Email
-                {emailCount > 0 && (
+            {canManageComms && (emailEnabled || smsEnabled || whatsappEnabled) && (
+              <TabsTrigger value="history" className="gap-1.5 text-xs">
+                <HistoryIcon className="h-3.5 w-3.5" /> History
+                {(emailCount + smsCount + whatsappCount) > 0 && (
                   <Badge variant="secondary" className="h-5 min-w-5 px-1 text-[10px] ml-0.5">
-                    {emailCount}
+                    {emailCount + smsCount + whatsappCount}
                   </Badge>
                 )}
               </TabsTrigger>
             )}
-            {smsEnabled && (
-              <TabsTrigger value="sms" className="gap-1.5 text-xs">
-                <MessageSquare className="h-3.5 w-3.5" /> SMS
-                {smsCount > 0 && (
+            {!canManageComms && (smsEnabled || whatsappEnabled) && (
+              <TabsTrigger value="messages" className="gap-1.5 text-xs">
+                <Inbox className="h-3.5 w-3.5" /> My Messages
+                {(smsCount + whatsappCount) > 0 && (
                   <Badge variant="secondary" className="h-5 min-w-5 px-1 text-[10px] ml-0.5">
-                    {smsCount}
-                  </Badge>
-                )}
-              </TabsTrigger>
-            )}
-            {whatsappEnabled && (
-              <TabsTrigger value="whatsapp" className="gap-1.5 text-xs">
-                <WhatsAppIcon className="h-3.5 w-3.5" /> WhatsApp
-                {whatsappCount > 0 && (
-                  <Badge variant="secondary" className="h-5 min-w-5 px-1 text-[10px] ml-0.5">
-                    {whatsappCount}
+                    {smsCount + whatsappCount}
                   </Badge>
                 )}
               </TabsTrigger>
@@ -624,54 +607,27 @@ export default function Communications() {
           </TabsContent>
         )}
 
-        {emailEnabled && canManageComms && (
-          <TabsContent value="email">
-            <div className="space-y-4">
-              <EmailAlertForm currentUser={user} myUnits={leaderUnits} isAdmin={isAdmin} restrictedUnits={leaderRestrictedUnits} />
-              <ScheduledList channel="email" tenantId={tenantId} />
-            </div>
+        {canManageComms && (emailEnabled || smsEnabled || whatsappEnabled) && (
+          <TabsContent value="history">
+            <CommunicationsHistory
+              tenantId={tenantId}
+              emailEnabled={emailEnabled}
+              smsEnabled={smsEnabled}
+              whatsappEnabled={whatsappEnabled}
+              renderScheduled={(channel) => <ScheduledList channel={channel} tenantId={tenantId} />}
+            />
           </TabsContent>
         )}
 
-        {smsEnabled && (
-          <TabsContent value="sms">
-            {canManageComms ? (
-              <div className="space-y-4">
-                <div className="flex items-center gap-2">
-                  <Button onClick={() => { setSmsAnnouncement(null); setSmsOpen(true); }} className="bg-primary hover:bg-primary/90">
-                    <MessageSquare className="h-4 w-4 mr-2" /> Send Bulk SMS
-                  </Button>
-                </div>
-                <ScheduledList channel="sms" tenantId={tenantId} />
-                <Card className="border-0 shadow-sm p-8 text-center text-muted-foreground">
-                  <MessageSquare className="h-10 w-10 mx-auto mb-3 opacity-20" />
-                  <p className="text-sm">Use the button above to compose and send SMS messages to members.</p>
-                </Card>
-              </div>
-            ) : (
-              <MemberSmsListView memberId={myMember?.id} tenantId={tenantId} channel="sms" onSelect={setSelectedSmsLog} />
-            )}
-          </TabsContent>
-        )}
-
-        {whatsappEnabled && (
-          <TabsContent value="whatsapp">
-            {canManageComms ? (
-              <div className="space-y-4">
-                <div className="flex items-center gap-2">
-                  <Button onClick={() => setWaOpen(true)} className="bg-primary hover:bg-primary/90">
-                    <WhatsAppIcon className="h-4 w-4 mr-2" /> Send Bulk WhatsApp
-                  </Button>
-                </div>
-                <ScheduledList channel="whatsapp" tenantId={tenantId} />
-                <Card className="border-0 shadow-sm p-8 text-center text-muted-foreground">
-                  <WhatsAppIcon className="h-10 w-10 mx-auto mb-3 opacity-20" />
-                  <p className="text-sm">Use the button above to compose and send WhatsApp messages to members.</p>
-                </Card>
-              </div>
-            ) : (
-              <MemberSmsListView memberId={myMember?.id} tenantId={tenantId} channel="whatsapp" onSelect={setSelectedSmsLog} />
-            )}
+        {!canManageComms && (smsEnabled || whatsappEnabled) && (
+          <TabsContent value="messages">
+            <MyMessagesView
+              smsEnabled={smsEnabled}
+              whatsappEnabled={whatsappEnabled}
+              renderList={(channel) => (
+                <MemberSmsListView memberId={myMember?.id} tenantId={tenantId} channel={channel} onSelect={setSelectedSmsLog} />
+              )}
+            />
           </TabsContent>
         )}
       </Tabs>
@@ -684,28 +640,8 @@ export default function Communications() {
         availableAudiences={availableAudiences}
       />
 
-      <SMSDialog
-        open={smsOpen} onOpenChange={setSmsOpen}
-        prefillMessage={smsAnnouncement ? `${smsAnnouncement.title}: ${smsAnnouncement.body}` : ""}
-        prefillAudience={smsAnnouncement?.audience || ""}
-        smsType={smsAnnouncement ? "announcement" : "bulk"}
-        referenceId={smsAnnouncement?.id || null}
-        title={smsAnnouncement ? "Send as SMS" : "Bulk SMS"}
-        unitAudiences={AUDIENCES}
-        restrictedUnits={leaderRestrictedUnits}
-      />
 
-      <SMSDialog
-        open={waOpen} onOpenChange={setWaOpen}
-        prefillMessage=""
-        prefillAudience=""
-        smsType="bulk"
-        referenceId={null}
-        title="Send Bulk WhatsApp"
-        defaultChannel="whatsapp"
-        unitAudiences={AUDIENCES}
-        restrictedUnits={leaderRestrictedUnits}
-      />
+
 
       {/* Announcement Detail Dialog */}
       <Dialog open={!!selectedAnnouncement} onOpenChange={(v) => !v && setSelectedAnnouncement(null)}>
