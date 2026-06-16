@@ -24,6 +24,7 @@ const WhatsAppIcon = ({ className }) => (
 
 import { logAudit } from "@/lib/audit";
 import SMSDialog from "@/components/sms/SMSDialog";
+import DirectSendPanel from "@/components/comms/DirectSendPanel";
 
 import { useSubFeature } from "@/hooks/useSubFeature";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
