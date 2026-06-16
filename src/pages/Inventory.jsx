@@ -239,12 +239,16 @@ export default function Inventory() {
                         <Button size="sm" variant="ghost" onClick={() => setHistoryDialog({ open: true, item })}>
                           <History className="h-3.5 w-3.5 mr-1" /> History
                         </Button>
-                        <Button size="sm" variant="ghost" onClick={() => setItemDialog({ open: true, item })}>
-                          <Pencil className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button size="sm" variant="ghost" onClick={() => handleDeleteItem(item)}>
-                          <Trash2 className="h-3.5 w-3.5 text-destructive" />
-                        </Button>
+                        {canManage && (
+                          <>
+                            <Button size="sm" variant="ghost" onClick={() => setItemDialog({ open: true, item })}>
+                              <Pencil className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button size="sm" variant="ghost" onClick={() => handleDeleteItem(item)}>
+                              <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                            </Button>
+                          </>
+                        )}
                       </div>
                     </CardContent>
                   </Card>
