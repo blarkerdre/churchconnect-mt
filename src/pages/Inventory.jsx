@@ -51,9 +51,11 @@ export default function Inventory() {
   const queryClient = useQueryClient();
 
   const { isMemberOfUnit: isOfficeMember, isLoading: officeLoading } = useUnitMembership("Church Office");
-  const { isAdmin, isSuperAdmin } = useAuth();
+  const { isAdmin, isSuperAdmin, leaderUnits = [] } = useAuth();
 
-  const canManage = isAdmin || isSuperAdmin || isOfficeMember;
+  const isOfficeLeader = leaderUnits.some((u) => String(u).toLowerCase() === "church office");
+  const canAccess = isAdmin || isSuperAdmin || isOfficeMember || isOfficeLeader;
+  const canManage = isAdmin || isSuperAdmin || isOfficeLeader;
 
   // Categories
   const { data: categories = [] } = useQuery({
