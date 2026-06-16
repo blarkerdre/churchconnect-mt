@@ -1,36 +1,14 @@
-## Inventory — refined access tiers
+## Goal
+Remove the Email tab/view from the Communications page for regular members. Admins and users with `canManageComms` keep full access.
 
-Introduce two permission levels on the Inventory page:
+## Changes — `src/pages/Communications.jsx`
 
-- **View + Inspect (any Church Office member, admins, super admins)** — can open the page, browse items, run inspections, view inspection history.
-- **Manage + Report (Church Office unit *leader* only, plus tenant admins / super admins)** — can add/edit/delete items, add/edit/delete categories, and generate the inventory report.
+1. **Tab trigger (line 598)** — change condition from `emailEnabled` to `emailEnabled && canManageComms` so members no longer see the Email tab.
+2. **Tab content (line 669)** — same gate: `emailEnabled && canManageComms`. Removes the `MemberEmailList` branch entirely for members.
+3. **Default tab (line 585)** — update the `defaultValue` fallback so it doesn't default to `"email"` for members: use `emailEnabled && canManageComms` in the chain.
+4. **Email count query (line 413)** — restrict `enabled` to `emailEnabled && canManageComms && !!tenantId`, dropping the member-email branch (no longer needed).
+5. Remove now-unused `MemberEmailList` component, `selectedEmailLog` state, and the Email Detail Dialog (lines 235–268, 295, 837–end of that dialog) since they only served the member view.
 
-### Changes
-
-**`src/pages/Inventory.jsx`**
-
-1. Add a new permission flag alongside `isOfficeMember`:
-   - Read `leaderUnits` from `useAuth()` and compute `isOfficeLeader = leaderUnits.some(u => u.toLowerCase() === "church office")`.
-   - Keep `canAccess = isAdmin || isSuperAdmin || isOfficeMember || isOfficeLeader` for the page-level gate (`Navigate` redirect uses this).
-   - New `canManage = isAdmin || isSuperAdmin || isOfficeLeader` for management actions.
-2. Gate buttons on `canManage`:
-   - Header "Add Item" button.
-   - "Add Category" button on the Categories tab.
-   - Edit (pencil) and Delete (trash) buttons on item cards and category cards.
-   - The "No items yet. Click Add Item to begin." empty-state copy changes to a neutral message when `!canManage`.
-3. Add a new **"Generate Report"** button (gated on `canManage`) in the header next to Add Item:
-   - Opens print view via existing `PrintReportButton` pattern (or `window.print` wrapper) rendering a printable report containing:
-     - All items grouped by category (name, location, serial, condition, last inspected, next due).
-     - "Due / Overdue inspections" section.
-   - Uses `escHtml` for any dynamic strings (project XSS rule).
-4. Keep the data queries enabled whenever `canAccess` is true (currently gated on `canManage`), so plain office members can load items/categories for viewing and inspecting.
-
-**`src/components/AppLayout.jsx`**
-
-- Sidebar Inventory entry visibility: keep current `isAdmin || isSuperAdmin || isChurchOfficeMember` (already covers leaders since leaders are members of the unit). No change needed.
-
-### Non-changes
-
-- No DB / RLS changes — existing tenant-scoped policies on `inventory_*` already cover writes; the new restriction is UI-level gating layered on top.
-- `app_settings` row for `inventory.church_office_unit` remains unused (kept as-is).
-- Inspection writes (`inventory_inspections`, `inventory_inspection_responses`) stay available to office members because they need to run inspections.
+## Out of scope
+- SMS, WhatsApp, and Announcements tabs are unchanged.
+- No DB/RLS changes — admins continue to use existing `EmailAlertForm` flow.
