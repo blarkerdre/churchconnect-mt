@@ -540,32 +540,22 @@ export default function Communications() {
                 <Send className="h-3.5 w-3.5" /> Direct Send
               </TabsTrigger>
             )}
-            {emailEnabled && canManageComms && (
-              <TabsTrigger value="email" className="gap-1.5 text-xs">
-                <Mail className="h-3.5 w-3.5" /> Email
-                {emailCount > 0 && (
+            {canManageComms && (emailEnabled || smsEnabled || whatsappEnabled) && (
+              <TabsTrigger value="history" className="gap-1.5 text-xs">
+                <HistoryIcon className="h-3.5 w-3.5" /> History
+                {(emailCount + smsCount + whatsappCount) > 0 && (
                   <Badge variant="secondary" className="h-5 min-w-5 px-1 text-[10px] ml-0.5">
-                    {emailCount}
+                    {emailCount + smsCount + whatsappCount}
                   </Badge>
                 )}
               </TabsTrigger>
             )}
-            {smsEnabled && (
-              <TabsTrigger value="sms" className="gap-1.5 text-xs">
-                <MessageSquare className="h-3.5 w-3.5" /> SMS
-                {smsCount > 0 && (
+            {!canManageComms && (smsEnabled || whatsappEnabled) && (
+              <TabsTrigger value="messages" className="gap-1.5 text-xs">
+                <Inbox className="h-3.5 w-3.5" /> My Messages
+                {(smsCount + whatsappCount) > 0 && (
                   <Badge variant="secondary" className="h-5 min-w-5 px-1 text-[10px] ml-0.5">
-                    {smsCount}
-                  </Badge>
-                )}
-              </TabsTrigger>
-            )}
-            {whatsappEnabled && (
-              <TabsTrigger value="whatsapp" className="gap-1.5 text-xs">
-                <WhatsAppIcon className="h-3.5 w-3.5" /> WhatsApp
-                {whatsappCount > 0 && (
-                  <Badge variant="secondary" className="h-5 min-w-5 px-1 text-[10px] ml-0.5">
-                    {whatsappCount}
+                    {smsCount + whatsappCount}
                   </Badge>
                 )}
               </TabsTrigger>
