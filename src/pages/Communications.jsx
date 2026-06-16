@@ -243,9 +243,6 @@ export default function Communications() {
   const [search, setSearch] = useState("");
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState(null);
-  const [smsOpen, setSmsOpen] = useState(false);
-  const [smsAnnouncement, setSmsAnnouncement] = useState(null);
-  const [waOpen, setWaOpen] = useState(false);
   const [selectedAnnouncement, setSelectedAnnouncement] = useState(null);
   const [selectedSmsLog, setSelectedSmsLog] = useState(null);
   
