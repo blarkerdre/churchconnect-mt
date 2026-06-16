@@ -10,7 +10,7 @@ import { useChurchUnits } from "@/hooks/useChurchUnits";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
-import { Megaphone, Pin, Search, Plus, Loader2, Trash2, Pencil, MessageSquare, Mail, Clock, XCircle, Users, User, Send, History as HistoryIcon, Inbox } from "lucide-react";
+import { Megaphone, Pin, Search, Plus, Loader2, Trash2, Pencil, MessageSquare, Mail, Clock, XCircle, Users, User, Send, History as HistoryIcon, Inbox, UsersRound } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { format } from "date-fns";
 import AnnouncementForm from "@/components/comms/AnnouncementForm";
@@ -25,6 +25,7 @@ const WhatsAppIcon = ({ className }) => (
 
 import { logAudit } from "@/lib/audit";
 import DirectSendPanel from "@/components/comms/DirectSendPanel";
+import BulkMembersPanel from "@/components/comms/BulkMembersPanel";
 
 import { useSubFeature } from "@/hooks/useSubFeature";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
@@ -540,6 +541,11 @@ export default function Communications() {
                 <Send className="h-3.5 w-3.5" /> Direct Send
               </TabsTrigger>
             )}
+            {isAdmin && (
+              <TabsTrigger value="bulk-members" className="gap-1.5 text-xs">
+                <UsersRound className="h-3.5 w-3.5" /> Bulk Members
+              </TabsTrigger>
+            )}
             {canManageComms && (emailEnabled || smsEnabled || whatsappEnabled) && (
               <TabsTrigger value="history" className="gap-1.5 text-xs">
                 <HistoryIcon className="h-3.5 w-3.5" /> History
@@ -604,6 +610,12 @@ export default function Communications() {
         {isAdmin && (
           <TabsContent value="direct">
             <DirectSendPanel senderName={user?.email?.split("@")[0] || undefined} />
+          </TabsContent>
+        )}
+
+        {isAdmin && (
+          <TabsContent value="bulk-members">
+            <BulkMembersPanel senderName={user?.email?.split("@")[0] || undefined} />
           </TabsContent>
         )}
 
