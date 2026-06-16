@@ -618,6 +618,12 @@ export default function Communications() {
           </div>
         </TabsContent>}
 
+        {isAdmin && (
+          <TabsContent value="direct">
+            <DirectSendPanel senderName={user?.email?.split("@")[0] || undefined} />
+          </TabsContent>
+        )}
+
         {emailEnabled && canManageComms && (
           <TabsContent value="email">
             <div className="space-y-4">
