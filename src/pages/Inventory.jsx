@@ -295,11 +295,13 @@ export default function Inventory() {
 
         {/* Categories */}
         <TabsContent value="categories" className="space-y-3">
-          <div>
-            <Button size="sm" onClick={() => setCatDialog({ open: true, cat: null })}>
-              <Plus className="h-4 w-4 mr-1" /> Add Category
-            </Button>
-          </div>
+          {canManage && (
+            <div>
+              <Button size="sm" onClick={() => setCatDialog({ open: true, cat: null })}>
+                <Plus className="h-4 w-4 mr-1" /> Add Category
+              </Button>
+            </div>
+          )}
           {categories.length === 0 ? (
             <Card><CardContent className="p-8 text-center text-muted-foreground">No categories yet.</CardContent></Card>
           ) : (
