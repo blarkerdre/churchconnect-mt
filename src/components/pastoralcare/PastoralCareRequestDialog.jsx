@@ -14,7 +14,7 @@ import { useTenantQuery } from "@/hooks/useTenantQuery";
 
 const CATEGORIES = [
   "Prayer Request", "Counselling", "Visitation", "Hospital Visit",
-  "Bereavement", "Marriage", "Financial Support", "Life Event", "Other",
+  "Bereavement", "Marriage", "Financial Support", "Other",
 ];
 
 const SUBTYPES = [
@@ -24,12 +24,13 @@ const SUBTYPES = [
   { value: "bereavement", label: "Bereavement" },
 ];
 
-export default function PastoralCareRequestDialog({ open, onOpenChange, currentUser, myMember }) {
+export default function PastoralCareRequestDialog({ open, onOpenChange, currentUser, myMember, mode = "care" }) {
   const { user } = useAuth();
   const { withTenant, tenantId, scopeQuery } = useTenantQuery();
   const queryClient = useQueryClient();
+  const lifeEventMode = mode === "lifeEvent";
   const [form, setForm] = useState({
-    category: "", title: "", description: "",
+    category: lifeEventMode ? "Life Event" : "", title: "", description: "",
     subtype: "childbirth", subject_name: "", event_date: "",
     pastor_requested: true,
     route_home_cell: false, route_unit: false,
@@ -37,7 +38,7 @@ export default function PastoralCareRequestDialog({ open, onOpenChange, currentU
   const [submitted, setSubmitted] = useState(false);
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
-  const isLifeEvent = form.category === "Life Event";
+  const isLifeEvent = lifeEventMode || form.category === "Life Event";
 
   // Look up the submitting member's home-cell leader & unit leaders for the route
   const { data: routeOptions } = useQuery({
@@ -189,7 +190,7 @@ export default function PastoralCareRequestDialog({ open, onOpenChange, currentU
     onOpenChange(false);
     setTimeout(() => {
       setForm({
-        category: "", title: "", description: "",
+        category: lifeEventMode ? "Life Event" : "", title: "", description: "",
         subtype: "childbirth", subject_name: "", event_date: "",
         pastor_requested: true, route_home_cell: false, route_unit: false,
       });
@@ -213,7 +214,7 @@ export default function PastoralCareRequestDialog({ open, onOpenChange, currentU
       <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
         <TenantDialogHeader>
           <Heart className="h-4 w-4 text-destructive" />
-          Request Pastoral Care
+          {lifeEventMode ? "Submit Life Event" : "Request Pastoral Care"}
         </TenantDialogHeader>
 
         {submitted ? (
@@ -238,15 +239,17 @@ export default function PastoralCareRequestDialog({ open, onOpenChange, currentU
                   : "Your request is confidential and will only be seen by pastoral leaders."}
               </p>
 
-              <div className="space-y-1.5">
-                <Label>Type of Support Needed *</Label>
-                <Select value={form.category} onValueChange={(v) => set("category", v)}>
-                  <SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger>
-                  <SelectContent>
-                    {CATEGORIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
+              {!lifeEventMode && (
+                <div className="space-y-1.5">
+                  <Label>Type of Support Needed *</Label>
+                  <Select value={form.category} onValueChange={(v) => set("category", v)}>
+                    <SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger>
+                    <SelectContent>
+                      {CATEGORIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
 
               {isLifeEvent ? (
                 <>
