@@ -46,6 +46,8 @@ export default function PastoralCare() {
   const [dateTo, setDateTo] = useState("");
   const [filterStatus, setFilterStatus] = useState("All");
   const [requestDialogOpen, setRequestDialogOpen] = useState(false);
+  const [lifeEventDialogOpen, setLifeEventDialogOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState("cases");
   const [manageDialogOpen, setManageDialogOpen] = useState(false);
   const [selectedCase, setSelectedCase] = useState(null);
   const [form, setForm] = useState({ subject: "", care_type: "Prayer Request", description: "", confidential: false });
