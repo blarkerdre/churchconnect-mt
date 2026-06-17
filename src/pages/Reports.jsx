@@ -11,7 +11,7 @@ const MODULES = [
   { title: "Analytics", description: "Member milestones, status conversion, attendance & growth.", icon: BarChart2, path: "/analytics" },
   { title: "Members", description: "Member directory, profiles, journeys and exports.", icon: Users, path: "/members" },
   { title: "Church Attendance", description: "Sunday service attendance trends and demographics.", icon: ClipboardList, path: "/church-attendance" },
-  { title: "Unit Meeting & Attendance", description: "Unit-level attendance sessions and reports.", icon: ClipboardList, path: "/attendance" },
+  { title: "Unit Meeting & Attendance", description: "Unit-level attendance sessions and reports.", icon: ClipboardList, path: "/church-unit?tab=attendance" },
   { title: "Home Cell", description: "Home Cell (WSF) attendance and centre reports.", icon: Globe, path: "/wsf" },
   { title: "Follow-ups", description: "Follow-ups, sign-posts and referral history.", icon: HeartHandshake, path: "/followups" },
   { title: "Pastoral Care", description: "Care requests, prayer requests and assignments.", icon: Heart, path: "/pastoral-care" },
@@ -19,7 +19,7 @@ const MODULES = [
   { title: "Communications", description: "Announcements, SMS, email and message history.", icon: Megaphone, path: "/communications" },
   { title: "Transportation", description: "Ride bookings, assignments and trip reports.", icon: Car, path: "/transportation" },
   { title: "Training Reports", description: "BFC, BCC, LCC and LDC training progress.", icon: TrendingUp, path: "/training-reports" },
-  { title: "Unit Tasks", description: "Task assignments, acknowledgements and completion.", icon: ClipboardList, path: "/unit-tasks" },
+  { title: "Unit Tasks", description: "Task assignments, acknowledgements and completion.", icon: ClipboardList, path: "/church-unit?tab=tasks" },
   { title: "Bible School", description: "Exam sessions, course registrations and results.", icon: BookOpen, path: "/exam-management" },
   { title: "Testimonies", description: "Member testimonies and breakthrough reports.", icon: MessageSquareHeart, path: "/testimony" },
   
