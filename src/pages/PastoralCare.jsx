@@ -396,6 +396,15 @@ export default function PastoralCare() {
         myMember={myMember}
       />
 
+      {/* New Life Event Dialog */}
+      <PastoralCareRequestDialog
+        open={lifeEventDialogOpen}
+        onOpenChange={setLifeEventDialogOpen}
+        myMember={myMember}
+        mode="lifeEvent"
+      />
+
+
       {/* Life Event Approval Dialog */}
       <LifeEventApprovalDialog
         open={!!activeLifeEvent}
