@@ -1,5 +1,8 @@
 import React, { useState } from "react";
+import { useSearchParams } from "react-router-dom";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
+
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -205,160 +208,201 @@ export default function PastoralCare() {
     setManageDialogOpen(true);
   };
 
+  const [searchParams, setSearchParams] = useSearchParams();
+  const currentTab = searchParams.get("tab") === "life-events" ? "life-events" : "cases";
+  const handleTabChange = (val) => {
+    const next = new URLSearchParams(searchParams);
+    if (val === "cases") next.delete("tab"); else next.set("tab", val);
+    setSearchParams(next, { replace: true });
+  };
+
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <Card className="border-0 shadow-sm"><CardContent className="p-4 text-center"><p className="text-2xl font-display font-bold text-foreground">{filtered.length}</p><p className="text-xs text-muted-foreground">Total Cases</p></CardContent></Card>
-        <Card className="border-0 shadow-sm"><CardContent className="p-4 text-center"><p className="text-2xl font-display font-bold text-accent">{filtered.filter(r => r.status === "Open").length}</p><p className="text-xs text-muted-foreground">Open</p></CardContent></Card>
-        <Card className="border-0 shadow-sm"><CardContent className="p-4 text-center"><p className="text-2xl font-display font-bold text-primary">{filtered.filter(r => r.status === "In Progress").length}</p><p className="text-xs text-muted-foreground">In Progress</p></CardContent></Card>
-        <Card className="border-0 shadow-sm"><CardContent className="p-4 text-center"><p className="text-2xl font-display font-bold text-chart-3">{filtered.filter(r => r.status === "Resolved").length}</p><p className="text-xs text-muted-foreground">Resolved</p></CardContent></Card>
-      </div>
+      <Tabs value={currentTab} onValueChange={handleTabChange} className="space-y-6">
+        <TabsList className="grid grid-cols-2 w-full sm:w-auto">
+          <TabsTrigger value="cases" className="gap-2">
+            <Heart className="h-4 w-4" /> Cases
+            <Badge variant="secondary" className="ml-1">{regularCases.length}</Badge>
+          </TabsTrigger>
+          <TabsTrigger value="life-events" className="gap-2">
+            <Sparkles className="h-4 w-4" /> Life Events
+            <Badge variant="secondary" className="ml-1">{lifeEvents.length}</Badge>
+          </TabsTrigger>
+        </TabsList>
 
-      <div className="flex flex-col gap-3">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="relative w-full sm:w-72">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Search cases..." value={search} onChange={e => setSearch(e.target.value)} className="pl-10" />
+        <TabsContent value="cases" className="space-y-6 mt-0">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <Card className="border-0 shadow-sm"><CardContent className="p-4 text-center"><p className="text-2xl font-display font-bold text-foreground">{filtered.length}</p><p className="text-xs text-muted-foreground">Total Cases</p></CardContent></Card>
+            <Card className="border-0 shadow-sm"><CardContent className="p-4 text-center"><p className="text-2xl font-display font-bold text-accent">{filtered.filter(r => r.status === "Open").length}</p><p className="text-xs text-muted-foreground">Open</p></CardContent></Card>
+            <Card className="border-0 shadow-sm"><CardContent className="p-4 text-center"><p className="text-2xl font-display font-bold text-primary">{filtered.filter(r => r.status === "In Progress").length}</p><p className="text-xs text-muted-foreground">In Progress</p></CardContent></Card>
+            <Card className="border-0 shadow-sm"><CardContent className="p-4 text-center"><p className="text-2xl font-display font-bold text-chart-3">{filtered.filter(r => r.status === "Resolved").length}</p><p className="text-xs text-muted-foreground">Resolved</p></CardContent></Card>
           </div>
-          <div className="flex items-center gap-2">
-            {isAdmin && (
-              <Button variant="outline" size="sm" onClick={() => { setAltarSetting(altarUnitName); setSettingsOpen(true); }}>
-                <Settings className="h-4 w-4 mr-2" /> Altar Ministry unit
-              </Button>
-            )}
-            {canCreateRequest && (
-              <Button onClick={() => setRequestDialogOpen(true)} className="bg-primary hover:bg-primary/90">
-                <Plus className="h-4 w-4 mr-2" /> New Request
-              </Button>
-            )}
-          </div>
-        </div>
-        {canManage && (
-          <div className="flex flex-wrap items-end gap-3">
-            <div className="w-full sm:w-auto">
-              <Label className="text-xs text-muted-foreground">From</Label>
-              <Input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="w-full sm:w-40" />
-            </div>
-            <div className="w-full sm:w-auto">
-              <Label className="text-xs text-muted-foreground">To</Label>
-              <Input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="w-full sm:w-40" />
-            </div>
-            <div className="w-full sm:w-auto">
-              <Label className="text-xs text-muted-foreground">Status</Label>
-              <Select value={filterStatus} onValueChange={setFilterStatus}>
-                <SelectTrigger className="w-full sm:w-36"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="All">All</SelectItem>
-                  {ALL_STATUSES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <Button variant="outline" onClick={downloadCSV} disabled={filtered.length === 0}>
-              <Download className="h-4 w-4 mr-2" /> CSV
-            </Button>
-            <PrintReportButton label="Print" buildRows={() => ({
-            title: "Pastoral Care Report",
-            headers: ["Subject", "Member", "Type", "Status", "Confidential", "Assigned To", "Created", "Resolution Notes"],
-            rows: filtered.map(r => [
-              r.subject,
-              r.members ? `${r.members.first_name} ${r.members.last_name}` : "",
-              r.care_type,
-              r.status,
-              r.confidential ? "Yes" : "No",
-              r.assigned_to ? (assigneeMap[r.assigned_to] || "") : "",
-              r.created_at ? new Date(r.created_at).toLocaleDateString("en-GB") : "",
-              r.resolution_notes || "",
-            ]),
-          })} />
-          </div>
-        )}
-      </div>
 
-      {isLoading ? (
-        <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>
-      ) : filtered.length === 0 ? (
-        <Card className="border-0 shadow-sm p-12 text-center text-muted-foreground">
-          <Heart className="h-10 w-10 mx-auto mb-3 opacity-20" />
-          <p className="text-lg font-medium">No cases found</p>
-        </Card>
-      ) : (
-        <div className="space-y-3">
-          {filtered.map(r => (
-            <Card key={r.id} className="border-0 shadow-sm hover:shadow-md transition-shadow cursor-pointer" onClick={() => setDetailCase(r)}>
-              <CardContent className="p-5">
-                <div className="flex items-start gap-4">
-                  <div className="h-10 w-10 rounded-xl bg-chart-5/10 flex items-center justify-center shrink-0">
-                    <Heart className="h-5 w-5 text-chart-5" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex flex-wrap items-center gap-2 mb-1">
-                      <h3 className="font-display font-bold text-foreground">{r.subject}</h3>
-                      {r.confidential && <Lock className="h-3.5 w-3.5 text-destructive" />}
-                      <Badge className={`border-0 ${statusColors[r.status]}`}>{r.status}</Badge>
-                    </div>
-                    <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
-                      {r.members && <span className="flex items-center gap-1"><User className="h-3.5 w-3.5" /> {r.members.first_name} {r.members.last_name}</span>}
-                      <span>{r.care_type}</span>
-                      <span className="flex items-center gap-1"><CalendarDays className="h-3.5 w-3.5" /> {new Date(r.created_at).toLocaleDateString()}</span>
-                      {r.assigned_to && assigneeMap[r.assigned_to] && (
-                        <span className="flex items-center gap-1"><UserCheck className="h-3.5 w-3.5" /> {assigneeMap[r.assigned_to]}</span>
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="relative w-full sm:w-72">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input placeholder="Search cases..." value={search} onChange={e => setSearch(e.target.value)} className="pl-10" />
+              </div>
+              <div className="flex items-center gap-2">
+                {canCreateRequest && (
+                  <Button onClick={() => setRequestDialogOpen(true)} className="bg-primary hover:bg-primary/90">
+                    <Plus className="h-4 w-4 mr-2" /> New Request
+                  </Button>
+                )}
+              </div>
+            </div>
+            {canManage && (
+              <div className="flex flex-wrap items-end gap-3">
+                <div className="w-full sm:w-auto">
+                  <Label className="text-xs text-muted-foreground">From</Label>
+                  <Input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="w-full sm:w-40" />
+                </div>
+                <div className="w-full sm:w-auto">
+                  <Label className="text-xs text-muted-foreground">To</Label>
+                  <Input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="w-full sm:w-40" />
+                </div>
+                <div className="w-full sm:w-auto">
+                  <Label className="text-xs text-muted-foreground">Status</Label>
+                  <Select value={filterStatus} onValueChange={setFilterStatus}>
+                    <SelectTrigger className="w-full sm:w-36"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="All">All</SelectItem>
+                      {ALL_STATUSES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Button variant="outline" onClick={downloadCSV} disabled={filtered.length === 0}>
+                  <Download className="h-4 w-4 mr-2" /> CSV
+                </Button>
+                <PrintReportButton label="Print" buildRows={() => ({
+                title: "Pastoral Care Report",
+                headers: ["Subject", "Member", "Type", "Status", "Confidential", "Assigned To", "Created", "Resolution Notes"],
+                rows: filtered.map(r => [
+                  r.subject,
+                  r.members ? `${r.members.first_name} ${r.members.last_name}` : "",
+                  r.care_type,
+                  r.status,
+                  r.confidential ? "Yes" : "No",
+                  r.assigned_to ? (assigneeMap[r.assigned_to] || "") : "",
+                  r.created_at ? new Date(r.created_at).toLocaleDateString("en-GB") : "",
+                  r.resolution_notes || "",
+                ]),
+              })} />
+              </div>
+            )}
+          </div>
+
+          {isLoading ? (
+            <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>
+          ) : filtered.length === 0 ? (
+            <Card className="border-0 shadow-sm p-12 text-center text-muted-foreground">
+              <Heart className="h-10 w-10 mx-auto mb-3 opacity-20" />
+              <p className="text-lg font-medium">No cases found</p>
+            </Card>
+          ) : (
+            <div className="space-y-3">
+              {filtered.map(r => (
+                <Card key={r.id} className="border-0 shadow-sm hover:shadow-md transition-shadow cursor-pointer" onClick={() => setDetailCase(r)}>
+                  <CardContent className="p-5">
+                    <div className="flex items-start gap-4">
+                      <div className="h-10 w-10 rounded-xl bg-chart-5/10 flex items-center justify-center shrink-0">
+                        <Heart className="h-5 w-5 text-chart-5" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex flex-wrap items-center gap-2 mb-1">
+                          <h3 className="font-display font-bold text-foreground">{r.subject}</h3>
+                          {r.confidential && <Lock className="h-3.5 w-3.5 text-destructive" />}
+                          <Badge className={`border-0 ${statusColors[r.status]}`}>{r.status}</Badge>
+                        </div>
+                        <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
+                          {r.members && <span className="flex items-center gap-1"><User className="h-3.5 w-3.5" /> {r.members.first_name} {r.members.last_name}</span>}
+                          <span>{r.care_type}</span>
+                          <span className="flex items-center gap-1"><CalendarDays className="h-3.5 w-3.5" /> {new Date(r.created_at).toLocaleDateString()}</span>
+                          {r.assigned_to && assigneeMap[r.assigned_to] && (
+                            <span className="flex items-center gap-1"><UserCheck className="h-3.5 w-3.5" /> {assigneeMap[r.assigned_to]}</span>
+                          )}
+                        </div>
+                      </div>
+                      {canManage && canAssignCases && (r.status === "Open" || r.status === "In Progress") && (
+                        <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); openManage(r); }}>Manage</Button>
                       )}
                     </div>
-                  </div>
-                  {canManage && canAssignCases && (r.status === "Open" || r.status === "In Progress") && (
-                    <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); openManage(r); }}>Manage</Button>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </TabsContent>
 
-      {/* Life Events */}
-      {lifeEvents.length > 0 && (
-        <div className="space-y-3">
-          <div className="flex items-center gap-2">
-            <Sparkles className="h-4 w-4 text-primary" />
-            <h2 className="font-display font-bold text-foreground">Life Events</h2>
-            <Badge variant="outline">{lifeEvents.length}</Badge>
+        <TabsContent value="life-events" className="space-y-4 mt-0">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-primary" />
+              <h2 className="font-display font-bold text-foreground">Life Events</h2>
+              <Badge variant="outline">{lifeEvents.length}</Badge>
+            </div>
+            <div className="flex items-center gap-2">
+              {isAdmin && (
+                <Button variant="outline" size="sm" onClick={() => { setAltarSetting(altarUnitName); setSettingsOpen(true); }}>
+                  <Settings className="h-4 w-4 mr-2" /> Altar Ministry unit
+                </Button>
+              )}
+              {canCreateRequest && (
+                <Button onClick={() => setRequestDialogOpen(true)} className="bg-primary hover:bg-primary/90">
+                  <Plus className="h-4 w-4 mr-2" /> New Request
+                </Button>
+              )}
+            </div>
           </div>
-          {lifeEvents.map(le => {
-            const isRoutedLeader = (le.route_user_ids || []).includes(user?.id);
-            const canOpen = isRoutedLeader || isAltarMember || isAltarLeader || isAdmin
-              || le.created_by === user?.id || le.assigned_owner_id === user?.id
-              || (le.assigned_pastor_ids || []).includes(user?.id);
-            return (
-              <Card key={le.id} className="border-0 shadow-sm hover:shadow-md transition-shadow cursor-pointer" onClick={() => canOpen && setActiveLifeEvent(le)}>
-                <CardContent className="p-5">
-                  <div className="flex items-start gap-4">
-                    <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-                      <Sparkles className="h-5 w-5 text-primary" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex flex-wrap items-center gap-2 mb-1">
-                        <h3 className="font-display font-bold text-foreground">
-                          {le.subtype.replace("_", " / ").replace(/\b\w/g, c => c.toUpperCase())}: {le.subject_name}
-                        </h3>
-                        <LifeEventStageBadge stage={le.stage} />
-                        {le.pastor_requested && <Badge variant="outline">Pastor requested</Badge>}
+
+          {lifeEvents.length === 0 ? (
+            <Card className="border-0 shadow-sm p-12 text-center text-muted-foreground">
+              <Sparkles className="h-10 w-10 mx-auto mb-3 opacity-20" />
+              <p className="text-lg font-medium">No life events yet</p>
+              <p className="text-sm mt-1">Submit a Life Event request via "New Request" to get started.</p>
+            </Card>
+          ) : (
+            <div className="space-y-3">
+              {lifeEvents.map(le => {
+                const isRoutedLeader = (le.route_user_ids || []).includes(user?.id);
+                const canOpen = isRoutedLeader || isAltarMember || isAltarLeader || isAdmin
+                  || le.created_by === user?.id || le.assigned_owner_id === user?.id
+                  || (le.assigned_pastor_ids || []).includes(user?.id);
+                return (
+                  <Card key={le.id} className="border-0 shadow-sm hover:shadow-md transition-shadow cursor-pointer" onClick={() => canOpen && setActiveLifeEvent(le)}>
+                    <CardContent className="p-5">
+                      <div className="flex items-start gap-4">
+                        <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                          <Sparkles className="h-5 w-5 text-primary" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex flex-wrap items-center gap-2 mb-1">
+                            <h3 className="font-display font-bold text-foreground">
+                              {le.subtype.replace("_", " / ").replace(/\b\w/g, c => c.toUpperCase())}: {le.subject_name}
+                            </h3>
+                            <LifeEventStageBadge stage={le.stage} />
+                            {le.pastor_requested && <Badge variant="outline">Pastor requested</Badge>}
+                          </div>
+                          <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
+                            {le.members && <span className="flex items-center gap-1"><User className="h-3.5 w-3.5" /> {le.members.first_name} {le.members.last_name}</span>}
+                            {le.event_date && <span className="flex items-center gap-1"><CalendarDays className="h-3.5 w-3.5" /> {new Date(le.event_date).toLocaleDateString("en-GB")}</span>}
+                            <span>Submitted {new Date(le.created_at).toLocaleDateString("en-GB")}</span>
+                          </div>
+                        </div>
+                        {canOpen && (
+                          <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); setActiveLifeEvent(le); }}>Open</Button>
+                        )}
                       </div>
-                      <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
-                        {le.members && <span className="flex items-center gap-1"><User className="h-3.5 w-3.5" /> {le.members.first_name} {le.members.last_name}</span>}
-                        {le.event_date && <span className="flex items-center gap-1"><CalendarDays className="h-3.5 w-3.5" /> {new Date(le.event_date).toLocaleDateString("en-GB")}</span>}
-                        <span>Submitted {new Date(le.created_at).toLocaleDateString("en-GB")}</span>
-                      </div>
-                    </div>
-                    {canOpen && (
-                      <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); setActiveLifeEvent(le); }}>Open</Button>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
-      )}
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
+        </TabsContent>
+      </Tabs>
+
 
       {/* New Request Dialog */}
       <PastoralCareRequestDialog
