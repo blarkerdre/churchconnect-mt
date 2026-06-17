@@ -24,12 +24,13 @@ const SUBTYPES = [
   { value: "bereavement", label: "Bereavement" },
 ];
 
-export default function PastoralCareRequestDialog({ open, onOpenChange, currentUser, myMember }) {
+export default function PastoralCareRequestDialog({ open, onOpenChange, currentUser, myMember, mode = "care" }) {
   const { user } = useAuth();
   const { withTenant, tenantId, scopeQuery } = useTenantQuery();
   const queryClient = useQueryClient();
+  const lifeEventMode = mode === "lifeEvent";
   const [form, setForm] = useState({
-    category: "", title: "", description: "",
+    category: lifeEventMode ? "Life Event" : "", title: "", description: "",
     subtype: "childbirth", subject_name: "", event_date: "",
     pastor_requested: true,
     route_home_cell: false, route_unit: false,
@@ -37,7 +38,7 @@ export default function PastoralCareRequestDialog({ open, onOpenChange, currentU
   const [submitted, setSubmitted] = useState(false);
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
-  const isLifeEvent = form.category === "Life Event";
+  const isLifeEvent = lifeEventMode || form.category === "Life Event";
 
   // Look up the submitting member's home-cell leader & unit leaders for the route
   const { data: routeOptions } = useQuery({
