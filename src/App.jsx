@@ -50,6 +50,7 @@ const CertificateApprovals = lazy(() => import("@/pages/CertificateApprovals"));
 const ChildrenChurch = lazy(() => import("@/pages/ChildrenChurch"));
 const MyFamily = lazy(() => import("@/pages/MyFamily"));
 const Inventory = lazy(() => import("@/pages/Inventory"));
+const ChurchUnit = lazy(() => import("@/pages/ChurchUnit"));
 
 function PageFallback() {
   return (
@@ -179,7 +180,8 @@ function AppPages() {
         <Route path="/my-profile" element={<MyProfile />} />
         <Route path="/members" element={<FeatureGate path="/members"><Members /></FeatureGate>} />
         <Route path="/events" element={<FeatureGate path="/events"><Events /></FeatureGate>} />
-        <Route path="/attendance" element={<FeatureGate path="/attendance"><LeaderRoute><Attendance /></LeaderRoute></FeatureGate>} />
+        <Route path="/attendance" element={<Navigate to="/church-unit?tab=attendance" replace />} />
+        <Route path="/church-unit" element={<FeatureGate path="/attendance"><ProtectedRoute><ChurchUnit /></ProtectedRoute></FeatureGate>} />
         <Route path="/followups" element={<FeatureGate path="/followups"><FollowupRoute><Followups /></FollowupRoute></FeatureGate>} />
         <Route path="/pastoral-care" element={<FeatureGate path="/pastoral-care"><PastoralCare /></FeatureGate>} />
         <Route path="/communications" element={<FeatureGate path="/communications"><Communications /></FeatureGate>} />
@@ -194,7 +196,7 @@ function AppPages() {
         <Route path="/user-management" element={<AdminRoute><UserManagement /></AdminRoute>} />
         <Route path="/sermon-notes" element={<FeatureGate path="/sermon-notes"><SermonNotes /></FeatureGate>} />
         <Route path="/testimony" element={<FeatureGate path="/testimony"><Testimony /></FeatureGate>} />
-        <Route path="/unit-tasks" element={<ProtectedRoute><UnitTasks /></ProtectedRoute>} />
+        <Route path="/unit-tasks" element={<Navigate to="/church-unit?tab=tasks" replace />} />
         <Route path="/inventory" element={<ProtectedRoute><Inventory /></ProtectedRoute>} />
         <Route path="/reports" element={<ReportsRoute><Reports /></ReportsRoute>} />
         <Route path="/certificates-report" element={<CertificateApprovalsRoute><CertificatesReport /></CertificateApprovalsRoute>} />
