@@ -14,7 +14,7 @@ import { useTenantQuery } from "@/hooks/useTenantQuery";
 
 const CATEGORIES = [
   "Prayer Request", "Counselling", "Visitation", "Hospital Visit",
-  "Bereavement", "Marriage", "Financial Support", "Life Event", "Other",
+  "Bereavement", "Marriage", "Financial Support", "Other",
 ];
 
 const SUBTYPES = [
