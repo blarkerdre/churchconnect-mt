@@ -35,8 +35,8 @@ export default function ChurchUnit() {
         <TabsList className="grid grid-cols-2 w-full max-w-md">
           <TabsTrigger value="attendance" className="gap-2">
             <ClipboardList className="h-4 w-4" />
-            <span className="hidden sm:inline">Attendance</span>
-            <span className="sm:hidden">Attendance</span>
+            <span className="hidden sm:inline">Meetings & Attendance</span>
+            <span className="sm:hidden">Meetings</span>
           </TabsTrigger>
           <TabsTrigger value="tasks" className="gap-2">
             <ListChecks className="h-4 w-4" />
