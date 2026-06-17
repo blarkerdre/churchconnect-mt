@@ -190,7 +190,7 @@ export default function PastoralCareRequestDialog({ open, onOpenChange, currentU
     onOpenChange(false);
     setTimeout(() => {
       setForm({
-        category: "", title: "", description: "",
+        category: lifeEventMode ? "Life Event" : "", title: "", description: "",
         subtype: "childbirth", subject_name: "", event_date: "",
         pastor_requested: true, route_home_cell: false, route_unit: false,
       });
