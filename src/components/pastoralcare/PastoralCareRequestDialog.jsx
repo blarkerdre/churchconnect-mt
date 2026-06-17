@@ -214,7 +214,7 @@ export default function PastoralCareRequestDialog({ open, onOpenChange, currentU
       <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
         <TenantDialogHeader>
           <Heart className="h-4 w-4 text-destructive" />
-          Request Pastoral Care
+          {lifeEventMode ? "Submit Life Event" : "Request Pastoral Care"}
         </TenantDialogHeader>
 
         {submitted ? (
@@ -239,15 +239,17 @@ export default function PastoralCareRequestDialog({ open, onOpenChange, currentU
                   : "Your request is confidential and will only be seen by pastoral leaders."}
               </p>
 
-              <div className="space-y-1.5">
-                <Label>Type of Support Needed *</Label>
-                <Select value={form.category} onValueChange={(v) => set("category", v)}>
-                  <SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger>
-                  <SelectContent>
-                    {CATEGORIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
+              {!lifeEventMode && (
+                <div className="space-y-1.5">
+                  <Label>Type of Support Needed *</Label>
+                  <Select value={form.category} onValueChange={(v) => set("category", v)}>
+                    <SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger>
+                    <SelectContent>
+                      {CATEGORIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
 
               {isLifeEvent ? (
                 <>
