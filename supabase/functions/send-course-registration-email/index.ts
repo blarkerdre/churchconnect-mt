@@ -88,6 +88,40 @@ Deno.serve(async (req) => {
       { auth: { autoRefreshToken: false, persistSession: false } },
     );
 
+    // Authorization: allow service-role server-to-server calls, OR an
+    // authenticated user who is either an admin of the tenant OR sending
+    // to their own email address. Prevents email-spam abuse.
+    const isServiceRole = authHeader === `Bearer ${serviceRoleKey}`;
+    if (!isServiceRole) {
+      const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+      const anonClient = createClient(Deno.env.get("SUPABASE_URL")!, anonKey, {
+        global: { headers: { Authorization: authHeader } },
+        auth: { autoRefreshToken: false, persistSession: false },
+      });
+      const { data: userData, error: userErr } = await anonClient.auth.getUser();
+      if (userErr || !userData?.user) {
+        return new Response(JSON.stringify({ error: "Unauthorized" }), {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const callerEmail = normalizeEmail(userData.user.email ?? "");
+      let allowed = !!callerEmail && callerEmail === normalizedEmail;
+      if (!allowed && tenant_id) {
+        const { data: isAdmin } = await supabase.rpc("is_admin", {
+          _user_id: userData.user.id,
+          _tenant_id: tenant_id,
+        });
+        allowed = !!isAdmin;
+      }
+      if (!allowed) {
+        return new Response(JSON.stringify({ error: "Forbidden" }), {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
+
     // Fetch tenant sender name
     let senderName = SITE_NAME;
     if (tenant_id) {
