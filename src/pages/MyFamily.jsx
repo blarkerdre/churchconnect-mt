@@ -40,12 +40,14 @@ function ChildForm({ open, onOpenChange, child, memberId, onSaved }) {
         date_of_birth: form.date_of_birth || null,
         gender: form.gender || null,
         age_group: form.age_group || null,
-        primary_guardian_member_id: memberId,
       };
       if (child?.id) {
+        // Preserve the original registering parent on edits by co-parents
+        delete payload.primary_guardian_member_id;
         const { error } = await supabase.from("children").update(payload).eq("id", child.id).eq("tenant_id", tenantId);
         if (error) throw error;
       } else {
+        payload.primary_guardian_member_id = memberId;
         const { error } = await supabase.from("children").insert(withTenant(payload));
         if (error) throw error;
       }
