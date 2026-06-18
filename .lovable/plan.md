@@ -1,40 +1,33 @@
 ## Problem
 
-Adding an authorised adult fails for non-admin parents because the `child_guardians` INSERT/UPDATE/DELETE policy only allows:
-
-- tenant admins, or
-- the child's primary guardian, identified by `children.primary_guardian_member_id` → `members.user_id = auth.uid()`.
-
-Two real-world cases break this:
-
-1. The parent's `members` row has `user_id = NULL` (common — members aren't always linked to an auth account), so the primary-guardian check returns false even for the actual parent.
-2. A co-parent (already listed in `child_guardians`) cannot add additional authorised adults at all — only the single "primary" guardian can.
+In My Family → Authorised pickup adults, the search box queries `public.members` directly. RLS on `members` only lets regular users see their own row (admins/leaders/reports officers see more, but a normal parent like Oluwa Olu does not). So her search returns no results and she can't pick anyone to add — even though the new INSERT policy would now allow her to.
 
 ## Fix
 
-Update the `child_guardians` write policy so a parent can manage authorised adults when any of the following is true:
+Add a tenant-scoped, security-definer RPC for guardian-style member lookup and switch the GuardianManager search to use it. The RPC returns only the minimal fields needed to pick an adult (id, first/last name, email), is restricted to the caller's tenant, and requires a non-empty query.
 
-- they are a tenant admin / owner (unchanged)
-- they are the child's primary guardian (unchanged: `is_child_primary_guardian`)
-- they are already a co-parent on that child (new: reuse `is_child_co_parent`)
-- they are a Children Church worker/leader for the tenant (new: reuse `is_children_church_member`) — so leaders can help register adults at drop-off
+### Database
 
-Also harden `is_child_primary_guardian` so a parent whose `members` row is linked by `auth.users.email` (but not yet by `user_id`) still resolves: fall back to matching `members.email = (select email from auth.users where id = _user_id)` within the same tenant. This recovers parents whose member record predates their auth account link.
+New function `public.search_tenant_members_for_guardian(_tenant_id uuid, _q text)`:
 
-No application code changes — the existing `MyFamily.jsx` "Add authorised adult" UI keeps working once the policy allows the insert.
+- `SECURITY DEFINER`, `STABLE`, `search_path = public`.
+- Verifies `user_has_tenant_access(_tenant_id)` for `auth.uid()`; returns empty otherwise.
+- Requires `length(btrim(_q)) >= 2`.
+- Returns rows from `members` in `_tenant_id` where first_name / last_name / email ILIKE `%q%`, ordered by name, `LIMIT 10`.
+- Returned columns: `id`, `first_name`, `last_name`, `email`.
+- `GRANT EXECUTE ... TO authenticated`; `REVOKE ... FROM anon, public`.
 
-## Technical details
+No changes to existing `members` RLS policies.
 
-- Migration: drop and recreate the `Child guardians manage` policy on `public.child_guardians` with the expanded `USING`/`WITH CHECK` predicate listed above.
-- Migration: `CREATE OR REPLACE FUNCTION public.is_child_primary_guardian` to add the email-based fallback (still `SECURITY DEFINER`, `STABLE`, `search_path = public`).
-- No grant changes needed; existing grants on `child_guardians` remain.
-- No schema changes, no frontend changes.
+### Frontend
+
+`src/pages/MyFamily.jsx` `GuardianManager`:
+
+- Replace the direct `supabase.from("members").select(...).or(...)` search with `supabase.rpc("search_tenant_members_for_guardian", { _tenant_id: tenantId, _q: search })`.
+- Keep the rest of the component (selection, insert, list, remove) unchanged.
 
 ## Validation
 
-After the migration:
-
-1. As a parent user who is the primary guardian (member linked or only by email), open My Family → Authorised adults → add a member. Insert should succeed.
-2. As a co-parent already on a child, repeat — insert should succeed.
-3. As an unrelated regular member, repeat — insert should still be rejected by RLS.
-4. As a tenant admin and as a Children Church worker, repeat — insert should succeed.
+1. Sign in as Oluwa Olu (regular member, no admin/leader role). Open My Family → Authorised adults → type a name. Results from her tenant appear and adding succeeds.
+2. Sign in as an admin in the same tenant. Search still works (RPC bypasses RLS, scoped by tenant).
+3. Confirm a user from a different tenant cannot retrieve results for `_tenant_id` they don't belong to (RPC returns empty).
