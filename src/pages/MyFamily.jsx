@@ -279,6 +279,7 @@ function DelegationDialog({ open, onOpenChange, child }) {
 
 export default function MyFamily() {
   const { user, isAdmin } = useAuth();
+  const { isSuperAdmin } = useTenant();
   const { tenantId } = useTenantQuery();
   const qc = useQueryClient();
   const [childOpen, setChildOpen] = useState(false);
