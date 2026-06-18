@@ -1,0 +1,1 @@
+ALTER TABLE public.children DROP CONSTRAINT IF EXISTS children_age_group_check;
