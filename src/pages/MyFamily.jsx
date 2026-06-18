@@ -299,7 +299,7 @@ export default function MyFamily() {
     },
   });
 
-  const canSeeAll = isAdmin;
+  const canSeeAll = isSuperAdmin;
 
   const removeChild = useMutation({
     mutationFn: async (child) => {
