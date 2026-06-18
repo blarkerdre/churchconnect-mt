@@ -106,11 +106,13 @@ function GuardianManager({ open, onOpenChange, child }) {
 
   const { data: guardians = [] } = useQuery({
     queryKey: ["child-guardians", child?.id],
-    enabled: !!child?.id,
+    enabled: !!child?.id && !!tenantId,
     queryFn: async () => {
-      const { data } = await supabase.from("child_guardians")
-        .select("*, members:member_id(id, first_name, last_name, email, phone)")
-        .eq("child_id", child.id).eq("tenant_id", tenantId);
+      const { data, error } = await supabase.rpc("list_child_guardians", {
+        _child_id: child.id,
+        _tenant_id: tenantId,
+      });
+      if (error) { toast.error(error.message); return []; }
       return data || [];
     },
   });
