@@ -119,10 +119,11 @@ function GuardianManager({ open, onOpenChange, child }) {
     queryKey: ["member-search", tenantId, search],
     enabled: !!tenantId && search.length >= 2,
     queryFn: async () => {
-      const { data } = await supabase.from("members").select("id, first_name, last_name, email")
-        .eq("tenant_id", tenantId)
-        .or(`first_name.ilike.%${search}%,last_name.ilike.%${search}%,email.ilike.%${search}%`)
-        .limit(8);
+      const { data, error } = await supabase.rpc("search_tenant_members_for_guardian", {
+        _tenant_id: tenantId,
+        _q: search,
+      });
+      if (error) { toast.error(error.message); return []; }
       return data || [];
     },
   });
