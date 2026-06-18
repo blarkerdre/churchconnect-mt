@@ -2,6 +2,7 @@ import React, { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useTenant } from "@/contexts/TenantContext";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -278,6 +279,7 @@ function DelegationDialog({ open, onOpenChange, child }) {
 
 export default function MyFamily() {
   const { user, isAdmin } = useAuth();
+  const { isSuperAdmin } = useTenant();
   const { tenantId } = useTenantQuery();
   const qc = useQueryClient();
   const [childOpen, setChildOpen] = useState(false);
@@ -297,7 +299,7 @@ export default function MyFamily() {
     },
   });
 
-  const canSeeAll = isAdmin;
+  const canSeeAll = isSuperAdmin;
 
   const removeChild = useMutation({
     mutationFn: async (child) => {
