@@ -1,33 +1,30 @@
-Currently, **no** — a child can only have one "primary guardian" in the system. The parent who first registers the child becomes the `primary_guardian_member_id`; that is the only parent who sees the child in **My Family**.
+## Plan
 
-The second parent *can* be added via **Authorised pickup adults** with relationship "Parent", but that only grants pickup authorization in Children Church — they do **not** see the child in their My Family page and cannot edit the child's profile.
+1. **Fix My Family visibility**
+   - Keep the page tenant-scoped.
+   - Show every child linked to the signed-in parent in the current tenant:
+     - primary guardian children
+     - co-parent/guardian links where the relationship is `Parent`
+   - Surface query errors instead of silently returning an empty list.
 
-This can be fixed with a small frontend change (no database migration needed, since `child_guardians` already exists).
+2. **Fix Children Church record rendering**
+   - Keep Children Church tenant-scoped, but make each panel reliably load all records for the active tenant:
+     - drop-off family search
+     - active pickup/check-in list
+     - report table
+   - Add clear empty/error states so “no records” is distinguishable from an access/query failure.
 
-### Plan: Dual-parent visibility in My Family
+3. **Harden backend access rules**
+   - Update row-level access so Children Church workers, tenant admins, and reports officers can read the tenant’s children/check-in records they need.
+   - Keep parents limited to their own children and co-parent links only.
+   - Preserve explicit `tenant_id` checks in every query and access rule.
 
-#### What to change
+4. **Verify tenant data alignment**
+   - Check existing children, guardians, members, and check-ins across tenants.
+   - Confirm records belong to the expected tenant and that worker/admin access is not blocked by role/unit lookup logic.
 
-1. **Broaden the "My Children" query in `MyFamily.jsx`**
-   - Currently fetches only where `primary_guardian_member_id = meMember.id`
-   - Also fetch children where the current user is linked in `child_guardians` with `relationship = 'Parent'`
-   - Merge both result sets so co-parents see the same children list
+## Technical notes
 
-2. **Preserve the original primary guardian on edit**
-   - In `ChildForm`, the save currently sets `primary_guardian_member_id: memberId`
-   - When a co-parent edits, this must **not** overwrite the original `primary_guardian_member_id`
-   - Only set `primary_guardian_member_id` when creating a brand-new child
-
-3. **Guardian add/remove stays the same**
-   - The existing **Authorised pickup adults** dialog already works for adding the second parent
-   - No changes needed there
-
-### Technical details
-
-- File: `src/pages/MyFamily.jsx`
-- Query change: use a two-step fetch (primary guardian children + guardian-Parent children) or a server-side join via `child_guardians`
-- No database schema changes, no RLS changes, no new tables
-
-### Result
-
-Both parents see the child in **My Family**, can edit the child's details, and can generate pickup delegation codes. The original registering parent remains the `primary_guardian_member_id` for admin/leader reference.
+- Existing database records are split across two tenants, so the app should render records for the **currently selected tenant**, not all tenants globally.
+- `children`, `child_guardians`, and `child_checkins` already have table grants; the likely issue is row-level visibility and/or role detection for the current tenant.
+- I will avoid making child data publicly readable and will not remove tenant isolation.
