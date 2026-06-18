@@ -1,33 +1,43 @@
 ## Problem
 
-In My Family → Authorised pickup adults, the search box queries `public.members` directly. RLS on `members` only lets regular users see their own row (admins/leaders/reports officers see more, but a normal parent like Oluwa Olu does not). So her search returns no results and she can't pick anyone to add — even though the new INSERT policy would now allow her to.
+`GuardianManager` lists authorised adults via:
+
+```js
+supabase.from("child_guardians")
+  .select("*, members:member_id(id, first_name, last_name, email, phone)")
+```
+
+The embedded `members` join is evaluated under the caller's RLS. A regular parent can only see their own `members` row, so for every other guardian the embedded `members` object comes back as `null` and the row renders with no name or contact info.
 
 ## Fix
 
-Add a tenant-scoped, security-definer RPC for guardian-style member lookup and switch the GuardianManager search to use it. The RPC returns only the minimal fields needed to pick an adult (id, first/last name, email), is restricted to the caller's tenant, and requires a non-empty query.
+Add a tenant-scoped, security-definer RPC that returns the guardians of a child together with the linked member's name, email, phone, and relationship — bypassing the `members` RLS while still enforcing tenant access and the same visibility rules already used for `child_guardians`.
 
 ### Database
 
-New function `public.search_tenant_members_for_guardian(_tenant_id uuid, _q text)`:
+New function `public.list_child_guardians(_child_id uuid, _tenant_id uuid)`:
 
 - `SECURITY DEFINER`, `STABLE`, `search_path = public`.
-- Verifies `user_has_tenant_access(_tenant_id)` for `auth.uid()`; returns empty otherwise.
-- Requires `length(btrim(_q)) >= 2`.
-- Returns rows from `members` in `_tenant_id` where first_name / last_name / email ILIKE `%q%`, ordered by name, `LIMIT 10`.
-- Returned columns: `id`, `first_name`, `last_name`, `email`.
-- `GRANT EXECUTE ... TO authenticated`; `REVOKE ... FROM anon, public`.
+- Returns empty unless `user_has_tenant_access(_tenant_id)` AND one of: `is_admin`, `is_children_church_member`, `is_child_primary_guardian`, `is_child_co_parent` — same gate as the existing SELECT policy on `child_guardians`.
+- Returns columns: `id` (guardian row id), `child_id`, `member_id`, `relationship`, `can_pickup`, `first_name`, `last_name`, `email`, `phone`.
+- Filters `cg.tenant_id = _tenant_id AND cg.child_id = _child_id`.
+- `REVOKE ... FROM PUBLIC, anon`; `GRANT EXECUTE ... TO authenticated`.
 
-No changes to existing `members` RLS policies.
+No changes to `members` or `child_guardians` RLS.
 
 ### Frontend
 
 `src/pages/MyFamily.jsx` `GuardianManager`:
 
-- Replace the direct `supabase.from("members").select(...).or(...)` search with `supabase.rpc("search_tenant_members_for_guardian", { _tenant_id: tenantId, _q: search })`.
-- Keep the rest of the component (selection, insert, list, remove) unchanged.
+- Replace the `child-guardians` query that does `select("*, members:member_id(...)")` with `supabase.rpc("list_child_guardians", { _child_id: child.id, _tenant_id: tenantId })`.
+- Update the render to read the flattened fields (`g.first_name`, `g.last_name`, `g.email`, `g.phone`) instead of `g.members?.first_name` etc.
+- Keep the existing remove-guardian mutation and the `["child-guardians", child.id]` query key so `invalidateQueries` continues to refresh the list after add/remove.
+
+Optionally apply the same RPC in `ChildrenChurch.jsx` where it reads the same embed for the "Authorised pickup adults" panel — same root cause, same fix, so leaders without admin role also see names.
 
 ## Validation
 
-1. Sign in as Oluwa Olu (regular member, no admin/leader role). Open My Family → Authorised adults → type a name. Results from her tenant appear and adding succeeds.
-2. Sign in as an admin in the same tenant. Search still works (RPC bypasses RLS, scoped by tenant).
-3. Confirm a user from a different tenant cannot retrieve results for `_tenant_id` they don't belong to (RPC returns empty).
+1. As Oluwa (regular parent), open Authorised adults for a child that already has guardians — names, emails, phones now appear.
+2. As an admin, open the same dialog — names still appear (RPC works for admins too).
+3. As a user from a different tenant, calling the RPC for that child returns no rows.
+4. Add and remove a guardian — list refreshes via existing query invalidation.
