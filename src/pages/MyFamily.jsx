@@ -162,7 +162,7 @@ function GuardianManager({ open, onOpenChange, child }) {
             {guardians.map(g => (
               <div key={g.id} className="flex items-center justify-between border rounded p-2">
                 <div>
-                  <p className="text-sm font-medium">{g.members?.first_name} {g.members?.last_name}</p>
+                  <p className="text-sm font-medium">{g.first_name} {g.last_name}</p>
                   <p className="text-xs text-muted-foreground">{g.relationship}</p>
                 </div>
                 <Button variant="ghost" size="sm" onClick={() => removeGuardian.mutate(g.id)}><Trash2 className="h-4 w-4" /></Button>
