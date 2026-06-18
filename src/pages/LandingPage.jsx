@@ -105,7 +105,10 @@ export default function LandingPage() {
             <img src="/lovable-uploads/church-connect-logo-transparent.png" alt="" className="h-7 w-7 object-contain" />
             <span className="font-display text-sm font-bold text-primary">ChurchConnect</span>
           </div>
-          <p className="text-xs text-muted-foreground">© {new Date().getFullYear()} ChurchConnect. All rights reserved.</p>
+          <div className="flex items-center gap-4 text-xs text-muted-foreground">
+            <Link to="/trust" className="hover:text-foreground transition-colors">Trust & Privacy</Link>
+            <span>© {new Date().getFullYear()} ChurchConnect. All rights reserved.</span>
+          </div>
         </div>
       </footer>
     </div>

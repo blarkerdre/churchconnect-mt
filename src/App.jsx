@@ -43,6 +43,7 @@ const Presentation = lazy(() => import("@/pages/Presentation"));
 const SermonNotes = lazy(() => import("@/pages/SermonNotes"));
 const Testimony = lazy(() => import("@/pages/Testimony"));
 const Unsubscribe = lazy(() => import("@/pages/Unsubscribe"));
+const Trust = lazy(() => import("@/pages/Trust"));
 const UnitTasks = lazy(() => import("@/pages/UnitTasks"));
 const Reports = lazy(() => import("@/pages/Reports"));
 const CertificatesReport = lazy(() => import("@/pages/CertificatesReport"));
@@ -269,6 +270,7 @@ function AppRoutes() {
         <Route path="/presentation" element={<Presentation />} />
         <Route path="/onboard" element={<Onboard />} />
         <Route path="/unsubscribe" element={<Unsubscribe />} />
+        <Route path="/trust" element={<Trust />} />
 
         {/* Tenant-prefixed public routes */}
         <Route path="/t/:tenantSlug/auth" element={<AuthProvider><Auth /></AuthProvider>} />
