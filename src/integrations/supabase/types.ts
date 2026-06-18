@@ -5555,6 +5555,15 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      search_tenant_members_for_guardian: {
+        Args: { _q: string; _tenant_id: string }
+        Returns: {
+          email: string
+          first_name: string
+          id: string
+          last_name: string
+        }[]
+      }
       task_is_in_user_unit: {
         Args: { _task_id: string; _tenant_id: string; _user_id: string }
         Returns: boolean
