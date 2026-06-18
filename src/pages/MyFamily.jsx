@@ -297,17 +297,7 @@ export default function MyFamily() {
     },
   });
 
-  const { data: isCCWorker = false } = useQuery({
-    queryKey: ["is-cc-worker", tenantId, user?.id],
-    enabled: !!tenantId && !!user?.id,
-    queryFn: async () => {
-      const { data, error } = await supabase.rpc("is_children_church_member", { _user_id: user.id, _tenant_id: tenantId });
-      if (error) { console.warn("is_children_church_member failed", error); return false; }
-      return !!data;
-    },
-  });
-
-  const canSeeAll = isAdmin || isCCWorker;
+  const canSeeAll = isAdmin;
 
   const removeChild = useMutation({
     mutationFn: async (child) => {
