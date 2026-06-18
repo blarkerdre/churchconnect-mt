@@ -1199,15 +1199,81 @@ export default function ChildrenChurch() {
         <p className="text-sm text-muted-foreground">Secure drop-off and pickup for children in care.</p>
       </div>
       <Tabs defaultValue="checkin">
-        <TabsList className="grid grid-cols-3 w-full sm:w-auto">
+        <TabsList className="grid grid-cols-4 w-full sm:w-auto">
           <TabsTrigger value="checkin">Check-in</TabsTrigger>
           <TabsTrigger value="pickup">Pickup</TabsTrigger>
+          {(isLeader || isAdmin) && <TabsTrigger value="all">All children</TabsTrigger>}
           {(isLeader || isAdmin) && <TabsTrigger value="report">Report</TabsTrigger>}
         </TabsList>
         <TabsContent value="checkin"><CheckInPanel tenantId={tenantId} tenantSlug={tenantSlug} /></TabsContent>
         <TabsContent value="pickup"><PickupPanel tenantId={tenantId} isLeader={isLeader || isAdmin} /></TabsContent>
+        {(isLeader || isAdmin) && <TabsContent value="all"><AllChildrenPanel tenantId={tenantId} /></TabsContent>}
         {(isLeader || isAdmin) && <TabsContent value="report"><ReportPanel tenantId={tenantId} /></TabsContent>}
       </Tabs>
     </div>
+  );
+}
+
+function AllChildrenPanel({ tenantId }) {
+  const [search, setSearch] = useState("");
+  const [profileChildId, setProfileChildId] = useState(null);
+  const { data: rows = [], isLoading, error } = useQuery({
+    queryKey: ["cc-all-children", tenantId],
+    enabled: !!tenantId,
+    queryFn: async () => {
+      const { data, error } = await supabase.from("children")
+        .select("id, first_name, last_name, age_group, allergies, is_active, primary_guardian:primary_guardian_member_id(first_name, last_name, phone, email)")
+        .eq("tenant_id", tenantId)
+        .order("first_name");
+      if (error) { console.error("cc all children load failed", error); throw error; }
+      return data || [];
+    },
+  });
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return rows;
+    return rows.filter(r => `${r.first_name || ""} ${r.last_name || ""}`.toLowerCase().includes(q));
+  }, [rows, search]);
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">All children in this tenant ({rows.length})</CardTitle>
+        <CardDescription>Every registered child — tap a row to view the full profile.</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-2">
+        <div className="relative">
+          <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input className="pl-8 h-9" placeholder="Search by name..." value={search} onChange={e => setSearch(e.target.value)} />
+        </div>
+        {error && <p className="text-sm text-destructive">Could not load records: {error.message}</p>}
+        {isLoading && <p className="text-sm text-muted-foreground">Loading…</p>}
+        {!isLoading && filtered.length === 0 && (
+          <p className="text-sm text-muted-foreground py-4 text-center">No children found.</p>
+        )}
+        <div className="space-y-1 max-h-[60vh] overflow-y-auto">
+          {filtered.map(c => (
+            <button key={c.id} type="button" onClick={() => setProfileChildId(c.id)}
+              className="w-full text-left border rounded p-2 hover:bg-muted text-sm">
+              <div className="flex justify-between items-start gap-2">
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium">{c.first_name} {c.last_name}{c.is_active === false && <span className="text-xs text-muted-foreground"> (inactive)</span>}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {c.primary_guardian ? `Parent: ${c.primary_guardian.first_name} ${c.primary_guardian.last_name}` : "No primary guardian"}
+                    {c.primary_guardian?.phone ? ` · ${c.primary_guardian.phone}` : ""}
+                  </p>
+                </div>
+                <div className="flex flex-col items-end gap-1">
+                  {c.age_group && <Badge variant="outline" className="text-[10px]">{c.age_group}</Badge>}
+                  {c.allergies && <Badge variant="destructive" className="text-[10px]">⚠</Badge>}
+                </div>
+              </div>
+            </button>
+          ))}
+        </div>
+        <ChildProfileDialog open={!!profileChildId} onOpenChange={(o) => !o && setProfileChildId(null)} childId={profileChildId} tenantId={tenantId} />
+      </CardContent>
+    </Card>
   );
 }
