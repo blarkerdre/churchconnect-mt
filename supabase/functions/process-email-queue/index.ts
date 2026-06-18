@@ -52,6 +52,25 @@ function parseJwtClaims(token: string): Record<string, unknown> | null {
   }
 }
 
+// Look up the tenant_id of the enqueue (pending) row for this message, so that
+// follow-up status rows (sent/dlq/failed/etc.) written by this service-role
+// worker carry the same tenant_id and surface in tenant-scoped log views.
+async function resolveTenantId(
+  supabase: ReturnType<typeof createClient>,
+  messageId: unknown
+): Promise<string | null> {
+  if (typeof messageId !== 'string' || !messageId) return null
+  const { data } = await supabase
+    .from('email_send_log')
+    .select('tenant_id')
+    .eq('message_id', messageId)
+    .not('tenant_id', 'is', null)
+    .order('created_at', { ascending: true })
+    .limit(1)
+    .maybeSingle()
+  return (data?.tenant_id as string | null) ?? null
+}
+
 // Move a message to the dead letter queue and log the reason.
 async function moveToDlq(
   supabase: ReturnType<typeof createClient>,
@@ -60,12 +79,14 @@ async function moveToDlq(
   reason: string
 ): Promise<void> {
   const payload = msg.message
+  const tenantId = await resolveTenantId(supabase, payload.message_id)
   await supabase.from('email_send_log').insert({
     message_id: payload.message_id,
     template_name: (payload.label || queue) as string,
     recipient_email: payload.to,
     status: 'dlq',
     error_message: reason,
+    tenant_id: tenantId,
   })
   const { error } = await supabase.rpc('move_to_dlq', {
     source_queue: queue,
@@ -77,6 +98,7 @@ async function moveToDlq(
     console.error('Failed to move message to DLQ', { queue, msg_id: msg.msg_id, reason, error })
   }
 }
+
 
 Deno.serve(async (req) => {
   const apiKey = Deno.env.get('LOVABLE_API_KEY')
