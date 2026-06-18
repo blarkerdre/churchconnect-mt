@@ -106,11 +106,13 @@ function GuardianManager({ open, onOpenChange, child }) {
 
   const { data: guardians = [] } = useQuery({
     queryKey: ["child-guardians", child?.id],
-    enabled: !!child?.id,
+    enabled: !!child?.id && !!tenantId,
     queryFn: async () => {
-      const { data } = await supabase.from("child_guardians")
-        .select("*, members:member_id(id, first_name, last_name, email, phone)")
-        .eq("child_id", child.id).eq("tenant_id", tenantId);
+      const { data, error } = await supabase.rpc("list_child_guardians", {
+        _child_id: child.id,
+        _tenant_id: tenantId,
+      });
+      if (error) { toast.error(error.message); return []; }
       return data || [];
     },
   });
@@ -160,7 +162,7 @@ function GuardianManager({ open, onOpenChange, child }) {
             {guardians.map(g => (
               <div key={g.id} className="flex items-center justify-between border rounded p-2">
                 <div>
-                  <p className="text-sm font-medium">{g.members?.first_name} {g.members?.last_name}</p>
+                  <p className="text-sm font-medium">{g.first_name} {g.last_name}</p>
                   <p className="text-xs text-muted-foreground">{g.relationship}</p>
                 </div>
                 <Button variant="ghost" size="sm" onClick={() => removeGuardian.mutate(g.id)}><Trash2 className="h-4 w-4" /></Button>
