@@ -1,31 +1,33 @@
-## Problem
+Currently, **no** — a child can only have one "primary guardian" in the system. The parent who first registers the child becomes the `primary_guardian_member_id`; that is the only parent who sees the child in **My Family**.
 
-Adding a child fails with:
-`new row for relation "children" violates check constraint "children_age_group_check"`
+The second parent *can* be added via **Authorised pickup adults** with relationship "Parent", but that only grants pickup authorization in Children Church — they do **not** see the child in their My Family page and cannot edit the child's profile.
 
-## Root cause
+This can be fixed with a small frontend change (no database migration needed, since `child_guardians` already exists).
 
-The `children` table has a hardcoded DB CHECK constraint that only accepts four age-group values:
+### Plan: Dual-parent visibility in My Family
 
-```
-Nursery, Toddler, Primary, Pre-Teen
-```
+#### What to change
 
-But age groups are admin-configurable through the `children_age_groups` app setting (Settings → Children's Church). As soon as a tenant adds or renames a group (e.g. "Juniors", "Crèche", "Youth"), saving a child with that label is rejected by the constraint — even though the UI offered the value.
+1. **Broaden the "My Children" query in `MyFamily.jsx`**
+   - Currently fetches only where `primary_guardian_member_id = meMember.id`
+   - Also fetch children where the current user is linked in `child_guardians` with `relationship = 'Parent'`
+   - Merge both result sets so co-parents see the same children list
 
-## Fix
+2. **Preserve the original primary guardian on edit**
+   - In `ChildForm`, the save currently sets `primary_guardian_member_id: memberId`
+   - When a co-parent edits, this must **not** overwrite the original `primary_guardian_member_id`
+   - Only set `primary_guardian_member_id` when creating a brand-new child
 
-Drop the rigid CHECK constraint so the configurable setting is the single source of truth for allowed values. The UI already restricts entries to values from `children_age_groups`, and `age_group` remains nullable (DOB can be used instead).
+3. **Guardian add/remove stays the same**
+   - The existing **Authorised pickup adults** dialog already works for adding the second parent
+   - No changes needed there
 
-### Migration
+### Technical details
 
-```sql
-ALTER TABLE public.children
-  DROP CONSTRAINT IF EXISTS children_age_group_check;
-```
+- File: `src/pages/MyFamily.jsx`
+- Query change: use a two-step fetch (primary guardian children + guardian-Parent children) or a server-side join via `child_guardians`
+- No database schema changes, no RLS changes, no new tables
 
-No code, RLS, or UI changes are needed. The `children_gender_check` constraint is kept as-is (gender is not configurable).
+### Result
 
-## Verification
-
-After the migration, adding a child with a custom age group label (e.g. the value that previously failed) saves successfully, and the existing four defaults continue to work.
+Both parents see the child in **My Family**, can edit the child's details, and can generate pickup delegation codes. The original registering parent remains the `primary_guardian_member_id` for admin/leader reference.
