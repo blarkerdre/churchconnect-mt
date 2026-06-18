@@ -274,7 +274,7 @@ function DelegationDialog({ open, onOpenChange, child }) {
 }
 
 export default function MyFamily() {
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const { tenantId } = useTenantQuery();
   const qc = useQueryClient();
   const [childOpen, setChildOpen] = useState(false);
@@ -282,36 +282,56 @@ export default function MyFamily() {
   const [guardianFor, setGuardianFor] = useState(null);
   const [delegateFor, setDelegateFor] = useState(null);
   const [deleteChild, setDeleteChild] = useState(null);
+  const [showAll, setShowAll] = useState(false);
+
+  const { data: meMember } = useQuery({
+    queryKey: ["me-member-id", tenantId, user?.id],
+    enabled: !!tenantId && !!user?.id,
+    queryFn: async () => {
+      const { data, error } = await supabase.from("members").select("id, first_name, last_name").eq("tenant_id", tenantId).eq("user_id", user.id).maybeSingle();
+      if (error) { console.error("me-member lookup failed", error); throw error; }
+      return data;
+    },
+  });
+
+  const { data: isCCWorker = false } = useQuery({
+    queryKey: ["is-cc-worker", tenantId, user?.id],
+    enabled: !!tenantId && !!user?.id,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("is_children_church_member", { _user_id: user.id, _tenant_id: tenantId });
+      if (error) { console.warn("is_children_church_member failed", error); return false; }
+      return !!data;
+    },
+  });
+
+  const canSeeAll = isAdmin || isCCWorker;
 
   const removeChild = useMutation({
     mutationFn: async (child) => {
       const { error } = await supabase.from("children").delete().eq("id", child.id).eq("tenant_id", tenantId);
       if (error) throw error;
     },
-    onSuccess: () => { toast.success("Child removed"); setDeleteChild(null); qc.invalidateQueries({ queryKey: ["my-children", tenantId, meMember?.id] }); },
+    onSuccess: () => { toast.success("Child removed"); setDeleteChild(null); qc.invalidateQueries({ queryKey: ["my-children"] }); },
     onError: (e) => toast.error(e.message),
   });
 
-  const { data: meMember } = useQuery({
-    queryKey: ["me-member-id", tenantId, user?.id],
-    enabled: !!tenantId && !!user?.id,
+  const { data: children = [], refetch, error: childrenError } = useQuery({
+    queryKey: ["my-children", tenantId, meMember?.id, showAll && canSeeAll],
+    enabled: !!tenantId && (!!meMember?.id || (canSeeAll && showAll)),
     queryFn: async () => {
-      const { data } = await supabase.from("members").select("id, first_name, last_name").eq("tenant_id", tenantId).eq("user_id", user.id).maybeSingle();
-      return data;
-    },
-  });
-
-  const { data: children = [], refetch } = useQuery({
-    queryKey: ["my-children", tenantId, meMember?.id],
-    enabled: !!tenantId && !!meMember?.id,
-    queryFn: async () => {
-      // 1) Children where I am the primary guardian
-      const { data: primary = [] } = await supabase.from("children").select("*")
+      if (canSeeAll && showAll) {
+        const { data, error } = await supabase.from("children").select("*")
+          .eq("tenant_id", tenantId).order("first_name");
+        if (error) { console.error("all-children load failed", error); toast.error(`Could not load records: ${error.message}`); throw error; }
+        return data || [];
+      }
+      const { data: primary = [], error: pErr } = await supabase.from("children").select("*")
         .eq("tenant_id", tenantId).eq("primary_guardian_member_id", meMember.id);
-      // 2) Children where I am linked as a Parent in child_guardians (co-parent visibility)
-      const { data: coLinks = [] } = await supabase.from("child_guardians")
+      if (pErr) { console.error("primary children load failed", pErr); toast.error(`Could not load your children: ${pErr.message}`); throw pErr; }
+      const { data: coLinks = [], error: cErr } = await supabase.from("child_guardians")
         .select("child_id")
         .eq("tenant_id", tenantId).eq("member_id", meMember.id).eq("relationship", "Parent");
+      if (cErr) console.warn("co-parent links load failed", cErr);
       const coIds = (coLinks || []).map(l => l.child_id).filter(Boolean);
       let co = [];
       if (coIds.length) {
@@ -319,7 +339,6 @@ export default function MyFamily() {
           .eq("tenant_id", tenantId).in("id", coIds);
         co = data || [];
       }
-      // Merge & dedupe
       const map = new Map();
       [...(primary || []), ...co].forEach(c => map.set(c.id, c));
       return Array.from(map.values()).sort((a, b) => (a.first_name || "").localeCompare(b.first_name || ""));
@@ -338,22 +357,37 @@ export default function MyFamily() {
     refetchInterval: 15000,
   });
 
-  if (!meMember) {
+  if (!meMember && !canSeeAll) {
     return <div className="p-4"><Card><CardContent className="p-6 text-sm text-muted-foreground">Your member profile is not linked yet. Please contact an admin.</CardContent></Card></div>;
   }
 
   return (
     <div className="p-4 space-y-4 max-w-3xl mx-auto">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2 flex-wrap">
         <div>
           <h1 className="text-2xl font-display font-bold flex items-center gap-2"><Baby className="h-6 w-6 text-primary" /> My Family</h1>
-          <p className="text-sm text-muted-foreground">Manage your children and authorised pickup adults.</p>
+          <p className="text-sm text-muted-foreground">
+            {showAll && canSeeAll ? "Browsing all children in this tenant." : "Manage your children and authorised pickup adults."}
+          </p>
         </div>
-        <Button onClick={() => { setEditChild(null); setChildOpen(true); }} size="sm"><Plus className="h-4 w-4 mr-1" /> Add child</Button>
+        <div className="flex gap-2">
+          {canSeeAll && (
+            <Button variant="outline" size="sm" onClick={() => setShowAll(s => !s)}>
+              {showAll ? "Show my family" : "Show all tenant records"}
+            </Button>
+          )}
+          {meMember && (
+            <Button onClick={() => { setEditChild(null); setChildOpen(true); }} size="sm"><Plus className="h-4 w-4 mr-1" /> Add child</Button>
+          )}
+        </div>
       </div>
 
+      {childrenError && (
+        <Card><CardContent className="p-4 text-sm text-destructive">Could not load records: {childrenError.message}</CardContent></Card>
+      )}
+
       {children.length === 0 ? (
-        <Card><CardContent className="p-8 text-center text-sm text-muted-foreground">No children added yet.</CardContent></Card>
+        <Card><CardContent className="p-8 text-center text-sm text-muted-foreground">{showAll && canSeeAll ? "No children registered in this tenant yet." : "No children added yet."}</CardContent></Card>
       ) : (
         <div className="space-y-3">
           {children.map(c => {
@@ -389,7 +423,7 @@ export default function MyFamily() {
         </div>
       )}
 
-      <ChildForm open={childOpen} onOpenChange={setChildOpen} child={editChild} memberId={meMember.id} onSaved={refetch} />
+      {meMember && <ChildForm open={childOpen} onOpenChange={setChildOpen} child={editChild} memberId={meMember.id} onSaved={refetch} />}
       {guardianFor && <GuardianManager open={!!guardianFor} onOpenChange={() => setGuardianFor(null)} child={guardianFor} />}
       {delegateFor && <DelegationDialog open={!!delegateFor} onOpenChange={() => setDelegateFor(null)} child={delegateFor} />}
 
