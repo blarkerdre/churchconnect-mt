@@ -40,12 +40,14 @@ function ChildForm({ open, onOpenChange, child, memberId, onSaved }) {
         date_of_birth: form.date_of_birth || null,
         gender: form.gender || null,
         age_group: form.age_group || null,
-        primary_guardian_member_id: memberId,
       };
       if (child?.id) {
+        // Preserve the original registering parent on edits by co-parents
+        delete payload.primary_guardian_member_id;
         const { error } = await supabase.from("children").update(payload).eq("id", child.id).eq("tenant_id", tenantId);
         if (error) throw error;
       } else {
+        payload.primary_guardian_member_id = memberId;
         const { error } = await supabase.from("children").insert(withTenant(payload));
         if (error) throw error;
       }
@@ -303,9 +305,24 @@ export default function MyFamily() {
     queryKey: ["my-children", tenantId, meMember?.id],
     enabled: !!tenantId && !!meMember?.id,
     queryFn: async () => {
-      const { data } = await supabase.from("children").select("*")
-        .eq("tenant_id", tenantId).eq("primary_guardian_member_id", meMember.id).order("first_name");
-      return data || [];
+      // 1) Children where I am the primary guardian
+      const { data: primary = [] } = await supabase.from("children").select("*")
+        .eq("tenant_id", tenantId).eq("primary_guardian_member_id", meMember.id);
+      // 2) Children where I am linked as a Parent in child_guardians (co-parent visibility)
+      const { data: coLinks = [] } = await supabase.from("child_guardians")
+        .select("child_id")
+        .eq("tenant_id", tenantId).eq("member_id", meMember.id).eq("relationship", "Parent");
+      const coIds = (coLinks || []).map(l => l.child_id).filter(Boolean);
+      let co = [];
+      if (coIds.length) {
+        const { data } = await supabase.from("children").select("*")
+          .eq("tenant_id", tenantId).in("id", coIds);
+        co = data || [];
+      }
+      // Merge & dedupe
+      const map = new Map();
+      [...(primary || []), ...co].forEach(c => map.set(c.id, c));
+      return Array.from(map.values()).sort((a, b) => (a.first_name || "").localeCompare(b.first_name || ""));
     },
   });
 
