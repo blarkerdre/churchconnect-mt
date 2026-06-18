@@ -363,16 +363,31 @@ export default function MyFamily() {
 
   return (
     <div className="p-4 space-y-4 max-w-3xl mx-auto">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2 flex-wrap">
         <div>
           <h1 className="text-2xl font-display font-bold flex items-center gap-2"><Baby className="h-6 w-6 text-primary" /> My Family</h1>
-          <p className="text-sm text-muted-foreground">Manage your children and authorised pickup adults.</p>
+          <p className="text-sm text-muted-foreground">
+            {showAll && canSeeAll ? "Browsing all children in this tenant." : "Manage your children and authorised pickup adults."}
+          </p>
         </div>
-        <Button onClick={() => { setEditChild(null); setChildOpen(true); }} size="sm"><Plus className="h-4 w-4 mr-1" /> Add child</Button>
+        <div className="flex gap-2">
+          {canSeeAll && (
+            <Button variant="outline" size="sm" onClick={() => setShowAll(s => !s)}>
+              {showAll ? "Show my family" : "Show all tenant records"}
+            </Button>
+          )}
+          {meMember && (
+            <Button onClick={() => { setEditChild(null); setChildOpen(true); }} size="sm"><Plus className="h-4 w-4 mr-1" /> Add child</Button>
+          )}
+        </div>
       </div>
 
+      {childrenError && (
+        <Card><CardContent className="p-4 text-sm text-destructive">Could not load records: {childrenError.message}</CardContent></Card>
+      )}
+
       {children.length === 0 ? (
-        <Card><CardContent className="p-8 text-center text-sm text-muted-foreground">No children added yet.</CardContent></Card>
+        <Card><CardContent className="p-8 text-center text-sm text-muted-foreground">{showAll && canSeeAll ? "No children registered in this tenant yet." : "No children added yet."}</CardContent></Card>
       ) : (
         <div className="space-y-3">
           {children.map(c => {
@@ -408,7 +423,7 @@ export default function MyFamily() {
         </div>
       )}
 
-      <ChildForm open={childOpen} onOpenChange={setChildOpen} child={editChild} memberId={meMember.id} onSaved={refetch} />
+      {meMember && <ChildForm open={childOpen} onOpenChange={setChildOpen} child={editChild} memberId={meMember.id} onSaved={refetch} />}
       {guardianFor && <GuardianManager open={!!guardianFor} onOpenChange={() => setGuardianFor(null)} child={guardianFor} />}
       {delegateFor && <DelegationDialog open={!!delegateFor} onOpenChange={() => setDelegateFor(null)} child={delegateFor} />}
 
