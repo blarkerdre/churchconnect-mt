@@ -5467,6 +5467,20 @@ export type Database = {
         Args: { _ignore?: string[]; _new: Json; _old: Json }
         Returns: Json
       }
+      list_child_guardians: {
+        Args: { _child_id: string; _tenant_id: string }
+        Returns: {
+          can_pickup: boolean
+          child_id: string
+          email: string
+          first_name: string
+          id: string
+          last_name: string
+          member_id: string
+          phone: string
+          relationship: string
+        }[]
+      }
       member_eligible_for_session: {
         Args: { _member_id: string; _session_id: string }
         Returns: boolean
