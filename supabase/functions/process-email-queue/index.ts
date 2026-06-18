@@ -270,6 +270,10 @@ Deno.serve(async (req) => {
         }
       }
 
+      // Resolve tenant_id from the original pending row so follow-up status
+      // rows surface in tenant-scoped log views.
+      const tenantId = await resolveTenantId(supabase, payload.message_id)
+
       try {
         await sendLovableEmail(
           {
@@ -298,7 +302,9 @@ Deno.serve(async (req) => {
           template_name: payload.label || queue,
           recipient_email: payload.to,
           status: 'sent',
+          tenant_id: tenantId,
         })
+
 
         // Delete from queue
         const { error: delError } = await supabase.rpc('delete_email', {
