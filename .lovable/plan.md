@@ -1,30 +1,21 @@
 ## Plan
 
-1. **Fix My Family visibility**
-   - Keep the page tenant-scoped.
-   - Show every child linked to the signed-in parent in the current tenant:
-     - primary guardian children
-     - co-parent/guardian links where the relationship is `Parent`
-   - Surface query errors instead of silently returning an empty list.
+1. **Remove the recursive Children Church access path**
+   - Update row-level access rules so `children` no longer checks `child_guardians` directly from a `children` policy.
+   - Keep parents able to see linked children, but move that check into a safe security-definer helper that bypasses recursive policy evaluation.
 
-2. **Fix Children Church record rendering**
-   - Keep Children Church tenant-scoped, but make each panel reliably load all records for the active tenant:
-     - drop-off family search
-     - active pickup/check-in list
-     - report table
-   - Add clear empty/error states so “no records” is distinguishable from an access/query failure.
+2. **Preserve tenant-scoped visibility**
+   - Admins, tenant owners/admins, reports officers, and Children Church workers can see all children/check-ins for their active tenant.
+   - Parents only see children where they are the primary guardian or are linked as a parent/guardian.
+   - All access remains tenant-scoped; no cross-tenant exposure.
 
-3. **Harden backend access rules**
-   - Update row-level access so Children Church workers, tenant admins, and reports officers can read the tenant’s children/check-in records they need.
-   - Keep parents limited to their own children and co-parent links only.
-   - Preserve explicit `tenant_id` checks in every query and access rule.
+3. **Fix related child tables if needed**
+   - Adjust `child_guardians` and `child_checkins` policies where they currently read `children` in a way that can trigger recursion.
+   - Use the same safe helper functions instead of direct policy-to-policy table lookups.
 
-4. **Verify tenant data alignment**
-   - Check existing children, guardians, members, and check-ins across tenants.
-   - Confirm records belong to the expected tenant and that worker/admin access is not blocked by role/unit lookup logic.
+4. **Add missing Data API grants**
+   - Restore explicit access grants for `children`, `child_guardians`, and `child_checkins` to authenticated users and backend service role, matching the existing RLS restrictions.
 
-## Technical notes
-
-- Existing database records are split across two tenants, so the app should render records for the **currently selected tenant**, not all tenants globally.
-- `children`, `child_guardians`, and `child_checkins` already have table grants; the likely issue is row-level visibility and/or role detection for the current tenant.
-- I will avoid making child data publicly readable and will not remove tenant isolation.
+5. **Validate after migration**
+   - Run read checks for `children`, `child_guardians`, and `child_checkins` policies.
+   - Confirm the app query no longer returns `infinite recursion detected in policy for relation "children"`.

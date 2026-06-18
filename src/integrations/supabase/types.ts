@@ -5399,6 +5399,14 @@ export type Database = {
         Args: { _task_id: string; _tenant_id: string; _user_id: string }
         Returns: boolean
       }
+      is_child_co_parent: {
+        Args: { _child_id: string; _tenant_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_child_primary_guardian: {
+        Args: { _child_id: string; _tenant_id: string; _user_id: string }
+        Returns: boolean
+      }
       is_children_church_leader: {
         Args: { _tenant_id: string; _user_id: string }
         Returns: boolean
