@@ -101,6 +101,7 @@ Deno.serve(async (req) => {
     // Build defaults
     const currency = payment?.currency || subscription?.currency || 'GBP'
     let lineItems = providedLineItems
+    let overageChargeIds: string[] = []
     if (!Array.isArray(lineItems) || lineItems.length === 0) {
       if (document_type === 'receipt' && payment) {
         lineItems = [{
@@ -124,6 +125,23 @@ Deno.serve(async (req) => {
             amount: Number(subscription.setup_fee_amount),
           })
         }
+
+        // Pull pending overage charges for this tenant
+        const { data: overages } = await admin
+          .from('tenant_overage_charges')
+          .select('*')
+          .eq('tenant_id', tenant_id)
+          .eq('status', 'pending')
+        for (const o of overages || []) {
+          items.push({
+            description: `Overage — ${o.metric} (${o.period_start}): ${o.quantity}`,
+            quantity: Number(o.quantity) || 0,
+            unit_price: Number(o.unit_price) || 0,
+            amount: Number(o.amount) || 0,
+          })
+          overageChargeIds.push(o.id)
+        }
+
         lineItems = items
       } else {
         lineItems = []
