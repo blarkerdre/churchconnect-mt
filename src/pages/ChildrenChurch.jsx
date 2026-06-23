@@ -1192,6 +1192,19 @@ export default function ChildrenChurch() {
     },
   });
 
+  const { data: isUnitMember = false } = useQuery({
+    queryKey: ["is-cc-member", tenantId, user?.id],
+    enabled: !!tenantId && !!user?.id,
+    queryFn: async () => {
+      const { data } = await supabase.rpc("is_children_church_member", { _user_id: user.id, _tenant_id: tenantId });
+      return !!data;
+    },
+  });
+
+  const canSeeAll = isUnitMember || isLeader || isAdmin;
+  const canSeeReport = isLeader || isAdmin;
+  const tabCount = 2 + (canSeeAll ? 1 : 0) + (canSeeReport ? 1 : 0);
+
   return (
     <div className="p-4 space-y-4 max-w-5xl mx-auto">
       <div>
@@ -1199,17 +1212,18 @@ export default function ChildrenChurch() {
         <p className="text-sm text-muted-foreground">Secure drop-off and pickup for children in care.</p>
       </div>
       <Tabs defaultValue="checkin">
-        <TabsList className="grid grid-cols-4 w-full sm:w-auto">
+        <TabsList className={`grid w-full sm:w-auto`} style={{ gridTemplateColumns: `repeat(${tabCount}, minmax(0, 1fr))` }}>
           <TabsTrigger value="checkin">Check-in</TabsTrigger>
           <TabsTrigger value="pickup">Pickup</TabsTrigger>
-          {(isLeader || isAdmin) && <TabsTrigger value="all">All children</TabsTrigger>}
-          {(isLeader || isAdmin) && <TabsTrigger value="report">Report</TabsTrigger>}
+          {canSeeAll && <TabsTrigger value="all">All children</TabsTrigger>}
+          {canSeeReport && <TabsTrigger value="report">Report</TabsTrigger>}
         </TabsList>
         <TabsContent value="checkin"><CheckInPanel tenantId={tenantId} tenantSlug={tenantSlug} /></TabsContent>
         <TabsContent value="pickup"><PickupPanel tenantId={tenantId} isLeader={isLeader || isAdmin} /></TabsContent>
-        {(isLeader || isAdmin) && <TabsContent value="all"><AllChildrenPanel tenantId={tenantId} /></TabsContent>}
-        {(isLeader || isAdmin) && <TabsContent value="report"><ReportPanel tenantId={tenantId} /></TabsContent>}
+        {canSeeAll && <TabsContent value="all"><AllChildrenPanel tenantId={tenantId} /></TabsContent>}
+        {canSeeReport && <TabsContent value="report"><ReportPanel tenantId={tenantId} /></TabsContent>}
       </Tabs>
+
     </div>
   );
 }
