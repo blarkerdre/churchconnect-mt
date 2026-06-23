@@ -16,6 +16,7 @@ import { Baby, Search, LogIn, LogOut, ShieldAlert, Clock, FileBarChart2, Downloa
 import { toast } from "sonner";
 import { format, formatDistanceToNow } from "date-fns";
 import { useAppSetting } from "@/hooks/useAppSetting";
+import { useUnitMembership } from "@/hooks/useUnitMembership";
 
 const DEFAULT_AGE_GROUPS = ["Nursery", "Toddler", "Primary", "Pre-Teen"];
 
