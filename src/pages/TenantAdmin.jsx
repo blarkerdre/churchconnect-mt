@@ -33,6 +33,7 @@ import TenantBillingTab from "@/components/tenants/TenantBillingTab";
 import DomifortIntegrationSection from "@/components/tenants/DomifortIntegrationSection";
 import BroadcastAlertSection from "@/components/alerts/BroadcastAlertSection";
 import PlatformUsersTab from "@/components/tenants/PlatformUsersTab";
+import PricingTab from "@/components/tenants/PricingTab";
 
 import { FEATURE_MODULES } from "@/lib/feature-modules";
 
