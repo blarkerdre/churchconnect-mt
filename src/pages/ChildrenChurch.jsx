@@ -16,6 +16,7 @@ import { Baby, Search, LogIn, LogOut, ShieldAlert, Clock, FileBarChart2, Downloa
 import { toast } from "sonner";
 import { format, formatDistanceToNow } from "date-fns";
 import { useAppSetting } from "@/hooks/useAppSetting";
+import { useUnitMembership } from "@/hooks/useUnitMembership";
 
 const DEFAULT_AGE_GROUPS = ["Nursery", "Toddler", "Primary", "Pre-Teen"];
 
@@ -503,6 +504,35 @@ function CheckInPanel({ tenantId, tenantSlug }) {
     },
   });
 
+  // When the search box is empty, show all active families so workers can browse
+  // without needing to know what to type. Reuses the same family-grouping shape as `families`.
+  const { data: allFamilies = [], isFetching: loadingAll } = useQuery({
+    queryKey: ["cc-all-families", tenantId],
+    enabled: !!tenantId && search.trim().length < 2,
+    queryFn: async () => {
+      const { data: kids = [] } = await supabase.from("children")
+        .select("id, first_name, last_name, age_group, allergies, primary_guardian_member_id")
+        .eq("tenant_id", tenantId).eq("is_active", true)
+        .order("first_name");
+      const parentIds = Array.from(new Set(kids.map(k => k.primary_guardian_member_id).filter(Boolean)));
+      if (parentIds.length === 0) return [];
+      const { data: parents = [] } = await supabase.from("members")
+        .select("id, first_name, last_name, phone, email")
+        .eq("tenant_id", tenantId)
+        .in("id", parentIds);
+      const parentMap = new Map(parents.map(p => [p.id, p]));
+      const fam = new Map();
+      kids.forEach(ch => {
+        const p = parentMap.get(ch.primary_guardian_member_id);
+        if (!p) return;
+        if (!fam.has(p.id)) fam.set(p.id, { parent: p, children: [] });
+        fam.get(p.id).children.push(ch);
+      });
+      return Array.from(fam.values())
+        .sort((a, b) => (a.parent.last_name || "").localeCompare(b.parent.last_name || ""));
+    },
+  });
+
   const checkIn = useMutation({
     mutationFn: async () => {
       if (!selectedFamily?.parent?.id) throw new Error("Select a family first");
@@ -669,6 +699,7 @@ function CheckInPanel({ tenantId, tenantSlug }) {
               <Search className="h-4 w-4 absolute left-2 top-2.5 text-muted-foreground" />
               <Input className="pl-8" placeholder="Type child name, parent name, or phone..." value={search} onChange={e => setSearch(e.target.value)} />
             </div>
+            <p className="text-[11px] text-muted-foreground">Type a name to search, or pick a family below.</p>
             <div className="space-y-2 max-h-80 overflow-y-auto">
               {search.trim().length >= 2 && !searching && families.length === 0 && (
                 <div className="text-center py-3 space-y-2">
@@ -678,7 +709,7 @@ function CheckInPanel({ tenantId, tenantSlug }) {
                   </Button>
                 </div>
               )}
-              {families.map(f => (
+              {(search.trim().length >= 2 ? families : allFamilies).map(f => (
                 <div key={f.parent.id} className="border rounded p-2 hover:bg-muted text-sm cursor-pointer"
                   onClick={() => { setSelectedFamily(f); setSelectedChildIds(f.children.map(c => c.id)); }}>
                   <p className="font-medium">{f.parent.first_name} {f.parent.last_name}</p>
@@ -695,6 +726,9 @@ function CheckInPanel({ tenantId, tenantSlug }) {
                   </div>
                 </div>
               ))}
+              {search.trim().length < 2 && !loadingAll && allFamilies.length === 0 && (
+                <p className="text-sm text-muted-foreground text-center py-3">No active children registered yet.</p>
+              )}
             </div>
             <div className="pt-2 border-t">
               <Button size="sm" variant="ghost" onClick={() => setWalkInOpen(true)} className="w-full">
@@ -1179,6 +1213,7 @@ function ReportPanel({ tenantId }) {
 export default function ChildrenChurch() {
   const { tenantId } = useTenantQuery();
   const { user, isAdmin } = useAuth();
+  const { isMemberOfUnit: isCCMember } = useUnitMembership("Children Church");
   const tenantSlug = typeof window !== "undefined"
     ? (window.location.pathname.match(/^\/t\/([^/]+)/)?.[1] || null)
     : null;
@@ -1192,6 +1227,9 @@ export default function ChildrenChurch() {
     },
   });
 
+  const canBrowseAll = isLeader || isAdmin || isCCMember;
+  const canReport = isLeader || isAdmin;
+
   return (
     <div className="p-4 space-y-4 max-w-5xl mx-auto">
       <div>
@@ -1202,13 +1240,13 @@ export default function ChildrenChurch() {
         <TabsList className="grid grid-cols-4 w-full sm:w-auto">
           <TabsTrigger value="checkin">Check-in</TabsTrigger>
           <TabsTrigger value="pickup">Pickup</TabsTrigger>
-          {(isLeader || isAdmin) && <TabsTrigger value="all">All children</TabsTrigger>}
-          {(isLeader || isAdmin) && <TabsTrigger value="report">Report</TabsTrigger>}
+          {canBrowseAll && <TabsTrigger value="all">All children</TabsTrigger>}
+          {canReport && <TabsTrigger value="report">Report</TabsTrigger>}
         </TabsList>
         <TabsContent value="checkin"><CheckInPanel tenantId={tenantId} tenantSlug={tenantSlug} /></TabsContent>
         <TabsContent value="pickup"><PickupPanel tenantId={tenantId} isLeader={isLeader || isAdmin} /></TabsContent>
-        {(isLeader || isAdmin) && <TabsContent value="all"><AllChildrenPanel tenantId={tenantId} /></TabsContent>}
-        {(isLeader || isAdmin) && <TabsContent value="report"><ReportPanel tenantId={tenantId} /></TabsContent>}
+        {canBrowseAll && <TabsContent value="all"><AllChildrenPanel tenantId={tenantId} /></TabsContent>}
+        {canReport && <TabsContent value="report"><ReportPanel tenantId={tenantId} /></TabsContent>}
       </Tabs>
     </div>
   );
