@@ -11,10 +11,8 @@ import { TenantProvider } from "@/contexts/TenantContext";
 import TenantThemeProvider from "@/components/tenants/TenantThemeProvider";
 import { useTenant } from "@/contexts/TenantContext";
 import LandingPage from "@/pages/LandingPage";
-
-// Lazy — only needed after navigating away from the landing page
-const Layout = lazy(() => import("@/components/AppLayout"));
-const Auth = lazy(() => import("@/pages/Auth"));
+import Layout from "@/components/AppLayout";
+import Auth from "@/pages/Auth";
 
 // Lazy-loaded pages — keeps initial bundle small
 const Dashboard = lazy(() => import("@/pages/Dashboard"));
