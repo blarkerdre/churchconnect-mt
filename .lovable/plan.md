@@ -1,21 +1,40 @@
-## Goal
-In Children Church, any member of the Children Church unit can use all features (Check-in, Pickup, All children). Only the Children Church unit leader (or tenant admin) can see the Report tab.
+# Fix: Children Church workers can't find children in Check-in / Drop-off search
 
-## Change (single file: `src/pages/ChildrenChurch.jsx`)
+## Root cause
 
-1. Add a membership query alongside the existing leader query:
-   - Call `supabase.rpc("is_children_church_member", { _user_id, _tenant_id })` → `isUnitMember`.
-   - Fallback: if that RPC doesn't exist, derive membership via `church_units` (slug/code `children_church`) joined to the user's member record. We'll attempt the RPC first; if it returns an error we'll do the table-based lookup. (Code-only fallback, no DB changes.)
-   - Treat `isLeader || isAdmin` as also satisfying `isUnitMember`.
+Romoke is a Children Church unit member (not an admin). The Drop-off search in `src/pages/ChildrenChurch.jsx` queries three tables — `children`, `child_guardians`, and `members` — then groups results by parent.
 
-2. Update the tabs in the `ChildrenChurch` component (lines 1201–1212):
-   - `Check-in` and `Pickup`: visible to everyone who can reach the page (unchanged).
-   - `All children` tab: show when `isUnitMember || isLeader || isAdmin` (was leader/admin only).
-   - `Report` tab: keep restricted to `isLeader || isAdmin` (unchanged).
-   - `TabsList` grid columns adjust based on how many tabs render (3 vs 4).
+- RLS on `children` and `child_guardians` already allows `is_children_church_member` to read rows.
+- RLS on `members` does **not**. The only matches she sees are members of her Home Cell centre (she is a `wsf_leader`), which is why "Domi" returned a couple of names but most searches return "No matching child or parent found."
 
-3. `PickupPanel` keeps receiving `isLeader={isLeader || isAdmin}` so the "Leader override" action stays gated to leaders only — only the Report tab visibility changes for unit members vs leaders.
+Because the family grouping is keyed off `members` rows (`allParents`), any child whose parent she can't see is dropped from the result — even when the child row itself was matched.
+
+## Fix
+
+Add a SELECT policy on `public.members` that lets Children Church members view member rows that are linked to any child as a primary guardian or authorised guardian. This is the minimum disclosure needed for drop-off/pickup to function — they only see parents/guardians of registered children, not the whole directory.
+
+### Migration
+
+New policy on `members`:
+
+```text
+Children church workers can view guardian members
+  USING:
+    is_children_church_member(auth.uid(), tenant_id)
+    AND (
+      EXISTS (SELECT 1 FROM children c
+              WHERE c.tenant_id = members.tenant_id
+                AND c.primary_guardian_member_id = members.id)
+      OR EXISTS (SELECT 1 FROM child_guardians g
+                 WHERE g.tenant_id = members.tenant_id
+                   AND g.member_id = members.id)
+    )
+```
+
+No client-side code changes required — the existing search query in `ChildrenChurch.jsx` will start returning the full set of matching parents once the policy is in place.
 
 ## Out of scope
-- No DB / RLS / migration changes. Existing RLS already allows unit members to read children/check-in rows; we are only adjusting the UI tab gating.
-- No changes to route-level access control (`AppLayout`/sidebar). If you also want the nav entry shown to plain unit members, say so and I'll extend the plan.
+
+- No change to admin/leader/reports-officer policies.
+- No exposure of non-guardian members to children's workers.
+- No change to the search UI or grouping logic.
