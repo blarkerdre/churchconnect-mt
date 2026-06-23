@@ -698,6 +698,7 @@ function CheckInPanel({ tenantId, tenantSlug }) {
               <Search className="h-4 w-4 absolute left-2 top-2.5 text-muted-foreground" />
               <Input className="pl-8" placeholder="Type child name, parent name, or phone..." value={search} onChange={e => setSearch(e.target.value)} />
             </div>
+            <p className="text-[11px] text-muted-foreground">Type a name to search, or pick a family below.</p>
             <div className="space-y-2 max-h-80 overflow-y-auto">
               {search.trim().length >= 2 && !searching && families.length === 0 && (
                 <div className="text-center py-3 space-y-2">
@@ -707,7 +708,7 @@ function CheckInPanel({ tenantId, tenantSlug }) {
                   </Button>
                 </div>
               )}
-              {families.map(f => (
+              {(search.trim().length >= 2 ? families : allFamilies).map(f => (
                 <div key={f.parent.id} className="border rounded p-2 hover:bg-muted text-sm cursor-pointer"
                   onClick={() => { setSelectedFamily(f); setSelectedChildIds(f.children.map(c => c.id)); }}>
                   <p className="font-medium">{f.parent.first_name} {f.parent.last_name}</p>
@@ -724,6 +725,9 @@ function CheckInPanel({ tenantId, tenantSlug }) {
                   </div>
                 </div>
               ))}
+              {search.trim().length < 2 && !loadingAll && allFamilies.length === 0 && (
+                <p className="text-sm text-muted-foreground text-center py-3">No active children registered yet.</p>
+              )}
             </div>
             <div className="pt-2 border-t">
               <Button size="sm" variant="ghost" onClick={() => setWalkInOpen(true)} className="w-full">
