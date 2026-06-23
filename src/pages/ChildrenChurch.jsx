@@ -1212,6 +1212,7 @@ function ReportPanel({ tenantId }) {
 export default function ChildrenChurch() {
   const { tenantId } = useTenantQuery();
   const { user, isAdmin } = useAuth();
+  const { isMemberOfUnit: isCCMember } = useUnitMembership("Children Church");
   const tenantSlug = typeof window !== "undefined"
     ? (window.location.pathname.match(/^\/t\/([^/]+)/)?.[1] || null)
     : null;
@@ -1225,6 +1226,9 @@ export default function ChildrenChurch() {
     },
   });
 
+  const canBrowseAll = isLeader || isAdmin || isCCMember;
+  const canReport = isLeader || isAdmin;
+
   return (
     <div className="p-4 space-y-4 max-w-5xl mx-auto">
       <div>
@@ -1235,13 +1239,13 @@ export default function ChildrenChurch() {
         <TabsList className="grid grid-cols-4 w-full sm:w-auto">
           <TabsTrigger value="checkin">Check-in</TabsTrigger>
           <TabsTrigger value="pickup">Pickup</TabsTrigger>
-          {(isLeader || isAdmin) && <TabsTrigger value="all">All children</TabsTrigger>}
-          {(isLeader || isAdmin) && <TabsTrigger value="report">Report</TabsTrigger>}
+          {canBrowseAll && <TabsTrigger value="all">All children</TabsTrigger>}
+          {canReport && <TabsTrigger value="report">Report</TabsTrigger>}
         </TabsList>
         <TabsContent value="checkin"><CheckInPanel tenantId={tenantId} tenantSlug={tenantSlug} /></TabsContent>
         <TabsContent value="pickup"><PickupPanel tenantId={tenantId} isLeader={isLeader || isAdmin} /></TabsContent>
-        {(isLeader || isAdmin) && <TabsContent value="all"><AllChildrenPanel tenantId={tenantId} /></TabsContent>}
-        {(isLeader || isAdmin) && <TabsContent value="report"><ReportPanel tenantId={tenantId} /></TabsContent>}
+        {canBrowseAll && <TabsContent value="all"><AllChildrenPanel tenantId={tenantId} /></TabsContent>}
+        {canReport && <TabsContent value="report"><ReportPanel tenantId={tenantId} /></TabsContent>}
       </Tabs>
     </div>
   );
