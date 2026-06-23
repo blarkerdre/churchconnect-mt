@@ -213,6 +213,14 @@ Deno.serve(async (req) => {
       })
     }
 
+    // Mark consumed overage charges as invoiced
+    if (overageChargeIds.length > 0 && invoice?.id) {
+      await admin.from('tenant_overage_charges')
+        .update({ status: 'invoiced', invoice_id: invoice.id })
+        .in('id', overageChargeIds)
+    }
+
+
     return new Response(JSON.stringify({ invoice }), {
       status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
