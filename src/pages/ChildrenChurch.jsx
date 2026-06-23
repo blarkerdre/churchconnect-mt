@@ -1201,7 +1201,7 @@ export default function ChildrenChurch() {
     },
   });
 
-  const canSeeAll = isUnitMember || isLeader || isAdmin;
+  const canSeeAll = isLeader || isAdmin;
   const canSeeReport = isLeader || isAdmin;
   const tabCount = 2 + (canSeeAll ? 1 : 0) + (canSeeReport ? 1 : 0);
 
