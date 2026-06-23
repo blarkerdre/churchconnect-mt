@@ -503,6 +503,35 @@ function CheckInPanel({ tenantId, tenantSlug }) {
     },
   });
 
+  // When the search box is empty, show all active families so workers can browse
+  // without needing to know what to type. Reuses the same family-grouping shape as `families`.
+  const { data: allFamilies = [], isFetching: loadingAll } = useQuery({
+    queryKey: ["cc-all-families", tenantId],
+    enabled: !!tenantId && search.trim().length < 2,
+    queryFn: async () => {
+      const { data: kids = [] } = await supabase.from("children")
+        .select("id, first_name, last_name, age_group, allergies, primary_guardian_member_id")
+        .eq("tenant_id", tenantId).eq("is_active", true)
+        .order("first_name");
+      const parentIds = Array.from(new Set(kids.map(k => k.primary_guardian_member_id).filter(Boolean)));
+      if (parentIds.length === 0) return [];
+      const { data: parents = [] } = await supabase.from("members")
+        .select("id, first_name, last_name, phone, email")
+        .eq("tenant_id", tenantId)
+        .in("id", parentIds);
+      const parentMap = new Map(parents.map(p => [p.id, p]));
+      const fam = new Map();
+      kids.forEach(ch => {
+        const p = parentMap.get(ch.primary_guardian_member_id);
+        if (!p) return;
+        if (!fam.has(p.id)) fam.set(p.id, { parent: p, children: [] });
+        fam.get(p.id).children.push(ch);
+      });
+      return Array.from(fam.values())
+        .sort((a, b) => (a.parent.last_name || "").localeCompare(b.parent.last_name || ""));
+    },
+  });
+
   const checkIn = useMutation({
     mutationFn: async () => {
       if (!selectedFamily?.parent?.id) throw new Error("Select a family first");
