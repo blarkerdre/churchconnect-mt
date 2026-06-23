@@ -445,6 +445,7 @@ export default function TenantAdmin() {
         <TabsList>
           <TabsTrigger value="tenants">Tenants</TabsTrigger>
           <TabsTrigger value="platform-users"><Users2 className="h-3.5 w-3.5 mr-1" />Platform Users</TabsTrigger>
+          <TabsTrigger value="pricing"><BarChart3 className="h-3.5 w-3.5 mr-1" />Pricing</TabsTrigger>
           <TabsTrigger value="analytics"><BarChart3 className="h-3.5 w-3.5 mr-1" />Analytics</TabsTrigger>
           <TabsTrigger value="integrations"><Link className="h-3.5 w-3.5 mr-1" />Integrations</TabsTrigger>
           <TabsTrigger value="broadcast"><Megaphone className="h-3.5 w-3.5 mr-1" />Broadcast</TabsTrigger>
