@@ -33,6 +33,7 @@ import TenantBillingTab from "@/components/tenants/TenantBillingTab";
 import DomifortIntegrationSection from "@/components/tenants/DomifortIntegrationSection";
 import BroadcastAlertSection from "@/components/alerts/BroadcastAlertSection";
 import PlatformUsersTab from "@/components/tenants/PlatformUsersTab";
+import PricingTab from "@/components/tenants/PricingTab";
 
 import { FEATURE_MODULES } from "@/lib/feature-modules";
 
@@ -444,6 +445,7 @@ export default function TenantAdmin() {
         <TabsList>
           <TabsTrigger value="tenants">Tenants</TabsTrigger>
           <TabsTrigger value="platform-users"><Users2 className="h-3.5 w-3.5 mr-1" />Platform Users</TabsTrigger>
+          <TabsTrigger value="pricing"><BarChart3 className="h-3.5 w-3.5 mr-1" />Pricing</TabsTrigger>
           <TabsTrigger value="analytics"><BarChart3 className="h-3.5 w-3.5 mr-1" />Analytics</TabsTrigger>
           <TabsTrigger value="integrations"><Link className="h-3.5 w-3.5 mr-1" />Integrations</TabsTrigger>
           <TabsTrigger value="broadcast"><Megaphone className="h-3.5 w-3.5 mr-1" />Broadcast</TabsTrigger>
@@ -711,6 +713,11 @@ export default function TenantAdmin() {
         <TabsContent value="platform-users">
           <PlatformUsersTab />
         </TabsContent>
+
+        <TabsContent value="pricing">
+          <PricingTab />
+        </TabsContent>
+
 
         <TabsContent value="analytics">
           <TenantAnalyticsTab tenants={tenants} />

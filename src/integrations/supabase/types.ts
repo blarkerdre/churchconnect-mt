@@ -3420,6 +3420,159 @@ export type Database = {
           },
         ]
       }
+      pricing_cost_inputs: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          currency: string
+          effective_from: string
+          id: string
+          metric: string
+          notes: string | null
+          target_margin_pct: number
+          unit_cost: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          effective_from?: string
+          id?: string
+          metric: string
+          notes?: string | null
+          target_margin_pct?: number
+          unit_cost?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          effective_from?: string
+          id?: string
+          metric?: string
+          notes?: string | null
+          target_margin_pct?: number
+          unit_cost?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      pricing_plans: {
+        Row: {
+          allow_overage_ai: boolean
+          allow_overage_email: boolean
+          allow_overage_member: boolean
+          allow_overage_sms: boolean
+          allow_overage_storage: boolean
+          allow_overage_whatsapp: boolean
+          base_price_annual: number
+          base_price_monthly: number
+          created_at: string
+          currency: string
+          description: string | null
+          feature_flags: Json
+          id: string
+          included_ai_calls: number
+          included_email: number
+          included_members: number
+          included_sms: number
+          included_storage_mb: number
+          included_whatsapp: number
+          is_active: boolean
+          is_public: boolean
+          name: string
+          overage_price_ai_call: number
+          overage_price_email: number
+          overage_price_member: number
+          overage_price_sms: number
+          overage_price_storage_gb: number
+          overage_price_whatsapp: number
+          setup_fee: number
+          slug: string
+          sort_order: number
+          stripe_price_id_annual: string | null
+          stripe_price_id_monthly: string | null
+          stripe_product_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          allow_overage_ai?: boolean
+          allow_overage_email?: boolean
+          allow_overage_member?: boolean
+          allow_overage_sms?: boolean
+          allow_overage_storage?: boolean
+          allow_overage_whatsapp?: boolean
+          base_price_annual?: number
+          base_price_monthly?: number
+          created_at?: string
+          currency?: string
+          description?: string | null
+          feature_flags?: Json
+          id?: string
+          included_ai_calls?: number
+          included_email?: number
+          included_members?: number
+          included_sms?: number
+          included_storage_mb?: number
+          included_whatsapp?: number
+          is_active?: boolean
+          is_public?: boolean
+          name: string
+          overage_price_ai_call?: number
+          overage_price_email?: number
+          overage_price_member?: number
+          overage_price_sms?: number
+          overage_price_storage_gb?: number
+          overage_price_whatsapp?: number
+          setup_fee?: number
+          slug: string
+          sort_order?: number
+          stripe_price_id_annual?: string | null
+          stripe_price_id_monthly?: string | null
+          stripe_product_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          allow_overage_ai?: boolean
+          allow_overage_email?: boolean
+          allow_overage_member?: boolean
+          allow_overage_sms?: boolean
+          allow_overage_storage?: boolean
+          allow_overage_whatsapp?: boolean
+          base_price_annual?: number
+          base_price_monthly?: number
+          created_at?: string
+          currency?: string
+          description?: string | null
+          feature_flags?: Json
+          id?: string
+          included_ai_calls?: number
+          included_email?: number
+          included_members?: number
+          included_sms?: number
+          included_storage_mb?: number
+          included_whatsapp?: number
+          is_active?: boolean
+          is_public?: boolean
+          name?: string
+          overage_price_ai_call?: number
+          overage_price_email?: number
+          overage_price_member?: number
+          overage_price_sms?: number
+          overage_price_storage_gb?: number
+          overage_price_whatsapp?: number
+          setup_fee?: number
+          slug?: string
+          sort_order?: number
+          stripe_price_id_annual?: string | null
+          stripe_price_id_monthly?: string | null
+          stripe_product_id?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -4016,6 +4169,75 @@ export type Database = {
           },
         ]
       }
+      tenant_overage_charges: {
+        Row: {
+          amount: number
+          created_at: string
+          currency: string
+          id: string
+          invoice_id: string | null
+          metric: string
+          notes: string | null
+          period_end: string
+          period_start: string
+          quantity: number
+          status: string
+          stripe_invoice_item_id: string | null
+          tenant_id: string
+          unit_price: number
+          updated_at: string
+        }
+        Insert: {
+          amount?: number
+          created_at?: string
+          currency?: string
+          id?: string
+          invoice_id?: string | null
+          metric: string
+          notes?: string | null
+          period_end: string
+          period_start: string
+          quantity?: number
+          status?: string
+          stripe_invoice_item_id?: string | null
+          tenant_id: string
+          unit_price?: number
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          currency?: string
+          id?: string
+          invoice_id?: string | null
+          metric?: string
+          notes?: string | null
+          period_end?: string
+          period_start?: string
+          quantity?: number
+          status?: string
+          stripe_invoice_item_id?: string | null
+          tenant_id?: string
+          unit_price?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_overage_charges_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "tenant_invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenant_overage_charges_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tenant_payments: {
         Row: {
           amount: number
@@ -4083,12 +4305,15 @@ export type Database = {
         Row: {
           amount: number
           billing_cycle: string
+          billing_interval: string
           created_at: string
           currency: string
           grace_period_days: number
           id: string
           is_active: boolean
           next_due_date: string
+          payment_mode: string
+          pricing_plan_id: string | null
           setup_fee_amount: number
           setup_fee_paid: boolean
           setup_fee_paid_at: string | null
@@ -4101,12 +4326,15 @@ export type Database = {
         Insert: {
           amount: number
           billing_cycle?: string
+          billing_interval?: string
           created_at?: string
           currency?: string
           grace_period_days?: number
           id?: string
           is_active?: boolean
           next_due_date: string
+          payment_mode?: string
+          pricing_plan_id?: string | null
           setup_fee_amount?: number
           setup_fee_paid?: boolean
           setup_fee_paid_at?: string | null
@@ -4119,12 +4347,15 @@ export type Database = {
         Update: {
           amount?: number
           billing_cycle?: string
+          billing_interval?: string
           created_at?: string
           currency?: string
           grace_period_days?: number
           id?: string
           is_active?: boolean
           next_due_date?: string
+          payment_mode?: string
+          pricing_plan_id?: string | null
           setup_fee_amount?: number
           setup_fee_paid?: boolean
           setup_fee_paid_at?: string | null
@@ -4136,9 +4367,69 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "tenant_subscriptions_pricing_plan_id_fkey"
+            columns: ["pricing_plan_id"]
+            isOneToOne: false
+            referencedRelation: "pricing_plans"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "tenant_subscriptions_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: true
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tenant_usage_counters: {
+        Row: {
+          created_at: string
+          currency: string
+          id: string
+          included: number
+          metric: string
+          overage_amount: number
+          overage_units: number
+          period_end: string
+          period_start: string
+          tenant_id: string
+          updated_at: string
+          used: number
+        }
+        Insert: {
+          created_at?: string
+          currency?: string
+          id?: string
+          included?: number
+          metric: string
+          overage_amount?: number
+          overage_units?: number
+          period_end: string
+          period_start: string
+          tenant_id: string
+          updated_at?: string
+          used?: number
+        }
+        Update: {
+          created_at?: string
+          currency?: string
+          id?: string
+          included?: number
+          metric?: string
+          overage_amount?: number
+          overage_units?: number
+          period_end?: string
+          period_start?: string
+          tenant_id?: string
+          updated_at?: string
+          used?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_usage_counters_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
@@ -4156,6 +4447,7 @@ export type Database = {
           member_limit: number
           name: string
           plan_tier: string
+          pricing_plan_id: string | null
           settings: Json | null
           setup_complete: boolean
           slug: string
@@ -4177,6 +4469,7 @@ export type Database = {
           member_limit?: number
           name: string
           plan_tier?: string
+          pricing_plan_id?: string | null
           settings?: Json | null
           setup_complete?: boolean
           slug: string
@@ -4198,6 +4491,7 @@ export type Database = {
           member_limit?: number
           name?: string
           plan_tier?: string
+          pricing_plan_id?: string | null
           settings?: Json | null
           setup_complete?: boolean
           slug?: string
@@ -4208,7 +4502,15 @@ export type Database = {
           updated_at?: string
           whatsapp_limit_monthly?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "tenants_pricing_plan_id_fkey"
+            columns: ["pricing_plan_id"]
+            isOneToOne: false
+            referencedRelation: "pricing_plans"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       testimonies: {
         Row: {
