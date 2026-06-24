@@ -48,7 +48,7 @@ export default function StatementOfResult({ open, onOpenChange, member, course, 
       : "";
     const churchName = currentTenant?.name || "";
     const subjectRows = rows.map(r =>
-      `<tr><td>${escHtml(r.name)}</td><td class="c">${r.taken ? r.score : "—"}</td><td class="c">${r.taken ? r.total : "—"}</td><td class="c">${r.taken ? Math.round(r.pct) + "%" : "—"}</td><td class="c"><strong>${r.grade}</strong></td></tr>`
+      `<tr><td>${escHtml(r.name)}</td><td class="c">${r.taken ? r.score : "—"}</td><td class="c">${r.taken ? r.total : "—"}</td><td class="c">${r.taken ? Math.round(r.pct) + "%" : "—"}</td><td class="c"><strong>${escHtml(r.grade)}</strong></td></tr>`
     ).join("");
     const html = `<!DOCTYPE html><html><head><title>Statement of Result</title><style>
       body{font-family:Arial,sans-serif;margin:32px;color:#111}
