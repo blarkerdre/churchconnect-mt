@@ -1,26 +1,22 @@
-## Plan: resolve high & critical dependency advisories
+## Plan: address recurring recharts → lodash advisory
 
-### Findings → action
+This is the same finding that re-surfaced. The advisory (GHSA-r5fr-rjxr-66jc) only affects `lodash.template`. Recharts does **not** call `_.template`, and we removed the direct `lodash` import last turn — so the runtime risk is zero. Two paths forward:
 
-| Package | Current | Action | Why |
-|---|---|---|---|
-| `react-quill` | 2.0.0 | **Remove** | Not imported anywhere in `src/`. Already forbidden by project memory (XSS). Removes the lodash transitive too. |
-| `jspdf` | ^4.0.0 (4.2.0) | **Bump to ^4.2.1** | 4.2.1 patches both advisories (HTML injection in new-window paths, PDF object injection via FreeText color). |
-| `@supabase/supabase-js` | ^2.99.1 (2.104.1) | **Bump to ^2.108.2** | Pulls in patched `ws` (memory exhaustion). |
-| `recharts` | ^2.15.4 | **Keep at 2.x** | The lodash advisory only affects `_.template`; recharts does not use it. Recharts 3.x is a breaking major and would require touching every chart. Will mark this specific finding as a false-positive (ignore) noting the unused code path. |
-| `lodash` (direct dep) | ^4.17.21 | **Remove** | Not directly imported in `src/`. It's only there as a leftover from react-quill. |
+### Option A — Upgrade recharts to v3 (recommended, fully removes advisory)
 
-### Steps
+- Recharts 3.x drops the `lodash` dependency entirely (uses `es-toolkit` instead), so the advisory disappears from `npm audit`.
+- We use only stable primitives (`BarChart`, `LineChart`, `PieChart`, `XAxis`, `YAxis`, `Tooltip`, `Legend`, `CartesianGrid`, `ResponsiveContainer`, `Cell`, plus `RechartsPrimitive` re-export in `src/components/ui/chart.jsx`) across 6 files. These APIs are unchanged in v3; the main 3.x breaking changes are around `defaultProps`, removed legacy components, and stricter TS types — none of which apply to our JS usage.
+- Steps:
+  1. `bun add recharts@^3`
+  2. Smoke-test the charts pages: `/analytics`, `/church-attendance`, `/certificates-report`, dashboards.
+  3. If a chart breaks (unlikely given our basic usage), patch the call site.
+  4. Mark `vulnerable_dependencies_high` fixed.
 
-1. `bun remove react-quill lodash`
-2. `bun add jspdf@^4.2.1 @supabase/supabase-js@^2.108.2`
-3. Verify no remaining imports of `react-quill` or `lodash` (already confirmed).
-4. Let the build run; confirm preview still renders and invoice PDF code path compiles.
-5. Mark findings:
-   - `vulnerable_dependencies_critical` → **fixed** (jspdf bumped).
-   - `vulnerable_dependencies_high` → **fixed** (supabase-js + jspdf bumped, react-quill + lodash removed). The remaining recharts→lodash transitive will be addressed by an ignore note in security memory: recharts does not call `_.template`, so the advisory is not exploitable here.
-6. Update `@security-memory` with the recharts/lodash rationale and the react-quill removal (consistent with existing memory).
+### Option B — Ignore the finding as non-exploitable
 
-### Out of scope
+- Keep recharts 2.15.4. Mark the finding as `ignore` with the rationale already in `@security-memory`: lodash advisory is `_.template` only; recharts doesn't use it; no direct lodash import.
+- Pros: zero churn. Cons: scanner may re-flag on future scans unless explicitly ignored (which is what we'd do here).
 
-No application logic, UI, or schema changes. Pure dependency hygiene.
+### Recommendation
+
+Go with **Option A**. It's a single dependency bump with minimal risk for our usage, and it removes the noise permanently.
