@@ -1,27 +1,26 @@
-## What I found
+## Plan: resolve high & critical dependency advisories
 
-- The code is healthy. The dev server returns 200, the published site (`churchconnect-mt.lovable.app/index`) renders the landing page correctly, and a headless browser hitting `localhost:8080/index` renders fine with no runtime errors.
-- `src/main.jsx` already rewrites `/index` → `/` before React mounts, so the URL itself isn't the problem.
-- No `serviceWorker.register('/sw.js')` call exists in app startup, so a stale SW from a *previous* build is the most likely culprit when only the iframe is blank while the published site works.
-- You confirmed: blank only in the Lovable preview iframe, with **no console errors** — that pattern matches a stale cached asset / service-worker registration in the iframe origin, not a code regression.
+### Findings → action
 
-## Proposed fix (one-shot)
-
-Add a tiny same-path kill-switch to `public/sw.js` so any previously registered service worker on the preview origin unregisters itself and clears its own caches on next load. This is the standard Lovable PWA cleanup pattern and is safe for the published app (no SW is registered at startup anyway).
+| Package | Current | Action | Why |
+|---|---|---|---|
+| `react-quill` | 2.0.0 | **Remove** | Not imported anywhere in `src/`. Already forbidden by project memory (XSS). Removes the lodash transitive too. |
+| `jspdf` | ^4.0.0 (4.2.0) | **Bump to ^4.2.1** | 4.2.1 patches both advisories (HTML injection in new-window paths, PDF object injection via FreeText color). |
+| `@supabase/supabase-js` | ^2.99.1 (2.104.1) | **Bump to ^2.108.2** | Pulls in patched `ws` (memory exhaustion). |
+| `recharts` | ^2.15.4 | **Keep at 2.x** | The lodash advisory only affects `_.template`; recharts does not use it. Recharts 3.x is a breaking major and would require touching every chart. Will mark this specific finding as a false-positive (ignore) noting the unused code path. |
+| `lodash` (direct dep) | ^4.17.21 | **Remove** | Not directly imported in `src/`. It's only there as a leftover from react-quill. |
 
 ### Steps
 
-1. Replace `public/sw.js` with the kill-switch worker from the PWA skill: on `activate`, delete only its own Workbox-style caches, claim clients, navigate them to refresh, then `registration.unregister()` in `finally`.
-2. Leave the rest of the codebase alone — no route changes, no main.jsx changes, no new SW registration.
-3. After deploy / preview refresh, ask you to hard-refresh the iframe once (Cmd/Ctrl+Shift+R) so the replacement worker activates.
+1. `bun remove react-quill lodash`
+2. `bun add jspdf@^4.2.1 @supabase/supabase-js@^2.108.2`
+3. Verify no remaining imports of `react-quill` or `lodash` (already confirmed).
+4. Let the build run; confirm preview still renders and invoice PDF code path compiles.
+5. Mark findings:
+   - `vulnerable_dependencies_critical` → **fixed** (jspdf bumped).
+   - `vulnerable_dependencies_high` → **fixed** (supabase-js + jspdf bumped, react-quill + lodash removed). The remaining recharts→lodash transitive will be addressed by an ignore note in security memory: recharts does not call `_.template`, so the advisory is not exploitable here.
+6. Update `@security-memory` with the recharts/lodash rationale and the react-quill removal (consistent with existing memory).
 
-### What this does NOT change
+### Out of scope
 
-- Push-notification flow (`usePushSubscription.js`, `notification-alert.js`) — those rely on `navigator.serviceWorker.ready` and will be unaffected because nothing in the app currently registers `/sw.js` at boot.
-- Routing, auth, tenant logic, UI.
-
-### If the kill-switch doesn't resolve it
-
-Likely a transient sandbox/iframe issue rather than code. Next step would be to click "Restart preview" in Lovable, or open the preview in a new tab via the URL chip to confirm.
-
-Approve and I'll apply the kill-switch worker.
+No application logic, UI, or schema changes. Pure dependency hygiene.
