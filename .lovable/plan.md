@@ -1,41 +1,27 @@
-# Orphan unit references — findings and proposed cleanup
+## What I found
 
-## What I scanned
-Joined every table that stores a free-text `unit_name` / `church_unit` against `church_units.name` (case-insensitive, per tenant): `unit_leader_assignments`, `unit_join_requests`, `unit_tasks`, `unit_task_groups`, `members.church_unit` (CSV-split).
+- The code is healthy. The dev server returns 200, the published site (`churchconnect-mt.lovable.app/index`) renders the landing page correctly, and a headless browser hitting `localhost:8080/index` renders fine with no runtime errors.
+- `src/main.jsx` already rewrites `/index` → `/` before React mounts, so the URL itself isn't the problem.
+- No `serviceWorker.register('/sw.js')` call exists in app startup, so a stale SW from a *previous* build is the most likely culprit when only the iframe is blank while the published site works.
+- You confirmed: blank only in the Lovable preview iframe, with **no console errors** — that pattern matches a stale cached asset / service-worker registration in the iframe origin, not a code regression.
 
-## Results
+## Proposed fix (one-shot)
 
-### Clean (zero orphans)
-- `unit_leader_assignments`
-- `unit_tasks`, `unit_task_groups`
+Add a tiny same-path kill-switch to `public/sw.js` so any previously registered service worker on the preview origin unregisters itself and clears its own caches on next load. This is the standard Lovable PWA cleanup pattern and is safe for the published app (no SW is registered at startup anyway).
 
-### Orphans found
+### Steps
 
-**Demo tenant** `d8bbbdae… (Demo Church TEST)`
-| Table | Stale value | Rows | Likely intent |
-|---|---|---|---|
-| `members.church_unit` | `Children` | 1 | rename → `Children Church` |
-| `members.church_unit` | `Church Admin` | 1 | unknown — closest unit is `Church Office` |
-| `unit_join_requests` | `Children` | 1 | rename → `Children Church` |
+1. Replace `public/sw.js` with the kill-switch worker from the PWA skill: on `activate`, delete only its own Workbox-style caches, claim clients, navigate them to refresh, then `registration.unregister()` in `finally`.
+2. Leave the rest of the codebase alone — no route changes, no main.jsx changes, no new SW registration.
+3. After deploy / preview refresh, ask you to hard-refresh the iframe once (Cmd/Ctrl+Shift+R) so the replacement worker activates.
 
-**Production tenant** `95e53cc3… (WCI Cardiff)`
-| Table | Stale value | Rows | Likely intent |
-|---|---|---|---|
-| `members.church_unit` | `Urshering` (typo) | 7 | rename → `Ushering` |
+### What this does NOT change
 
-Other `unit_join_requests` rows with NULL `unit_name` (12 total) are not orphans — `unit_name` is nullable on that table and means "general join request".
+- Push-notification flow (`usePushSubscription.js`, `notification-alert.js`) — those rely on `navigator.serviceWorker.ready` and will be unaffected because nothing in the app currently registers `/sw.js` at boot.
+- Routing, auth, tenant logic, UI.
 
-## Why these need your judgement, not a blind delete
-`members.church_unit` is a comma-separated string of the units a member belongs to. Deleting an entry removes the member from that unit; renaming preserves the relationship. The fix is a **rename**, not a delete.
+### If the kill-switch doesn't resolve it
 
-## Proposed actions (one `supabase--insert` call, all UPDATEs)
+Likely a transient sandbox/iframe issue rather than code. Next step would be to click "Restart preview" in Lovable, or open the preview in a new tab via the URL chip to confirm.
 
-1. **Production typo fix** — for every member in tenant `95e…` whose `church_unit` CSV contains `Urshering`, replace the token with `Ushering` (regex-safe, preserves other tokens, dedups whitespace).
-2. **Demo "Children" → "Children Church"** — same CSV-safe rename in `members.church_unit` AND update the matching `unit_join_requests.unit_name` row.
-3. **Demo "Church Admin"** — leave alone and surface it to you. I won't guess a mapping. After you confirm (drop it, rename to "Church Office", or add a new "Church Admin" unit), I'll do the corresponding action.
-
-## Prevention (out of scope unless you want it)
-Long-term, `members.church_unit` as a free-text CSV is what allowed these to drift. A normalised `member_units` join table with FKs to `church_units` would make renames atomic and orphans impossible. Flag if you want this as a follow-up.
-
-## Deliverable
-A single data-only operation that performs (1) and (2). Then I'll ask you about (3) before touching it.
+Approve and I'll apply the kill-switch worker.
