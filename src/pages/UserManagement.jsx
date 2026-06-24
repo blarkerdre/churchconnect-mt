@@ -134,11 +134,19 @@ export default function UserManagement() {
       } else {
         const { error } = await supabase.from("user_roles").delete().eq("user_id", userId).eq("role", role).eq("tenant_id", tenantId);
         if (error) throw error;
+        if (role === "unit_leader") {
+          await supabase
+            .from("unit_leader_assignments")
+            .delete()
+            .eq("user_id", userId)
+            .eq("tenant_id", tenantId);
+        }
         await logAudit("role_remove", "user_roles", userId, { role, target_name: targetName }, tenantId);
       }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["all-user-roles"] });
+      queryClient.invalidateQueries({ queryKey: ["unit-leader-assignments"] });
       toast({ title: "Role updated" });
     },
     onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
