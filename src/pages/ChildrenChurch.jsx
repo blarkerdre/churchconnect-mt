@@ -978,7 +978,17 @@ function PickupPanel({ tenantId, isLeader }) {
   );
 }
 
-function ReportPanel({ tenantId }) {
+function ReportPanel({ tenantId, isAdmin = false }) {
+  const qc = useQueryClient();
+  const [deleteRow, setDeleteRow] = useState(null);
+  const deleteRecord = useMutation({
+    mutationFn: async (row) => {
+      const { error } = await supabase.from("child_checkins").delete().eq("id", row.id).eq("tenant_id", tenantId);
+      if (error) throw error;
+    },
+    onSuccess: () => { toast.success("Record deleted"); setDeleteRow(null); qc.invalidateQueries({ queryKey: ["cc-report"] }); },
+    onError: (e) => toast.error(e.message),
+  });
   const [from, setFrom] = useState(format(new Date(Date.now() - 30*86400000), "yyyy-MM-dd"));
   const [to, setTo] = useState(format(new Date(), "yyyy-MM-dd"));
   const [nameQuery, setNameQuery] = useState("");
