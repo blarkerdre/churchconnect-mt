@@ -303,6 +303,14 @@ export default function MyFamily() {
 
   const removeChild = useMutation({
     mutationFn: async (child) => {
+      // Preserve Children Church report history: block delete if any check-in records exist.
+      const { count, error: cErr } = await supabase.from("child_checkins")
+        .select("id", { count: "exact", head: true })
+        .eq("tenant_id", tenantId).eq("child_id", child.id);
+      if (cErr) throw cErr;
+      if ((count || 0) > 0) {
+        throw new Error("This child has Children Church check-in records. Please contact an admin to remove them.");
+      }
       const { error } = await supabase.from("children").delete().eq("id", child.id).eq("tenant_id", tenantId);
       if (error) throw error;
     },
