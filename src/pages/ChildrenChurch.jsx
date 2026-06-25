@@ -1221,7 +1221,7 @@ export default function ChildrenChurch() {
         <TabsContent value="checkin"><CheckInPanel tenantId={tenantId} tenantSlug={tenantSlug} /></TabsContent>
         <TabsContent value="pickup"><PickupPanel tenantId={tenantId} isLeader={isLeader || isAdmin} /></TabsContent>
         {canSeeAll && <TabsContent value="all"><AllChildrenPanel tenantId={tenantId} /></TabsContent>}
-        {canSeeReport && <TabsContent value="report"><ReportPanel tenantId={tenantId} /></TabsContent>}
+        {canSeeReport && <TabsContent value="report"><ReportPanel tenantId={tenantId} isAdmin={isAdmin} /></TabsContent>}
       </Tabs>
 
     </div>
