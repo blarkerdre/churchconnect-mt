@@ -1152,6 +1152,7 @@ function ReportPanel({ tenantId, isAdmin = false }) {
               <th className="p-2 text-left">Collected by</th>
               <th className="p-2 text-left">Delegated to</th>
               <th className="p-2 text-left">Status</th>
+              {isAdmin && <th className="p-2 text-left">Actions</th>}
             </tr></thead>
             <tbody>
               {filteredRows.map(r => {
@@ -1175,14 +1176,41 @@ function ReportPanel({ tenantId, isAdmin = false }) {
                     <td className="p-2">{r._pickup_adult_name || "—"}{r.override_reason ? <div className="text-[10px] text-muted-foreground mt-0.5" title={r.override_reason}>Reason: {r.override_reason.length > 40 ? r.override_reason.slice(0,40)+"…" : r.override_reason}</div> : null}</td>
                     <td className="p-2">{r._delegation_name || "—"}</td>
                     <td className="p-2"><Badge variant={r.status === "flagged" ? "destructive" : r.status === "picked_up" ? "default" : "outline"}>{r.status}</Badge></td>
+                    {isAdmin && (
+                      <td className="p-2">
+                        <Button size="sm" variant="ghost" className="text-destructive h-7 px-2" onClick={() => setDeleteRow(r)} aria-label="Delete record">
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </td>
+                    )}
                   </tr>
                 );
               })}
-              {filteredRows.length === 0 && <tr><td colSpan="11" className="p-4 text-center text-muted-foreground">No records.</td></tr>}
+              {filteredRows.length === 0 && <tr><td colSpan={isAdmin ? 12 : 11} className="p-4 text-center text-muted-foreground">No records.</td></tr>}
             </tbody>
           </table>
         </div>
       </CardContent>
+      {isAdmin && (
+        <AlertDialog open={!!deleteRow} onOpenChange={(o) => !o && setDeleteRow(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete this check-in record?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This permanently removes the Children Church record for {deleteRow?.children?.first_name} {deleteRow?.children?.last_name} on {deleteRow?.service_date}. This cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                onClick={(e) => { e.preventDefault(); deleteRecord.mutate(deleteRow); }}
+                disabled={deleteRecord.isPending}
+              >Delete</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
     </Card>
   );
 }
