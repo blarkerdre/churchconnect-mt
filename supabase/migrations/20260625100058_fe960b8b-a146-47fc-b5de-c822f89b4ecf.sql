@@ -1,0 +1,1 @@
+CREATE POLICY "Admins delete checkins" ON public.child_checkins FOR DELETE TO authenticated USING (is_admin(auth.uid(), tenant_id));

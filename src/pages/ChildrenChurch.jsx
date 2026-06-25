@@ -12,6 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Baby, Search, LogIn, LogOut, ShieldAlert, Clock, FileBarChart2, Download, Eye, User, UserPlus, Copy, Plus, Trash2, Mail } from "lucide-react";
 import { toast } from "sonner";
 import { format, formatDistanceToNow } from "date-fns";
@@ -978,7 +979,17 @@ function PickupPanel({ tenantId, isLeader }) {
   );
 }
 
-function ReportPanel({ tenantId }) {
+function ReportPanel({ tenantId, isAdmin = false }) {
+  const qc = useQueryClient();
+  const [deleteRow, setDeleteRow] = useState(null);
+  const deleteRecord = useMutation({
+    mutationFn: async (row) => {
+      const { error } = await supabase.from("child_checkins").delete().eq("id", row.id).eq("tenant_id", tenantId);
+      if (error) throw error;
+    },
+    onSuccess: () => { toast.success("Record deleted"); setDeleteRow(null); qc.invalidateQueries({ queryKey: ["cc-report"] }); },
+    onError: (e) => toast.error(e.message),
+  });
   const [from, setFrom] = useState(format(new Date(Date.now() - 30*86400000), "yyyy-MM-dd"));
   const [to, setTo] = useState(format(new Date(), "yyyy-MM-dd"));
   const [nameQuery, setNameQuery] = useState("");
@@ -1141,6 +1152,7 @@ function ReportPanel({ tenantId }) {
               <th className="p-2 text-left">Collected by</th>
               <th className="p-2 text-left">Delegated to</th>
               <th className="p-2 text-left">Status</th>
+              {isAdmin && <th className="p-2 text-left">Actions</th>}
             </tr></thead>
             <tbody>
               {filteredRows.map(r => {
@@ -1164,14 +1176,41 @@ function ReportPanel({ tenantId }) {
                     <td className="p-2">{r._pickup_adult_name || "—"}{r.override_reason ? <div className="text-[10px] text-muted-foreground mt-0.5" title={r.override_reason}>Reason: {r.override_reason.length > 40 ? r.override_reason.slice(0,40)+"…" : r.override_reason}</div> : null}</td>
                     <td className="p-2">{r._delegation_name || "—"}</td>
                     <td className="p-2"><Badge variant={r.status === "flagged" ? "destructive" : r.status === "picked_up" ? "default" : "outline"}>{r.status}</Badge></td>
+                    {isAdmin && (
+                      <td className="p-2">
+                        <Button size="sm" variant="ghost" className="text-destructive h-7 px-2" onClick={() => setDeleteRow(r)} aria-label="Delete record">
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </td>
+                    )}
                   </tr>
                 );
               })}
-              {filteredRows.length === 0 && <tr><td colSpan="11" className="p-4 text-center text-muted-foreground">No records.</td></tr>}
+              {filteredRows.length === 0 && <tr><td colSpan={isAdmin ? 12 : 11} className="p-4 text-center text-muted-foreground">No records.</td></tr>}
             </tbody>
           </table>
         </div>
       </CardContent>
+      {isAdmin && (
+        <AlertDialog open={!!deleteRow} onOpenChange={(o) => !o && setDeleteRow(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete this check-in record?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This permanently removes the Children Church record for {deleteRow?.children?.first_name} {deleteRow?.children?.last_name} on {deleteRow?.service_date}. This cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                onClick={(e) => { e.preventDefault(); deleteRecord.mutate(deleteRow); }}
+                disabled={deleteRecord.isPending}
+              >Delete</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
     </Card>
   );
 }
@@ -1221,7 +1260,7 @@ export default function ChildrenChurch() {
         <TabsContent value="checkin"><CheckInPanel tenantId={tenantId} tenantSlug={tenantSlug} /></TabsContent>
         <TabsContent value="pickup"><PickupPanel tenantId={tenantId} isLeader={isLeader || isAdmin} /></TabsContent>
         {canSeeAll && <TabsContent value="all"><AllChildrenPanel tenantId={tenantId} /></TabsContent>}
-        {canSeeReport && <TabsContent value="report"><ReportPanel tenantId={tenantId} /></TabsContent>}
+        {canSeeReport && <TabsContent value="report"><ReportPanel tenantId={tenantId} isAdmin={isAdmin} /></TabsContent>}
       </Tabs>
 
     </div>
