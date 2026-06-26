@@ -1,22 +1,38 @@
-## Plan: address recurring recharts → lodash advisory
+# Why Ubani's birthday email is showing "dlq"
 
-This is the same finding that re-surfaced. The advisory (GHSA-r5fr-rjxr-66jc) only affects `lodash.template`. Recharts does **not** call `_.template`, and we removed the direct `lodash` import last turn — so the runtime risk is zero. Two paths forward:
+## What happened
 
-### Option A — Upgrade recharts to v3 (recommended, fully removes advisory)
+The birthday email to `ubanibling@gmail.com` was enqueued at 07:00 on 26 Jun, but the send attempt failed with:
 
-- Recharts 3.x drops the `lodash` dependency entirely (uses `es-toolkit` instead), so the advisory disappears from `npm audit`.
-- We use only stable primitives (`BarChart`, `LineChart`, `PieChart`, `XAxis`, `YAxis`, `Tooltip`, `Legend`, `CartesianGrid`, `ResponsiveContainer`, `Cell`, plus `RechartsPrimitive` re-export in `src/components/ui/chart.jsx`) across 6 files. These APIs are unchanged in v3; the main 3.x breaking changes are around `defaultProps`, removed legacy components, and stricter TS types — none of which apply to our JS usage.
-- Steps:
-  1. `bun add recharts@^3`
-  2. Smoke-test the charts pages: `/analytics`, `/church-attendance`, `/certificates-report`, dashboards.
-  3. If a chart breaks (unlikely given our basic usage), patch the call site.
-  4. Mark `vulnerable_dependencies_high` fixed.
+```
+403 domain_not_verified — "Email domain is not verified for this project"
+```
 
-### Option B — Ignore the finding as non-exploitable
+After retries it was moved to the dead-letter queue (`dlq`). The same thing happened yesterday to `kennedarean@yahoo.com`. Birthday emails before 23 Jun went out fine, so something changed in the last few days.
 
-- Keep recharts 2.15.4. Mark the finding as `ignore` with the rationale already in `@security-memory`: lodash advisory is `_.template` only; recharts doesn't use it; no direct lodash import.
-- Pros: zero churn. Cons: scanner may re-flag on future scans unless explicitly ignored (which is what we'd do here).
+## Root cause (not a code bug)
 
-### Recommendation
+Your sender domain `notify.app.churchmanagementsuite.org` is currently in **Drifted** status — it was verified before, but DNS verification is no longer passing. Until it's back to verified, every outbound email (birthday, follow-up, auth, etc.) will fail with the same 403 and end up in DLQ.
 
-Go with **Option A**. It's a single dependency bump with minimal risk for our usage, and it removes the noise permanently.
+Expected DNS records at your domain provider (Cloudflare/registrar for `churchmanagementsuite.org`):
+
+| Type | Host | Value |
+|------|------|-------|
+| TXT | `_lovable-email.app.churchmanagementsuite.org` | `lovable_email_verify=e10cc24f013f6a3e0af40efad634fcf06819...` |
+| NS  | `notify.app.churchmanagementsuite.org` | `ns5.lovable.cloud` |
+| NS  | `notify.app.churchmanagementsuite.org` | `ns6.lovable.cloud` |
+
+## What you need to do
+
+1. Open **Cloud → Emails → Manage Domains** and compare the records above with what's at your DNS provider.
+2. **If they differ / are missing** (most likely — a record was removed or edited): fix them at your DNS provider, then click **Verify Domain**. Propagation can take a few minutes to a few hours.
+3. **If they match exactly:** the issue is on Lovable's side — contact Lovable support to re-provision `notify.app.churchmanagementsuite.org`. Don't loop on Verify.
+
+## After it's verified
+
+- New birthday/auth/app emails will send normally.
+- The DLQ'd messages (Ubani's, Kennedarean's) won't auto-replay. If you want them resent, I can add a small admin action to re-trigger today's birthday send for specific members — say the word and I'll plan that as a separate change.
+
+## Code change required
+
+None. This is purely a DNS/domain-verification issue.
