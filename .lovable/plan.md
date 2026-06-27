@@ -1,38 +1,27 @@
-# Why Ubani's birthday email is showing "dlq"
+# Resend DLQ'd Birthday Emails
 
-## What happened
+The sender domain `notify.app.churchmanagementsuite.org` is now **Verified**, so the original failures (`403 domain_not_verified`) won't recur. Two birthday emails are stuck in DLQ and need to be re-sent.
 
-The birthday email to `ubanibling@gmail.com` was enqueued at 07:00 on 26 Jun, but the send attempt failed with:
+## Affected recipients
 
-```
-403 domain_not_verified — "Email domain is not verified for this project"
-```
+| Member | Email | Birthday | DLQ'd on |
+|---|---|---|---|
+| Ubani Audu | ubanibling@gmail.com | 26 Jun | 26 Jun 07:00 |
+| Kennedy Ndukwe | kennedarean@yahoo.com | 25 Jun | 25 Jun 07:00 |
 
-After retries it was moved to the dead-letter queue (`dlq`). The same thing happened yesterday to `kennedarean@yahoo.com`. Birthday emails before 23 Jun went out fine, so something changed in the last few days.
+## Approach
 
-## Root cause (not a code bug)
+Invoke the existing `send-birthday-messages` Edge Function once per member in manual mode. Manual mode (`member_id` in body) bypasses today's-birthday filter and the idempotency log, so it will actually send even though the birthday date has passed and a (failed) log row already exists.
 
-Your sender domain `notify.app.churchmanagementsuite.org` is currently in **Drifted** status — it was verified before, but DNS verification is no longer passing. Until it's back to verified, every outbound email (birthday, follow-up, auth, etc.) will fail with the same 403 and end up in DLQ.
+Steps:
+1. Call `send-birthday-messages` with `{ tenant_id, member_id: <Ubani's id>, channels: ["email"] }`.
+2. Call `send-birthday-messages` with `{ tenant_id, member_id: <Kennedy's id>, channels: ["email"] }`.
+3. Query `email_send_log` for these recipients to confirm new rows show `status = sent`.
+4. Update the two original DLQ rows' status (optional housekeeping) — or leave them as historical record of the original failure.
 
-Expected DNS records at your domain provider (Cloudflare/registrar for `churchmanagementsuite.org`):
+No code changes. No migrations. Pure operational re-send via the existing manual-send path already used by the admin "Send wishes" button.
 
-| Type | Host | Value |
-|------|------|-------|
-| TXT | `_lovable-email.app.churchmanagementsuite.org` | `lovable_email_verify=e10cc24f013f6a3e0af40efad634fcf06819...` |
-| NS  | `notify.app.churchmanagementsuite.org` | `ns5.lovable.cloud` |
-| NS  | `notify.app.churchmanagementsuite.org` | `ns6.lovable.cloud` |
+## Out of scope
 
-## What you need to do
-
-1. Open **Cloud → Emails → Manage Domains** and compare the records above with what's at your DNS provider.
-2. **If they differ / are missing** (most likely — a record was removed or edited): fix them at your DNS provider, then click **Verify Domain**. Propagation can take a few minutes to a few hours.
-3. **If they match exactly:** the issue is on Lovable's side — contact Lovable support to re-provision `notify.app.churchmanagementsuite.org`. Don't loop on Verify.
-
-## After it's verified
-
-- New birthday/auth/app emails will send normally.
-- The DLQ'd messages (Ubani's, Kennedarean's) won't auto-replay. If you want them resent, I can add a small admin action to re-trigger today's birthday send for specific members — say the word and I'll plan that as a separate change.
-
-## Code change required
-
-None. This is purely a DNS/domain-verification issue.
+- Building a generic "Replay DLQ" admin UI (can be a follow-up if you want one).
+- Changing birthday-send logic.
