@@ -5871,6 +5871,10 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      reset_checkin_pin: {
+        Args: { _checkin_id: string; _pin: string }
+        Returns: undefined
+      }
       search_tenant_members_for_guardian: {
         Args: { _q: string; _tenant_id: string }
         Returns: {
