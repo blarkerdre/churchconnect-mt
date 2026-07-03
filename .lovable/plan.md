@@ -1,56 +1,89 @@
-## Why Silver missed the PIN
+## Guided walkthrough — My Family & Children Church
 
-Three independent gaps stack up:
+A lightweight in-app product tour that spotlights UI elements, shows a tooltip with step copy, and advances via Next/Back/Skip. Auto-runs once per user per tour, and can be re-opened anytime via a "?" Help button in each page header.
 
-1. The in-app notification insert is blocked by RLS for Children's Church workers who aren't `admin`/`unit_leader` (Romoke is `wsf_leader`, so the insert is silently rejected).
-2. Email/SMS delivery is gated on "walk-in only" (no `user_id`), so parents with accounts never get the PIN by email or SMS.
-3. The check-in code swallows the notification error with a `console.warn`, so no one sees the failure.
+### 1. Tour engine (in-house, ~150 LOC, no new deps)
 
-## Fix
+New files:
 
-Make the PIN reach the primary parent reliably, regardless of who runs check-in.
+- `src/components/tour/TourProvider.jsx` — context + state (active tour id, current step, open/close, complete).
+- `src/components/tour/SpotlightTour.jsx` — the overlay. Renders:
+  - A full-screen SVG mask with a rounded-rect cutout around the target element's bounding box (measured via `getBoundingClientRect` + `ResizeObserver` + scroll listener, re-measured on every step).
+  - A floating tooltip card (title, body, "Step X of Y", Back / Skip / Next / Finish buttons) auto-placed above/below the target using a simple flip algorithm.
+  - Scrolls the target into view with `scrollIntoView({ block: 'center' })` before measuring.
+  - Handles missing targets gracefully (falls back to a centered modal for that step).
+  - Keyboard: →/Enter next, ← back, Esc skip. Focus trap inside the tooltip.
+- `src/components/tour/tours.js` — declarative tour definitions:
 
-### 1. Edge function to deliver the pickup PIN (server-side, service role)
+  ```js
+  export const TOURS = {
+    'my-family-v1':      { title: 'My Family tour', steps: [ { selector: '[data-tour="mf-add-child"]', title: '…', body: '…' }, … ] },
+    'children-church-v1':{ title: 'Children Church tour', steps: [ … ] },
+  };
+  ```
 
-New function `supabase/functions/send-pickup-pin/index.ts`:
+- `src/components/tour/HelpButton.jsx` — small `?` icon button placed in each page header that calls `startTour(id)`.
+- `src/hooks/useTourCompletion.js` — reads/writes completion state (see §3).
 
-- Inputs: `{ tenant_id, checkin_ids: string[], pin, recipient_member_ids: string[], child_first_names: string[] }`.
-- Validates caller has tenant access AND is a Children's Church worker (admin, unit_leader, wsf_leader, or assigned worker — same check used by `checkin_child`).
-- Re-loads recipient members (`user_id`, `email`, `phone`, `first_name`) with service role.
-- For each recipient:
-  - Inserts an in-app `notifications` row (bypasses RLS because it uses service role).
-  - If `email` present, calls `send-email-alert` with the existing PIN email body.
-  - If `phone` present, calls `send-sms` with the existing PIN SMS body.
-- Returns `{ notified, emailed, smsed, errors: [...] }`.
-- `verify_jwt = true`; add entry to `supabase/config.toml`.
+Mount `<TourProvider>` inside `AppLayout` so both pages share it, and render `<SpotlightTour />` once at the provider root.
 
-### 2. Update `src/pages/ChildrenChurch.jsx` `checkIn` mutation
+### 2. Anchoring the steps
 
-Replace the current three blocks (in-app notify, walk-in email, walk-in SMS) with a single call to `send-pickup-pin` after `checkin_child` succeeds:
+Add `data-tour="…"` attributes to the existing elements — no visual changes to the pages. Proposed anchors:
 
-- Collect `recipient_member_ids` = primary guardian + brought-by (deduped).
-- Pass `pin`, `checkin_ids`, `tenant_id`, child first names.
-- Toast based on the function's response (e.g. "Pickup PIN sent: in-app, email, SMS").
-- Keep the issued-PIN modal (`setIssuedPin`) as the in-person fallback.
+**My Family (`src/pages/MyFamily.jsx`)** — parent audience:
+1. `mf-add-child` — the "Add child" button (welcome + why).
+2. `mf-child-card` — first child card (view/edit profile, medical/allergy notes).
+3. `mf-authorised-adults` — Authorised pickup adults section (who can collect).
+4. `mf-add-authorised` — search box for adding an authorised adult.
+5. `mf-pickup-code` — one-time pickup code / delegation area.
+6. `mf-help` — Help button (reminder they can re-open the tour).
 
-This removes the walk-in vs. account-holder branching — every primary parent gets the PIN via every channel they have.
+**Children Church (`src/pages/ChildrenChurch.jsx`)** — worker audience, steps auto-skip when the tab/section isn't visible for the user's role:
+1. `cc-checkin-search` — family search on Drop-off tab.
+2. `cc-checkin-confirm` — check-in confirm + PIN delivery explanation.
+3. `cc-pickup-search` — Pickup tab search.
+4. `cc-pickup-verify` — PIN entry / authorised adult verification.
+5. `cc-leader-override` — override button (leader/admin only — step conditionally included).
+6. `cc-all-children` / `cc-report` — leader/admin-only steps, conditionally included.
+7. `cc-help` — Help button.
 
-### 3. One-off: resend Silver's PIN now
+Tour steps take an optional `when: (ctx) => boolean` so role-gated steps are dropped for users who can't see them.
 
-After deploying the function, invoke it for the two open check-ins (`13937792…` and `2b9e539c…`) with the existing PIN (we'd need to re-generate, since the DB only stores the hash). Two options:
+### 3. Trigger + persistence
 
-- **Recommended:** generate a fresh PIN, call new RPC `reset_checkin_pin(_checkin_id, _pin)` (security-definer, worker-only) to update `pin_code_hash` on the two rows, then call `send-pickup-pin` to deliver it to Silver. Add this RPC in the same migration.
-- Or have Silver re-check-in (loses the existing check-in record).
+- **Auto-run on first visit:** on mount of MyFamily / ChildrenChurch, `useTourCompletion(tourId)` checks completion; if not completed, start after a 600 ms delay (lets the page's data-loading skeletons resolve so anchors exist).
+- **Manual:** Help button in each page header always calls `startTour(tourId)`, ignoring completion.
+- **Persistence:** new table `user_tour_completions` (per user, per tour id) so it works across devices.
 
-### Out of scope
+  ```sql
+  create table public.user_tour_completions (
+    user_id uuid not null references auth.users(id) on delete cascade,
+    tour_id text not null,
+    completed_at timestamptz not null default now(),
+    primary key (user_id, tour_id)
+  );
+  grant select, insert, update, delete on public.user_tour_completions to authenticated;
+  grant all on public.user_tour_completions to service_role;
+  alter table public.user_tour_completions enable row level security;
+  create policy "own rows read"   on public.user_tour_completions for select to authenticated using (user_id = auth.uid());
+  create policy "own rows write"  on public.user_tour_completions for insert to authenticated with check (user_id = auth.uid());
+  create policy "own rows update" on public.user_tour_completions for update to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid());
+  ```
 
-- Changing the `notifications` RLS policy (would widen write access for all callers; the edge function is a narrower fix).
-- Reworking the leader-override pickup notifications (already work).
-- Any UI for parents to view/regenerate PIN themselves.
+  Row is written when the tour is finished OR skipped (so "skip" is also remembered). `localStorage` is used as an instant cache to avoid the flash while the DB round-trip completes.
 
-## Technical notes
+### 4. Styling
 
-- `send-pickup-pin` mirrors the auth pattern of `resolve-nearest-pickup` (validate `Authorization` Bearer with `supabase.auth.getUser`, then proceed with service role).
-- Worker check: `is_admin(uid, tenant) OR has_role(uid, 'unit_leader', tenant) OR has_role(uid, 'wsf_leader', tenant) OR EXISTS member assigned as cc_worker` — reuse whatever `checkin_child` RPC enforces (need to read its definition before finalizing).
-- `reset_checkin_pin` RPC: `security definer`, `set search_path = public`, updates `pin_code_hash = crypt(_pin, gen_salt('bf'))` using the same hashing used by `checkin_child`.
-- No schema changes beyond the new RPC; no new tables.
+Uses existing shadcn tokens (Card, Button, Playfair headings, Source Sans body, navy/gold palette). Overlay is `bg-black/60`, tooltip is a `Card` with a small gold accent border to match the app's branding. No new fonts, no new colors, mobile-responsive (tooltip becomes a bottom sheet under 480 px).
+
+### 5. Out of scope
+
+- No changes to My Family or Children Church business logic.
+- No admin analytics of who completed the tour (can add later).
+- No editor for tour content — steps live in code.
+
+### Files touched
+
+- **New:** `src/components/tour/TourProvider.jsx`, `SpotlightTour.jsx`, `tours.js`, `HelpButton.jsx`; `src/hooks/useTourCompletion.js`; one migration.
+- **Edit:** `src/components/layout/AppLayout.jsx` (mount provider), `src/pages/MyFamily.jsx` and `src/pages/ChildrenChurch.jsx` (add `data-tour` attrs, Help button, auto-start hook).
