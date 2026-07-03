@@ -12,6 +12,7 @@ import {
   BookOpen, ChevronsUpDown, Check, Lock, MessageSquareHeart, Star, Package
 } from "lucide-react";
 import AppFeedbackDialog from "@/components/feedback/AppFeedbackDialog";
+import { TourProvider } from "@/components/tour/TourProvider";
 import SignPostInboxDialog from "@/components/followups/SignPostInboxDialog";
 import { useQuery } from "@tanstack/react-query";
 import { Inbox } from "lucide-react";
@@ -206,6 +207,7 @@ export default function Layout({ children }) {
   }
 
   return (
+    <TourProvider>
     <div className="min-h-screen bg-background flex">
       {/* Mobile overlay */}
       {sidebarOpen && (
@@ -476,5 +478,6 @@ export default function Layout({ children }) {
       <SignPostInboxDialog open={signpostInboxOpen} onOpenChange={setSignpostInboxOpen} />
       <InstallAppDialog open={installOpen} onOpenChange={setInstallOpen} />
     </div>
+    </TourProvider>
   );
 }
