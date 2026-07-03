@@ -17,6 +17,9 @@ import { Baby, Search, LogIn, LogOut, ShieldAlert, Clock, FileBarChart2, Downloa
 import { toast } from "sonner";
 import { format, formatDistanceToNow } from "date-fns";
 import { useAppSetting } from "@/hooks/useAppSetting";
+import HelpButton from "@/components/tour/HelpButton";
+import { useTour } from "@/components/tour/TourProvider";
+import { useTourCompletion } from "@/hooks/useTourCompletion";
 
 const DEFAULT_AGE_GROUPS = ["Nursery", "Toddler", "Primary", "Pre-Teen"];
 
@@ -1182,18 +1185,30 @@ export default function ChildrenChurch() {
   const canSeeReport = isLeader || isAdmin;
   const tabCount = 2 + (canSeeAll ? 1 : 0) + (canSeeReport ? 1 : 0);
 
+  const tour = useTour();
+  const { completed: tourDone } = useTourCompletion("children-church-v1");
+  React.useEffect(() => {
+    if (tourDone === false && tenantId) {
+      const t = setTimeout(() => tour?.startTour("children-church-v1", { isLeader, isAdmin }), 600);
+      return () => clearTimeout(t);
+    }
+  }, [tourDone, tenantId, isLeader, isAdmin, tour]);
+
   return (
     <div className="p-4 space-y-4 max-w-5xl mx-auto">
-      <div>
-        <h1 className="text-2xl font-display font-bold flex items-center gap-2"><Baby className="h-6 w-6 text-primary" /> Children Church</h1>
-        <p className="text-sm text-muted-foreground">Secure drop-off and pickup for children in care.</p>
+      <div className="flex items-start justify-between gap-2 flex-wrap">
+        <div>
+          <h1 className="text-2xl font-display font-bold flex items-center gap-2"><Baby className="h-6 w-6 text-primary" /> Children Church</h1>
+          <p className="text-sm text-muted-foreground">Secure drop-off and pickup for children in care.</p>
+        </div>
+        <HelpButton tourId="children-church-v1" ctx={{ isLeader, isAdmin }} dataTour="cc-help" />
       </div>
       <Tabs defaultValue="checkin">
         <TabsList className={`grid w-full sm:w-auto`} style={{ gridTemplateColumns: `repeat(${tabCount}, minmax(0, 1fr))` }}>
-          <TabsTrigger value="checkin">Check-in</TabsTrigger>
-          <TabsTrigger value="pickup">Pickup</TabsTrigger>
-          {canSeeAll && <TabsTrigger value="all">All children</TabsTrigger>}
-          {canSeeReport && <TabsTrigger value="report">Report</TabsTrigger>}
+          <TabsTrigger value="checkin" data-tour="cc-tab-checkin">Check-in</TabsTrigger>
+          <TabsTrigger value="pickup" data-tour="cc-tab-pickup">Pickup</TabsTrigger>
+          {canSeeAll && <TabsTrigger value="all" data-tour="cc-tab-all">All children</TabsTrigger>}
+          {canSeeReport && <TabsTrigger value="report" data-tour="cc-tab-report">Report</TabsTrigger>}
         </TabsList>
         <TabsContent value="checkin"><CheckInPanel tenantId={tenantId} tenantSlug={tenantSlug} /></TabsContent>
         <TabsContent value="pickup"><PickupPanel tenantId={tenantId} isLeader={isLeader || isAdmin} /></TabsContent>
