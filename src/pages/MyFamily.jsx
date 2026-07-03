@@ -18,6 +18,9 @@ import { Baby, Plus, ShieldCheck, KeyRound, Trash2, UserPlus, Share2, Clock } fr
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { useAppSetting } from "@/hooks/useAppSetting";
+import HelpButton from "@/components/tour/HelpButton";
+import { useTour } from "@/components/tour/TourProvider";
+import { useTourCompletion } from "@/hooks/useTourCompletion";
 
 const DEFAULT_AGE_GROUPS = ["Nursery", "Toddler", "Primary", "Pre-Teen"];
 
@@ -288,6 +291,8 @@ export default function MyFamily() {
   const [delegateFor, setDelegateFor] = useState(null);
   const [deleteChild, setDeleteChild] = useState(null);
   const [showAll, setShowAll] = useState(false);
+  const tour = useTour();
+  const { completed: tourDone } = useTourCompletion("my-family-v1");
 
   const { data: meMember } = useQuery({
     queryKey: ["me-member-id", tenantId, user?.id],
@@ -360,6 +365,13 @@ export default function MyFamily() {
     refetchInterval: 15000,
   });
 
+  React.useEffect(() => {
+    if (tourDone === false && meMember) {
+      const t = setTimeout(() => tour?.startTour("my-family-v1"), 600);
+      return () => clearTimeout(t);
+    }
+  }, [tourDone, meMember, tour]);
+
   if (!meMember && !canSeeAll) {
     return <div className="p-4"><Card><CardContent className="p-6 text-sm text-muted-foreground">Your member profile is not linked yet. Please contact an admin.</CardContent></Card></div>;
   }
@@ -373,14 +385,15 @@ export default function MyFamily() {
             {showAll && canSeeAll ? "Browsing all children in this tenant." : "Manage your children and authorised pickup adults."}
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-center">
+          <HelpButton tourId="my-family-v1" dataTour="mf-help" />
           {canSeeAll && (
             <Button variant="outline" size="sm" onClick={() => setShowAll(s => !s)}>
               {showAll ? "Show my family" : "Show all tenant records"}
             </Button>
           )}
           {meMember && (
-            <Button onClick={() => { setEditChild(null); setChildOpen(true); }} size="sm"><Plus className="h-4 w-4 mr-1" /> Add child</Button>
+            <Button data-tour="mf-add-child" onClick={() => { setEditChild(null); setChildOpen(true); }} size="sm"><Plus className="h-4 w-4 mr-1" /> Add child</Button>
           )}
         </div>
       </div>
