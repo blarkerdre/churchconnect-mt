@@ -5238,6 +5238,24 @@ export type Database = {
           },
         ]
       }
+      user_tour_completions: {
+        Row: {
+          completed_at: string
+          tour_id: string
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string
+          tour_id: string
+          user_id: string
+        }
+        Update: {
+          completed_at?: string
+          tour_id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       wsf_attendance: {
         Row: {
           centre_id: string
