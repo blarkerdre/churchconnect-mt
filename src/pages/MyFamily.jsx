@@ -406,10 +406,11 @@ export default function MyFamily() {
         <Card><CardContent className="p-8 text-center text-sm text-muted-foreground">{showAll && canSeeAll ? "No children registered in this tenant yet." : "No children added yet."}</CardContent></Card>
       ) : (
         <div className="space-y-3">
-          {children.map(c => {
+          {children.map((c, idx) => {
             const active = activeCheckins.find(a => a.child_id === c.id);
+            const tourAttrs = idx === 0 ? { "data-tour": "mf-child-card" } : {};
             return (
-              <Card key={c.id}>
+              <Card key={c.id} {...tourAttrs}>
                 <CardContent className="p-4 space-y-3">
                   <div className="flex items-start justify-between">
                     <div>
@@ -425,8 +426,8 @@ export default function MyFamily() {
                   </div>
                   <div className="flex flex-wrap gap-2">
                     <Button size="sm" variant="outline" onClick={() => { setEditChild(c); setChildOpen(true); }}>Edit</Button>
-                    <Button size="sm" variant="outline" onClick={() => setGuardianFor(c)}><ShieldCheck className="h-4 w-4 mr-1" /> Authorised adults</Button>
-                    <Button size="sm" variant="outline" onClick={() => setDelegateFor(c)}><KeyRound className="h-4 w-4 mr-1" /> One-time code</Button>
+                    <Button data-tour={idx === 0 ? "mf-authorised" : undefined} size="sm" variant="outline" onClick={() => setGuardianFor(c)}><ShieldCheck className="h-4 w-4 mr-1" /> Authorised adults</Button>
+                    <Button data-tour={idx === 0 ? "mf-onetime" : undefined} size="sm" variant="outline" onClick={() => setDelegateFor(c)}><KeyRound className="h-4 w-4 mr-1" /> One-time code</Button>
                     <Button size="sm" variant="destructive" onClick={() => {
                       if (active) { toast.error("Release child from care before deleting"); return; }
                       setDeleteChild(c);
