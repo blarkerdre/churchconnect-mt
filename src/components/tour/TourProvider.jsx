@@ -193,14 +193,28 @@ function SpotlightOverlay({ tourId, steps, onClose, onComplete }) {
 }
 
 export function TourProvider({ children }) {
-  const { user, isAdmin } = useAuth();
+  const auth = useAuth() || {};
+  const { user, isAdmin, isTenantAdmin, isTenantOwner, isUnitLeader, isWSFLeader, isReportsOfficer, roles = [] } = auth;
+  const isSuperAdmin = roles.includes?.("super_admin");
+  const isLeader = !!(isUnitLeader || isWSFLeader);
   const [active, setActive] = useState(null); // { tourId, steps }
 
+  const baseCtx = useMemo(() => ({
+    isAdmin: !!isAdmin,
+    isTenantAdmin: !!isTenantAdmin,
+    isTenantOwner: !!isTenantOwner,
+    isSuperAdmin: !!isSuperAdmin,
+    isUnitLeader: !!isUnitLeader,
+    isWSFLeader: !!isWSFLeader,
+    isReportsOfficer: !!isReportsOfficer,
+    isLeader,
+  }), [isAdmin, isTenantAdmin, isTenantOwner, isSuperAdmin, isUnitLeader, isWSFLeader, isReportsOfficer, isLeader]);
+
   const startTour = useCallback((tourId, ctx = {}) => {
-    const steps = resolveSteps(tourId, { isAdmin, ...ctx });
+    const steps = resolveSteps(tourId, { ...baseCtx, ...ctx });
     if (!steps.length) return;
     setActive({ tourId, steps });
-  }, [isAdmin]);
+  }, [baseCtx]);
 
   const stopTour = useCallback(() => setActive(null), []);
 
@@ -214,12 +228,23 @@ export function TourProvider({ children }) {
       .upsert({ user_id: user.id, tour_id: tourId, completed_at: new Date().toISOString() });
   }, [user?.id]);
 
+  const resetAllTours = useCallback(async () => {
+    if (!user?.id) return;
+    try {
+      Object.keys(TOURS).forEach((id) => {
+        try { localStorage.removeItem(`tour:completed:${user.id}:${id}`); } catch {}
+      });
+    } catch {}
+    await supabase.from("user_tour_completions").delete().eq("user_id", user.id);
+  }, [user?.id]);
+
   const value = useMemo(() => ({
     startTour,
     stopTour,
+    resetAllTours,
     active: !!active,
     availableTours: Object.keys(TOURS),
-  }), [startTour, stopTour, active]);
+  }), [startTour, stopTour, resetAllTours, active]);
 
   return (
     <TourCtx.Provider value={value}>
