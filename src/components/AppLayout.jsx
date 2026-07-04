@@ -12,7 +12,10 @@ import {
   BookOpen, ChevronsUpDown, Check, Lock, MessageSquareHeart, Star, Package
 } from "lucide-react";
 import AppFeedbackDialog from "@/components/feedback/AppFeedbackDialog";
-import { TourProvider } from "@/components/tour/TourProvider";
+import { TourProvider, useTour } from "@/components/tour/TourProvider";
+import { ROUTE_TOURS } from "@/components/tour/tours";
+import HelpButton from "@/components/tour/HelpButton";
+import { useAutoTour } from "@/hooks/useAutoTour";
 import SignPostInboxDialog from "@/components/followups/SignPostInboxDialog";
 import { useQuery } from "@tanstack/react-query";
 import { Inbox } from "lucide-react";
