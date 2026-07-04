@@ -12,7 +12,10 @@ import {
   BookOpen, ChevronsUpDown, Check, Lock, MessageSquareHeart, Star, Package
 } from "lucide-react";
 import AppFeedbackDialog from "@/components/feedback/AppFeedbackDialog";
-import { TourProvider } from "@/components/tour/TourProvider";
+import { TourProvider, useTour } from "@/components/tour/TourProvider";
+import { ROUTE_TOURS } from "@/components/tour/tours";
+import HelpButton from "@/components/tour/HelpButton";
+import { useAutoTour } from "@/hooks/useAutoTour";
 import SignPostInboxDialog from "@/components/followups/SignPostInboxDialog";
 import { useQuery } from "@tanstack/react-query";
 import { Inbox } from "lucide-react";
@@ -62,6 +65,18 @@ const allNavItems = [
   { name: "Settings", icon: Settings, path: "/settings", access: "admin" },
   { name: "Tenant Admin", icon: Globe, path: "/tenant-admin", access: "super_admin" },
 ];
+
+function RouteTourController({ barePath, hasMultipleTenants }) {
+  const tour = useTour();
+  const tourId = ROUTE_TOURS[barePath] || null;
+  useAutoTour(tourId, { hasMultipleTenants });
+  React.useEffect(() => {
+    const handler = () => { if (tourId && tour) tour.startTour(tourId, { hasMultipleTenants }); };
+    window.addEventListener("start-current-tour", handler);
+    return () => window.removeEventListener("start-current-tour", handler);
+  }, [tourId, tour, hasMultipleTenants]);
+  return null;
+}
 
 export default function Layout({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -233,7 +248,7 @@ export default function Layout({ children }) {
           </div>
           {/* Tenant switcher — only show when user has multiple tenants */}
           {tenantMemberships.length > 1 && !collapsed && (
-            <div className="mt-3 relative">
+            <div data-tour="tenant-switcher" className="mt-3 relative">
               <button
                 onClick={() => setTenantDropdownOpen(!tenantDropdownOpen)}
                 className="w-full flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-md text-xs bg-sidebar-accent/50 hover:bg-sidebar-accent text-sidebar-foreground/70 hover:text-sidebar-foreground transition-colors"
@@ -268,7 +283,7 @@ export default function Layout({ children }) {
         </div>
 
         {/* Nav */}
-        <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
+        <nav data-tour="sidebar-nav" className="flex-1 p-3 space-y-1 overflow-y-auto">
           {navItems.map((item) => {
             const isActive = barePath === item.path;
             return (
@@ -421,7 +436,18 @@ export default function Layout({ children }) {
               <span className="text-[11px] font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded-full hidden sm:inline">
                 {getRoleTitle()}
               </span>
+              <RouteTourController barePath={barePath} hasMultipleTenants={tenantMemberships.length > 1} />
               <NotificationBell />
+              <button
+                type="button"
+                onClick={() => window.dispatchEvent(new CustomEvent("start-current-tour"))}
+                title="Take a tour of this page"
+                aria-label="Take a tour of this page"
+                data-tour="page-help"
+                className="inline-flex items-center justify-center h-8 w-8 rounded-full border border-primary/30 bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+              >
+                <span className="text-sm font-bold">?</span>
+              </button>
               <Button variant="outline" size="icon" className="lg:hidden h-8 w-8 text-destructive border-destructive/30 hover:bg-destructive/10" onClick={signOut}>
                 <LogOut className="h-4 w-4" />
               </Button>
