@@ -1,89 +1,93 @@
-## Guided walkthrough — My Family & Children Church
+# Guided tours for every module
 
-A lightweight in-app product tour that spotlights UI elements, shows a tooltip with step copy, and advances via Next/Back/Skip. Auto-runs once per user per tour, and can be re-opened anytime via a "?" Help button in each page header.
+Extend the existing spotlight tour system (already used on My Family and Children Church) to cover every feature module in the app. Each module gets its own tour that auto-runs the first time a user opens it and can be re-launched from a Tour button in the page header.
 
-### 1. Tour engine (in-house, ~150 LOC, no new deps)
+## What's already in place (reused, not rebuilt)
 
-New files:
+- `TourProvider` + `SpotlightOverlay` — SVG-mask spotlight, tooltip with Back/Next/Skip, keyboard nav, mobile fallback.
+- `HelpButton` (Tour button) — drops into any page header.
+- `tours.js` — declarative step definitions, optional `when: (ctx) => boolean` for role-gated steps.
+- `useTourCompletion` hook + `user_tour_completions` table — per-user, per-tour persistence with localStorage cache.
 
-- `src/components/tour/TourProvider.jsx` — context + state (active tour id, current step, open/close, complete).
-- `src/components/tour/SpotlightTour.jsx` — the overlay. Renders:
-  - A full-screen SVG mask with a rounded-rect cutout around the target element's bounding box (measured via `getBoundingClientRect` + `ResizeObserver` + scroll listener, re-measured on every step).
-  - A floating tooltip card (title, body, "Step X of Y", Back / Skip / Next / Finish buttons) auto-placed above/below the target using a simple flip algorithm.
-  - Scrolls the target into view with `scrollIntoView({ block: 'center' })` before measuring.
-  - Handles missing targets gracefully (falls back to a centered modal for that step).
-  - Keyboard: →/Enter next, ← back, Esc skip. Focus trap inside the tooltip.
-- `src/components/tour/tours.js` — declarative tour definitions:
+No changes to the framework itself.
 
-  ```js
-  export const TOURS = {
-    'my-family-v1':      { title: 'My Family tour', steps: [ { selector: '[data-tour="mf-add-child"]', title: '…', body: '…' }, … ] },
-    'children-church-v1':{ title: 'Children Church tour', steps: [ … ] },
-  };
-  ```
+## Modules covered
 
-- `src/components/tour/HelpButton.jsx` — small `?` icon button placed in each page header that calls `startTour(id)`.
-- `src/hooks/useTourCompletion.js` — reads/writes completion state (see §3).
+One tour per module, keyed by a stable id (e.g. `members-v1`, `events-v1`, …):
 
-Mount `<TourProvider>` inside `AppLayout` so both pages share it, and render `<SpotlightTour />` once at the provider root.
+1. Dashboard (`dashboard-v1`) — sidebar overview, banner, feed, notifications bell, tenant switcher
+2. Members (`members-v1`) — directory, add member, bulk import, filters, member profile, status lifecycle
+3. Events (`events-v1`) — create event, delivery mode, audience, registrations, reactions
+4. Attendance (`attendance-v1`) — session list, create session, check-in panel, self check-in
+5. Church Attendance (`church-attendance-v1`) — report entry, demographics, visual trends
+6. Follow-ups (`followups-v1`) — inbox, create follow-up, referrals, templates, signposts
+7. Pastoral Care (`pastoral-care-v1`) — requests, assignments, life events, history
+8. Communications (`communications-v1`) — announcements, direct send, messaging, history, contacts
+9. Transportation (`transportation-v1`) — bookings, driver availability, route planner, report
+10. Analytics (`analytics-v1`) — charts, absence alerts, milestone/conversion reports, re-engagement
+11. Bible School (`exam-management-v1`) — sessions, subjects, register, take exam, results
+12. Training Reports (`training-reports-v1`) — programs, attendees, completions
+13. Home Cell (`wsf-v1`) — centres, attendance, my centre members, zones
+14. Sermon Notes (`sermon-notes-v1`) — folders, new note, rich editor, handwriting pad
+15. Testimony (`testimony-v1`) — write, categories, share
+16. Unit Tasks (`unit-tasks-v1`) — task groups, assignments, comments, report, roster
+17. Inventory (`inventory-v1`) — items, categories, inspections, history
+18. Reports Hub (`reports-v1`) — read-only cross-module view for Reports Officer
+19. Settings (`settings-v1`) — modules, branding, templates, danger zone, external links
+20. Tenant Admin (`tenant-admin-v1`, super-admin only) — tenants, users, billing, analytics, integrations
+21. My Profile (`my-profile-v1`) — profile completion, feed, certificates, notifications
+22. My Family (`my-family-v1`) — already shipped
+23. Children Church (`children-church-v1`) — already shipped
 
-### 2. Anchoring the steps
+Tours for features the tenant has disabled (via `FEATURE_MODULES` / `disabled_features`) simply don't get auto-launched — the module isn't in the sidebar.
 
-Add `data-tour="…"` attributes to the existing elements — no visual changes to the pages. Proposed anchors:
+## Wiring pattern per page (identical for all)
 
-**My Family (`src/pages/MyFamily.jsx`)** — parent audience:
-1. `mf-add-child` — the "Add child" button (welcome + why).
-2. `mf-child-card` — first child card (view/edit profile, medical/allergy notes).
-3. `mf-authorised-adults` — Authorised pickup adults section (who can collect).
-4. `mf-add-authorised` — search box for adding an authorised adult.
-5. `mf-pickup-code` — one-time pickup code / delegation area.
-6. `mf-help` — Help button (reminder they can re-open the tour).
+For each page above:
 
-**Children Church (`src/pages/ChildrenChurch.jsx`)** — worker audience, steps auto-skip when the tab/section isn't visible for the user's role:
-1. `cc-checkin-search` — family search on Drop-off tab.
-2. `cc-checkin-confirm` — check-in confirm + PIN delivery explanation.
-3. `cc-pickup-search` — Pickup tab search.
-4. `cc-pickup-verify` — PIN entry / authorised adult verification.
-5. `cc-leader-override` — override button (leader/admin only — step conditionally included).
-6. `cc-all-children` / `cc-report` — leader/admin-only steps, conditionally included.
-7. `cc-help` — Help button.
+1. Add `data-tour="<id>"` attributes to 4–7 anchor elements (header, primary action, main table/list, filters, one representative item, key tab).
+2. In the page header, render `<HelpButton tourId="<module>-v1" dataTour="<module>-help" />` next to the existing title/actions.
+3. Add the auto-launch hook (same 4 lines already used on My Family / Children Church):
 
-Tour steps take an optional `when: (ctx) => boolean` so role-gated steps are dropped for users who can't see them.
+   ```jsx
+   const { completed } = useTourCompletion("<module>-v1");
+   const tour = useTour();
+   useEffect(() => {
+     if (completed === false) {
+       const t = setTimeout(() => tour.startTour("<module>-v1", { isAdmin, isLeader }), 600);
+       return () => clearTimeout(t);
+     }
+   }, [completed, isAdmin, isLeader]);
+   ```
 
-### 3. Trigger + persistence
+4. Add the step definitions to `src/components/tour/tours.js`. Role-gated steps use `when: (ctx) => ctx.isAdmin` etc. so workers don't see admin-only anchors.
 
-- **Auto-run on first visit:** on mount of MyFamily / ChildrenChurch, `useTourCompletion(tourId)` checks completion; if not completed, start after a 600 ms delay (lets the page's data-loading skeletons resolve so anchors exist).
-- **Manual:** Help button in each page header always calls `startTour(tourId)`, ignoring completion.
-- **Persistence:** new table `user_tour_completions` (per user, per tour id) so it works across devices.
+## Ctx passed to tours
 
-  ```sql
-  create table public.user_tour_completions (
-    user_id uuid not null references auth.users(id) on delete cascade,
-    tour_id text not null,
-    completed_at timestamptz not null default now(),
-    primary key (user_id, tour_id)
-  );
-  grant select, insert, update, delete on public.user_tour_completions to authenticated;
-  grant all on public.user_tour_completions to service_role;
-  alter table public.user_tour_completions enable row level security;
-  create policy "own rows read"   on public.user_tour_completions for select to authenticated using (user_id = auth.uid());
-  create policy "own rows write"  on public.user_tour_completions for insert to authenticated with check (user_id = auth.uid());
-  create policy "own rows update" on public.user_tour_completions for update to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid());
-  ```
+Extend the ctx passed into `resolveSteps` to cover all role checks used across modules:
+`{ isAdmin, isTenantAdmin, isTenantOwner, isSuperAdmin, isLeader, isWSFLeader, isUnitLeader, isReportsOfficer, isPastor }`. Populated from `useAuth()` inside `TourProvider.startTour`.
 
-  Row is written when the tour is finished OR skipped (so "skip" is also remembered). `localStorage` is used as an instant cache to avoid the flash while the DB round-trip completes.
+## Global "Take the app tour" entry point
 
-### 4. Styling
+On the Dashboard, add one extra button: **Take the app tour** — launches `dashboard-v1`, which is a short (5–6 step) overview of the sidebar, notifications, tenant switcher, and profile menu. This is the first-run tour every new user sees when they land on `/`.
 
-Uses existing shadcn tokens (Card, Button, Playfair headings, Source Sans body, navy/gold palette). Overlay is `bg-black/60`, tooltip is a `Card` with a small gold accent border to match the app's branding. No new fonts, no new colors, mobile-responsive (tooltip becomes a bottom sheet under 480 px).
+## Reset / re-run
 
-### 5. Out of scope
+Add a small **Restart onboarding tours** button in Settings → Profile that clears the user's `user_tour_completions` rows and localStorage keys, so a user can replay every tour if they want.
 
-- No changes to My Family or Children Church business logic.
-- No admin analytics of who completed the tour (can add later).
-- No editor for tour content — steps live in code.
+## Out of scope
 
-### Files touched
+- No changes to feature business logic — tours are pure UI overlays.
+- No admin editor for tour content (steps live in `tours.js`).
+- No analytics on tour completion beyond the existing `user_tour_completions` table.
+- No changes to the existing DB schema.
 
-- **New:** `src/components/tour/TourProvider.jsx`, `SpotlightTour.jsx`, `tours.js`, `HelpButton.jsx`; `src/hooks/useTourCompletion.js`; one migration.
-- **Edit:** `src/components/layout/AppLayout.jsx` (mount provider), `src/pages/MyFamily.jsx` and `src/pages/ChildrenChurch.jsx` (add `data-tour` attrs, Help button, auto-start hook).
+## Files touched
+
+- `src/components/tour/tours.js` — add ~20 new tour definitions.
+- `src/components/tour/TourProvider.jsx` — expand ctx passed to `resolveSteps`.
+- Each page in the list above — add `data-tour` attrs, `<HelpButton />`, and the auto-launch hook.
+- `src/pages/Settings.jsx` (or MyProfile) — add "Restart onboarding tours" button.
+- `src/pages/Dashboard.jsx` — add the "Take the app tour" entry button.
+
+No new files, no migrations.
