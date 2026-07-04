@@ -424,7 +424,18 @@ export default function Layout({ children }) {
               <span className="text-[11px] font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded-full hidden sm:inline">
                 {getRoleTitle()}
               </span>
+              <RouteTourController barePath={barePath} hasMultipleTenants={tenantMemberships.length > 1} />
               <NotificationBell />
+              <button
+                type="button"
+                onClick={() => window.dispatchEvent(new CustomEvent("start-current-tour"))}
+                title="Take a tour of this page"
+                aria-label="Take a tour of this page"
+                data-tour="page-help"
+                className="inline-flex items-center justify-center h-8 w-8 rounded-full border border-primary/30 bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+              >
+                <span className="text-sm font-bold">?</span>
+              </button>
               <Button variant="outline" size="icon" className="lg:hidden h-8 w-8 text-destructive border-destructive/30 hover:bg-destructive/10" onClick={signOut}>
                 <LogOut className="h-4 w-4" />
               </Button>
