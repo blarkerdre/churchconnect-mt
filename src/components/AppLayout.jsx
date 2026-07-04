@@ -248,7 +248,7 @@ export default function Layout({ children }) {
           </div>
           {/* Tenant switcher — only show when user has multiple tenants */}
           {tenantMemberships.length > 1 && !collapsed && (
-            <div className="mt-3 relative">
+            <div data-tour="tenant-switcher" className="mt-3 relative">
               <button
                 onClick={() => setTenantDropdownOpen(!tenantDropdownOpen)}
                 className="w-full flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-md text-xs bg-sidebar-accent/50 hover:bg-sidebar-accent text-sidebar-foreground/70 hover:text-sidebar-foreground transition-colors"
