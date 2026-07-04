@@ -46,6 +46,7 @@ import ConsentPrivacySection from "@/components/settings/ConsentPrivacySection";
 
 import ApiKeysSection from "@/components/settings/ApiKeysSection";
 import TenantFeaturesSection from "@/components/settings/TenantFeaturesSection";
+import ReplayToursSection from "@/components/settings/ReplayToursSection";
 
 import DashboardBannerSettings from "@/components/settings/DashboardBannerSettings";
 
@@ -1646,8 +1647,9 @@ export default function Settings() {
           </TabsContent>
         )}
 
-        <TabsContent value="notifications">
+        <TabsContent value="notifications" className="space-y-4">
           <NotificationPreferencesSection />
+          <ReplayToursSection />
         </TabsContent>
 
         <TabsContent value="comms" className="space-y-4">
