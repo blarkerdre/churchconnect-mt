@@ -66,6 +66,18 @@ const allNavItems = [
   { name: "Tenant Admin", icon: Globe, path: "/tenant-admin", access: "super_admin" },
 ];
 
+function RouteTourController({ barePath, hasMultipleTenants }) {
+  const tour = useTour();
+  const tourId = ROUTE_TOURS[barePath] || null;
+  useAutoTour(tourId, { hasMultipleTenants });
+  React.useEffect(() => {
+    const handler = () => { if (tourId && tour) tour.startTour(tourId, { hasMultipleTenants }); };
+    window.addEventListener("start-current-tour", handler);
+    return () => window.removeEventListener("start-current-tour", handler);
+  }, [tourId, tour, hasMultipleTenants]);
+  return null;
+}
+
 export default function Layout({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
