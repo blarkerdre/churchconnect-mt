@@ -323,6 +323,6 @@ export const ROUTE_TOURS = {
   "/settings": "settings-v1",
   "/tenant-admin": "tenant-admin-v1",
   "/user-management": "user-management-v1",
-  "/my-family": "my-family-v1",
-  "/children-church": "children-church-v1",
+  // "/my-family" and "/children-church" auto-launch via their own hooks (page-specific anchors).
+
 };
