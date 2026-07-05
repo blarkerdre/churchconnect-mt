@@ -33,6 +33,7 @@ import { renderTextWithLinks } from "@/lib/linkify";
 import { dedupeByMessageId } from "@/lib/dedupe-email-log";
 
 import PasswordConfirmDialog from "@/components/shared/PasswordConfirmDialog";
+import ModuleTour from "@/components/tour/ModuleTour";
 
 const STATIC_AUDIENCES = ["All Members", "Leaders Only"];
 
@@ -523,6 +524,7 @@ export default function Communications() {
 
   return (
     <div className="space-y-6">
+    <ModuleTour tourId="communications-v1" />
       <Tabs defaultValue={announcementsEnabled ? "announcements" : (isAdmin ? "direct" : "messages")} className="space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <TabsList className="flex flex-nowrap h-auto gap-1 overflow-x-auto w-full justify-start">

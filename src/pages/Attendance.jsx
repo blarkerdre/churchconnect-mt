@@ -18,6 +18,7 @@ import { useChurchUnits } from "@/hooks/useChurchUnits";
 import ReportAttachments from "@/components/reports/ReportAttachments";
 import CheckInPanel from "@/components/attendance/CheckInPanel";
 import PasswordConfirmDialog from "@/components/shared/PasswordConfirmDialog";
+import ModuleTour from "@/components/tour/ModuleTour";
 
 export default function Attendance() {
   const { user, isAdmin, isUnitLeader, isWSFLeader, leaderUnits = [], leaderCentres = [] } = useAuth();
@@ -216,6 +217,7 @@ export default function Attendance() {
 
   return (
     <div className="space-y-6">
+    <ModuleTour tourId="attendance-v1" />
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <Card className="border-0 shadow-sm"><CardContent className="p-3 sm:p-4 text-center"><p className="text-xl sm:text-2xl font-display font-bold text-chart-3">{presentCount}</p><p className="text-xs text-muted-foreground">Checked In</p></CardContent></Card>
         <Card className="border-0 shadow-sm"><CardContent className="p-3 sm:p-4 text-center"><p className="text-xl sm:text-2xl font-display font-bold text-foreground">{totalMembers}</p><p className="text-xs text-muted-foreground">Active</p></CardContent></Card>

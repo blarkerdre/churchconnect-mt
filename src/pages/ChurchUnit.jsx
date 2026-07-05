@@ -2,6 +2,7 @@ import { lazy, Suspense } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { ClipboardList, ListChecks } from "lucide-react";
+import ModuleTour from "@/components/tour/ModuleTour";
 
 const Attendance = lazy(() => import("@/pages/Attendance"));
 const UnitTasks = lazy(() => import("@/pages/UnitTasks"));
@@ -26,6 +27,7 @@ export default function ChurchUnit() {
 
   return (
     <div className="p-4 md:p-6 max-w-7xl mx-auto space-y-4">
+    <ModuleTour tourId="church-unit-v1" />
       <div className="flex items-center gap-2">
         <ClipboardList className="h-6 w-6 text-primary" />
         <h1 className="font-display text-2xl font-bold">Church Unit</h1>
