@@ -18,6 +18,7 @@ import StatusConversionReport from "@/components/analytics/StatusConversionRepor
 import { useTenantQuery } from "@/hooks/useTenantQuery";
 import { useAuth } from "@/hooks/useAuth";
 import { format, subMonths, startOfMonth, endOfMonth, parseISO } from "date-fns";
+import ModuleTour from "@/components/tour/ModuleTour";
 
 const COLORS = [
   "hsl(160, 50%, 40%)",
@@ -220,6 +221,7 @@ export default function Analytics() {
 
   return (
     <Tabs defaultValue="overview" className="space-y-6">
+    <ModuleTour tourId="analytics-v1" />
       <TabsList>
         <TabsTrigger value="overview">Overview</TabsTrigger>
         <TabsTrigger value="reports">Reports</TabsTrigger>

@@ -36,6 +36,7 @@ import PlatformUsersTab from "@/components/tenants/PlatformUsersTab";
 import PricingTab from "@/components/tenants/PricingTab";
 
 import { FEATURE_MODULES } from "@/lib/feature-modules";
+import ModuleTour from "@/components/tour/ModuleTour";
 
 
 const PLAN_TIERS = [
@@ -362,6 +363,7 @@ export default function TenantAdmin() {
 
   return (
     <div className="space-y-6">
+    <ModuleTour tourId="tenant-admin-v1" />
       {/* Super Admin Banner */}
       <Alert className="border-amber-300 bg-amber-50 dark:bg-amber-950/20">
         <ShieldAlert className="h-4 w-4 text-amber-600" />

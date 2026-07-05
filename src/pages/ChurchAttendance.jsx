@@ -20,6 +20,7 @@ import ReportAttachments from "@/components/reports/ReportAttachments";
 import { useSubFeature } from "@/hooks/useSubFeature";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
 import PrintReportButton from "@/components/PrintReportButton";
+import ModuleTour from "@/components/tour/ModuleTour";
 
 const DEFAULT_SERVICE_TYPES = ["Sunday Service", "Midweek Service", "Special Program", "Thanksgiving Service", "Other"];
 
@@ -249,6 +250,7 @@ export default function ChurchAttendance() {
 
   return (
     <div className="space-y-6">
+    <ModuleTour tourId="church-attendance-v1" />
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>

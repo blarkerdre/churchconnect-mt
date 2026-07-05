@@ -26,6 +26,7 @@ import InspectionDialog from "@/components/inventory/InspectionDialog";
 import InspectionHistoryDialog from "@/components/inventory/InspectionHistoryDialog";
 import PrintReportButton from "@/components/PrintReportButton";
 import { logAudit } from "@/lib/audit";
+import ModuleTour from "@/components/tour/ModuleTour";
 
 const conditionColor = {
   good: "bg-chart-3/10 text-chart-3",
@@ -155,6 +156,7 @@ export default function Inventory() {
 
   return (
     <div className="p-4 sm:p-6 space-y-4 max-w-7xl mx-auto">
+    <ModuleTour tourId="inventory-v1" />
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <div>
           <h1 className="text-2xl sm:text-3xl font-serif font-bold text-foreground flex items-center gap-2">

@@ -18,6 +18,7 @@ import WSFLeaderAssignments from "@/components/users/WSFLeaderAssignments";
 import BulkUnitAssignDialog from "@/components/users/BulkUnitAssignDialog";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
 import DangerConfirmDialog from "@/components/exams/DangerConfirmDialog";
+import ModuleTour from "@/components/tour/ModuleTour";
 
 // NOTE: super_admin is intentionally NOT assignable from the per-tenant role picker.
 // It is a platform-wide role (tenant_id IS NULL) and must be granted via the
@@ -224,6 +225,7 @@ export default function UserManagement() {
   if (!isAdmin) {
     return (
       <Card className="border-0 shadow-sm">
+      <ModuleTour tourId="user-management-v1" />
         <CardContent className="p-8 text-center text-muted-foreground">
           You do not have permission to access this page.
         </CardContent>

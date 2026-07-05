@@ -25,6 +25,7 @@ import { useSubFeature } from "@/hooks/useSubFeature";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
 import { getGradeClassification, DEFAULT_GRADE_CLASSIFICATIONS } from "@/lib/grade-utils";
 import StatementOfResult from "@/components/exams/StatementOfResult";
+import ModuleTour from "@/components/tour/ModuleTour";
 
 const OPTION_LETTERS = ["a", "b", "c", "d"];
 const QUESTION_TYPES = [
@@ -266,6 +267,7 @@ export default function ExamManagement() {
 
   return (
     <div className="space-y-6">
+    <ModuleTour tourId="exam-management-v1" />
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-xl font-display font-bold text-foreground flex items-center gap-2">
