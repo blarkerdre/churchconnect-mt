@@ -6,6 +6,7 @@ import {
   Megaphone, Car, TrendingUp, BookOpen, Globe, MessageSquareHeart, ArrowRight, FileText,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import ModuleTour from "@/components/tour/ModuleTour";
 
 const MODULES = [
   { title: "Analytics", description: "Member milestones, status conversion, attendance & growth.", icon: BarChart2, path: "/analytics" },
@@ -32,6 +33,7 @@ export default function Reports() {
 
   return (
     <div className="p-4 md:p-8 max-w-7xl mx-auto">
+    <ModuleTour tourId="reports-v1" />
       <div className="mb-6 flex items-start gap-3">
         <div className="p-2.5 rounded-lg bg-primary/10 text-primary">
           <FileText className="h-6 w-6" />

@@ -18,6 +18,7 @@ import { logAudit } from "@/lib/audit";
 import { useAuth } from "@/hooks/useAuth";
 import { useSubFeature } from "@/hooks/useSubFeature";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
+import ModuleTour from "@/components/tour/ModuleTour";
 
 const statusColors = {
   "Active": "bg-chart-3/10 text-chart-3",
@@ -157,6 +158,7 @@ export default function Members() {
 
   return (
     <div className="space-y-6">
+    <ModuleTour tourId="members-v1" />
       {/* Controls */}
       {!(isReportsOfficer && !isAdmin) && (
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">

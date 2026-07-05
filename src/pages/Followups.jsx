@@ -19,6 +19,7 @@ import FollowupMessageDialog from "@/components/followups/FollowupMessageDialog"
 import { useSubFeature } from "@/hooks/useSubFeature";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
 import PasswordConfirmDialog from "@/components/shared/PasswordConfirmDialog";
+import ModuleTour from "@/components/tour/ModuleTour";
 
 const priorityColors = { "Urgent": "bg-destructive/10 text-destructive", "High": "bg-chart-5/10 text-chart-5", "Medium": "bg-accent/10 text-accent", "Low": "bg-muted text-muted-foreground" };
 const statusColors = { "Pending": "bg-accent/10 text-accent", "In Progress": "bg-primary/10 text-primary", "Completed": "bg-chart-3/10 text-chart-3", "Overdue": "bg-destructive/10 text-destructive" };
@@ -291,6 +292,7 @@ export default function Followups() {
 
   return (
     <div className="space-y-6">
+    <ModuleTour tourId="followups-v1" />
       {/* Overdue reminder */}
       <OverdueReminder
         overdueTasks={overdueTasks.map(f => ({ ...f, person_name: f.person_name, due_date: f.due_date }))}

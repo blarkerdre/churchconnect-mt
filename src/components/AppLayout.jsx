@@ -12,10 +12,7 @@ import {
   BookOpen, ChevronsUpDown, Check, Lock, MessageSquareHeart, Star, Package
 } from "lucide-react";
 import AppFeedbackDialog from "@/components/feedback/AppFeedbackDialog";
-import { TourProvider, useTour } from "@/components/tour/TourProvider";
-import { ROUTE_TOURS } from "@/components/tour/tours";
-import HelpButton from "@/components/tour/HelpButton";
-import { useAutoTour } from "@/hooks/useAutoTour";
+import { TourProvider } from "@/components/tour/TourProvider";
 import SignPostInboxDialog from "@/components/followups/SignPostInboxDialog";
 import { useQuery } from "@tanstack/react-query";
 import { Inbox } from "lucide-react";
@@ -66,17 +63,6 @@ const allNavItems = [
   { name: "Tenant Admin", icon: Globe, path: "/tenant-admin", access: "super_admin" },
 ];
 
-function RouteTourController({ barePath, hasMultipleTenants }) {
-  const tour = useTour();
-  const tourId = ROUTE_TOURS[barePath] || null;
-  useAutoTour(tourId, { hasMultipleTenants });
-  React.useEffect(() => {
-    const handler = () => { if (tourId && tour) tour.startTour(tourId, { hasMultipleTenants }); };
-    window.addEventListener("start-current-tour", handler);
-    return () => window.removeEventListener("start-current-tour", handler);
-  }, [tourId, tour, hasMultipleTenants]);
-  return null;
-}
 
 export default function Layout({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -436,18 +422,7 @@ export default function Layout({ children }) {
               <span className="text-[11px] font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded-full hidden sm:inline">
                 {getRoleTitle()}
               </span>
-              <RouteTourController barePath={barePath} hasMultipleTenants={tenantMemberships.length > 1} />
               <NotificationBell />
-              <button
-                type="button"
-                onClick={() => window.dispatchEvent(new CustomEvent("start-current-tour"))}
-                title="Take a tour of this page"
-                aria-label="Take a tour of this page"
-                data-tour="page-help"
-                className="inline-flex items-center justify-center h-8 w-8 rounded-full border border-primary/30 bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
-              >
-                <span className="text-sm font-bold">?</span>
-              </button>
               <Button variant="outline" size="icon" className="lg:hidden h-8 w-8 text-destructive border-destructive/30 hover:bg-destructive/10" onClick={signOut}>
                 <LogOut className="h-4 w-4" />
               </Button>

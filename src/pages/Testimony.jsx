@@ -13,6 +13,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format } from "date-fns";
+import ModuleTour from "@/components/tour/ModuleTour";
 
 export default function Testimony() {
   const { tenantId } = useTenantQuery();
@@ -137,6 +138,7 @@ export default function Testimony() {
 
   return (
     <div className="space-y-6">
+    <ModuleTour tourId="testimony-v1" />
       <div>
         <h1 className="text-2xl font-bold text-foreground">Share Your Testimony</h1>
         <p className="text-sm text-muted-foreground mt-1">Tell us what the Lord has done in your life</p>

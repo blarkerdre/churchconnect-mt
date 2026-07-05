@@ -29,6 +29,7 @@ import { useTenant, DEFAULT_TENANT_ID } from "@/contexts/TenantContext";
 import { useConsentText, renderConsentText } from "@/hooks/useConsentText";
 import { diffUnitMembership, submitJoinRequests } from "@/hooks/usePendingJoinRequests";
 import { Info as InfoIcon } from "lucide-react";
+import ModuleTour from "@/components/tour/ModuleTour";
 
 const GENDERS = ["Male", "Female"];
 const MEMBERSHIP_STATUSES = ["Active", "First Timer", "New Convert", "Visitor"];
@@ -382,6 +383,7 @@ export default function MyProfile() {
   if (isLoading) {
     return (
       <div className="flex justify-center py-12">
+      <ModuleTour tourId="my-profile-v1" />
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     );

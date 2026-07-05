@@ -23,6 +23,7 @@ import ReportAttachments from "@/components/reports/ReportAttachments";
 import TrainingAttendeesPanel from "@/components/training/TrainingAttendeesPanel";
 import PrintReportButton from "@/components/PrintReportButton";
 import { useSubFeature } from "@/hooks/useSubFeature";
+import ModuleTour from "@/components/tour/ModuleTour";
 
 const ICON_MAP = {
   "Water Baptism": { icon: Droplets, color: "text-blue-500" },
@@ -328,6 +329,7 @@ export default function TrainingReports() {
 
   return (
     <div className="space-y-6">
+    <ModuleTour tourId="training-reports-v1" />
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>

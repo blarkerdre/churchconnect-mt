@@ -23,6 +23,7 @@ import { useTenantQuery } from "@/hooks/useTenantQuery";
 import PasswordConfirmDialog from "@/components/shared/PasswordConfirmDialog";
 import { normalizePhone } from "@/lib/phone-utils";
 import { useAppSetting } from "@/hooks/useAppSetting";
+import ModuleTour from "@/components/tour/ModuleTour";
 
 const DEFAULT_SERVICE_TYPES = ["Sunday Service", "Midweek Service", "Special Program", "Thanksgiving Service", "Other"];
 
@@ -478,6 +479,7 @@ export default function Transportation() {
 
   return (
     <div className="space-y-6">
+    <ModuleTour tourId="transportation-v1" />
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
         <Card className="border-0 shadow-sm"><CardContent className="p-3 sm:p-4 text-center"><p className="text-xl sm:text-2xl font-display font-bold text-foreground">{filtered.length}</p><p className="text-xs text-muted-foreground">Total</p></CardContent></Card>
         <Card className="border-0 shadow-sm"><CardContent className="p-3 sm:p-4 text-center"><p className="text-xl sm:text-2xl font-display font-bold text-accent">{filtered.filter(b => b.status === "Pending").length}</p><p className="text-xs text-muted-foreground">Pending</p></CardContent></Card>
