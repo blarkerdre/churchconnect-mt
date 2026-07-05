@@ -20,6 +20,7 @@ import { useAltarMinistry } from "@/hooks/useAltarMinistry";
 import PrintReportButton from "@/components/PrintReportButton";
 import LifeEventApprovalDialog, { LifeEventStageBadge } from "@/components/pastoralcare/LifeEventApprovalDialog";
 import PastoralCareRequestDialog from "@/components/pastoralcare/PastoralCareRequestDialog";
+import ModuleTour from "@/components/tour/ModuleTour";
 
 const statusColors = {
   "Open": "bg-accent/10 text-accent",
@@ -210,6 +211,7 @@ export default function PastoralCare() {
 
   return (
     <div className="space-y-6">
+    <ModuleTour tourId="pastoral-care-v1" />
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <Card className="border-0 shadow-sm"><CardContent className="p-4 text-center"><p className="text-2xl font-display font-bold text-foreground">{filtered.length}</p><p className="text-xs text-muted-foreground">Total Cases</p></CardContent></Card>
         <Card className="border-0 shadow-sm"><CardContent className="p-4 text-center"><p className="text-2xl font-display font-bold text-accent">{filtered.filter(r => r.status === "Open").length}</p><p className="text-xs text-muted-foreground">Open</p></CardContent></Card>

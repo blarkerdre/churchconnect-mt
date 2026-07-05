@@ -13,6 +13,7 @@ import UnitTaskFormDialog from "@/components/unitTasks/UnitTaskFormDialog";
 import UnitTaskDetailPanel from "@/components/unitTasks/UnitTaskDetailPanel";
 import UnitTaskReportDialog from "@/components/unitTasks/UnitTaskReportDialog";
 import ServiceRosterDialog from "@/components/unitTasks/ServiceRosterDialog";
+import ModuleTour from "@/components/tour/ModuleTour";
 
 const priorityColor = {
   Urgent: "bg-destructive/10 text-destructive",
@@ -133,6 +134,7 @@ export default function UnitTasks() {
 
   return (
     <div className="p-4 md:p-6 max-w-7xl mx-auto space-y-6">
+    <ModuleTour tourId="unit-tasks-v1" />
       <div className="flex flex-wrap items-center gap-3">
         <div className="flex items-center gap-2">
           <ClipboardList className="h-6 w-6 text-primary" />

@@ -16,6 +16,7 @@ import { useTenantQuery } from "@/hooks/useTenantQuery";
 import { useTenant } from "@/contexts/TenantContext";
 import { Badge } from "@/components/ui/badge";
 import PendingJoinRequests from "@/components/dashboard/PendingJoinRequests";
+import ModuleTour from "@/components/tour/ModuleTour";
 
 export default function Dashboard() {
   const { isAdmin, isUnitLeader, isWSFLeader, profile, myMember, loading: authLoading } = useAuth();
@@ -131,6 +132,7 @@ export default function Dashboard() {
   if (!authLoading && !isAdmin && isUnitLeader) {
     return (
       <div className="space-y-6">
+      <ModuleTour tourId="dashboard-v1" />
         <PendingJoinRequests filter="unit" />
         <MemberDashboard currentUser={profile} myMember={myMember} />
       </div>

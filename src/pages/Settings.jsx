@@ -49,6 +49,7 @@ import TenantFeaturesSection from "@/components/settings/TenantFeaturesSection";
 import ReplayToursSection from "@/components/settings/ReplayToursSection";
 
 import DashboardBannerSettings from "@/components/settings/DashboardBannerSettings";
+import ModuleTour from "@/components/tour/ModuleTour";
 
 /* ─── Notification Preferences section ─── */
 function NotificationPreferencesSection() {
@@ -1590,6 +1591,7 @@ export default function Settings() {
 
   return (
     <div className="space-y-6">
+    <ModuleTour tourId="settings-v1" />
       <div>
         <h1 className="text-lg sm:text-xl font-display font-bold text-foreground flex items-center gap-2">
           <SettingsIcon className="h-5 w-5 text-primary" /> Settings

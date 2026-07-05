@@ -8,6 +8,7 @@ import WSFCentreMembersDialog from "@/components/wsf/WSFCentreMembersDialog";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
 import { Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import ModuleTour from "@/components/tour/ModuleTour";
 
 export default function WSFManagement() {
   const { isAdmin, isWSFLeader, isReportsOfficer, user } = useAuth();
@@ -58,6 +59,7 @@ export default function WSFManagement() {
   if (!isAdmin && !isWSFLeader && !isReportsOfficer) {
     return (
       <Card className="border-0 shadow-sm">
+      <ModuleTour tourId="wsf-v1" />
         <CardContent className="p-8 text-center text-muted-foreground">
           You don't have access to Home Cell management.
         </CardContent>
