@@ -84,7 +84,7 @@ export default function MyCertificates({ memberId, hiddenCourseNames = [] }) {
                   <span className="text-xs text-muted-foreground">
                     {format(new Date(c.completion_date), "dd MMM yyyy")}
                   </span>
-                  <Badge variant="outline" className="text-[10px]">{c.certificate_number}</Badge>
+                  <Badge variant="outline" className="text-[10px]">{c.student_number || c.certificate_number}</Badge>
                 </div>
               </div>
               <Button
