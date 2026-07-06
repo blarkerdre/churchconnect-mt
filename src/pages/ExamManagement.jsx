@@ -893,17 +893,21 @@ function CourseRegistrationsView({ course }) {
             <Table>
               <TableHeader>
                 <TableRow className="bg-muted/50">
-                   <TableHead className="font-semibold">Name</TableHead>
+                  <TableHead className="font-semibold">Name</TableHead>
                   <TableHead className="font-semibold">Email</TableHead>
                   <TableHead className="font-semibold">Phone</TableHead>
                   <TableHead className="font-semibold">Source</TableHead>
-                  
+                  <TableHead className="font-semibold">Status</TableHead>
+                  <TableHead className="font-semibold">Student No.</TableHead>
                   <TableHead className="font-semibold">Registered</TableHead>
                   <TableHead className="font-semibold text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredRegistrations.map(r => (
+                {filteredRegistrations.map(r => {
+                  const isEditing = editingNumberId === r.id;
+                  const isApproved = r.status === "approved";
+                  return (
                   <TableRow key={r.id}>
                     <TableCell className="font-medium">{r.members?.first_name} {r.members?.last_name}</TableCell>
                     <TableCell className="text-sm text-muted-foreground">{r.members?.email || "—"}</TableCell>
@@ -913,20 +917,73 @@ function CourseRegistrationsView({ course }) {
                         {r.members?.user_id ? "Member" : "QR / Public"}
                       </Badge>
                     </TableCell>
-                    
+                    <TableCell>
+                      <Badge variant={isApproved ? "default" : "secondary"} className={isApproved ? "bg-emerald-600 hover:bg-emerald-600" : ""}>
+                        {isApproved ? "Approved" : (r.status || "pending")}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-sm">
+                      {isEditing ? (
+                        <div className="flex items-center gap-1">
+                          <Input
+                            value={editingNumberValue}
+                            onChange={e => setEditingNumberValue(e.target.value)}
+                            className="h-7 w-[220px] text-xs font-mono"
+                            placeholder="TENANT/COURSE/MONTH/YYYY/NNN"
+                          />
+                          <Button size="icon" variant="ghost" className="h-7 w-7"
+                            onClick={() => updateNumberMutation.mutate({ id: r.id, value: editingNumberValue.trim() })}
+                            disabled={updateNumberMutation.isPending}
+                          >
+                            <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+                          </Button>
+                          <Button size="icon" variant="ghost" className="h-7 w-7"
+                            onClick={() => { setEditingNumberId(null); setEditingNumberValue(""); }}
+                          >
+                            <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-1.5">
+                          <span className={r.student_number ? "font-mono text-xs" : "text-muted-foreground italic text-xs"}>
+                            {r.student_number || "—"}
+                          </span>
+                          {canManageNumbers && (
+                            <Button size="icon" variant="ghost" className="h-6 w-6"
+                              onClick={() => { setEditingNumberId(r.id); setEditingNumberValue(r.student_number || ""); }}
+                              title="Edit student number"
+                            >
+                              <Edit className="h-3 w-3" />
+                            </Button>
+                          )}
+                        </div>
+                      )}
+                    </TableCell>
                     <TableCell className="text-sm text-muted-foreground">{new Date(r.registered_at).toLocaleDateString()}</TableCell>
                     <TableCell className="text-right">
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setDeleteTarget(r)}>
-                        <Trash2 className="h-3.5 w-3.5 text-destructive" />
-                      </Button>
+                      <div className="flex items-center justify-end gap-1">
+                        {canManageNumbers && !isApproved && (
+                          <Button size="sm" variant="outline" className="h-7 gap-1 text-xs"
+                            onClick={() => approveMutation.mutate(r.id)}
+                            disabled={approveMutation.isPending}
+                          >
+                            <CheckCircle2 className="h-3.5 w-3.5" /> Approve
+                          </Button>
+                        )}
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setDeleteTarget(r)}>
+                          <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
-                ))}
+                  );
+                })}
               </TableBody>
             </Table>
           </div>
         )}
       </CardContent>
+
 
       <DangerConfirmDialog
         open={!!deleteTarget}
