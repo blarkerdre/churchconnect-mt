@@ -51,7 +51,7 @@ export default function CertificateTemplateSettings() {
 
   const allTypes = useMemo(() => {
     const courseNames = courses.map(c => c.name);
-    const merged = new Set(["Default", ...courseNames, ...(settingsTypes || [])]);
+    const merged = new Set(["Default", ...courseNames, ...(Array.isArray(settingsTypes) ? settingsTypes : [])]);
     return [...merged];
   }, [courses, settingsTypes]);
 
