@@ -683,6 +683,7 @@ Deno.serve(async (req) => {
         success: true,
         completion,
         certificate_number: certificateNumber,
+        student_number: studentNumber,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
