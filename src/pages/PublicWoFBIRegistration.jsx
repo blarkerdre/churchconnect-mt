@@ -118,19 +118,10 @@ export default function PublicWoFBIRegistration() {
             <p className="text-muted-foreground">
               You have been registered for <strong>{courseName}</strong>.
             </p>
-            {studentNumber && (
-              <div className="rounded-lg border-2 border-primary/30 bg-primary/5 p-4 space-y-1">
-                <p className="text-xs uppercase tracking-wide text-muted-foreground">Your student registration number</p>
-                <p className="text-xl font-mono font-bold text-primary break-all">{studentNumber}</p>
-                <p className="text-[11px] text-muted-foreground">Provisional until an administrator approves your registration.</p>
-              </div>
-            )}
             <div className="bg-muted rounded-lg p-4 space-y-2 text-left">
               <h3 className="font-semibold text-sm">What's next?</h3>
               <p className="text-sm text-muted-foreground">
-                {studentNumber
-                  ? "Please keep your student registration number safe — you'll need it for exams and your certificate. It will also appear on your profile and welcome email."
-                  : "Your student registration number will be issued once an administrator approves your registration. You'll see it on your profile and it will appear in your welcome email."}
+                Your student registration number will be issued once an administrator approves your registration. It will then appear on your profile.
               </p>
               <p className="text-sm text-muted-foreground">
                 In the meantime, log in or create an account in the Bible School section to access your exams.
