@@ -532,7 +532,13 @@ export default function ExamManagement() {
               </p>
             </div>
             <div><Label>Description</Label><Input value={titleForm.description} onChange={e => setTitleForm(f => ({ ...f, description: e.target.value }))} placeholder="Optional" /></div>
-            <div><Label>Aggregate Pass Mark (%)</Label><Input type="number" min="0" max="100" value={titleForm.pass_mark_percentage} onChange={e => setTitleForm(f => ({ ...f, pass_mark_percentage: e.target.value }))} className="w-28" /></div>
+            <div>
+              <Label>Course Pass Mark (%)</Label>
+              <Input type="number" min="0" max="100" value={titleForm.pass_mark_percentage} onChange={e => setTitleForm(f => ({ ...f, pass_mark_percentage: e.target.value }))} className="w-28" />
+              <p className="text-[11px] text-muted-foreground mt-1">
+                The minimum overall percentage a student needs across all subjects to pass the entire course and receive a certificate. This is separate from each subject's own pass mark.
+              </p>
+            </div>
             <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50 border border-border">
               <Label htmlFor="reg-open" className="cursor-pointer">Registration Open</Label>
               <Switch id="reg-open" checked={titleForm.registration_open} onCheckedChange={v => setTitleForm(f => ({ ...f, registration_open: v }))} />
