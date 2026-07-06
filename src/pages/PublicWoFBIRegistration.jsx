@@ -28,6 +28,7 @@ export default function PublicWoFBIRegistration() {
   const [saving, setSaving] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [courseName, setCourseName] = useState("");
+  const [studentNumber, setStudentNumber] = useState("");
   const [courses, setCourses] = useState([]);
   const [loadingCourses, setLoadingCourses] = useState(true);
   const [resolvedTenantId, setResolvedTenantId] = useState(null);
@@ -97,6 +98,7 @@ export default function PublicWoFBIRegistration() {
         toast({ title: result.error || "Registration failed", variant: "destructive" });
       } else {
         setCourseName(result.course_name || "");
+        setStudentNumber(result.student_number || "");
         setSubmitted(true);
       }
     } catch {
@@ -118,15 +120,25 @@ export default function PublicWoFBIRegistration() {
             <p className="text-muted-foreground">
               You have been registered for <strong>{courseName}</strong>.
             </p>
+            {studentNumber && (
+              <div className="rounded-lg border-2 border-primary/30 bg-primary/5 p-4 space-y-1">
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">Your student registration number</p>
+                <p className="text-xl font-mono font-bold text-primary break-all">{studentNumber}</p>
+                <p className="text-[11px] text-muted-foreground">Provisional until an administrator approves your registration.</p>
+              </div>
+            )}
             <div className="bg-muted rounded-lg p-4 space-y-2 text-left">
               <h3 className="font-semibold text-sm">What's next?</h3>
               <p className="text-sm text-muted-foreground">
-                Your <strong>student registration number</strong> will be issued once an administrator approves your registration. You'll see it on your profile and it will appear in your welcome email.
+                {studentNumber
+                  ? "Please keep your student registration number safe — you'll need it for exams and your certificate. It will also appear on your profile and welcome email."
+                  : "Your student registration number will be issued once an administrator approves your registration. You'll see it on your profile and it will appear in your welcome email."}
               </p>
               <p className="text-sm text-muted-foreground">
                 In the meantime, log in or create an account in the Bible School section to access your exams.
               </p>
             </div>
+
 
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
               <Button asChild>
