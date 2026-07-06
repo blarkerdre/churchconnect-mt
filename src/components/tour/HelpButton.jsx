@@ -15,7 +15,7 @@ export default function HelpButton({ tourId, ctx, className = "", label = "Take 
       type="button"
       variant="outline"
       size="sm"
-      onClick={() => tour.startTour(tourId, ctx)}
+      onClick={() => tour.startTour(tourId, ctx, { manual: true })}
       className={className}
       data-tour={dataTour}
       aria-label={label}
