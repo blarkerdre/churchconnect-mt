@@ -168,6 +168,13 @@ export default function SubjectManager({ course, onSelectSubject, selectedSubjec
               <Label htmlFor="randomize" className="text-sm font-medium">Randomize Questions</Label>
               <Switch id="randomize" checked={!!form.randomize_questions} onCheckedChange={v => setForm(f => ({ ...f, randomize_questions: v }))} />
             </div>
+            <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50 border border-border">
+              <div>
+                <Label htmlFor="is-open" className="text-sm font-medium">Exam Open</Label>
+                <p className="text-[11px] text-muted-foreground">Students can only answer questions when this is on.</p>
+              </div>
+              <Switch id="is-open" checked={!!form.is_open} onCheckedChange={v => setForm(f => ({ ...f, is_open: v }))} />
+            </div>
             <div className="space-y-2">
               <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50 border border-border">
                 <Label htmlFor="customGrades" className="text-sm font-medium">Custom Grade Bands</Label>
