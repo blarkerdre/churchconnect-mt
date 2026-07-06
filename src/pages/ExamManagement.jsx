@@ -329,7 +329,7 @@ export default function ExamManagement() {
                   <button className="opacity-0 group-hover:opacity-100 transition-opacity ml-1" onClick={(e) => {
                     e.stopPropagation();
                     setEditingTitle(t);
-                    setTitleForm({ name: t.name, description: t.description || "", pass_mark_percentage: t.pass_mark_percentage || 50, registration_open: !!t.registration_open, exams_open: !!t.exams_open, grade_classifications: t.grade_classifications || DEFAULT_GRADE_CLASSIFICATIONS, send_result_email: t.send_result_email !== false, send_certificate_email: t.send_certificate_email !== false });
+                    setTitleForm({ name: t.name, course_code: t.course_code || "", description: t.description || "", pass_mark_percentage: t.pass_mark_percentage || 50, registration_open: !!t.registration_open, exams_open: !!t.exams_open, grade_classifications: t.grade_classifications || DEFAULT_GRADE_CLASSIFICATIONS, send_result_email: t.send_result_email !== false, send_certificate_email: t.send_certificate_email !== false });
                     setTitleDialogOpen(true);
                   }}>
                     <Edit className="h-3 w-3" />
