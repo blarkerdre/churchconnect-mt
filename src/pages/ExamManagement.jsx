@@ -706,24 +706,60 @@ export default function ExamManagement() {
 function CourseRegistrationsView({ course }) {
   const qc = useQueryClient();
   const { tenantId } = useTenantQuery();
+  const { isAdmin, isTenantAdmin, isTenantOwner } = useAuth();
+  const canManageNumbers = !!(isAdmin || isTenantAdmin || isTenantOwner);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [sourceFilter, setSourceFilter] = useState("all");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
+  const [editingNumberId, setEditingNumberId] = useState(null);
+  const [editingNumberValue, setEditingNumberValue] = useState("");
 
   const { data: registrations = [], isLoading } = useQuery({
     queryKey: ["course-registrations", course.id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("course_registrations")
-        .select("id, registered_at, member_id, members(first_name, last_name, email, phone, user_id)")
+        .select("id, registered_at, member_id, student_number, status, approved_at, members(first_name, last_name, email, phone, user_id)")
         .eq("course_id", course.id)
         .order("registered_at", { ascending: false });
       if (error) throw error;
       return data;
     },
     enabled: !!course?.id,
+  });
+
+  const approveMutation = useMutation({
+    mutationFn: async (id) => {
+      const { data, error } = await supabase.rpc("approve_course_registration", { _registration_id: id });
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: ["course-registrations", course.id] });
+      const num = Array.isArray(data) ? data[0]?.student_number : data?.student_number;
+      toast({ title: "Registration approved", description: num ? `Student No. ${num}` : undefined });
+    },
+    onError: (err) => toast({ title: "Approval failed", description: err.message, variant: "destructive" }),
+  });
+
+  const updateNumberMutation = useMutation({
+    mutationFn: async ({ id, value }) => {
+      const { error } = await supabase
+        .from("course_registrations")
+        .update({ student_number: value || null })
+        .eq("id", id)
+        .eq("tenant_id", tenantId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["course-registrations", course.id] });
+      toast({ title: "Student number updated" });
+      setEditingNumberId(null);
+      setEditingNumberValue("");
+    },
+    onError: (err) => toast({ title: "Update failed", description: err.message, variant: "destructive" }),
   });
 
   const deleteMutation = useMutation({
