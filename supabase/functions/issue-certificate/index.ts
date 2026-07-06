@@ -445,14 +445,14 @@ Deno.serve(async (req) => {
   ` : ""}
   <!-- Dean signature (left) -->
   ${deanDataUri ? `<image href="${deanDataUri}" x="115" y="480" width="150" height="45" preserveAspectRatio="xMidYMax meet"/>` : ""}
-  <line x1="100" y1="530" x2="290" y2="530" stroke="#333" stroke-width="1"/>
-  <text x="195" y="548" text-anchor="middle" font-family="Inter, sans-serif" font-style="italic" font-weight="700" font-size="12" fill="${bodyDark}">${escapeXml(signatoryTitle || "Dean")}</text>
+  ${!bgDataUri ? `<line x1="100" y1="530" x2="290" y2="530" stroke="#333" stroke-width="1"/>` : ""}
+  ${!bgDataUri ? `<text x="195" y="548" text-anchor="middle" font-family="Inter, sans-serif" font-style="italic" font-weight="700" font-size="12" fill="${bodyDark}">${escapeXml(signatoryTitle || "Dean")}</text>` : ""}
   <!-- Crest (centre) -->
   ${crestDataUri ? `<image href="${crestDataUri}" x="376" y="470" width="90" height="90" preserveAspectRatio="xMidYMid meet"/>` : ""}
   <!-- Date (right) -->
   <text x="647" y="520" text-anchor="middle" font-family="Playfair Display, serif" font-style="italic" font-weight="700" font-size="14" fill="${bodyDark}">${escapeXml(formattedDate)}</text>
-  <line x1="552" y1="530" x2="742" y2="530" stroke="#333" stroke-width="1"/>
-  <text x="647" y="548" text-anchor="middle" font-family="Inter, sans-serif" font-style="italic" font-weight="700" font-size="12" fill="${bodyDark}">Date</text>
+  ${!bgDataUri ? `<line x1="552" y1="530" x2="742" y2="530" stroke="#333" stroke-width="1"/>` : ""}
+  ${!bgDataUri ? `<text x="647" y="548" text-anchor="middle" font-family="Inter, sans-serif" font-style="italic" font-weight="700" font-size="12" fill="${bodyDark}">Date</text>` : ""}
 </svg>`;
     } else if (backgroundImageUrl) {
       const nameY = textPositions.name_y || 280;
