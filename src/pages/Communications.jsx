@@ -529,7 +529,7 @@ export default function Communications() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <TabsList className="flex flex-nowrap h-auto gap-1 overflow-x-auto w-full justify-start">
             {announcementsEnabled && (
-              <TabsTrigger value="announcements" className="gap-1.5 text-xs">
+              <TabsTrigger data-tour="comms-announcement" value="announcements" className="gap-1.5 text-xs">
                 <Megaphone className="h-3.5 w-3.5" /> Announcements
                 {visibleAnnouncements.length > 0 && (
                   <Badge variant="secondary" className="h-5 min-w-5 px-1 text-[10px] ml-0.5">
@@ -539,7 +539,7 @@ export default function Communications() {
               </TabsTrigger>
             )}
             {isAdmin && (
-              <TabsTrigger value="direct" className="gap-1.5 text-xs">
+              <TabsTrigger data-tour="comms-direct" value="direct" className="gap-1.5 text-xs">
                 <Send className="h-3.5 w-3.5" /> Direct Send
               </TabsTrigger>
             )}
@@ -549,7 +549,7 @@ export default function Communications() {
               </TabsTrigger>
             )}
             {canManageComms && (emailEnabled || smsEnabled || whatsappEnabled) && (
-              <TabsTrigger value="history" className="gap-1.5 text-xs">
+              <TabsTrigger data-tour="comms-history" value="history" className="gap-1.5 text-xs">
                 <HistoryIcon className="h-3.5 w-3.5" /> History
                 {(emailCount + smsCount + whatsappCount) > 0 && (
                   <Badge variant="secondary" className="h-5 min-w-5 px-1 text-[10px] ml-0.5">
@@ -579,7 +579,7 @@ export default function Communications() {
                 <Input placeholder="Search communications..." value={search} onChange={e => setSearch(e.target.value)} className="pl-10" />
               </div>
               {canManageComms && (
-                <Button onClick={() => { setEditing(null); setFormOpen(true); }} className="bg-primary hover:bg-primary/90">
+                <Button data-tour="comms-new-announcement" onClick={() => { setEditing(null); setFormOpen(true); }} className="bg-primary hover:bg-primary/90">
                   <Plus className="h-4 w-4 mr-2" /> New Announcement
                 </Button>
               )}

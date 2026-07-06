@@ -239,7 +239,7 @@ export default function PastoralCare() {
                   </Button>
                 )}
                 {canCreateRequest && (
-                  <Button onClick={() => setRequestDialogOpen(true)} className="bg-primary hover:bg-primary/90">
+                  <Button data-tour="pc-request" onClick={() => setRequestDialogOpen(true)} className="bg-primary hover:bg-primary/90">
                     <Plus className="h-4 w-4 mr-2" /> New Request
                   </Button>
                 )}
