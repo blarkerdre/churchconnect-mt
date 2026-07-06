@@ -487,6 +487,7 @@ Deno.serve(async (req) => {
           image_base64: base64,
           content_type: "image/png",
           certificate_number: certificateNumber,
+          student_number: studentNumber,
           training_type,
           completion_date: certDate,
           member_name: memberName,
