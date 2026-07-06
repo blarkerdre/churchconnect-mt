@@ -455,35 +455,6 @@ Deno.serve(async (req) => {
   <text x="647" y="548" text-anchor="middle" font-family="Inter, sans-serif" font-style="italic" font-weight="700" font-size="12" fill="${bodyDark}">Date</text>
 </svg>`;
     } else if (backgroundImageUrl) {
-      // Generate a signed URL for the background image to embed in SVG.
-      // Backward compatibility: older rows may have been saved without the tenant_id prefix.
-      const candidatePaths = [
-        backgroundImageUrl,
-        backgroundImageUrl.startsWith(`${tenant_id}/`) ? null : `${tenant_id}/${backgroundImageUrl}`,
-      ].filter(Boolean) as string[];
-
-      let bgDataUri = "";
-      for (const candidate of candidatePaths) {
-        const { data: bgSignedData } = await supabase.storage
-          .from("church-documents")
-          .createSignedUrl(candidate, 60 * 60);
-        if (!bgSignedData?.signedUrl) continue;
-        try {
-          const imgResp = await fetch(bgSignedData.signedUrl);
-          if (!imgResp.ok) continue;
-          const imgBuf = await imgResp.arrayBuffer();
-          const contentType = imgResp.headers.get("content-type") || "image/png";
-          const base64 = encodeBase64(new Uint8Array(imgBuf));
-          bgDataUri = `data:${contentType};base64,${base64}`;
-          break;
-        } catch (e) {
-          console.warn("Failed to fetch background image candidate:", candidate, e);
-        }
-      }
-      if (!bgDataUri) {
-        console.warn("Background image could not be embedded; falling back to solid color. Path:", backgroundImageUrl);
-      }
-
       const nameY = textPositions.name_y || 280;
       const trainingY = textPositions.training_y || 340;
       const dateY = textPositions.date_y || 380;
