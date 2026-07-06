@@ -28,7 +28,6 @@ export default function PublicWoFBIRegistration() {
   const [saving, setSaving] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [courseName, setCourseName] = useState("");
-  const [studentNumber, setStudentNumber] = useState("");
   const [courses, setCourses] = useState([]);
   const [loadingCourses, setLoadingCourses] = useState(true);
   const [resolvedTenantId, setResolvedTenantId] = useState(null);
