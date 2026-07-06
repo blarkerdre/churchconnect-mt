@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { X, ChevronLeft, ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { notifyTourCompletion } from "@/hooks/useTourCompletion";
 import { resolveSteps, TOURS } from "./tours";
 
 const TourCtx = createContext(null);
@@ -198,6 +199,12 @@ export function TourProvider({ children }) {
   const isSuperAdmin = roles.includes?.("super_admin");
   const isLeader = !!(isUnitLeader || isWSFLeader);
   const [active, setActive] = useState(null); // { tourId, steps }
+  // In-session set of tour ids the user dismissed/completed. Prevents
+  // auto-run from re-triggering after Skip/Close/Finish even if the
+  // completion fetch/upsert hasn't yet round-tripped.
+  const dismissedRef = useRef(new Set());
+  const activeRef = useRef(null);
+  activeRef.current = active;
 
   const baseCtx = useMemo(() => ({
     isAdmin: !!isAdmin,
@@ -210,7 +217,12 @@ export function TourProvider({ children }) {
     isLeader,
   }), [isAdmin, isTenantAdmin, isTenantOwner, isSuperAdmin, isUnitLeader, isWSFLeader, isReportsOfficer, isLeader]);
 
-  const startTour = useCallback((tourId, ctx = {}) => {
+  // `manual` = user explicitly clicked the "?" Tour button; bypass the
+  // dismissed-in-this-session guard so they can always replay on demand.
+  const startTour = useCallback((tourId, ctx = {}, { manual = false } = {}) => {
+    if (!tourId) return;
+    if (activeRef.current?.tourId === tourId) return;
+    if (!manual && dismissedRef.current.has(tourId)) return;
     const steps = resolveSteps(tourId, { ...baseCtx, ...ctx });
     if (!steps.length) return;
     setActive({ tourId, steps });
@@ -218,17 +230,20 @@ export function TourProvider({ children }) {
 
   const stopTour = useCallback(() => setActive(null), []);
 
+  const wasDismissed = useCallback((tourId) => dismissedRef.current.has(tourId), []);
+
   const markCompletedRemote = useCallback(async (tourId) => {
-    if (!user?.id || !tourId) return;
-    try {
-      localStorage.setItem(`tour:completed:${user.id}:${tourId}`, "1");
-    } catch {}
+    if (!tourId) return;
+    dismissedRef.current.add(tourId);
+    if (!user?.id) return;
+    notifyTourCompletion(user.id, tourId);
     await supabase
       .from("user_tour_completions")
       .upsert({ user_id: user.id, tour_id: tourId, completed_at: new Date().toISOString() });
   }, [user?.id]);
 
   const resetAllTours = useCallback(async () => {
+    dismissedRef.current.clear();
     if (!user?.id) return;
     try {
       Object.keys(TOURS).forEach((id) => {
@@ -242,9 +257,10 @@ export function TourProvider({ children }) {
     startTour,
     stopTour,
     resetAllTours,
+    wasDismissed,
     active: !!active,
     availableTours: Object.keys(TOURS),
-  }), [startTour, stopTour, resetAllTours, active]);
+  }), [startTour, stopTour, resetAllTours, wasDismissed, active]);
 
   return (
     <TourCtx.Provider value={value}>
