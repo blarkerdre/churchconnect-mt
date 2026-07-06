@@ -131,7 +131,7 @@ export default function IssueCertificateDialog({ open, onOpenChange, member }) {
       queryClient.invalidateQueries({ queryKey: ["training-completions"] });
       toast({
         title: "Certificate reissued",
-        description: `Certificate ${data.certificate_number} has been regenerated${member.email ? " and re-emailed" : ""}.`,
+        description: `Certificate ${data.student_number || data.certificate_number} has been regenerated${member.email ? " and re-emailed" : ""}.`,
       });
       setReissuingId(null);
       setPreviewData(null);
