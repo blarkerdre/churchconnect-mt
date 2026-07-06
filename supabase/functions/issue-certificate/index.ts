@@ -523,6 +523,8 @@ Deno.serve(async (req) => {
           certificate_url: filePath,
           issued_by: userId,
           ...(notes !== undefined ? { notes: notes || null } : {}),
+          ...(studentNumber ? { student_number: studentNumber } : {}),
+          ...(gradeClassification ? { grade_classification: gradeClassification } : {}),
         })
         .eq("id", existing.id)
         .eq("tenant_id", tenant_id)
@@ -542,6 +544,8 @@ Deno.serve(async (req) => {
           issued_by: userId,
           notes: notes || null,
           tenant_id,
+          ...(studentNumber ? { student_number: studentNumber } : {}),
+          ...(gradeClassification ? { grade_classification: gradeClassification } : {}),
         })
         .select()
         .single();
