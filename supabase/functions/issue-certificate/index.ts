@@ -382,10 +382,38 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Fetch background image data URI if configured (used by both Bible School and generic layouts)
+    let bgDataUri = "";
+    if (backgroundImageUrl) {
+      const candidatePaths = [
+        backgroundImageUrl,
+        backgroundImageUrl.startsWith(`${tenant_id}/`) ? null : `${tenant_id}/${backgroundImageUrl}`,
+      ].filter(Boolean) as string[];
+      for (const candidate of candidatePaths) {
+        const { data: bgSignedData } = await supabase.storage
+          .from("church-documents")
+          .createSignedUrl(candidate, 60 * 60);
+        if (!bgSignedData?.signedUrl) continue;
+        try {
+          const imgResp = await fetch(bgSignedData.signedUrl);
+          if (!imgResp.ok) continue;
+          const imgBuf = await imgResp.arrayBuffer();
+          const contentType = imgResp.headers.get("content-type") || "image/png";
+          bgDataUri = `data:${contentType};base64,${encodeBase64(new Uint8Array(imgBuf))}`;
+          break;
+        } catch (e) {
+          console.warn("Failed to fetch background image candidate:", candidate, e);
+        }
+      }
+      if (!bgDataUri) {
+        console.warn("Background image could not be embedded; falling back to solid color. Path:", backgroundImageUrl);
+      }
+    }
+
     // Build SVG certificate
     let svgCert: string;
 
-    if (isBibleSchool && !backgroundImageUrl) {
+    if (isBibleSchool) {
       // Bible School layout matching the Word of Faith Bible Institute certificate
       const deanDataUri = deanSignatureUrl ? await inlineStorageImage(deanSignatureUrl) : "";
       const crestDataUri = crestImageUrl ? await inlineStorageImage(crestImageUrl) : "";
