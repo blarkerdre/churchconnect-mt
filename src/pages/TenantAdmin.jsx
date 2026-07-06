@@ -1017,6 +1017,19 @@ export default function TenantAdmin() {
                 <p className="text-xs text-muted-foreground">Used in URLs: /t/{editForm.slug || "slug"}/</p>
               </div>
               <div className="space-y-2">
+                <Label>Certificate Code</Label>
+                <Input
+                  value={editForm.certificate_code || ""}
+                  onChange={(e) => setEditForm({ ...editForm, certificate_code: e.target.value.toUpperCase() })}
+                  placeholder="e.g. WCIC"
+                  maxLength={8}
+                  className="uppercase"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Prefix used in student numbers on Bible School certificates, e.g. <code>WCIC/BCC/AUGUST/2025/113</code>.
+                </p>
+              </div>
+              <div className="space-y-2">
                 <Label>Timezone</Label>
                 <Input
                   value={editForm.timezone || ""}
