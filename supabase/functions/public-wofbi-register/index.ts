@@ -246,9 +246,11 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { error: regError } = await supabase
+    const { data: newReg, error: regError } = await supabase
       .from("course_registrations")
-      .insert({ member_id: memberId, course_id: courseId, tenant_id: tenantId });
+      .insert({ member_id: memberId, course_id: courseId, tenant_id: tenantId })
+      .select("student_number")
+      .single();
 
     if (regError) throw regError;
 
@@ -260,9 +262,14 @@ Deno.serve(async (req) => {
       triggerCourseRegistrationEmail(email, firstName, course.name, tenantId);
     }
 
-    return new Response(JSON.stringify({ success: true, course_name: course.name }), {
+    return new Response(JSON.stringify({
+      success: true,
+      course_name: course.name,
+      student_number: newReg?.student_number ?? null,
+    }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
+
   } catch (err) {
     console.error("WoFBI registration error:", err);
     return new Response(JSON.stringify({ error: "Registration failed. Please try again." }), {
