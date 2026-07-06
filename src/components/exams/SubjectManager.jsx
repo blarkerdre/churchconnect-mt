@@ -143,6 +143,7 @@ export default function SubjectManager({ course, onSelectSubject, selectedSubjec
               pass_mark_percentage: Number(form.pass_mark_percentage) || 50,
               time_limit_minutes: form.time_limit_minutes ? Number(form.time_limit_minutes) : null,
               randomize_questions: !!form.randomize_questions,
+              is_open: !!form.is_open,
               grade_classifications: form.useCustomGrades && form.grade_classifications.length > 0 ? form.grade_classifications : null,
             });
           }} className="space-y-4">
