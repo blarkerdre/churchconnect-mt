@@ -246,11 +246,9 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { data: newReg, error: regError } = await supabase
+    const { error: regError } = await supabase
       .from("course_registrations")
-      .insert({ member_id: memberId, course_id: courseId, tenant_id: tenantId })
-      .select("student_number")
-      .single();
+      .insert({ member_id: memberId, course_id: courseId, tenant_id: tenantId });
 
     if (regError) throw regError;
 
@@ -265,7 +263,6 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({
       success: true,
       course_name: course.name,
-      student_number: newReg?.student_number ?? null,
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
