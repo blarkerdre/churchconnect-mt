@@ -1002,9 +1002,10 @@ function DynamicExamButtons({ memberId, onSelect, tenantId }) {
   if (isLoading || courses.length === 0) return null;
 
   // Show all courses the member is registered for.
-  const registeredCourseIds = new Set(registrations.map(r => r.course_id));
-  const registeredCourses = courses.filter(c => registeredCourseIds.has(c.id));
+  const regByCourseId = new Map(registrations.map(r => [r.course_id, r]));
+  const registeredCourses = courses.filter(c => regByCourseId.has(c.id));
   if (registeredCourses.length === 0) return null;
+
 
   const handleSubjectClick = (course, subject) => {
     onSelect({ type: course.name, subjectId: subject.id, subjectName: subject.name });
