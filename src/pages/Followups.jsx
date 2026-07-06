@@ -328,7 +328,7 @@ export default function Followups() {
           )}
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          {canCreateFollowup && <Button onClick={openNew} className="bg-primary hover:bg-primary/90"><Plus className="h-4 w-4 mr-2" /> New Follow-up</Button>}
+          {canCreateFollowup && <Button data-tour="followups-new" onClick={openNew} className="bg-primary hover:bg-primary/90"><Plus className="h-4 w-4 mr-2" /> New Follow-up</Button>}
           {canManageFollowups && (
             <>
               <Button variant="outline" onClick={() => setReportOpen(true)}>

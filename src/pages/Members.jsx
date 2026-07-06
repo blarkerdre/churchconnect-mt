@@ -182,12 +182,12 @@ export default function Members() {
                   </Button>
                 )}
                 {canBulkImport && (
-                  <Button variant="outline" size="sm" onClick={() => setImportOpen(true)} className="gap-1.5">
+                  <Button data-tour="members-import" variant="outline" size="sm" onClick={() => setImportOpen(true)} className="gap-1.5">
                     <Upload className="h-4 w-4" /><span className="hidden sm:inline">Import CSV</span>
                   </Button>
                 )}
                 {canAddMember && (
-                  <Button onClick={openNew} className="bg-primary hover:bg-primary/90 w-full sm:w-auto">
+                  <Button data-tour="members-add" onClick={openNew} className="bg-primary hover:bg-primary/90 w-full sm:w-auto">
                     <Plus className="h-4 w-4 mr-2" /> Register Member
                   </Button>
                 )}
@@ -199,7 +199,9 @@ export default function Members() {
 
       {/* Filters */}
       {(isAdmin || viewOnly) && (
-        <AudienceFilter filters={filters} onChange={setFilters} />
+        <div data-tour="members-filters">
+          <AudienceFilter filters={filters} onChange={setFilters} />
+        </div>
       )}
 
 
@@ -217,7 +219,7 @@ export default function Members() {
       {isLoading ? (
         <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>
       ) : (
-        <Card className="border-0 shadow-sm overflow-hidden">
+        <Card data-tour="members-table" className="border-0 shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
