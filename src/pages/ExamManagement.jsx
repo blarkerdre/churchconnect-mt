@@ -492,6 +492,7 @@ export default function ExamManagement() {
             if (!titleForm.name.trim()) { toast({ title: "Course name is required", variant: "destructive" }); return; }
             saveTitleMutation.mutate({
               name: titleForm.name.trim(),
+              course_code: (titleForm.course_code || "").trim().toUpperCase() || null,
               description: titleForm.description.trim() || null,
               pass_mark_percentage: Number(titleForm.pass_mark_percentage) || 50,
               is_active: true,
@@ -502,7 +503,20 @@ export default function ExamManagement() {
               send_certificate_email: titleForm.send_certificate_email,
             });
           }} className="space-y-4">
-            <div><Label>Course Name *</Label><Input value={titleForm.name} onChange={e => setTitleForm(f => ({ ...f, name: e.target.value }))} placeholder="e.g. BCC, LCC" /></div>
+            <div><Label>Course Name *</Label><Input value={titleForm.name} onChange={e => setTitleForm(f => ({ ...f, name: e.target.value }))} placeholder="e.g. Basic Certificate Course" /></div>
+            <div>
+              <Label>Course Code</Label>
+              <Input
+                value={titleForm.course_code}
+                onChange={e => setTitleForm(f => ({ ...f, course_code: e.target.value.toUpperCase() }))}
+                placeholder="e.g. BCC, LCC, LDC"
+                maxLength={8}
+                className="uppercase"
+              />
+              <p className="text-[11px] text-muted-foreground mt-1">
+                Short code used in student numbers, e.g. <code>WCIC/BCC/AUGUST/2025/113</code>.
+              </p>
+            </div>
             <div><Label>Description</Label><Input value={titleForm.description} onChange={e => setTitleForm(f => ({ ...f, description: e.target.value }))} placeholder="Optional" /></div>
             <div><Label>Aggregate Pass Mark (%)</Label><Input type="number" min="0" max="100" value={titleForm.pass_mark_percentage} onChange={e => setTitleForm(f => ({ ...f, pass_mark_percentage: e.target.value }))} className="w-28" /></div>
             <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50 border border-border">
