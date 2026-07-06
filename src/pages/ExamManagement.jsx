@@ -795,13 +795,16 @@ function CourseRegistrationsView({ course }) {
   });
 
   const downloadCSV = () => {
-    const headers = ["Name", "Email", "Phone", "Source", "Registered At"];
+    const headers = ["Name", "Email", "Phone", "Source", "Status", "Student No.", "Registered At", "Approved At"];
     const rows = filteredRegistrations.map(r => [
       `${r.members?.first_name || ""} ${r.members?.last_name || ""}`.trim(),
       r.members?.email || "",
       r.members?.phone || "",
       r.members?.user_id ? "Member" : "QR / Public",
+      r.status || "pending",
+      r.student_number || "",
       new Date(r.registered_at).toLocaleDateString(),
+      r.approved_at ? new Date(r.approved_at).toLocaleDateString() : "",
     ]);
     const csv = [headers, ...rows].map(row => row.map(c => `"${(c || "").replace(/"/g, '""')}"`).join(",")).join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
