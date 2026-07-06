@@ -120,20 +120,32 @@ Deno.serve(async (req) => {
     if (subject_id) {
       const { data: subj } = await adminClient
         .from("exam_subjects")
-        .select("pass_mark_percentage, course_id")
+        .select("pass_mark_percentage, course_id, is_open")
         .eq("id", subject_id)
         .maybeSingle();
       if (subj) passThreshold = subj.pass_mark_percentage;
+      if (subj && subj.is_open === false) {
+        return new Response(JSON.stringify({ error: "This exam is currently closed." }), {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
       // Fetch email flags from the course
       if (subj?.course_id) {
         const { data: courseFlags } = await adminClient
           .from("exam_titles")
-          .select("send_result_email, send_certificate_email")
+          .select("send_result_email, send_certificate_email, exams_open")
           .eq("id", subj.course_id)
           .maybeSingle();
         if (courseFlags) {
           sendResultEmail = courseFlags.send_result_email !== false;
           sendCertificateEmail = courseFlags.send_certificate_email !== false;
+          if (courseFlags.exams_open === false) {
+            return new Response(JSON.stringify({ error: "Exams for this course are currently closed." }), {
+              status: 403,
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+          }
         }
       }
     } else {

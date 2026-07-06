@@ -1,0 +1,1 @@
+ALTER TABLE public.exam_subjects ADD COLUMN IF NOT EXISTS is_open boolean NOT NULL DEFAULT false;

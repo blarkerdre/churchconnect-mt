@@ -1288,7 +1288,8 @@ function MemberExamsView({ memberId, memberRecord, courses, loading }) {
                           const subjectPassMark = s.pass_mark_percentage ?? 50;
                           const hasPassed = taken && bestPct >= subjectPassMark;
                           const canRetake = taken && !hasPassed && myAttempts.some(a => a.subject_id === s.id && a.retake_allowed === true);
-                          const isDisabled = taken && !canRetake;
+                          const isClosed = !s.is_open;
+                          const isDisabled = isClosed || (taken && !canRetake);
                           return (
                             <Button
                               key={s.id}
@@ -1297,9 +1298,10 @@ function MemberExamsView({ memberId, memberRecord, courses, loading }) {
                               disabled={isDisabled}
                               onClick={() => setExamSelection({ type: course.name, subjectId: s.id, subjectName: s.name })}
                               className="gap-1.5"
+                              title={isClosed ? "This exam is currently closed" : undefined}
                             >
                               <BookOpen className="h-3.5 w-3.5" />
-                              {s.name} {taken ? (canRetake ? "↻ Retake" : (course.send_result_email ? `✓ ${best.score}/${best.total_points}` : "✓ Completed")) : ""}
+                              {s.name} {isClosed ? "🔒 Closed" : (taken ? (canRetake ? "↻ Retake" : (course.send_result_email ? `✓ ${best.score}/${best.total_points}` : "✓ Completed")) : "")}
                             </Button>
                           );
                         })}

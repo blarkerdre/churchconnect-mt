@@ -2054,6 +2054,7 @@ export type Database = {
           grade_classifications: Json | null
           id: string
           is_active: boolean
+          is_open: boolean
           name: string
           pass_mark_percentage: number
           randomize_questions: boolean
@@ -2068,6 +2069,7 @@ export type Database = {
           grade_classifications?: Json | null
           id?: string
           is_active?: boolean
+          is_open?: boolean
           name: string
           pass_mark_percentage?: number
           randomize_questions?: boolean
@@ -2082,6 +2084,7 @@ export type Database = {
           grade_classifications?: Json | null
           id?: string
           is_active?: boolean
+          is_open?: boolean
           name?: string
           pass_mark_percentage?: number
           randomize_questions?: boolean

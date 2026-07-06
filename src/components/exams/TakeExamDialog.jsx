@@ -233,6 +233,12 @@ export default function TakeExamDialog({ open, onOpenChange, trainingType, membe
 
         {isLoading ? (
           <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+        ) : subjectId && subjectData && subjectData.is_open === false && !previewMode ? (
+          <div className="py-8 text-center space-y-3">
+            <p className="text-sm font-medium text-foreground">🔒 This exam is currently closed</p>
+            <p className="text-xs text-muted-foreground">You will be able to answer questions once an administrator opens this subject.</p>
+            <Button onClick={handleClose} variant="outline">Close</Button>
+          </div>
         ) : shuffledQuestions.length === 0 && !submitted ? (
           <p className="text-sm text-muted-foreground text-center py-8">No exam questions available yet.</p>
         ) : submitted && result ? (
