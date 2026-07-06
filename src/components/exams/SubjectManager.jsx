@@ -111,10 +111,13 @@ export default function SubjectManager({ course, onSelectSubject, selectedSubjec
                     <Badge variant="outline" className="text-[9px] h-4">Pass: {s.pass_mark_percentage}%</Badge>
                     {s.time_limit_minutes && <Badge variant="outline" className="text-[9px] h-4">⏱ {s.time_limit_minutes}min</Badge>}
                     {s.randomize_questions && <Badge variant="outline" className="text-[9px] h-4">🔀 Random</Badge>}
+                    {s.is_open
+                      ? <Badge variant="outline" className="text-[9px] h-4 border-primary/40 text-primary">Open</Badge>
+                      : <Badge variant="secondary" className="text-[9px] h-4">Closed</Badge>}
                     {!s.is_active && <Badge variant="secondary" className="text-[9px] h-4">Inactive</Badge>}
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
-                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); setEditing(s); setForm({ name: s.name, description: s.description || "", pass_mark_percentage: s.pass_mark_percentage ?? 50, time_limit_minutes: s.time_limit_minutes ?? "", randomize_questions: s.randomize_questions ?? false, useCustomGrades: !!(s.grade_classifications && s.grade_classifications.length > 0), grade_classifications: s.grade_classifications || [] }); setDialogOpen(true); }}>
+                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); setEditing(s); setForm({ name: s.name, description: s.description || "", pass_mark_percentage: s.pass_mark_percentage ?? 50, time_limit_minutes: s.time_limit_minutes ?? "", randomize_questions: s.randomize_questions ?? false, is_open: !!s.is_open, useCustomGrades: !!(s.grade_classifications && s.grade_classifications.length > 0), grade_classifications: s.grade_classifications || [] }); setDialogOpen(true); }}>
                       <Edit className="h-3.5 w-3.5" />
                     </Button>
                     <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={(e) => { e.stopPropagation(); setDeleteTarget(s); }}>
