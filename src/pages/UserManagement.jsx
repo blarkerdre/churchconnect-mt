@@ -244,7 +244,7 @@ export default function UserManagement() {
           <Button variant="outline" size="sm" onClick={() => setBulkAssignOpen(true)}>
             <UsersRound className="h-4 w-4 mr-1" /><span className="hidden sm:inline">Bulk Unit Assign</span><span className="sm:hidden">Bulk</span>
           </Button>
-          <Button size="sm" onClick={() => { setAddForm({ email: "", password: "", full_name: "", role: "member" }); setAddDialogOpen(true); }} className="bg-primary hover:bg-primary/90">
+          <Button data-tour="um-invite" size="sm" onClick={() => { setAddForm({ email: "", password: "", full_name: "", role: "member" }); setAddDialogOpen(true); }} className="bg-primary hover:bg-primary/90">
             <Plus className="h-4 w-4 mr-1" /> Add User
           </Button>
         </div>
@@ -308,7 +308,7 @@ export default function UserManagement() {
                  <tr className="border-b border-border bg-muted/50">
                    <th className="text-left p-3 sm:p-4 font-medium text-muted-foreground">User</th>
                    <th className="text-left p-3 sm:p-4 font-medium text-muted-foreground hidden md:table-cell">Email</th>
-                   <th className="text-left p-3 sm:p-4 font-medium text-muted-foreground">Roles</th>
+                   <th data-tour="um-roles" className="text-left p-3 sm:p-4 font-medium text-muted-foreground">Roles</th>
                    <th className={`text-left p-3 sm:p-4 font-medium text-muted-foreground ${(roleFilter === "unit_leader" || roleFilter === "wsf_leader") ? "" : "hidden lg:table-cell"}`}>Assignments</th>
                    <th className="text-left p-3 sm:p-4 font-medium text-muted-foreground hidden md:table-cell">Manage Roles</th>
                    <th className="text-right p-3 sm:p-4 font-medium text-muted-foreground">Actions</th>
