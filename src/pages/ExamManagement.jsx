@@ -706,24 +706,60 @@ export default function ExamManagement() {
 function CourseRegistrationsView({ course }) {
   const qc = useQueryClient();
   const { tenantId } = useTenantQuery();
+  const { isAdmin, isTenantAdmin, isTenantOwner } = useAuth();
+  const canManageNumbers = !!(isAdmin || isTenantAdmin || isTenantOwner);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [sourceFilter, setSourceFilter] = useState("all");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
+  const [editingNumberId, setEditingNumberId] = useState(null);
+  const [editingNumberValue, setEditingNumberValue] = useState("");
 
   const { data: registrations = [], isLoading } = useQuery({
     queryKey: ["course-registrations", course.id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("course_registrations")
-        .select("id, registered_at, member_id, members(first_name, last_name, email, phone, user_id)")
+        .select("id, registered_at, member_id, student_number, status, approved_at, members(first_name, last_name, email, phone, user_id)")
         .eq("course_id", course.id)
         .order("registered_at", { ascending: false });
       if (error) throw error;
       return data;
     },
     enabled: !!course?.id,
+  });
+
+  const approveMutation = useMutation({
+    mutationFn: async (id) => {
+      const { data, error } = await supabase.rpc("approve_course_registration", { _registration_id: id });
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: ["course-registrations", course.id] });
+      const num = Array.isArray(data) ? data[0]?.student_number : data?.student_number;
+      toast({ title: "Registration approved", description: num ? `Student No. ${num}` : undefined });
+    },
+    onError: (err) => toast({ title: "Approval failed", description: err.message, variant: "destructive" }),
+  });
+
+  const updateNumberMutation = useMutation({
+    mutationFn: async ({ id, value }) => {
+      const { error } = await supabase
+        .from("course_registrations")
+        .update({ student_number: value || null })
+        .eq("id", id)
+        .eq("tenant_id", tenantId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["course-registrations", course.id] });
+      toast({ title: "Student number updated" });
+      setEditingNumberId(null);
+      setEditingNumberValue("");
+    },
+    onError: (err) => toast({ title: "Update failed", description: err.message, variant: "destructive" }),
   });
 
   const deleteMutation = useMutation({
@@ -759,13 +795,16 @@ function CourseRegistrationsView({ course }) {
   });
 
   const downloadCSV = () => {
-    const headers = ["Name", "Email", "Phone", "Source", "Registered At"];
+    const headers = ["Name", "Email", "Phone", "Source", "Status", "Student No.", "Registered At", "Approved At"];
     const rows = filteredRegistrations.map(r => [
       `${r.members?.first_name || ""} ${r.members?.last_name || ""}`.trim(),
       r.members?.email || "",
       r.members?.phone || "",
       r.members?.user_id ? "Member" : "QR / Public",
+      r.status || "pending",
+      r.student_number || "",
       new Date(r.registered_at).toLocaleDateString(),
+      r.approved_at ? new Date(r.approved_at).toLocaleDateString() : "",
     ]);
     const csv = [headers, ...rows].map(row => row.map(c => `"${(c || "").replace(/"/g, '""')}"`).join(",")).join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
@@ -854,17 +893,21 @@ function CourseRegistrationsView({ course }) {
             <Table>
               <TableHeader>
                 <TableRow className="bg-muted/50">
-                   <TableHead className="font-semibold">Name</TableHead>
+                  <TableHead className="font-semibold">Name</TableHead>
                   <TableHead className="font-semibold">Email</TableHead>
                   <TableHead className="font-semibold">Phone</TableHead>
                   <TableHead className="font-semibold">Source</TableHead>
-                  
+                  <TableHead className="font-semibold">Status</TableHead>
+                  <TableHead className="font-semibold">Student No.</TableHead>
                   <TableHead className="font-semibold">Registered</TableHead>
                   <TableHead className="font-semibold text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredRegistrations.map(r => (
+                {filteredRegistrations.map(r => {
+                  const isEditing = editingNumberId === r.id;
+                  const isApproved = r.status === "approved";
+                  return (
                   <TableRow key={r.id}>
                     <TableCell className="font-medium">{r.members?.first_name} {r.members?.last_name}</TableCell>
                     <TableCell className="text-sm text-muted-foreground">{r.members?.email || "—"}</TableCell>
@@ -874,20 +917,73 @@ function CourseRegistrationsView({ course }) {
                         {r.members?.user_id ? "Member" : "QR / Public"}
                       </Badge>
                     </TableCell>
-                    
+                    <TableCell>
+                      <Badge variant={isApproved ? "default" : "secondary"} className={isApproved ? "bg-emerald-600 hover:bg-emerald-600" : ""}>
+                        {isApproved ? "Approved" : (r.status || "pending")}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-sm">
+                      {isEditing ? (
+                        <div className="flex items-center gap-1">
+                          <Input
+                            value={editingNumberValue}
+                            onChange={e => setEditingNumberValue(e.target.value)}
+                            className="h-7 w-[220px] text-xs font-mono"
+                            placeholder="TENANT/COURSE/MONTH/YYYY/NNN"
+                          />
+                          <Button size="icon" variant="ghost" className="h-7 w-7"
+                            onClick={() => updateNumberMutation.mutate({ id: r.id, value: editingNumberValue.trim() })}
+                            disabled={updateNumberMutation.isPending}
+                          >
+                            <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+                          </Button>
+                          <Button size="icon" variant="ghost" className="h-7 w-7"
+                            onClick={() => { setEditingNumberId(null); setEditingNumberValue(""); }}
+                          >
+                            <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-1.5">
+                          <span className={r.student_number ? "font-mono text-xs" : "text-muted-foreground italic text-xs"}>
+                            {r.student_number || "—"}
+                          </span>
+                          {canManageNumbers && (
+                            <Button size="icon" variant="ghost" className="h-6 w-6"
+                              onClick={() => { setEditingNumberId(r.id); setEditingNumberValue(r.student_number || ""); }}
+                              title="Edit student number"
+                            >
+                              <Edit className="h-3 w-3" />
+                            </Button>
+                          )}
+                        </div>
+                      )}
+                    </TableCell>
                     <TableCell className="text-sm text-muted-foreground">{new Date(r.registered_at).toLocaleDateString()}</TableCell>
                     <TableCell className="text-right">
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setDeleteTarget(r)}>
-                        <Trash2 className="h-3.5 w-3.5 text-destructive" />
-                      </Button>
+                      <div className="flex items-center justify-end gap-1">
+                        {canManageNumbers && !isApproved && (
+                          <Button size="sm" variant="outline" className="h-7 gap-1 text-xs"
+                            onClick={() => approveMutation.mutate(r.id)}
+                            disabled={approveMutation.isPending}
+                          >
+                            <CheckCircle2 className="h-3.5 w-3.5" /> Approve
+                          </Button>
+                        )}
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setDeleteTarget(r)}>
+                          <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
-                ))}
+                  );
+                })}
               </TableBody>
             </Table>
           </div>
         )}
       </CardContent>
+
 
       <DangerConfirmDialog
         open={!!deleteTarget}

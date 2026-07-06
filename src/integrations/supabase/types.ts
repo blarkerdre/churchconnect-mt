@@ -1074,27 +1074,39 @@ export type Database = {
       }
       course_registrations: {
         Row: {
+          approved_at: string | null
+          approved_by: string | null
           course_id: string
           id: string
           member_id: string
           registered_at: string
           session_id: string | null
+          status: string
+          student_number: string | null
           tenant_id: string | null
         }
         Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
           course_id: string
           id?: string
           member_id: string
           registered_at?: string
           session_id?: string | null
+          status?: string
+          student_number?: string | null
           tenant_id?: string | null
         }
         Update: {
+          approved_at?: string | null
+          approved_by?: string | null
           course_id?: string
           id?: string
           member_id?: string
           registered_at?: string
           session_id?: string | null
+          status?: string
+          student_number?: string | null
           tenant_id?: string | null
         }
         Relationships: [
@@ -5529,6 +5541,14 @@ export type Database = {
       accept_tenant_invitation: {
         Args: { _invitation_id: string }
         Returns: undefined
+      }
+      approve_course_registration: {
+        Args: { _registration_id: string }
+        Returns: {
+          id: string
+          status: string
+          student_number: string
+        }[]
       }
       approve_join_request: {
         Args: { p_request_id: string }
