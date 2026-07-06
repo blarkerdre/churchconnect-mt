@@ -304,10 +304,74 @@ Deno.serve(async (req) => {
     });
     const memberName = `${member.first_name} ${member.last_name}`;
 
+    // Helper: fetch a storage path and inline it as a base64 data URI
+    const inlineStorageImage = async (path: string): Promise<string> => {
+      const candidates = [path, path.startsWith(`${tenant_id}/`) ? null : `${tenant_id}/${path}`]
+        .filter(Boolean) as string[];
+      for (const p of candidates) {
+        const { data: s } = await supabase.storage.from("church-documents").createSignedUrl(p, 3600);
+        if (!s?.signedUrl) continue;
+        try {
+          const r = await fetch(s.signedUrl);
+          if (!r.ok) continue;
+          const buf = await r.arrayBuffer();
+          const ct = r.headers.get("content-type") || "image/png";
+          return `data:${ct};base64,${encodeBase64(new Uint8Array(buf))}`;
+        } catch (_) { /* try next */ }
+      }
+      return "";
+    };
+
+    const gradeClassification =
+      (typeof gcInput === "string" && gcInput.trim()) ||
+      existing?.grade_classification ||
+      "";
+
     // Build SVG certificate
     let svgCert: string;
 
-    if (backgroundImageUrl) {
+    if (isBibleSchool && !backgroundImageUrl) {
+      // Bible School layout matching the Word of Faith Bible Institute certificate
+      const deanDataUri = deanSignatureUrl ? await inlineStorageImage(deanSignatureUrl) : "";
+      const crestDataUri = crestImageUrl ? await inlineStorageImage(crestImageUrl) : "";
+      const nameHex = /^#[0-9a-fA-F]{6}$/.test(nameColor) ? nameColor : "#5B2E91";
+      const titleColor = accentColor && /^#[0-9a-fA-F]{6}$/.test(accentColor) ? accentColor : "#B22222";
+      const bodyDark = "#333333";
+      const gradeColor = "#C0392B";
+      const idLine = studentNumber || certificateNumber;
+
+      svgCert = `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="842" height="595" viewBox="0 0 842 595">
+  <rect width="842" height="595" fill="#ffffff"/>
+  <!-- Title -->
+  <text x="421" y="90" text-anchor="middle" font-family="Great Vibes, cursive" font-weight="400" font-size="56" fill="${titleColor}">${escapeXml(churchName)}</text>
+  <!-- Certify line -->
+  <text x="421" y="165" text-anchor="middle" font-family="Inter, sans-serif" font-weight="600" font-size="20" fill="${titleColor}">This is to certify that</text>
+  <!-- Student name -->
+  <text x="421" y="215" text-anchor="middle" font-family="Playfair Display, serif" font-weight="700" font-size="34" fill="${nameHex}">${escapeXml(memberName)}</text>
+  <!-- Student number -->
+  <text x="421" y="248" text-anchor="middle" font-family="Playfair Display, serif" font-weight="400" font-size="15" fill="${bodyDark}">Student No. <tspan font-style="italic">${escapeXml(idLine)}</tspan></text>
+  <!-- Fulfilment line -->
+  <text x="421" y="295" text-anchor="middle" font-family="Inter, sans-serif" font-weight="400" font-size="17" fill="${bodyDark}">has fulfilled the requirement of the institute for the</text>
+  <!-- Course name in script -->
+  <text x="421" y="360" text-anchor="middle" font-family="Pinyon Script, cursive" font-weight="400" font-size="48" fill="#111111">${escapeXml(training_type)}</text>
+  ${gradeClassification ? `
+  <!-- Grade line -->
+  <text x="330" y="420" text-anchor="middle" font-family="Inter, sans-serif" font-weight="400" font-size="18" fill="${bodyDark}">with</text>
+  <text x="500" y="420" text-anchor="middle" font-family="Inter, sans-serif" font-weight="700" font-size="22" fill="${gradeColor}">${escapeXml(gradeClassification)}</text>
+  ` : ""}
+  <!-- Dean signature (left) -->
+  ${deanDataUri ? `<image href="${deanDataUri}" x="115" y="480" width="150" height="45" preserveAspectRatio="xMidYMax meet"/>` : ""}
+  <line x1="100" y1="530" x2="290" y2="530" stroke="#333" stroke-width="1"/>
+  <text x="195" y="548" text-anchor="middle" font-family="Inter, sans-serif" font-style="italic" font-weight="700" font-size="12" fill="${bodyDark}">${escapeXml(signatoryTitle || "Dean")}</text>
+  <!-- Crest (centre) -->
+  ${crestDataUri ? `<image href="${crestDataUri}" x="376" y="470" width="90" height="90" preserveAspectRatio="xMidYMid meet"/>` : ""}
+  <!-- Date (right) -->
+  <text x="647" y="520" text-anchor="middle" font-family="Playfair Display, serif" font-style="italic" font-weight="700" font-size="14" fill="${bodyDark}">${escapeXml(formattedDate)}</text>
+  <line x1="552" y1="530" x2="742" y2="530" stroke="#333" stroke-width="1"/>
+  <text x="647" y="548" text-anchor="middle" font-family="Inter, sans-serif" font-style="italic" font-weight="700" font-size="12" fill="${bodyDark}">Date</text>
+</svg>`;
+    } else if (backgroundImageUrl) {
       // Generate a signed URL for the background image to embed in SVG.
       // Backward compatibility: older rows may have been saved without the tenant_id prefix.
       const candidatePaths = [
