@@ -1,40 +1,36 @@
-## Problem
+# Follow-ups Process Map — Downloadable PNG
 
-On **Certificate Approvals**, the "Signposted By" column always shows "—" even when `training_attendees.signposted_by` is populated.
+Produce a single high-resolution PNG (`/mnt/documents/followups-process-map.png`) diagramming the entire Follow-ups workflow. Delivered via `<presentation-artifact>` so the user can preview and download it. No app code changes.
 
-## Root cause
+## Diagram scope (four swimlanes)
 
-`src/pages/CertificateApprovals.jsx` fetches from `profiles` incorrectly:
+**1. Signposting flow**
+Member/leader raises signpost → SignPostDialog → assigned to inbox of target leader/unit → recipient reviews in SignPostInboxDialog → Accept (converts to follow-up) / Decline (with reason) / Reassign → referral timeline updated → closure.
 
-```js
-supabase.from("profiles")
-  .select("id, first_name, last_name, email")
-  .in("id", signposterIds);
-```
+**2. Follow-up lifecycle**
+Creation (manual, from signpost, from absence alert, from new-convert trigger) → assignment to assignee → contact attempts logged (call / SMS / WhatsApp / email / visit) → status transitions (Pending → In Progress → Awaiting Response → Completed / Unreachable / Reassigned) → outcome + notes → auto-close.
 
-Two bugs:
+**3. Roles & permissions**
+- Member: raise signpost, view own.
+- Assignee (leader): action inbox, log contact, update status.
+- Unit / Home Cell Leader: see unit's follow-ups, reassign within unit.
+- Admin / Tenant Owner: full visibility, bulk reassign, reports, templates.
+- Reports Officer: read-only across all.
 
-1. **Wrong join column.** `signposted_by` stores an auth user id, which matches `profiles.user_id`, not `profiles.id`. So no rows are returned.
-2. **Non-existent columns.** The `profiles` table has `full_name` and `email` — there is no `first_name` / `last_name`. The select errors out (the working `SignPostInboxDialog` already uses `user_id` + `full_name`).
+**4. Notifications & escalations**
+Assignment → in-app bell + email + optional SMS/WhatsApp (per template) → 48h no-action reminder → overdue banner on dashboard (OverdueReminder) → admin escalation after configured SLA → weekly digest.
 
-Result: `profileMap` is empty → cell renders `"—"`, and CSV/Print show the same.
+## Visual design
+- Landscape 2400×1600 PNG, 200 DPI feel.
+- Navy (#1e3a5f) headers, gold (#c9a961) accents, white background — matches project brand.
+- Playfair Display for titles, Source Sans 3 for body (fallback to DejaVu if unavailable).
+- Four horizontal swimlanes with rounded nodes, arrows, decision diamonds, and a legend (node types, actor colors).
+- Small footer: "Church Management Suite — Follow-ups Process Map" + generated date.
 
-## Fix
+## Technical approach
+- Python + `graphviz` (or `matplotlib` fallback) rendered to PNG in `/tmp/`, then moved to `/mnt/documents/followups-process-map.png`.
+- Mandatory visual QA: open the PNG, check for overlaps, clipped text, arrow crossings, low contrast; iterate until clean.
+- Final reply embeds:
+  `<presentation-artifact path="followups-process-map.png" mime_type="image/png"></presentation-artifact>`
 
-Edit `src/pages/CertificateApprovals.jsx`:
-
-- Change the profiles query to:
-  ```js
-  supabase.from("profiles")
-    .select("user_id, full_name, email")
-    .in("user_id", signposterIds);
-  ```
-- Rebuild `profileMap` keyed by `p.user_id`, value `p.full_name || p.email || "—"`.
-
-No schema, RLS, or other module changes required. Table cell, CSV export, and Print output start showing the signposter's name automatically.
-
-## Verification
-
-- Open Certificate Approvals with at least one signposted attendee.
-- Confirm the "Signposted By" column shows the referrer's name.
-- Export CSV and Print — same value appears.
+No changes to source code, DB, or RLS.
