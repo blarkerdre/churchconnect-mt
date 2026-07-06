@@ -303,6 +303,7 @@ export default function TenantAdmin() {
       storage_limit_mb: tenant.storage_limit_mb || 500,
       sms_limit_monthly: tenant.sms_limit_monthly || 0,
       whatsapp_limit_monthly: tenant.whatsapp_limit_monthly || 0,
+      certificate_code: tenant.certificate_code || "",
       disabled_features: settings.disabled_features || [],
       primary_color: settings.primary_color || "",
       welcome_message: settings.welcome_message || "",
@@ -311,7 +312,7 @@ export default function TenantAdmin() {
 
   const handleSaveEdit = () => {
     if (!editTenant) return;
-    const { name, slug, timezone, logo_url, setup_complete, plan_tier, member_limit, storage_limit_mb, sms_limit_monthly, whatsapp_limit_monthly, disabled_features, primary_color, welcome_message } = editForm;
+    const { name, slug, timezone, logo_url, setup_complete, plan_tier, member_limit, storage_limit_mb, sms_limit_monthly, whatsapp_limit_monthly, certificate_code, disabled_features, primary_color, welcome_message } = editForm;
     const settings = {
       ...(editTenant.settings || {}),
       disabled_features,
@@ -330,6 +331,7 @@ export default function TenantAdmin() {
       storage_limit_mb: parseInt(storage_limit_mb) || 500,
       sms_limit_monthly: parseInt(sms_limit_monthly) || 0,
       whatsapp_limit_monthly: parseInt(whatsapp_limit_monthly) || 0,
+      certificate_code: (certificate_code || "").trim().toUpperCase() || null,
       settings,
     });
   };
