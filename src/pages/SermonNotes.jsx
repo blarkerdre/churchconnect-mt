@@ -19,8 +19,8 @@ import { toast } from "sonner";
 import SermonNoteFormDialog from "@/components/sermons/SermonNoteFormDialog";
 import SermonFolderSidebar from "@/components/sermons/SermonFolderSidebar";
 import { cn } from "@/lib/utils";
-import {
 import ModuleTour from "@/components/tour/ModuleTour";
+import {
   AlertDialog, AlertDialogAction, AlertDialogCancel,
   AlertDialogContent, AlertDialogDescription, AlertDialogFooter,
   AlertDialogHeader, AlertDialogTitle
