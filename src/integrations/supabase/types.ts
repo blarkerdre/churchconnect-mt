@@ -2121,6 +2121,7 @@ export type Database = {
           registration_open: boolean
           send_certificate_email: boolean
           send_result_email: boolean
+          starting_number: number
           tenant_id: string | null
         }
         Insert: {
@@ -2137,6 +2138,7 @@ export type Database = {
           registration_open?: boolean
           send_certificate_email?: boolean
           send_result_email?: boolean
+          starting_number?: number
           tenant_id?: string | null
         }
         Update: {
@@ -2153,6 +2155,7 @@ export type Database = {
           registration_open?: boolean
           send_certificate_email?: boolean
           send_result_email?: boolean
+          starting_number?: number
           tenant_id?: string | null
         }
         Relationships: [
