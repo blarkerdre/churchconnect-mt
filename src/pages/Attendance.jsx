@@ -309,7 +309,7 @@ export default function Attendance() {
             </Button>
           )}
           {canManage && (
-            <Button onClick={() => {
+            <Button data-tour="attendance-create" onClick={() => {
               const defaultType = isWSFLeaderOnly ? "Home Cell Meeting" : isUnitLeaderOnly ? "Unit Meeting" : "Sunday Service";
               const defaultUnit = isWSFLeaderOnly && leaderCentres.length === 1 ? leaderCentres[0]
                 : isUnitLeaderOnly && leaderUnits.length === 1 ? leaderUnits[0] : "";

@@ -215,7 +215,7 @@ export default function NotificationBell() {
     <>
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
-          <Button variant="ghost" size="icon" className="relative">
+          <Button variant="ghost" size="icon" className="relative" data-tour="notification-bell">
             <Bell className="h-5 w-5 text-muted-foreground" />
             {unreadCount > 0 && (
               <span className="absolute -top-0.5 -right-0.5 h-4 w-4 rounded-full bg-destructive flex items-center justify-center text-[9px] font-bold text-destructive-foreground">

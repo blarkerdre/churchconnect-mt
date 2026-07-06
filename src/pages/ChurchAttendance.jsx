@@ -262,7 +262,7 @@ export default function ChurchAttendance() {
         {canRecordAttendance && (
           <Dialog open={open} onOpenChange={handleDialogOpenChange}>
             <DialogTrigger asChild>
-              <Button size="sm" className="gap-1.5"><Plus className="h-4 w-4" /> Record Attendance</Button>
+              <Button data-tour="ca-new-report" size="sm" className="gap-1.5"><Plus className="h-4 w-4" /> Record Attendance</Button>
             </DialogTrigger>
           <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
             <DialogHeader>
