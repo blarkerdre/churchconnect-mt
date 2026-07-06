@@ -243,7 +243,7 @@ Deno.serve(async (req) => {
     // Detect Bible School course (matches an exam_titles row for this tenant)
     const { data: courseRow } = await supabase
       .from("exam_titles")
-      .select("id, name, course_code")
+      .select("id, name, course_code, pass_mark_percentage, grade_classifications")
       .eq("tenant_id", tenant_id)
       .ilike("name", training_type.trim())
       .maybeSingle();
