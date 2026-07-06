@@ -254,7 +254,7 @@ export default function IssueCertificateDialog({ open, onOpenChange, member }) {
                               <span className="text-[11px] text-muted-foreground">
                                 {format(new Date(c.completion_date), "dd MMM yyyy")}
                               </span>
-                              <Badge variant="outline" className="text-[10px]">{c.certificate_number}</Badge>
+                              <Badge variant="outline" className="text-[10px]">{c.student_number || c.certificate_number}</Badge>
                             </div>
                           </div>
                         </div>
