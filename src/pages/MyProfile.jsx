@@ -1080,12 +1080,21 @@ function DynamicExamButtons({ memberId, onSelect, tenantId }) {
               <div className="flex items-center justify-between flex-wrap gap-2">
                 <div>
                   <h3 className="text-sm font-semibold text-foreground">{course.name}</h3>
+                  {(() => {
+                    const reg = regByCourseId.get(course.id);
+                    if (!reg) return null;
+                    if (reg.student_number) {
+                      return <p className="text-[11px] font-mono text-primary mt-0.5">Student No. {reg.student_number}</p>;
+                    }
+                    return <p className="text-[11px] text-muted-foreground italic mt-0.5">Student No. pending admin approval</p>;
+                  })()}
                   <p className="text-xs text-muted-foreground">
                     {completedSubjectIds.length}/{subjects.length} subjects completed
                     {totalPoints > 0 && ` · Aggregate: ${Math.round(aggPct)}%`}
                     {` · Pass mark: ${course.pass_mark_percentage}%`}
                   </p>
                 </div>
+
                 <div className="flex gap-1.5">
                   {allDone && (
                     <Badge variant={passed ? "default" : "destructive"} className="text-xs">
