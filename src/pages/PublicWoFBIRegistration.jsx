@@ -98,6 +98,7 @@ export default function PublicWoFBIRegistration() {
         toast({ title: result.error || "Registration failed", variant: "destructive" });
       } else {
         setCourseName(result.course_name || "");
+        setStudentNumber(result.student_number || "");
         setSubmitted(true);
       }
     } catch {
