@@ -172,7 +172,7 @@ export default function IssueCertificateDialog({ open, onOpenChange, member }) {
           memberName: data.member_name,
           trainingType: data.training_type,
           completionDate: data.completion_date,
-          certificateNumber: data.certificate_number,
+          certificateNumber: data.student_number || data.certificate_number,
         },
         mode,
         completion: completion || null,
