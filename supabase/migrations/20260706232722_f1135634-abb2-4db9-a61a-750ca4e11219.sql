@@ -1,0 +1,3 @@
+UPDATE public.exam_titles SET course_code = 'BCC' WHERE tenant_id = '95e53cc3-4569-4dd3-a4ad-3489593dce81' AND name = 'Basic Certificate Course (BCC)';
+UPDATE public.exam_titles SET course_code = 'LCC' WHERE tenant_id = '95e53cc3-4569-4dd3-a4ad-3489593dce81' AND name = 'Leadership Certificate Course (LCC)';
+UPDATE public.exam_titles SET course_code = 'LDC' WHERE tenant_id = '95e53cc3-4569-4dd3-a4ad-3489593dce81' AND name = 'Leadership Diploma Course (LDC)';
