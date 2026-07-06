@@ -1,0 +1,33 @@
+INSERT INTO public.certificate_templates (
+  tenant_id,
+  training_type,
+  church_name,
+  signatory_name,
+  signatory_title,
+  background_color,
+  accent_color,
+  text_color,
+  name_color,
+  custom_message,
+  background_image_url,
+  text_positions,
+  dean_signature_url,
+  crest_image_url,
+  logo_url
+) VALUES (
+  '95e53cc3-4569-4dd3-a4ad-3489593dce81',
+  'Basic Certificate Course (BCC)',
+  'The Word of Faith Bible Institute, Cardiff',
+  'Toyosi Atoyebi',
+  'Dean of WOFBI',
+  '#1a2d4d',
+  '#B22222',
+  '#333333',
+  '#5B2E91',
+  null,
+  '95e53cc3-4569-4dd3-a4ad-3489593dce81/certificate-backgrounds/certificate-wofbi-template-bg.jpg',
+  '{"name_y":215,"training_y":360,"date_y":520,"signatory_y":548}'::jsonb,
+  null,
+  null,
+  null
+);

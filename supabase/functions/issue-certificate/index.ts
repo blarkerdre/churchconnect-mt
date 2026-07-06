@@ -382,10 +382,38 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Fetch background image data URI if configured (used by both Bible School and generic layouts)
+    let bgDataUri = "";
+    if (backgroundImageUrl) {
+      const candidatePaths = [
+        backgroundImageUrl,
+        backgroundImageUrl.startsWith(`${tenant_id}/`) ? null : `${tenant_id}/${backgroundImageUrl}`,
+      ].filter(Boolean) as string[];
+      for (const candidate of candidatePaths) {
+        const { data: bgSignedData } = await supabase.storage
+          .from("church-documents")
+          .createSignedUrl(candidate, 60 * 60);
+        if (!bgSignedData?.signedUrl) continue;
+        try {
+          const imgResp = await fetch(bgSignedData.signedUrl);
+          if (!imgResp.ok) continue;
+          const imgBuf = await imgResp.arrayBuffer();
+          const contentType = imgResp.headers.get("content-type") || "image/png";
+          bgDataUri = `data:${contentType};base64,${encodeBase64(new Uint8Array(imgBuf))}`;
+          break;
+        } catch (e) {
+          console.warn("Failed to fetch background image candidate:", candidate, e);
+        }
+      }
+      if (!bgDataUri) {
+        console.warn("Background image could not be embedded; falling back to solid color. Path:", backgroundImageUrl);
+      }
+    }
+
     // Build SVG certificate
     let svgCert: string;
 
-    if (isBibleSchool && !backgroundImageUrl) {
+    if (isBibleSchool) {
       // Bible School layout matching the Word of Faith Bible Institute certificate
       const deanDataUri = deanSignatureUrl ? await inlineStorageImage(deanSignatureUrl) : "";
       const crestDataUri = crestImageUrl ? await inlineStorageImage(crestImageUrl) : "";
@@ -397,9 +425,9 @@ Deno.serve(async (req) => {
 
       svgCert = `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="842" height="595" viewBox="0 0 842 595">
-  <rect width="842" height="595" fill="#ffffff"/>
+  ${bgDataUri ? `<image href="${bgDataUri}" width="842" height="595" preserveAspectRatio="xMidYMid slice"/>` : `<rect width="842" height="595" fill="#ffffff"/>`}
   <!-- Title -->
-  <text x="421" y="90" text-anchor="middle" font-family="Great Vibes, cursive" font-weight="400" font-size="56" fill="${titleColor}">${escapeXml(churchName)}</text>
+  ${!bgDataUri ? `<text x="421" y="90" text-anchor="middle" font-family="Great Vibes, cursive" font-weight="400" font-size="56" fill="${titleColor}">${escapeXml(churchName)}</text>` : ""}
   <!-- Certify line -->
   <text x="421" y="165" text-anchor="middle" font-family="Inter, sans-serif" font-weight="600" font-size="20" fill="${titleColor}">This is to certify that</text>
   <!-- Student name -->
@@ -417,45 +445,16 @@ Deno.serve(async (req) => {
   ` : ""}
   <!-- Dean signature (left) -->
   ${deanDataUri ? `<image href="${deanDataUri}" x="115" y="480" width="150" height="45" preserveAspectRatio="xMidYMax meet"/>` : ""}
-  <line x1="100" y1="530" x2="290" y2="530" stroke="#333" stroke-width="1"/>
-  <text x="195" y="548" text-anchor="middle" font-family="Inter, sans-serif" font-style="italic" font-weight="700" font-size="12" fill="${bodyDark}">${escapeXml(signatoryTitle || "Dean")}</text>
+  ${!bgDataUri ? `<line x1="100" y1="530" x2="290" y2="530" stroke="#333" stroke-width="1"/>` : ""}
+  ${!bgDataUri ? `<text x="195" y="548" text-anchor="middle" font-family="Inter, sans-serif" font-style="italic" font-weight="700" font-size="12" fill="${bodyDark}">${escapeXml(signatoryTitle || "Dean")}</text>` : ""}
   <!-- Crest (centre) -->
   ${crestDataUri ? `<image href="${crestDataUri}" x="376" y="470" width="90" height="90" preserveAspectRatio="xMidYMid meet"/>` : ""}
   <!-- Date (right) -->
   <text x="647" y="520" text-anchor="middle" font-family="Playfair Display, serif" font-style="italic" font-weight="700" font-size="14" fill="${bodyDark}">${escapeXml(formattedDate)}</text>
-  <line x1="552" y1="530" x2="742" y2="530" stroke="#333" stroke-width="1"/>
-  <text x="647" y="548" text-anchor="middle" font-family="Inter, sans-serif" font-style="italic" font-weight="700" font-size="12" fill="${bodyDark}">Date</text>
+  ${!bgDataUri ? `<line x1="552" y1="530" x2="742" y2="530" stroke="#333" stroke-width="1"/>` : ""}
+  ${!bgDataUri ? `<text x="647" y="548" text-anchor="middle" font-family="Inter, sans-serif" font-style="italic" font-weight="700" font-size="12" fill="${bodyDark}">Date</text>` : ""}
 </svg>`;
     } else if (backgroundImageUrl) {
-      // Generate a signed URL for the background image to embed in SVG.
-      // Backward compatibility: older rows may have been saved without the tenant_id prefix.
-      const candidatePaths = [
-        backgroundImageUrl,
-        backgroundImageUrl.startsWith(`${tenant_id}/`) ? null : `${tenant_id}/${backgroundImageUrl}`,
-      ].filter(Boolean) as string[];
-
-      let bgDataUri = "";
-      for (const candidate of candidatePaths) {
-        const { data: bgSignedData } = await supabase.storage
-          .from("church-documents")
-          .createSignedUrl(candidate, 60 * 60);
-        if (!bgSignedData?.signedUrl) continue;
-        try {
-          const imgResp = await fetch(bgSignedData.signedUrl);
-          if (!imgResp.ok) continue;
-          const imgBuf = await imgResp.arrayBuffer();
-          const contentType = imgResp.headers.get("content-type") || "image/png";
-          const base64 = encodeBase64(new Uint8Array(imgBuf));
-          bgDataUri = `data:${contentType};base64,${base64}`;
-          break;
-        } catch (e) {
-          console.warn("Failed to fetch background image candidate:", candidate, e);
-        }
-      }
-      if (!bgDataUri) {
-        console.warn("Background image could not be embedded; falling back to solid color. Path:", backgroundImageUrl);
-      }
-
       const nameY = textPositions.name_y || 280;
       const trainingY = textPositions.training_y || 340;
       const dateY = textPositions.date_y || 380;
