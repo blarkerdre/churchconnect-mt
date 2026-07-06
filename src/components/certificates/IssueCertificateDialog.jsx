@@ -100,7 +100,7 @@ export default function IssueCertificateDialog({ open, onOpenChange, member }) {
       queryClient.invalidateQueries({ queryKey: ["members"] });
       toast({
         title: "Certificate issued!",
-        description: `Certificate ${data.certificate_number} has been generated${member.email ? " and emailed" : ""}.`,
+        description: `Certificate ${data.student_number || data.certificate_number} has been generated${member.email ? " and emailed" : ""}.`,
       });
       setTrainingType("");
       setNotes("");
