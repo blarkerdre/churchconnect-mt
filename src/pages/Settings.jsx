@@ -1601,11 +1601,11 @@ export default function Settings() {
 
       <Tabs defaultValue="branding" className="space-y-4">
         <TabsList className="flex flex-nowrap h-auto gap-1 overflow-x-auto w-full justify-start [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-          <TabsTrigger value="branding" className="gap-1.5 text-xs"><ImageIcon className="h-3.5 w-3.5" /><span className="hidden sm:inline"> Branding</span></TabsTrigger>
+          <TabsTrigger data-tour="settings-branding" value="branding" className="gap-1.5 text-xs"><ImageIcon className="h-3.5 w-3.5" /><span className="hidden sm:inline"> Branding</span></TabsTrigger>
           {canOwnerOnly && (
             <TabsTrigger value="billing" className="gap-1.5 text-xs"><CreditCard className="h-3.5 w-3.5" /><span className="hidden sm:inline"> Billing</span></TabsTrigger>
           )}
-          <TabsTrigger value="notifications" className="gap-1.5 text-xs"><Bell className="h-3.5 w-3.5" /><span className="hidden sm:inline"> Notifications</span></TabsTrigger>
+          <TabsTrigger data-tour="settings-restart-tours" value="notifications" className="gap-1.5 text-xs"><Bell className="h-3.5 w-3.5" /><span className="hidden sm:inline"> Notifications</span></TabsTrigger>
           <TabsTrigger value="comms" className="gap-1.5 text-xs"><Mail className="h-3.5 w-3.5" /><span className="hidden sm:inline"> Comms</span></TabsTrigger>
           <TabsTrigger value="units" className="gap-1.5 text-xs"><Users className="h-3.5 w-3.5" /><span className="hidden sm:inline"> Units</span></TabsTrigger>
           <TabsTrigger value="wsf" className="gap-1.5 text-xs"><Globe className="h-3.5 w-3.5" /><span className="hidden sm:inline"> Home Cell</span></TabsTrigger>
@@ -1616,7 +1616,7 @@ export default function Settings() {
           <TabsTrigger value="children" className="gap-1.5 text-xs"><Baby className="h-3.5 w-3.5" /><span className="hidden sm:inline"> Children</span></TabsTrigger>
           <TabsTrigger value="followup-templates" className="gap-1.5 text-xs"><Send className="h-3.5 w-3.5" /><span className="hidden sm:inline"> Follow-ups</span></TabsTrigger>
           {canManageTenant && (
-            <TabsTrigger value="features" className="gap-1.5 text-xs"><SlidersHorizontal className="h-3.5 w-3.5" /><span className="hidden sm:inline"> Features</span></TabsTrigger>
+            <TabsTrigger data-tour="settings-modules" value="features" className="gap-1.5 text-xs"><SlidersHorizontal className="h-3.5 w-3.5" /><span className="hidden sm:inline"> Features</span></TabsTrigger>
           )}
           {canManageTenant && (
             <TabsTrigger value="certificates" className="gap-1.5 text-xs"><Award className="h-3.5 w-3.5" /><span className="hidden sm:inline"> Certs</span></TabsTrigger>
@@ -1631,8 +1631,9 @@ export default function Settings() {
             <TabsTrigger value="api" className="gap-1.5 text-xs"><Key className="h-3.5 w-3.5" /><span className="hidden sm:inline"> API</span></TabsTrigger>
           )}
           {canOwnerOnly && (
-            <TabsTrigger value="danger" className="gap-1.5 text-xs text-destructive"><ShieldAlert className="h-3.5 w-3.5" /><span className="hidden sm:inline"> Danger</span></TabsTrigger>
+            <TabsTrigger data-tour="settings-danger" value="danger" className="gap-1.5 text-xs text-destructive"><ShieldAlert className="h-3.5 w-3.5" /><span className="hidden sm:inline"> Danger</span></TabsTrigger>
           )}
+
 
         </TabsList>
 

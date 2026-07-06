@@ -501,12 +501,12 @@ export default function Transportation() {
               </Button>
             )}
             {isDriverUnitMember && (
-              <Button variant="outline" onClick={() => setAvailabilityDialogOpen(true)}>
+              <Button data-tour="transport-drivers" variant="outline" onClick={() => setAvailabilityDialogOpen(true)}>
                 <CarFront className="h-4 w-4 mr-2" /> Mark Availability
               </Button>
             )}
             {canCreateBooking && (
-              <Button onClick={() => { setForm({ pickup_postcode: "", pickup_address: "", service_type: "", destination: "Church", request_date: "", notes: "", passengers: 1, journey_type: "Single", return_date: "", return_time: "" }); setBookDialogOpen(true); }} className="bg-primary hover:bg-primary/90">
+              <Button data-tour="transport-book" onClick={() => { setForm({ pickup_postcode: "", pickup_address: "", service_type: "", destination: "Church", request_date: "", notes: "", passengers: 1, journey_type: "Single", return_date: "", return_time: "" }); setBookDialogOpen(true); }} className="bg-primary hover:bg-primary/90">
                 <Plus className="h-4 w-4 mr-2" /> Book Transport
               </Button>
             )}

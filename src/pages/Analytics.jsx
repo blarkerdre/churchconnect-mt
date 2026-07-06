@@ -258,7 +258,7 @@ export default function Analytics() {
         <Card className="border-0 shadow-sm"><CardContent className="p-4 text-center"><p className="text-2xl font-display font-bold text-accent">{wsfAnalytics.activeCentres}</p><p className="text-xs text-muted-foreground">Home Cell Centres</p></CardContent></Card>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div data-tour="analytics-charts" className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Attendance Trend */}
         <Card className="border-0 shadow-sm">
           <CardHeader><CardTitle className="text-base font-display">Attendance Trend</CardTitle></CardHeader>
@@ -371,7 +371,7 @@ export default function Analytics() {
       </TabsContent>
 
       <TabsContent value="reports" className="space-y-6">
-        {canViewReports && <MemberMilestoneReport />}
+        {canViewReports && <div data-tour="analytics-conversion"><MemberMilestoneReport /></div>}
         {canViewReports && <StatusConversionReport />}
         {canViewReports && <FeedbackSummary />}
       </TabsContent>
