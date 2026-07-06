@@ -303,6 +303,7 @@ export default function TenantAdmin() {
       storage_limit_mb: tenant.storage_limit_mb || 500,
       sms_limit_monthly: tenant.sms_limit_monthly || 0,
       whatsapp_limit_monthly: tenant.whatsapp_limit_monthly || 0,
+      certificate_code: tenant.certificate_code || "",
       disabled_features: settings.disabled_features || [],
       primary_color: settings.primary_color || "",
       welcome_message: settings.welcome_message || "",
@@ -311,7 +312,7 @@ export default function TenantAdmin() {
 
   const handleSaveEdit = () => {
     if (!editTenant) return;
-    const { name, slug, timezone, logo_url, setup_complete, plan_tier, member_limit, storage_limit_mb, sms_limit_monthly, whatsapp_limit_monthly, disabled_features, primary_color, welcome_message } = editForm;
+    const { name, slug, timezone, logo_url, setup_complete, plan_tier, member_limit, storage_limit_mb, sms_limit_monthly, whatsapp_limit_monthly, certificate_code, disabled_features, primary_color, welcome_message } = editForm;
     const settings = {
       ...(editTenant.settings || {}),
       disabled_features,
@@ -330,6 +331,7 @@ export default function TenantAdmin() {
       storage_limit_mb: parseInt(storage_limit_mb) || 500,
       sms_limit_monthly: parseInt(sms_limit_monthly) || 0,
       whatsapp_limit_monthly: parseInt(whatsapp_limit_monthly) || 0,
+      certificate_code: (certificate_code || "").trim().toUpperCase() || null,
       settings,
     });
   };
@@ -1013,6 +1015,19 @@ export default function TenantAdmin() {
                   onChange={(e) => setEditForm({ ...editForm, slug: e.target.value })}
                 />
                 <p className="text-xs text-muted-foreground">Used in URLs: /t/{editForm.slug || "slug"}/</p>
+              </div>
+              <div className="space-y-2">
+                <Label>Certificate Code</Label>
+                <Input
+                  value={editForm.certificate_code || ""}
+                  onChange={(e) => setEditForm({ ...editForm, certificate_code: e.target.value.toUpperCase() })}
+                  placeholder="e.g. WCIC"
+                  maxLength={8}
+                  className="uppercase"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Prefix used in student numbers on Bible School certificates, e.g. <code>WCIC/BCC/AUGUST/2025/113</code>.
+                </p>
               </div>
               <div className="space-y-2">
                 <Label>Timezone</Label>

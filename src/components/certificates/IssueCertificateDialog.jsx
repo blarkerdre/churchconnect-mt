@@ -100,7 +100,7 @@ export default function IssueCertificateDialog({ open, onOpenChange, member }) {
       queryClient.invalidateQueries({ queryKey: ["members"] });
       toast({
         title: "Certificate issued!",
-        description: `Certificate ${data.certificate_number} has been generated${member.email ? " and emailed" : ""}.`,
+        description: `Certificate ${data.student_number || data.certificate_number} has been generated${member.email ? " and emailed" : ""}.`,
       });
       setTrainingType("");
       setNotes("");
@@ -131,7 +131,7 @@ export default function IssueCertificateDialog({ open, onOpenChange, member }) {
       queryClient.invalidateQueries({ queryKey: ["training-completions"] });
       toast({
         title: "Certificate reissued",
-        description: `Certificate ${data.certificate_number} has been regenerated${member.email ? " and re-emailed" : ""}.`,
+        description: `Certificate ${data.student_number || data.certificate_number} has been regenerated${member.email ? " and re-emailed" : ""}.`,
       });
       setReissuingId(null);
       setPreviewData(null);
@@ -172,7 +172,7 @@ export default function IssueCertificateDialog({ open, onOpenChange, member }) {
           memberName: data.member_name,
           trainingType: data.training_type,
           completionDate: data.completion_date,
-          certificateNumber: data.certificate_number,
+          certificateNumber: data.student_number || data.certificate_number,
         },
         mode,
         completion: completion || null,
@@ -254,7 +254,7 @@ export default function IssueCertificateDialog({ open, onOpenChange, member }) {
                               <span className="text-[11px] text-muted-foreground">
                                 {format(new Date(c.completion_date), "dd MMM yyyy")}
                               </span>
-                              <Badge variant="outline" className="text-[10px]">{c.certificate_number}</Badge>
+                              <Badge variant="outline" className="text-[10px]">{c.student_number || c.certificate_number}</Badge>
                             </div>
                           </div>
                         </div>
