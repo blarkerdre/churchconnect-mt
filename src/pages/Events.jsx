@@ -325,7 +325,7 @@ export default function Events() {
           </Select>
         </div>
         {canManage && canCreateEvent && (
-          <Button onClick={openNew} className="w-full sm:w-auto bg-primary hover:bg-primary/90"><Plus className="h-4 w-4 mr-2" /> New Event</Button>
+          <Button data-tour="events-create" onClick={openNew} className="w-full sm:w-auto bg-primary hover:bg-primary/90"><Plus className="h-4 w-4 mr-2" /> New Event</Button>
         )}
       </div>
 
@@ -337,7 +337,7 @@ export default function Events() {
           <p className="text-lg font-medium">No events found</p>
         </Card>
       ) : (
-        <div className="space-y-3">
+        <div data-tour="events-list" className="space-y-3">
           {filtered.map(e => {
             const status = getEventStatus(e.event_date);
             const regCount = registrationCounts[e.id] || 0;
