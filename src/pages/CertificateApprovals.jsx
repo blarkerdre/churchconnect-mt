@@ -57,13 +57,13 @@ export default function CertificateApprovals() {
     queryKey: ["cert-approval-profiles", signposterIds.join(",")],
     enabled: signposterIds.length > 0,
     queryFn: async () => {
-      const { data } = await supabase.from("profiles").select("id, first_name, last_name, email").in("id", signposterIds);
+      const { data } = await supabase.from("profiles").select("user_id, full_name, email").in("user_id", signposterIds);
       return data || [];
     },
   });
   const profileMap = useMemo(() => {
     const m = new Map();
-    profiles.forEach(p => m.set(p.id, [p.first_name, p.last_name].filter(Boolean).join(" ") || p.email || "—"));
+    profiles.forEach(p => m.set(p.user_id, p.full_name || p.email || "—"));
     return m;
   }, [profiles]);
 
