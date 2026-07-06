@@ -82,7 +82,7 @@ export default function SubjectManager({ course, onSelectSubject, selectedSubjec
             <CardTitle className="text-base font-display flex items-center gap-2">
               <Layers className="h-4 w-4 text-primary" /> {course.name} — Subjects
             </CardTitle>
-            <Button size="sm" variant="outline" className="gap-1.5" onClick={() => { setEditing(null); setForm({ name: "", description: "", pass_mark_percentage: 50, time_limit_minutes: "", randomize_questions: false, useCustomGrades: false, grade_classifications: [] }); setDialogOpen(true); }}>
+            <Button size="sm" variant="outline" className="gap-1.5" onClick={() => { setEditing(null); setForm({ name: "", description: "", pass_mark_percentage: 50, time_limit_minutes: "", randomize_questions: false, is_open: false, useCustomGrades: false, grade_classifications: [] }); setDialogOpen(true); }}>
               <Plus className="h-3.5 w-3.5" /> Add Subject
             </Button>
           </div>
