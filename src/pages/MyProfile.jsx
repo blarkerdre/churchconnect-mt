@@ -967,12 +967,13 @@ function DynamicExamButtons({ memberId, onSelect, tenantId }) {
   const { data: registrations = [] } = useQuery({
     queryKey: ["my-course-registrations-v2", memberId, tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("course_registrations").select("course_id").eq("member_id", memberId).eq("tenant_id", tenantId);
+      const { data, error } = await supabase.from("course_registrations").select("course_id, student_number, status").eq("member_id", memberId).eq("tenant_id", tenantId);
       if (error) throw error;
       return data;
     },
     enabled: !!memberId && !!tenantId,
   });
+
 
   const { data: allSubjects = [] } = useQuery({
     queryKey: ["all-exam-subjects", tenantId],
