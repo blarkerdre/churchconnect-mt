@@ -543,9 +543,14 @@ export default function ExamManagement() {
               <Label htmlFor="reg-open" className="cursor-pointer">Registration Open</Label>
               <Switch id="reg-open" checked={titleForm.registration_open} onCheckedChange={v => setTitleForm(f => ({ ...f, registration_open: v }))} />
             </div>
-            <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50 border border-border">
-              <Label htmlFor="exams-open" className="cursor-pointer">Exams Open</Label>
-              <Switch id="exams-open" checked={titleForm.exams_open} onCheckedChange={v => setTitleForm(f => ({ ...f, exams_open: v }))} />
+            <div className="p-3 rounded-lg bg-muted/50 border border-border">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="exams-open" className="cursor-pointer">Exams Open</Label>
+                <Switch id="exams-open" checked={titleForm.exams_open} onCheckedChange={v => setTitleForm(f => ({ ...f, exams_open: v }))} />
+              </div>
+              <p className="text-[11px] text-muted-foreground mt-2">
+                When this is off, students cannot attempt any exam in this course, even if individual subjects are marked as open. Use this as a master switch to control the exam window for the entire course.
+              </p>
             </div>
             <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50 border border-border">
               <Label htmlFor="send-result" className="cursor-pointer">Email Result Statement on Completion</Label>
