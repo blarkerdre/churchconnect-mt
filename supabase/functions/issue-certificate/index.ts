@@ -235,6 +235,9 @@ Deno.serve(async (req) => {
       template?.custom_message ||
       "This is to certify that the above named has successfully completed";
     const backgroundImageUrl = template?.background_image_url || null;
+    const deanSignatureUrl = template?.dean_signature_url || null;
+    const crestImageUrl = template?.crest_image_url || null;
+    const nameColor = template?.name_color || "#5B2E91"; // Bible School purple by default
     const textPositions = template?.text_positions || { name_y: 280, training_y: 340, date_y: 380, signatory_y: 500 };
 
     // Detect Bible School course (matches an exam_titles row for this tenant)
