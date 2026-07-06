@@ -445,12 +445,12 @@ export default function TenantAdmin() {
       {/* Main Tabs */}
       <Tabs defaultValue="tenants">
         <TabsList>
-          <TabsTrigger value="tenants">Tenants</TabsTrigger>
-          <TabsTrigger value="platform-users"><Users2 className="h-3.5 w-3.5 mr-1" />Platform Users</TabsTrigger>
-          <TabsTrigger value="pricing"><BarChart3 className="h-3.5 w-3.5 mr-1" />Pricing</TabsTrigger>
-          <TabsTrigger value="analytics"><BarChart3 className="h-3.5 w-3.5 mr-1" />Analytics</TabsTrigger>
-          <TabsTrigger value="integrations"><Link className="h-3.5 w-3.5 mr-1" />Integrations</TabsTrigger>
-          <TabsTrigger value="broadcast"><Megaphone className="h-3.5 w-3.5 mr-1" />Broadcast</TabsTrigger>
+         <TabsTrigger data-tour="ta-tenants" value="tenants">Tenants</TabsTrigger>
+         <TabsTrigger value="platform-users"><Users2 className="h-3.5 w-3.5 mr-1" />Platform Users</TabsTrigger>
+         <TabsTrigger data-tour="ta-billing" value="pricing"><BarChart3 className="h-3.5 w-3.5 mr-1" />Pricing</TabsTrigger>
+         <TabsTrigger value="analytics"><BarChart3 className="h-3.5 w-3.5 mr-1" />Analytics</TabsTrigger>
+         <TabsTrigger data-tour="ta-integrations" value="integrations"><Link className="h-3.5 w-3.5 mr-1" />Integrations</TabsTrigger>
+         <TabsTrigger value="broadcast"><Megaphone className="h-3.5 w-3.5 mr-1" />Broadcast</TabsTrigger>
         </TabsList>
 
         <TabsContent value="tenants">

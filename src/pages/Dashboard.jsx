@@ -139,7 +139,12 @@ export default function Dashboard() {
     );
   }
   if (!authLoading && !isAdmin) {
-    return <MemberDashboard currentUser={profile} myMember={myMember} />;
+    return (
+      <>
+        <ModuleTour tourId="dashboard-v1" />
+        <MemberDashboard currentUser={profile} myMember={myMember} />
+      </>
+    );
   }
 
   const total = dashStats?.total ?? 0;
@@ -188,6 +193,7 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6">
+      <ModuleTour tourId="dashboard-v1" />
       {/* Tenant context bar */}
       <div className="flex items-center gap-2">
         <h2 className="text-lg font-bold text-foreground">{currentTenant?.name || "Dashboard"}</h2>
@@ -243,7 +249,7 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-sm">
+        <Card data-tour="dashboard-feed" className="border-0 shadow-sm">
           <CardHeader>
             <CardTitle className="text-base font-display">Recent Activity</CardTitle>
           </CardHeader>
