@@ -71,7 +71,7 @@ export default function SubjectManager({ course, onSelectSubject, selectedSubjec
   const closeDialog = () => {
     setDialogOpen(false);
     setEditing(null);
-    setForm({ name: "", description: "", pass_mark_percentage: 50, time_limit_minutes: "", randomize_questions: false, useCustomGrades: false, grade_classifications: [] });
+    setForm({ name: "", description: "", pass_mark_percentage: 50, time_limit_minutes: "", randomize_questions: false, is_open: false, useCustomGrades: false, grade_classifications: [] });
   };
 
   return (
