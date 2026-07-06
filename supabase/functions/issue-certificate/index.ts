@@ -322,10 +322,65 @@ Deno.serve(async (req) => {
       return "";
     };
 
-    const gradeClassification =
+    // Compute grade classification from exam results for Bible School courses.
+    const computeBibleSchoolGrade = async (): Promise<string> => {
+      if (!isBibleSchool || !courseRow) return "";
+      const { data: subjects } = await supabase
+        .from("exam_subjects")
+        .select("id")
+        .eq("course_id", courseRow.id)
+        .eq("is_active", true);
+      const subjectIds = (subjects || []).map((s: { id: string }) => s.id);
+      if (subjectIds.length === 0) return "";
+      const { data: attempts } = await supabase
+        .from("exam_attempts")
+        .select("subject_id, score, total_points")
+        .eq("member_id", member_id)
+        .in("subject_id", subjectIds);
+      if (!attempts || attempts.length === 0) return "";
+      // Best-of per subject (highest percentage)
+      const best: Record<string, { score: number; total_points: number }> = {};
+      for (const a of attempts as Array<{ subject_id: string; score: number; total_points: number }>) {
+        const pct = a.total_points > 0 ? a.score / a.total_points : 0;
+        const cur = best[a.subject_id];
+        const curPct = cur ? (cur.total_points > 0 ? cur.score / cur.total_points : 0) : -1;
+        if (!cur || pct > curPct) best[a.subject_id] = { score: a.score, total_points: a.total_points };
+      }
+      const taken = Object.keys(best);
+      if (taken.length !== subjectIds.length) return "";
+      let totalScore = 0;
+      let totalPoints = 0;
+      for (const s of Object.values(best)) {
+        totalScore += s.score;
+        totalPoints += s.total_points;
+      }
+      if (totalPoints <= 0) return "";
+      const percentage = (totalScore / totalPoints) * 100;
+      const passMark = (courseRow as { pass_mark_percentage?: number }).pass_mark_percentage ?? 50;
+      if (percentage < passMark) return "";
+      const bands = ((courseRow as { grade_classifications?: Array<{ label: string; min_percentage: number }> }).grade_classifications) || [
+        { label: "Distinction", min_percentage: 75 },
+        { label: "Merit", min_percentage: 65 },
+        { label: "Pass", min_percentage: 50 },
+      ];
+      const sorted = [...bands].sort((a, b) => b.min_percentage - a.min_percentage);
+      for (const b of sorted) {
+        if (percentage >= b.min_percentage) return b.label;
+      }
+      return "";
+    };
+
+    let gradeClassification =
       (typeof gcInput === "string" && gcInput.trim()) ||
       existing?.grade_classification ||
       "";
+    if (!gradeClassification && isBibleSchool) {
+      try {
+        gradeClassification = await computeBibleSchoolGrade();
+      } catch (e) {
+        console.warn("grade computation failed:", e);
+      }
+    }
 
     // Build SVG certificate
     let svgCert: string;
