@@ -1,61 +1,49 @@
-## Why menus aren't spotlighted
+## Why Skip / Close doesn't stick during an auto-run tour
 
-Tour steps target `[data-tour="…"]` selectors. Only the first step of each tour (`[data-tour="<module>-help"]`, rendered by `ModuleTour`) currently matches an element. Every other step's selector (`members-add`, `events-create`, `sidebar-nav`, `notification-bell`, `tenant-switcher`, `comms-announcement`, `pc-request`, `wsf-attendance`, `sn-folders`, `analytics-charts`, etc.) doesn't exist in the DOM, so `SpotlightOverlay` falls back to a centered modal with no highlight — exactly like on the screenshots.
+The Skip, X and Escape handlers actually work — they call `onClose`, which marks the tour completed (localStorage + `user_tour_completions` upsert) and clears `active`. The overlay does close.
 
-My Family and Children Church work because their pages already carry every `data-tour` anchor the tour references. The other pages don't.
+The problem is that it **reopens on its own within a second**, so it feels like Skip did nothing.
 
-## Fix
+### Root cause
 
-Add the missing `data-tour="…"` attributes to the real UI elements referenced by `src/components/tour/tours.js`. No new tours, no logic changes.
+`useAutoTour` re-fires whenever its `tour` dependency changes:
 
-### 1. Global chrome (once, in shared layout components)
+```js
+// src/hooks/useAutoTour.jsx
+useEffect(() => {
+  if (completed !== false) return;
+  const t = setTimeout(() => tour.startTour(tourId, ctx), 700);
+  return () => clearTimeout(t);
+}, [tourId, completed, tour]);
+```
 
-| Selector | Where to add it |
-|---|---|
-| `sidebar-nav` | Sidebar nav container in `AppLayout.jsx` (or the `Sidebar` component it renders) |
-| `notification-bell` | `NotificationBell.jsx` root button |
-| `tenant-switcher` | Tenant switcher trigger in `AppLayout.jsx` header |
-| `dashboard-feed` | Feed section wrapper in `MemberDashboard.jsx` / `Dashboard.jsx` |
+- `tour` is the value from `TourProvider`, memoized on `baseCtx` (auth roles + tenant flags). Every time auth finishes loading, roles arrive, or tenant memberships refresh, `TourCtx.Provider value` gets a new reference → `tour` changes → this effect re-runs.
+- `completed` in this hook instance is still `false` right after Skip. `useTourCompletion` only updates its own state; it does not observe the write that `TourProvider.markCompletedRemote` performs. So the guard `completed !== false` is still false → the tour is scheduled again → user sees it reopen after ~700 ms.
+- Same thing happens if the user clicks Skip while `completed` is `null` (fetch still in flight) and the fetch then resolves to `false`.
 
-### 2. Per-page anchors
+Result: the user cannot skip/exit/close because the auto-run keeps re-triggering on the same page load.
 
-For each page, add `data-tour` to the specific button/tab/section the step describes. Examples:
+### Fix (small, contained to the tour layer)
 
-- **Members**: `members-add` on "Add member" button, `members-import` on "Import" button, `members-filters` on the filter bar, `members-table` on `MemberTable` root.
-- **Events**: `events-create` on "New event" button, `events-list` on the events grid.
-- **Attendance**: `attendance-create` on session create button, `attendance-checkin` on `CheckInPanel` root.
-- **ChurchAttendance**: `ca-new-report`, `ca-trends`.
-- **Follow-ups**: `followups-new`, `followups-referrals`, `followups-templates`.
-- **Pastoral Care**: `pc-request`, `pc-assign`.
-- **Communications**: `comms-announcement`, `comms-direct`, `comms-history` on the corresponding tabs/panels.
-- **Transportation**: `transport-book`, `transport-drivers`.
-- **Analytics**: `analytics-charts`, `analytics-absence`, `analytics-conversion`.
-- **Exam Management**: `exam-sessions`, `exam-take`, `exam-results` on the relevant tabs.
-- **Training Reports**: `training-attendees`.
-- **WSF (Home Cell)**: `wsf-attendance`, `wsf-members`.
-- **Sermon Notes**: `sn-folders`, `sn-new`.
-- **Testimony**: `testimony-new`.
-- **Unit Tasks**: `tasks-new`, `tasks-report`.
-- **Inventory**: `inv-items`, `inv-inspections`.
-- **Settings**: `settings-modules`, `settings-branding`, `settings-restart-tours`, `settings-danger` on the corresponding cards/sections.
-- **Tenant Admin**: `ta-tenants`, `ta-billing`, `ta-integrations` on the tabs.
-- **User Management**: `um-invite`, `um-roles`.
-- **My Profile**: `profile-completion`, `profile-feed`, `my-certificates`.
-- **Church Unit**: `unit-members`.
-- **Reports**: no extra anchors needed (only 1 step).
+1. **Remember dismissals per session.** In `TourProvider.startTour`, skip starting a tour whose id is in an in-memory "dismissed this session" set. `onClose` and `onComplete` add the id to that set (in addition to the existing `markCompletedRemote`). This alone stops the re-open loop even if `completed` is stale.
+2. **Re-read completion after close.** Expose a `markLocalCompleted(tourId)` callback from `TourProvider` (or reuse `useTourCompletion` inside it) so the same key that `useAutoTour` watches flips to `true` synchronously. Simplest: have `TourProvider` write `localStorage` (already done) AND broadcast via a small event/atom that `useTourCompletion` subscribes to, so `completed` becomes `true` immediately.
+3. **Stabilise `useAutoTour` deps.** Drop `tour` from the dependency array (use a ref) so identity churn on the context value can't re-trigger the auto-start. The effect only needs to fire when `tourId` or `completed` changes.
+4. **Guard against double-start.** In `startTour`, no-op if `active?.tourId === tourId` or if the tour is already in the dismissed set.
 
-### 3. Verification
+### Files to touch
 
-After edits, run the app, open each module for the first time, and confirm the spotlight tracks the real UI element on every step. Steps whose target is legitimately hidden for the current role are already filtered out via `when`.
+- `src/components/tour/TourProvider.jsx` — add session-dismissed set, guard `startTour`, notify listeners on completion.
+- `src/hooks/useAutoTour.jsx` — remove `tour` from deps, use a ref; bail out if the provider reports the tour as dismissed.
+- `src/hooks/useTourCompletion.js` — subscribe to the provider's completion signal so `completed` flips to `true` right after Skip/Close/Finish.
 
 ### Out of scope
 
-- No changes to `TourProvider`, `SpotlightOverlay`, `HelpButton`, `useAutoTour`, `ModuleTour`, or `tours.js` content.
-- No new tours, no copy rewrites, no business-logic changes.
+- No changes to `tours.js`, no new `data-tour` anchors, no UI/CSS changes to the overlay, no changes to `ModuleTour` or `HelpButton`. The manual "Tour" button behaviour stays identical — it always starts the tour on demand (it can bypass the dismissed set).
 
-### Files touched
+### Verification
 
-- `src/components/AppLayout.jsx` (sidebar-nav, tenant-switcher wrappers)
-- `src/components/notifications/NotificationBell.jsx`
-- `src/components/dashboard/MemberDashboard.jsx` (dashboard-feed)
-- The 20+ module pages and their child components listed above.
+- Load a page fresh as a user with no completion row → tour auto-opens → click Skip → tour stays closed and does not reappear on role/tenant hydration.
+- Same with the X button and the Escape key.
+- Navigate away and back on the same session → tour does not auto-open.
+- Click the "?" Tour button → tour opens on demand.
+- After "Replay all tours" in Settings, auto-open works again on next visit.
