@@ -501,6 +501,7 @@ export default function ExamManagement() {
               grade_classifications: titleForm.grade_classifications,
               send_result_email: titleForm.send_result_email,
               send_certificate_email: titleForm.send_certificate_email,
+              starting_number: Math.max(1, parseInt(titleForm.starting_number, 10) || 1),
             });
           }} className="space-y-4">
             <div><Label>Course Name *</Label><Input value={titleForm.name} onChange={e => setTitleForm(f => ({ ...f, name: e.target.value }))} placeholder="e.g. Basic Certificate Course" /></div>
@@ -515,6 +516,19 @@ export default function ExamManagement() {
               />
               <p className="text-[11px] text-muted-foreground mt-1">
                 Short code used in student numbers, e.g. <code>WCIC/BCC/AUGUST/2025/113</code>.
+              </p>
+            </div>
+            <div>
+              <Label>Starting Registration Number</Label>
+              <Input
+                type="number"
+                min="1"
+                value={titleForm.starting_number}
+                onChange={e => setTitleForm(f => ({ ...f, starting_number: e.target.value }))}
+                className="w-32"
+              />
+              <p className="text-[11px] text-muted-foreground mt-1">
+                Each month's first registration uses this number, or the next available one if a higher number already exists. Existing numbers are never changed.
               </p>
             </div>
             <div><Label>Description</Label><Input value={titleForm.description} onChange={e => setTitleForm(f => ({ ...f, description: e.target.value }))} placeholder="Optional" /></div>
