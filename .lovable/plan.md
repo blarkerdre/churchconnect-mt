@@ -1,75 +1,66 @@
 ## Goal
 
-Adopt the uploaded Word of Faith Bible Institute certificate as the default Bible School certificate design, and issue every Bible School completion a structured "Student No." in the format `WCIC/BCC/AUGUST/2025/113`.
+Auto-generate a **student registration number** on the moment an admin approves a Bible School course registration, make it editable by tenant admins/owners, and surface it on the public confirmation, the member's profile/certificates, admin registration lists and Training Reports.
 
-## 1. Data model changes (migration)
+Note: this is distinct from certificate issuance. Registration numbers are now assigned earlier (at approval), and the certificate simply re-uses the same value on issuance.
 
-Add three new fields, all editable in existing admin UIs:
+## 1. Data model (migration)
 
-- `tenants.certificate_code TEXT` — short prefix (e.g. `WCIC`). Falls back to the tenant slug uppercased when empty.
-- `exam_titles.course_code TEXT` — short course code (e.g. `BCC`, `LCC`, `LDC`, `BFC`). Required for Bible School courses.
-- `training_completions.student_number TEXT` — the structured number (`WCIC/BCC/AUGUST/2025/113`). Kept separate from the existing `certificate_number` so historical certificates aren't disturbed.
+- `course_registrations`
+  - `student_number TEXT` — the WCIC/BCC/AUGUST/YYYY/NNN value.
+  - `status TEXT NOT NULL DEFAULT 'pending'` — `pending` | `approved` | `rejected` (only if not already present; check first).
+  - `approved_at TIMESTAMPTZ`, `approved_by UUID` (nullable).
+  - Unique index on `(tenant_id, student_number)` where `student_number IS NOT NULL`.
+- Extend existing `public.next_student_number(_tenant_id, _course_id, _completion_date)` so it also inspects `course_registrations.student_number` for the same month, so numbering stays continuous whether the row lives in `course_registrations` or `training_completions`.
+- `training_completions` remains as-is; when a completion is created for an already-approved registration, we **copy** the existing `student_number` across (no re-generation).
 
-No RLS changes needed (fields inherit existing table policies).
+## 2. Assignment flow
 
-## 2. Student-number generation
+- **Public registration** (`public-wofbi-register` edge function): row is inserted with `status='pending'` and no `student_number`. Confirmation screen shows *"Your registration is pending approval. Your student number will be issued once approved."*
+- **Admin approval**: new action on the admin registrations list ("Approve"). On approve:
+  1. Set `status='approved'`, `approved_at`, `approved_by`.
+  2. Call `next_student_number(...)` with today's date and store the result on the row.
+  3. Trigger existing course-registration email, now including the assigned number.
+- **Certificate issuance** (`issue-certificate/index.ts`): if a `course_registrations` row already has a `student_number`, use it verbatim; otherwise fall back to the current generator (preserves behaviour for pre-approval-flow rows).
 
-New Postgres function `public.next_student_number(_tenant_id uuid, _course_id uuid, _completion_date date)` — SECURITY DEFINER, `search_path = public`:
+## 3. Editing
 
-1. Read `certificate_code` from tenants (fallback: `upper(slug)`).
-2. Read `course_code` from `exam_titles` (fallback: first letters of course name).
-3. Compute `MONTH = to_char(_completion_date, 'FMMONTH')` (e.g. `AUGUST`) and `YEAR = to_char(_completion_date, 'YYYY')`.
-4. Count existing `training_completions` for the same tenant + course where `student_number LIKE '<prefix>/<course>/<MONTH>/<YEAR>/%'`, add 1, zero-pad to 3 digits.
-5. Return `WCIC/BCC/AUGUST/2025/113`.
+- Tenant admins/owners get an inline "Edit number" button on each registration row (admin list + Training Reports detail).
+- Server-side guard: only users with `has_role(auth.uid(),'admin')` or tenant owner may `UPDATE course_registrations.student_number` — enforced via a new RLS policy scoped to `tenant_id`.
+- Every edit writes an `audit_log` entry via existing `logAudit` helper (`entity='course_registration'`, action=`student_number_update`, before/after values).
+- Uniqueness guarded by the unique index; UI shows the DB error inline if a duplicate is entered.
 
-Called from the `issue-certificate` edge function whenever the completion is for a Bible School course (i.e. `training_type` matches a `exam_titles.name` for that tenant). Non-Bible-School completions continue to use the current `CERT-...` scheme untouched.
+## 4. UI surfaces
 
-Preview mode returns `WCIC/BCC/AUGUST/2025/PREVIEW`.
+- **Public Bible School registration success screen** (`PublicWoFBIRegistration.jsx`): show a pending message + a note that the number will arrive by email once approved. When the approval email fires, include the number in the body of `send-course-registration-email`.
+- **Member profile / My Certificates** (`MyCertificates.jsx` + `MyProfile.jsx`): add a "Bible School registration" section listing each `course_registrations` row with course name, status badge, and `student_number` (or "Pending" if not yet assigned).
+- **Admin registrations list** (part of `ExamManagement.jsx` — the course roster panel): add columns `Status`, `Student No.`, `Approved`. Row actions: **Approve** (if pending) and **Edit number** (admin/owner only).
+- **Training Reports** (`TrainingReports.jsx` + `CertificatesReport.jsx` exports): add `student_number` column; include in CSV export.
+- **Certificate rendering**: unchanged — already prints the number.
 
-## 3. Certificate visual (matches upload)
+## 5. Backfill
 
-Update `issue-certificate/index.ts` SVG to a new "Bible School" layout used when the course belongs to `exam_titles`:
-
-- Landscape A4 (existing 842×595) on white.
-- Title in a red script face ("The Word of Faith Bible Institute, Cardiff") — configurable via `certificate_templates.church_name`. Load a script TTF (Great Vibes or Allura) via the existing Google Fonts loader.
-- Sub-line: `This is to certify that` (dark red).
-- Student name — large, bold, purple (`#5B2E91`), configurable colour.
-- `Student No.  WCIC/BCC/AUGUST/2025/113` — italic serif.
-- `has fulfilled the requirement of the institute for the`
-- Course name in large black script (Monotype-Corsiva-ish; reuse the script font).
-- `with` and grade classification (from `training_completions.grade` / classification, red).
-- Dean signature image + label (left), crest image (centre), date (right, italic serif).
-
-All colours, church name, signatory name/title, dean-signature image, and crest image remain editable in **Certificate Template Settings** (`certificate_templates`). Ship this as the seeded default when a tenant's Bible School template is missing.
-
-New optional columns on `certificate_templates` (added in the same migration):
-
-- `dean_signature_url TEXT`
-- `crest_image_url TEXT`
-- `script_font_url TEXT` (optional override; sensible Google Fonts default)
-
-## 4. UI changes
-
-- **Tenant Admin → Settings**: add "Certificate code" input on the tenant form (short text, uppercase-hint, max 8 chars).
-- **Exam Management → course editor** (`exam_titles`): add "Course code" input next to name (e.g. `BCC`). Show validation warning if missing.
-- **Certificate Template Settings** (`CertificateTemplateSettings.jsx`): add uploaders for Dean signature and Crest image (reuse existing storage helpers), plus a colour picker for the "Name colour" (purple by default).
-- **My Certificates** (`MyCertificates.jsx`) and **Certificate Approvals / Report** pages: show `student_number` instead of / alongside `certificate_number` for Bible School completions.
-- **Issue Certificate dialog** (`IssueCertificateDialog.jsx`): preview reflects the new layout; shows the student number that will be assigned.
-
-## 5. Backfill (optional, one-off)
-
-Provide a small admin action ("Backfill student numbers") on the Certificates Report page that, for each existing Bible School `training_completions` row without a `student_number`, generates one ordered by `completion_date` using the same function. Idempotent (skips rows that already have one).
+- One-off admin action on the Certificates Report page: for each approved `course_registrations` row without a `student_number`, generate one ordered by `created_at` using the same function. Idempotent.
 
 ## 6. QA
 
-- Migration applies cleanly; grants unchanged (existing tables).
-- Issue a preview certificate for a Bible School course → verify layout matches upload and preview number shows `.../PREVIEW`.
-- Issue a real certificate → number equals `<TENANT>/<COURSE>/<MONTH>/<YEAR>/001`; second issue in same month = `/002`; new month resets to `/001`.
-- Issue a non-Bible-School training completion → falls back to old `CERT-...` design, unchanged.
-- Downloaded PNG in "My Certificates" opens correctly.
+- Public registration → row created as `pending`, no number shown.
+- Admin approves → `student_number` populated in the correct WCIC/BCC/MONTH/YYYY/NNN format; second approval same month increments; new month resets.
+- Admin edits a number → change persists, audit log entry created; duplicates rejected.
+- Non-admin user attempts to update `student_number` via API → RLS denies.
+- Certificate for a completion tied to an approved registration reuses the existing number.
+- Training Reports export contains the new column.
 
 ## Out of scope
 
-- Changing existing `certificate_number` values.
-- Public verification page for student numbers (can be a follow-up).
-- Financial/fees on the certificate.
+- Changing certificate visual/layout (already shipped).
+- Bulk re-numbering / renumbering already-issued certificates.
+- Public verification page.
+
+## Technical summary (for reference)
+
+Files/objects touched:
+
+- **DB**: migration adding `student_number`, `status`, `approved_at`, `approved_by` on `course_registrations`; unique index; RLS policy for admin-only `student_number` updates; small update to `next_student_number` to consider both tables.
+- **Edge functions**: `public-wofbi-register/index.ts` (unchanged behaviour — still pending), new `approve-course-registration/index.ts` (approve + assign number + email), `issue-certificate/index.ts` (reuse existing number when present), `send-course-registration-email/index.ts` (accept optional `student_number`).
+- **Frontend**: `PublicWoFBIRegistration.jsx`, `MyCertificates.jsx`, `MyProfile.jsx`, `ExamManagement.jsx` (registrations sub-view), `TrainingReports.jsx`, `CertificatesReport.jsx`.

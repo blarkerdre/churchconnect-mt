@@ -967,12 +967,13 @@ function DynamicExamButtons({ memberId, onSelect, tenantId }) {
   const { data: registrations = [] } = useQuery({
     queryKey: ["my-course-registrations-v2", memberId, tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("course_registrations").select("course_id").eq("member_id", memberId).eq("tenant_id", tenantId);
+      const { data, error } = await supabase.from("course_registrations").select("course_id, student_number, status").eq("member_id", memberId).eq("tenant_id", tenantId);
       if (error) throw error;
       return data;
     },
     enabled: !!memberId && !!tenantId,
   });
+
 
   const { data: allSubjects = [] } = useQuery({
     queryKey: ["all-exam-subjects", tenantId],
@@ -1001,9 +1002,10 @@ function DynamicExamButtons({ memberId, onSelect, tenantId }) {
   if (isLoading || courses.length === 0) return null;
 
   // Show all courses the member is registered for.
-  const registeredCourseIds = new Set(registrations.map(r => r.course_id));
-  const registeredCourses = courses.filter(c => registeredCourseIds.has(c.id));
+  const regByCourseId = new Map(registrations.map(r => [r.course_id, r]));
+  const registeredCourses = courses.filter(c => regByCourseId.has(c.id));
   if (registeredCourses.length === 0) return null;
+
 
   const handleSubjectClick = (course, subject) => {
     onSelect({ type: course.name, subjectId: subject.id, subjectName: subject.name });
@@ -1078,12 +1080,21 @@ function DynamicExamButtons({ memberId, onSelect, tenantId }) {
               <div className="flex items-center justify-between flex-wrap gap-2">
                 <div>
                   <h3 className="text-sm font-semibold text-foreground">{course.name}</h3>
+                  {(() => {
+                    const reg = regByCourseId.get(course.id);
+                    if (!reg) return null;
+                    if (reg.student_number) {
+                      return <p className="text-[11px] font-mono text-primary mt-0.5">Student No. {reg.student_number}</p>;
+                    }
+                    return <p className="text-[11px] text-muted-foreground italic mt-0.5">Student No. pending admin approval</p>;
+                  })()}
                   <p className="text-xs text-muted-foreground">
                     {completedSubjectIds.length}/{subjects.length} subjects completed
                     {totalPoints > 0 && ` · Aggregate: ${Math.round(aggPct)}%`}
                     {` · Pass mark: ${course.pass_mark_percentage}%`}
                   </p>
                 </div>
+
                 <div className="flex gap-1.5">
                   {allDone && (
                     <Badge variant={passed ? "default" : "destructive"} className="text-xs">

@@ -114,16 +114,20 @@ export default function PublicWoFBIRegistration() {
         <Card className="w-full max-w-md text-center">
           <CardContent className="py-12 space-y-6">
             <CheckCircle2 className="mx-auto h-16 w-16 text-green-600" />
-            <h2 className="text-2xl font-bold">Registration Successful!</h2>
+            <h2 className="text-2xl font-bold">Registration Received!</h2>
             <p className="text-muted-foreground">
               You have been registered for <strong>{courseName}</strong>.
             </p>
             <div className="bg-muted rounded-lg p-4 space-y-2 text-left">
               <h3 className="font-semibold text-sm">What's next?</h3>
               <p className="text-sm text-muted-foreground">
-                To access and take your exams, log in or create an account in the Bible School section.
+                Your <strong>student registration number</strong> will be issued once an administrator approves your registration. You'll see it on your profile and it will appear in your welcome email.
+              </p>
+              <p className="text-sm text-muted-foreground">
+                In the meantime, log in or create an account in the Bible School section to access your exams.
               </p>
             </div>
+
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
               <Button asChild>
                 <a href={loginUrl}>Login / Create Account</a>
