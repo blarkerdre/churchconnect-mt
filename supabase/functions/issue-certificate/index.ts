@@ -237,12 +237,39 @@ Deno.serve(async (req) => {
     const backgroundImageUrl = template?.background_image_url || null;
     const textPositions = template?.text_positions || { name_y: 280, training_y: 340, date_y: 380, signatory_y: 500 };
 
+    // Detect Bible School course (matches an exam_titles row for this tenant)
+    const { data: courseRow } = await supabase
+      .from("exam_titles")
+      .select("id, name, course_code")
+      .eq("tenant_id", tenant_id)
+      .ilike("name", training_type.trim())
+      .maybeSingle();
+    const isBibleSchool = !!courseRow;
+
+    const certDate = completion_date || existing?.completion_date || new Date().toISOString().split("T")[0];
+
     let certificateNumber: string;
+    let studentNumber: string | null = existing?.student_number ?? null;
     if (existing?.certificate_number) {
       certificateNumber = existing.certificate_number;
     } else if (isPreview) {
-      // Don't burn a sequence number on previews — clearly mark as preview.
       certificateNumber = "PREVIEW-XXXX-XXXX-XXXX";
+    } else if (isBibleSchool && courseRow) {
+      // Allocate a Bible School student number: WCIC/BCC/AUGUST/2025/113
+      const { data: sn, error: snErr } = await supabase.rpc("next_student_number", {
+        _tenant_id: tenant_id,
+        _course_id: courseRow.id,
+        _completion_date: certDate,
+      });
+      if (snErr) {
+        console.error("next_student_number error:", snErr);
+        return new Response(JSON.stringify({ error: "Failed to allocate student number" }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      studentNumber = sn as string;
+      certificateNumber = studentNumber; // keep unique cert number aligned with student number
     } else {
       const year = new Date().getFullYear();
       const prefix = training_type
@@ -257,7 +284,16 @@ Deno.serve(async (req) => {
       certificateNumber = `CERT-${prefix}-${year}-${seq}`;
     }
 
-    const certDate = completion_date || existing?.completion_date || new Date().toISOString().split("T")[0];
+    if (isBibleSchool && isPreview) {
+      // Preview: use a stable placeholder student number.
+      const monthName = new Date(certDate)
+        .toLocaleDateString("en-GB", { month: "long" })
+        .toUpperCase();
+      const year = new Date(certDate).getFullYear();
+      const tCode = (courseRow?.course_code || "CRS").toUpperCase();
+      studentNumber = `PREVIEW/${tCode}/${monthName}/${year}/PREVIEW`;
+    }
+
     const formattedDate = new Date(certDate).toLocaleDateString("en-GB", {
       day: "numeric",
       month: "long",
