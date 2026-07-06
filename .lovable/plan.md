@@ -1,59 +1,75 @@
-## Deliverable
+## Goal
 
-A ~10–12 page conference-style research paper positioning the Church Management Suite as a **general-purpose multi-tenant membership, engagement, and lifecycle platform**, with a broad survey of how its architecture and modules transfer across sectors (non-profits/NGOs, education/training, community clubs & associations, and other faith organisations). Produced in three formats and saved to `/mnt/documents/`:
+Adopt the uploaded Word of Faith Bible Institute certificate as the default Bible School certificate design, and issue every Bible School completion a structured "Student No." in the format `WCIC/BCC/AUGUST/2025/113`.
 
-- `research-paper-universal-application.md`
-- `research-paper-universal-application.docx`
-- `research-paper-universal-application.pdf`
+## 1. Data model changes (migration)
 
-## Paper structure (IEEE/ACM-style, ~10–12 pages, 2-column PDF)
+Add three new fields, all editable in existing admin UIs:
 
-1. **Title, authors, affiliation, abstract, keywords**
-   Working title: *"A Multi-Tenant Membership Lifecycle Platform: Generalising a Church Management System for Cross-Sector Adoption"*
-2. **Introduction** — problem statement, motivation for domain-agnostic membership platforms, contribution summary.
-3. **Related Work** — membership CRMs (Salesforce NPSP, Planning Center, Breeze), multi-tenant SaaS (Kong, Chen et al.), LMS/attendance systems (Moodle), pastoral-care/case-management analogues. All cited.
-4. **System Architecture** — path-based multi-tenancy (`/t/:tenantSlug`), Postgres + RLS isolation, tenant-scoped role bridging, edge functions, UK data residency, dynamic theming, PWA. Diagrams described in text + one architecture figure.
-5. **Domain Model & Modules** — abstract the vocabulary (Member, Unit, Home Cell, Follow-up, Event, Course, Attendance, Communications, Reports, Training Certificates, Storage/Quota) and show its 1-to-1 mapping to generic membership primitives.
-6. **Universal Application: Cross-Sector Survey**
-   - 6.1 Non-profits & NGOs (volunteers, donors, beneficiaries, case follow-up)
-   - 6.2 Education & training centres (students, cohorts, attendance, exams, certificates)
-   - 6.3 Community clubs & professional associations (chapters, committees, events, dues-free membership)
-   - 6.4 Other faith organisations (mosques, temples, synagogues — terminology remap only)
-   For each: mapping table (Church term → sector term), which modules apply as-is, which need only relabelling, which need extension.
-7. **Configurability & Adaptation Mechanisms** — DB-driven feature toggles, tenant branding, terminology mapping (WoFBI→Bible School, WSF→Home Cell), management toggles, external links, per-tenant comms providers.
-8. **Security, Privacy & Compliance** — RLS, tenant_id guards, GDPR/UK residency, consent capture, XSS hardening, role-based access, audit logs, storage quotas.
-9. **Evaluation** — qualitative rubric across sectors: fit score per module (as-is / relabel / extend / not applicable), summarised in one large table; discussion of gaps (financial tracking explicitly out of scope, dues/donations, sector-specific compliance like FERPA/HIPAA analogues).
-10. **Discussion & Limitations** — single-database tenancy trade-offs, terminology drift, need for sector-specific onboarding wizards.
-11. **Conclusion & Future Work** — pluggable terminology packs, sector templates on tenant creation, marketplace of modules.
-12. **References** — ~18–25 academic + industry citations (ACM/IEEE format), covering multi-tenant SaaS, RLS, membership CRM, LMS, GDPR, PWA.
+- `tenants.certificate_code TEXT` — short prefix (e.g. `WCIC`). Falls back to the tenant slug uppercased when empty.
+- `exam_titles.course_code TEXT` — short course code (e.g. `BCC`, `LCC`, `LDC`, `BFC`). Required for Bible School courses.
+- `training_completions.student_number TEXT` — the structured number (`WCIC/BCC/AUGUST/2025/113`). Kept separate from the existing `certificate_number` so historical certificates aren't disturbed.
 
-Two figures + three tables:
-- Fig. 1: System architecture (tenant router → RLS → modules).
-- Fig. 2: Cross-sector mapping diagram.
-- Table I: Vocabulary mapping (Church ↔ NGO ↔ Education ↔ Club ↔ Faith).
-- Table II: Module fit matrix (rows = 15 modules, columns = 4 sectors, cell = as-is / relabel / extend / N/A).
-- Table III: Compliance & data-residency features vs sector requirements.
+No RLS changes needed (fields inherit existing table policies).
 
-## Technical approach
+## 2. Student-number generation
 
-- Author paper content directly (no live app changes). All source citations are real, publicly verifiable references (multi-tenant SaaS papers, GDPR regulation, PostgreSQL RLS docs, Planning Center / Breeze / Salesforce NPSP public materials, Moodle papers, PWA W3C specs).
-- Generate Markdown master file first (source of truth).
-- Generate DOCX with the `docx` npm library per the skill/docx guidance: US Letter, Arial fallback with Times-like serif for body, proper `HeadingLevel` styles, real tables (DXA widths), image figures rendered via matplotlib to PNG then embedded, footnotes for citations, page numbers in footer.
-- Generate PDF via `pandoc` from the Markdown with a two-column LaTeX template (or via LibreOffice from the DOCX if pandoc/LaTeX is unavailable) for the conference look.
-- QA pass: convert DOCX and PDF to per-page images with LibreOffice + pdftoppm, `code--view` each page, fix layout/clipping, re-emit. Only then present the artefacts.
+New Postgres function `public.next_student_number(_tenant_id uuid, _course_id uuid, _completion_date date)` — SECURITY DEFINER, `search_path = public`:
 
-## What the paper does NOT do
+1. Read `certificate_code` from tenants (fallback: `upper(slug)`).
+2. Read `course_code` from `exam_titles` (fallback: first letters of course name).
+3. Compute `MONTH = to_char(_completion_date, 'FMMONTH')` (e.g. `AUGUST`) and `YEAR = to_char(_completion_date, 'YYYY')`.
+4. Count existing `training_completions` for the same tenant + course where `student_number LIKE '<prefix>/<course>/<MONTH>/<YEAR>/%'`, add 1, zero-pad to 3 digits.
+5. Return `WCIC/BCC/AUGUST/2025/113`.
 
-- No code changes to the app.
-- No modification of DB, RLS, edge functions, or landing page.
-- No claim of empirical user studies — evaluation is qualitative/architectural.
-- No sector-specific implementation work; only analysis and recommendations.
+Called from the `issue-certificate` edge function whenever the completion is for a Bible School course (i.e. `training_type` matches a `exam_titles.name` for that tenant). Non-Bible-School completions continue to use the current `CERT-...` scheme untouched.
 
-## Files written
+Preview mode returns `WCIC/BCC/AUGUST/2025/PREVIEW`.
 
-- `/mnt/documents/research-paper-universal-application.md`
-- `/mnt/documents/research-paper-universal-application.docx`
-- `/mnt/documents/research-paper-universal-application.pdf`
-- One architecture figure and one mapping figure under `/mnt/documents/figures/` (referenced by the paper).
+## 3. Certificate visual (matches upload)
 
-Presented back to you with three `<presentation-artifact>` tags for direct download.
+Update `issue-certificate/index.ts` SVG to a new "Bible School" layout used when the course belongs to `exam_titles`:
+
+- Landscape A4 (existing 842×595) on white.
+- Title in a red script face ("The Word of Faith Bible Institute, Cardiff") — configurable via `certificate_templates.church_name`. Load a script TTF (Great Vibes or Allura) via the existing Google Fonts loader.
+- Sub-line: `This is to certify that` (dark red).
+- Student name — large, bold, purple (`#5B2E91`), configurable colour.
+- `Student No.  WCIC/BCC/AUGUST/2025/113` — italic serif.
+- `has fulfilled the requirement of the institute for the`
+- Course name in large black script (Monotype-Corsiva-ish; reuse the script font).
+- `with` and grade classification (from `training_completions.grade` / classification, red).
+- Dean signature image + label (left), crest image (centre), date (right, italic serif).
+
+All colours, church name, signatory name/title, dean-signature image, and crest image remain editable in **Certificate Template Settings** (`certificate_templates`). Ship this as the seeded default when a tenant's Bible School template is missing.
+
+New optional columns on `certificate_templates` (added in the same migration):
+
+- `dean_signature_url TEXT`
+- `crest_image_url TEXT`
+- `script_font_url TEXT` (optional override; sensible Google Fonts default)
+
+## 4. UI changes
+
+- **Tenant Admin → Settings**: add "Certificate code" input on the tenant form (short text, uppercase-hint, max 8 chars).
+- **Exam Management → course editor** (`exam_titles`): add "Course code" input next to name (e.g. `BCC`). Show validation warning if missing.
+- **Certificate Template Settings** (`CertificateTemplateSettings.jsx`): add uploaders for Dean signature and Crest image (reuse existing storage helpers), plus a colour picker for the "Name colour" (purple by default).
+- **My Certificates** (`MyCertificates.jsx`) and **Certificate Approvals / Report** pages: show `student_number` instead of / alongside `certificate_number` for Bible School completions.
+- **Issue Certificate dialog** (`IssueCertificateDialog.jsx`): preview reflects the new layout; shows the student number that will be assigned.
+
+## 5. Backfill (optional, one-off)
+
+Provide a small admin action ("Backfill student numbers") on the Certificates Report page that, for each existing Bible School `training_completions` row without a `student_number`, generates one ordered by `completion_date` using the same function. Idempotent (skips rows that already have one).
+
+## 6. QA
+
+- Migration applies cleanly; grants unchanged (existing tables).
+- Issue a preview certificate for a Bible School course → verify layout matches upload and preview number shows `.../PREVIEW`.
+- Issue a real certificate → number equals `<TENANT>/<COURSE>/<MONTH>/<YEAR>/001`; second issue in same month = `/002`; new month resets to `/001`.
+- Issue a non-Bible-School training completion → falls back to old `CERT-...` design, unchanged.
+- Downloaded PNG in "My Certificates" opens correctly.
+
+## Out of scope
+
+- Changing existing `certificate_number` values.
+- Public verification page for student numbers (can be a follow-up).
+- Financial/fees on the certificate.

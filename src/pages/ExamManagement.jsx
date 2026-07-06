@@ -63,7 +63,7 @@ export default function ExamManagement() {
   // Course CRUD state
   const [titleDialogOpen, setTitleDialogOpen] = useState(false);
   const [editingTitle, setEditingTitle] = useState(null);
-  const [titleForm, setTitleForm] = useState({ name: "", description: "", pass_mark_percentage: 50, registration_open: false, exams_open: false, grade_classifications: DEFAULT_GRADE_CLASSIFICATIONS, send_result_email: true, send_certificate_email: true });
+  const [titleForm, setTitleForm] = useState({ name: "", course_code: "", description: "", pass_mark_percentage: 50, registration_open: false, exams_open: false, grade_classifications: DEFAULT_GRADE_CLASSIFICATIONS, send_result_email: true, send_certificate_email: true });
   const [deleteTitleTarget, setDeleteTitleTarget] = useState(null);
   const [showResults, setShowResults] = useState(false);
   const [showRegistrations, setShowRegistrations] = useState(false);
@@ -104,7 +104,7 @@ export default function ExamManagement() {
       toast({ title: editingTitle ? "Course updated" : "Course created" });
       setTitleDialogOpen(false);
       setEditingTitle(null);
-      setTitleForm({ name: "", description: "", pass_mark_percentage: 50, registration_open: false, exams_open: false, grade_classifications: DEFAULT_GRADE_CLASSIFICATIONS, send_result_email: true, send_certificate_email: true });
+      setTitleForm({ name: "", course_code: "", description: "", pass_mark_percentage: 50, registration_open: false, exams_open: false, grade_classifications: DEFAULT_GRADE_CLASSIFICATIONS, send_result_email: true, send_certificate_email: true });
     },
     onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
@@ -298,7 +298,7 @@ export default function ExamManagement() {
              {canCreateCourse && (
                <Button size="sm" variant="outline" className="gap-1.5" onClick={() => {
                 setEditingTitle(null);
-                setTitleForm({ name: "", description: "", pass_mark_percentage: 50, registration_open: false, exams_open: false, grade_classifications: DEFAULT_GRADE_CLASSIFICATIONS, send_result_email: true, send_certificate_email: true });
+                setTitleForm({ name: "", course_code: "", description: "", pass_mark_percentage: 50, registration_open: false, exams_open: false, grade_classifications: DEFAULT_GRADE_CLASSIFICATIONS, send_result_email: true, send_certificate_email: true });
                 setTitleDialogOpen(true);
               }}>
                 <Plus className="h-3.5 w-3.5" /> Add Course
@@ -329,7 +329,7 @@ export default function ExamManagement() {
                   <button className="opacity-0 group-hover:opacity-100 transition-opacity ml-1" onClick={(e) => {
                     e.stopPropagation();
                     setEditingTitle(t);
-                    setTitleForm({ name: t.name, description: t.description || "", pass_mark_percentage: t.pass_mark_percentage || 50, registration_open: !!t.registration_open, exams_open: !!t.exams_open, grade_classifications: t.grade_classifications || DEFAULT_GRADE_CLASSIFICATIONS, send_result_email: t.send_result_email !== false, send_certificate_email: t.send_certificate_email !== false });
+                    setTitleForm({ name: t.name, course_code: t.course_code || "", description: t.description || "", pass_mark_percentage: t.pass_mark_percentage || 50, registration_open: !!t.registration_open, exams_open: !!t.exams_open, grade_classifications: t.grade_classifications || DEFAULT_GRADE_CLASSIFICATIONS, send_result_email: t.send_result_email !== false, send_certificate_email: t.send_certificate_email !== false });
                     setTitleDialogOpen(true);
                   }}>
                     <Edit className="h-3 w-3" />
@@ -492,6 +492,7 @@ export default function ExamManagement() {
             if (!titleForm.name.trim()) { toast({ title: "Course name is required", variant: "destructive" }); return; }
             saveTitleMutation.mutate({
               name: titleForm.name.trim(),
+              course_code: (titleForm.course_code || "").trim().toUpperCase() || null,
               description: titleForm.description.trim() || null,
               pass_mark_percentage: Number(titleForm.pass_mark_percentage) || 50,
               is_active: true,
@@ -502,7 +503,20 @@ export default function ExamManagement() {
               send_certificate_email: titleForm.send_certificate_email,
             });
           }} className="space-y-4">
-            <div><Label>Course Name *</Label><Input value={titleForm.name} onChange={e => setTitleForm(f => ({ ...f, name: e.target.value }))} placeholder="e.g. BCC, LCC" /></div>
+            <div><Label>Course Name *</Label><Input value={titleForm.name} onChange={e => setTitleForm(f => ({ ...f, name: e.target.value }))} placeholder="e.g. Basic Certificate Course" /></div>
+            <div>
+              <Label>Course Code</Label>
+              <Input
+                value={titleForm.course_code}
+                onChange={e => setTitleForm(f => ({ ...f, course_code: e.target.value.toUpperCase() }))}
+                placeholder="e.g. BCC, LCC, LDC"
+                maxLength={8}
+                className="uppercase"
+              />
+              <p className="text-[11px] text-muted-foreground mt-1">
+                Short code used in student numbers, e.g. <code>WCIC/BCC/AUGUST/2025/113</code>.
+              </p>
+            </div>
             <div><Label>Description</Label><Input value={titleForm.description} onChange={e => setTitleForm(f => ({ ...f, description: e.target.value }))} placeholder="Optional" /></div>
             <div><Label>Aggregate Pass Mark (%)</Label><Input type="number" min="0" max="100" value={titleForm.pass_mark_percentage} onChange={e => setTitleForm(f => ({ ...f, pass_mark_percentage: e.target.value }))} className="w-28" /></div>
             <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50 border border-border">

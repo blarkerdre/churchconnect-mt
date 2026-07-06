@@ -32,6 +32,10 @@ async function loadFonts(): Promise<Uint8Array[]> {
       "https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuI6fMZg.ttf",
       "https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuGKYMZg.ttf",
       "https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuFuYMZg.ttf",
+      // Great Vibes — script face for Bible School certificate title
+      "https://fonts.gstatic.com/s/greatvibes/v19/RWmMoKWR9v4ksMfaWd_JN-XCg6UKDXlq.ttf",
+      // Pinyon Script — cursive course-name face
+      "https://fonts.gstatic.com/s/pinyonscript/v22/6xKpdSJbL9-e9LuoeQiDRQR8aOLQO4bhiDY.ttf",
     ];
     _fontsPromise = Promise.all(
       urls.map(async (u) => {
@@ -118,7 +122,7 @@ Deno.serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     const body = await req.json();
-    const { member_id, training_type, completion_date, notes, tenant_id, reissue, completion_id, preview } = body;
+    const { member_id, training_type, completion_date, notes, tenant_id, reissue, completion_id, preview, grade_classification: gcInput } = body;
     const isPreview = preview === true;
 
     if (!member_id || !training_type || !tenant_id) {
@@ -231,14 +235,44 @@ Deno.serve(async (req) => {
       template?.custom_message ||
       "This is to certify that the above named has successfully completed";
     const backgroundImageUrl = template?.background_image_url || null;
+    const deanSignatureUrl = template?.dean_signature_url || null;
+    const crestImageUrl = template?.crest_image_url || null;
+    const nameColor = template?.name_color || "#5B2E91"; // Bible School purple by default
     const textPositions = template?.text_positions || { name_y: 280, training_y: 340, date_y: 380, signatory_y: 500 };
 
+    // Detect Bible School course (matches an exam_titles row for this tenant)
+    const { data: courseRow } = await supabase
+      .from("exam_titles")
+      .select("id, name, course_code")
+      .eq("tenant_id", tenant_id)
+      .ilike("name", training_type.trim())
+      .maybeSingle();
+    const isBibleSchool = !!courseRow;
+
+    const certDate = completion_date || existing?.completion_date || new Date().toISOString().split("T")[0];
+
     let certificateNumber: string;
+    let studentNumber: string | null = existing?.student_number ?? null;
     if (existing?.certificate_number) {
       certificateNumber = existing.certificate_number;
     } else if (isPreview) {
-      // Don't burn a sequence number on previews — clearly mark as preview.
       certificateNumber = "PREVIEW-XXXX-XXXX-XXXX";
+    } else if (isBibleSchool && courseRow) {
+      // Allocate a Bible School student number: WCIC/BCC/AUGUST/2025/113
+      const { data: sn, error: snErr } = await supabase.rpc("next_student_number", {
+        _tenant_id: tenant_id,
+        _course_id: courseRow.id,
+        _completion_date: certDate,
+      });
+      if (snErr) {
+        console.error("next_student_number error:", snErr);
+        return new Response(JSON.stringify({ error: "Failed to allocate student number" }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      studentNumber = sn as string;
+      certificateNumber = studentNumber; // keep unique cert number aligned with student number
     } else {
       const year = new Date().getFullYear();
       const prefix = training_type
@@ -253,7 +287,16 @@ Deno.serve(async (req) => {
       certificateNumber = `CERT-${prefix}-${year}-${seq}`;
     }
 
-    const certDate = completion_date || existing?.completion_date || new Date().toISOString().split("T")[0];
+    if (isBibleSchool && isPreview) {
+      // Preview: use a stable placeholder student number.
+      const monthName = new Date(certDate)
+        .toLocaleDateString("en-GB", { month: "long" })
+        .toUpperCase();
+      const year = new Date(certDate).getFullYear();
+      const tCode = (courseRow?.course_code || "CRS").toUpperCase();
+      studentNumber = `PREVIEW/${tCode}/${monthName}/${year}/PREVIEW`;
+    }
+
     const formattedDate = new Date(certDate).toLocaleDateString("en-GB", {
       day: "numeric",
       month: "long",
@@ -261,10 +304,74 @@ Deno.serve(async (req) => {
     });
     const memberName = `${member.first_name} ${member.last_name}`;
 
+    // Helper: fetch a storage path and inline it as a base64 data URI
+    const inlineStorageImage = async (path: string): Promise<string> => {
+      const candidates = [path, path.startsWith(`${tenant_id}/`) ? null : `${tenant_id}/${path}`]
+        .filter(Boolean) as string[];
+      for (const p of candidates) {
+        const { data: s } = await supabase.storage.from("church-documents").createSignedUrl(p, 3600);
+        if (!s?.signedUrl) continue;
+        try {
+          const r = await fetch(s.signedUrl);
+          if (!r.ok) continue;
+          const buf = await r.arrayBuffer();
+          const ct = r.headers.get("content-type") || "image/png";
+          return `data:${ct};base64,${encodeBase64(new Uint8Array(buf))}`;
+        } catch (_) { /* try next */ }
+      }
+      return "";
+    };
+
+    const gradeClassification =
+      (typeof gcInput === "string" && gcInput.trim()) ||
+      existing?.grade_classification ||
+      "";
+
     // Build SVG certificate
     let svgCert: string;
 
-    if (backgroundImageUrl) {
+    if (isBibleSchool && !backgroundImageUrl) {
+      // Bible School layout matching the Word of Faith Bible Institute certificate
+      const deanDataUri = deanSignatureUrl ? await inlineStorageImage(deanSignatureUrl) : "";
+      const crestDataUri = crestImageUrl ? await inlineStorageImage(crestImageUrl) : "";
+      const nameHex = /^#[0-9a-fA-F]{6}$/.test(nameColor) ? nameColor : "#5B2E91";
+      const titleColor = accentColor && /^#[0-9a-fA-F]{6}$/.test(accentColor) ? accentColor : "#B22222";
+      const bodyDark = "#333333";
+      const gradeColor = "#C0392B";
+      const idLine = studentNumber || certificateNumber;
+
+      svgCert = `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="842" height="595" viewBox="0 0 842 595">
+  <rect width="842" height="595" fill="#ffffff"/>
+  <!-- Title -->
+  <text x="421" y="90" text-anchor="middle" font-family="Great Vibes, cursive" font-weight="400" font-size="56" fill="${titleColor}">${escapeXml(churchName)}</text>
+  <!-- Certify line -->
+  <text x="421" y="165" text-anchor="middle" font-family="Inter, sans-serif" font-weight="600" font-size="20" fill="${titleColor}">This is to certify that</text>
+  <!-- Student name -->
+  <text x="421" y="215" text-anchor="middle" font-family="Playfair Display, serif" font-weight="700" font-size="34" fill="${nameHex}">${escapeXml(memberName)}</text>
+  <!-- Student number -->
+  <text x="421" y="248" text-anchor="middle" font-family="Playfair Display, serif" font-weight="400" font-size="15" fill="${bodyDark}">Student No. <tspan font-style="italic">${escapeXml(idLine)}</tspan></text>
+  <!-- Fulfilment line -->
+  <text x="421" y="295" text-anchor="middle" font-family="Inter, sans-serif" font-weight="400" font-size="17" fill="${bodyDark}">has fulfilled the requirement of the institute for the</text>
+  <!-- Course name in script -->
+  <text x="421" y="360" text-anchor="middle" font-family="Pinyon Script, cursive" font-weight="400" font-size="48" fill="#111111">${escapeXml(training_type)}</text>
+  ${gradeClassification ? `
+  <!-- Grade line -->
+  <text x="330" y="420" text-anchor="middle" font-family="Inter, sans-serif" font-weight="400" font-size="18" fill="${bodyDark}">with</text>
+  <text x="500" y="420" text-anchor="middle" font-family="Inter, sans-serif" font-weight="700" font-size="22" fill="${gradeColor}">${escapeXml(gradeClassification)}</text>
+  ` : ""}
+  <!-- Dean signature (left) -->
+  ${deanDataUri ? `<image href="${deanDataUri}" x="115" y="480" width="150" height="45" preserveAspectRatio="xMidYMax meet"/>` : ""}
+  <line x1="100" y1="530" x2="290" y2="530" stroke="#333" stroke-width="1"/>
+  <text x="195" y="548" text-anchor="middle" font-family="Inter, sans-serif" font-style="italic" font-weight="700" font-size="12" fill="${bodyDark}">${escapeXml(signatoryTitle || "Dean")}</text>
+  <!-- Crest (centre) -->
+  ${crestDataUri ? `<image href="${crestDataUri}" x="376" y="470" width="90" height="90" preserveAspectRatio="xMidYMid meet"/>` : ""}
+  <!-- Date (right) -->
+  <text x="647" y="520" text-anchor="middle" font-family="Playfair Display, serif" font-style="italic" font-weight="700" font-size="14" fill="${bodyDark}">${escapeXml(formattedDate)}</text>
+  <line x1="552" y1="530" x2="742" y2="530" stroke="#333" stroke-width="1"/>
+  <text x="647" y="548" text-anchor="middle" font-family="Inter, sans-serif" font-style="italic" font-weight="700" font-size="12" fill="${bodyDark}">Date</text>
+</svg>`;
+    } else if (backgroundImageUrl) {
       // Generate a signed URL for the background image to embed in SVG.
       // Backward compatibility: older rows may have been saved without the tenant_id prefix.
       const candidatePaths = [
@@ -380,6 +487,7 @@ Deno.serve(async (req) => {
           image_base64: base64,
           content_type: "image/png",
           certificate_number: certificateNumber,
+          student_number: studentNumber,
           training_type,
           completion_date: certDate,
           member_name: memberName,
@@ -416,6 +524,8 @@ Deno.serve(async (req) => {
           certificate_url: filePath,
           issued_by: userId,
           ...(notes !== undefined ? { notes: notes || null } : {}),
+          ...(studentNumber ? { student_number: studentNumber } : {}),
+          ...(gradeClassification ? { grade_classification: gradeClassification } : {}),
         })
         .eq("id", existing.id)
         .eq("tenant_id", tenant_id)
@@ -435,6 +545,8 @@ Deno.serve(async (req) => {
           issued_by: userId,
           notes: notes || null,
           tenant_id,
+          ...(studentNumber ? { student_number: studentNumber } : {}),
+          ...(gradeClassification ? { grade_classification: gradeClassification } : {}),
         })
         .select()
         .single();
@@ -571,6 +683,7 @@ Deno.serve(async (req) => {
         success: true,
         completion,
         certificate_number: certificateNumber,
+        student_number: studentNumber,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );

@@ -590,9 +590,12 @@ export type Database = {
           background_image_url: string | null
           church_name: string
           created_at: string
+          crest_image_url: string | null
           custom_message: string | null
+          dean_signature_url: string | null
           id: string
           logo_url: string | null
+          name_color: string | null
           signatory_name: string
           signatory_title: string
           tenant_id: string
@@ -607,9 +610,12 @@ export type Database = {
           background_image_url?: string | null
           church_name?: string
           created_at?: string
+          crest_image_url?: string | null
           custom_message?: string | null
+          dean_signature_url?: string | null
           id?: string
           logo_url?: string | null
+          name_color?: string | null
           signatory_name?: string
           signatory_title?: string
           tenant_id: string
@@ -624,9 +630,12 @@ export type Database = {
           background_image_url?: string | null
           church_name?: string
           created_at?: string
+          crest_image_url?: string | null
           custom_message?: string | null
+          dean_signature_url?: string | null
           id?: string
           logo_url?: string | null
+          name_color?: string | null
           signatory_name?: string
           signatory_title?: string
           tenant_id?: string
@@ -2087,6 +2096,7 @@ export type Database = {
       }
       exam_titles: {
         Row: {
+          course_code: string | null
           created_at: string
           created_by: string | null
           description: string | null
@@ -2102,6 +2112,7 @@ export type Database = {
           tenant_id: string | null
         }
         Insert: {
+          course_code?: string | null
           created_at?: string
           created_by?: string | null
           description?: string | null
@@ -2117,6 +2128,7 @@ export type Database = {
           tenant_id?: string | null
         }
         Update: {
+          course_code?: string | null
           created_at?: string
           created_by?: string | null
           description?: string | null
@@ -4439,6 +4451,7 @@ export type Database = {
         Row: {
           archived_at: string | null
           archived_by: string | null
+          certificate_code: string | null
           created_at: string
           created_by: string | null
           id: string
@@ -4461,6 +4474,7 @@ export type Database = {
         Insert: {
           archived_at?: string | null
           archived_by?: string | null
+          certificate_code?: string | null
           created_at?: string
           created_by?: string | null
           id?: string
@@ -4483,6 +4497,7 @@ export type Database = {
         Update: {
           archived_at?: string | null
           archived_by?: string | null
+          certificate_code?: string | null
           created_at?: string
           created_by?: string | null
           id?: string
@@ -4647,10 +4662,12 @@ export type Database = {
           certificate_url: string | null
           completion_date: string
           created_at: string
+          grade_classification: string | null
           id: string
           issued_by: string
           member_id: string
           notes: string | null
+          student_number: string | null
           tenant_id: string | null
           training_type: string
         }
@@ -4659,10 +4676,12 @@ export type Database = {
           certificate_url?: string | null
           completion_date?: string
           created_at?: string
+          grade_classification?: string | null
           id?: string
           issued_by: string
           member_id: string
           notes?: string | null
+          student_number?: string | null
           tenant_id?: string | null
           training_type: string
         }
@@ -4671,10 +4690,12 @@ export type Database = {
           certificate_url?: string | null
           completion_date?: string
           created_at?: string
+          grade_classification?: string | null
           id?: string
           issued_by?: string
           member_id?: string
           notes?: string | null
+          student_number?: string | null
           tenant_id?: string | null
           training_type?: string
         }
@@ -5817,6 +5838,14 @@ export type Database = {
       }
       next_invoice_number: {
         Args: { _doc_type: string; _tenant_id: string }
+        Returns: string
+      }
+      next_student_number: {
+        Args: {
+          _completion_date: string
+          _course_id: string
+          _tenant_id: string
+        }
         Returns: string
       }
       notify_all_users:
