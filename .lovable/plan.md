@@ -1,44 +1,31 @@
-## Goal
+## Home Cell Creation Report
 
-"Hidden" means hidden from **members only**. Admins & Tenant Owners keep full visibility of every unit and can still assign members to hidden ones — the hidden unit just doesn't appear in any member-facing dropdown or filter.
+Add a report that lists Home Cell centres by their `created_at` date, filterable by a date range.
 
-## Current behaviour
+### Where it lives
+New section in `src/pages/WSFManagement.jsx` (Home Cell page), visible to admin, WSF leader, and reports officer (leaders see only their own centres — same visibility rule already used on that page).
 
-Every consumer uses `useChurchUnits()` which defaults to `activeOnly = true`. That correctly hides units from members, but it *also* hides them from admins on the same screens — so admins can't add a member to a hidden unit, which is wrong.
+Title: "Home Cells Created" — placed below the existing Attendance section.
 
-## Changes
+### UI
+- Two date inputs: **From** and **To** (defaults: From = first day of current year, To = today).
+- Quick presets: This month, Last 30 days, This year, All time.
+- Summary line: "N Home Cells created between {from} and {to}".
+- Table columns: Name, City, Postcode, Leader/Host, Meeting Day, Status (Active/Hidden), Created (formatted date).
+- Sort by `created_at` desc.
+- "Print Report" button using existing `PrintReportButton` (buildRows returns the filtered rows).
+- Empty state when no rows match.
 
-### 1. Role-aware unit lists on admin surfaces
+### Data
+- Reuse the existing `wsf-centres` query already loaded on the page (already tenant-scoped via `scopeQuery`). No new query, no schema change — `wsf_centres.created_at` already exists.
+- Filter client-side by `created_at` against the selected range (inclusive; To is treated as end-of-day).
+- For non-admin WSF leaders, restrict to `ledCentres` (matches existing behaviour on the page).
 
-Where an **admin or tenant owner** operates a unit picker/filter, load the full list and visually mark hidden units. Everywhere else keeps the current filtered behaviour.
+### Files touched
+- `src/pages/WSFManagement.jsx` — add the new section + date state + filtered list + print button.
+- New small component `src/components/wsf/WSFCreationReport.jsx` to keep `WSFManagement.jsx` tidy (accepts `centres` prop and renders filters + table + print).
 
-Files to update (switch to `useChurchUnits(false)` when `isTenantAdmin || isTenantOwner`, otherwise keep default):
-- `src/components/members/MemberFormDialog.jsx` — admin editing a member: show hidden units in the picker with a small muted **"Hidden"** badge next to the name.
-- `src/components/users/BulkUnitAssignDialog.jsx` — badge hidden units in the unit dropdown.
-- `src/components/users/UnitLeaderAssignments.jsx` — same badge treatment.
-- `src/components/comms/AudienceFilter.jsx` — admin audience filter includes hidden units (badge).
-- `src/components/events/EventFormDialog.jsx` — admin event audience: include + badge.
-- `src/components/attendance/SessionFormDialog.jsx` — admin attendance session unit filter: include + badge.
-- `src/pages/UnitTasks.jsx` — admin unit selector: include + badge.
-- `src/components/followups/SignPostDialog.jsx` — when the current user is admin, include hidden units (leader-only view stays filtered).
-
-Member-facing usage stays unchanged:
-- Self-service `MyProfile.jsx`, member-facing branches of `MemberFormDialog` (non-admin), `Communications.jsx` recipient side, `Events.jsx` browse view, `Attendance.jsx` self-check-in, `ChurchUnit.jsx` — all keep the default `activeOnly = true`.
-
-### 2. Small "Hidden" badge component
-
-Reuse the existing Badge with `variant="outline"` and muted styling, e.g. `<Badge variant="outline" className="ml-2 text-[10px] text-muted-foreground">Hidden</Badge>` inside each `SelectItem` / list row for units whose `is_active === false`.
-
-### 3. No backend or approval changes
-
-Approvals (`approve_join_request`) and sign-post "Add to my unit" already write to `members.church_unit` without a visibility check — this stays as-is, since admins are allowed to add members to hidden units. No schema changes.
-
-## Out of scope
-- No changes to how members see units (still filtered).
-- No changes to `wsf_centres` (Home Cell) visibility.
-- No auto-restore of a unit when an admin adds a member to it.
-
-## Verification
-- As a **member**: hidden units don't appear in profile edit, event forms, self check-in, audience filters, sign-post targets, or unit-tasks views.
-- As an **admin / tenant owner**: hidden units appear in every unit picker/filter across Members, Users, Communications, Events, Attendance, Unit Tasks, Sign-post — each labelled "Hidden". Assigning a member to a hidden unit succeeds and persists.
-- Toggling a unit back to visible removes the "Hidden" badge for admins and makes it reappear for members.
+### Out of scope
+- No changes to `wsf_centres` schema.
+- No changes to Reports Hub tile wording (the existing "Home Cell" tile already links to `/wsf`).
+- No export to CSV (print only) unless you want it added.
