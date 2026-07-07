@@ -1,33 +1,35 @@
-## Problem
+## Goal
 
-Four members (Chika Ugwu, Abisoye Famojuro, Justin Miller, Katie Miller) were approved for the "Believers Foundation Class (BFC)" certificate by the Training Rep, but their certificates never got generated.
+Give tenant admins/owners a simple **Hide / Unhide** toggle for each Church Unit in **Settings → Church Units**. Hidden units disappear from every member-facing surface (member forms, unit filters, audience filters, event/attendance pickers, sign-post dialog, unit tasks, communications, etc.) while admins keep full visibility and management in Settings.
 
-**Root cause:** In `src/pages/CertificateApprovals.jsx` the approve handler:
-1. Flips `training_attendees.signpost_status` to `"approved"` in the database.
-2. Then invokes the `issue-certificate` edge function.
-3. Only if step 2 succeeds does it flip the status to `"issued"` and save the certificate number.
+## How it works
 
-If step 2 fails (transient wasm/font fetch error, storage timeout, network glitch, etc.) the row is left permanently in `"approved"` with no `certificate_number`. Nothing in the UI surfaces or retries these stuck records — they no longer appear on the Pending tab, and the Approved tab today has no action button.
+The `church_units` table already has an `is_active` boolean. Almost every consumer already uses the `useChurchUnits()` hook, which filters `is_active = true` by default. This change repurposes that flag as the **"Visible to members"** switch and closes the two remaining direct-query gaps.
 
-Verified in DB: all 4 rows have `signpost_status='approved'`, `certificate_number=NULL`, `decision_by` set — and there is **no matching row in `training_completions`**, confirming the edge function never completed.
+## Changes
 
-## Fix
+### 1. Settings → Church Units row (`src/pages/Settings.jsx`, `ChurchUnitsSection`)
+- Add an inline **Eye / EyeOff** icon-button on each unit row that toggles `is_active` with one click (optimistic mutation, toast on success).
+- Change the badge text from "Active / Inactive" to **"Visible / Hidden"**.
+- In the edit dialog, rename the Active switch label to **"Visible to members"** with helper text: *"Hidden units are removed from member forms, filters and pickers. Existing member assignments are preserved."*
+- No schema change.
 
-Two small, focused changes in `src/pages/CertificateApprovals.jsx` (frontend only — the edge function itself already works; other members in the same tenant were issued successfully):
+### 2. Close direct-query gaps (member-facing paths)
+- `src/pages/UnitTasks.jsx` line 49 — add `.eq("is_active", true)` to the `church_units` fetch used to populate the unit picker.
+- `src/components/followups/SignPostDialog.jsx` line 71 — add `.eq("is_active", true)`.
 
-1. **Add a "Retry Issue" action** on the Approved tab for any row where `signpost_status='approved'` AND `certificate_number` is empty. Clicking it re-invokes `issue-certificate` with the same payload the original approve used, and on success updates the row to `signpost_status='issued'` + saves the cert number (identical to the tail of `handleApprove`). On failure, show the actual error message in the toast so the admin can see why (fonts, storage, RLS, etc.).
+### 3. Leave admin/settings paths unchanged
+- The Settings section already queries **all** units (active + hidden) so admins can unhide them.
+- `useChurchUnits(false)` remains available if any future admin-only screen needs the full list.
 
-2. **Add a small "Needs re-issue" badge / red dot** on the Approved tab count and next to rows missing a certificate number so admins immediately see there is unfinished work.
+## Out of scope
 
-Optionally (nice-to-have, still frontend-only): reorder `handleApprove` to invoke `issue-certificate` FIRST, and only update `training_attendees` after the certificate is generated. That way a future edge-function failure leaves the row on the Pending tab and the admin can just click Approve again. This is a safer flow going forward.
+- No changes to member records — hiding a unit does **not** clear existing `members.church_unit` assignments; those still display on member profiles/tables as text.
+- No new permission model — the Settings page is already gated to admins/tenant owners.
+- No schema migration.
 
-## What will not change
+## Verification
 
-- No edge function changes (`issue-certificate` is working — 3 other rows in the same tenant were successfully issued).
-- No schema changes.
-- No changes to grading, exam attempts, or `training_completions` logic.
-- Existing 4 stuck rows will be resolved by the admin clicking the new **Retry Issue** button once.
-
-## Files touched
-
-- `src/pages/CertificateApprovals.jsx` — add `handleRetryIssue`, render Retry button + warning badge on Approved tab, optionally reorder `handleApprove`.
+- As an admin, open Settings → Church Units, click the eye icon on a unit → badge flips to *Hidden*.
+- As a non-admin member, open Members form / Events form / Communications audience filter / Attendance session dialog / Sign-post dialog / Unit Tasks → hidden unit no longer appears in dropdowns.
+- Click the eye icon again → unit reappears everywhere.
