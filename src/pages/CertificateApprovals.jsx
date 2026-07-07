@@ -88,6 +88,11 @@ export default function CertificateApprovals() {
     return c;
   }, [rows]);
 
+  const stuckCount = useMemo(
+    () => rows.filter(r => r.signpost_status === "approved" && !r.certificate_number).length,
+    [rows]
+  );
+
   const declineMutation = useMutation({
     mutationFn: async ({ id, notes }) => {
       const { error } = await supabase.from("training_attendees").update({
