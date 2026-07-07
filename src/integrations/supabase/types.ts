@@ -588,6 +588,7 @@ export type Database = {
           accent_color: string
           background_color: string
           background_image_url: string | null
+          centre_name: string | null
           church_name: string
           created_at: string
           crest_image_url: string | null
@@ -603,11 +604,13 @@ export type Database = {
           text_positions: Json | null
           training_type: string
           updated_at: string
+          wofbi_logo_url: string | null
         }
         Insert: {
           accent_color?: string
           background_color?: string
           background_image_url?: string | null
+          centre_name?: string | null
           church_name?: string
           created_at?: string
           crest_image_url?: string | null
@@ -623,11 +626,13 @@ export type Database = {
           text_positions?: Json | null
           training_type: string
           updated_at?: string
+          wofbi_logo_url?: string | null
         }
         Update: {
           accent_color?: string
           background_color?: string
           background_image_url?: string | null
+          centre_name?: string | null
           church_name?: string
           created_at?: string
           crest_image_url?: string | null
@@ -643,6 +648,7 @@ export type Database = {
           text_positions?: Json | null
           training_type?: string
           updated_at?: string
+          wofbi_logo_url?: string | null
         }
         Relationships: [
           {
@@ -2119,6 +2125,7 @@ export type Database = {
           grade_classifications: Json | null
           id: string
           is_active: boolean
+          letter_grade_bands: Json | null
           name: string
           pass_mark_percentage: number
           registration_open: boolean
@@ -2136,6 +2143,7 @@ export type Database = {
           grade_classifications?: Json | null
           id?: string
           is_active?: boolean
+          letter_grade_bands?: Json | null
           name: string
           pass_mark_percentage?: number
           registration_open?: boolean
@@ -2153,6 +2161,7 @@ export type Database = {
           grade_classifications?: Json | null
           id?: string
           is_active?: boolean
+          letter_grade_bands?: Json | null
           name?: string
           pass_mark_percentage?: number
           registration_open?: boolean
