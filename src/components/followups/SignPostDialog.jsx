@@ -63,17 +63,16 @@ export default function SignPostDialog({ open, onOpenChange, followup, member, o
 
   // Church units — explicit tenant_id guard for safety per multi-tenancy memory
   const { data: units = [], isLoading: unitsLoading, error: unitsError } = useQuery({
-    queryKey: ["church-units-active", tenantId],
+    queryKey: ["church-units-signpost", tenantId, isAdmin],
     enabled: open && !!tenantId,
     queryFn: async () => {
-      const { data, error } = await scopeQuery(
-        supabase
-          .from("church_units")
-          .select("id, name")
-          .eq("is_active", true)
-          .eq("tenant_id", tenantId)
-          .order("name")
-      );
+      let q = supabase
+        .from("church_units")
+        .select("id, name, is_active")
+        .eq("tenant_id", tenantId)
+        .order("name");
+      if (!isAdmin) q = q.eq("is_active", true);
+      const { data, error } = await scopeQuery(q);
       if (error) throw error;
       if (!data || data.length === 0) {
         console.warn("[SignPost] church_units returned 0 rows for tenant", tenantId);
