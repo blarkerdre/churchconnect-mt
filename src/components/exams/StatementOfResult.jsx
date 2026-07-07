@@ -248,6 +248,7 @@ export default function StatementOfResult({ open, onOpenChange, member, course, 
         .signature .who { font-size:12px; }
         @media print { body { margin:0; } }
       </style></head><body>
+      ${watermarkHtml}
       <div class="header">
         ${logoHtml}
         <h1>${escHtml((churchName || "").toUpperCase())}</h1>
