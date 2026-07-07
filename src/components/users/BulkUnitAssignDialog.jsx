@@ -104,8 +104,15 @@ export default function BulkUnitAssignDialog({ open, onOpenChange }) {
             <Select value={selectedUnit} onValueChange={(v) => { setSelectedUnit(v); setSelectedUsers([]); }}>
               <SelectTrigger><SelectValue placeholder="Choose a unit" /></SelectTrigger>
               <SelectContent>
-                {allUnitNames.map(u => (
-                  <SelectItem key={u} value={u}>{u}</SelectItem>
+                {churchUnits.map(u => (
+                  <SelectItem key={u.name} value={u.name}>
+                    <span className="inline-flex items-center gap-1.5">
+                      {u.name}
+                      {u.is_active === false && (
+                        <Badge variant="outline" className="text-[9px] px-1 py-0 text-muted-foreground">Hidden</Badge>
+                      )}
+                    </span>
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
