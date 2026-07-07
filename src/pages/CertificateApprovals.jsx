@@ -14,7 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/components/ui/use-toast";
 import { format, parseISO } from "date-fns";
-import { Loader2, Check, X, Award, Download } from "lucide-react";
+import { Loader2, Check, X, Award, Download, RefreshCw, AlertTriangle } from "lucide-react";
 import PrintReportButton from "@/components/PrintReportButton";
 
 const STATUS_VARIANT = {
@@ -88,6 +88,11 @@ export default function CertificateApprovals() {
     return c;
   }, [rows]);
 
+  const stuckCount = useMemo(
+    () => rows.filter(r => r.signpost_status === "approved" && !r.certificate_number).length,
+    [rows]
+  );
+
   const declineMutation = useMutation({
     mutationFn: async ({ id, notes }) => {
       const { error } = await supabase.from("training_attendees").update({
@@ -109,15 +114,39 @@ export default function CertificateApprovals() {
   const handleApprove = async (row) => {
     setBusyId(row.id);
     try {
-      // Mark approved first
-      const { error: aErr } = await supabase.from("training_attendees").update({
-        signpost_status: "approved",
+      // Invoke issue-certificate FIRST so a transient failure doesn't leave the
+      // row stuck in "approved" with no certificate.
+      const { data, error } = await supabase.functions.invoke("issue-certificate", {
+        body: {
+          member_id: row.member_id,
+          training_type: row.training_type,
+          tenant_id: tenantId,
+          completion_date: row.report?.session_date,
+        },
+      });
+      if (error) throw error;
+      const certNumber = data?.certificate_number || data?.certificateNumber || null;
+
+      const { error: uErr } = await supabase.from("training_attendees").update({
+        signpost_status: "issued",
         decision_by: user?.id,
         decision_at: new Date().toISOString(),
+        certificate_number: certNumber,
       }).eq("id", row.id).eq("tenant_id", tenantId);
-      if (aErr) throw aErr;
+      if (uErr) throw uErr;
 
-      // Call issue-certificate edge function
+      qc.invalidateQueries({ queryKey: ["certificate-approvals"] });
+      toast({ title: "Certificate issued", description: certNumber || "" });
+    } catch (e) {
+      toast({ title: "Issue failed", description: e.message, variant: "destructive" });
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const handleRetryIssue = async (row) => {
+    setBusyId(row.id);
+    try {
       const { data, error } = await supabase.functions.invoke("issue-certificate", {
         body: {
           member_id: row.member_id,
@@ -138,7 +167,7 @@ export default function CertificateApprovals() {
       qc.invalidateQueries({ queryKey: ["certificate-approvals"] });
       toast({ title: "Certificate issued", description: certNumber || "" });
     } catch (e) {
-      toast({ title: "Issue failed", description: e.message, variant: "destructive" });
+      toast({ title: "Retry failed", description: e.message, variant: "destructive" });
     } finally {
       setBusyId(null);
     }
@@ -179,7 +208,12 @@ export default function CertificateApprovals() {
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList>
           <TabsTrigger value="pending">Pending ({counts.pending || 0})</TabsTrigger>
-          <TabsTrigger value="approved">Approved ({counts.approved || 0})</TabsTrigger>
+          <TabsTrigger value="approved" className="gap-1.5">
+            Approved ({counts.approved || 0})
+            {stuckCount > 0 && (
+              <Badge variant="destructive" className="h-4 px-1.5 text-[10px]">{stuckCount}</Badge>
+            )}
+          </TabsTrigger>
           <TabsTrigger value="declined">Declined ({counts.declined || 0})</TabsTrigger>
           <TabsTrigger value="issued">Issued ({counts.issued || 0})</TabsTrigger>
           <TabsTrigger value="all">All ({counts.all || 0})</TabsTrigger>
@@ -247,7 +281,16 @@ export default function CertificateApprovals() {
                         <TableCell className="text-sm">{r.report?.session_date ? format(parseISO(r.report.session_date), "dd MMM yyyy") : "—"}</TableCell>
                         <TableCell className="text-xs">{profileMap.get(r.signposted_by) || "—"}</TableCell>
                         <TableCell className="text-xs">{r.signposted_at ? format(parseISO(r.signposted_at), "dd MMM yyyy") : "—"}</TableCell>
-                        <TableCell><Badge variant={STATUS_VARIANT[r.signpost_status]} className="capitalize text-[10px]">{r.signpost_status}</Badge></TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-1">
+                            <Badge variant={STATUS_VARIANT[r.signpost_status]} className="capitalize text-[10px]">{r.signpost_status}</Badge>
+                            {r.signpost_status === "approved" && !r.certificate_number && (
+                              <span title="Certificate not yet generated — needs re-issue">
+                                <AlertTriangle className="h-3.5 w-3.5 text-destructive" />
+                              </span>
+                            )}
+                          </div>
+                        </TableCell>
                         <TableCell className="text-xs">{r.certificate_number || "—"}</TableCell>
                         <TableCell className="text-right">
                           {r.signpost_status === "pending" && (
@@ -260,10 +303,16 @@ export default function CertificateApprovals() {
                               </Button>
                             </div>
                           )}
+                          {r.signpost_status === "approved" && !r.certificate_number && (
+                            <Button size="sm" variant="outline" className="gap-1 h-7" disabled={busyId === r.id} onClick={() => handleRetryIssue(r)}>
+                              {busyId === r.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />} Retry Issue
+                            </Button>
+                          )}
                           {r.decision_notes && (r.signpost_status === "declined" || r.signpost_status === "approved") && (
-                            <span className="text-xs text-muted-foreground italic">{r.decision_notes}</span>
+                            <span className="text-xs text-muted-foreground italic ml-2">{r.decision_notes}</span>
                           )}
                         </TableCell>
+
                       </TableRow>
                     );
                   })}
