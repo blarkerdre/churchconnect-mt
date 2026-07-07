@@ -41,7 +41,9 @@ const empty = {
 
 export default function EventFormDialog({ open, onOpenChange, event, onSave, lockedCategory = null }) {
   const { data: CATEGORIES } = useAppSetting("event_categories", DEFAULT_CATEGORIES);
-  const { data: churchUnitsData = [] } = useChurchUnits();
+  const { isAdmin } = useAuth();
+  const { data: churchUnitsData = [] } = useChurchUnits(!isAdmin);
+  const hiddenUnitNames = new Set(churchUnitsData.filter(u => u.is_active === false).map(u => u.name));
   const AUDIENCES = ["All Members", ...churchUnitsData.map(u => u.name), "Home Cell", "Home Cell Leaders", "Leaders Only"];
   const [form, setForm] = useState(empty);
   const [saving, setSaving] = useState(false);
