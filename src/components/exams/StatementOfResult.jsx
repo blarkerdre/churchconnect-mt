@@ -327,11 +327,11 @@ export default function StatementOfResult({ open, onOpenChange, member, course, 
         <div className="space-y-4 max-h-[70vh] overflow-y-auto">
           {/* On-screen preview mirrors the printable layout */}
           <div className="text-center space-y-1 border-b pb-3">
-            {logoUrl ? <img src={logoUrl} alt="Logo" className="h-16 mx-auto mb-1" /> : null}
-            <p className="text-lg font-black tracking-wide">{(churchName || "").toUpperCase()}</p>
-            {centreName ? <p className="text-xs font-semibold">{centreName.toUpperCase()}</p> : null}
-            <p className="text-xs font-semibold">STATEMENT OF RESULT</p>
-            <p className="text-xs font-semibold">
+            {logoUrl ? <img src={logoUrl} alt="Logo" className="h-24 mx-auto mb-1" /> : null}
+            <p className="text-2xl font-black tracking-wide">{(churchName || "").toUpperCase()}</p>
+            {centreName ? <p className="text-sm font-bold uppercase tracking-wide">{centreName.toUpperCase()}</p> : null}
+            <p className="text-sm font-bold">STATEMENT OF RESULT</p>
+            <p className="text-sm font-bold">
               {(course.name || "").toUpperCase()} {sessionLabel}
             </p>
           </div>
