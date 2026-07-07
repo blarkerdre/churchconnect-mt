@@ -605,6 +605,78 @@ export default function ExamManagement() {
               </div>
               <p className="text-xs text-muted-foreground">Highest percentage first. Students below the lowest threshold get "Fail".</p>
             </div>
+
+            {/* Letter Grade Bands Editor (Statement of Result) */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <Label>Alphabet Grade Bands (Statement of Result)</Label>
+                <Button type="button" variant="ghost" size="sm" onClick={() => setTitleForm(f => ({ ...f, letter_grade_bands: LETTER_GRADE_BANDS }))}>
+                  Reset to defaults
+                </Button>
+              </div>
+              <div className="space-y-2">
+                {(titleForm.letter_grade_bands || []).map((gb, idx) => (
+                  <div key={idx} className="flex items-center gap-2">
+                    <Input
+                      value={gb.letter}
+                      onChange={e => {
+                        const updated = [...titleForm.letter_grade_bands];
+                        updated[idx] = { ...updated[idx], letter: e.target.value };
+                        setTitleForm(f => ({ ...f, letter_grade_bands: updated }));
+                      }}
+                      placeholder="Letter"
+                      className="w-16"
+                    />
+                    <Input
+                      value={gb.label}
+                      onChange={e => {
+                        const updated = [...titleForm.letter_grade_bands];
+                        updated[idx] = { ...updated[idx], label: e.target.value };
+                        setTitleForm(f => ({ ...f, letter_grade_bands: updated }));
+                      }}
+                      placeholder="Label (e.g. Excellent)"
+                      className="flex-1"
+                    />
+                    <Input
+                      type="number" min="0" max="100"
+                      value={gb.min}
+                      onChange={e => {
+                        const updated = [...titleForm.letter_grade_bands];
+                        updated[idx] = { ...updated[idx], min: Number(e.target.value) };
+                        setTitleForm(f => ({ ...f, letter_grade_bands: updated }));
+                      }}
+                      className="w-20"
+                      placeholder="Min"
+                    />
+                    <span className="text-xs text-muted-foreground">-</span>
+                    <Input
+                      type="number" min="0" max="100"
+                      value={gb.max}
+                      onChange={e => {
+                        const updated = [...titleForm.letter_grade_bands];
+                        updated[idx] = { ...updated[idx], max: Number(e.target.value) };
+                        setTitleForm(f => ({ ...f, letter_grade_bands: updated }));
+                      }}
+                      className="w-20"
+                      placeholder="Max"
+                    />
+                    <span className="text-xs text-muted-foreground">%</span>
+                    <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => {
+                      setTitleForm(f => ({ ...f, letter_grade_bands: f.letter_grade_bands.filter((_, i) => i !== idx) }));
+                    }}>
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  </div>
+                ))}
+                <Button type="button" variant="outline" size="sm" className="gap-1.5" onClick={() => {
+                  setTitleForm(f => ({ ...f, letter_grade_bands: [...(f.letter_grade_bands || []), { letter: "", label: "", min: 0, max: 0 }] }));
+                }}>
+                  <Plus className="h-3 w-3" /> Add Band
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">Per-module letter shown on the Statement of Result (e.g. A+ / A / B). Independent from the overall grade classifications above.</p>
+            </div>
+
             <DialogFooter>
               <Button type="submit" disabled={saveTitleMutation.isPending}>
                 {saveTitleMutation.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
