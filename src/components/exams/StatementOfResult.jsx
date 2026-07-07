@@ -199,11 +199,15 @@ export default function StatementOfResult({ open, onOpenChange, member, course, 
     ).join("");
 
     const logoHtml = logoUrl
-      ? `<img src="${escHtml(logoUrl)}" alt="Logo" style="height:96px;margin:0 auto 8px;display:block;" />`
+      ? `<img src="${escHtml(logoUrl)}" alt="Logo" style="height:130px;margin:0 auto 6px;display:block;" />`
       : "";
 
     const centreLine = centreName
       ? `<div class="centre">${escHtml(centreName.toUpperCase())}</div>`
+      : "";
+
+    const watermarkHtml = logoUrl
+      ? `<div class="watermark">WOFBI</div>`
       : "";
 
     const signatureHtml = signatureUrl
