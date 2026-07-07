@@ -1,31 +1,18 @@
-## Home Cell Creation Report
+Add Zone, Leader, and Host columns to the Home Cells Created report.
 
-Add a report that lists Home Cell centres by their `created_at` date, filterable by a date range.
+The current `WSFCreationReport` already shows a combined "Leader / Host" column and references `c.leader_name`, which does not exist on the `wsf_centres` row. This plan fixes that lookup and separates the fields.
 
-### Where it lives
-New section in `src/pages/WSFManagement.jsx` (Home Cell page), visible to admin, WSF leader, and reports officer (leaders see only their own centres — same visibility rule already used on that page).
+Changes:
+1. `src/pages/WSFManagement.jsx`
+   - Add a query for `wsf_zones` to resolve zone names.
+   - Add a query for relevant members (or leaders) to resolve `leader_id` to a name.
+   - Pass the lookup arrays/maps as props to `<WSFCreationReport>`.
 
-Title: "Home Cells Created" — placed below the existing Attendance section.
+2. `src/components/wsf/WSFCreationReport.jsx`
+   - Accept new props for zone/leader lookups.
+   - Replace the combined "Leader / Host" column with two separate columns: "Leader" and "Host".
+   - Add a "Zone" column (e.g., between Name and City).
+   - Use the passed lookups to render zone name from `zone_id` and leader name from `leader_id`.
+   - Update the print report builder so the printed version matches the on-screen columns.
 
-### UI
-- Two date inputs: **From** and **To** (defaults: From = first day of current year, To = today).
-- Quick presets: This month, Last 30 days, This year, All time.
-- Summary line: "N Home Cells created between {from} and {to}".
-- Table columns: Name, City, Postcode, Leader/Host, Meeting Day, Status (Active/Hidden), Created (formatted date).
-- Sort by `created_at` desc.
-- "Print Report" button using existing `PrintReportButton` (buildRows returns the filtered rows).
-- Empty state when no rows match.
-
-### Data
-- Reuse the existing `wsf-centres` query already loaded on the page (already tenant-scoped via `scopeQuery`). No new query, no schema change — `wsf_centres.created_at` already exists.
-- Filter client-side by `created_at` against the selected range (inclusive; To is treated as end-of-day).
-- For non-admin WSF leaders, restrict to `ledCentres` (matches existing behaviour on the page).
-
-### Files touched
-- `src/pages/WSFManagement.jsx` — add the new section + date state + filtered list + print button.
-- New small component `src/components/wsf/WSFCreationReport.jsx` to keep `WSFManagement.jsx` tidy (accepts `centres` prop and renders filters + table + print).
-
-### Out of scope
-- No changes to `wsf_centres` schema.
-- No changes to Reports Hub tile wording (the existing "Home Cell" tile already links to `/wsf`).
-- No export to CSV (print only) unless you want it added.
+No database changes are required. Only the two files above are affected.
