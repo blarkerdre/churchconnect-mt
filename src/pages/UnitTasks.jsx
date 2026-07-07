@@ -45,12 +45,13 @@ export default function UnitTasks() {
     enabled: !!tenantId && canLead,
     queryFn: async () => {
       if (isAdmin || isSuperAdmin) {
-        const { data, error } = await supabase
+        let q = supabase
           .from("church_units")
-          .select("name")
+          .select("name, is_active")
           .eq("tenant_id", tenantId)
-          .eq("is_active", true)
           .order("name");
+        // Admins see hidden units too; non-admin fallback below never reaches here
+        const { data, error } = await q;
         if (error) return [];
         return (data || []).map((r) => r.name).filter(Boolean);
       }

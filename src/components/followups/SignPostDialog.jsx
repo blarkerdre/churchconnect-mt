@@ -48,7 +48,7 @@ class DialogErrorBoundary extends React.Component {
 
 export default function SignPostDialog({ open, onOpenChange, followup, member, onCreated, defaultType = "unit_leader" }) {
   const { tenantId, scopeQuery, withTenant } = useTenantQuery();
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const [type, setType] = useState(defaultType);
 
   useEffect(() => {
@@ -63,17 +63,16 @@ export default function SignPostDialog({ open, onOpenChange, followup, member, o
 
   // Church units — explicit tenant_id guard for safety per multi-tenancy memory
   const { data: units = [], isLoading: unitsLoading, error: unitsError } = useQuery({
-    queryKey: ["church-units-active", tenantId],
+    queryKey: ["church-units-signpost", tenantId, isAdmin],
     enabled: open && !!tenantId,
     queryFn: async () => {
-      const { data, error } = await scopeQuery(
-        supabase
-          .from("church_units")
-          .select("id, name")
-          .eq("is_active", true)
-          .eq("tenant_id", tenantId)
-          .order("name")
-      );
+      let q = supabase
+        .from("church_units")
+        .select("id, name, is_active")
+        .eq("tenant_id", tenantId)
+        .order("name");
+      if (!isAdmin) q = q.eq("is_active", true);
+      const { data, error } = await scopeQuery(q);
       if (error) throw error;
       if (!data || data.length === 0) {
         console.warn("[SignPost] church_units returned 0 rows for tenant", tenantId);
@@ -407,7 +406,16 @@ export default function SignPostDialog({ open, onOpenChange, followup, member, o
                     <Select value={unitName} onValueChange={(v) => { setUnitName(v); setUnitLeaderId(""); }}>
                       <SelectTrigger><SelectValue placeholder={unitsLoading ? "Loading units…" : "Select unit"} /></SelectTrigger>
                       <SelectContent className="z-[80]" position="popper" sideOffset={4}>
-                        {units.map(u => <SelectItem key={u.id} value={u.name}>{u.name}</SelectItem>)}
+                        {units.map(u => (
+                          <SelectItem key={u.id} value={u.name}>
+                            <span className="inline-flex items-center gap-1.5">
+                              {u.name}
+                              {u.is_active === false && (
+                                <span className="text-[9px] uppercase px-1 rounded bg-muted text-muted-foreground">Hidden</span>
+                              )}
+                            </span>
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   )}

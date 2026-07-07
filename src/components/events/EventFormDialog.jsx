@@ -11,6 +11,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Loader2, Repeat } from "lucide-react";
 import { useAppSetting } from "@/hooks/useAppSetting";
 import { useChurchUnits } from "@/hooks/useChurchUnits";
+import { useAuth } from "@/hooks/useAuth";
+import { Badge } from "@/components/ui/badge";
 
 const DEFAULT_CATEGORIES = ["Conference", "Special Service", "Revival", "Youth Event", "Women's Event", "Men's Event", "Children's Event", "Outreach", "Training", "Social", "Other"];
 const STATUSES = ["Upcoming", "Ongoing", "Completed", "Cancelled"];
@@ -39,7 +41,9 @@ const empty = {
 
 export default function EventFormDialog({ open, onOpenChange, event, onSave, lockedCategory = null }) {
   const { data: CATEGORIES } = useAppSetting("event_categories", DEFAULT_CATEGORIES);
-  const { data: churchUnitsData = [] } = useChurchUnits();
+  const { isAdmin } = useAuth();
+  const { data: churchUnitsData = [] } = useChurchUnits(!isAdmin);
+  const hiddenUnitNames = new Set(churchUnitsData.filter(u => u.is_active === false).map(u => u.name));
   const AUDIENCES = ["All Members", ...churchUnitsData.map(u => u.name), "Home Cell", "Home Cell Leaders", "Leaders Only"];
   const [form, setForm] = useState(empty);
   const [saving, setSaving] = useState(false);
@@ -138,7 +142,16 @@ export default function EventFormDialog({ open, onOpenChange, event, onSave, loc
                 <Label>Audience</Label>
                 <Select value={form.audience || "All Members"} onValueChange={v => set("audience", v)}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>{AUDIENCES.map(a => <SelectItem key={a} value={a}>{a}</SelectItem>)}</SelectContent>
+                  <SelectContent>{AUDIENCES.map(a => (
+                    <SelectItem key={a} value={a}>
+                      <span className="inline-flex items-center gap-1.5">
+                        {a}
+                        {hiddenUnitNames.has(a) && (
+                          <Badge variant="outline" className="text-[9px] px-1 py-0 text-muted-foreground">Hidden</Badge>
+                        )}
+                      </span>
+                    </SelectItem>
+                  ))}</SelectContent>
                 </Select>
               </div>
               <div className="space-y-1.5 md:col-span-2">

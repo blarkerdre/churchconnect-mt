@@ -50,9 +50,13 @@ const emptyMember = {
 };
 
 export default function MemberFormDialog({ open, onOpenChange, member, onSaved }) {
-  const { data: churchUnits = [] } = useChurchUnits();
-  const CHURCH_UNITS = churchUnits.map(u => u.name);
   const { isAdmin, roles: currentUserRoles, user: currentUser, isTenantOwner } = useAuth();
+  const { data: churchUnits = [] } = useChurchUnits(!isAdmin);
+  const CHURCH_UNITS = churchUnits.map(u => u.name);
+  const unitActiveMap = React.useMemo(
+    () => Object.fromEntries(churchUnits.map(u => [u.name.toLowerCase(), u.is_active !== false])),
+    [churchUnits]
+  );
   const { tenantId, withTenant, scopeQuery } = useTenantQuery();
   const { currentTenant } = useTenant();
   const isSuperAdmin = currentUserRoles.includes("super_admin");
@@ -550,6 +554,7 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
                 {CHURCH_UNITS.filter(u => u !== "None").map(unit => {
                   const selected = (form.church_unit || "").split(",").map(s => s.trim()).filter(Boolean);
                   const isSelected = selected.some(s => s.toLowerCase() === unit.toLowerCase());
+                  const isHidden = unitActiveMap[unit.toLowerCase()] === false;
                   return (
                     <button
                       key={unit}
@@ -569,13 +574,18 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
                         });
                         set("church_unit", updated.join(", "));
                       }}
-                      className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
+                      className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors inline-flex items-center gap-1 ${
                         isSelected
                           ? "bg-primary text-primary-foreground"
                           : "bg-muted text-muted-foreground hover:bg-muted/80"
                       }`}
                     >
                       {unit}
+                      {isHidden && (
+                        <span className={`text-[9px] uppercase tracking-wide px-1 rounded ${isSelected ? "bg-primary-foreground/20" : "bg-background/60 text-muted-foreground"}`}>
+                          Hidden
+                        </span>
+                      )}
                     </button>
                   );
                 })}

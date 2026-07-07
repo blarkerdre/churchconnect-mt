@@ -8,6 +8,7 @@ import { CalendarIcon, Users, X } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useChurchUnits } from "@/hooks/useChurchUnits";
+import { useAuth } from "@/hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
@@ -29,7 +30,8 @@ const ACCOUNT_OPTIONS = [
 
 export default function AudienceFilter({ filters, onChange, className, restrictedUnits }) {
   const { status = "all", unit = "all", dateFrom = null, dateTo = null, account = "all", gender = "all", wsfCentreId = "all" } = filters || {};
-  const { data: churchUnits = [] } = useChurchUnits();
+  const { isAdmin } = useAuth();
+  const { data: churchUnits = [] } = useChurchUnits(!isAdmin);
 
   // When restrictedUnits is provided, only show those units
   const availableUnits = restrictedUnits && restrictedUnits.length > 0
@@ -123,7 +125,14 @@ export default function AudienceFilter({ filters, onChange, className, restricte
             <SelectContent>
               {showAllUnitsOption && <SelectItem value="all">All Units</SelectItem>}
               {availableUnits.map((u) => (
-                <SelectItem key={u.id} value={u.name}>{u.name}</SelectItem>
+                <SelectItem key={u.id} value={u.name}>
+                  <span className="inline-flex items-center gap-1.5">
+                    {u.name}
+                    {u.is_active === false && (
+                      <Badge variant="outline" className="text-[9px] px-1 py-0 text-muted-foreground">Hidden</Badge>
+                    )}
+                  </span>
+                </SelectItem>
               ))}
             </SelectContent>
         </Select>
