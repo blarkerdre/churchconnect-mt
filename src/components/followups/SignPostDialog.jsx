@@ -48,7 +48,7 @@ class DialogErrorBoundary extends React.Component {
 
 export default function SignPostDialog({ open, onOpenChange, followup, member, onCreated, defaultType = "unit_leader" }) {
   const { tenantId, scopeQuery, withTenant } = useTenantQuery();
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const [type, setType] = useState(defaultType);
 
   useEffect(() => {
