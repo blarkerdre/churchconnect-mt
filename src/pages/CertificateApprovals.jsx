@@ -114,15 +114,39 @@ export default function CertificateApprovals() {
   const handleApprove = async (row) => {
     setBusyId(row.id);
     try {
-      // Mark approved first
-      const { error: aErr } = await supabase.from("training_attendees").update({
-        signpost_status: "approved",
+      // Invoke issue-certificate FIRST so a transient failure doesn't leave the
+      // row stuck in "approved" with no certificate.
+      const { data, error } = await supabase.functions.invoke("issue-certificate", {
+        body: {
+          member_id: row.member_id,
+          training_type: row.training_type,
+          tenant_id: tenantId,
+          completion_date: row.report?.session_date,
+        },
+      });
+      if (error) throw error;
+      const certNumber = data?.certificate_number || data?.certificateNumber || null;
+
+      const { error: uErr } = await supabase.from("training_attendees").update({
+        signpost_status: "issued",
         decision_by: user?.id,
         decision_at: new Date().toISOString(),
+        certificate_number: certNumber,
       }).eq("id", row.id).eq("tenant_id", tenantId);
-      if (aErr) throw aErr;
+      if (uErr) throw uErr;
 
-      // Call issue-certificate edge function
+      qc.invalidateQueries({ queryKey: ["certificate-approvals"] });
+      toast({ title: "Certificate issued", description: certNumber || "" });
+    } catch (e) {
+      toast({ title: "Issue failed", description: e.message, variant: "destructive" });
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const handleRetryIssue = async (row) => {
+    setBusyId(row.id);
+    try {
       const { data, error } = await supabase.functions.invoke("issue-certificate", {
         body: {
           member_id: row.member_id,
@@ -143,7 +167,7 @@ export default function CertificateApprovals() {
       qc.invalidateQueries({ queryKey: ["certificate-approvals"] });
       toast({ title: "Certificate issued", description: certNumber || "" });
     } catch (e) {
-      toast({ title: "Issue failed", description: e.message, variant: "destructive" });
+      toast({ title: "Retry failed", description: e.message, variant: "destructive" });
     } finally {
       setBusyId(null);
     }
