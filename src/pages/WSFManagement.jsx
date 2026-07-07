@@ -76,6 +76,8 @@ export default function WSFManagement() {
       </div>
       <WSFAttendanceTab centres={visibleCentres} />
 
+      <WSFCreationReport centres={visibleCentres} />
+
       {!isAdmin && ledCentres.length > 0 && (
         <>
           <div>
