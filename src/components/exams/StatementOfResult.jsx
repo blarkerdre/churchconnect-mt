@@ -194,7 +194,7 @@ export default function StatementOfResult({ open, onOpenChange, member, course, 
       )
       .join("");
 
-    const notesRows = LETTER_GRADE_BANDS.map(
+    const notesRows = letterBands.map(
       (b) => `<tr><td>${escHtml(b.label)}</td><td>${escHtml(b.letter)}&nbsp;&nbsp;${b.min}-${b.max}</td></tr>`
     ).join("");
 
