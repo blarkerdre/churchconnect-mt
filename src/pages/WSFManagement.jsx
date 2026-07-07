@@ -35,6 +35,37 @@ export default function WSFManagement() {
     },
   });
 
+  const { data: zones = [] } = useQuery({
+    queryKey: ["wsf-zones", tenantId],
+    queryFn: async () => {
+      const { data, error } = await scopeQuery(supabase.from("wsf_zones").select("*").order("name"));
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const leaderIds = useMemo(() => {
+    const ids = new Set();
+    centres.forEach(c => {
+      if (c.leader_id) ids.add(c.leader_id);
+      if (c.host_member_id) ids.add(c.host_member_id);
+    });
+    return Array.from(ids);
+  }, [centres]);
+
+  const { data: centreMembers = [] } = useQuery({
+    queryKey: ["wsf-centre-members", leaderIds, tenantId],
+    queryFn: async () => {
+      if (leaderIds.length === 0) return [];
+      const { data, error } = await scopeQuery(
+        supabase.from("members").select("id, first_name, last_name").in("id", leaderIds)
+      );
+      if (error) throw error;
+      return data;
+    },
+    enabled: leaderIds.length > 0,
+  });
+
   // Get member counts per centre for leaders
   const ledCentres = !isAdmin && isWSFLeader && myMember
     ? centres.filter(c => c.leader_id === myMember.id)
@@ -76,7 +107,7 @@ export default function WSFManagement() {
       </div>
       <WSFAttendanceTab centres={visibleCentres} />
 
-      <WSFCreationReport centres={visibleCentres} />
+      <WSFCreationReport centres={visibleCentres} zones={zones} members={centreMembers} />
 
       {!isAdmin && ledCentres.length > 0 && (
         <>
