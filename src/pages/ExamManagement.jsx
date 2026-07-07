@@ -499,6 +499,7 @@ export default function ExamManagement() {
               registration_open: titleForm.registration_open,
               exams_open: titleForm.exams_open,
               grade_classifications: titleForm.grade_classifications,
+              letter_grade_bands: (titleForm.letter_grade_bands || []).map(b => ({ letter: String(b.letter||"").trim(), label: String(b.label||"").trim(), min: Number(b.min)||0, max: Number(b.max)||0 })),
               send_result_email: titleForm.send_result_email,
               send_certificate_email: titleForm.send_certificate_email,
               starting_number: Math.max(1, parseInt(titleForm.starting_number, 10) || 1),
