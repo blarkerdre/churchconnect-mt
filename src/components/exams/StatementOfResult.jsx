@@ -152,10 +152,12 @@ export default function StatementOfResult({ open, onOpenChange, member, course, 
     { label: "Pass", min_percentage: 50 },
   ];
 
+  const letterBands = resolveLetterGradeBands(course);
+
   const rows = subjects.map((s) => {
     const sub = memberSubjects[s.id];
     const pct = sub && sub.total_points > 0 ? (sub.score / sub.total_points) * 100 : 0;
-    const letter = sub ? getLetterGrade(pct).letter : "—";
+    const letter = sub ? getLetterGrade(pct, letterBands).letter : "—";
     return { name: s.name, score: sub?.score ?? 0, total: sub?.total_points ?? 0, pct, letter, taken: !!sub };
   });
 
