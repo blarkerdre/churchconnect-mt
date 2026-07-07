@@ -125,7 +125,14 @@ export default function AudienceFilter({ filters, onChange, className, restricte
             <SelectContent>
               {showAllUnitsOption && <SelectItem value="all">All Units</SelectItem>}
               {availableUnits.map((u) => (
-                <SelectItem key={u.id} value={u.name}>{u.name}</SelectItem>
+                <SelectItem key={u.id} value={u.name}>
+                  <span className="inline-flex items-center gap-1.5">
+                    {u.name}
+                    {u.is_active === false && (
+                      <Badge variant="outline" className="text-[9px] px-1 py-0 text-muted-foreground">Hidden</Badge>
+                    )}
+                  </span>
+                </SelectItem>
               ))}
             </SelectContent>
         </Select>
