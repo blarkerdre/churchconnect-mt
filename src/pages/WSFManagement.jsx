@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import WSFAttendanceTab from "@/components/wsf/WSFAttendanceTab";
 import WSFCentreMembersDialog from "@/components/wsf/WSFCentreMembersDialog";
+import WSFCreationReport from "@/components/wsf/WSFCreationReport";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
 import { Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -74,6 +75,8 @@ export default function WSFManagement() {
         <p className="text-sm text-muted-foreground">Track attendance for Home Cell meetings</p>
       </div>
       <WSFAttendanceTab centres={visibleCentres} />
+
+      <WSFCreationReport centres={visibleCentres} />
 
       {!isAdmin && ledCentres.length > 0 && (
         <>
