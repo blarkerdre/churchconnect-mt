@@ -208,7 +208,12 @@ export default function CertificateApprovals() {
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList>
           <TabsTrigger value="pending">Pending ({counts.pending || 0})</TabsTrigger>
-          <TabsTrigger value="approved">Approved ({counts.approved || 0})</TabsTrigger>
+          <TabsTrigger value="approved" className="gap-1.5">
+            Approved ({counts.approved || 0})
+            {stuckCount > 0 && (
+              <Badge variant="destructive" className="h-4 px-1.5 text-[10px]">{stuckCount}</Badge>
+            )}
+          </TabsTrigger>
           <TabsTrigger value="declined">Declined ({counts.declined || 0})</TabsTrigger>
           <TabsTrigger value="issued">Issued ({counts.issued || 0})</TabsTrigger>
           <TabsTrigger value="all">All ({counts.all || 0})</TabsTrigger>
