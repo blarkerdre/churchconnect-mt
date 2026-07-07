@@ -35,10 +35,18 @@ export const LETTER_GRADE_BANDS = [
   { letter: "F",  label: "Fail",      min: 0,  max: 39  },
 ];
 
-export function getLetterGrade(percentage) {
+export function getLetterGrade(percentage, bands) {
+  const source = Array.isArray(bands) && bands.length > 0 ? bands : LETTER_GRADE_BANDS;
+  const sorted = [...source].sort((a, b) => Number(b.min) - Number(a.min));
   const pct = Math.max(0, Math.min(100, Number(percentage) || 0));
-  for (const b of LETTER_GRADE_BANDS) {
-    if (pct >= b.min) return b;
+  for (const b of sorted) {
+    if (pct >= Number(b.min)) return b;
   }
-  return LETTER_GRADE_BANDS[LETTER_GRADE_BANDS.length - 1];
+  return sorted[sorted.length - 1];
+}
+
+export function resolveLetterGradeBands(course) {
+  const custom = course?.letter_grade_bands;
+  if (Array.isArray(custom) && custom.length > 0) return custom;
+  return LETTER_GRADE_BANDS;
 }

@@ -20,6 +20,8 @@ import PasswordConfirmDialog from "@/components/shared/PasswordConfirmDialog";
 const emptyTemplate = {
   training_type: "",
   church_name: "Winners Chapel International Cardiff",
+  centre_name: "",
+  wofbi_logo_url: "",
   signatory_name: "",
   signatory_title: "",
   background_color: "#1a2d4d",
@@ -111,6 +113,8 @@ export default function CertificateTemplateSettings() {
     setForm({
       training_type: t.training_type,
       church_name: t.church_name,
+      centre_name: t.centre_name || "",
+      wofbi_logo_url: t.wofbi_logo_url || "",
       signatory_name: t.signatory_name,
       signatory_title: t.signatory_title,
       background_color: t.background_color,
@@ -123,6 +127,37 @@ export default function CertificateTemplateSettings() {
     setDialogOpen(true);
   };
   const closeDialog = () => { setDialogOpen(false); setEditing(null); setForm(emptyTemplate); setUseCustomType(false); };
+
+  const handleWofbiLogoUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      toast({ title: "Please upload an image file (PNG, JPG)", variant: "destructive" });
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      toast({ title: "Logo must be under 2MB", variant: "destructive" });
+      return;
+    }
+    if (!tenantId) return;
+    setUploading(true);
+    try {
+      await assertStorageAvailable(tenantId, file.size);
+      const ext = file.name.split(".").pop();
+      const path = `${tenantId}/wofbi-logo/${Date.now()}.${ext}`;
+      const { error } = await supabase.storage
+        .from("church-documents")
+        .upload(path, file, { contentType: file.type, upsert: true });
+      if (error) throw error;
+      const { data: pub } = supabase.storage.from("church-documents").getPublicUrl(path);
+      set("wofbi_logo_url", pub?.publicUrl || "");
+      toast({ title: "WoFBI logo uploaded" });
+    } catch (err) {
+      toast({ title: "Upload failed", description: err.message, variant: "destructive" });
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const handleUpload = async (e) => {
     const file = e.target.files?.[0];
@@ -199,6 +234,8 @@ export default function CertificateTemplateSettings() {
     saveMutation.mutate({
       training_type: form.training_type.trim(),
       church_name: form.church_name,
+      centre_name: (form.centre_name || "").trim() || null,
+      wofbi_logo_url: form.wofbi_logo_url || null,
       signatory_name: form.signatory_name,
       signatory_title: form.signatory_title,
       background_color: form.background_color,
@@ -389,6 +426,32 @@ export default function CertificateTemplateSettings() {
             <div className="space-y-1.5">
               <Label>Church Name</Label>
               <Input value={form.church_name} onChange={(e) => set("church_name", e.target.value)} />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Centre Name (Statement of Result)</Label>
+              <Input
+                value={form.centre_name}
+                onChange={(e) => set("centre_name", e.target.value)}
+                placeholder="e.g. Cardiff Learning Centre"
+              />
+              <p className="text-xs text-muted-foreground">Shown under the church header on the Statement of Result. Leave blank to hide.</p>
+            </div>
+            <div className="space-y-1.5">
+              <Label>WoFBI Logo (Statement of Result)</Label>
+              <p className="text-xs text-muted-foreground">Optional. Replaces the default church logo on the Statement of Result. PNG/JPG, under 2MB.</p>
+              <div className="flex flex-wrap items-center gap-2">
+                <label className="flex items-center gap-2 px-3 py-2 border rounded-md cursor-pointer hover:bg-muted/50 text-sm">
+                  {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                  Upload Logo
+                  <input type="file" accept="image/*" onChange={handleWofbiLogoUpload} className="hidden" disabled={uploading} />
+                </label>
+                {form.wofbi_logo_url && (
+                  <Button variant="ghost" size="sm" onClick={() => set("wofbi_logo_url", "")}>Remove</Button>
+                )}
+              </div>
+              {form.wofbi_logo_url && (
+                <img src={form.wofbi_logo_url} alt="WoFBI logo" className="mt-2 h-16 object-contain rounded border bg-white p-1" />
+              )}
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
