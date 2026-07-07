@@ -612,14 +612,24 @@ function ChurchUnitsSection() {
         ) : (
           <div className="space-y-2">
             {units.map((unit) => (
-              <div key={unit.id} className="flex items-center justify-between p-2.5 sm:p-3 bg-muted/50 rounded-lg">
+              <div key={unit.id} className={`flex items-center justify-between p-2.5 sm:p-3 rounded-lg ${unit.is_active ? "bg-muted/50" : "bg-muted/30 opacity-70"}`}>
                 <div className="flex items-center gap-2 sm:gap-3 min-w-0">
                   <span className="text-sm font-medium text-foreground truncate">{unit.name}</span>
                   <Badge variant={unit.is_active ? "default" : "secondary"} className="text-xs">
-                    {unit.is_active ? "Active" : "Inactive"}
+                    {unit.is_active ? "Visible" : "Hidden"}
                   </Badge>
                 </div>
                 <div className="flex items-center gap-1">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    title={unit.is_active ? "Hide from members" : "Show to members"}
+                    onClick={() => toggleVisibilityMutation.mutate({ id: unit.id, is_active: !unit.is_active })}
+                    disabled={toggleVisibilityMutation.isPending}
+                  >
+                    {unit.is_active ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5 text-muted-foreground" />}
+                  </Button>
                   <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(unit)}>
                     <Pencil className="h-3.5 w-3.5" />
                   </Button>
