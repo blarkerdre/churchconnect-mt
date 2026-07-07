@@ -13,12 +13,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
 import { useChurchUnits } from "@/hooks/useChurchUnits";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function BulkUnitAssignDialog({ open, onOpenChange }) {
   const queryClient = useQueryClient();
   const { tenantId, scopeQuery, withTenant } = useTenantQuery();
-  const { data: churchUnits = [] } = useChurchUnits();
-  const allUnitNames = churchUnits.map(u => u.name);
+  const { isAdmin } = useAuth();
+  const { data: churchUnits = [] } = useChurchUnits(!isAdmin);
   const [selectedUnit, setSelectedUnit] = useState("");
   const [selectedUsers, setSelectedUsers] = useState([]);
   const [search, setSearch] = useState("");
