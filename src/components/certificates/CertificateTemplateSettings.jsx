@@ -128,6 +128,37 @@ export default function CertificateTemplateSettings() {
   };
   const closeDialog = () => { setDialogOpen(false); setEditing(null); setForm(emptyTemplate); setUseCustomType(false); };
 
+  const handleWofbiLogoUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      toast({ title: "Please upload an image file (PNG, JPG)", variant: "destructive" });
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      toast({ title: "Logo must be under 2MB", variant: "destructive" });
+      return;
+    }
+    if (!tenantId) return;
+    setUploading(true);
+    try {
+      await assertStorageAvailable(tenantId, file.size);
+      const ext = file.name.split(".").pop();
+      const path = `${tenantId}/wofbi-logo/${Date.now()}.${ext}`;
+      const { error } = await supabase.storage
+        .from("church-documents")
+        .upload(path, file, { contentType: file.type, upsert: true });
+      if (error) throw error;
+      const { data: pub } = supabase.storage.from("church-documents").getPublicUrl(path);
+      set("wofbi_logo_url", pub?.publicUrl || "");
+      toast({ title: "WoFBI logo uploaded" });
+    } catch (err) {
+      toast({ title: "Upload failed", description: err.message, variant: "destructive" });
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const handleUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
