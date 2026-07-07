@@ -50,9 +50,13 @@ const emptyMember = {
 };
 
 export default function MemberFormDialog({ open, onOpenChange, member, onSaved }) {
-  const { data: churchUnits = [] } = useChurchUnits();
-  const CHURCH_UNITS = churchUnits.map(u => u.name);
   const { isAdmin, roles: currentUserRoles, user: currentUser, isTenantOwner } = useAuth();
+  const { data: churchUnits = [] } = useChurchUnits(!isAdmin);
+  const CHURCH_UNITS = churchUnits.map(u => u.name);
+  const unitActiveMap = React.useMemo(
+    () => Object.fromEntries(churchUnits.map(u => [u.name.toLowerCase(), u.is_active !== false])),
+    [churchUnits]
+  );
   const { tenantId, withTenant, scopeQuery } = useTenantQuery();
   const { currentTenant } = useTenant();
   const isSuperAdmin = currentUserRoles.includes("super_admin");
