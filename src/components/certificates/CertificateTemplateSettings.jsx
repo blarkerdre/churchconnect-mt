@@ -20,6 +20,8 @@ import PasswordConfirmDialog from "@/components/shared/PasswordConfirmDialog";
 const emptyTemplate = {
   training_type: "",
   church_name: "Winners Chapel International Cardiff",
+  centre_name: "",
+  wofbi_logo_url: "",
   signatory_name: "",
   signatory_title: "",
   background_color: "#1a2d4d",
