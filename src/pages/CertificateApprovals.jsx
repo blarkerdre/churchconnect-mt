@@ -14,7 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/components/ui/use-toast";
 import { format, parseISO } from "date-fns";
-import { Loader2, Check, X, Award, Download } from "lucide-react";
+import { Loader2, Check, X, Award, Download, RefreshCw, AlertTriangle } from "lucide-react";
 import PrintReportButton from "@/components/PrintReportButton";
 
 const STATUS_VARIANT = {
