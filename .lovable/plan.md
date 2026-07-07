@@ -1,30 +1,33 @@
-Tune the Statement of Result header to match the attached WoFBI Cardiff reference. Everything else (logo upload, centre name, per-course letter bands) is already in place from the previous change — this is layout polish only, no schema changes.
+## Problem
 
-## Reference vs current
+Four members (Chika Ugwu, Abisoye Famojuro, Justin Miller, Katie Miller) were approved for the "Believers Foundation Class (BFC)" certificate by the Training Rep, but their certificates never got generated.
 
-| Element | Reference | Current | Change |
-|---|---|---|---|
-| Logo | WOFBI crest, centered, ~140px | Uses `wofbi_logo_url` at h-16 (~64px) | Enlarge to ~140px height |
-| Church name | Big bold black wordmark ("WORD OF FAITH BIBLE INSTITUTE") | `text-lg font-black` | Bump to `text-2xl` on-screen, ~26px in print |
-| Centre name | Medium bold, prominent line ("CARDIFF LEARNING CENTRE") | `text-xs font-semibold` | Bump to `text-sm font-bold` (same weight as STATEMENT OF RESULT lines) |
-| "STATEMENT OF RESULT" / course line | Same medium bold size | Already matches | No change |
-| Diagonal "WOFBI" watermark | Present | Absent | Add optional watermark (uses `centre_name`-adjacent branding — actually renders the short brand code) — behind a template opt-in |
-| Explanatory Notes bands | "A* -90-100" style | "A+  90-100" | Already customisable per course; no code change |
+**Root cause:** In `src/pages/CertificateApprovals.jsx` the approve handler:
+1. Flips `training_attendees.signpost_status` to `"approved"` in the database.
+2. Then invokes the `issue-certificate` edge function.
+3. Only if step 2 succeeds does it flip the status to `"issued"` and save the certificate number.
 
-## Scope of edit
+If step 2 fails (transient wasm/font fetch error, storage timeout, network glitch, etc.) the row is left permanently in `"approved"` with no `certificate_number`. Nothing in the UI surfaces or retries these stuck records — they no longer appear on the Pending tab, and the Approved tab today has no action button.
 
-Frontend only, `src/components/exams/StatementOfResult.jsx`:
-- On-screen preview: increase logo height (h-24), church name (`text-2xl font-black`), and centre name (`text-sm font-bold uppercase tracking-wide`).
-- Print HTML: logo `height:130px`, church name `font-size:30px`, centre name `font-size:16px; font-weight:bold; margin-top:8px`.
-- Add a subtle diagonal watermark to the print view when `template?.wofbi_logo_url` is set: a fixed grey "WOFBI" text at ~45° behind the table body. Skipping on-screen (dialog is small).
+Verified in DB: all 4 rows have `signpost_status='approved'`, `certificate_number=NULL`, `decision_by` set — and there is **no matching row in `training_completions`**, confirming the edge function never completed.
 
-## Out of scope
+## Fix
 
-- No schema changes (all fields already exist).
-- No changes to grade-utils, CourseResultsView, or CertificateTemplateSettings.
-- Not changing signatory rendering.
-- Not attempting to auto-populate church_name / centre_name — admin sets them once in Certificate Templates.
+Two small, focused changes in `src/pages/CertificateApprovals.jsx` (frontend only — the edge function itself already works; other members in the same tenant were issued successfully):
 
-## Verification
+1. **Add a "Retry Issue" action** on the Approved tab for any row where `signpost_status='approved'` AND `certificate_number` is empty. Clicking it re-invokes `issue-certificate` with the same payload the original approve used, and on success updates the row to `signpost_status='issued'` + saves the cert number (identical to the tail of `handleApprove`). On failure, show the actual error message in the toast so the admin can see why (fonts, storage, RLS, etc.).
 
-Playwright headless render of the seeded WCI Cardiff BCC statement after setting church_name + centre_name + WoFBI logo → screenshot saved to `/mnt/documents/wci-cardiff-statement-v2.png` and shown as an artifact for side-by-side comparison with the reference.
+2. **Add a small "Needs re-issue" badge / red dot** on the Approved tab count and next to rows missing a certificate number so admins immediately see there is unfinished work.
+
+Optionally (nice-to-have, still frontend-only): reorder `handleApprove` to invoke `issue-certificate` FIRST, and only update `training_attendees` after the certificate is generated. That way a future edge-function failure leaves the row on the Pending tab and the admin can just click Approve again. This is a safer flow going forward.
+
+## What will not change
+
+- No edge function changes (`issue-certificate` is working — 3 other rows in the same tenant were successfully issued).
+- No schema changes.
+- No changes to grading, exam attempts, or `training_completions` logic.
+- Existing 4 stuck rows will be resolved by the admin clicking the new **Retry Issue** button once.
+
+## Files touched
+
+- `src/pages/CertificateApprovals.jsx` — add `handleRetryIssue`, render Retry button + warning badge on Approved tab, optionally reorder `handleApprove`.
