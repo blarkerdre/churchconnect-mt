@@ -8,10 +8,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
 import { useChurchUnits } from "@/hooks/useChurchUnits";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function UnitLeaderAssignments({ userId }) {
   const queryClient = useQueryClient();
   const { tenantId, scopeQuery, withTenant } = useTenantQuery();
+  const { isAdmin } = useAuth();
 
   const { data: assignments = [] } = useQuery({
     queryKey: ["unit-leader-assignments", userId, tenantId],
@@ -28,10 +30,9 @@ export default function UnitLeaderAssignments({ userId }) {
     enabled: !!userId,
   });
 
-  const { data: churchUnits = [] } = useChurchUnits();
-  const allUnitNames = churchUnits.map(u => u.name);
+  const { data: churchUnits = [] } = useChurchUnits(!isAdmin);
   const assignedUnits = assignments.map((a) => a.unit_name);
-  const availableUnits = allUnitNames.filter((u) => !assignedUnits.includes(u));
+  const availableUnits = churchUnits.filter((u) => !assignedUnits.includes(u.name));
 
   const addMutation = useMutation({
     mutationFn: async (unitName) => {
