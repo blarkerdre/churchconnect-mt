@@ -85,13 +85,16 @@ export default function UnitLeaderAssignments({ userId }) {
           </PopoverTrigger>
           <PopoverContent className="w-48 p-2" align="start">
             <div className="max-h-48 overflow-y-auto space-y-1">
-              {availableUnits.map((unit) => (
+              {availableUnits.map((u) => (
                 <button
-                  key={unit}
-                  onClick={() => addMutation.mutate(unit)}
-                  className="w-full text-left text-sm px-2 py-1.5 rounded hover:bg-muted transition-colors"
+                  key={u.name}
+                  onClick={() => addMutation.mutate(u.name)}
+                  className="w-full text-left text-sm px-2 py-1.5 rounded hover:bg-muted transition-colors flex items-center justify-between gap-2"
                 >
-                  {unit}
+                  <span>{u.name}</span>
+                  {u.is_active === false && (
+                    <Badge variant="outline" className="text-[9px] px-1 py-0 text-muted-foreground">Hidden</Badge>
+                  )}
                 </button>
               ))}
             </div>
