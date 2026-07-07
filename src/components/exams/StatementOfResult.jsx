@@ -199,11 +199,15 @@ export default function StatementOfResult({ open, onOpenChange, member, course, 
     ).join("");
 
     const logoHtml = logoUrl
-      ? `<img src="${escHtml(logoUrl)}" alt="Logo" style="height:96px;margin:0 auto 8px;display:block;" />`
+      ? `<img src="${escHtml(logoUrl)}" alt="Logo" style="height:130px;margin:0 auto 6px;display:block;" />`
       : "";
 
     const centreLine = centreName
       ? `<div class="centre">${escHtml(centreName.toUpperCase())}</div>`
+      : "";
+
+    const watermarkHtml = logoUrl
+      ? `<div class="watermark">WOFBI</div>`
       : "";
 
     const signatureHtml = signatureUrl
@@ -213,12 +217,14 @@ export default function StatementOfResult({ open, onOpenChange, member, course, 
     const html = `<!DOCTYPE html><html><head><title>Statement of Result — ${escHtml(member.name)}</title>
       <style>
         @page { size: A4; margin: 18mm 20mm; }
-        body { font-family: 'Cambria', 'Georgia', serif; color:#111; margin:0; }
+        body { font-family: 'Cambria', 'Georgia', serif; color:#111; margin:0; position:relative; }
+        .watermark { position:fixed; top:50%; left:50%; transform:translate(-50%,-50%) rotate(-35deg); font-family:'Impact','Arial Black',sans-serif; font-size:180px; color:rgba(0,0,0,0.07); letter-spacing:10px; z-index:0; pointer-events:none; }
+        .header, .name-row, table.modules, .notes, .signature { position:relative; z-index:1; }
         .header { text-align:center; margin-bottom:18px; }
-        .header h1 { font-family: 'Impact', 'Arial Black', sans-serif; font-size:34px; margin:4px 0; letter-spacing:1px; }
-        .centre { font-size:14px; font-weight:bold; margin-top:6px; }
-        .title { font-size:14px; font-weight:bold; margin-top:2px; }
-        .course-line { font-size:14px; font-weight:bold; margin-top:2px; }
+        .header h1 { font-family: 'Impact', 'Arial Black', sans-serif; font-size:38px; margin:4px 0; letter-spacing:1px; }
+        .centre { font-size:16px; font-weight:bold; margin-top:8px; }
+        .title { font-size:15px; font-weight:bold; margin-top:2px; }
+        .course-line { font-size:15px; font-weight:bold; margin-top:2px; }
         .name-row { display:flex; justify-content:space-between; align-items:baseline; margin: 18px 0 6px; font-size:14px; }
         .name-row .label { font-weight:bold; }
         .name-row .name { font-size:22px; color:#6b3fa0; font-family: 'Georgia', serif; margin-left:6px; }
@@ -242,6 +248,7 @@ export default function StatementOfResult({ open, onOpenChange, member, course, 
         .signature .who { font-size:12px; }
         @media print { body { margin:0; } }
       </style></head><body>
+      ${watermarkHtml}
       <div class="header">
         ${logoHtml}
         <h1>${escHtml((churchName || "").toUpperCase())}</h1>
@@ -320,11 +327,11 @@ export default function StatementOfResult({ open, onOpenChange, member, course, 
         <div className="space-y-4 max-h-[70vh] overflow-y-auto">
           {/* On-screen preview mirrors the printable layout */}
           <div className="text-center space-y-1 border-b pb-3">
-            {logoUrl ? <img src={logoUrl} alt="Logo" className="h-16 mx-auto mb-1" /> : null}
-            <p className="text-lg font-black tracking-wide">{(churchName || "").toUpperCase()}</p>
-            {centreName ? <p className="text-xs font-semibold">{centreName.toUpperCase()}</p> : null}
-            <p className="text-xs font-semibold">STATEMENT OF RESULT</p>
-            <p className="text-xs font-semibold">
+            {logoUrl ? <img src={logoUrl} alt="Logo" className="h-24 mx-auto mb-1" /> : null}
+            <p className="text-2xl font-black tracking-wide">{(churchName || "").toUpperCase()}</p>
+            {centreName ? <p className="text-sm font-bold uppercase tracking-wide">{centreName.toUpperCase()}</p> : null}
+            <p className="text-sm font-bold">STATEMENT OF RESULT</p>
+            <p className="text-sm font-bold">
               {(course.name || "").toUpperCase()} {sessionLabel}
             </p>
           </div>
