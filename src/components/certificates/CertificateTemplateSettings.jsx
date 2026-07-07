@@ -203,6 +203,8 @@ export default function CertificateTemplateSettings() {
     saveMutation.mutate({
       training_type: form.training_type.trim(),
       church_name: form.church_name,
+      centre_name: (form.centre_name || "").trim() || null,
+      wofbi_logo_url: form.wofbi_logo_url || null,
       signatory_name: form.signatory_name,
       signatory_title: form.signatory_title,
       background_color: form.background_color,
