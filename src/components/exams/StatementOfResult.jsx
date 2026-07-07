@@ -362,7 +362,7 @@ export default function StatementOfResult({ open, onOpenChange, member, course, 
             <div className="grid grid-cols-2 gap-x-4 text-[11px]">
               <div className="font-semibold">Result</div>
               <div className="font-semibold">Grades</div>
-              {LETTER_GRADE_BANDS.map((b) => (
+              {letterBands.map((b) => (
                 <React.Fragment key={b.letter}>
                   <div>{b.label}</div>
                   <div>{b.letter} &nbsp;{b.min}-{b.max}</div>
