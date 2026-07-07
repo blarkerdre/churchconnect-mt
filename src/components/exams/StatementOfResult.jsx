@@ -168,10 +168,17 @@ export default function StatementOfResult({ open, onOpenChange, member, course, 
 
   const sessionLabel = formatSessionLabel(session);
   const churchName = template?.church_name || currentTenant?.name || "";
-  const centreName = currentTenant?.name && template?.church_name && template.church_name !== currentTenant.name
-    ? currentTenant.name
-    : "";
-  const logoUrl = template?.crest_image_url || template?.logo_url || currentTenant?.logo_url || "";
+  const centreName =
+    template?.centre_name ||
+    (currentTenant?.name && template?.church_name && template.church_name !== currentTenant.name
+      ? currentTenant.name
+      : "");
+  const logoUrl =
+    template?.wofbi_logo_url ||
+    template?.crest_image_url ||
+    template?.logo_url ||
+    currentTenant?.logo_url ||
+    "";
   const signatoryName = template?.signatory_name || "";
   const signatoryTitle = template?.signatory_title || "";
   const signatureUrl = template?.dean_signature_url || "";
