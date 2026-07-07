@@ -148,7 +148,16 @@ export default function SessionFormDialog({ open, onOpenChange, onSave, isAdmin 
               ) : (
                 <Select value={form.unit} onValueChange={v => set("unit", v)}>
                   <SelectTrigger><SelectValue placeholder="Select unit" /></SelectTrigger>
-                  <SelectContent>{unitOptions.map(u => <SelectItem key={u} value={u}>{u}</SelectItem>)}</SelectContent>
+                  <SelectContent>{unitOptions.map(u => (
+                    <SelectItem key={u} value={u}>
+                      <span className="inline-flex items-center gap-1.5">
+                        {u}
+                        {hiddenUnitNames.has(u) && (
+                          <span className="text-[9px] uppercase px-1 rounded bg-muted text-muted-foreground">Hidden</span>
+                        )}
+                      </span>
+                    </SelectItem>
+                  ))}</SelectContent>
                 </Select>
               )}
             </div>
