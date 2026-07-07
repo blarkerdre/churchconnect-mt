@@ -30,7 +30,8 @@ const ACCOUNT_OPTIONS = [
 
 export default function AudienceFilter({ filters, onChange, className, restrictedUnits }) {
   const { status = "all", unit = "all", dateFrom = null, dateTo = null, account = "all", gender = "all", wsfCentreId = "all" } = filters || {};
-  const { data: churchUnits = [] } = useChurchUnits();
+  const { isAdmin } = useAuth();
+  const { data: churchUnits = [] } = useChurchUnits(!isAdmin);
 
   // When restrictedUnits is provided, only show those units
   const availableUnits = restrictedUnits && restrictedUnits.length > 0
