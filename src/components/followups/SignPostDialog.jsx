@@ -406,7 +406,16 @@ export default function SignPostDialog({ open, onOpenChange, followup, member, o
                     <Select value={unitName} onValueChange={(v) => { setUnitName(v); setUnitLeaderId(""); }}>
                       <SelectTrigger><SelectValue placeholder={unitsLoading ? "Loading units…" : "Select unit"} /></SelectTrigger>
                       <SelectContent className="z-[80]" position="popper" sideOffset={4}>
-                        {units.map(u => <SelectItem key={u.id} value={u.name}>{u.name}</SelectItem>)}
+                        {units.map(u => (
+                          <SelectItem key={u.id} value={u.name}>
+                            <span className="inline-flex items-center gap-1.5">
+                              {u.name}
+                              {u.is_active === false && (
+                                <span className="text-[9px] uppercase px-1 rounded bg-muted text-muted-foreground">Hidden</span>
+                              )}
+                            </span>
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   )}
