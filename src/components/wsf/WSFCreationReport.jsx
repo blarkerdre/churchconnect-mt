@@ -21,9 +21,21 @@ function formatDate(iso) {
   return new Date(iso).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
 }
 
-export default function WSFCreationReport({ centres = [] }) {
+export default function WSFCreationReport({ centres = [], zones = [], members = [] }) {
   const [from, setFrom] = useState(toInputDate(startOfYear()));
   const [to, setTo] = useState(toInputDate(new Date()));
+
+  const zoneMap = useMemo(() => {
+    const m = {};
+    zones.forEach(z => { m[z.id] = z; });
+    return m;
+  }, [zones]);
+
+  const memberMap = useMemo(() => {
+    const m = {};
+    members.forEach(x => { m[x.id] = `${x.first_name} ${x.last_name}`; });
+    return m;
+  }, [members]);
 
   const applyPreset = (preset) => {
     const today = new Date();
@@ -57,12 +69,14 @@ export default function WSFCreationReport({ centres = [] }) {
 
   const buildRows = () => ({
     title: `Home Cells Created${from ? ` from ${from}` : ""}${to ? ` to ${to}` : ""}`,
-    headers: ["Name", "City", "Postcode", "Leader / Host", "Meeting Day", "Status", "Created"],
+    headers: ["Name", "Zone", "City", "Postcode", "Leader", "Host", "Meeting Day", "Status", "Created"],
     rows: filtered.map(c => [
       c.name || "",
+      zoneMap[c.zone_id]?.name || "",
       c.city || "",
       c.postcode || "",
-      c.leader_name || c.host_name || "",
+      memberMap[c.leader_id] || "",
+      c.host_name || "",
       c.meeting_day || "",
       c.is_active === false ? "Hidden" : "Active",
       formatDate(c.created_at),
@@ -111,9 +125,11 @@ export default function WSFCreationReport({ centres = [] }) {
               <thead className="bg-muted/50">
                 <tr>
                   <th className="text-left p-2 font-medium">Name</th>
+                  <th className="text-left p-2 font-medium">Zone</th>
                   <th className="text-left p-2 font-medium">City</th>
                   <th className="text-left p-2 font-medium">Postcode</th>
-                  <th className="text-left p-2 font-medium">Leader / Host</th>
+                  <th className="text-left p-2 font-medium">Leader</th>
+                  <th className="text-left p-2 font-medium">Host</th>
                   <th className="text-left p-2 font-medium">Meeting Day</th>
                   <th className="text-left p-2 font-medium">Status</th>
                   <th className="text-left p-2 font-medium whitespace-nowrap">Created</th>
@@ -123,9 +139,11 @@ export default function WSFCreationReport({ centres = [] }) {
                 {filtered.map(c => (
                   <tr key={c.id} className="border-t">
                     <td className="p-2">{c.name}</td>
+                    <td className="p-2">{zoneMap[c.zone_id]?.name || "—"}</td>
                     <td className="p-2">{c.city || "—"}</td>
                     <td className="p-2">{c.postcode || "—"}</td>
-                    <td className="p-2">{c.leader_name || c.host_name || "—"}</td>
+                    <td className="p-2">{memberMap[c.leader_id] || "—"}</td>
+                    <td className="p-2">{c.host_name || "—"}</td>
                     <td className="p-2">{c.meeting_day || "—"}</td>
                     <td className="p-2">
                       {c.is_active === false
