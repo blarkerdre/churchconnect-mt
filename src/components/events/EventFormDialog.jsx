@@ -142,7 +142,16 @@ export default function EventFormDialog({ open, onOpenChange, event, onSave, loc
                 <Label>Audience</Label>
                 <Select value={form.audience || "All Members"} onValueChange={v => set("audience", v)}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>{AUDIENCES.map(a => <SelectItem key={a} value={a}>{a}</SelectItem>)}</SelectContent>
+                  <SelectContent>{AUDIENCES.map(a => (
+                    <SelectItem key={a} value={a}>
+                      <span className="inline-flex items-center gap-1.5">
+                        {a}
+                        {hiddenUnitNames.has(a) && (
+                          <Badge variant="outline" className="text-[9px] px-1 py-0 text-muted-foreground">Hidden</Badge>
+                        )}
+                      </span>
+                    </SelectItem>
+                  ))}</SelectContent>
                 </Select>
               </div>
               <div className="space-y-1.5 md:col-span-2">
