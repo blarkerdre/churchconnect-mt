@@ -25,7 +25,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 import {
   Settings as SettingsIcon, Plus, Pencil, Trash2, Loader2,
-  Users, Church, CalendarDays, TrendingUp, Heart, Globe, Bell, Award, Link2, ShieldAlert, Upload, X, ImageIcon, Mail, Phone, CreditCard, Send, Key, ChevronDown, SlidersHorizontal, Baby
+  Users, Church, CalendarDays, TrendingUp, Heart, Globe, Bell, Award, Link2, ShieldAlert, Upload, X, ImageIcon, Mail, Phone, CreditCard, Send, Key, ChevronDown, SlidersHorizontal, Baby, Eye, EyeOff
 } from "lucide-react";
 
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
