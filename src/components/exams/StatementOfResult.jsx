@@ -1,19 +1,149 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import TenantDialogHeader from "@/components/ui/TenantDialogHeader";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Printer, Download, Award } from "lucide-react";
-import { getGradeClassification } from "@/lib/grade-utils";
+import { getGradeClassification, getLetterGrade, LETTER_GRADE_BANDS } from "@/lib/grade-utils";
 import { useTenant } from "@/contexts/TenantContext";
+import { supabase } from "@/integrations/supabase/client";
 
 function escHtml(str) {
   return String(str ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
+function deriveCourseCode(course) {
+  if (course?.course_code) return String(course.course_code).toUpperCase();
+  const m = String(course?.name || "").match(/\(([^)]+)\)/);
+  if (m) return m[1].toUpperCase().replace(/[^A-Z0-9]/g, "");
+  const initials = String(course?.name || "")
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((w) => w[0])
+    .join("")
+    .toUpperCase();
+  return initials || "CRS";
+}
+
+function deriveTenantCode(tenant) {
+  const slug = String(tenant?.slug || "").replace(/[^A-Za-z0-9]/g, "").toUpperCase();
+  if (slug && slug.length <= 6) return slug;
+  const initials = String(tenant?.name || "")
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((w) => w[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 6);
+  return initials || slug.slice(0, 6) || "ORG";
+}
+
+function formatSessionLabel(session) {
+  const dateStr = session?.starts_at || session?.starts_on || session?.created_at;
+  if (dateStr) {
+    const d = new Date(dateStr);
+    if (!isNaN(d.getTime())) {
+      return `${d.toLocaleString("en-GB", { month: "long" }).toUpperCase()} ${d.getFullYear()}`;
+    }
+  }
+  if (session?.name) return String(session.name).toUpperCase();
+  const now = new Date();
+  return `${now.toLocaleString("en-GB", { month: "long" }).toUpperCase()} ${now.getFullYear()}`;
+}
+
 export default function StatementOfResult({ open, onOpenChange, member, course, subjects, memberSubjects }) {
   const { currentTenant } = useTenant();
+  const [session, setSession] = useState(null);
+  const [studentNumber, setStudentNumber] = useState("");
+  const [template, setTemplate] = useState(null);
+
+  useEffect(() => {
+    if (!open || !member?.id || !course?.id || !currentTenant?.id) return;
+    let cancelled = false;
+
+    (async () => {
+      // 1. Registration (may already store a student_number and session_id)
+      const { data: reg } = await supabase
+        .from("course_registrations")
+        .select("id, student_number, session_id, registered_at")
+        .eq("tenant_id", currentTenant.id)
+        .eq("course_id", course.id)
+        .eq("member_id", member.id)
+        .maybeSingle();
+
+      // 2. Session — prefer registration's session, else most recent attempt's session
+      let sess = null;
+      if (reg?.session_id) {
+        const { data } = await supabase
+          .from("exam_sessions")
+          .select("id, name, starts_at, starts_on, ended_at, created_at")
+          .eq("id", reg.session_id)
+          .maybeSingle();
+        sess = data;
+      }
+      if (!sess) {
+        const subjectIds = (subjects || []).map((s) => s.id);
+        if (subjectIds.length) {
+          const { data: attempts } = await supabase
+            .from("exam_attempts")
+            .select("session_id, submitted_at, created_at")
+            .eq("member_id", member.id)
+            .in("subject_id", subjectIds)
+            .not("session_id", "is", null)
+            .order("submitted_at", { ascending: false, nullsFirst: false });
+          const sid = attempts?.find((a) => a.session_id)?.session_id;
+          if (sid) {
+            const { data } = await supabase
+              .from("exam_sessions")
+              .select("id, name, starts_at, starts_on, ended_at, created_at")
+              .eq("id", sid)
+              .maybeSingle();
+            sess = data;
+          }
+        }
+      }
+
+      // 3. Sequence — position among registrations for this course + (optional) session
+      let seq = 1;
+      if (reg?.id) {
+        let q = supabase
+          .from("course_registrations")
+          .select("id, registered_at")
+          .eq("tenant_id", currentTenant.id)
+          .eq("course_id", course.id)
+          .order("registered_at", { ascending: true });
+        if (sess?.id) q = q.eq("session_id", sess.id);
+        const { data: allRegs } = await q;
+        const idx = (allRegs || []).findIndex((r) => r.id === reg.id);
+        if (idx >= 0) seq = idx + 1;
+      }
+
+      // 4. Certificate template for signatory + logo
+      const { data: tmpl } = await supabase
+        .from("certificate_templates")
+        .select("signatory_name, signatory_title, dean_signature_url, logo_url, crest_image_url, church_name")
+        .eq("tenant_id", currentTenant.id)
+        .eq("training_type", course.name)
+        .maybeSingle();
+
+      if (cancelled) return;
+      setSession(sess);
+      setTemplate(tmpl || null);
+
+      const stored = reg?.student_number && String(reg.student_number).trim();
+      if (stored) {
+        setStudentNumber(stored);
+      } else {
+        const tenantCode = deriveTenantCode(currentTenant);
+        const courseCode = deriveCourseCode(course);
+        const sessionLabel = formatSessionLabel(sess).replace(/\s+/g, "/");
+        const seqStr = String(100 + seq).padStart(3, "0");
+        setStudentNumber(`${tenantCode}/${courseCode}/${sessionLabel}/${seqStr}`);
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [open, member?.id, course?.id, currentTenant?.id, subjects]);
+
   if (!member || !course) return null;
 
   const classifications = course.grade_classifications || [
@@ -22,12 +152,11 @@ export default function StatementOfResult({ open, onOpenChange, member, course, 
     { label: "Pass", min_percentage: 50 },
   ];
 
-  const rows = subjects.map(s => {
+  const rows = subjects.map((s) => {
     const sub = memberSubjects[s.id];
     const pct = sub && sub.total_points > 0 ? (sub.score / sub.total_points) * 100 : 0;
-    const subClassifications = (s.grade_classifications && s.grade_classifications.length > 0) ? s.grade_classifications : classifications;
-    const grade = sub ? getGradeClassification(pct, subClassifications) : "—";
-    return { name: s.name, score: sub?.score ?? 0, total: sub?.total_points ?? 0, pct, grade, taken: !!sub };
+    const letter = sub ? getLetterGrade(pct).letter : "—";
+    return { name: s.name, score: sub?.score ?? 0, total: sub?.total_points ?? 0, pct, letter, taken: !!sub };
   });
 
   const totalScore = rows.reduce((s, r) => s + r.score, 0);
@@ -35,65 +164,133 @@ export default function StatementOfResult({ open, onOpenChange, member, course, 
   const overallPct = totalPoints > 0 ? (totalScore / totalPoints) * 100 : 0;
   const overallGrade = getGradeClassification(overallPct, classifications);
 
-  const gradeVariant = (grade) => {
-    if (grade === "Distinction") return "default";
-    if (grade === "Merit") return "secondary";
-    if (grade === "Fail") return "destructive";
-    return "outline";
-  };
+  const sessionLabel = formatSessionLabel(session);
+  const churchName = template?.church_name || currentTenant?.name || "";
+  const centreName = currentTenant?.name && template?.church_name && template.church_name !== currentTenant.name
+    ? currentTenant.name
+    : "";
+  const logoUrl = template?.crest_image_url || template?.logo_url || currentTenant?.logo_url || "";
+  const signatoryName = template?.signatory_name || "";
+  const signatoryTitle = template?.signatory_title || "";
+  const signatureUrl = template?.dean_signature_url || "";
 
   const handlePrint = () => {
-    const logoHtml = currentTenant?.logo_url
-      ? `<img src="${escHtml(currentTenant.logo_url)}" style="height:48px;margin-bottom:8px;" />`
-      : "";
-    const churchName = currentTenant?.name || "";
-    const subjectRows = rows.map(r =>
-      `<tr><td>${escHtml(r.name)}</td><td class="c">${r.taken ? r.score : "—"}</td><td class="c">${r.taken ? r.total : "—"}</td><td class="c">${r.taken ? Math.round(r.pct) + "%" : "—"}</td><td class="c"><strong>${escHtml(r.grade)}</strong></td></tr>`
+    const subjectRows = rows
+      .map(
+        (r) => `
+        <tr>
+          <td>${escHtml(r.name.toUpperCase())}</td>
+          <td class="grade">${r.taken ? escHtml(r.letter) : "—"}</td>
+        </tr>`
+      )
+      .join("");
+
+    const notesRows = LETTER_GRADE_BANDS.map(
+      (b) => `<tr><td>${escHtml(b.label)}</td><td>${escHtml(b.letter)}&nbsp;&nbsp;${b.min}-${b.max}</td></tr>`
     ).join("");
-    const html = `<!DOCTYPE html><html><head><title>Statement of Result</title><style>
-      body{font-family:Arial,sans-serif;margin:32px;color:#111}
-      .header{text-align:center;margin-bottom:24px}
-      .header h1{font-size:20px;color:#1e3a5f;margin:4px 0}
-      .header h2{font-size:16px;color:#333;margin:4px 0;font-weight:normal}
-      .header p{font-size:12px;color:#666}
-      table{width:100%;border-collapse:collapse;margin-top:16px}
-      th{background:#1e3a5f;color:#fff;padding:8px 10px;text-align:left;font-size:11px}
-      td{padding:7px 10px;border-bottom:1px solid #e5e7eb;font-size:12px}
-      tr:nth-child(even) td{background:#f8fafc}
-      .c{text-align:center}
-      .footer{margin-top:16px;padding:12px;background:#f0f4f8;border-radius:6px;text-align:center}
-      .footer .grade{font-size:18px;font-weight:bold;color:#1e3a5f}
-      @media print{body{margin:0}}
-    </style></head><body>
+
+    const logoHtml = logoUrl
+      ? `<img src="${escHtml(logoUrl)}" alt="Logo" style="height:96px;margin:0 auto 8px;display:block;" />`
+      : "";
+
+    const centreLine = centreName
+      ? `<div class="centre">${escHtml(centreName.toUpperCase())}</div>`
+      : "";
+
+    const signatureHtml = signatureUrl
+      ? `<img src="${escHtml(signatureUrl)}" alt="Signature" style="height:60px;" />`
+      : `<div style="border-bottom:1px solid #333;width:180px;height:40px;"></div>`;
+
+    const html = `<!DOCTYPE html><html><head><title>Statement of Result — ${escHtml(member.name)}</title>
+      <style>
+        @page { size: A4; margin: 18mm 20mm; }
+        body { font-family: 'Cambria', 'Georgia', serif; color:#111; margin:0; }
+        .header { text-align:center; margin-bottom:18px; }
+        .header h1 { font-family: 'Impact', 'Arial Black', sans-serif; font-size:34px; margin:4px 0; letter-spacing:1px; }
+        .centre { font-size:14px; font-weight:bold; margin-top:6px; }
+        .title { font-size:14px; font-weight:bold; margin-top:2px; }
+        .course-line { font-size:14px; font-weight:bold; margin-top:2px; }
+        .name-row { display:flex; justify-content:space-between; align-items:baseline; margin: 18px 0 6px; font-size:14px; }
+        .name-row .label { font-weight:bold; }
+        .name-row .name { font-size:22px; color:#6b3fa0; font-family: 'Georgia', serif; margin-left:6px; }
+        .name-row .ref { text-decoration:underline; font-weight:bold; }
+        table.modules { width:100%; border-collapse:collapse; margin-top:4px; }
+        table.modules thead th {
+          background:#dbe5f1; color:#000; text-align:left;
+          padding:8px 10px; font-size:13px; border-bottom:1px solid #b7c7d9;
+        }
+        table.modules thead th.grade { text-align:right; }
+        table.modules td { padding:6px 10px; font-size:13px; }
+        table.modules td.grade { text-align:right; font-weight:bold; white-space:nowrap; }
+        table.modules tfoot td {
+          background:#dbe5f1; font-weight:bold; padding:8px 10px; font-size:13px;
+          border-top:1px solid #b7c7d9;
+        }
+        .notes { margin-top:18px; }
+        .notes .heading { font-style:italic; font-weight:bold; text-decoration:underline; margin-bottom:6px; }
+        table.notes-table td { padding:2px 24px 2px 0; font-size:12px; }
+        .signature { margin-top:36px; display:flex; align-items:flex-end; gap:16px; }
+        .signature .who { font-size:12px; }
+        @media print { body { margin:0; } }
+      </style></head><body>
       <div class="header">
         ${logoHtml}
-        <h1>${escHtml(churchName)}</h1>
-        <h2>Statement of Result</h2>
-        <p><strong>Course:</strong> ${escHtml(course.name)} &nbsp;|&nbsp; <strong>Student:</strong> ${escHtml(member.name)}</p>
-        <p>Generated: ${escHtml(new Date().toLocaleDateString("en-GB"))}</p>
+        <h1>${escHtml((churchName || "").toUpperCase())}</h1>
+        ${centreLine}
+        <div class="title">STATEMENT OF RESULT</div>
+        <div class="course-line">${escHtml((course.name || "").toUpperCase())} ${escHtml(sessionLabel)}</div>
       </div>
-      <table>
-        <thead><tr><th>Subject</th><th class="c">Score</th><th class="c">Total</th><th class="c">%</th><th class="c">Grade</th></tr></thead>
+
+      <div class="name-row">
+        <div><span class="label">NAME:</span><span class="name">${escHtml(member.name)}</span></div>
+        <div class="ref">${escHtml(studentNumber)}</div>
+      </div>
+
+      <table class="modules">
+        <thead>
+          <tr><th>Module Title</th><th class="grade">Grades</th></tr>
+        </thead>
         <tbody>${subjectRows}</tbody>
-        <tfoot><tr style="font-weight:bold;background:#e8edf3"><td>AGGREGATE</td><td class="c">${totalScore}</td><td class="c">${totalPoints}</td><td class="c">${Math.round(overallPct)}%</td><td class="c">${escHtml(overallGrade)}</td></tr></tfoot>
+        <tfoot>
+          <tr><td></td><td class="grade">Overall Result:&nbsp;&nbsp;${escHtml(overallGrade)}</td></tr>
+        </tfoot>
       </table>
-      <div class="footer">
-        <p>Overall Classification</p>
-        <p class="grade">${escHtml(overallGrade)}</p>
+
+      <div class="notes">
+        <div class="heading">Explanatory Notes</div>
+        <table class="notes-table">
+          <tr><td><b>Result</b></td><td><b>Grades</b></td></tr>
+          ${notesRows}
+        </table>
+      </div>
+
+      <div class="signature">
+        <div>
+          ${signatureHtml}
+          <div class="who">
+            ${signatoryName ? `<div><b>${escHtml(signatoryName)}</b></div>` : ""}
+            ${signatoryTitle ? `<div>${escHtml(signatoryTitle)}</div>` : ""}
+          </div>
+        </div>
       </div>
     </body></html>`;
-    const win = window.open("", "_blank", "width=900,height=700");
+
+    const win = window.open("", "_blank", "width=900,height=1100");
     win.document.write(html);
     win.document.close();
     win.focus();
-    win.print();
+    setTimeout(() => win.print(), 300);
   };
 
   const handleDownloadCSV = () => {
     const esc = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
-    const headers = ["Subject", "Score", "Total", "%", "Grade"];
-    const csvRows = rows.map(r => [r.name, r.taken ? r.score : "", r.taken ? r.total : "", r.taken ? `${Math.round(r.pct)}%` : "", r.grade].map(esc).join(","));
-    csvRows.push(["AGGREGATE", totalScore, totalPoints, `${Math.round(overallPct)}%`, overallGrade].map(esc).join(","));
+    const headers = ["Module", "Score", "Total", "%", "Letter"];
+    const csvRows = rows.map((r) =>
+      [r.name, r.taken ? r.score : "", r.taken ? r.total : "", r.taken ? `${Math.round(r.pct)}%` : "", r.letter]
+        .map(esc)
+        .join(",")
+    );
+    csvRows.push(["OVERALL", totalScore, totalPoints, `${Math.round(overallPct)}%`, overallGrade].map(esc).join(","));
     const csv = [headers.map(esc).join(","), ...csvRows].join("\n");
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
@@ -106,54 +303,66 @@ export default function StatementOfResult({ open, onOpenChange, member, course, 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-2xl">
         <TenantDialogHeader>
           <Award className="h-4 w-4 text-primary" /> Statement of Result
         </TenantDialogHeader>
 
-        <div className="space-y-4">
-          <div className="text-center space-y-1">
-            <p className="text-sm font-semibold text-foreground">{course.name}</p>
-            <p className="text-sm text-muted-foreground">{member.name}</p>
+        <div className="space-y-4 max-h-[70vh] overflow-y-auto">
+          {/* On-screen preview mirrors the printable layout */}
+          <div className="text-center space-y-1 border-b pb-3">
+            {logoUrl ? <img src={logoUrl} alt="Logo" className="h-16 mx-auto mb-1" /> : null}
+            <p className="text-lg font-black tracking-wide">{(churchName || "").toUpperCase()}</p>
+            {centreName ? <p className="text-xs font-semibold">{centreName.toUpperCase()}</p> : null}
+            <p className="text-xs font-semibold">STATEMENT OF RESULT</p>
+            <p className="text-xs font-semibold">
+              {(course.name || "").toUpperCase()} {sessionLabel}
+            </p>
           </div>
 
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Subject</TableHead>
-                  <TableHead className="text-center">Score</TableHead>
-                  <TableHead className="text-center">Total</TableHead>
-                  <TableHead className="text-center">%</TableHead>
-                  <TableHead className="text-center">Grade</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {rows.map(r => (
-                  <TableRow key={r.name}>
-                    <TableCell className="text-sm font-medium">{r.name}</TableCell>
-                    <TableCell className="text-center text-sm">{r.taken ? r.score : "—"}</TableCell>
-                    <TableCell className="text-center text-sm">{r.taken ? r.total : "—"}</TableCell>
-                    <TableCell className="text-center text-sm">{r.taken ? `${Math.round(r.pct)}%` : "—"}</TableCell>
-                    <TableCell className="text-center">
-                      <Badge variant={gradeVariant(r.grade)} className="text-[10px]">{r.grade}</Badge>
-                    </TableCell>
-                  </TableRow>
-                ))}
-                <TableRow className="bg-muted/50 font-semibold">
-                  <TableCell className="text-sm font-bold">AGGREGATE</TableCell>
-                  <TableCell className="text-center text-sm font-bold">{totalScore}</TableCell>
-                  <TableCell className="text-center text-sm font-bold">{totalPoints}</TableCell>
-                  <TableCell className="text-center text-sm font-bold">{Math.round(overallPct)}%</TableCell>
-                  <TableCell className="text-center">
-                    <Badge variant={gradeVariant(overallGrade)} className="text-xs">{overallGrade}</Badge>
-                  </TableCell>
-                </TableRow>
-              </TableBody>
-            </Table>
+          <div className="flex justify-between items-baseline text-sm">
+            <div>
+              <span className="font-bold">NAME: </span>
+              <span className="text-base font-serif text-primary">{member.name}</span>
+            </div>
+            <div className="font-bold underline text-xs">{studentNumber || "—"}</div>
           </div>
 
-          <div className="flex justify-center gap-2">
+          <div className="border rounded overflow-hidden">
+            <div className="grid grid-cols-[1fr_auto] bg-primary/10 px-3 py-2 text-xs font-bold">
+              <div>Module Title</div>
+              <div className="text-right">Grades</div>
+            </div>
+            {rows.map((r) => (
+              <div
+                key={r.name}
+                className="grid grid-cols-[1fr_auto] px-3 py-1.5 text-sm border-t border-border/50"
+              >
+                <div className="uppercase">{r.name}</div>
+                <div className="text-right font-bold tabular-nums">{r.taken ? r.letter : "—"}</div>
+              </div>
+            ))}
+            <div className="grid grid-cols-[1fr_auto] bg-primary/10 px-3 py-2 text-sm font-bold border-t">
+              <div />
+              <div className="text-right">Overall Result: {overallGrade}</div>
+            </div>
+          </div>
+
+          <div>
+            <p className="text-xs font-bold italic underline mb-1">Explanatory Notes</p>
+            <div className="grid grid-cols-2 gap-x-4 text-[11px]">
+              <div className="font-semibold">Result</div>
+              <div className="font-semibold">Grades</div>
+              {LETTER_GRADE_BANDS.map((b) => (
+                <React.Fragment key={b.letter}>
+                  <div>{b.label}</div>
+                  <div>{b.letter} &nbsp;{b.min}-{b.max}</div>
+                </React.Fragment>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex justify-center gap-2 pt-2">
             <Button variant="outline" size="sm" className="gap-1.5" onClick={handlePrint}>
               <Printer className="h-3.5 w-3.5" /> Print
             </Button>
