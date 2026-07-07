@@ -40,9 +40,10 @@ const empty = {
 };
 
 export default function SessionFormDialog({ open, onOpenChange, onSave, isAdmin = true, myUnits = [] }) {
-  const { data: churchUnits = [] } = useChurchUnits();
+  const { data: churchUnits = [] } = useChurchUnits(!isAdmin);
   const { tenantId, scopeQuery } = useTenantQuery();
   const allUnitNames = churchUnits.map(u => u.name);
+  const hiddenUnitNames = new Set(churchUnits.filter(u => u.is_active === false).map(u => u.name));
   const isUnitLeader = !isAdmin;
   const singleUnit = myUnits.length === 1 ? myUnits[0] : "";
 
@@ -147,7 +148,16 @@ export default function SessionFormDialog({ open, onOpenChange, onSave, isAdmin 
               ) : (
                 <Select value={form.unit} onValueChange={v => set("unit", v)}>
                   <SelectTrigger><SelectValue placeholder="Select unit" /></SelectTrigger>
-                  <SelectContent>{unitOptions.map(u => <SelectItem key={u} value={u}>{u}</SelectItem>)}</SelectContent>
+                  <SelectContent>{unitOptions.map(u => (
+                    <SelectItem key={u} value={u}>
+                      <span className="inline-flex items-center gap-1.5">
+                        {u}
+                        {hiddenUnitNames.has(u) && (
+                          <span className="text-[9px] uppercase px-1 rounded bg-muted text-muted-foreground">Hidden</span>
+                        )}
+                      </span>
+                    </SelectItem>
+                  ))}</SelectContent>
                 </Select>
               )}
             </div>

@@ -13,12 +13,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
 import { useChurchUnits } from "@/hooks/useChurchUnits";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function BulkUnitAssignDialog({ open, onOpenChange }) {
   const queryClient = useQueryClient();
   const { tenantId, scopeQuery, withTenant } = useTenantQuery();
-  const { data: churchUnits = [] } = useChurchUnits();
-  const allUnitNames = churchUnits.map(u => u.name);
+  const { isAdmin } = useAuth();
+  const { data: churchUnits = [] } = useChurchUnits(!isAdmin);
   const [selectedUnit, setSelectedUnit] = useState("");
   const [selectedUsers, setSelectedUsers] = useState([]);
   const [search, setSearch] = useState("");
@@ -103,8 +104,15 @@ export default function BulkUnitAssignDialog({ open, onOpenChange }) {
             <Select value={selectedUnit} onValueChange={(v) => { setSelectedUnit(v); setSelectedUsers([]); }}>
               <SelectTrigger><SelectValue placeholder="Choose a unit" /></SelectTrigger>
               <SelectContent>
-                {allUnitNames.map(u => (
-                  <SelectItem key={u} value={u}>{u}</SelectItem>
+                {churchUnits.map(u => (
+                  <SelectItem key={u.name} value={u.name}>
+                    <span className="inline-flex items-center gap-1.5">
+                      {u.name}
+                      {u.is_active === false && (
+                        <Badge variant="outline" className="text-[9px] px-1 py-0 text-muted-foreground">Hidden</Badge>
+                      )}
+                    </span>
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
