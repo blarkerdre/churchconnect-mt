@@ -25,7 +25,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 import {
   Settings as SettingsIcon, Plus, Pencil, Trash2, Loader2,
-  Users, Church, CalendarDays, TrendingUp, Heart, Globe, Bell, Award, Link2, ShieldAlert, Upload, X, ImageIcon, Mail, Phone, CreditCard, Send, Key, ChevronDown, SlidersHorizontal, Baby
+  Users, Church, CalendarDays, TrendingUp, Heart, Globe, Bell, Award, Link2, ShieldAlert, Upload, X, ImageIcon, Mail, Phone, CreditCard, Send, Key, ChevronDown, SlidersHorizontal, Baby, Eye, EyeOff
 } from "lucide-react";
 
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -554,6 +554,18 @@ function ChurchUnitsSection() {
     onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
 
+  const toggleVisibilityMutation = useMutation({
+    mutationFn: async ({ id, is_active }) => {
+      const { error } = await supabase.from("church_units").update({ is_active }).eq("id", id).eq("tenant_id", tenantId);
+      if (error) throw error;
+    },
+    onSuccess: (_, { is_active }) => {
+      qc.invalidateQueries({ queryKey: ["church-units"] });
+      toast({ title: is_active ? "Unit is now visible to members" : "Unit hidden from members" });
+    },
+    onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+  });
+
   const deleteMutation = useMutation({
     mutationFn: async (id) => {
       const { error } = await supabase.from("church_units").delete().eq("id", id).eq("tenant_id", tenantId);
@@ -600,14 +612,24 @@ function ChurchUnitsSection() {
         ) : (
           <div className="space-y-2">
             {units.map((unit) => (
-              <div key={unit.id} className="flex items-center justify-between p-2.5 sm:p-3 bg-muted/50 rounded-lg">
+              <div key={unit.id} className={`flex items-center justify-between p-2.5 sm:p-3 rounded-lg ${unit.is_active ? "bg-muted/50" : "bg-muted/30 opacity-70"}`}>
                 <div className="flex items-center gap-2 sm:gap-3 min-w-0">
                   <span className="text-sm font-medium text-foreground truncate">{unit.name}</span>
                   <Badge variant={unit.is_active ? "default" : "secondary"} className="text-xs">
-                    {unit.is_active ? "Active" : "Inactive"}
+                    {unit.is_active ? "Visible" : "Hidden"}
                   </Badge>
                 </div>
                 <div className="flex items-center gap-1">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    title={unit.is_active ? "Hide from members" : "Show to members"}
+                    onClick={() => toggleVisibilityMutation.mutate({ id: unit.id, is_active: !unit.is_active })}
+                    disabled={toggleVisibilityMutation.isPending}
+                  >
+                    {unit.is_active ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5 text-muted-foreground" />}
+                  </Button>
                   <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(unit)}>
                     <Pencil className="h-3.5 w-3.5" />
                   </Button>
@@ -631,8 +653,11 @@ function ChurchUnitsSection() {
               <Label>Unit Name</Label>
               <Input value={unitName} onChange={(e) => setUnitName(e.target.value)} placeholder="e.g. Choir" />
             </div>
-            <div className="flex items-center justify-between">
-              <Label>Active</Label>
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <Label>Visible to members</Label>
+                <p className="text-xs text-muted-foreground mt-0.5">Hidden units are removed from member forms, filters and pickers. Existing member assignments are preserved.</p>
+              </div>
               <Switch checked={unitActive} onCheckedChange={setUnitActive} />
             </div>
             <Button onClick={handleSave} disabled={saveMutation.isPending} className="w-full">
