@@ -120,7 +120,7 @@ export default function StatementOfResult({ open, onOpenChange, member, course, 
       // 4. Certificate template for signatory + logo
       const { data: tmpl } = await supabase
         .from("certificate_templates")
-        .select("signatory_name, signatory_title, dean_signature_url, logo_url, crest_image_url, church_name")
+        .select("signatory_name, signatory_title, dean_signature_url, logo_url, crest_image_url, church_name, wofbi_logo_url, centre_name")
         .eq("tenant_id", currentTenant.id)
         .eq("training_type", course.name)
         .maybeSingle();
