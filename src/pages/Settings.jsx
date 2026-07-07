@@ -653,8 +653,11 @@ function ChurchUnitsSection() {
               <Label>Unit Name</Label>
               <Input value={unitName} onChange={(e) => setUnitName(e.target.value)} placeholder="e.g. Choir" />
             </div>
-            <div className="flex items-center justify-between">
-              <Label>Active</Label>
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <Label>Visible to members</Label>
+                <p className="text-xs text-muted-foreground mt-0.5">Hidden units are removed from member forms, filters and pickers. Existing member assignments are preserved.</p>
+              </div>
               <Switch checked={unitActive} onCheckedChange={setUnitActive} />
             </div>
             <Button onClick={handleSave} disabled={saveMutation.isPending} className="w-full">
