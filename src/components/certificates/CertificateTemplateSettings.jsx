@@ -427,6 +427,32 @@ export default function CertificateTemplateSettings() {
               <Label>Church Name</Label>
               <Input value={form.church_name} onChange={(e) => set("church_name", e.target.value)} />
             </div>
+            <div className="space-y-1.5">
+              <Label>Centre Name (Statement of Result)</Label>
+              <Input
+                value={form.centre_name}
+                onChange={(e) => set("centre_name", e.target.value)}
+                placeholder="e.g. Cardiff Learning Centre"
+              />
+              <p className="text-xs text-muted-foreground">Shown under the church header on the Statement of Result. Leave blank to hide.</p>
+            </div>
+            <div className="space-y-1.5">
+              <Label>WoFBI Logo (Statement of Result)</Label>
+              <p className="text-xs text-muted-foreground">Optional. Replaces the default church logo on the Statement of Result. PNG/JPG, under 2MB.</p>
+              <div className="flex flex-wrap items-center gap-2">
+                <label className="flex items-center gap-2 px-3 py-2 border rounded-md cursor-pointer hover:bg-muted/50 text-sm">
+                  {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                  Upload Logo
+                  <input type="file" accept="image/*" onChange={handleWofbiLogoUpload} className="hidden" disabled={uploading} />
+                </label>
+                {form.wofbi_logo_url && (
+                  <Button variant="ghost" size="sm" onClick={() => set("wofbi_logo_url", "")}>Remove</Button>
+                )}
+              </div>
+              {form.wofbi_logo_url && (
+                <img src={form.wofbi_logo_url} alt="WoFBI logo" className="mt-2 h-16 object-contain rounded border bg-white p-1" />
+              )}
+            </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label>Signatory Name</Label>
