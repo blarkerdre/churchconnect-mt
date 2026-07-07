@@ -1,35 +1,44 @@
 ## Goal
 
-Give tenant admins/owners a simple **Hide / Unhide** toggle for each Church Unit in **Settings → Church Units**. Hidden units disappear from every member-facing surface (member forms, unit filters, audience filters, event/attendance pickers, sign-post dialog, unit tasks, communications, etc.) while admins keep full visibility and management in Settings.
+"Hidden" means hidden from **members only**. Admins & Tenant Owners keep full visibility of every unit and can still assign members to hidden ones — the hidden unit just doesn't appear in any member-facing dropdown or filter.
 
-## How it works
+## Current behaviour
 
-The `church_units` table already has an `is_active` boolean. Almost every consumer already uses the `useChurchUnits()` hook, which filters `is_active = true` by default. This change repurposes that flag as the **"Visible to members"** switch and closes the two remaining direct-query gaps.
+Every consumer uses `useChurchUnits()` which defaults to `activeOnly = true`. That correctly hides units from members, but it *also* hides them from admins on the same screens — so admins can't add a member to a hidden unit, which is wrong.
 
 ## Changes
 
-### 1. Settings → Church Units row (`src/pages/Settings.jsx`, `ChurchUnitsSection`)
-- Add an inline **Eye / EyeOff** icon-button on each unit row that toggles `is_active` with one click (optimistic mutation, toast on success).
-- Change the badge text from "Active / Inactive" to **"Visible / Hidden"**.
-- In the edit dialog, rename the Active switch label to **"Visible to members"** with helper text: *"Hidden units are removed from member forms, filters and pickers. Existing member assignments are preserved."*
-- No schema change.
+### 1. Role-aware unit lists on admin surfaces
 
-### 2. Close direct-query gaps (member-facing paths)
-- `src/pages/UnitTasks.jsx` line 49 — add `.eq("is_active", true)` to the `church_units` fetch used to populate the unit picker.
-- `src/components/followups/SignPostDialog.jsx` line 71 — add `.eq("is_active", true)`.
+Where an **admin or tenant owner** operates a unit picker/filter, load the full list and visually mark hidden units. Everywhere else keeps the current filtered behaviour.
 
-### 3. Leave admin/settings paths unchanged
-- The Settings section already queries **all** units (active + hidden) so admins can unhide them.
-- `useChurchUnits(false)` remains available if any future admin-only screen needs the full list.
+Files to update (switch to `useChurchUnits(false)` when `isTenantAdmin || isTenantOwner`, otherwise keep default):
+- `src/components/members/MemberFormDialog.jsx` — admin editing a member: show hidden units in the picker with a small muted **"Hidden"** badge next to the name.
+- `src/components/users/BulkUnitAssignDialog.jsx` — badge hidden units in the unit dropdown.
+- `src/components/users/UnitLeaderAssignments.jsx` — same badge treatment.
+- `src/components/comms/AudienceFilter.jsx` — admin audience filter includes hidden units (badge).
+- `src/components/events/EventFormDialog.jsx` — admin event audience: include + badge.
+- `src/components/attendance/SessionFormDialog.jsx` — admin attendance session unit filter: include + badge.
+- `src/pages/UnitTasks.jsx` — admin unit selector: include + badge.
+- `src/components/followups/SignPostDialog.jsx` — when the current user is admin, include hidden units (leader-only view stays filtered).
+
+Member-facing usage stays unchanged:
+- Self-service `MyProfile.jsx`, member-facing branches of `MemberFormDialog` (non-admin), `Communications.jsx` recipient side, `Events.jsx` browse view, `Attendance.jsx` self-check-in, `ChurchUnit.jsx` — all keep the default `activeOnly = true`.
+
+### 2. Small "Hidden" badge component
+
+Reuse the existing Badge with `variant="outline"` and muted styling, e.g. `<Badge variant="outline" className="ml-2 text-[10px] text-muted-foreground">Hidden</Badge>` inside each `SelectItem` / list row for units whose `is_active === false`.
+
+### 3. No backend or approval changes
+
+Approvals (`approve_join_request`) and sign-post "Add to my unit" already write to `members.church_unit` without a visibility check — this stays as-is, since admins are allowed to add members to hidden units. No schema changes.
 
 ## Out of scope
-
-- No changes to member records — hiding a unit does **not** clear existing `members.church_unit` assignments; those still display on member profiles/tables as text.
-- No new permission model — the Settings page is already gated to admins/tenant owners.
-- No schema migration.
+- No changes to how members see units (still filtered).
+- No changes to `wsf_centres` (Home Cell) visibility.
+- No auto-restore of a unit when an admin adds a member to it.
 
 ## Verification
-
-- As an admin, open Settings → Church Units, click the eye icon on a unit → badge flips to *Hidden*.
-- As a non-admin member, open Members form / Events form / Communications audience filter / Attendance session dialog / Sign-post dialog / Unit Tasks → hidden unit no longer appears in dropdowns.
-- Click the eye icon again → unit reappears everywhere.
+- As a **member**: hidden units don't appear in profile edit, event forms, self check-in, audience filters, sign-post targets, or unit-tasks views.
+- As an **admin / tenant owner**: hidden units appear in every unit picker/filter across Members, Users, Communications, Events, Attendance, Unit Tasks, Sign-post — each labelled "Hidden". Assigning a member to a hidden unit succeeds and persists.
+- Toggling a unit back to visible removes the "Hidden" badge for admins and makes it reappear for members.
