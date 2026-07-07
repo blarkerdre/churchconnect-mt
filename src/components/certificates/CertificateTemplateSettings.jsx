@@ -113,6 +113,8 @@ export default function CertificateTemplateSettings() {
     setForm({
       training_type: t.training_type,
       church_name: t.church_name,
+      centre_name: t.centre_name || "",
+      wofbi_logo_url: t.wofbi_logo_url || "",
       signatory_name: t.signatory_name,
       signatory_title: t.signatory_title,
       background_color: t.background_color,
