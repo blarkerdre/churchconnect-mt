@@ -23,7 +23,7 @@ import CourseResultsView from "@/components/exams/CourseResultsView";
 import TakeExamDialog from "@/components/exams/TakeExamDialog";
 import { useSubFeature } from "@/hooks/useSubFeature";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
-import { getGradeClassification, DEFAULT_GRADE_CLASSIFICATIONS } from "@/lib/grade-utils";
+import { getGradeClassification, DEFAULT_GRADE_CLASSIFICATIONS, LETTER_GRADE_BANDS } from "@/lib/grade-utils";
 import StatementOfResult from "@/components/exams/StatementOfResult";
 import ModuleTour from "@/components/tour/ModuleTour";
 
@@ -63,7 +63,7 @@ export default function ExamManagement() {
   // Course CRUD state
   const [titleDialogOpen, setTitleDialogOpen] = useState(false);
   const [editingTitle, setEditingTitle] = useState(null);
-  const [titleForm, setTitleForm] = useState({ name: "", course_code: "", description: "", pass_mark_percentage: 50, registration_open: false, exams_open: false, grade_classifications: DEFAULT_GRADE_CLASSIFICATIONS, send_result_email: true, send_certificate_email: true, starting_number: 1 });
+  const [titleForm, setTitleForm] = useState({ name: "", course_code: "", description: "", pass_mark_percentage: 50, registration_open: false, exams_open: false, grade_classifications: DEFAULT_GRADE_CLASSIFICATIONS, letter_grade_bands: LETTER_GRADE_BANDS, send_result_email: true, send_certificate_email: true, starting_number: 1 });
   const [deleteTitleTarget, setDeleteTitleTarget] = useState(null);
   const [showResults, setShowResults] = useState(false);
   const [showRegistrations, setShowRegistrations] = useState(false);
@@ -104,7 +104,7 @@ export default function ExamManagement() {
       toast({ title: editingTitle ? "Course updated" : "Course created" });
       setTitleDialogOpen(false);
       setEditingTitle(null);
-      setTitleForm({ name: "", course_code: "", description: "", pass_mark_percentage: 50, registration_open: false, exams_open: false, grade_classifications: DEFAULT_GRADE_CLASSIFICATIONS, send_result_email: true, send_certificate_email: true, starting_number: 1 });
+      setTitleForm({ name: "", course_code: "", description: "", pass_mark_percentage: 50, registration_open: false, exams_open: false, grade_classifications: DEFAULT_GRADE_CLASSIFICATIONS, letter_grade_bands: LETTER_GRADE_BANDS, send_result_email: true, send_certificate_email: true, starting_number: 1 });
     },
     onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
@@ -298,7 +298,7 @@ export default function ExamManagement() {
              {canCreateCourse && (
                <Button size="sm" variant="outline" className="gap-1.5" onClick={() => {
                 setEditingTitle(null);
-                setTitleForm({ name: "", course_code: "", description: "", pass_mark_percentage: 50, registration_open: false, exams_open: false, grade_classifications: DEFAULT_GRADE_CLASSIFICATIONS, send_result_email: true, send_certificate_email: true, starting_number: 1 });
+                setTitleForm({ name: "", course_code: "", description: "", pass_mark_percentage: 50, registration_open: false, exams_open: false, grade_classifications: DEFAULT_GRADE_CLASSIFICATIONS, letter_grade_bands: LETTER_GRADE_BANDS, send_result_email: true, send_certificate_email: true, starting_number: 1 });
                 setTitleDialogOpen(true);
               }}>
                 <Plus className="h-3.5 w-3.5" /> Add Course
@@ -329,7 +329,7 @@ export default function ExamManagement() {
                   <button className="opacity-0 group-hover:opacity-100 transition-opacity ml-1" onClick={(e) => {
                     e.stopPropagation();
                     setEditingTitle(t);
-                    setTitleForm({ name: t.name, course_code: t.course_code || "", description: t.description || "", pass_mark_percentage: t.pass_mark_percentage || 50, registration_open: !!t.registration_open, exams_open: !!t.exams_open, grade_classifications: t.grade_classifications || DEFAULT_GRADE_CLASSIFICATIONS, send_result_email: t.send_result_email !== false, send_certificate_email: t.send_certificate_email !== false, starting_number: t.starting_number ?? 1 });
+                    setTitleForm({ name: t.name, course_code: t.course_code || "", description: t.description || "", pass_mark_percentage: t.pass_mark_percentage || 50, registration_open: !!t.registration_open, exams_open: !!t.exams_open, grade_classifications: t.grade_classifications || DEFAULT_GRADE_CLASSIFICATIONS, letter_grade_bands: (Array.isArray(t.letter_grade_bands) && t.letter_grade_bands.length > 0) ? t.letter_grade_bands : LETTER_GRADE_BANDS, send_result_email: t.send_result_email !== false, send_certificate_email: t.send_certificate_email !== false, starting_number: t.starting_number ?? 1 });
                     setTitleDialogOpen(true);
                   }}>
                     <Edit className="h-3 w-3" />
@@ -499,6 +499,7 @@ export default function ExamManagement() {
               registration_open: titleForm.registration_open,
               exams_open: titleForm.exams_open,
               grade_classifications: titleForm.grade_classifications,
+              letter_grade_bands: (titleForm.letter_grade_bands || []).map(b => ({ letter: String(b.letter||"").trim(), label: String(b.label||"").trim(), min: Number(b.min)||0, max: Number(b.max)||0 })),
               send_result_email: titleForm.send_result_email,
               send_certificate_email: titleForm.send_certificate_email,
               starting_number: Math.max(1, parseInt(titleForm.starting_number, 10) || 1),
@@ -604,6 +605,78 @@ export default function ExamManagement() {
               </div>
               <p className="text-xs text-muted-foreground">Highest percentage first. Students below the lowest threshold get "Fail".</p>
             </div>
+
+            {/* Letter Grade Bands Editor (Statement of Result) */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <Label>Alphabet Grade Bands (Statement of Result)</Label>
+                <Button type="button" variant="ghost" size="sm" onClick={() => setTitleForm(f => ({ ...f, letter_grade_bands: LETTER_GRADE_BANDS }))}>
+                  Reset to defaults
+                </Button>
+              </div>
+              <div className="space-y-2">
+                {(titleForm.letter_grade_bands || []).map((gb, idx) => (
+                  <div key={idx} className="flex items-center gap-2">
+                    <Input
+                      value={gb.letter}
+                      onChange={e => {
+                        const updated = [...titleForm.letter_grade_bands];
+                        updated[idx] = { ...updated[idx], letter: e.target.value };
+                        setTitleForm(f => ({ ...f, letter_grade_bands: updated }));
+                      }}
+                      placeholder="Letter"
+                      className="w-16"
+                    />
+                    <Input
+                      value={gb.label}
+                      onChange={e => {
+                        const updated = [...titleForm.letter_grade_bands];
+                        updated[idx] = { ...updated[idx], label: e.target.value };
+                        setTitleForm(f => ({ ...f, letter_grade_bands: updated }));
+                      }}
+                      placeholder="Label (e.g. Excellent)"
+                      className="flex-1"
+                    />
+                    <Input
+                      type="number" min="0" max="100"
+                      value={gb.min}
+                      onChange={e => {
+                        const updated = [...titleForm.letter_grade_bands];
+                        updated[idx] = { ...updated[idx], min: Number(e.target.value) };
+                        setTitleForm(f => ({ ...f, letter_grade_bands: updated }));
+                      }}
+                      className="w-20"
+                      placeholder="Min"
+                    />
+                    <span className="text-xs text-muted-foreground">-</span>
+                    <Input
+                      type="number" min="0" max="100"
+                      value={gb.max}
+                      onChange={e => {
+                        const updated = [...titleForm.letter_grade_bands];
+                        updated[idx] = { ...updated[idx], max: Number(e.target.value) };
+                        setTitleForm(f => ({ ...f, letter_grade_bands: updated }));
+                      }}
+                      className="w-20"
+                      placeholder="Max"
+                    />
+                    <span className="text-xs text-muted-foreground">%</span>
+                    <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => {
+                      setTitleForm(f => ({ ...f, letter_grade_bands: f.letter_grade_bands.filter((_, i) => i !== idx) }));
+                    }}>
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  </div>
+                ))}
+                <Button type="button" variant="outline" size="sm" className="gap-1.5" onClick={() => {
+                  setTitleForm(f => ({ ...f, letter_grade_bands: [...(f.letter_grade_bands || []), { letter: "", label: "", min: 0, max: 0 }] }));
+                }}>
+                  <Plus className="h-3 w-3" /> Add Band
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">Per-module letter shown on the Statement of Result (e.g. A+ / A / B). Independent from the overall grade classifications above.</p>
+            </div>
+
             <DialogFooter>
               <Button type="submit" disabled={saveTitleMutation.isPending}>
                 {saveTitleMutation.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}

@@ -3,7 +3,7 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import TenantDialogHeader from "@/components/ui/TenantDialogHeader";
 import { Button } from "@/components/ui/button";
 import { Printer, Download, Award } from "lucide-react";
-import { getGradeClassification, getLetterGrade, LETTER_GRADE_BANDS } from "@/lib/grade-utils";
+import { getGradeClassification, getLetterGrade, LETTER_GRADE_BANDS, resolveLetterGradeBands } from "@/lib/grade-utils";
 import { useTenant } from "@/contexts/TenantContext";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -120,7 +120,7 @@ export default function StatementOfResult({ open, onOpenChange, member, course, 
       // 4. Certificate template for signatory + logo
       const { data: tmpl } = await supabase
         .from("certificate_templates")
-        .select("signatory_name, signatory_title, dean_signature_url, logo_url, crest_image_url, church_name")
+        .select("signatory_name, signatory_title, dean_signature_url, logo_url, crest_image_url, church_name, wofbi_logo_url, centre_name")
         .eq("tenant_id", currentTenant.id)
         .eq("training_type", course.name)
         .maybeSingle();
@@ -152,10 +152,12 @@ export default function StatementOfResult({ open, onOpenChange, member, course, 
     { label: "Pass", min_percentage: 50 },
   ];
 
+  const letterBands = resolveLetterGradeBands(course);
+
   const rows = subjects.map((s) => {
     const sub = memberSubjects[s.id];
     const pct = sub && sub.total_points > 0 ? (sub.score / sub.total_points) * 100 : 0;
-    const letter = sub ? getLetterGrade(pct).letter : "—";
+    const letter = sub ? getLetterGrade(pct, letterBands).letter : "—";
     return { name: s.name, score: sub?.score ?? 0, total: sub?.total_points ?? 0, pct, letter, taken: !!sub };
   });
 
@@ -166,10 +168,17 @@ export default function StatementOfResult({ open, onOpenChange, member, course, 
 
   const sessionLabel = formatSessionLabel(session);
   const churchName = template?.church_name || currentTenant?.name || "";
-  const centreName = currentTenant?.name && template?.church_name && template.church_name !== currentTenant.name
-    ? currentTenant.name
-    : "";
-  const logoUrl = template?.crest_image_url || template?.logo_url || currentTenant?.logo_url || "";
+  const centreName =
+    template?.centre_name ||
+    (currentTenant?.name && template?.church_name && template.church_name !== currentTenant.name
+      ? currentTenant.name
+      : "");
+  const logoUrl =
+    template?.wofbi_logo_url ||
+    template?.crest_image_url ||
+    template?.logo_url ||
+    currentTenant?.logo_url ||
+    "";
   const signatoryName = template?.signatory_name || "";
   const signatoryTitle = template?.signatory_title || "";
   const signatureUrl = template?.dean_signature_url || "";
@@ -185,7 +194,7 @@ export default function StatementOfResult({ open, onOpenChange, member, course, 
       )
       .join("");
 
-    const notesRows = LETTER_GRADE_BANDS.map(
+    const notesRows = letterBands.map(
       (b) => `<tr><td>${escHtml(b.label)}</td><td>${escHtml(b.letter)}&nbsp;&nbsp;${b.min}-${b.max}</td></tr>`
     ).join("");
 
@@ -353,7 +362,7 @@ export default function StatementOfResult({ open, onOpenChange, member, course, 
             <div className="grid grid-cols-2 gap-x-4 text-[11px]">
               <div className="font-semibold">Result</div>
               <div className="font-semibold">Grades</div>
-              {LETTER_GRADE_BANDS.map((b) => (
+              {letterBands.map((b) => (
                 <React.Fragment key={b.letter}>
                   <div>{b.label}</div>
                   <div>{b.letter} &nbsp;{b.min}-{b.max}</div>

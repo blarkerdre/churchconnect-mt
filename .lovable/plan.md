@@ -1,36 +1,58 @@
 
 ## Goal
-Produce a rendered screenshot of the Statement of Result for a real WCI Cardiff Bible School student, so you can eyeball the layout, branding, reference number, and grade formatting end-to-end.
 
-## Current gap
-WCI Cardiff has the three Bible School courses (BCC, LCC, LDC) defined, but no exam sessions, no exam subjects, no registrations, and no attempts. Nothing can render until at least one full chain exists.
+Three changes to the Statement of Result, all opt-in / per-tenant / per-course so nothing changes for tenants that don't configure them:
 
-## Steps
+1. **WoFBI logo** — configurable per tenant (falls back to current tenant logo).
+2. **Centre line** (e.g. "Cardiff Learning Centre") — configurable per tenant, placement will match the reference document once re-attached.
+3. **Alphabet grade bands** — customisable per course (same pattern as `grade_classifications`), with the current WOFBI bands as the default.
 
-### 1. Seed test data for BCC under WCI Cardiff
-All rows tagged `tenant_id = 95e53cc3-… (wci-cardiff)`, marked as test data (name suffixed "(TEST)") so they can be identified and removed later.
+> Note: no document is attached in the current message. I'll implement the header layout to match the current statement, and once you re-attach the WoFBI reference I'll fine-tune placement of "Cardiff Learning Centre" and the WoFBI logo in a follow-up pass. If you'd like exact fidelity first, re-attach it and I'll incorporate before implementing.
 
-- **1 exam session**: "Cardiff Bible School — Sample Session (TEST)"
-- **Link session to BCC** via `exam_session_courses`
-- **6 exam subjects under BCC** (typical WOFBI module names): Understanding Salvation, Understanding the Church, Understanding the Bible, Understanding the Holy Spirit, Understanding Prayer, Understanding Faith.
-- **1 registration**: existing member `Loretta Asare` (fc07ec8a-…) → BCC → the session above. `student_number` left NULL so the auto-generation path is exercised.
-- **6 exam attempts** for that member, one per subject, all `completed_at` set, `passed=true`, with a spread of scores producing letter grades A+/A/B/C/D/E (e.g. 92, 85, 74, 66, 55, 48) to visually validate the grade band mapping.
+## Schema changes (migration)
 
-Done via `supabase--insert` (data-only, no schema changes).
+**`certificate_templates`** — add two nullable columns:
+- `wofbi_logo_url text` — tenant's WoFBI logo (used on Bible School statements instead of the generic tenant logo).
+- `centre_name text` — e.g. "Cardiff Learning Centre". Shown under the WoFBI header block.
 
-### 2. Render and capture
-- Launch Playwright headless, restore the injected Supabase session, navigate to the WCI Cardiff Bible School results screen for BCC.
-- Open Loretta Asare's Statement of Result dialog, trigger the print preview, and screenshot the on-screen and print-format views at 1280×1800.
-- Save PNGs under `/mnt/documents/wci-cardiff-statement-of-result*.png` and surface them as `<presentation-artifact>` tags.
+Applied per tenant + `training_type` (row already exists per Bible School course), so a tenant can, in principle, set different centre names per course. In practice we'll surface it once in the certificate template settings UI for the Bible School courses.
 
-### 3. QA
-- Visually verify: Cardiff logo + centre header, "STATEMENT OF RESULT" title, course + session line, name + auto-generated reference number (format `WCI-CARDIFF/BCC/<session>/101`), module table with A+…E letter grades, overall classification row, notes key, signatory block.
-- Fix any layout issues (clipping, overflow, missing logo) before delivering.
+**`exam_titles`** — add one nullable column:
+- `letter_grade_bands jsonb` — array of `{ letter, label, min, max }` objects. `null` means "use platform default" (current `LETTER_GRADE_BANDS`).
 
-### 4. Cleanup note
-Seeded rows stay in the DB (marked TEST) so you can reuse them. I'll list their IDs at the end so you can delete them any time with one query.
+No RLS/GRANT changes — both tables already have policies.
+
+## Frontend changes
+
+**`src/lib/grade-utils.js`**
+- Keep `LETTER_GRADE_BANDS` as the default export.
+- Add `getLetterGrade(percentage, bands)` — accept an optional `bands` override, fall back to default.
+- Add `resolveLetterGradeBands(course)` helper that returns `course.letter_grade_bands || LETTER_GRADE_BANDS`.
+
+**`src/components/exams/StatementOfResult.jsx`**
+- Fetch `certificate_templates.wofbi_logo_url` and `centre_name` in the existing template query.
+- Header:
+  - If `wofbi_logo_url` set → render it as the main logo (replaces the current `crest_image_url`/`logo_url`/`tenant.logo_url` fallback chain for Bible School statements).
+  - If `centre_name` set → render it as a distinct line in the header block. Exact placement will be tuned to the WoFBI document once re-attached; default is directly under the church name, above "STATEMENT OF RESULT".
+- Row rendering + Explanatory Notes: use `resolveLetterGradeBands(course)` instead of the imported constant. Print view too.
+
+**`src/components/exams/CourseResultsView.jsx`** (course settings surface)
+- In the "Grade classifications" editor area, add a second editor: **Letter grade bands** with columns Letter / Label / Min % / Max %.
+- Persists to `exam_titles.letter_grade_bands`. "Reset to defaults" button sets column back to `null`.
+
+**`src/components/certificates/CertificateTemplateSettings.jsx`**
+- Add two fields to the Bible School (WOFBI) template row:
+  - **WoFBI logo** (upload → same storage bucket the other cert images use, stored in `wofbi_logo_url`).
+  - **Centre name** (text input, stored in `centre_name`, placeholder "Cardiff Learning Centre").
 
 ## Out of scope
-- No schema changes.
-- No template changes — this is purely a rendering sample of the current implementation.
-- No email or PDF export delivery — screenshots only.
+
+- No changes to `course_registrations`, reference-number format, or the CSV export.
+- No changes to certificates themselves (only Statement of Result); we can mirror the WoFBI branding on the printed certificate in a follow-up if wanted.
+- No re-styling of the whole statement layout — just header + configurable bands. Exact WoFBI header treatment awaits your re-attached document.
+
+## Verification
+
+1. WCI Cardiff: upload WoFBI logo + set centre name "Cardiff Learning Centre" → re-render the seeded BCC statement via Playwright and screenshot to `/mnt/documents/`.
+2. Edit BCC letter bands (e.g. lower "Pass" to 35) → confirm one of the seeded scores changes letter grade in the rendered statement.
+3. A different tenant with no WoFBI logo / no centre name / no custom bands → confirm the statement renders unchanged.
