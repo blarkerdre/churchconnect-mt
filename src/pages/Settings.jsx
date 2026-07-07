@@ -554,6 +554,18 @@ function ChurchUnitsSection() {
     onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
 
+  const toggleVisibilityMutation = useMutation({
+    mutationFn: async ({ id, is_active }) => {
+      const { error } = await supabase.from("church_units").update({ is_active }).eq("id", id).eq("tenant_id", tenantId);
+      if (error) throw error;
+    },
+    onSuccess: (_, { is_active }) => {
+      qc.invalidateQueries({ queryKey: ["church-units"] });
+      toast({ title: is_active ? "Unit is now visible to members" : "Unit hidden from members" });
+    },
+    onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+  });
+
   const deleteMutation = useMutation({
     mutationFn: async (id) => {
       const { error } = await supabase.from("church_units").delete().eq("id", id).eq("tenant_id", tenantId);
