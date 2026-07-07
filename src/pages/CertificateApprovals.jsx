@@ -281,7 +281,16 @@ export default function CertificateApprovals() {
                         <TableCell className="text-sm">{r.report?.session_date ? format(parseISO(r.report.session_date), "dd MMM yyyy") : "—"}</TableCell>
                         <TableCell className="text-xs">{profileMap.get(r.signposted_by) || "—"}</TableCell>
                         <TableCell className="text-xs">{r.signposted_at ? format(parseISO(r.signposted_at), "dd MMM yyyy") : "—"}</TableCell>
-                        <TableCell><Badge variant={STATUS_VARIANT[r.signpost_status]} className="capitalize text-[10px]">{r.signpost_status}</Badge></TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-1">
+                            <Badge variant={STATUS_VARIANT[r.signpost_status]} className="capitalize text-[10px]">{r.signpost_status}</Badge>
+                            {r.signpost_status === "approved" && !r.certificate_number && (
+                              <span title="Certificate not yet generated — needs re-issue">
+                                <AlertTriangle className="h-3.5 w-3.5 text-destructive" />
+                              </span>
+                            )}
+                          </div>
+                        </TableCell>
                         <TableCell className="text-xs">{r.certificate_number || "—"}</TableCell>
                         <TableCell className="text-right">
                           {r.signpost_status === "pending" && (
@@ -294,10 +303,16 @@ export default function CertificateApprovals() {
                               </Button>
                             </div>
                           )}
+                          {r.signpost_status === "approved" && !r.certificate_number && (
+                            <Button size="sm" variant="outline" className="gap-1 h-7" disabled={busyId === r.id} onClick={() => handleRetryIssue(r)}>
+                              {busyId === r.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />} Retry Issue
+                            </Button>
+                          )}
                           {r.decision_notes && (r.signpost_status === "declined" || r.signpost_status === "approved") && (
-                            <span className="text-xs text-muted-foreground italic">{r.decision_notes}</span>
+                            <span className="text-xs text-muted-foreground italic ml-2">{r.decision_notes}</span>
                           )}
                         </TableCell>
+
                       </TableRow>
                     );
                   })}
