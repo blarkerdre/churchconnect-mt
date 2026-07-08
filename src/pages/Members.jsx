@@ -109,7 +109,8 @@ export default function Members() {
     const matchDateFrom = !filters.dateFrom || new Date(m.created_at) >= filters.dateFrom;
     const matchDateTo = !filters.dateTo || new Date(m.created_at) <= new Date(new Date(filters.dateTo).setHours(23, 59, 59, 999));
     const matchAccount = filters.account === "all" || (filters.account === "linked" ? !!m.user_id : !m.user_id);
-    return matchSearch && matchStatus && matchUnit && matchDateFrom && matchDateTo && matchAccount;
+    const matchWsfCentre = !filters.wsfCentreId || filters.wsfCentreId === "all" || m.wsf_centre_id === filters.wsfCentreId;
+    return matchSearch && matchStatus && matchUnit && matchDateFrom && matchDateTo && matchAccount && matchWsfCentre;
   });
 
   const openNew = () => {
