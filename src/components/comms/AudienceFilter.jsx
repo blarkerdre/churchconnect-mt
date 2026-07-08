@@ -178,7 +178,7 @@ export default function AudienceFilter({ filters, onChange, className, restricte
             <SelectContent>
               <SelectItem value="all">All Home Cells</SelectItem>
               {wsfCentres.map((c) => (
-                <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                <SelectItem key={c.id} value={c.id}>{c.name}{c.is_active === false ? " (Hidden)" : ""}</SelectItem>
               ))}
             </SelectContent>
           </Select>
