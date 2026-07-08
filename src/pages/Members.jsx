@@ -34,7 +34,7 @@ export default function Members() {
   const viewOnly = (isLeader || isReportsOfficer) && !isAdmin;
   const unitLeaderReadOnly = isUnitLeader && !isAdmin;
   const [search, setSearch] = useState("");
-  const [filters, setFilters] = useState({ status: "all", unit: "all", dateFrom: null, dateTo: null, account: "all" });
+  const [filters, setFilters] = useState({ status: "all", unit: "all", dateFrom: null, dateTo: null, account: "all", wsfCentreId: "all" });
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingMember, setEditingMember] = useState(null);
   const [qrOpen, setQrOpen] = useState(false);
