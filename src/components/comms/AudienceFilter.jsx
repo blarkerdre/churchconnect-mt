@@ -41,11 +41,11 @@ export default function AudienceFilter({ filters, onChange, className, restricte
   const { tenantId, scopeQuery } = useTenantQuery();
 
   const { data: wsfCentres = [] } = useQuery({
-    queryKey: ["audience-wsf-centres", tenantId],
+    queryKey: ["audience-wsf-centres", tenantId, isAdmin],
     queryFn: async () => {
-      const { data } = await scopeQuery(
-        supabase.from("wsf_centres").select("id, name").eq("is_active", true).order("name")
-      );
+      let q = supabase.from("wsf_centres").select("id, name, is_active").order("name");
+      if (!isAdmin) q = q.eq("is_active", true);
+      const { data } = await scopeQuery(q);
       return data || [];
     },
     enabled: !!tenantId,
