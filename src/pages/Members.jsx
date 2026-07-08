@@ -34,7 +34,7 @@ export default function Members() {
   const viewOnly = (isLeader || isReportsOfficer) && !isAdmin;
   const unitLeaderReadOnly = isUnitLeader && !isAdmin;
   const [search, setSearch] = useState("");
-  const [filters, setFilters] = useState({ status: "all", unit: "all", dateFrom: null, dateTo: null, account: "all" });
+  const [filters, setFilters] = useState({ status: "all", unit: "all", dateFrom: null, dateTo: null, account: "all", wsfCentreId: "all" });
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingMember, setEditingMember] = useState(null);
   const [qrOpen, setQrOpen] = useState(false);
@@ -109,7 +109,8 @@ export default function Members() {
     const matchDateFrom = !filters.dateFrom || new Date(m.created_at) >= filters.dateFrom;
     const matchDateTo = !filters.dateTo || new Date(m.created_at) <= new Date(new Date(filters.dateTo).setHours(23, 59, 59, 999));
     const matchAccount = filters.account === "all" || (filters.account === "linked" ? !!m.user_id : !m.user_id);
-    return matchSearch && matchStatus && matchUnit && matchDateFrom && matchDateTo && matchAccount;
+    const matchWsfCentre = !filters.wsfCentreId || filters.wsfCentreId === "all" || m.wsf_centre_id === filters.wsfCentreId;
+    return matchSearch && matchStatus && matchUnit && matchDateFrom && matchDateTo && matchAccount && matchWsfCentre;
   });
 
   const openNew = () => {
