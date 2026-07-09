@@ -1431,6 +1431,9 @@ function MemberExamsView({ memberId, memberRecord, courses, loading }) {
         subjectName={examSelection?.subjectName}
       />
 
+      <RateLecturerDialog open={rateOpen} onOpenChange={setRateOpen} />
+
+
       {statementCourse && (() => {
         const subjects = allSubjects.filter(s => s.course_id === statementCourse.id);
         const memberSubs = {};
