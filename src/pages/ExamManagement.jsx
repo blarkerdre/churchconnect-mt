@@ -1210,8 +1210,12 @@ function WofbiAboutDisplay() {
 function MemberExamsView({ memberId, memberRecord, courses, loading }) {
   const qc = useQueryClient();
   const { tenantId, scopeQuery, withTenant } = useTenantQuery();
+  const { currentTenant } = useTenant();
   const [examSelection, setExamSelection] = useState(null);
   const [statementCourse, setStatementCourse] = useState(null);
+  const [rateOpen, setRateOpen] = useState(false);
+  const lecturerRatingEnabled = !!currentTenant?.settings?.wofbi_lecturer_rating_enabled;
+
 
   const { data: registrations = [], isLoading: regLoading } = useQuery({
     queryKey: ["my-course-registrations", memberId, tenantId],
