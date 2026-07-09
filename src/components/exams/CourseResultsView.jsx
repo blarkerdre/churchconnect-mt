@@ -1,15 +1,17 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Trophy, Download, RotateCcw, FileText } from "lucide-react";
+import { Loader2, Trophy, Download, RotateCcw, FileText, Mail, Award, Send } from "lucide-react";
 import PrintReportButton from "@/components/PrintReportButton";
 import { toast } from "@/components/ui/use-toast";
 import { getGradeClassification } from "@/lib/grade-utils";
 import StatementOfResult from "@/components/exams/StatementOfResult";
+import { useAuth } from "@/hooks/useAuth";
 
 function downloadCSV(filename, headers, rows) {
   const escape = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
