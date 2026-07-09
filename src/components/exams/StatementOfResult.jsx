@@ -56,6 +56,7 @@ export default function StatementOfResult({ open, onOpenChange, member, course, 
   const [session, setSession] = useState(null);
   const [studentNumber, setStudentNumber] = useState("");
   const [template, setTemplate] = useState(null);
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
 
   useEffect(() => {
     if (!open || !member?.id || !course?.id || !currentTenant?.id) return;
