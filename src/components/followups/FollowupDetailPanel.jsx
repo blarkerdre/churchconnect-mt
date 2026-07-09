@@ -182,7 +182,6 @@ export default function FollowupDetailPanel({ followup, onClose, onUpdate, curre
   };
 
   const handleReopen = async () => {
-    if (!window.confirm("Reopen this completed follow-up?")) return;
     await onUpdate(followup.id, { status: "In Progress", completed_date: null });
     toast({ title: "Follow-up reopened", description: "Status set to In Progress." });
   };
