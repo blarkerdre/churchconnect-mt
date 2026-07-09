@@ -1304,14 +1304,22 @@ function MemberExamsView({ memberId, memberRecord, courses, loading }) {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-xl font-display font-bold text-foreground flex items-center gap-2">
-           <BookOpen className="h-5 w-5 text-primary" /> Bible School
-         </h1>
-         <p className="text-sm text-muted-foreground mt-1">Register for courses and take your Bible School exams</p>
+      <div className="flex items-start justify-between flex-wrap gap-2">
+        <div>
+          <h1 className="text-xl font-display font-bold text-foreground flex items-center gap-2">
+            <BookOpen className="h-5 w-5 text-primary" /> Bible School
+          </h1>
+          <p className="text-sm text-muted-foreground mt-1">Register for courses and take your Bible School exams</p>
+        </div>
+        {lecturerRatingEnabled && (
+          <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setRateOpen(true)}>
+            <Star className="h-3.5 w-3.5" /> Rate a Lecturer
+          </Button>
+        )}
       </div>
 
       <WofbiAboutDisplay />
+
 
 
 
