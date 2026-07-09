@@ -821,6 +821,20 @@ export default function ExamManagement() {
           previewMode
         />
       )}
+        </TabsContent>
+
+        <TabsContent value="lecturer" className="space-y-4 mt-4">
+          {adminLecturerRatingEnabled && myMember?.id && (
+            <div className="flex justify-end">
+              <Button variant="outline" onClick={() => setAdminRateOpen(true)} className="gap-2">
+                <Star className="h-4 w-4" /> Rate a Lecturer
+              </Button>
+            </div>
+          )}
+          <LecturerManager />
+          <RateLecturerDialog open={adminRateOpen} onOpenChange={setAdminRateOpen} />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
