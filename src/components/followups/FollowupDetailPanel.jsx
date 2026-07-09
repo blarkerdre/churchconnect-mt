@@ -179,6 +179,12 @@ export default function FollowupDetailPanel({ followup, onClose, onUpdate, curre
     await onUpdate(followup.id, patch);
   };
 
+  const handleReopen = async () => {
+    if (!window.confirm("Reopen this completed follow-up?")) return;
+    await onUpdate(followup.id, { status: "In Progress", completed_date: null });
+    toast({ title: "Follow-up reopened", description: "Status set to In Progress." });
+  };
+
   const isOverdue = followup.due_date && followup.status !== "Completed" &&
     new Date(followup.due_date) < new Date();
 
