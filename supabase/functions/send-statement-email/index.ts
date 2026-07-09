@@ -1,4 +1,6 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { generateAndUploadStatement } from "../render-statement-pdf/index.ts";
+import { formatSessionLabel } from "../_shared/statement-pdf.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -18,16 +20,7 @@ function escHtml(s: unknown) {
     .replace(/'/g, "&#39;");
 }
 
-function getLetterGrade(pct: number, bands: any[]): string {
-  if (!Array.isArray(bands)) return "";
-  const sorted = [...bands].sort((a, b) => (b.min_percentage ?? 0) - (a.min_percentage ?? 0));
-  for (const b of sorted) {
-    if (pct >= (b.min_percentage ?? 0)) return b.letter ?? b.label ?? "";
-  }
-  return "";
-}
-
-function getClassification(pct: number, cls: any[]): string {
+function getClassification(pct: number, cls: any[]) {
   if (!Array.isArray(cls)) return "";
   const sorted = [...cls].sort((a, b) => (b.min_percentage ?? 0) - (a.min_percentage ?? 0));
   for (const c of sorted) {
@@ -50,8 +43,9 @@ async function sendForMember(
     .eq("tenant_id", tenant.id)
     .maybeSingle();
   if (!member) return { ok: false, error: "Member not found" };
-  if (!member.email) return { ok: false, error: "No email on file", email: undefined };
+  if (!member.email) return { ok: false, error: "No email on file" };
 
+  // Best attempts to compute overall for the email summary
   const subjectIds = subjects.map((s) => s.id);
   const { data: attempts } = await supabase
     .from("exam_attempts")
@@ -72,107 +66,96 @@ async function sendForMember(
 
   let totalScore = 0;
   let totalPoints = 0;
-  const rows = subjects.map((s) => {
+  for (const s of subjects) {
     const b = best[s.id];
-    const score = b?.score ?? 0;
-    const tp = b?.total_points ?? 0;
-    const pct = tp > 0 ? (score / tp) * 100 : 0;
-    const bands = Array.isArray(s.letter_grade_bands) && s.letter_grade_bands.length > 0
-      ? s.letter_grade_bands
-      : course.letter_grade_bands || [];
-    const cls = Array.isArray(s.grade_classifications) && s.grade_classifications.length > 0
-      ? s.grade_classifications
-      : course.grade_classifications || [];
-    return {
-      name: s.name,
-      score,
-      total_points: tp,
-      pct,
-      letter: b ? getLetterGrade(pct, bands) : "—",
-      classification: b ? getClassification(pct, cls) : "—",
-      taken: !!b,
-    };
-  });
-
-  rows.forEach((r) => {
-    totalScore += r.score;
-    totalPoints += r.total_points;
-  });
+    totalScore += b?.score ?? 0;
+    totalPoints += b?.total_points ?? 0;
+  }
   const overallPct = totalPoints > 0 ? (totalScore / totalPoints) * 100 : 0;
   const passMark = course.pass_mark_percentage ?? 50;
   const passed = overallPct >= passMark;
   const overallClassification = getClassification(overallPct, course.grade_classifications || []);
+
+  // Generate the PDF (same layout as the on-screen Statement of Result)
+  let pdfResult: Awaited<ReturnType<typeof generateAndUploadStatement>>;
+  try {
+    pdfResult = await generateAndUploadStatement(supabase, tenant.id, course.id, memberId);
+  } catch (e) {
+    return { ok: false, error: `PDF generation failed: ${(e as Error).message}` };
+  }
 
   const memberName = `${member.first_name || ""} ${member.last_name || ""}`.trim() || "Student";
   const senderName = tenant.settings?.email_sender_name || tenant.name || "mychurchconnect";
   const tenantSiteUrl = tenant.slug ? `https://${ROOT_DOMAIN}/t/${tenant.slug}` : `https://${ROOT_DOMAIN}`;
   const statusColor = passed ? "#38a169" : "#e53e3e";
   const statusText = passed ? "PASSED" : "NOT YET PASSED";
-
-  const rowsHtml = rows
-    .map(
-      (r) => `<tr>
-      <td style="padding:8px 12px;border:1px solid #e2e8f0;">${escHtml(r.name)}</td>
-      <td style="padding:8px 12px;border:1px solid #e2e8f0;text-align:center;">${r.taken ? `${r.score} / ${r.total_points}` : "—"}</td>
-      <td style="padding:8px 12px;border:1px solid #e2e8f0;text-align:center;">${r.taken ? `${Math.round(r.pct)}%` : "—"}</td>
-      <td style="padding:8px 12px;border:1px solid #e2e8f0;text-align:center;">${escHtml(r.letter)}</td>
-      <td style="padding:8px 12px;border:1px solid #e2e8f0;text-align:center;">${escHtml(r.classification)}</td>
-    </tr>`,
-    )
-    .join("");
+  const sessionLabel = formatSessionLabel(pdfResult.session_label_source);
 
   const html = `<!DOCTYPE html><html><head><meta charset="utf-8"></head>
 <body style="margin:0;padding:0;background:#ffffff;font-family:Georgia,'Times New Roman',serif;">
 <div style="max-width:640px;margin:0 auto;padding:20px 0 48px;">
   <div style="padding:24px 32px;background:#1a2d4d;border-radius:8px 8px 0 0;text-align:center;">
     <p style="color:#fff;font-size:20px;font-weight:700;margin:0;">Statement of Result</p>
-    <p style="color:#c9a961;font-size:14px;margin:6px 0 0;">${escHtml(course.name)}</p>
+    <p style="color:#c9a961;font-size:14px;margin:6px 0 0;">${escHtml(course.name)} — ${escHtml(sessionLabel)}</p>
   </div>
   <div style="padding:28px 32px;background:#f8f9fa;">
     <h1 style="color:#1a2d4d;font-size:20px;font-weight:700;margin:0 0 8px;">${escHtml(memberName)}</h1>
     <p style="color:#4a5568;font-size:14px;margin:0 0 20px;">${escHtml(tenant.name)}</p>
-    <table style="width:100%;border-collapse:collapse;margin:0 0 20px;font-size:13px;">
-      <thead>
-        <tr style="background:#edf2f7;color:#1a2d4d;">
-          <th style="padding:10px 12px;border:1px solid #e2e8f0;text-align:left;">Subject</th>
-          <th style="padding:10px 12px;border:1px solid #e2e8f0;">Score</th>
-          <th style="padding:10px 12px;border:1px solid #e2e8f0;">%</th>
-          <th style="padding:10px 12px;border:1px solid #e2e8f0;">Grade</th>
-          <th style="padding:10px 12px;border:1px solid #e2e8f0;">Classification</th>
-        </tr>
-      </thead>
-      <tbody>${rowsHtml}</tbody>
-      <tfoot>
-        <tr style="background:#edf2f7;font-weight:700;color:#1a2d4d;">
-          <td style="padding:10px 12px;border:1px solid #e2e8f0;">Overall</td>
-          <td style="padding:10px 12px;border:1px solid #e2e8f0;text-align:center;">${totalScore} / ${totalPoints}</td>
-          <td style="padding:10px 12px;border:1px solid #e2e8f0;text-align:center;">${Math.round(overallPct)}%</td>
-          <td style="padding:10px 12px;border:1px solid #e2e8f0;text-align:center;">—</td>
-          <td style="padding:10px 12px;border:1px solid #e2e8f0;text-align:center;">${escHtml(overallClassification)}</td>
-        </tr>
-      </tfoot>
+
+    <table style="width:100%;border-collapse:collapse;margin:0 0 18px;font-size:14px;color:#1a2d4d;">
+      <tr>
+        <td style="padding:6px 0;color:#4a5568;">Student Number</td>
+        <td style="padding:6px 0;text-align:right;font-weight:700;">${escHtml(pdfResult.student_number)}</td>
+      </tr>
+      <tr>
+        <td style="padding:6px 0;color:#4a5568;">Overall Result</td>
+        <td style="padding:6px 0;text-align:right;font-weight:700;">${escHtml(overallClassification || "—")}</td>
+      </tr>
+      <tr>
+        <td style="padding:6px 0;color:#4a5568;">Status</td>
+        <td style="padding:6px 0;text-align:right;font-weight:700;color:${statusColor};">${statusText}</td>
+      </tr>
     </table>
-    <p style="margin:0 0 16px;color:#4a5568;font-size:14px;">
-      Pass mark: <strong>${passMark}%</strong> — Status:
-      <strong style="color:${statusColor};">${statusText}</strong>
+
+    <p style="margin:0 0 18px;color:#4a5568;font-size:14px;line-height:1.55;">
+      Your official Statement of Result is attached as a PDF. Click below to download it.
     </p>
-    <div style="text-align:center;margin:24px 0 0;">
-      <a href="${escHtml(tenantSiteUrl)}/auth" style="background:#1a2d4d;border-radius:6px;color:#fff;display:inline-block;font-size:14px;font-weight:600;padding:12px 28px;text-decoration:none;">View in your profile</a>
+
+    <div style="text-align:center;margin:20px 0 8px;">
+      <a href="${escHtml(pdfResult.signed_url)}"
+         style="background:#1a2d4d;border-radius:6px;color:#fff;display:inline-block;font-size:15px;font-weight:600;padding:14px 32px;text-decoration:none;">
+        Download Statement of Result (PDF)
+      </a>
+    </div>
+    <p style="text-align:center;margin:0 0 20px;color:#718096;font-size:12px;">
+      Download link is valid for 30 days.
+    </p>
+
+    <div style="text-align:center;margin:12px 0 0;">
+      <a href="${escHtml(tenantSiteUrl)}/auth" style="color:#1a2d4d;font-size:13px;text-decoration:underline;">View in your profile</a>
     </div>
   </div>
   <div style="padding:20px 32px;text-align:center;">
-    <p style="color:#a0aec0;font-size:12px;margin:0;">Bible School — Statement of Result</p>
+    <p style="color:#a0aec0;font-size:12px;margin:0;">${escHtml(tenant.name)} — Statement of Result</p>
   </div>
 </div></body></html>`;
 
-  const text = `Statement of Result — ${course.name}\n\nStudent: ${memberName}\n\n` +
-    rows.map((r) => `${r.name}: ${r.taken ? `${r.score}/${r.total_points} (${Math.round(r.pct)}%) ${r.letter}` : "—"}`).join("\n") +
-    `\n\nOverall: ${totalScore}/${totalPoints} (${Math.round(overallPct)}%) — ${statusText}\nPass mark: ${passMark}%`;
+  const text = `Statement of Result — ${course.name} (${sessionLabel})
+
+Student: ${memberName}
+Student Number: ${pdfResult.student_number}
+Overall Result: ${overallClassification || "—"}
+Status: ${statusText}
+Pass mark: ${passMark}%
+
+Download your PDF (valid 30 days):
+${pdfResult.signed_url}
+`;
 
   const messageId = `statement-${crypto.randomUUID()}`;
   const recipient = member.email.trim().toLowerCase();
 
-  // Look up or create unsubscribe token (required by the email queue)
+  // Unsubscribe token
   const { data: tokenRow } = await supabase
     .from("email_unsubscribe_tokens")
     .select("token")
@@ -188,7 +171,6 @@ async function sendForMember(
         { email: recipient, token: unsubToken },
         { onConflict: "email", ignoreDuplicates: true },
       );
-    // Re-read in case another request raced us
     const { data: stored } = await supabase
       .from("email_unsubscribe_tokens")
       .select("token")
@@ -236,7 +218,6 @@ Deno.serve(async (req) => {
     const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
     const admin = createClient(supabaseUrl, serviceKey);
 
-    // Auth: must be an admin in this tenant
     const authHeader = req.headers.get("Authorization") || "";
     const userClient = createClient(supabaseUrl, anonKey, {
       global: { headers: { Authorization: authHeader } },
@@ -286,7 +267,7 @@ Deno.serve(async (req) => {
 
     const { data: subjects } = await admin
       .from("exam_subjects")
-      .select("id, name, pass_mark_percentage, grade_classifications, letter_grade_bands, sort_order")
+      .select("id, name, sort_order")
       .eq("course_id", course_id)
       .eq("is_active", true)
       .order("sort_order");
