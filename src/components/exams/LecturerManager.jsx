@@ -250,13 +250,15 @@ export default function LecturerManager() {
 }
 
 function LecturerFeedbackDialog({ lecturer, onClose, tenantId }) {
+  const [subjectFilter, setSubjectFilter] = useState("all");
+
   const { data: ratings = [], isLoading } = useQuery({
     queryKey: ["lecturer-ratings", lecturer?.id, tenantId],
     enabled: !!lecturer?.id && !!tenantId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("lecturer_ratings")
-        .select("*, members(first_name, last_name)")
+        .select("*, members(first_name, last_name), exam_subjects(name), exam_titles(name)")
         .eq("lecturer_id", lecturer.id)
         .eq("tenant_id", tenantId)
         .order("created_at", { ascending: false });
@@ -265,12 +267,24 @@ function LecturerFeedbackDialog({ lecturer, onClose, tenantId }) {
     },
   });
 
-  const avg = ratings.length
-    ? Math.round((ratings.reduce((s, r) => s + (r.overall_rating || 0), 0) / ratings.length) * 10) / 10
+  const subjectOptions = Array.from(
+    new Map(
+      ratings
+        .filter((r) => r.subject_id)
+        .map((r) => [r.subject_id, r.exam_subjects?.name || "—"])
+    ).entries()
+  );
+
+  const filtered = subjectFilter === "all"
+    ? ratings
+    : ratings.filter((r) => r.subject_id === subjectFilter);
+
+  const avg = filtered.length
+    ? Math.round((filtered.reduce((s, r) => s + (r.overall_rating || 0), 0) / filtered.length) * 10) / 10
     : null;
 
   return (
-    <Dialog open={!!lecturer} onOpenChange={(v) => { if (!v) onClose(); }}>
+    <Dialog open={!!lecturer} onOpenChange={(v) => { if (!v) { setSubjectFilter("all"); onClose(); } }}>
       <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -284,11 +298,26 @@ function LecturerFeedbackDialog({ lecturer, onClose, tenantId }) {
           <p className="text-sm text-muted-foreground text-center py-6">No feedback submitted yet.</p>
         ) : (
           <div className="space-y-3">
+            {subjectOptions.length > 0 && (
+              <div className="flex items-center gap-2">
+                <Label className="text-xs">Filter by subject</Label>
+                <select
+                  className="text-xs border rounded px-2 py-1 bg-background"
+                  value={subjectFilter}
+                  onChange={(e) => setSubjectFilter(e.target.value)}
+                >
+                  <option value="all">All subjects</option>
+                  {subjectOptions.map(([id, name]) => (
+                    <option key={id} value={id}>{name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
             <div className="flex items-center gap-3 text-sm">
-              <Badge variant="outline">{ratings.length} submission{ratings.length !== 1 ? "s" : ""}</Badge>
+              <Badge variant="outline">{filtered.length} submission{filtered.length !== 1 ? "s" : ""}</Badge>
               {avg !== null && <Badge variant="default">Avg rating: {avg}/10</Badge>}
             </div>
-            {ratings.map((r) => (
+            {filtered.map((r) => (
               <div key={r.id} className="border rounded-lg p-3 space-y-1.5 text-sm">
                 <div className="flex justify-between items-center">
                   <span className="font-medium">
@@ -296,7 +325,11 @@ function LecturerFeedbackDialog({ lecturer, onClose, tenantId }) {
                   </span>
                   <span className="text-xs text-muted-foreground">{new Date(r.created_at).toLocaleDateString()}</span>
                 </div>
-                {r.level && <p className="text-xs text-muted-foreground">Level: {r.level}</p>}
+                <div className="flex flex-wrap gap-1.5 text-[10px]">
+                  {r.exam_titles?.name && <Badge variant="outline">Course: {r.exam_titles.name}</Badge>}
+                  {r.exam_subjects?.name && <Badge variant="outline">Subject: {r.exam_subjects.name}</Badge>}
+                  {r.level && <Badge variant="outline">Level: {r.level}</Badge>}
+                </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-xs">
                   <FieldRow label="Session" val={OPTION_LABELS.session_description[r.session_description]} />
                   <FieldRow label="Delivery" val={OPTION_LABELS.delivery[r.delivery]} />
@@ -326,3 +359,4 @@ function FieldRow({ label, val }) {
     </div>
   );
 }
+
