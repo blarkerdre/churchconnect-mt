@@ -421,6 +421,17 @@ export default function FollowupDetailPanel({ followup, onClose, onUpdate, curre
             </div>
           )}
 
+          {/* Reopen (admins & follow-up unit) */}
+          {followup.status === "Completed" && canManage && (
+            <div className="space-y-2">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Quick Actions</p>
+              <Button size="sm" variant="outline" className="text-primary border-primary/20 hover:bg-primary/10"
+                onClick={handleReopen}>
+                <RefreshCw className="h-3.5 w-3.5 mr-1" /> Reopen (Mark In Progress)
+              </Button>
+            </div>
+          )}
+
           {/* Send Message / Call (when completed too) */}
           {followup.status === "Completed" && (followup.person_email || followup.person_phone) && (
             <div className="space-y-2">
