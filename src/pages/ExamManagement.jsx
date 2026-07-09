@@ -16,15 +16,18 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "@/components/ui/use-toast";
-import { Loader2, Plus, Trash2, Edit, BookOpen, Save, Tag, Layers, Eye, CheckCircle2, Download, Users, QrCode, Search, FileText } from "lucide-react";
+import { Loader2, Plus, Trash2, Edit, BookOpen, Save, Tag, Layers, Eye, CheckCircle2, Download, Users, QrCode, Search, FileText, Star } from "lucide-react";
 import WoFBIRegistrationQRCode from "@/components/exams/WoFBIRegistrationQRCode";
 import SubjectManager from "@/components/exams/SubjectManager";
 import CourseResultsView from "@/components/exams/CourseResultsView";
 import TakeExamDialog from "@/components/exams/TakeExamDialog";
 import { useSubFeature } from "@/hooks/useSubFeature";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
+import { useTenant } from "@/contexts/TenantContext";
 import { getGradeClassification, DEFAULT_GRADE_CLASSIFICATIONS, LETTER_GRADE_BANDS } from "@/lib/grade-utils";
 import StatementOfResult from "@/components/exams/StatementOfResult";
+import LecturerManager from "@/components/exams/LecturerManager";
+import RateLecturerDialog from "@/components/exams/RateLecturerDialog";
 import ModuleTour from "@/components/tour/ModuleTour";
 
 const OPTION_LETTERS = ["a", "b", "c", "d"];
@@ -286,6 +289,11 @@ export default function ExamManagement() {
 
       {/* WoFBI About Section (Admin Editable) */}
       <WofbiAboutEditor />
+
+      {/* Lecturer Feedback Management */}
+      <LecturerManager />
+
+
 
 
       {/* Certificate Courses */}
@@ -1203,8 +1211,12 @@ function WofbiAboutDisplay() {
 function MemberExamsView({ memberId, memberRecord, courses, loading }) {
   const qc = useQueryClient();
   const { tenantId, scopeQuery, withTenant } = useTenantQuery();
+  const { currentTenant } = useTenant();
   const [examSelection, setExamSelection] = useState(null);
   const [statementCourse, setStatementCourse] = useState(null);
+  const [rateOpen, setRateOpen] = useState(false);
+  const lecturerRatingEnabled = !!currentTenant?.settings?.wofbi_lecturer_rating_enabled;
+
 
   const { data: registrations = [], isLoading: regLoading } = useQuery({
     queryKey: ["my-course-registrations", memberId, tenantId],
@@ -1292,14 +1304,22 @@ function MemberExamsView({ memberId, memberRecord, courses, loading }) {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-xl font-display font-bold text-foreground flex items-center gap-2">
-           <BookOpen className="h-5 w-5 text-primary" /> Bible School
-         </h1>
-         <p className="text-sm text-muted-foreground mt-1">Register for courses and take your Bible School exams</p>
+      <div className="flex items-start justify-between flex-wrap gap-2">
+        <div>
+          <h1 className="text-xl font-display font-bold text-foreground flex items-center gap-2">
+            <BookOpen className="h-5 w-5 text-primary" /> Bible School
+          </h1>
+          <p className="text-sm text-muted-foreground mt-1">Register for courses and take your Bible School exams</p>
+        </div>
+        {lecturerRatingEnabled && (
+          <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setRateOpen(true)}>
+            <Star className="h-3.5 w-3.5" /> Rate a Lecturer
+          </Button>
+        )}
       </div>
 
       <WofbiAboutDisplay />
+
 
 
 
@@ -1410,6 +1430,9 @@ function MemberExamsView({ memberId, memberRecord, courses, loading }) {
         subjectId={examSelection?.subjectId}
         subjectName={examSelection?.subjectName}
       />
+
+      <RateLecturerDialog open={rateOpen} onOpenChange={setRateOpen} />
+
 
       {statementCourse && (() => {
         const subjects = allSubjects.filter(s => s.course_id === statementCourse.id);
