@@ -188,6 +188,75 @@ export default function CourseResultsView({ course }) {
     downloadCSV(`${course.name}_${subject.name}_results.csv`, headers, rows);
   };
 
+  const completedMembers = useMemo(() => members.filter(m => m.subjectsTaken === subjects.length), [members, subjects.length]);
+  const passedMembers = useMemo(() => completedMembers.filter(m => m.passed), [completedMembers]);
+
+  const toggleSelect = (id) => {
+    setSelected(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+  const selectAllPassed = () => setSelected(new Set(passedMembers.map(m => m.id)));
+  const selectAllCompleted = () => setSelected(new Set(completedMembers.map(m => m.id)));
+  const clearSelection = () => setSelected(new Set());
+
+  const sendStatements = async (memberIds) => {
+    if (memberIds.length === 0) return;
+    setSendingBulk(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("send-statement-email", {
+        body: { member_ids: memberIds, course_id: course.id, tenant_id: course.tenant_id },
+      });
+      if (error) throw error;
+      toast({
+        title: "Statements sent",
+        description: `${data?.sent ?? 0} sent${data?.failed ? `, ${data.failed} failed` : ""}`,
+      });
+      clearSelection();
+    } catch (e) {
+      toast({ title: "Failed to send statements", description: e.message, variant: "destructive" });
+    } finally {
+      setSendingBulk(false);
+    }
+  };
+
+  const sendCertificates = async (memberIds) => {
+    const eligible = memberIds.filter(id => passedMembers.some(pm => pm.id === id));
+    if (eligible.length === 0) {
+      toast({ title: "No eligible members", description: "Certificates can only be sent to members who passed the course.", variant: "destructive" });
+      return;
+    }
+    setSendingBulk(true);
+    try {
+      let ok = 0, fail = 0;
+      for (const id of eligible) {
+        try {
+          const { data, error } = await supabase.functions.invoke("issue-certificate", {
+            body: {
+              member_id: id,
+              training_type: course.name,
+              tenant_id: course.tenant_id,
+              reissue: true,
+              admin_override: true,
+              send_certificate_email: true,
+            },
+          });
+          if (error || !data?.success) fail++; else ok++;
+        } catch { fail++; }
+      }
+      toast({
+        title: "Certificates processed",
+        description: `${ok} sent${fail ? `, ${fail} failed` : ""}${memberIds.length !== eligible.length ? ` (${memberIds.length - eligible.length} skipped — not passed)` : ""}`,
+      });
+      clearSelection();
+    } finally {
+      setSendingBulk(false);
+    }
+  };
+
+
   return (
     <>
     <Card className="border-0 shadow-sm">
