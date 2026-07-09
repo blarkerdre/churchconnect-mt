@@ -188,7 +188,7 @@ export default function MyProfile() {
   const { data: examTitles = [] } = useQuery({
     queryKey: ["exam-titles-cert-flags", tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("exam_titles").select("name, send_certificate_email").eq("tenant_id", tenantId);
+      const { data, error } = await supabase.from("exam_titles").select("name, send_certificate_email, send_result_email").eq("tenant_id", tenantId);
       if (error) throw error;
       return data;
     },
@@ -196,6 +196,7 @@ export default function MyProfile() {
   });
 
   const hiddenCourseNames = examTitles.filter(c => !c.send_certificate_email).map(c => c.name);
+  const hiddenStatementCourseNames = examTitles.filter(c => !c.send_result_email).map(c => c.name);
 
   const { data: attendanceRecords = [] } = useQuery({
     queryKey: ["my-attendance", member?.id, tenantId],
