@@ -13,6 +13,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
 import SignPostDialog from "./SignPostDialog";
 import ReferralTimeline from "./ReferralTimeline";
+import PasswordConfirmDialog from "@/components/shared/PasswordConfirmDialog";
 
 const NEXT_STEPS = {
   "First Timer": [
