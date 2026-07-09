@@ -205,19 +205,16 @@ export async function buildStatementPdf(input: BuildStatementPdfInput): Promise<
   const marginX = 20;
   const contentWidth = pageWidth - marginX * 2;
 
-  // Watermark
+  // Watermark — light-gray text (avoids GState compatibility issues in Deno)
   if (isBibleSchool) {
-    // @ts-ignore - GState is available at runtime
-    const gs = doc.setGState ? doc.setGState(new (doc as any).GState({ opacity: 0.07 })) : null;
     doc.setFont("helvetica", "bold");
     doc.setFontSize(120);
-    doc.setTextColor(0, 0, 0);
+    doc.setTextColor(230, 230, 230);
     doc.text("WOFBI", pageWidth / 2, 170, {
       align: "center",
       angle: 35,
     } as any);
-    // @ts-ignore
-    if (doc.setGState) doc.setGState(new (doc as any).GState({ opacity: 1 }));
+    doc.setTextColor(0, 0, 0);
   }
 
   let y = 18;
