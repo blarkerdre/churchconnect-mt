@@ -103,49 +103,63 @@ export default function WSFManagement() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-lg font-display font-bold text-foreground">Home Cell Attendance</h2>
-        <p className="text-sm text-muted-foreground">Track attendance for Home Cell meetings</p>
+        <h2 className="text-lg font-display font-bold text-foreground">Home Cell</h2>
+        <p className="text-sm text-muted-foreground">Attendance{isAdmin ? " and reports" : ""}</p>
       </div>
-      <WSFAttendanceTab centres={visibleCentres} />
 
-      <WSFCreationReport centres={visibleCentres} zones={zones} members={centreMembers} />
+      <Tabs defaultValue="attendance" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="attendance">Attendance</TabsTrigger>
+          {isAdmin && <TabsTrigger value="created">Home Cells Created</TabsTrigger>}
+        </TabsList>
 
-      {!isAdmin && ledCentres.length > 0 && (
-        <>
-          <div>
-            <h2 className="text-lg font-display font-bold text-foreground">My Centre Members</h2>
-            <p className="text-sm text-muted-foreground">View members assigned to your centre</p>
-          </div>
-          <div className="grid gap-3 sm:grid-cols-2">
-            {ledCentres.map(centre => (
-              <Card
-                key={centre.id}
-                className="cursor-pointer hover:bg-muted/50 transition-colors border"
-                onClick={() => setSelectedCentre(centre)}
-              >
-                <CardContent className="p-4 flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                    <Users className="h-5 w-5 text-primary" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold truncate">{centre.name}</p>
-                  </div>
-                  <Badge variant="secondary" className="font-mono">
-                    {memberCounts[centre.id] ?? "…"}
-                  </Badge>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+        <TabsContent value="attendance" className="space-y-6">
+          <WSFAttendanceTab centres={visibleCentres} />
 
-          <WSFCentreMembersDialog
-            open={!!selectedCentre}
-            onOpenChange={(open) => { if (!open) setSelectedCentre(null); }}
-            centre={selectedCentre}
-            isReadOnly={true}
-          />
-        </>
-      )}
+          {!isAdmin && ledCentres.length > 0 && (
+            <>
+              <div>
+                <h2 className="text-lg font-display font-bold text-foreground">My Centre Members</h2>
+                <p className="text-sm text-muted-foreground">View members assigned to your centre</p>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {ledCentres.map(centre => (
+                  <Card
+                    key={centre.id}
+                    className="cursor-pointer hover:bg-muted/50 transition-colors border"
+                    onClick={() => setSelectedCentre(centre)}
+                  >
+                    <CardContent className="p-4 flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                        <Users className="h-5 w-5 text-primary" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold truncate">{centre.name}</p>
+                      </div>
+                      <Badge variant="secondary" className="font-mono">
+                        {memberCounts[centre.id] ?? "…"}
+                      </Badge>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+
+              <WSFCentreMembersDialog
+                open={!!selectedCentre}
+                onOpenChange={(open) => { if (!open) setSelectedCentre(null); }}
+                centre={selectedCentre}
+                isReadOnly={true}
+              />
+            </>
+          )}
+        </TabsContent>
+
+        {isAdmin && (
+          <TabsContent value="created">
+            <WSFCreationReport centres={visibleCentres} zones={zones} members={centreMembers} />
+          </TabsContent>
+        )}
+      </Tabs>
     </div>
   );
 }
