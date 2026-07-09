@@ -230,6 +230,15 @@ export default function CourseResultsView({ course }) {
     }
     setSendingBulk(true);
     try {
+      // Fetch existing completions so we correctly set reissue only where a completion already exists.
+      const { data: existing } = await supabase
+        .from("training_completions")
+        .select("member_id")
+        .eq("training_type", course.name)
+        .eq("tenant_id", course.tenant_id)
+        .in("member_id", eligible);
+      const existingSet = new Set((existing || []).map(r => r.member_id));
+
       let ok = 0, fail = 0;
       for (const id of eligible) {
         try {
@@ -238,7 +247,7 @@ export default function CourseResultsView({ course }) {
               member_id: id,
               training_type: course.name,
               tenant_id: course.tenant_id,
-              reissue: true,
+              reissue: existingSet.has(id),
               admin_override: true,
               send_certificate_email: true,
             },
@@ -246,9 +255,13 @@ export default function CourseResultsView({ course }) {
           if (error || !data?.success) fail++; else ok++;
         } catch { fail++; }
       }
+      qc.invalidateQueries({ queryKey: ["training-completions"] });
+      qc.invalidateQueries({ queryKey: ["course-attempts"] });
+      const skipped = memberIds.length - eligible.length;
       toast({
-        title: "Certificates processed",
-        description: `${ok} sent${fail ? `, ${fail} failed` : ""}${memberIds.length !== eligible.length ? ` (${memberIds.length - eligible.length} skipped — not passed)` : ""}`,
+        title: fail === 0 ? "Certificates sent" : "Certificates partially sent",
+        description: `${ok} emailed${fail ? `, ${fail} failed` : ""}${skipped ? ` (${skipped} skipped — not passed)` : ""}`,
+        variant: fail && !ok ? "destructive" : undefined,
       });
       clearSelection();
     } finally {
