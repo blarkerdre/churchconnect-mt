@@ -33,6 +33,7 @@ export default function CourseResultsView({ course }) {
   const [statementMember, setStatementMember] = useState(null);
   const [selected, setSelected] = useState(() => new Set());
   const [sendingBulk, setSendingBulk] = useState(false);
+  const [deleteMember, setDeleteMember] = useState(null);
 
   const classifications = course.grade_classifications || [
     { label: "Distinction", min_percentage: 75 },
