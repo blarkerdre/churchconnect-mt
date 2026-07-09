@@ -25,6 +25,8 @@ import { useSubFeature } from "@/hooks/useSubFeature";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
 import { getGradeClassification, DEFAULT_GRADE_CLASSIFICATIONS, LETTER_GRADE_BANDS } from "@/lib/grade-utils";
 import StatementOfResult from "@/components/exams/StatementOfResult";
+import LecturerManager from "@/components/exams/LecturerManager";
+import RateLecturerDialog from "@/components/exams/RateLecturerDialog";
 import ModuleTour from "@/components/tour/ModuleTour";
 
 const OPTION_LETTERS = ["a", "b", "c", "d"];
