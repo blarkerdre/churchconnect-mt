@@ -673,7 +673,7 @@ export default function MyProfile() {
 
 
       {/* Take Exams */}
-      {!editing && <DynamicExamButtons memberId={member.id} onSelect={setExamSelection} tenantId={tenantId} />}
+      {!editing && <DynamicExamButtons memberId={member.id} onSelect={setExamSelection} tenantId={tenantId} hiddenStatementCourseNames={hiddenStatementCourseNames} />}
 
       <TakeExamDialog
         open={!!examSelection}
