@@ -27,7 +27,10 @@ function downloadCSV(filename, headers, rows) {
 
 export default function CourseResultsView({ course }) {
   const qc = useQueryClient();
+  const { isAdmin } = useAuth();
   const [statementMember, setStatementMember] = useState(null);
+  const [selected, setSelected] = useState(() => new Set());
+  const [sendingBulk, setSendingBulk] = useState(false);
 
   const classifications = course.grade_classifications || [
     { label: "Distinction", min_percentage: 75 },
