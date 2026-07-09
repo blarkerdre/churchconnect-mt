@@ -125,6 +125,9 @@ export default function CourseResultsView({ course }) {
       setDeleteMember(null);
     },
     onError: (err) => toast({ title: "Delete failed", description: err.message, variant: "destructive" }),
+  });
+
+
 
   // Group by member
   const memberMap = {};
