@@ -395,6 +395,30 @@ export default function CourseResultsView({ course }) {
                               <FileText className="h-3 w-3" /> Statement
                             </Button>
                           )}
+                          {isAdmin && m.subjectsTaken === subjects.length && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 text-[10px] px-1.5 gap-0.5"
+                              disabled={sendingBulk}
+                              onClick={() => sendStatements([m.id])}
+                              title="Email Statement of Result to this member"
+                            >
+                              <Send className="h-3 w-3" /> Email
+                            </Button>
+                          )}
+                          {isAdmin && m.subjectsTaken === subjects.length && m.passed && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 text-[10px] px-1.5 gap-0.5"
+                              disabled={sendingBulk}
+                              onClick={() => sendCertificates([m.id])}
+                              title="Email certificate to this member"
+                            >
+                              <Award className="h-3 w-3" /> Certificate
+                            </Button>
+                          )}
                           {subjects.map(s => {
                             const sub = m.subjects[s.id];
                             if (!sub) return null;
