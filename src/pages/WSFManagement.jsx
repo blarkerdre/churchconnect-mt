@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import WSFAttendanceTab from "@/components/wsf/WSFAttendanceTab";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import WSFCentreMembersDialog from "@/components/wsf/WSFCentreMembersDialog";
 import WSFCreationReport from "@/components/wsf/WSFCreationReport";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
