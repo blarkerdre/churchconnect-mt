@@ -170,11 +170,37 @@ async function sendForMember(
     `\n\nOverall: ${totalScore}/${totalPoints} (${Math.round(overallPct)}%) — ${statusText}\nPass mark: ${passMark}%`;
 
   const messageId = `statement-${crypto.randomUUID()}`;
+  const recipient = member.email.trim().toLowerCase();
+
+  // Look up or create unsubscribe token (required by the email queue)
+  const { data: tokenRow } = await supabase
+    .from("email_unsubscribe_tokens")
+    .select("token")
+    .eq("email", recipient)
+    .maybeSingle();
+
+  let unsubToken = tokenRow?.token;
+  if (!unsubToken) {
+    unsubToken = crypto.randomUUID();
+    await supabase
+      .from("email_unsubscribe_tokens")
+      .upsert(
+        { email: recipient, token: unsubToken },
+        { onConflict: "email", ignoreDuplicates: true },
+      );
+    // Re-read in case another request raced us
+    const { data: stored } = await supabase
+      .from("email_unsubscribe_tokens")
+      .select("token")
+      .eq("email", recipient)
+      .maybeSingle();
+    if (stored?.token) unsubToken = stored.token;
+  }
 
   await supabase.rpc("enqueue_email", {
     queue_name: "transactional_emails",
     payload: {
-      to: member.email.trim().toLowerCase(),
+      to: recipient,
       from: `"${String(senderName).replace(/"/g, "")}" <noreply@${ROOT_DOMAIN}>`,
       sender_domain: SENDER_DOMAIN,
       subject: `Statement of Result: ${course.name}`,
@@ -184,6 +210,7 @@ async function sendForMember(
       label: "statement-of-result",
       message_id: messageId,
       idempotency_key: messageId,
+      unsubscribe_token: unsubToken,
       queued_at: new Date().toISOString(),
       tenant_id: tenant.id,
     },
@@ -192,7 +219,7 @@ async function sendForMember(
   await supabase.from("email_send_log").insert({
     message_id: messageId,
     template_name: "statement-of-result",
-    recipient_email: member.email,
+    recipient_email: recipient,
     status: "pending",
     tenant_id: tenant.id,
   });
