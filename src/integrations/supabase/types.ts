@@ -4691,7 +4691,7 @@ export type Database = {
           created_at: string
           grade_classification: string | null
           id: string
-          issued_by: string
+          issued_by: string | null
           member_id: string
           notes: string | null
           student_number: string | null
@@ -4705,7 +4705,7 @@ export type Database = {
           created_at?: string
           grade_classification?: string | null
           id?: string
-          issued_by: string
+          issued_by?: string | null
           member_id: string
           notes?: string | null
           student_number?: string | null
@@ -4719,7 +4719,7 @@ export type Database = {
           created_at?: string
           grade_classification?: string | null
           id?: string
-          issued_by?: string
+          issued_by?: string | null
           member_id?: string
           notes?: string | null
           student_number?: string | null
