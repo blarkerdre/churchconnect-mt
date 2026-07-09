@@ -561,6 +561,9 @@ export default function ExamManagement() {
               <Label htmlFor="send-cert" className="cursor-pointer">Email Certificate on Completion</Label>
               <Switch id="send-cert" checked={titleForm.send_certificate_email} onCheckedChange={v => setTitleForm(f => ({ ...f, send_certificate_email: v }))} />
             </div>
+            <p className="text-[11px] text-muted-foreground -mt-1">
+              When these are off, results and certificates are not auto-emailed to members. Admins can still send them manually from the Results view.
+            </p>
             {/* Grade Classifications Editor */}
             <div className="space-y-2">
               <Label>Grade Classifications</Label>
