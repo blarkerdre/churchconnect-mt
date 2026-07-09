@@ -280,20 +280,37 @@ Deno.serve(async (req) => {
     } else if (isPreview) {
       certificateNumber = "PREVIEW-XXXX-XXXX-XXXX";
     } else if (isBibleSchool && courseRow) {
-      // Allocate a Bible School student number: WCIC/BCC/AUGUST/2025/113
-      const { data: sn, error: snErr } = await supabase.rpc("next_student_number", {
-        _tenant_id: tenant_id,
-        _course_id: courseRow.id,
-        _completion_date: certDate,
-      });
-      if (snErr) {
-        console.error("next_student_number error:", snErr);
-        return new Response(JSON.stringify({ error: "Failed to allocate student number" }), {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+      // Prefer the student number allocated at registration time, so the
+      // certificate matches Statement of Result and the course_registrations row.
+      const { data: reg } = await supabase
+        .from("course_registrations")
+        .select("student_number")
+        .eq("tenant_id", tenant_id)
+        .eq("course_id", courseRow.id)
+        .eq("member_id", member_id)
+        .not("student_number", "is", null)
+        .order("registered_at", { ascending: true })
+        .limit(1)
+        .maybeSingle();
+
+      if (reg?.student_number) {
+        studentNumber = reg.student_number;
+      } else {
+        // Fall back to allocating a fresh Bible School student number
+        const { data: sn, error: snErr } = await supabase.rpc("next_student_number", {
+          _tenant_id: tenant_id,
+          _course_id: courseRow.id,
+          _completion_date: certDate,
         });
+        if (snErr) {
+          console.error("next_student_number error:", snErr);
+          return new Response(JSON.stringify({ error: "Failed to allocate student number" }), {
+            status: 500,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        studentNumber = sn as string;
       }
-      studentNumber = sn as string;
       certificateNumber = studentNumber; // keep unique cert number aligned with student number
     } else {
       const year = new Date().getFullYear();

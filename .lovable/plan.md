@@ -1,58 +1,61 @@
-## Root Cause
+## Goal
+Make the certificate's student number match the member's existing `course_registrations.student_number` (allocated at registration), instead of allocating a fresh sequence when the certificate is issued. Fall back to allocation only when no registration number exists.
 
-In **Course Results → Send Certificates** (bulk action in `src/components/exams/CourseResultsView.jsx`, `sendCertificates`, line 225-257), every call to the `issue-certificate` Edge Function is made with `reissue: true`:
+## Root cause recap
+Currently `issue-certificate` calls `next_student_number()` for Bible School courses, which computes `MAX(seq) + 1` across `training_completions` + `course_registrations` for the `TENANT/COURSE/MONTH/YEAR/` prefix. Romoke registered 3rd for BCC July 2026, so completion got `003` — that number is correct as an allocation, but it doesn't match her registration number and can drift as more people register.
 
-```js
-supabase.functions.invoke("issue-certificate", {
-  body: {
-    member_id: id,
-    training_type: course.name,
-    tenant_id: course.tenant_id,
-    reissue: true,            // ← always true
-    admin_override: true,
-    send_certificate_email: true,
-  },
-})
+## Changes
+
+### 1. `supabase/functions/issue-certificate/index.ts` (lines ~276–297)
+Before calling `next_student_number`, look up the member's existing registration for this course:
+
+```ts
+if (isBibleSchool && courseRow && !studentNumber) {
+  const { data: reg } = await supabase
+    .from("course_registrations")
+    .select("student_number")
+    .eq("tenant_id", tenant_id)
+    .eq("course_id", courseRow.id)
+    .eq("member_id", member_id)
+    .not("student_number", "is", null)
+    .order("registered_at", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+  if (reg?.student_number) {
+    studentNumber = reg.student_number;
+    certificateNumber = studentNumber;
+  }
+}
+// only allocate a fresh number if still missing
+if (isBibleSchool && courseRow && !studentNumber) {
+  // existing next_student_number RPC call
+}
 ```
 
-Inside `issue-certificate/index.ts` (~line 213), the reissue branch requires an **existing** `training_completions` row:
+Behaviour:
+- Existing completions with a `student_number` are untouched (the `existing?.student_number` guard already handles this).
+- New certificates reuse the registration number.
+- If a member somehow has no registration row, we still fall back to `next_student_number` so nothing breaks.
 
+### 2. Statement of Result alignment
+`supabase/functions/_shared/generate-statement.ts` and `src/components/exams/StatementOfResult.jsx` already read `course_registrations.student_number` first via `deriveStudentNumber`, so no change is needed there — after fix #1 the certificate, statement, and email will all show the same number.
+
+### 3. Data backfill for Romoke (one-off)
+Update her existing completion row so the printed certificate reflects the corrected number:
+
+```sql
+UPDATE training_completions
+SET student_number = 'WCIC/BCC/JULY/2026/002',
+    certificate_number = 'WCIC/BCC/JULY/2026/002'
+WHERE student_number = 'WCIC/BCC/JULY/2026/003';
 ```
-"No existing certificate found to reissue"
-```
 
-So the very first time an admin bulk-sends BCC / LCC / LDC certificates for members who passed but haven't been issued anything yet, every call returns an error. The bulk loop counts them under `fail`, and the toast reads:
+(Assumes her registration number is `…/002`. I'll confirm from `course_registrations` before running the update.)
 
-> **Certificates processed** — 0 sent, N failed
-
-That is exactly the "processed but not sent" symptom.
-
-Members who already had a certificate row (e.g. earlier auto-issue via `grade-exam` → `checkCourseCompletion`) do get re-emailed, which is why some historic BCC/LCC/LDC certificates in `email_send_log` show `sent` — but the group that never had an auto-issued row never receives anything.
-
-Contributing factor: duplicate `exam_titles` rows (e.g. "Basic Certificate Course" with `send_certificate_email=false` and "Basic Certificate Course (BCC)" with `true`). If a subject's `course_id` points to the disabled variant, `grade-exam` will not auto-issue+email the certificate on completion either, leaving those members in the "no existing completion" state above.
-
-## Fix
-
-1. **`src/components/exams/CourseResultsView.jsx`** — In `sendCertificates`, do not force `reissue: true`. Detect per-member whether a completion already exists and only set `reissue: true` for those; otherwise issue a first-time certificate. Simplest safe change: drop `reissue: true` from the payload entirely and rely on `issue-certificate`'s existing idempotent logic (it already reuses an existing `certificate_number` when the row exists, and creates one when it doesn't). Keep `admin_override: true` and `send_certificate_email: true` so the email is always sent.
-
-2. **Toast wording** — Update the bulk toast so "processed" isn't confused with "sent":
-   - Title: `Certificates sent` when `fail === 0`, else `Certificates partially sent`.
-   - Description: `${ok} emailed${fail ? \`, ${fail} failed\` : ""}`.
-
-3. **Post-completion sanity** — After the bulk run, invalidate the `training-completions` and `course-attempts` queries so the UI reflects the new completions.
-
-4. **Data hygiene (optional but recommended, admin-facing note only, no code)** — Flag to the tenant admin that duplicate `exam_titles` (e.g. two "Basic Certificate Course" entries with different email toggles) exist and should be consolidated so `grade-exam` picks the enabled row.
+### 4. Out of scope (flagged, not fixed here)
+- Duplicate `…/001` in `course_registrations` — the registration-side allocator has a race. Happy to address in a follow-up if you want; the fix would be a similar server-side RPC + unique index on `(tenant_id, student_number)`.
 
 ## Verification
-
-1. Pick a BCC member who has passed all subjects but has no `training_completions` row.
-2. Select them in Course Results → **Send Certificates**.
-3. Confirm:
-   - Toast: `Certificates sent — 1 emailed`.
-   - New row in `training_completions` with a valid `certificate_number` and `certificate_url`.
-   - New `email_send_log` row `template_name = 'certificate'`, `status = pending → sent`.
-   - Email lands in the member's inbox with the Download Certificate link.
-4. Re-run for the same member: certificate number is preserved, file regenerated, new email sent (reissue path).
-5. Repeat for LCC and LDC.
-
-No backend/edge-function changes required — this is a client-side fix in `CourseResultsView.jsx`.
+- Issue a fresh certificate for a new BCC July 2026 registrant → certificate `student_number` equals their `course_registrations.student_number`.
+- Open Statement of Result dialog for Romoke → shows `…/002`.
+- Reissue Romoke's certificate → keeps `…/002` (uses `existing.student_number`).
