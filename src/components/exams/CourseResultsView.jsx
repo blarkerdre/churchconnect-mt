@@ -93,6 +93,39 @@ export default function CourseResultsView({ course }) {
     onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
 
+  const deleteResultMutation = useMutation({
+    mutationFn: async ({ memberId }) => {
+      if (subjectIds.length === 0) throw new Error("No subjects");
+      const { error: attErr } = await supabase
+        .from("exam_attempts")
+        .delete()
+        .eq("member_id", memberId)
+        .eq("tenant_id", course.tenant_id)
+        .in("subject_id", subjectIds);
+      if (attErr) throw attErr;
+      const { error: tcErr } = await supabase
+        .from("training_completions")
+        .delete()
+        .eq("member_id", memberId)
+        .eq("tenant_id", course.tenant_id)
+        .eq("training_type", course.name);
+      if (tcErr) throw tcErr;
+      await logAudit(
+        "course_result_delete",
+        "exam_attempts",
+        memberId,
+        { course_id: course.id, course_name: course.name, subject_ids: subjectIds },
+        course.tenant_id,
+      );
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["course-attempts"] });
+      qc.invalidateQueries({ queryKey: ["training-completions"] });
+      toast({ title: "Course result deleted", description: "All attempts and any certificate for this member have been removed." });
+      setDeleteMember(null);
+    },
+    onError: (err) => toast({ title: "Delete failed", description: err.message, variant: "destructive" }),
+
   // Group by member
   const memberMap = {};
   attempts.forEach(a => {
