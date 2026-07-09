@@ -1,15 +1,17 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Trophy, Download, RotateCcw, FileText } from "lucide-react";
+import { Loader2, Trophy, Download, RotateCcw, FileText, Mail, Award, Send } from "lucide-react";
 import PrintReportButton from "@/components/PrintReportButton";
 import { toast } from "@/components/ui/use-toast";
 import { getGradeClassification } from "@/lib/grade-utils";
 import StatementOfResult from "@/components/exams/StatementOfResult";
+import { useAuth } from "@/hooks/useAuth";
 
 function downloadCSV(filename, headers, rows) {
   const escape = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
@@ -25,7 +27,10 @@ function downloadCSV(filename, headers, rows) {
 
 export default function CourseResultsView({ course }) {
   const qc = useQueryClient();
+  const { isAdmin } = useAuth();
   const [statementMember, setStatementMember] = useState(null);
+  const [selected, setSelected] = useState(() => new Set());
+  const [sendingBulk, setSendingBulk] = useState(false);
 
   const classifications = course.grade_classifications || [
     { label: "Distinction", min_percentage: 75 },
@@ -183,6 +188,75 @@ export default function CourseResultsView({ course }) {
     downloadCSV(`${course.name}_${subject.name}_results.csv`, headers, rows);
   };
 
+  const completedMembers = useMemo(() => members.filter(m => m.subjectsTaken === subjects.length), [members, subjects.length]);
+  const passedMembers = useMemo(() => completedMembers.filter(m => m.passed), [completedMembers]);
+
+  const toggleSelect = (id) => {
+    setSelected(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+  const selectAllPassed = () => setSelected(new Set(passedMembers.map(m => m.id)));
+  const selectAllCompleted = () => setSelected(new Set(completedMembers.map(m => m.id)));
+  const clearSelection = () => setSelected(new Set());
+
+  const sendStatements = async (memberIds) => {
+    if (memberIds.length === 0) return;
+    setSendingBulk(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("send-statement-email", {
+        body: { member_ids: memberIds, course_id: course.id, tenant_id: course.tenant_id },
+      });
+      if (error) throw error;
+      toast({
+        title: "Statements sent",
+        description: `${data?.sent ?? 0} sent${data?.failed ? `, ${data.failed} failed` : ""}`,
+      });
+      clearSelection();
+    } catch (e) {
+      toast({ title: "Failed to send statements", description: e.message, variant: "destructive" });
+    } finally {
+      setSendingBulk(false);
+    }
+  };
+
+  const sendCertificates = async (memberIds) => {
+    const eligible = memberIds.filter(id => passedMembers.some(pm => pm.id === id));
+    if (eligible.length === 0) {
+      toast({ title: "No eligible members", description: "Certificates can only be sent to members who passed the course.", variant: "destructive" });
+      return;
+    }
+    setSendingBulk(true);
+    try {
+      let ok = 0, fail = 0;
+      for (const id of eligible) {
+        try {
+          const { data, error } = await supabase.functions.invoke("issue-certificate", {
+            body: {
+              member_id: id,
+              training_type: course.name,
+              tenant_id: course.tenant_id,
+              reissue: true,
+              admin_override: true,
+              send_certificate_email: true,
+            },
+          });
+          if (error || !data?.success) fail++; else ok++;
+        } catch { fail++; }
+      }
+      toast({
+        title: "Certificates processed",
+        description: `${ok} sent${fail ? `, ${fail} failed` : ""}${memberIds.length !== eligible.length ? ` (${memberIds.length - eligible.length} skipped — not passed)` : ""}`,
+      });
+      clearSelection();
+    } finally {
+      setSendingBulk(false);
+    }
+  };
+
+
   return (
     <>
     <Card className="border-0 shadow-sm">
@@ -234,10 +308,39 @@ export default function CourseResultsView({ course }) {
               </div>
             )}
 
+            {isAdmin && completedMembers.length > 0 && (
+              <div className="flex flex-wrap items-center gap-2 mb-3 p-2.5 rounded-lg bg-primary/5 border border-primary/20">
+                <span className="text-xs font-medium text-muted-foreground mr-1">
+                  Admin: {selected.size} selected
+                </span>
+                <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={selectAllCompleted} disabled={sendingBulk}>All completed</Button>
+                <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={selectAllPassed} disabled={sendingBulk}>All passed</Button>
+                {selected.size > 0 && (
+                  <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={clearSelection} disabled={sendingBulk}>Clear</Button>
+                )}
+                <div className="flex-1" />
+                <Button
+                  variant="outline" size="sm" className="h-7 text-xs gap-1"
+                  disabled={selected.size === 0 || sendingBulk}
+                  onClick={() => sendStatements(Array.from(selected))}
+                >
+                  {sendingBulk ? <Loader2 className="h-3 w-3 animate-spin" /> : <Mail className="h-3 w-3" />} Email Statement
+                </Button>
+                <Button
+                  variant="outline" size="sm" className="h-7 text-xs gap-1"
+                  disabled={selected.size === 0 || sendingBulk}
+                  onClick={() => sendCertificates(Array.from(selected))}
+                >
+                  {sendingBulk ? <Loader2 className="h-3 w-3 animate-spin" /> : <Award className="h-3 w-3" />} Email Certificate
+                </Button>
+              </div>
+            )}
+
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
+                    {isAdmin && <TableHead className="w-8"></TableHead>}
                     <TableHead>Member</TableHead>
                     {subjects.map(s => <TableHead key={s.id} className="text-center text-xs">{s.name}</TableHead>)}
                     <TableHead className="text-center">Total</TableHead>
@@ -248,6 +351,17 @@ export default function CourseResultsView({ course }) {
                 <TableBody>
                   {members.map(m => (
                     <TableRow key={m.id}>
+                      {isAdmin && (
+                        <TableCell className="w-8">
+                          {m.subjectsTaken === subjects.length && (
+                            <Checkbox
+                              checked={selected.has(m.id)}
+                              onCheckedChange={() => toggleSelect(m.id)}
+                              disabled={sendingBulk}
+                            />
+                          )}
+                        </TableCell>
+                      )}
                       <TableCell className="text-sm font-medium">{m.name}</TableCell>
                       {subjects.map(s => {
                         const sub = m.subjects[s.id];
@@ -279,6 +393,30 @@ export default function CourseResultsView({ course }) {
                               onClick={() => setStatementMember({ id: m.id, name: m.name, subjects: m.subjects })}
                             >
                               <FileText className="h-3 w-3" /> Statement
+                            </Button>
+                          )}
+                          {isAdmin && m.subjectsTaken === subjects.length && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 text-[10px] px-1.5 gap-0.5"
+                              disabled={sendingBulk}
+                              onClick={() => sendStatements([m.id])}
+                              title="Email Statement of Result to this member"
+                            >
+                              <Send className="h-3 w-3" /> Email
+                            </Button>
+                          )}
+                          {isAdmin && m.subjectsTaken === subjects.length && m.passed && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 text-[10px] px-1.5 gap-0.5"
+                              disabled={sendingBulk}
+                              onClick={() => sendCertificates([m.id])}
+                              title="Email certificate to this member"
+                            >
+                              <Award className="h-3 w-3" /> Certificate
                             </Button>
                           )}
                           {subjects.map(s => {

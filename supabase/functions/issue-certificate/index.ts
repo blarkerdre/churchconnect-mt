@@ -122,7 +122,9 @@ Deno.serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     const body = await req.json();
-    const { member_id, training_type, completion_date, notes, tenant_id, reissue, completion_id, preview, grade_classification: gcInput } = body;
+    const { member_id, training_type, completion_date, notes, tenant_id, reissue, completion_id, preview, grade_classification: gcInput, send_certificate_email, admin_override } = body;
+    // Honour per-course email toggle unless an admin manually triggers the send
+    const shouldEmail = admin_override === true || send_certificate_email !== false;
     const isPreview = preview === true;
 
     if (!member_id || !training_type || !tenant_id) {
@@ -635,8 +637,8 @@ Deno.serve(async (req) => {
         .eq("id", member_id);
     }
 
-    // Email certificate to member if they have an email
-    if (member.email) {
+    // Email certificate to member if they have an email AND the toggle allows it (or admin override)
+    if (member.email && shouldEmail) {
       try {
         const { data: signedUrl } = await supabase.storage
           .from("church-documents")

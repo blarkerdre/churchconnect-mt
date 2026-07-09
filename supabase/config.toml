@@ -25,6 +25,8 @@ project_id = "qfordhikmtgedfybktjg"
     verify_jwt = false
   [functions.send-testimony]
     verify_jwt = false
+  [functions.send-statement-email]
+    verify_jwt = false
   [functions.external-api]
     verify_jwt = false
   [functions.make-call]
