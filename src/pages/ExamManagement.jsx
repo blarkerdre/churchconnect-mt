@@ -833,6 +833,7 @@ export default function ExamManagement() {
             </div>
           )}
           <LecturerManager />
+          <LecturerFeedbackReport />
           <RateLecturerDialog open={adminRateOpen} onOpenChange={setAdminRateOpen} />
         </TabsContent>
       </Tabs>
