@@ -13,6 +13,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
 import SignPostDialog from "./SignPostDialog";
 import ReferralTimeline from "./ReferralTimeline";
+import PasswordConfirmDialog from "@/components/shared/PasswordConfirmDialog";
 
 const NEXT_STEPS = {
   "First Timer": [
@@ -55,6 +56,7 @@ export default function FollowupDetailPanel({ followup, onClose, onUpdate, curre
   const [selectedMessage, setSelectedMessage] = useState(null);
   const [callingPhone, setCallingPhone] = useState(false);
   const [signPostOpen, setSignPostOpen] = useState(false);
+  const [reopenOpen, setReopenOpen] = useState(false);
   const { tenantId, scopeQuery } = useTenantQuery();
   const queryClient = useQueryClient();
 
@@ -180,7 +182,6 @@ export default function FollowupDetailPanel({ followup, onClose, onUpdate, curre
   };
 
   const handleReopen = async () => {
-    if (!window.confirm("Reopen this completed follow-up?")) return;
     await onUpdate(followup.id, { status: "In Progress", completed_date: null });
     toast({ title: "Follow-up reopened", description: "Status set to In Progress." });
   };
@@ -426,7 +427,7 @@ export default function FollowupDetailPanel({ followup, onClose, onUpdate, curre
             <div className="space-y-2">
               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Quick Actions</p>
               <Button size="sm" variant="outline" className="text-primary border-primary/20 hover:bg-primary/10"
-                onClick={handleReopen}>
+                onClick={() => setReopenOpen(true)}>
                 <RefreshCw className="h-3.5 w-3.5 mr-1" /> Reopen (Mark In Progress)
               </Button>
             </div>
@@ -626,6 +627,15 @@ export default function FollowupDetailPanel({ followup, onClose, onUpdate, curre
         onCreated={() => {
           queryClient.invalidateQueries({ queryKey: ["followup-referrals", followup.id] });
         }}
+      />
+
+      <PasswordConfirmDialog
+        open={reopenOpen}
+        onOpenChange={setReopenOpen}
+        title="Reopen follow-up"
+        description="Reopening will move this follow-up back to In Progress and clear its completion date."
+        confirmLabel="Reopen"
+        onConfirm={handleReopen}
       />
     </div>
   );

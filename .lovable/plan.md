@@ -1,17 +1,10 @@
-## Goal
-Allow Admins and Follow-up Unit Leaders to reverse a completed follow-up back to **In Progress**.
-
 ## Change
-In `src/components/followups/FollowupDetailPanel.jsx`:
+In `src/components/followups/FollowupDetailPanel.jsx`, gate the Reopen action behind a password re-entry using the existing `PasswordConfirmDialog`.
 
-1. When `followup.status === "Completed"` AND `canManage` is true, show a new **"Reopen (Mark In Progress)"** button in the Quick Actions area.
-2. Clicking it calls `onUpdate(followup.id, { status: "In Progress", completed_date: null })`, clearing the completion date so stats/exports stay accurate.
-3. Small confirm prompt ("Reopen this completed follow-up?") to prevent accidents.
-4. Show a success toast after the update.
+1. Import `PasswordConfirmDialog` from `@/components/shared/PasswordConfirmDialog`.
+2. Add `const [reopenOpen, setReopenOpen] = useState(false)`.
+3. Change the Reopen button's `onClick` from `handleReopen` to `() => setReopenOpen(true)` (remove the `window.confirm`).
+4. Update `handleReopen` to perform the status update without the confirm prompt; it becomes the dialog's `onConfirm`.
+5. Render `<PasswordConfirmDialog open={reopenOpen} onOpenChange={setReopenOpen} title="Reopen follow-up" description="Reopening will move this follow-up back to In Progress and clear its completion date." confirmLabel="Reopen" onConfirm={handleReopen} />`.
 
-## Access control
-Reuses existing `canManage` prop passed from `src/pages/Followups.jsx`, which is `isAdmin || isFollowupTeam` (Follow-up unit leader/member). No new role logic, no DB changes.
-
-## Out of scope
-- No schema/RLS changes (existing follow-up update policy already permits admins and follow-up unit members).
-- No changes to the list view badges or filters.
+The dialog verifies the current user's password via `supabase.auth.signInWithPassword` before running the update, matching the pattern used elsewhere in the app.
