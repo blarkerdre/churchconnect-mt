@@ -1,29 +1,48 @@
-# Fix: "Retake exam says admin(uuid) does not exist"
+# Fix "Edge function returned a non 2xx" on exam submit
 
 ## Root cause
 
-Any UPDATE on `public.exam_attempts` fires the `trg_protect_exam_attempt_fields` trigger, which runs:
+The `grade-exam` edge function source is correct, but insertion into `exam_answers` fires the `enforce_exam_answer_correctness` trigger, which still reads the removed `exam_questions.correct_answer` column:
 
 ```sql
-SELECT public.is_admin(auth.uid()) INTO _is_admin;
+SELECT correct_answer FROM public.exam_questions WHERE id = NEW.question_id;
 ```
 
-But the only `is_admin` function defined in the database is `is_admin(_user_id uuid, _tenant_id uuid)`. Postgres can't resolve the single-argument call and raises `function is_admin(uuid) does not exist` (surfaced in the UI as "admin(uuid) does not exist").
+The answer key now lives in `public.exam_question_answers`. Postgres raises `column "correct_answer" does not exist`, bubbling up as the 500 seen in edge logs.
 
-This breaks the admin "Allow Retake" button in `CourseResultsView` (it sets `retake_allowed = true` on the latest failed attempt) and any other UPDATE path on exam_attempts run by non-service-role clients.
+## Fix
 
-## Plan
-
-Add a migration that replaces `public.protect_exam_attempt_fields()` so it calls the tenant-scoped signature using the row's tenant:
+One migration replacing the trigger function body to read from `exam_question_answers`. No frontend or edge function changes required.
 
 ```sql
-SELECT public.is_admin(auth.uid(), NEW.tenant_id) INTO _is_admin;
+CREATE OR REPLACE FUNCTION public.enforce_exam_answer_correctness()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO 'public'
+AS $$
+DECLARE
+  _correct_answer text;
+BEGIN
+  SELECT correct_answer INTO _correct_answer
+  FROM public.exam_question_answers
+  WHERE question_id = NEW.question_id;
+
+  IF _correct_answer IS NOT NULL THEN
+    NEW.is_correct := (NEW.selected_answer = _correct_answer);
+  ELSE
+    -- Preserve is_correct computed by grade-exam edge function
+    NEW.is_correct := COALESCE(NEW.is_correct, false);
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
 ```
 
-Everything else in the function (service_role bypass, sensitive-field guard on score/passed/certificate_issued/total_points) stays identical. Trigger definition itself is untouched — only the function body changes.
+Note: the previous version overwrote `is_correct` unconditionally. The edge function already grades (including fill-in-gap case-insensitive and drag-and-drop ordered). Keeping the trigger's authoritative MCQ check but falling back to the edge function's value when no key row exists is safer.
 
 ## Verification
 
-1. As an admin, click "Retake {subject}" on a failed attempt in Course Results → toast "Retake allowed for this member" appears, no error.
-2. As a regular member, attempting to update `score`/`passed`/`total_points`/`certificate_issued` still raises "You are not allowed to modify exam results".
-3. No code, RLS policy, or frontend changes required.
+- Submit an exam as a member — no 500, result dialog appears.
+- `exam_answers.is_correct` matches the answer key for MCQ questions.
