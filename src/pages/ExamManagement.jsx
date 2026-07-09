@@ -55,6 +55,9 @@ export default function ExamManagement() {
   const { user, isAdmin, myMember } = useAuth();
   const qc = useQueryClient();
   const { tenantId, scopeQuery, withTenant } = useTenantQuery();
+  const { currentTenant } = useTenant();
+  const [adminRateOpen, setAdminRateOpen] = useState(false);
+  const adminLecturerRatingEnabled = !!currentTenant?.settings?.wofbi_lecturer_rating_enabled;
   const [selectedCourse, setSelectedCourse] = useState(null);
   const [selectedSubject, setSelectedSubject] = useState(null);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -283,8 +286,14 @@ export default function ExamManagement() {
             <QrCode className="h-4 w-4" /> Registration QR
           </Button>
         )}
+        {adminLecturerRatingEnabled && myMember?.id && (
+          <Button variant="outline" onClick={() => setAdminRateOpen(true)} className="gap-2">
+            <Star className="h-4 w-4" /> Rate a Lecturer
+          </Button>
+        )}
       </div>
       <WoFBIRegistrationQRCode open={qrOpen} onOpenChange={setQrOpen} />
+      <RateLecturerDialog open={adminRateOpen} onOpenChange={setAdminRateOpen} />
 
 
       {/* WoFBI About Section (Admin Editable) */}
