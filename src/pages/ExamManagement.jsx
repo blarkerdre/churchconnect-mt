@@ -29,6 +29,7 @@ import StatementOfResult from "@/components/exams/StatementOfResult";
 import LecturerManager from "@/components/exams/LecturerManager";
 import RateLecturerDialog from "@/components/exams/RateLecturerDialog";
 import ModuleTour from "@/components/tour/ModuleTour";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
 const OPTION_LETTERS = ["a", "b", "c", "d"];
 const QUESTION_TYPES = [
@@ -286,21 +287,24 @@ export default function ExamManagement() {
             <QrCode className="h-4 w-4" /> Registration QR
           </Button>
         )}
-        {adminLecturerRatingEnabled && myMember?.id && (
-          <Button variant="outline" onClick={() => setAdminRateOpen(true)} className="gap-2">
-            <Star className="h-4 w-4" /> Rate a Lecturer
-          </Button>
-        )}
       </div>
       <WoFBIRegistrationQRCode open={qrOpen} onOpenChange={setQrOpen} />
-      <RateLecturerDialog open={adminRateOpen} onOpenChange={setAdminRateOpen} />
 
+      <Tabs defaultValue="management" className="w-full">
+        <TabsList>
+          <TabsTrigger value="management">Management</TabsTrigger>
+          <TabsTrigger value="lecturer">Lecturer Feedback</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="management" className="space-y-6 mt-4">
 
       {/* WoFBI About Section (Admin Editable) */}
       <WofbiAboutEditor />
 
-      {/* Lecturer Feedback Management */}
-      <LecturerManager />
+
+
+
+
 
 
 
@@ -817,6 +821,20 @@ export default function ExamManagement() {
           previewMode
         />
       )}
+        </TabsContent>
+
+        <TabsContent value="lecturer" className="space-y-4 mt-4">
+          {adminLecturerRatingEnabled && myMember?.id && (
+            <div className="flex justify-end">
+              <Button variant="outline" onClick={() => setAdminRateOpen(true)} className="gap-2">
+                <Star className="h-4 w-4" /> Rate a Lecturer
+              </Button>
+            </div>
+          )}
+          <LecturerManager />
+          <RateLecturerDialog open={adminRateOpen} onOpenChange={setAdminRateOpen} />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
