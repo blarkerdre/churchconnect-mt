@@ -29,6 +29,7 @@ import StatementOfResult from "@/components/exams/StatementOfResult";
 import LecturerManager from "@/components/exams/LecturerManager";
 import RateLecturerDialog from "@/components/exams/RateLecturerDialog";
 import ModuleTour from "@/components/tour/ModuleTour";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
 const OPTION_LETTERS = ["a", "b", "c", "d"];
 const QUESTION_TYPES = [
