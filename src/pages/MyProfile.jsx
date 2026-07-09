@@ -952,7 +952,7 @@ function CreateMemberProfile({ user, onCreated, wsfCentres, churchUnits }) {
   );
 }
 
-function DynamicExamButtons({ memberId, onSelect, tenantId }) {
+function DynamicExamButtons({ memberId, onSelect, tenantId, hiddenStatementCourseNames = [] }) {
   const qc = useQueryClient();
 
   const { data: courses = [], isLoading } = useQuery({
