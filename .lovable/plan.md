@@ -1,48 +1,25 @@
-# Fix "Edge function returned a non 2xx" on exam submit
 
-## Root cause
+## What's actually happening
 
-The `grade-exam` edge function source is correct, but insertion into `exam_answers` fires the `enforce_exam_answer_correctness` trigger, which still reads the removed `exam_questions.correct_answer` column:
+- **Certificate emails ARE sending.** `email_send_log` shows recent `certificate` rows going `pending → sent` (e.g. 2026-07-08 19:14). The certificate function already looks up/creates an `email_unsubscribe_tokens` row and includes `unsubscribe_token` in the enqueue payload.
+- **Statement-of-Result emails are failing.** The queue rejects them with `400 missing_unsubscribe: "Transactional emails must include an unsubscribe_token"`, then retries 5× and drops to DLQ.
 
-```sql
-SELECT correct_answer FROM public.exam_questions WHERE id = NEW.question_id;
-```
-
-The answer key now lives in `public.exam_question_answers`. Postgres raises `column "correct_answer" does not exist`, bubbling up as the 500 seen in edge logs.
+Root cause: `supabase/functions/send-statement-email/index.ts` enqueues the email without an `unsubscribe_token` field. All app emails going through Lovable's queue must include one.
 
 ## Fix
 
-One migration replacing the trigger function body to read from `exam_question_answers`. No frontend or edge function changes required.
+Single edit in `supabase/functions/send-statement-email/index.ts`, inside `sendForMember`, before the `enqueue_email` RPC call:
 
-```sql
-CREATE OR REPLACE FUNCTION public.enforce_exam_answer_correctness()
-RETURNS trigger
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path TO 'public'
-AS $$
-DECLARE
-  _correct_answer text;
-BEGIN
-  SELECT correct_answer INTO _correct_answer
-  FROM public.exam_question_answers
-  WHERE question_id = NEW.question_id;
+1. Normalize the recipient once: `const recipient = member.email.trim().toLowerCase();`
+2. Look up an existing token in `email_unsubscribe_tokens` by that email.
+3. If none, generate `crypto.randomUUID()` and upsert with `onConflict: 'email', ignoreDuplicates: true`, then re-read to get the stored token (handles race).
+4. Add `unsubscribe_token: unsubToken` to the `enqueue_email` payload.
+5. Use the same normalized `recipient` in the payload's `to` and in the `email_send_log` insert so lookups match the suppression/token tables consistently.
 
-  IF _correct_answer IS NOT NULL THEN
-    NEW.is_correct := (NEW.selected_answer = _correct_answer);
-  ELSE
-    -- Preserve is_correct computed by grade-exam edge function
-    NEW.is_correct := COALESCE(NEW.is_correct, false);
-  END IF;
-
-  RETURN NEW;
-END;
-$$;
-```
-
-Note: the previous version overwrote `is_correct` unconditionally. The edge function already grades (including fill-in-gap case-insensitive and drag-and-drop ordered). Keeping the trigger's authoritative MCQ check but falling back to the edge function's value when no key row exists is safer.
+No changes needed to `issue-certificate` (already correct), to templates, or to the frontend. After the edit, redeploy `send-statement-email`.
 
 ## Verification
 
-- Submit an exam as a member — no 500, result dialog appears.
-- `exam_answers.is_correct` matches the answer key for MCQ questions.
+- Trigger "Send Statement of Result" from Course Results for a member with an email.
+- `email_send_log` row goes `pending → sent` (not `failed`/`dlq`).
+- No new `missing_unsubscribe` errors in `process-email-queue` logs.
