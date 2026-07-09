@@ -27,6 +27,7 @@ import { useTenant } from "@/contexts/TenantContext";
 import { getGradeClassification, DEFAULT_GRADE_CLASSIFICATIONS, LETTER_GRADE_BANDS } from "@/lib/grade-utils";
 import StatementOfResult from "@/components/exams/StatementOfResult";
 import LecturerManager from "@/components/exams/LecturerManager";
+import LecturerFeedbackReport from "@/components/exams/LecturerFeedbackReport";
 import RateLecturerDialog from "@/components/exams/RateLecturerDialog";
 import ModuleTour from "@/components/tour/ModuleTour";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
