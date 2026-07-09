@@ -5557,6 +5557,10 @@ export type Database = {
         Args: { _invitation_id: string }
         Returns: undefined
       }
+      add_member_unit: {
+        Args: { _member: string; _unit: string }
+        Returns: undefined
+      }
       approve_course_registration: {
         Args: { _registration_id: string }
         Returns: {
@@ -5633,6 +5637,10 @@ export type Database = {
       enqueue_email: {
         Args: { payload: Json; queue_name: string }
         Returns: number
+      }
+      ensure_church_unit: {
+        Args: { _name: string; _tenant: string }
+        Returns: undefined
       }
       get_active_church_unit_names: {
         Args: { _tenant_slug?: string }
@@ -5953,6 +5961,10 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      remove_member_unit: {
+        Args: { _member: string; _unit: string }
+        Returns: undefined
       }
       reset_checkin_pin: {
         Args: { _checkin_id: string; _pin: string }
