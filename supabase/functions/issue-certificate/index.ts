@@ -637,8 +637,8 @@ Deno.serve(async (req) => {
         .eq("id", member_id);
     }
 
-    // Email certificate to member if they have an email
-    if (member.email) {
+    // Email certificate to member if they have an email AND the toggle allows it (or admin override)
+    if (member.email && shouldEmail) {
       try {
         const { data: signedUrl } = await supabase.storage
           .from("church-documents")
