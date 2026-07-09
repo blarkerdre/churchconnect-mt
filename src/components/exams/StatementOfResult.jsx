@@ -2,10 +2,11 @@ import React, { useEffect, useState } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import TenantDialogHeader from "@/components/ui/TenantDialogHeader";
 import { Button } from "@/components/ui/button";
-import { Printer, Download, Award } from "lucide-react";
+import { Printer, Download, Award, FileDown, Loader2 } from "lucide-react";
 import { getGradeClassification, getLetterGrade, LETTER_GRADE_BANDS, resolveLetterGradeBands } from "@/lib/grade-utils";
 import { useTenant } from "@/contexts/TenantContext";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 function escHtml(str) {
   return String(str ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
