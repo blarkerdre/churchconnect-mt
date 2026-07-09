@@ -2,10 +2,11 @@ import React, { useEffect, useState } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import TenantDialogHeader from "@/components/ui/TenantDialogHeader";
 import { Button } from "@/components/ui/button";
-import { Printer, Download, Award } from "lucide-react";
+import { Printer, Download, Award, FileDown, Loader2 } from "lucide-react";
 import { getGradeClassification, getLetterGrade, LETTER_GRADE_BANDS, resolveLetterGradeBands } from "@/lib/grade-utils";
 import { useTenant } from "@/contexts/TenantContext";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 function escHtml(str) {
   return String(str ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
@@ -55,6 +56,7 @@ export default function StatementOfResult({ open, onOpenChange, member, course, 
   const [session, setSession] = useState(null);
   const [studentNumber, setStudentNumber] = useState("");
   const [template, setTemplate] = useState(null);
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
 
   useEffect(() => {
     if (!open || !member?.id || !course?.id || !currentTenant?.id) return;
@@ -317,6 +319,31 @@ export default function StatementOfResult({ open, onOpenChange, member, course, 
     URL.revokeObjectURL(url);
   };
 
+  const handleDownloadPdf = async () => {
+    if (!currentTenant?.id || !course?.id || !member?.id) return;
+    setDownloadingPdf(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("render-statement-pdf", {
+        body: { tenant_id: currentTenant.id, course_id: course.id, member_id: member.id },
+      });
+      if (error) throw error;
+      if (!data?.signed_url) throw new Error("No download URL returned");
+      const a = document.createElement("a");
+      a.href = data.signed_url;
+      a.target = "_blank";
+      a.rel = "noopener";
+      a.download = `${course.name}_${member.name}_statement.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      toast.success("Statement of Result PDF ready");
+    } catch (e) {
+      toast.error(e?.message || "Failed to generate PDF");
+    } finally {
+      setDownloadingPdf(false);
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl">
@@ -378,12 +405,16 @@ export default function StatementOfResult({ open, onOpenChange, member, course, 
             </div>
           </div>
 
-          <div className="flex justify-center gap-2 pt-2">
+          <div className="flex flex-wrap justify-center gap-2 pt-2">
             <Button variant="outline" size="sm" className="gap-1.5" onClick={handlePrint}>
               <Printer className="h-3.5 w-3.5" /> Print
             </Button>
             <Button variant="outline" size="sm" className="gap-1.5" onClick={handleDownloadCSV}>
               <Download className="h-3.5 w-3.5" /> CSV
+            </Button>
+            <Button size="sm" className="gap-1.5" disabled={downloadingPdf} onClick={handleDownloadPdf}>
+              {downloadingPdf ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FileDown className="h-3.5 w-3.5" />}
+              Download PDF
             </Button>
           </div>
         </div>
