@@ -58,6 +58,8 @@ const QUESTIONS = [
 ];
 
 const emptyForm = {
+  course_id: "",
+  subject_id: "",
   lecturer_id: "",
   level: "",
   session_description: "",
@@ -76,7 +78,7 @@ export default function RateLecturerDialog({ open, onOpenChange }) {
   const { tenantId } = useTenantQuery();
   const [form, setForm] = useState(emptyForm);
 
-  const { data: lecturers = [], isLoading } = useQuery({
+  const { data: lecturers = [], isLoading: lecLoading } = useQuery({
     queryKey: ["lecturers-active", tenantId],
     enabled: !!tenantId && open,
     queryFn: async () => {
@@ -91,25 +93,57 @@ export default function RateLecturerDialog({ open, onOpenChange }) {
     },
   });
 
-  // Load existing rating for selected lecturer to allow edit
-  useEffect(() => {
-    if (!open) { setForm(emptyForm); return; }
-  }, [open]);
+  const { data: courses = [] } = useQuery({
+    queryKey: ["rate-courses", tenantId],
+    enabled: !!tenantId && open,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("exam_titles")
+        .select("id, name")
+        .eq("tenant_id", tenantId)
+        .eq("is_active", true)
+        .order("name");
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  const { data: subjects = [] } = useQuery({
+    queryKey: ["rate-subjects", tenantId, form.course_id],
+    enabled: !!tenantId && !!form.course_id && open,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("exam_subjects")
+        .select("id, name")
+        .eq("tenant_id", tenantId)
+        .eq("course_id", form.course_id)
+        .eq("is_active", true)
+        .order("sort_order");
+      if (error) throw error;
+      return data || [];
+    },
+  });
 
   useEffect(() => {
-    if (!form.lecturer_id || !user?.id || !tenantId) return;
+    if (!open) setForm(emptyForm);
+  }, [open]);
+
+  // Load existing rating for selected (lecturer, subject) to allow edit
+  useEffect(() => {
+    if (!form.lecturer_id || !form.subject_id || !user?.id || !tenantId) return;
     (async () => {
       const { data } = await supabase
         .from("lecturer_ratings")
         .select("*")
         .eq("tenant_id", tenantId)
         .eq("lecturer_id", form.lecturer_id)
+        .eq("subject_id", form.subject_id)
         .eq("submitted_by", user.id)
         .maybeSingle();
       if (data) {
         setForm((f) => ({
           ...f,
-          level: data.level || "",
+          level: data.level || f.level,
           session_description: data.session_description || "",
           delivery: data.delivery || "",
           time_keeping: data.time_keeping || "",
@@ -120,20 +154,34 @@ export default function RateLecturerDialog({ open, onOpenChange }) {
           comments: data.comments || "",
         }));
       } else {
-        // Prefill level from lecturer default
         const lect = lecturers.find((l) => l.id === form.lecturer_id);
-        setForm((f) => ({ ...f, level: lect?.level || "" }));
+        setForm((f) => ({
+          ...f,
+          level: f.level || lect?.level || "",
+          session_description: "",
+          delivery: "",
+          time_keeping: "",
+          class_atmosphere: "",
+          test_quality: "",
+          have_again: "",
+          overall_rating: 0,
+          comments: "",
+        }));
       }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [form.lecturer_id]);
+  }, [form.lecturer_id, form.subject_id]);
 
   const submitMutation = useMutation({
     mutationFn: async () => {
+      if (!form.course_id) throw new Error("Please select a course");
+      if (!form.subject_id) throw new Error("Please select a subject");
       if (!form.lecturer_id) throw new Error("Please select a lecturer");
       if (!form.overall_rating) throw new Error("Please select an overall rating (1–10)");
       const payload = {
         tenant_id: tenantId,
+        course_id: form.course_id,
+        subject_id: form.subject_id,
         lecturer_id: form.lecturer_id,
         member_id: myMember?.id || null,
         submitted_by: user.id,
@@ -149,7 +197,7 @@ export default function RateLecturerDialog({ open, onOpenChange }) {
       };
       const { error } = await supabase
         .from("lecturer_ratings")
-        .upsert(payload, { onConflict: "tenant_id,lecturer_id,submitted_by" });
+        .upsert(payload, { onConflict: "tenant_id,lecturer_id,submitted_by,subject_id" });
       if (error) throw error;
     },
     onSuccess: () => {
@@ -162,6 +210,8 @@ export default function RateLecturerDialog({ open, onOpenChange }) {
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
 
+  const isLoading = lecLoading;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -170,7 +220,7 @@ export default function RateLecturerDialog({ open, onOpenChange }) {
             <Star className="h-5 w-5 text-primary" /> Rate the Lecturer
           </DialogTitle>
           <p className="text-xs text-muted-foreground pt-1">
-            We are continually committed to improving the standard of the institute — please share your feedback on how the lectures were delivered.
+            We are continually committed to improving the standard of the institute — please share your feedback on how the lectures were delivered. You can rate the same lecturer once per subject.
           </p>
         </DialogHeader>
 
@@ -181,6 +231,28 @@ export default function RateLecturerDialog({ open, onOpenChange }) {
         ) : (
           <div className="space-y-5">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <Label>Course *</Label>
+                <Select value={form.course_id} onValueChange={(v) => setForm((f) => ({ ...f, course_id: v, subject_id: "" }))}>
+                  <SelectTrigger><SelectValue placeholder="Select a course" /></SelectTrigger>
+                  <SelectContent>
+                    {courses.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Subject *</Label>
+                <Select value={form.subject_id} onValueChange={(v) => set("subject_id", v)} disabled={!form.course_id}>
+                  <SelectTrigger><SelectValue placeholder={form.course_id ? "Select a subject" : "Select a course first"} /></SelectTrigger>
+                  <SelectContent>
+                    {subjects.map((s) => (
+                      <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
               <div>
                 <Label>Lecturer's Name *</Label>
                 <Select value={form.lecturer_id} onValueChange={(v) => set("lecturer_id", v)}>
