@@ -286,8 +286,14 @@ export default function ExamManagement() {
             <QrCode className="h-4 w-4" /> Registration QR
           </Button>
         )}
+        {adminLecturerRatingEnabled && myMember?.id && (
+          <Button variant="outline" onClick={() => setAdminRateOpen(true)} className="gap-2">
+            <Star className="h-4 w-4" /> Rate a Lecturer
+          </Button>
+        )}
       </div>
       <WoFBIRegistrationQRCode open={qrOpen} onOpenChange={setQrOpen} />
+      <RateLecturerDialog open={adminRateOpen} onOpenChange={setAdminRateOpen} />
 
 
       {/* WoFBI About Section (Admin Editable) */}
