@@ -55,6 +55,9 @@ export default function ExamManagement() {
   const { user, isAdmin, myMember } = useAuth();
   const qc = useQueryClient();
   const { tenantId, scopeQuery, withTenant } = useTenantQuery();
+  const { currentTenant } = useTenant();
+  const [adminRateOpen, setAdminRateOpen] = useState(false);
+  const adminLecturerRatingEnabled = !!currentTenant?.settings?.wofbi_lecturer_rating_enabled;
   const [selectedCourse, setSelectedCourse] = useState(null);
   const [selectedSubject, setSelectedSubject] = useState(null);
   const [dialogOpen, setDialogOpen] = useState(false);
