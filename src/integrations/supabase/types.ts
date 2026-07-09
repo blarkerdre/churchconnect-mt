@@ -2851,6 +2851,123 @@ export type Database = {
           },
         ]
       }
+      lecturer_ratings: {
+        Row: {
+          class_atmosphere: string | null
+          comments: string | null
+          created_at: string
+          delivery: string | null
+          have_again: string | null
+          id: string
+          lecturer_id: string
+          level: string | null
+          member_id: string | null
+          overall_rating: number | null
+          session_description: string | null
+          submitted_by: string
+          tenant_id: string
+          test_quality: string | null
+          time_keeping: string | null
+          updated_at: string
+        }
+        Insert: {
+          class_atmosphere?: string | null
+          comments?: string | null
+          created_at?: string
+          delivery?: string | null
+          have_again?: string | null
+          id?: string
+          lecturer_id: string
+          level?: string | null
+          member_id?: string | null
+          overall_rating?: number | null
+          session_description?: string | null
+          submitted_by: string
+          tenant_id: string
+          test_quality?: string | null
+          time_keeping?: string | null
+          updated_at?: string
+        }
+        Update: {
+          class_atmosphere?: string | null
+          comments?: string | null
+          created_at?: string
+          delivery?: string | null
+          have_again?: string | null
+          id?: string
+          lecturer_id?: string
+          level?: string | null
+          member_id?: string | null
+          overall_rating?: number | null
+          session_description?: string | null
+          submitted_by?: string
+          tenant_id?: string
+          test_quality?: string | null
+          time_keeping?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lecturer_ratings_lecturer_id_fkey"
+            columns: ["lecturer_id"]
+            isOneToOne: false
+            referencedRelation: "lecturers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lecturer_ratings_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lecturer_ratings_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lecturers: {
+        Row: {
+          active: boolean
+          created_at: string
+          id: string
+          level: string | null
+          name: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          level?: string | null
+          name: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          level?: string | null
+          name?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lecturers_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       life_event_requests: {
         Row: {
           approval_route: string[]
