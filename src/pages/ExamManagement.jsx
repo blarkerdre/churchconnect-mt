@@ -832,8 +832,8 @@ export default function ExamManagement() {
               </Button>
             </div>
           )}
-          <LecturerManager />
           <LecturerFeedbackReport />
+          <LecturerManager />
           <RateLecturerDialog open={adminRateOpen} onOpenChange={setAdminRateOpen} />
         </TabsContent>
       </Tabs>
