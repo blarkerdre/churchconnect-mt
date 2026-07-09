@@ -179,6 +179,12 @@ export default function FollowupDetailPanel({ followup, onClose, onUpdate, curre
     await onUpdate(followup.id, patch);
   };
 
+  const handleReopen = async () => {
+    if (!window.confirm("Reopen this completed follow-up?")) return;
+    await onUpdate(followup.id, { status: "In Progress", completed_date: null });
+    toast({ title: "Follow-up reopened", description: "Status set to In Progress." });
+  };
+
   const isOverdue = followup.due_date && followup.status !== "Completed" &&
     new Date(followup.due_date) < new Date();
 
@@ -412,6 +418,17 @@ export default function FollowupDetailPanel({ followup, onClose, onUpdate, curre
                   </>
                 )}
               </div>
+            </div>
+          )}
+
+          {/* Reopen (admins & follow-up unit) */}
+          {followup.status === "Completed" && canManage && (
+            <div className="space-y-2">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Quick Actions</p>
+              <Button size="sm" variant="outline" className="text-primary border-primary/20 hover:bg-primary/10"
+                onClick={handleReopen}>
+                <RefreshCw className="h-3.5 w-3.5 mr-1" /> Reopen (Mark In Progress)
+              </Button>
             </div>
           )}
 
