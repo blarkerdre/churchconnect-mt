@@ -1,19 +1,22 @@
-## Problem
+# Fix: "Error submitting exam"
 
-On a member's profile, the Bible School section shows the "Score Report" (Statement of Result) button regardless of the `send_result_email` toggle. The user wants the profile to respect both toggles: Certificate and Statement should only be visible to the member when the corresponding email would have been sent.
+## Diagnosis
 
-Certificates are already hidden via `hiddenCourseNames` when `send_certificate_email` is off — no change needed there. Statement of Result is not gated today.
+The `grade-exam` edge function is failing with:
 
-## Changes
+```
+column "correct_answer" does not exist  (code 42703)
+```
 
-### `src/pages/MyProfile.jsx`
-1. In the `exam-titles-cert-flags` query (line ~188), also select `send_result_email`.
-2. Derive a second list `hiddenStatementCourseNames = examTitles.filter(c => !c.send_result_email).map(c => c.name)`.
-3. Pass it into the Bible School section (the component rendered around line ~672 that calls `downloadScoreReport`).
-4. In that section, hide the "📄 Score Report" button when the course's name is in `hiddenStatementCourseNames`. Keep the subject list, take-exam buttons, and pass/fail badge intact — only the Statement download is suppressed, matching how certificates are hidden.
+- The `correct_answer` column was moved from `public.exam_questions` to `public.exam_question_answers`.
+- The current source in `supabase/functions/grade-exam/index.ts` already reads answers from `exam_question_answers` correctly.
+- The **deployed** version of the function is stale — it still selects `correct_answer` from `exam_questions`, so every submission crashes at line ~91 with the 42703 error visible in the edge logs.
 
-## Out of scope
+Nothing else references the dropped column (`rg` across `supabase/functions/` confirms only `grade-exam` mentions it, and only via `exam_question_answers`).
 
-- No change to admin `CourseResultsView` (admins can still send/print manually).
-- No change to `send_certificate_email` handling — already respected.
-- No change to grading, retake, or email pipeline.
+## Plan
+
+1. Redeploy the `grade-exam` edge function so the current source (which reads the answer key from `exam_question_answers`) becomes active.
+2. Re-submit a test exam attempt to confirm grading succeeds and no 42703 error appears in the function logs.
+
+No code, schema, or RLS changes required.
