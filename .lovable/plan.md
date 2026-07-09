@@ -1,22 +1,29 @@
-# Fix: "Error submitting exam"
+# Fix: "Retake exam says admin(uuid) does not exist"
 
-## Diagnosis
+## Root cause
 
-The `grade-exam` edge function is failing with:
+Any UPDATE on `public.exam_attempts` fires the `trg_protect_exam_attempt_fields` trigger, which runs:
 
+```sql
+SELECT public.is_admin(auth.uid()) INTO _is_admin;
 ```
-column "correct_answer" does not exist  (code 42703)
-```
 
-- The `correct_answer` column was moved from `public.exam_questions` to `public.exam_question_answers`.
-- The current source in `supabase/functions/grade-exam/index.ts` already reads answers from `exam_question_answers` correctly.
-- The **deployed** version of the function is stale — it still selects `correct_answer` from `exam_questions`, so every submission crashes at line ~91 with the 42703 error visible in the edge logs.
+But the only `is_admin` function defined in the database is `is_admin(_user_id uuid, _tenant_id uuid)`. Postgres can't resolve the single-argument call and raises `function is_admin(uuid) does not exist` (surfaced in the UI as "admin(uuid) does not exist").
 
-Nothing else references the dropped column (`rg` across `supabase/functions/` confirms only `grade-exam` mentions it, and only via `exam_question_answers`).
+This breaks the admin "Allow Retake" button in `CourseResultsView` (it sets `retake_allowed = true` on the latest failed attempt) and any other UPDATE path on exam_attempts run by non-service-role clients.
 
 ## Plan
 
-1. Redeploy the `grade-exam` edge function so the current source (which reads the answer key from `exam_question_answers`) becomes active.
-2. Re-submit a test exam attempt to confirm grading succeeds and no 42703 error appears in the function logs.
+Add a migration that replaces `public.protect_exam_attempt_fields()` so it calls the tenant-scoped signature using the row's tenant:
 
-No code, schema, or RLS changes required.
+```sql
+SELECT public.is_admin(auth.uid(), NEW.tenant_id) INTO _is_admin;
+```
+
+Everything else in the function (service_role bypass, sensitive-field guard on score/passed/certificate_issued/total_points) stays identical. Trigger definition itself is untouched — only the function body changes.
+
+## Verification
+
+1. As an admin, click "Retake {subject}" on a failed attempt in Course Results → toast "Retake allowed for this member" appears, no error.
+2. As a regular member, attempting to update `score`/`passed`/`total_points`/`certificate_issued` still raises "You are not allowed to modify exam results".
+3. No code, RLS policy, or frontend changes required.
