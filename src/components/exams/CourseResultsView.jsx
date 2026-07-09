@@ -527,6 +527,25 @@ export default function CourseResultsView({ course }) {
         memberSubjects={statementMember.subjects}
       />
     )}
+    {deleteMember && (
+      <DangerConfirmDialog
+        open={!!deleteMember}
+        onOpenChange={(v) => { if (!v) setDeleteMember(null); }}
+        title="Delete course result"
+        entityName={deleteMember.name}
+        confirmText={deleteMember.name}
+        impacts={[
+          `All exam attempts for ${deleteMember.name} in ${course.name} will be permanently deleted.`,
+          deleteMember.hasCert
+            ? "Any issued certificate for this course will be revoked."
+            : "Any certificate record for this course will be removed if present.",
+          "This cannot be undone.",
+        ]}
+        confirmLabel="Delete result"
+        isPending={deleteResultMutation.isPending}
+        onConfirm={() => deleteResultMutation.mutateAsync({ memberId: deleteMember.id })}
+      />
+    )}
     </>
   );
 }
