@@ -6,11 +6,13 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Trophy, Download, RotateCcw, FileText, Mail, Award, Send } from "lucide-react";
+import { Loader2, Trophy, Download, RotateCcw, FileText, Mail, Award, Send, Trash2 } from "lucide-react";
 import PrintReportButton from "@/components/PrintReportButton";
 import { toast } from "@/components/ui/use-toast";
 import { getGradeClassification } from "@/lib/grade-utils";
 import StatementOfResult from "@/components/exams/StatementOfResult";
+import DangerConfirmDialog from "@/components/exams/DangerConfirmDialog";
+import { logAudit } from "@/lib/audit";
 import { useAuth } from "@/hooks/useAuth";
 
 function downloadCSV(filename, headers, rows) {
@@ -31,6 +33,7 @@ export default function CourseResultsView({ course }) {
   const [statementMember, setStatementMember] = useState(null);
   const [selected, setSelected] = useState(() => new Set());
   const [sendingBulk, setSendingBulk] = useState(false);
+  const [deleteMember, setDeleteMember] = useState(null);
 
   const classifications = course.grade_classifications || [
     { label: "Distinction", min_percentage: 75 },
@@ -89,6 +92,42 @@ export default function CourseResultsView({ course }) {
     },
     onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
+
+  const deleteResultMutation = useMutation({
+    mutationFn: async ({ memberId }) => {
+      if (subjectIds.length === 0) throw new Error("No subjects");
+      const { error: attErr } = await supabase
+        .from("exam_attempts")
+        .delete()
+        .eq("member_id", memberId)
+        .eq("tenant_id", course.tenant_id)
+        .in("subject_id", subjectIds);
+      if (attErr) throw attErr;
+      const { error: tcErr } = await supabase
+        .from("training_completions")
+        .delete()
+        .eq("member_id", memberId)
+        .eq("tenant_id", course.tenant_id)
+        .eq("training_type", course.name);
+      if (tcErr) throw tcErr;
+      await logAudit(
+        "course_result_delete",
+        "exam_attempts",
+        memberId,
+        { course_id: course.id, course_name: course.name, subject_ids: subjectIds },
+        course.tenant_id,
+      );
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["course-attempts"] });
+      qc.invalidateQueries({ queryKey: ["training-completions"] });
+      toast({ title: "Course result deleted", description: "All attempts and any certificate for this member have been removed." });
+      setDeleteMember(null);
+    },
+    onError: (err) => toast({ title: "Delete failed", description: err.message, variant: "destructive" }),
+  });
+
+
 
   // Group by member
   const memberMap = {};
@@ -455,6 +494,17 @@ export default function CourseResultsView({ course }) {
                               </Button>
                             );
                           })}
+                          {isAdmin && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 text-[10px] px-1.5 gap-0.5 text-destructive hover:text-destructive hover:bg-destructive/10"
+                              onClick={() => setDeleteMember({ id: m.id, name: m.name, hasCert: m.passed && m.subjectsTaken === subjects.length })}
+                              title="Delete this member's course result"
+                            >
+                              <Trash2 className="h-3 w-3" /> Delete
+                            </Button>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>
@@ -475,6 +525,25 @@ export default function CourseResultsView({ course }) {
         course={course}
         subjects={subjects}
         memberSubjects={statementMember.subjects}
+      />
+    )}
+    {deleteMember && (
+      <DangerConfirmDialog
+        open={!!deleteMember}
+        onOpenChange={(v) => { if (!v) setDeleteMember(null); }}
+        title="Delete course result"
+        entityName={deleteMember.name}
+        confirmText={deleteMember.name}
+        impacts={[
+          `All exam attempts for ${deleteMember.name} in ${course.name} will be permanently deleted.`,
+          deleteMember.hasCert
+            ? "Any issued certificate for this course will be revoked."
+            : "Any certificate record for this course will be removed if present.",
+          "This cannot be undone.",
+        ]}
+        confirmLabel="Delete result"
+        isPending={deleteResultMutation.isPending}
+        onConfirm={() => deleteResultMutation.mutateAsync({ memberId: deleteMember.id })}
       />
     )}
     </>
