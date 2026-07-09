@@ -1102,7 +1102,7 @@ function DynamicExamButtons({ memberId, onSelect, tenantId, hiddenStatementCours
                       {passed ? "Passed ✓" : "Not Passed"}
                     </Badge>
                   )}
-                  {completedSubjectIds.length > 0 && (
+                  {completedSubjectIds.length > 0 && !hiddenStatementCourseNames.includes(course.name) && (
                     <Button variant="ghost" size="sm" className="text-xs h-7" onClick={() => downloadScoreReport(course, allSubjects)}>
                       📄 Score Report
                     </Button>
