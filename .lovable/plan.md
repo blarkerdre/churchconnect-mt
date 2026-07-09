@@ -1,17 +1,16 @@
-## Problem
+## Goal
+Move the "Home Cells Created" report out of the main Home Cell page flow into a dedicated tab, visible only to admins.
 
-The Members page has a Home Cell dropdown in `AudienceFilter` (`wsfCentreId`), but the members list ignores it. `src/pages/Members.jsx` only checks `status`, `unit`, `dateFrom`, `dateTo`, and `account` when filtering — `wsfCentreId` is dropped, so selecting a Home Cell has no effect.
+## Changes
 
-## Fix
+**`src/pages/WSFManagement.jsx`**
+- Wrap the page content in shadcn `Tabs` (from `@/components/ui/tabs`).
+- Tab 1 — **Attendance** (visible to all current roles: admin, WSF leader, reports officer): renders the existing `WSFAttendanceTab` and the "My Centre Members" cards block.
+- Tab 2 — **Home Cells Created** (admin only, i.e. `isAdmin === true`): renders `WSFCreationReport` with the existing `centres` / `zones` / `centreMembers` props.
+- Conditionally render the second `TabsTrigger` and `TabsContent` only when `isAdmin`, so WSF leaders and reports officers don't see the tab at all.
+- Keep the page heading, but adjust the subtitle to reflect the tab context, or move the current "Home Cell Attendance" heading inside the Attendance tab so each tab owns its own title.
 
-**`src/pages/Members.jsx`**
-- Add `wsfCentreId: "all"` to the initial `filters` state.
-- In the `filtered` computation, add:
-  `const matchWsfCentre = filters.wsfCentreId === "all" || m.wsf_centre_id === filters.wsfCentreId;`
-  and include it in the final `&&` chain.
-
-**`src/components/comms/AudienceFilter.jsx`** (consistency with the earlier "admin can see hidden Home Cells" work)
-- Drop the `.eq("is_active", true)` restriction on the `wsf_centres` query so admins can filter members by hidden centres too. RLS already hides non-admin access.
-- Optionally label hidden centres as `"{name} (Hidden)"` in the dropdown for clarity.
-
-No database or other component changes needed.
+## Out of scope
+- No changes to `WSFCreationReport.jsx` itself.
+- No changes to data fetching / queries — they remain at the page level and feed whichever tab is active.
+- No permission/RLS changes; access restriction is purely UI-level (admins already have full data access).
