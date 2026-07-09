@@ -494,6 +494,17 @@ export default function CourseResultsView({ course }) {
                               </Button>
                             );
                           })}
+                          {isAdmin && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 text-[10px] px-1.5 gap-0.5 text-destructive hover:text-destructive hover:bg-destructive/10"
+                              onClick={() => setDeleteMember({ id: m.id, name: m.name, hasCert: m.passed && m.subjectsTaken === subjects.length })}
+                              title="Delete this member's course result"
+                            >
+                              <Trash2 className="h-3 w-3" /> Delete
+                            </Button>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>
