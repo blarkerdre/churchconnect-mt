@@ -628,6 +628,15 @@ export default function FollowupDetailPanel({ followup, onClose, onUpdate, curre
           queryClient.invalidateQueries({ queryKey: ["followup-referrals", followup.id] });
         }}
       />
+
+      <PasswordConfirmDialog
+        open={reopenOpen}
+        onOpenChange={setReopenOpen}
+        title="Reopen follow-up"
+        description="Reopening will move this follow-up back to In Progress and clear its completion date."
+        confirmLabel="Reopen"
+        onConfirm={handleReopen}
+      />
     </div>
   );
 }
