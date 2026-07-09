@@ -2855,6 +2855,7 @@ export type Database = {
         Row: {
           class_atmosphere: string | null
           comments: string | null
+          course_id: string | null
           created_at: string
           delivery: string | null
           have_again: string | null
@@ -2864,6 +2865,7 @@ export type Database = {
           member_id: string | null
           overall_rating: number | null
           session_description: string | null
+          subject_id: string | null
           submitted_by: string
           tenant_id: string
           test_quality: string | null
@@ -2873,6 +2875,7 @@ export type Database = {
         Insert: {
           class_atmosphere?: string | null
           comments?: string | null
+          course_id?: string | null
           created_at?: string
           delivery?: string | null
           have_again?: string | null
@@ -2882,6 +2885,7 @@ export type Database = {
           member_id?: string | null
           overall_rating?: number | null
           session_description?: string | null
+          subject_id?: string | null
           submitted_by: string
           tenant_id: string
           test_quality?: string | null
@@ -2891,6 +2895,7 @@ export type Database = {
         Update: {
           class_atmosphere?: string | null
           comments?: string | null
+          course_id?: string | null
           created_at?: string
           delivery?: string | null
           have_again?: string | null
@@ -2900,6 +2905,7 @@ export type Database = {
           member_id?: string | null
           overall_rating?: number | null
           session_description?: string | null
+          subject_id?: string | null
           submitted_by?: string
           tenant_id?: string
           test_quality?: string | null
@@ -2907,6 +2913,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "lecturer_ratings_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "exam_titles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "lecturer_ratings_lecturer_id_fkey"
             columns: ["lecturer_id"]
@@ -2919,6 +2932,13 @@ export type Database = {
             columns: ["member_id"]
             isOneToOne: false
             referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lecturer_ratings_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "exam_subjects"
             referencedColumns: ["id"]
           },
           {
