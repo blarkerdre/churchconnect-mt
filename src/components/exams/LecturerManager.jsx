@@ -135,6 +135,12 @@ export default function LecturerManager() {
           />
         </div>
 
+        {ratingEnabled && !isLoading && lecturers.filter((l) => l.active).length === 0 && (
+          <div className="rounded-lg border border-amber-300 bg-amber-50 dark:bg-amber-950/20 p-3 text-xs text-amber-800 dark:text-amber-200">
+            Rating is enabled, but there are no active lecturers yet. Add an active lecturer so students can submit ratings.
+          </div>
+        )}
+
         <div className="flex items-center justify-between">
           <p className="text-sm font-medium">Lecturers</p>
           <Button size="sm" variant="outline" className="gap-1.5" onClick={() => { setEditing(null); setForm(emptyForm); setDialogOpen(true); }}>
