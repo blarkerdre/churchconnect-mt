@@ -319,6 +319,31 @@ export default function StatementOfResult({ open, onOpenChange, member, course, 
     URL.revokeObjectURL(url);
   };
 
+  const handleDownloadPdf = async () => {
+    if (!currentTenant?.id || !course?.id || !member?.id) return;
+    setDownloadingPdf(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("render-statement-pdf", {
+        body: { tenant_id: currentTenant.id, course_id: course.id, member_id: member.id },
+      });
+      if (error) throw error;
+      if (!data?.signed_url) throw new Error("No download URL returned");
+      const a = document.createElement("a");
+      a.href = data.signed_url;
+      a.target = "_blank";
+      a.rel = "noopener";
+      a.download = `${course.name}_${member.name}_statement.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      toast.success("Statement of Result PDF ready");
+    } catch (e) {
+      toast.error(e?.message || "Failed to generate PDF");
+    } finally {
+      setDownloadingPdf(false);
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl">
