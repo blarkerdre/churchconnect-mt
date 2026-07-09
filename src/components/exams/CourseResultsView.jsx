@@ -308,10 +308,39 @@ export default function CourseResultsView({ course }) {
               </div>
             )}
 
+            {isAdmin && completedMembers.length > 0 && (
+              <div className="flex flex-wrap items-center gap-2 mb-3 p-2.5 rounded-lg bg-primary/5 border border-primary/20">
+                <span className="text-xs font-medium text-muted-foreground mr-1">
+                  Admin: {selected.size} selected
+                </span>
+                <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={selectAllCompleted} disabled={sendingBulk}>All completed</Button>
+                <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={selectAllPassed} disabled={sendingBulk}>All passed</Button>
+                {selected.size > 0 && (
+                  <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={clearSelection} disabled={sendingBulk}>Clear</Button>
+                )}
+                <div className="flex-1" />
+                <Button
+                  variant="outline" size="sm" className="h-7 text-xs gap-1"
+                  disabled={selected.size === 0 || sendingBulk}
+                  onClick={() => sendStatements(Array.from(selected))}
+                >
+                  {sendingBulk ? <Loader2 className="h-3 w-3 animate-spin" /> : <Mail className="h-3 w-3" />} Email Statement
+                </Button>
+                <Button
+                  variant="outline" size="sm" className="h-7 text-xs gap-1"
+                  disabled={selected.size === 0 || sendingBulk}
+                  onClick={() => sendCertificates(Array.from(selected))}
+                >
+                  {sendingBulk ? <Loader2 className="h-3 w-3 animate-spin" /> : <Award className="h-3 w-3" />} Email Certificate
+                </Button>
+              </div>
+            )}
+
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
+                    {isAdmin && <TableHead className="w-8"></TableHead>}
                     <TableHead>Member</TableHead>
                     {subjects.map(s => <TableHead key={s.id} className="text-center text-xs">{s.name}</TableHead>)}
                     <TableHead className="text-center">Total</TableHead>
@@ -322,6 +351,17 @@ export default function CourseResultsView({ course }) {
                 <TableBody>
                   {members.map(m => (
                     <TableRow key={m.id}>
+                      {isAdmin && (
+                        <TableCell className="w-8">
+                          {m.subjectsTaken === subjects.length && (
+                            <Checkbox
+                              checked={selected.has(m.id)}
+                              onCheckedChange={() => toggleSelect(m.id)}
+                              disabled={sendingBulk}
+                            />
+                          )}
+                        </TableCell>
+                      )}
                       <TableCell className="text-sm font-medium">{m.name}</TableCell>
                       {subjects.map(s => {
                         const sub = m.subjects[s.id];
