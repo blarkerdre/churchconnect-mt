@@ -15,17 +15,9 @@ import DangerConfirmDialog from "@/components/exams/DangerConfirmDialog";
 import { toast } from "@/components/ui/use-toast";
 import { Loader2, Plus, Edit, Trash2, GraduationCap, Eye, Star } from "lucide-react";
 import { logAudit } from "@/lib/audit";
+import { OPTION_LABELS } from "@/lib/lecturer-feedback-options";
 
 const emptyForm = { name: "", level: "", active: true };
-
-const OPTION_LABELS = {
-  session_description: { preaching: "Preaching", teaching: "Teaching", impartation: "Impartation", all: "All of them", none: "None of them" },
-  delivery: { clear_simple: "Clear & Simple", interactive: "Interactive", just_right: "Just right", not_clear: "Not clear", difficult: "Difficult to understand" },
-  time_keeping: { on_time: "On time", too_long: "Too long", too_short: "Too short", just_right: "Just right", not_sure: "Not sure" },
-  class_atmosphere: { in_control: "In control of the class", unable_to_control: "Unable to control the class", balance_right: "The balance was right", not_sure: "Not sure" },
-  test_quality: { too_hard: "Too hard", too_simple: "Too simple", just_right: "Just right", not_sure: "Not sure" },
-  have_again: { yes: "Yes", no: "No", maybe: "Maybe", never: "Never", unsure: "Unsure" },
-};
 
 export default function LecturerManager() {
   const qc = useQueryClient();
