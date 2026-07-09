@@ -103,23 +103,41 @@ Deno.serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
 
-    // Verify caller
-    const userClient = createClient(supabaseUrl, anonKey, {
-      global: { headers: { Authorization: authHeader } },
-    });
-    const { data: claimsData, error: claimsError } = await userClient.auth.getClaims(
-      authHeader.replace("Bearer ", "")
-    );
-    if (claimsError || !claimsData?.claims) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    const rawToken = authHeader.replace("Bearer ", "");
+
+    // Detect server-to-server invocation with the service role key.
+    // Service-role JWTs have role=service_role and no user sub; skip user checks.
+    let isServiceRole = false;
+    try {
+      const parts = rawToken.split(".");
+      if (parts.length === 3) {
+        const b64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+        const pad = b64.length % 4 === 0 ? b64 : b64 + "=".repeat(4 - (b64.length % 4));
+        const payload = JSON.parse(atob(pad));
+        if (payload?.role === "service_role") isServiceRole = true;
+      }
+    } catch (_) {
+      // ignore — treat as regular user token below
     }
-    const userId = claimsData.claims.sub as string;
 
     // Use service role for DB operations
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    let userId: string | null = null;
+    if (!isServiceRole) {
+      // Verify caller as a regular user
+      const userClient = createClient(supabaseUrl, anonKey, {
+        global: { headers: { Authorization: authHeader } },
+      });
+      const { data: claimsData, error: claimsError } = await userClient.auth.getClaims(rawToken);
+      if (claimsError || !claimsData?.claims) {
+        return new Response(JSON.stringify({ error: "Unauthorized" }), {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      userId = claimsData.claims.sub as string;
+    }
 
     const body = await req.json();
     const { member_id, training_type, completion_date, notes, tenant_id, reissue, completion_id, preview, grade_classification: gcInput, send_certificate_email, admin_override } = body;
@@ -134,31 +152,33 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Tenant-scoped role checks: caller must be admin OR a unit_leader assigned to the "Training Rep" unit within this tenant
-    const { data: isAdminResult } = await supabase.rpc("is_admin", { _user_id: userId, _tenant_id: tenant_id });
-    let isTrainingRepLeader = false;
-    if (!isAdminResult) {
-      const { data: isLeaderResult } = await supabase.rpc("has_role", {
-        _user_id: userId,
-        _role: "unit_leader",
-        _tenant_id: tenant_id,
-      });
-      if (isLeaderResult) {
-        const { data: assignment } = await supabase
-          .from("unit_leader_assignments")
-          .select("id")
-          .eq("user_id", userId)
-          .eq("tenant_id", tenant_id)
-          .ilike("unit_name", "Training Rep")
-          .maybeSingle();
-        isTrainingRepLeader = !!assignment;
+    if (!isServiceRole) {
+      // Tenant-scoped role checks: caller must be admin OR a unit_leader assigned to the "Training Rep" unit within this tenant
+      const { data: isAdminResult } = await supabase.rpc("is_admin", { _user_id: userId, _tenant_id: tenant_id });
+      let isTrainingRepLeader = false;
+      if (!isAdminResult) {
+        const { data: isLeaderResult } = await supabase.rpc("has_role", {
+          _user_id: userId,
+          _role: "unit_leader",
+          _tenant_id: tenant_id,
+        });
+        if (isLeaderResult) {
+          const { data: assignment } = await supabase
+            .from("unit_leader_assignments")
+            .select("id")
+            .eq("user_id", userId)
+            .eq("tenant_id", tenant_id)
+            .ilike("unit_name", "Training Rep")
+            .maybeSingle();
+          isTrainingRepLeader = !!assignment;
+        }
       }
-    }
-    if (!isAdminResult && !isTrainingRepLeader) {
-      return new Response(
-        JSON.stringify({ error: "Only admins and the Training Rep unit leader can issue certificates" }),
-        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      if (!isAdminResult && !isTrainingRepLeader) {
+        return new Response(
+          JSON.stringify({ error: "Only admins and the Training Rep unit leader can issue certificates" }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
     }
 
     // Look up existing completion. For reissue prefer completion_id (robust against
