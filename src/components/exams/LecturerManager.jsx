@@ -225,11 +225,12 @@ export default function LecturerManager() {
         <DangerConfirmDialog
           open={!!deleteTarget}
           onOpenChange={(v) => { if (!v) setDeleteTarget(null); }}
-          title="Delete lecturer?"
-          description={deleteTarget ? `"${deleteTarget.name}" and all their feedback submissions will be permanently deleted. This cannot be undone.` : ""}
+          title="Delete Lecturer"
+          entityName={deleteTarget?.name || ""}
+          impacts={["The lecturer will be removed from the rating list", "All student feedback for this lecturer will be permanently deleted"]}
           confirmLabel="Delete lecturer"
           onConfirm={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)}
-          loading={deleteMutation.isPending}
+          isPending={deleteMutation.isPending}
         />
 
         <LecturerFeedbackDialog
