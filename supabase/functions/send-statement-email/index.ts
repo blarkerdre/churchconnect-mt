@@ -1,5 +1,5 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { generateAndUploadStatement } from "../render-statement-pdf/index.ts";
+import { generateAndUploadStatement } from "../_shared/generate-statement.ts";
 import { formatSessionLabel } from "../_shared/statement-pdf.ts";
 
 const corsHeaders = {
