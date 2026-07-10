@@ -29,6 +29,7 @@ import StatementOfResult from "@/components/exams/StatementOfResult";
 import LecturerManager from "@/components/exams/LecturerManager";
 import LecturerFeedbackReport from "@/components/exams/LecturerFeedbackReport";
 import RateLecturerDialog from "@/components/exams/RateLecturerDialog";
+import QcReport from "@/components/exams/QcReport";
 import ModuleTour from "@/components/tour/ModuleTour";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
@@ -295,6 +296,7 @@ export default function ExamManagement() {
         <TabsList>
           <TabsTrigger value="management">Management</TabsTrigger>
           <TabsTrigger value="lecturer">Lecturer Feedback</TabsTrigger>
+          <TabsTrigger value="qc">Quality Control</TabsTrigger>
         </TabsList>
 
         <TabsContent value="management" className="space-y-6 mt-4">
@@ -835,6 +837,10 @@ export default function ExamManagement() {
           <LecturerFeedbackReport />
           <LecturerManager />
           <RateLecturerDialog open={adminRateOpen} onOpenChange={setAdminRateOpen} />
+        </TabsContent>
+
+        <TabsContent value="qc" className="space-y-4 mt-4">
+          <QcReport />
         </TabsContent>
       </Tabs>
     </div>
