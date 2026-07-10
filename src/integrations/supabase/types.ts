@@ -2851,6 +2851,112 @@ export type Database = {
           },
         ]
       }
+      lecturer_qc_checks: {
+        Row: {
+          check_date: string
+          class_recorded: boolean | null
+          conducted_test: boolean | null
+          content_focus_note: string | null
+          content_focus_score: number | null
+          created_at: string
+          created_by: string | null
+          exam_subject_id: string | null
+          exam_title_id: string | null
+          finished_on_time: number | null
+          general_observations: string | null
+          id: string
+          introduced_self: boolean | null
+          lecturer_id: string
+          orderliness_note: string | null
+          orderliness_score: number | null
+          qa_observations: string | null
+          qc_member_name: string | null
+          recording_submitted: boolean | null
+          started_on_time: number | null
+          student_avg_rating: number | null
+          tenant_id: string
+          tier: string | null
+          total_score: number | null
+          updated_at: string
+        }
+        Insert: {
+          check_date?: string
+          class_recorded?: boolean | null
+          conducted_test?: boolean | null
+          content_focus_note?: string | null
+          content_focus_score?: number | null
+          created_at?: string
+          created_by?: string | null
+          exam_subject_id?: string | null
+          exam_title_id?: string | null
+          finished_on_time?: number | null
+          general_observations?: string | null
+          id?: string
+          introduced_self?: boolean | null
+          lecturer_id: string
+          orderliness_note?: string | null
+          orderliness_score?: number | null
+          qa_observations?: string | null
+          qc_member_name?: string | null
+          recording_submitted?: boolean | null
+          started_on_time?: number | null
+          student_avg_rating?: number | null
+          tenant_id: string
+          tier?: string | null
+          total_score?: number | null
+          updated_at?: string
+        }
+        Update: {
+          check_date?: string
+          class_recorded?: boolean | null
+          conducted_test?: boolean | null
+          content_focus_note?: string | null
+          content_focus_score?: number | null
+          created_at?: string
+          created_by?: string | null
+          exam_subject_id?: string | null
+          exam_title_id?: string | null
+          finished_on_time?: number | null
+          general_observations?: string | null
+          id?: string
+          introduced_self?: boolean | null
+          lecturer_id?: string
+          orderliness_note?: string | null
+          orderliness_score?: number | null
+          qa_observations?: string | null
+          qc_member_name?: string | null
+          recording_submitted?: boolean | null
+          started_on_time?: number | null
+          student_avg_rating?: number | null
+          tenant_id?: string
+          tier?: string | null
+          total_score?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lecturer_qc_checks_exam_subject_id_fkey"
+            columns: ["exam_subject_id"]
+            isOneToOne: false
+            referencedRelation: "exam_subjects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lecturer_qc_checks_exam_title_id_fkey"
+            columns: ["exam_title_id"]
+            isOneToOne: false
+            referencedRelation: "exam_titles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lecturer_qc_checks_lecturer_id_fkey"
+            columns: ["lecturer_id"]
+            isOneToOne: false
+            referencedRelation: "lecturers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lecturer_ratings: {
         Row: {
           class_atmosphere: string | null
