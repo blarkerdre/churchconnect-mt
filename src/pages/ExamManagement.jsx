@@ -1433,10 +1433,18 @@ function MemberExamsView({ memberId, memberRecord, courses, loading }) {
 
                   {!isRegistered ? (
                     course.registration_open ? (
-                      <Button size="sm" onClick={() => registerMutation.mutate(course.id)} disabled={registerMutation.isPending} className="gap-1.5">
-                        {registerMutation.isPending && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-                        Register for {course.name}
-                      </Button>
+                      appFormEnabled && wofbiRegisterPath ? (
+                        <Button asChild size="sm" className="gap-1.5">
+                          <a href={`${wofbiRegisterPath}?course_id=${course.id}`}>
+                            Register for {course.name}
+                          </a>
+                        </Button>
+                      ) : (
+                        <Button size="sm" onClick={() => registerMutation.mutate(course.id)} disabled={registerMutation.isPending} className="gap-1.5">
+                          {registerMutation.isPending && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                          Register for {course.name}
+                        </Button>
+                      )
                     ) : (
                       <p className="text-xs text-muted-foreground italic">Registration is currently closed.</p>
                     )
