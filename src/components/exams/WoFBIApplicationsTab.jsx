@@ -302,7 +302,8 @@ export default function WoFBIApplicationsTab() {
       ["Course", "Applications"],
       ...report.topCourses.map(([n, c]) => [n, c]),
     ];
-    downloadCsv(rows, `bible-school-report-${new Date().toISOString().slice(0, 10)}.csv`);
+    const suffix = answerFilters.length > 0 ? "-filtered" : "";
+    downloadCsv(rows, `bible-school-report${suffix}-${new Date().toISOString().slice(0, 10)}.csv`);
   };
 
   const answerFields = (form?.fields || []).filter((f) => f.type !== "section_heading");
