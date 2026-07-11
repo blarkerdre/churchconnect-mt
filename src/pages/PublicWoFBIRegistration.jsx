@@ -247,6 +247,14 @@ export default function PublicWoFBIRegistration() {
             <div className="flex items-center justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
           ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
+            {isAuthed && (
+              <div className="flex items-start gap-2 rounded-md border border-primary/20 bg-primary/5 p-3 text-sm">
+                <UserCheck className="h-4 w-4 mt-0.5 text-primary shrink-0" />
+                <div>
+                  Signed in as <strong>{user?.email}</strong>. This application will be linked to your member profile.
+                </div>
+              </div>
+            )}
             <input
               type="text"
               name="website"
@@ -257,6 +265,7 @@ export default function PublicWoFBIRegistration() {
               className="absolute opacity-0 pointer-events-none h-0 w-0"
               aria-hidden="true"
             />
+
 
             <div className="pt-1 pb-1 border-b">
               <h3 className="text-sm font-semibold uppercase tracking-wide text-primary">Contact Details</h3>
