@@ -600,6 +600,32 @@ export default function WoFBIApplicationsTab() {
                         <Button size="sm" variant="outline" onClick={() => setDetail(a)} className="gap-1.5">
                           <Eye className="h-3.5 w-3.5" /> View
                         </Button>
+                        {a.status !== "approved" && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="text-primary hover:text-primary"
+                            onClick={() => updateStatus.mutate({ id: a.id, status: "approved" })}
+                            disabled={updateStatus.isPending}
+                            aria-label="Approve application"
+                            title="Approve"
+                          >
+                            <CheckCircle2 className="h-3.5 w-3.5" />
+                          </Button>
+                        )}
+                        {a.status !== "rejected" && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="text-destructive hover:text-destructive"
+                            onClick={() => updateStatus.mutate({ id: a.id, status: "rejected" })}
+                            disabled={updateStatus.isPending}
+                            aria-label="Reject application"
+                            title="Reject"
+                          >
+                            <XCircle className="h-3.5 w-3.5" />
+                          </Button>
+                        )}
                         {canDelete && (
                           <Button
                             size="sm"
