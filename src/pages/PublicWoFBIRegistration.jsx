@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,11 +7,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Loader2, CheckCircle2, BookOpen } from "lucide-react";
+import { Loader2, CheckCircle2, BookOpen, UserCheck } from "lucide-react";
 import { usePublicConsentText, renderConsentText } from "@/hooks/useConsentText";
 import { toast } from "@/components/ui/use-toast";
 import { Toaster } from "@/components/ui/toaster";
 import WoFBIDynamicForm from "@/components/exams/WoFBIDynamicForm";
+import { useAuth } from "@/hooks/useAuth";
 
 const emptyForm = {
   first_name: "",
