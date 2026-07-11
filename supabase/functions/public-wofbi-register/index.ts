@@ -213,36 +213,50 @@ Deno.serve(async (req) => {
     let memberId: string | null = null;
     let isNewMember = false;
 
-    const { data: existingMember } = await supabase
-      .from("members")
-      .select("id")
-      .eq("email", email)
-      .eq("tenant_id", tenantId)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    if (existingMember) {
-      memberId = existingMember.id;
-    } else {
-      const { data: newMember, error: insertError } = await supabase
+    // Prefer linking by authenticated user_id when available
+    if (authUserId) {
+      const { data: linkedMember } = await supabase
         .from("members")
-        .insert({
-          first_name: firstName,
-          last_name: lastName,
-          email,
-          phone,
-          membership_status: "First Timer",
-          gdpr_consent: true,
-          gdpr_consent_date: new Date().toISOString(),
-          tenant_id: tenantId,
-        })
         .select("id")
-        .single();
+        .eq("user_id", authUserId)
+        .eq("tenant_id", tenantId)
+        .maybeSingle();
+      if (linkedMember) memberId = linkedMember.id;
+    }
 
-      if (insertError) throw insertError;
-      memberId = newMember.id;
-      isNewMember = true;
+    if (!memberId) {
+      const { data: existingMember } = await supabase
+        .from("members")
+        .select("id")
+        .eq("email", email)
+        .eq("tenant_id", tenantId)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (existingMember) {
+        memberId = existingMember.id;
+      } else {
+        const { data: newMember, error: insertError } = await supabase
+          .from("members")
+          .insert({
+            first_name: firstName,
+            last_name: lastName,
+            email,
+            phone,
+            membership_status: "First Timer",
+            gdpr_consent: true,
+            gdpr_consent_date: new Date().toISOString(),
+            tenant_id: tenantId,
+            ...(authUserId ? { user_id: authUserId } : {}),
+          })
+          .select("id")
+          .single();
+
+        if (insertError) throw insertError;
+        memberId = newMember.id;
+        isNewMember = true;
+      }
     }
 
     const { data: existingReg } = await supabase
