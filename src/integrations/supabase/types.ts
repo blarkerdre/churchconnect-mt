@@ -5800,6 +5800,12 @@ export type Database = {
         Args: { _invitation_id: string }
         Returns: undefined
       }
+      accept_tenant_invitation_by_token: {
+        Args: { _allow_email_mismatch?: boolean; _token: string }
+        Returns: {
+          tenant_slug: string
+        }[]
+      }
       add_member_unit: {
         Args: { _member: string; _unit: string }
         Returns: undefined
@@ -5940,6 +5946,18 @@ export type Database = {
           subject_id: string
           tenant_id: string
           training_type: string
+        }[]
+      }
+      get_invitation_details: {
+        Args: { _token: string }
+        Returns: {
+          email: string
+          expired: boolean
+          role: string
+          status: string
+          tenant_id: string
+          tenant_name: string
+          tenant_slug: string
         }[]
       }
       get_public_consent_settings: {
