@@ -70,16 +70,70 @@ export default function WoFBIApplicationsTab() {
 
   const updateStatus = useMutation({
     mutationFn: async ({ id, status }) => {
+      const app = applications.find((a) => a.id === id);
       const { error } = await supabase
         .from("wofbi_applications")
         .update({ status, reviewed_by: user?.id, reviewed_at: new Date().toISOString() })
         .eq("id", id)
         .eq("tenant_id", tenantId);
       if (error) throw error;
+
+      let enrolled = false;
+      let alreadyEnrolled = false;
+      let unlinked = false;
+
+      if (status === "approved" && app) {
+        if (app.member_id && app.course_id) {
+          const { data: existing } = await supabase
+            .from("course_registrations")
+            .select("id")
+            .eq("tenant_id", tenantId)
+            .eq("member_id", app.member_id)
+            .eq("course_id", app.course_id)
+            .maybeSingle();
+          if (existing) {
+            alreadyEnrolled = true;
+          } else {
+            const { error: insErr } = await supabase.from("course_registrations").insert({
+              tenant_id: tenantId,
+              member_id: app.member_id,
+              course_id: app.course_id,
+              status: "active",
+              registered_at: new Date().toISOString(),
+            });
+            if (insErr) throw insErr;
+            enrolled = true;
+          }
+        } else if (!app.member_id) {
+          unlinked = true;
+        }
+        await logAudit(
+          "wofbi_application.approved",
+          "wofbi_applications",
+          id,
+          { member_id: app.member_id || null, course_id: app.course_id || null, enrolled, already_enrolled: alreadyEnrolled, unlinked },
+          tenantId
+        );
+      }
+
+      return { status, enrolled, alreadyEnrolled, unlinked };
     },
-    onSuccess: () => {
+    onSuccess: (res) => {
       qc.invalidateQueries({ queryKey: ["wofbi-applications", tenantId] });
-      toast({ title: "Application updated" });
+      if (res.status === "approved") {
+        qc.invalidateQueries({ queryKey: ["course-registrations"] });
+        if (res.enrolled) {
+          toast({ title: "Applicant approved and enrolled", description: "A course registration has been created." });
+        } else if (res.alreadyEnrolled) {
+          toast({ title: "Approved", description: "Applicant was already enrolled in this course." });
+        } else if (res.unlinked) {
+          toast({ title: "Approved", description: "Link this applicant to a member record to enrol them into the course." });
+        } else {
+          toast({ title: "Application approved" });
+        }
+      } else {
+        toast({ title: "Application updated" });
+      }
       setDetail(null);
     },
     onError: (e) => toast({ title: "Update failed", description: e.message, variant: "destructive" }),
@@ -546,6 +600,32 @@ export default function WoFBIApplicationsTab() {
                         <Button size="sm" variant="outline" onClick={() => setDetail(a)} className="gap-1.5">
                           <Eye className="h-3.5 w-3.5" /> View
                         </Button>
+                        {a.status !== "approved" && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="text-primary hover:text-primary"
+                            onClick={() => updateStatus.mutate({ id: a.id, status: "approved" })}
+                            disabled={updateStatus.isPending}
+                            aria-label="Approve application"
+                            title="Approve"
+                          >
+                            <CheckCircle2 className="h-3.5 w-3.5" />
+                          </Button>
+                        )}
+                        {a.status !== "rejected" && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="text-destructive hover:text-destructive"
+                            onClick={() => updateStatus.mutate({ id: a.id, status: "rejected" })}
+                            disabled={updateStatus.isPending}
+                            aria-label="Reject application"
+                            title="Reject"
+                          >
+                            <XCircle className="h-3.5 w-3.5" />
+                          </Button>
+                        )}
                         {canDelete && (
                           <Button
                             size="sm"
