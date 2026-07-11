@@ -50,6 +50,7 @@ const ChildrenChurch = lazy(() => import("@/pages/ChildrenChurch"));
 const MyFamily = lazy(() => import("@/pages/MyFamily"));
 const Inventory = lazy(() => import("@/pages/Inventory"));
 const ChurchUnit = lazy(() => import("@/pages/ChurchUnit"));
+const AcceptInvite = lazy(() => import("@/pages/AcceptInvite"));
 
 function PageFallback() {
   return (
@@ -269,6 +270,7 @@ function AppRoutes() {
         <Route path="/onboard" element={<Onboard />} />
         <Route path="/unsubscribe" element={<Unsubscribe />} />
         <Route path="/trust" element={<Trust />} />
+        <Route path="/accept-invite" element={<AuthProvider><AcceptInvite /></AuthProvider>} />
 
         {/* Tenant-prefixed public routes */}
         <Route path="/t/:tenantSlug/auth" element={<AuthProvider><Auth /></AuthProvider>} />
