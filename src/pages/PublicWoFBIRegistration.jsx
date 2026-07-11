@@ -190,19 +190,27 @@ export default function PublicWoFBIRegistration() {
             </div>
 
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
-              <Button asChild>
-                <a href={loginUrl}>Login / Create Account</a>
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setForm(emptyForm);
-                  setAnswers({});
-                  setSubmitted(false);
-                }}
-              >
-                Register Another Person
-              </Button>
+              {isAuthed ? (
+                <Button asChild>
+                  <a href={tenantSlug ? `/t/${tenantSlug}/exam-management` : "/exam-management"}>Go to Bible School</a>
+                </Button>
+              ) : (
+                <Button asChild>
+                  <a href={loginUrl}>Login / Create Account</a>
+                </Button>
+              )}
+              {!isAuthed && (
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setForm(emptyForm);
+                    setAnswers({});
+                    setSubmitted(false);
+                  }}
+                >
+                  Register Another Person
+                </Button>
+              )}
             </div>
           </CardContent>
         </Card>
