@@ -1,50 +1,42 @@
 ## Goal
-Extend the Bible School Applications tab (`src/components/exams/WoFBIApplicationsTab.jsx`) so admins can filter responses, view a summary report, and delete individual or bulk submissions — alongside the existing search, view, approve/reject, and CSV export.
+Let admins filter Bible School applications by answers to the dynamic form fields (e.g. gender = Male AND marital status = Married) so they can produce targeted lists like "registered married men" — and include those filters in the report and CSV exports.
 
-## Changes
+## Scope
+Change is limited to `src/components/exams/WoFBIApplicationsTab.jsx`. No schema, RLS, or public form changes.
 
-### 1. Filters (above the table)
-Add a filter bar next to the existing search input:
-- **Status**: All / Submitted / Approved / Rejected (Select)
-- **Course**: All courses / each course from `exam_titles` used by applications (Select)
-- **Date range**: From / To date inputs (filters on `created_at`)
-- **Clear filters** button when any filter is active
+## What the user will see
 
-Filters compose with the existing text search. Filtered results also drive the CSV export (already the case) and the report summary.
+1. **New "Answer filters" row** below the existing Status/Course/Date filters:
+   - A "+ Add filter" button opens a small popover: pick a form field, then pick a value.
+   - Supported field types (from the dynamic form):
+     - `select` / `radio` → value dropdown from the field's options.
+     - `checkbox` (single boolean) → Yes / No.
+     - `multiselect` / checkbox groups → "includes" value dropdown.
+     - `text` / `textarea` / `email` / `phone` / `number` / `date` → "contains" text input (number/date get equals).
+   - Each active filter shows as a removable chip: `Marital status: Married ×`. Multiple chips combine with AND.
+   - Chips participate in "Clear filters" and the "X of Y shown" counter.
 
-### 2. Report (summary panel)
-Add a collapsible "Report" section above the table showing metrics for the **currently filtered** set:
-- Total applications
-- Counts by status (Submitted / Approved / Rejected) with % of total
-- Top 5 courses by application count
-- Submissions this month vs. last month
-- Button: **Export Report (CSV)** — a small summary CSV distinct from the existing per-row export
+2. **Report panel** already summarises the filtered set, so applying "Gender = Male" + "Marital status = Married" instantly gives counts, status breakdown, top courses, and month-on-month for that cohort. No new stat cards needed.
 
-Rendered as compact stat cards + a small table for course breakdown. No new charts library.
+3. **Exports** already read from `filtered`, so:
+   - "Export CSV" produces the row-level list for the cohort (e.g. married men).
+   - "Export report" produces the summary for the cohort.
+   Filenames get a short suffix when answer filters are active, e.g. `bible-school-applications-filtered-2026-07-11.csv`.
 
-### 3. Delete
-- **Row-level delete**: add a Delete (trash) button in each row's Actions column, with a confirm dialog ("Delete this application? This cannot be undone.").
-- **Detail dialog delete**: add a Delete button in the existing detail dialog footer (same confirm).
-- **Bulk delete**: add checkboxes per row + header "select all (filtered)" checkbox. When ≥1 selected, show a toolbar with "Delete selected (N)" (confirm dialog).
-- All deletes are tenant-scoped: `.eq("tenant_id", tenantId).in("id", ids)` and invalidate the `wofbi-applications` query.
-- Audit-log each deletion via `logAudit` (action `wofbi_application.deleted`, target = application id, metadata = applicant name/email/course).
-- Permission gate: only tenant admins/owners see delete controls (via `useAuth().isTenantAdmin || isTenantOwner`).
+4. **Empty state** message updated to mention answer filters when they're the reason nothing matches.
 
-### 4. UX polish
-- Preserve current selection when filters change; clear selection after successful delete.
-- Toasts on success/failure for single and bulk deletes.
-- Empty-state text updates when filters yield no results ("No applications match the current filters").
+## Technical notes
 
-## Technical details
-
-- File: `src/components/exams/WoFBIApplicationsTab.jsx` (single-file change; may extract a small `ApplicationsReport` subcomponent in the same file to keep it readable).
-- State additions: `statusFilter`, `courseFilter`, `dateFrom`, `dateTo`, `selectedIds` (Set), `confirmDelete` ({ ids, label }), `showReport`.
-- Derived `filtered` memo extended with the new predicates.
-- New mutation `deleteApplications` using `supabase.from("wofbi_applications").delete().in("id", ids).eq("tenant_id", tenantId)`.
-- RLS: `wofbi_applications` already has tenant-scoped policies; no migration needed. If delete policy is missing for admins, a follow-up migration will be created — will verify by reading policies before implementing and add a migration only if required.
-- No schema changes expected.
+- Read field metadata from the already-loaded `form.fields`. Skip `section_heading`.
+- New state: `answerFilters: Array<{ id, fieldId, op, value }>` where `op ∈ {"equals","contains","includes","boolean"}` chosen from field type.
+- Extend the existing `filtered` `useMemo` with an AND pass over `answerFilters`, reading `a.answers?.[fieldId]`. Case-insensitive `contains` for free-text; strict equality for select/radio/boolean; `Array.isArray(v) && v.includes(value)` for multi-select.
+- `hasFilters` and `clearFilters` include `answerFilters`.
+- Popover uses existing shadcn `Popover` + `Select` + `Input`; no new deps.
+- Selection state (`selectedIds`) is cleared when answer filters change to avoid acting on hidden rows.
+- All logic stays client-side over the already-fetched applications list — same tenant scoping, same permissions, no new queries.
 
 ## Out of scope
-- Charts/graphs beyond simple stat cards.
-- Editing application answers (approve/reject stays as-is).
-- Public form changes.
+- Saving filter presets.
+- Server-side querying by JSON answers.
+- Charts beyond existing stat cards.
+- Editing form answers.
