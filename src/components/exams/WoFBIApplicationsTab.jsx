@@ -381,6 +381,75 @@ export default function WoFBIApplicationsTab() {
             <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="h-9" aria-label="From date" />
             <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="h-9" aria-label="To date" />
           </div>
+
+          {filterableFields.length > 0 && (
+            <div className="rounded-md border p-2 space-y-2 bg-muted/20">
+              <div className="text-xs font-semibold text-muted-foreground">Filter by form answers</div>
+              {answerFilters.length > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                  {answerFilters.map((af) => {
+                    const field = getFieldMeta(af.fieldId);
+                    return (
+                      <Badge key={af.id} variant="secondary" className="gap-1 pr-1">
+                        <span className="text-xs">
+                          {field?.label || "Field"}: {formatAnswerValue(field, af.value)}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => removeAnswerFilter(af.id)}
+                          className="ml-0.5 rounded hover:bg-background/60 p-0.5"
+                          aria-label="Remove filter"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </Badge>
+                    );
+                  })}
+                </div>
+              )}
+              <div className="grid grid-cols-1 sm:grid-cols-[1fr,1fr,auto] gap-2">
+                <Select
+                  value={newFilterFieldId}
+                  onValueChange={(v) => { setNewFilterFieldId(v); setNewFilterValue(""); }}
+                >
+                  <SelectTrigger className="h-9"><SelectValue placeholder="Select field..." /></SelectTrigger>
+                  <SelectContent>
+                    {filterableFields.map((f) => (
+                      <SelectItem key={f.id} value={f.id}>{f.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {newFilterIsChoice ? (
+                  <Select value={newFilterValue} onValueChange={setNewFilterValue} disabled={!newFilterField}>
+                    <SelectTrigger className="h-9"><SelectValue placeholder="Value..." /></SelectTrigger>
+                    <SelectContent>
+                      {newFilterOptions.map((o) => (
+                        <SelectItem key={o.v} value={o.v}>{o.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <Input
+                    className="h-9"
+                    value={newFilterValue}
+                    onChange={(e) => setNewFilterValue(e.target.value)}
+                    placeholder={newFilterField ? "Contains..." : "Pick a field first"}
+                    disabled={!newFilterField}
+                  />
+                )}
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-9"
+                  onClick={addAnswerFilter}
+                  disabled={!newFilterField || !newFilterValue}
+                >
+                  Add filter
+                </Button>
+              </div>
+            </div>
+          )}
+
           {hasFilters && (
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <span>{filtered.length} of {applications.length} shown</span>
@@ -390,6 +459,7 @@ export default function WoFBIApplicationsTab() {
             </div>
           )}
         </div>
+
 
         {canDelete && selectedIds.size > 0 && (
           <div className="flex items-center justify-between rounded-md border bg-muted/40 px-3 py-2">
