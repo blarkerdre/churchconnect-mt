@@ -1,42 +1,61 @@
 ## Goal
-Let admins filter Bible School applications by answers to the dynamic form fields (e.g. gender = Male AND marital status = Married) so they can produce targeted lists like "registered married men" — and include those filters in the report and CSV exports.
 
-## Scope
-Change is limited to `src/components/exams/WoFBIApplicationsTab.jsx`. No schema, RLS, or public form changes.
+When a Bible School (WoFBI) record is deleted — either a **Course Registration** row or a **Application form response** row — automatically remove **every** related Bible School record for that member, so no orphaned exam data, ratings, QC checks, or certificates remain.
 
-## What the user will see
+## Scope of cascade
 
-1. **New "Answer filters" row** below the existing Status/Course/Date filters:
-   - A "+ Add filter" button opens a small popover: pick a form field, then pick a value.
-   - Supported field types (from the dynamic form):
-     - `select` / `radio` → value dropdown from the field's options.
-     - `checkbox` (single boolean) → Yes / No.
-     - `multiselect` / checkbox groups → "includes" value dropdown.
-     - `text` / `textarea` / `email` / `phone` / `number` / `date` → "contains" text input (number/date get equals).
-   - Each active filter shows as a removable chip: `Marital status: Married ×`. Multiple chips combine with AND.
-   - Chips participate in "Clear filters" and the "X of Y shown" counter.
+For the affected `(member_id, course_id)` pair (course-registration deletion) or `(member_id, course_id)` from the application (application deletion — cascades that course only; if the application has no course_id, cascades all Bible School courses for that member):
 
-2. **Report panel** already summarises the filtered set, so applying "Gender = Male" + "Marital status = Married" instantly gives counts, status breakdown, top courses, and month-on-month for that cohort. No new stat cards needed.
+1. `wofbi_applications` — the registration form response(s)
+2. `course_registrations` — the enrolment row
+3. `exam_attempts` + `exam_answers` — every attempt across every subject under that course
+4. `training_completions` — the training row and certificate for that course
+5. `lecturer_ratings` — ratings the member gave for that course
+6. `lecturer_qc_checks` — QC checks for the member on that course
 
-3. **Exports** already read from `filtered`, so:
-   - "Export CSV" produces the row-level list for the cohort (e.g. married men).
-   - "Export report" produces the summary for the cohort.
-   Filenames get a short suffix when answer filters are active, e.g. `bible-school-applications-filtered-2026-07-11.csv`.
+Out of scope: exam questions, subjects, course definitions, and other members' data.
 
-4. **Empty state** message updated to mention answer filters when they're the reason nothing matches.
+## Implementation
+
+### 1. New SECURITY DEFINER RPC (migration)
+
+`public.cascade_delete_bible_school_records(_member_id uuid, _course_id uuid default null)`
+
+- Auth guard: caller must be admin/tenant_admin/tenant_owner for the member's tenant (use `has_role` / `user_has_tenant_access`).
+- Resolves `training_type` from `exam_titles.name` for the given course_id (or all WoFBI courses for the member if `_course_id` is null).
+- Resolves `subject_ids` from `exam_subjects.course_id`.
+- Deletes in FK-safe order:
+  1. `exam_answers` where `attempt_id in (select id from exam_attempts where member_id = _member_id and (subject_id in subjects OR training_type in types))`
+  2. `exam_attempts` same filter
+  3. `lecturer_qc_checks` where `member_id = _member_id and course_id = _course_id` (or all when null)
+  4. `lecturer_ratings` where `member_id = _member_id and course_id = _course_id`
+  5. `training_completions` where `member_id = _member_id and training_type in types`
+  6. `course_registrations` where `member_id = _member_id and (course_id = _course_id or true)`
+  7. `wofbi_applications` where `member_id = _member_id and (course_id = _course_id or _course_id is null)`
+- Writes one `audit_log` row summarising counts per table.
+- Returns a JSON summary `{ attempts, answers, completions, ratings, qc, registrations, applications }`.
+
+### 2. Wire up in Course Registrations delete (`src/pages/ExamManagement.jsx`)
+
+Replace the direct `.from("course_registrations").delete()` in `deleteMutation` with a call to `supabase.rpc("cascade_delete_bible_school_records", { _member_id, _course_id: course.id })`. Update the confirmation dialog copy to state that all Bible School records for this member and this course will be permanently removed (attempts, results, certificate, ratings, QC, application).
+
+### 3. Wire up in Applications tab (`src/components/exams/WoFBIApplicationsTab.jsx`)
+
+In `deleteApplications` mutation, for each selected application call the RPC with `_member_id = a.member_id` and `_course_id = a.course_id`. For rows where `member_id` is null (public form not yet linked), fall back to today's behaviour: just delete the `wofbi_applications` row. Update the confirm dialog copy to warn that all Bible School data for the applicant will be removed.
+
+### 4. Confirmation UX
+
+Both dialogs get a red highlighted list of what will be deleted, and require the current typed word "DELETE" is NOT required — the existing single-confirm button stays, but the description is expanded so admins understand the cascade.
 
 ## Technical notes
 
-- Read field metadata from the already-loaded `form.fields`. Skip `section_heading`.
-- New state: `answerFilters: Array<{ id, fieldId, op, value }>` where `op ∈ {"equals","contains","includes","boolean"}` chosen from field type.
-- Extend the existing `filtered` `useMemo` with an AND pass over `answerFilters`, reading `a.answers?.[fieldId]`. Case-insensitive `contains` for free-text; strict equality for select/radio/boolean; `Array.isArray(v) && v.includes(value)` for multi-select.
-- `hasFilters` and `clearFilters` include `answerFilters`.
-- Popover uses existing shadcn `Popover` + `Select` + `Input`; no new deps.
-- Selection state (`selectedIds`) is cleared when answer filters change to avoid acting on hidden rows.
-- All logic stays client-side over the already-fetched applications list — same tenant scoping, same permissions, no new queries.
+- The RPC is `SECURITY DEFINER` with `SET search_path = public` and re-checks tenant membership inside to prevent cross-tenant deletes.
+- All deletes stay tenant-scoped via `tenant_id = (select tenant_id from members where id = _member_id)`.
+- No schema changes to existing tables; no ON DELETE CASCADE changes (kept surgical to the RPC).
+- Audit log entry uses action `bible_school.cascade_delete` for traceability.
 
-## Out of scope
-- Saving filter presets.
-- Server-side querying by JSON answers.
-- Charts beyond existing stat cards.
-- Editing form answers.
+## Not in scope
+
+- Undo / soft-delete.
+- Restoring certificates from `purged_data_archives`.
+- Changes to `first_timers`, `wsf_*`, or non-WoFBI training records.
