@@ -1158,11 +1158,14 @@ function CourseRegistrationsView({ course }) {
         confirmText="DELETE"
         confirmLabel="Remove"
         impacts={[
-          `${deleteTarget?.members?.first_name || "The member"}'s registration for "${course.name}" will be removed.`,
-          "Existing exam attempts and results are NOT deleted — only the enrolment record.",
+          `${deleteTarget?.members?.first_name || "The member"}'s enrolment for "${course.name}" will be removed.`,
+          "All exam attempts, answers and results for this course will be permanently deleted.",
+          "The issued certificate / training completion for this course will be deleted.",
+          "Their lecturer ratings for this course will be deleted.",
+          "Their Bible School application form response for this course will be deleted.",
         ]}
         isPending={deleteMutation.isPending}
-        onConfirm={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)}
+        onConfirm={() => deleteTarget && deleteMutation.mutate(deleteTarget)}
       />
     </Card>
   );
