@@ -32,6 +32,9 @@ export default function WoFBIApplicationsTab() {
   const [courseFilter, setCourseFilter] = useState("all");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const [answerFilters, setAnswerFilters] = useState([]); // [{ id, fieldId, value }]
+  const [newFilterFieldId, setNewFilterFieldId] = useState("");
+  const [newFilterValue, setNewFilterValue] = useState("");
   const [selectedIds, setSelectedIds] = useState(() => new Set());
   const [detail, setDetail] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(null); // { ids: [], label: '' }
