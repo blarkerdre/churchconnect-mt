@@ -11,6 +11,7 @@ import { Loader2, CheckCircle2, BookOpen } from "lucide-react";
 import { usePublicConsentText, renderConsentText } from "@/hooks/useConsentText";
 import { toast } from "@/components/ui/use-toast";
 import { Toaster } from "@/components/ui/toaster";
+import WoFBIDynamicForm from "@/components/exams/WoFBIDynamicForm";
 
 const emptyForm = {
   first_name: "",
@@ -25,6 +26,7 @@ const emptyForm = {
 export default function PublicWoFBIRegistration() {
   const { tenantSlug } = useParams();
   const [form, setForm] = useState(emptyForm);
+  const [answers, setAnswers] = useState({});
   const [saving, setSaving] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [courseName, setCourseName] = useState("");
@@ -33,6 +35,8 @@ export default function PublicWoFBIRegistration() {
   const [resolvedTenantId, setResolvedTenantId] = useState(null);
   const [tenantName, setTenantName] = useState("");
   const [tenantLogo, setTenantLogo] = useState(null);
+  const [appForm, setAppForm] = useState(null);
+  const [loadingAppForm, setLoadingAppForm] = useState(true);
 
   useEffect(() => {
     if (tenantSlug) {
@@ -54,9 +58,22 @@ export default function PublicWoFBIRegistration() {
         setCourses(data || []);
         setLoadingCourses(false);
       });
+    setLoadingAppForm(true);
+    supabase.from("wofbi_application_forms")
+      .select("enabled, title, intro_text, fields")
+      .eq("tenant_id", resolvedTenantId)
+      .maybeSingle()
+      .then(({ data }) => {
+        setAppForm(data || null);
+        setLoadingAppForm(false);
+      });
   }, [resolvedTenantId]);
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
+  const setAnswer = (id, v) => setAnswers((a) => ({ ...a, [id]: v }));
+
+  const useDetailed = !!appForm?.enabled;
+  const detailedFields = appForm?.fields || [];
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -76,6 +93,16 @@ export default function PublicWoFBIRegistration() {
       toast({ title: "Please accept the data privacy policy", variant: "destructive" });
       return;
     }
+    if (useDetailed) {
+      for (const f of detailedFields) {
+        if (!f.required || f.type === "section_heading") continue;
+        const v = answers[f.id];
+        if (f.type === "checkbox" ? !v : (v === undefined || v === null || v === "")) {
+          toast({ title: `Please complete: ${f.label}`, variant: "destructive" });
+          return;
+        }
+      }
+    }
 
     setSaving(true);
     try {
@@ -89,6 +116,7 @@ export default function PublicWoFBIRegistration() {
             ...form,
             tenant_id: resolvedTenantId,
             tenant_slug: tenantSlug || null,
+            answers: useDetailed ? answers : {},
           }),
         }
       );
@@ -114,20 +142,19 @@ export default function PublicWoFBIRegistration() {
         <Card className="w-full max-w-md text-center">
           <CardContent className="py-12 space-y-6">
             <CheckCircle2 className="mx-auto h-16 w-16 text-green-600" />
-            <h2 className="text-2xl font-bold">Registration Received!</h2>
+            <h2 className="text-2xl font-bold">Application Received!</h2>
             <p className="text-muted-foreground">
               You have been registered for <strong>{courseName}</strong>.
             </p>
             <div className="bg-muted rounded-lg p-4 space-y-2 text-left">
               <h3 className="font-semibold text-sm">What's next?</h3>
               <p className="text-sm text-muted-foreground">
-                Your student registration number will be issued once an administrator approves your registration. It will then appear on your profile.
+                Your application will be reviewed by an administrator. You will receive further instructions by email.
               </p>
               <p className="text-sm text-muted-foreground">
                 In the meantime, log in or create an account in the Bible School section to access your exams.
               </p>
             </div>
-
 
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
               <Button asChild>
@@ -137,6 +164,7 @@ export default function PublicWoFBIRegistration() {
                 variant="outline"
                 onClick={() => {
                   setForm(emptyForm);
+                  setAnswers({});
                   setSubmitted(false);
                 }}
               >
@@ -149,10 +177,12 @@ export default function PublicWoFBIRegistration() {
     );
   }
 
+  const isLoading = loadingCourses || loadingAppForm;
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-muted/30 p-4">
+    <div className="min-h-screen bg-muted/30 py-8 px-4">
       <Toaster />
-      <Card className="w-full max-w-lg">
+      <Card className="w-full max-w-2xl mx-auto">
         <CardHeader className="text-center">
           {tenantLogo ? (
             <img src={tenantLogo} alt={tenantName} className="h-14 w-auto mx-auto mb-2 object-contain" />
@@ -161,12 +191,20 @@ export default function PublicWoFBIRegistration() {
               <BookOpen className="h-10 w-10 text-primary" />
             </div>
           )}
-          <CardTitle className="text-2xl">Bible School Course Registration</CardTitle>
+          <CardTitle className="text-2xl">
+            {useDetailed ? (appForm?.title || "Bible School — Application Form") : "Bible School Course Registration"}
+          </CardTitle>
           <p className="text-sm text-muted-foreground mt-1">
-            {tenantName ? `${tenantName} — ` : ""}Bible School — Register for a course
+            {tenantName ? `${tenantName}` : ""}
           </p>
+          {useDetailed && appForm?.intro_text && (
+            <p className="text-sm text-muted-foreground mt-2">{appForm.intro_text}</p>
+          )}
         </CardHeader>
         <CardContent>
+          {isLoading ? (
+            <div className="flex items-center justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+          ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
             <input
               type="text"
@@ -179,59 +217,38 @@ export default function PublicWoFBIRegistration() {
               aria-hidden="true"
             />
 
+            <div className="pt-1 pb-1 border-b">
+              <h3 className="text-sm font-semibold uppercase tracking-wide text-primary">Contact Details</h3>
+            </div>
+
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1">
                 <Label htmlFor="first_name">First Name *</Label>
-                <Input
-                  id="first_name"
-                  value={form.first_name}
-                  onChange={(e) => set("first_name", e.target.value)}
-                  maxLength={100}
-                  required
-                />
+                <Input id="first_name" value={form.first_name}
+                  onChange={(e) => set("first_name", e.target.value)} maxLength={100} required />
               </div>
               <div className="space-y-1">
-                <Label htmlFor="last_name">Last Name *</Label>
-                <Input
-                  id="last_name"
-                  value={form.last_name}
-                  onChange={(e) => set("last_name", e.target.value)}
-                  maxLength={100}
-                  required
-                />
+                <Label htmlFor="last_name">Last Name (Surname) *</Label>
+                <Input id="last_name" value={form.last_name}
+                  onChange={(e) => set("last_name", e.target.value)} maxLength={100} required />
               </div>
             </div>
 
             <div className="space-y-1">
               <Label htmlFor="email">Email *</Label>
-              <Input
-                id="email"
-                type="email"
-                value={form.email}
-                onChange={(e) => set("email", e.target.value)}
-                maxLength={255}
-                required
-              />
+              <Input id="email" type="email" value={form.email}
+                onChange={(e) => set("email", e.target.value)} maxLength={255} required />
             </div>
 
             <div className="space-y-1">
-              <Label htmlFor="phone">Phone (Optional)</Label>
-              <Input
-                id="phone"
-                type="tel"
-                value={form.phone}
-                onChange={(e) => set("phone", e.target.value)}
-                maxLength={20}
-              />
+              <Label htmlFor="phone">Mobile{useDetailed ? "" : " (Optional)"}</Label>
+              <Input id="phone" type="tel" value={form.phone}
+                onChange={(e) => set("phone", e.target.value)} maxLength={20} />
             </div>
 
             <div className="space-y-1">
               <Label>Select Course *</Label>
-              {loadingCourses ? (
-                <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
-                  <Loader2 className="h-4 w-4 animate-spin" /> Loading courses...
-                </div>
-              ) : courses.length === 0 ? (
+              {courses.length === 0 ? (
                 <p className="text-sm text-muted-foreground py-2">
                   No courses are currently open for registration.
                 </p>
@@ -242,31 +259,24 @@ export default function PublicWoFBIRegistration() {
                   </SelectTrigger>
                   <SelectContent>
                     {courses.map((c) => (
-                      <SelectItem key={c.id} value={c.id}>
-                        {c.name}
-                      </SelectItem>
+                      <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               )}
             </div>
 
+            {useDetailed && (
+              <WoFBIDynamicForm fields={detailedFields} values={answers} onChange={setAnswer} />
+            )}
+
             <WoFBIConsentBlock form={form} set={set} resolvedTenantId={resolvedTenantId} />
 
-            <Button
-              type="submit"
-              className="w-full"
-              disabled={saving || courses.length === 0}
-            >
-              {saving ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" /> Registering...
-                </>
-              ) : (
-                "Register"
-              )}
+            <Button type="submit" className="w-full" disabled={saving || courses.length === 0}>
+              {saving ? (<><Loader2 className="h-4 w-4 animate-spin mr-2" /> Submitting...</>) : "Submit Application"}
             </Button>
           </form>
+          )}
         </CardContent>
       </Card>
     </div>
