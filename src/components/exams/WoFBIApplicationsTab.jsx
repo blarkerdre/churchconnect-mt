@@ -88,20 +88,36 @@ export default function WoFBIApplicationsTab() {
   const deleteApplications = useMutation({
     mutationFn: async (ids) => {
       const toDelete = applications.filter((a) => ids.includes(a.id));
-      const { error } = await supabase
-        .from("wofbi_applications")
-        .delete()
-        .in("id", ids)
-        .eq("tenant_id", tenantId);
-      if (error) throw error;
-      // audit each
+      // For linked applicants, cascade-delete all Bible School records for their course.
+      // For unlinked (public) applications, just delete the application row.
+      const linked = toDelete.filter((a) => a.member_id);
+      const unlinked = toDelete.filter((a) => !a.member_id);
+
+      for (const a of linked) {
+        const { error } = await supabase.rpc("cascade_delete_bible_school_records", {
+          _member_id: a.member_id,
+          _course_id: a.course_id || null,
+        });
+        if (error) throw error;
+      }
+
+      if (unlinked.length > 0) {
+        const { error } = await supabase
+          .from("wofbi_applications")
+          .delete()
+          .in("id", unlinked.map((a) => a.id))
+          .eq("tenant_id", tenantId);
+        if (error) throw error;
+      }
+
+      // audit each application deletion (cascade RPC already logs its own detailed entry)
       await Promise.all(
         toDelete.map((a) =>
           logAudit(
             "wofbi_application.deleted",
             "wofbi_applications",
             a.id,
-            { name: `${a.first_name} ${a.last_name}`, email: a.email, course: a.course?.name || null },
+            { name: `${a.first_name} ${a.last_name}`, email: a.email, course: a.course?.name || null, cascaded: !!a.member_id },
             tenantId
           )
         )
@@ -110,7 +126,11 @@ export default function WoFBIApplicationsTab() {
     },
     onSuccess: (count) => {
       qc.invalidateQueries({ queryKey: ["wofbi-applications", tenantId] });
-      toast({ title: count > 1 ? `Deleted ${count} applications` : "Application deleted" });
+      qc.invalidateQueries({ queryKey: ["course-registrations"] });
+      toast({
+        title: count > 1 ? `Deleted ${count} applications` : "Application deleted",
+        description: "All linked Bible School records (registration, exam attempts, results, certificate, ratings) were also removed.",
+      });
       setSelectedIds(new Set());
       setConfirmDelete(null);
       setDetail(null);
