@@ -1264,6 +1264,22 @@ function MemberExamsView({ memberId, memberRecord, courses, loading }) {
   const [rateOpen, setRateOpen] = useState(false);
   const lecturerRatingEnabled = !!currentTenant?.settings?.wofbi_lecturer_rating_enabled;
 
+  // Detect if the tenant has enabled the extended application form
+  const { data: appFormEnabled = false } = useQuery({
+    queryKey: ["wofbi-app-form-enabled", tenantId],
+    enabled: !!tenantId,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("wofbi_application_forms")
+        .select("enabled")
+        .eq("tenant_id", tenantId)
+        .maybeSingle();
+      return !!data?.enabled;
+    },
+  });
+
+  const tenantSlug = currentTenant?.slug;
+  const wofbiRegisterPath = tenantSlug ? `/t/${tenantSlug}/bible-school-register` : null;
 
   const { data: registrations = [], isLoading: regLoading } = useQuery({
     queryKey: ["my-course-registrations", memberId, tenantId],
@@ -1276,6 +1292,7 @@ function MemberExamsView({ memberId, memberRecord, courses, loading }) {
     },
     enabled: !!memberId,
   });
+
 
   const { data: allSubjects = [] } = useQuery({
     queryKey: ["all-exam-subjects", tenantId],
