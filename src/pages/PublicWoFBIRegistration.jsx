@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,11 +7,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Loader2, CheckCircle2, BookOpen } from "lucide-react";
+import { Loader2, CheckCircle2, BookOpen, UserCheck } from "lucide-react";
 import { usePublicConsentText, renderConsentText } from "@/hooks/useConsentText";
 import { toast } from "@/components/ui/use-toast";
 import { Toaster } from "@/components/ui/toaster";
 import WoFBIDynamicForm from "@/components/exams/WoFBIDynamicForm";
+import { useAuth } from "@/hooks/useAuth";
 
 const emptyForm = {
   first_name: "",
@@ -25,6 +26,8 @@ const emptyForm = {
 
 export default function PublicWoFBIRegistration() {
   const { tenantSlug } = useParams();
+  const [searchParams] = useSearchParams();
+  const { user, myMember } = useAuth();
   const [form, setForm] = useState(emptyForm);
   const [answers, setAnswers] = useState({});
   const [saving, setSaving] = useState(false);
@@ -37,6 +40,29 @@ export default function PublicWoFBIRegistration() {
   const [tenantLogo, setTenantLogo] = useState(null);
   const [appForm, setAppForm] = useState(null);
   const [loadingAppForm, setLoadingAppForm] = useState(true);
+
+  const isAuthed = !!user;
+
+  // Prefill from signed-in member profile
+  useEffect(() => {
+    if (myMember) {
+      setForm((f) => ({
+        ...f,
+        first_name: f.first_name || myMember.first_name || "",
+        last_name: f.last_name || myMember.last_name || "",
+        email: f.email || myMember.email || user?.email || "",
+        phone: f.phone || myMember.phone || "",
+      }));
+    } else if (user?.email) {
+      setForm((f) => ({ ...f, email: f.email || user.email }));
+    }
+  }, [myMember, user]);
+
+  // Preselect course from ?course_id=
+  useEffect(() => {
+    const preCourse = searchParams.get("course_id");
+    if (preCourse) setForm((f) => ({ ...f, course_id: preCourse }));
+  }, [searchParams]);
 
   useEffect(() => {
     if (tenantSlug) {
@@ -107,11 +133,18 @@ export default function PublicWoFBIRegistration() {
     setSaving(true);
     try {
       const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+      const headers = { "Content-Type": "application/json" };
+      if (isAuthed) {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.access_token) {
+          headers["Authorization"] = `Bearer ${session.access_token}`;
+        }
+      }
       const res = await fetch(
         `https://${projectId}.supabase.co/functions/v1/public-wofbi-register`,
         {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers,
           body: JSON.stringify({
             ...form,
             tenant_id: resolvedTenantId,
@@ -157,19 +190,27 @@ export default function PublicWoFBIRegistration() {
             </div>
 
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
-              <Button asChild>
-                <a href={loginUrl}>Login / Create Account</a>
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setForm(emptyForm);
-                  setAnswers({});
-                  setSubmitted(false);
-                }}
-              >
-                Register Another Person
-              </Button>
+              {isAuthed ? (
+                <Button asChild>
+                  <a href={tenantSlug ? `/t/${tenantSlug}/exam-management` : "/exam-management"}>Go to Bible School</a>
+                </Button>
+              ) : (
+                <Button asChild>
+                  <a href={loginUrl}>Login / Create Account</a>
+                </Button>
+              )}
+              {!isAuthed && (
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setForm(emptyForm);
+                    setAnswers({});
+                    setSubmitted(false);
+                  }}
+                >
+                  Register Another Person
+                </Button>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -206,6 +247,14 @@ export default function PublicWoFBIRegistration() {
             <div className="flex items-center justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
           ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
+            {isAuthed && (
+              <div className="flex items-start gap-2 rounded-md border border-primary/20 bg-primary/5 p-3 text-sm">
+                <UserCheck className="h-4 w-4 mt-0.5 text-primary shrink-0" />
+                <div>
+                  Signed in as <strong>{user?.email}</strong>. This application will be linked to your member profile.
+                </div>
+              </div>
+            )}
             <input
               type="text"
               name="website"
@@ -216,6 +265,7 @@ export default function PublicWoFBIRegistration() {
               className="absolute opacity-0 pointer-events-none h-0 w-0"
               aria-hidden="true"
             />
+
 
             <div className="pt-1 pb-1 border-b">
               <h3 className="text-sm font-semibold uppercase tracking-wide text-primary">Contact Details</h3>

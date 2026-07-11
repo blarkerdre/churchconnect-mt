@@ -275,7 +275,7 @@ function AppRoutes() {
         {/* Tenant-prefixed public routes */}
         <Route path="/t/:tenantSlug/auth" element={<AuthProvider><Auth /></AuthProvider>} />
         <Route path="/t/:tenantSlug/register" element={<PublicRegistration />} />
-        <Route path="/t/:tenantSlug/bible-school-register" element={<PublicWoFBIRegistration />} />
+        <Route path="/t/:tenantSlug/bible-school-register" element={<AuthProvider><PublicWoFBIRegistration /></AuthProvider>} />
 
         {/* Public reset-password routes */}
         <Route path="/reset-password" element={<AuthProvider><ResetPassword /></AuthProvider>} />

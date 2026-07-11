@@ -1264,6 +1264,22 @@ function MemberExamsView({ memberId, memberRecord, courses, loading }) {
   const [rateOpen, setRateOpen] = useState(false);
   const lecturerRatingEnabled = !!currentTenant?.settings?.wofbi_lecturer_rating_enabled;
 
+  // Detect if the tenant has enabled the extended application form
+  const { data: appFormEnabled = false } = useQuery({
+    queryKey: ["wofbi-app-form-enabled", tenantId],
+    enabled: !!tenantId,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("wofbi_application_forms")
+        .select("enabled")
+        .eq("tenant_id", tenantId)
+        .maybeSingle();
+      return !!data?.enabled;
+    },
+  });
+
+  const tenantSlug = currentTenant?.slug;
+  const wofbiRegisterPath = tenantSlug ? `/t/${tenantSlug}/bible-school-register` : null;
 
   const { data: registrations = [], isLoading: regLoading } = useQuery({
     queryKey: ["my-course-registrations", memberId, tenantId],
@@ -1276,6 +1292,7 @@ function MemberExamsView({ memberId, memberRecord, courses, loading }) {
     },
     enabled: !!memberId,
   });
+
 
   const { data: allSubjects = [] } = useQuery({
     queryKey: ["all-exam-subjects", tenantId],
@@ -1416,10 +1433,18 @@ function MemberExamsView({ memberId, memberRecord, courses, loading }) {
 
                   {!isRegistered ? (
                     course.registration_open ? (
-                      <Button size="sm" onClick={() => registerMutation.mutate(course.id)} disabled={registerMutation.isPending} className="gap-1.5">
-                        {registerMutation.isPending && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-                        Register for {course.name}
-                      </Button>
+                      appFormEnabled && wofbiRegisterPath ? (
+                        <Button asChild size="sm" className="gap-1.5">
+                          <a href={`${wofbiRegisterPath}?course_id=${course.id}`}>
+                            Register for {course.name}
+                          </a>
+                        </Button>
+                      ) : (
+                        <Button size="sm" onClick={() => registerMutation.mutate(course.id)} disabled={registerMutation.isPending} className="gap-1.5">
+                          {registerMutation.isPending && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                          Register for {course.name}
+                        </Button>
+                      )
                     ) : (
                       <p className="text-xs text-muted-foreground italic">Registration is currently closed.</p>
                     )
