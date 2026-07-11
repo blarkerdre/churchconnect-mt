@@ -285,7 +285,8 @@ export default function WoFBIApplicationsTab() {
         return v ?? "";
       }),
     ]);
-    downloadCsv([headers, ...rows], `bible-school-applications-${new Date().toISOString().slice(0, 10)}.csv`);
+    const suffix = answerFilters.length > 0 ? "-filtered" : "";
+    downloadCsv([headers, ...rows], `bible-school-applications${suffix}-${new Date().toISOString().slice(0, 10)}.csv`);
   };
 
   const exportReport = () => {
