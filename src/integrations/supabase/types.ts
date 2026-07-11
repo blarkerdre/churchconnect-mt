@@ -5949,6 +5949,10 @@ export type Database = {
         Args: { _task_id: string; _tenant_id: string; _user_id: string }
         Returns: boolean
       }
+      cascade_delete_bible_school_records: {
+        Args: { _course_id?: string; _member_id: string }
+        Returns: Json
+      }
       check_tenant_storage_quota: {
         Args: { _added_bytes?: number; _tenant_id: string }
         Returns: boolean

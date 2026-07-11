@@ -919,13 +919,22 @@ function CourseRegistrationsView({ course }) {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: async (id) => {
-      const { error } = await supabase.from("course_registrations").delete().eq("id", id).eq("tenant_id", tenantId);
-      if (error) throw error;
+    mutationFn: async (reg) => {
+      if (reg.member_id) {
+        const { error } = await supabase.rpc("cascade_delete_bible_school_records", {
+          _member_id: reg.member_id,
+          _course_id: course.id,
+        });
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from("course_registrations").delete().eq("id", reg.id).eq("tenant_id", tenantId);
+        if (error) throw error;
+      }
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["course-registrations", course.id] });
-      toast({ title: "Registration removed" });
+      qc.invalidateQueries({ queryKey: ["wofbi-applications"] });
+      toast({ title: "Bible School records removed", description: "Registration, exam attempts, results, certificate, ratings and application form response were deleted." });
       setDeleteTarget(null);
     },
     onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
@@ -1149,11 +1158,14 @@ function CourseRegistrationsView({ course }) {
         confirmText="DELETE"
         confirmLabel="Remove"
         impacts={[
-          `${deleteTarget?.members?.first_name || "The member"}'s registration for "${course.name}" will be removed.`,
-          "Existing exam attempts and results are NOT deleted — only the enrolment record.",
+          `${deleteTarget?.members?.first_name || "The member"}'s enrolment for "${course.name}" will be removed.`,
+          "All exam attempts, answers and results for this course will be permanently deleted.",
+          "The issued certificate / training completion for this course will be deleted.",
+          "Their lecturer ratings for this course will be deleted.",
+          "Their Bible School application form response for this course will be deleted.",
         ]}
         isPending={deleteMutation.isPending}
-        onConfirm={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)}
+        onConfirm={() => deleteTarget && deleteMutation.mutate(deleteTarget)}
       />
     </Card>
   );
