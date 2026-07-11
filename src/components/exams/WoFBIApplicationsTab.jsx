@@ -126,6 +126,13 @@ export default function WoFBIApplicationsTab() {
     return Array.from(m.entries()).map(([id, name]) => ({ id, name }));
   }, [applications]);
 
+  const filterableFields = useMemo(
+    () => (form?.fields || []).filter((f) => f.type !== "section_heading"),
+    [form]
+  );
+
+  const getFieldMeta = (fieldId) => filterableFields.find((f) => f.id === fieldId);
+
   const filtered = useMemo(() => {
     const s = q.trim().toLowerCase();
     const from = dateFrom ? new Date(dateFrom).getTime() : null;
@@ -142,11 +149,25 @@ export default function WoFBIApplicationsTab() {
         const hay = `${a.first_name} ${a.last_name} ${a.email || ""} ${a.course?.name || ""} ${a.status || ""}`.toLowerCase();
         if (!hay.includes(s)) return false;
       }
+      for (const af of answerFilters) {
+        const field = getFieldMeta(af.fieldId);
+        if (!field) continue;
+        const v = a.answers?.[af.fieldId];
+        if (field.type === "checkbox") {
+          const want = af.value === "true";
+          if (!!v !== want) return false;
+        } else if (field.type === "select" || field.type === "radio" || field.type === "yes_no") {
+          if ((v ?? "") !== af.value) return false;
+        } else {
+          const sv = String(v ?? "").toLowerCase();
+          if (!sv.includes(String(af.value).toLowerCase())) return false;
+        }
+      }
       return true;
     });
-  }, [applications, q, statusFilter, courseFilter, dateFrom, dateTo]);
+  }, [applications, q, statusFilter, courseFilter, dateFrom, dateTo, answerFilters, filterableFields]);
 
-  const hasFilters = statusFilter !== "all" || courseFilter !== "all" || dateFrom || dateTo || q;
+  const hasFilters = statusFilter !== "all" || courseFilter !== "all" || dateFrom || dateTo || q || answerFilters.length > 0;
 
   const clearFilters = () => {
     setQ("");
@@ -154,7 +175,45 @@ export default function WoFBIApplicationsTab() {
     setCourseFilter("all");
     setDateFrom("");
     setDateTo("");
+    setAnswerFilters([]);
+    setSelectedIds(new Set());
   };
+
+  const newFilterField = getFieldMeta(newFilterFieldId);
+  const newFilterIsChoice =
+    newFilterField &&
+    (newFilterField.type === "select" || newFilterField.type === "radio" || newFilterField.type === "yes_no" || newFilterField.type === "checkbox");
+  const newFilterOptions = !newFilterField
+    ? []
+    : newFilterField.type === "checkbox"
+    ? [{ v: "true", label: "Yes" }, { v: "false", label: "No" }]
+    : newFilterField.type === "yes_no"
+    ? [{ v: "Yes", label: "Yes" }, { v: "No", label: "No" }]
+    : (newFilterField.options || []).map((o) => ({ v: o, label: o }));
+
+  const addAnswerFilter = () => {
+    if (!newFilterField || !newFilterValue) return;
+    setAnswerFilters((prev) => [
+      ...prev,
+      { id: `${newFilterFieldId}-${Date.now()}`, fieldId: newFilterFieldId, value: newFilterValue },
+    ]);
+    setNewFilterFieldId("");
+    setNewFilterValue("");
+    setSelectedIds(new Set());
+  };
+
+  const removeAnswerFilter = (id) => {
+    setAnswerFilters((prev) => prev.filter((f) => f.id !== id));
+    setSelectedIds(new Set());
+  };
+
+  const formatAnswerValue = (field, value) => {
+    if (!field) return value;
+    if (field.type === "checkbox") return value === "true" ? "Yes" : "No";
+    return value;
+  };
+
+
 
   const toggleSelect = (id) => {
     setSelectedIds((prev) => {
