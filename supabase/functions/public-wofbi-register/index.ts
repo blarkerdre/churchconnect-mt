@@ -114,7 +114,20 @@ Deno.serve(async (req) => {
 
     const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
       req.headers.get("cf-connecting-ip") || "unknown";
-    if (isRateLimited(ip)) {
+
+    // Optional: identify signed-in caller via Bearer token
+    let authUserId: string | null = null;
+    const authHeader = req.headers.get("Authorization") || req.headers.get("authorization");
+    if (authHeader?.toLowerCase().startsWith("bearer ")) {
+      const token = authHeader.slice(7).trim();
+      if (token) {
+        const { data: userRes } = await supabase.auth.getUser(token);
+        if (userRes?.user?.id) authUserId = userRes.user.id;
+      }
+    }
+
+    // Skip rate limit for authenticated users (they're already identifiable)
+    if (!authUserId && isRateLimited(ip)) {
       return new Response(JSON.stringify({ error: "Too many registrations. Please try again later." }), {
         status: 429,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
