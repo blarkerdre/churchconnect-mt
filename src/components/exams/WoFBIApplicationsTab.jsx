@@ -3,14 +3,18 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
 import { useAuth } from "@/hooks/useAuth";
+import { logAudit } from "@/lib/audit";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { toast } from "@/components/ui/use-toast";
-import { Loader2, Search, Download, Eye, CheckCircle2, XCircle } from "lucide-react";
+import { Loader2, Search, Download, Eye, CheckCircle2, XCircle, Trash2, BarChart3, X } from "lucide-react";
 
 const STATUS_VARIANT = {
   submitted: "secondary",
@@ -20,10 +24,18 @@ const STATUS_VARIANT = {
 
 export default function WoFBIApplicationsTab() {
   const qc = useQueryClient();
-  const { user } = useAuth();
+  const { user, isTenantAdmin, isTenantOwner, isAdmin } = useAuth();
+  const canDelete = isTenantAdmin || isTenantOwner || isAdmin;
   const { tenantId, scopeQuery } = useTenantQuery();
   const [q, setQ] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [courseFilter, setCourseFilter] = useState("all");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const [selectedIds, setSelectedIds] = useState(() => new Set());
   const [detail, setDetail] = useState(null);
+  const [confirmDelete, setConfirmDelete] = useState(null); // { ids: [], label: '' }
+  const [showReport, setShowReport] = useState(false);
 
   const { data: form } = useQuery({
     queryKey: ["wofbi-application-form-fields", tenantId],
@@ -70,18 +82,119 @@ export default function WoFBIApplicationsTab() {
     onError: (e) => toast({ title: "Update failed", description: e.message, variant: "destructive" }),
   });
 
+  const deleteApplications = useMutation({
+    mutationFn: async (ids) => {
+      const toDelete = applications.filter((a) => ids.includes(a.id));
+      const { error } = await supabase
+        .from("wofbi_applications")
+        .delete()
+        .in("id", ids)
+        .eq("tenant_id", tenantId);
+      if (error) throw error;
+      // audit each
+      await Promise.all(
+        toDelete.map((a) =>
+          logAudit(
+            "wofbi_application.deleted",
+            "wofbi_applications",
+            a.id,
+            { name: `${a.first_name} ${a.last_name}`, email: a.email, course: a.course?.name || null },
+            tenantId
+          )
+        )
+      );
+      return ids.length;
+    },
+    onSuccess: (count) => {
+      qc.invalidateQueries({ queryKey: ["wofbi-applications", tenantId] });
+      toast({ title: count > 1 ? `Deleted ${count} applications` : "Application deleted" });
+      setSelectedIds(new Set());
+      setConfirmDelete(null);
+      setDetail(null);
+    },
+    onError: (e) => toast({ title: "Delete failed", description: e.message, variant: "destructive" }),
+  });
+
+  const courseOptions = useMemo(() => {
+    const m = new Map();
+    applications.forEach((a) => {
+      if (a.course?.id) m.set(a.course.id, a.course.name);
+    });
+    return Array.from(m.entries()).map(([id, name]) => ({ id, name }));
+  }, [applications]);
+
   const filtered = useMemo(() => {
     const s = q.trim().toLowerCase();
-    if (!s) return applications;
+    const from = dateFrom ? new Date(dateFrom).getTime() : null;
+    const to = dateTo ? new Date(dateTo).getTime() + 86400000 : null; // include end date
     return applications.filter((a) => {
-      return (
-        `${a.first_name} ${a.last_name}`.toLowerCase().includes(s) ||
-        (a.email || "").toLowerCase().includes(s) ||
-        (a.course?.name || "").toLowerCase().includes(s) ||
-        (a.status || "").toLowerCase().includes(s)
-      );
+      if (statusFilter !== "all" && a.status !== statusFilter) return false;
+      if (courseFilter !== "all" && a.course?.id !== courseFilter) return false;
+      if (from || to) {
+        const t = new Date(a.created_at).getTime();
+        if (from && t < from) return false;
+        if (to && t >= to) return false;
+      }
+      if (s) {
+        const hay = `${a.first_name} ${a.last_name} ${a.email || ""} ${a.course?.name || ""} ${a.status || ""}`.toLowerCase();
+        if (!hay.includes(s)) return false;
+      }
+      return true;
     });
-  }, [applications, q]);
+  }, [applications, q, statusFilter, courseFilter, dateFrom, dateTo]);
+
+  const hasFilters = statusFilter !== "all" || courseFilter !== "all" || dateFrom || dateTo || q;
+
+  const clearFilters = () => {
+    setQ("");
+    setStatusFilter("all");
+    setCourseFilter("all");
+    setDateFrom("");
+    setDateTo("");
+  };
+
+  const toggleSelect = (id) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+  const allFilteredSelected = filtered.length > 0 && filtered.every((a) => selectedIds.has(a.id));
+  const toggleSelectAll = () => {
+    setSelectedIds((prev) => {
+      if (allFilteredSelected) {
+        const next = new Set(prev);
+        filtered.forEach((a) => next.delete(a.id));
+        return next;
+      }
+      const next = new Set(prev);
+      filtered.forEach((a) => next.add(a.id));
+      return next;
+    });
+  };
+
+  const report = useMemo(() => {
+    const total = filtered.length;
+    const byStatus = { submitted: 0, approved: 0, rejected: 0 };
+    const byCourse = new Map();
+    const now = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+    const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1).getTime();
+    let thisMonth = 0, lastMonth = 0;
+    filtered.forEach((a) => {
+      byStatus[a.status] = (byStatus[a.status] || 0) + 1;
+      const key = a.course?.name || "—";
+      byCourse.set(key, (byCourse.get(key) || 0) + 1);
+      const t = new Date(a.created_at).getTime();
+      if (t >= monthStart) thisMonth++;
+      else if (t >= lastMonthStart) lastMonth++;
+    });
+    const topCourses = Array.from(byCourse.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5);
+    return { total, byStatus, topCourses, thisMonth, lastMonth };
+  }, [filtered]);
 
   const exportCsv = () => {
     const fields = form?.fields || [];
@@ -110,45 +223,145 @@ export default function WoFBIApplicationsTab() {
         return v ?? "";
       }),
     ]);
-    const escape = (v) => {
-      const s = String(v ?? "");
-      return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
-    };
-    const csv = [headers, ...rows].map((r) => r.map(escape).join(",")).join("\n");
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `bible-school-applications-${new Date().toISOString().slice(0, 10)}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+    downloadCsv([headers, ...rows], `bible-school-applications-${new Date().toISOString().slice(0, 10)}.csv`);
+  };
+
+  const exportReport = () => {
+    const rows = [
+      ["Metric", "Value"],
+      ["Total (filtered)", report.total],
+      ["Submitted", report.byStatus.submitted || 0],
+      ["Approved", report.byStatus.approved || 0],
+      ["Rejected", report.byStatus.rejected || 0],
+      ["This month", report.thisMonth],
+      ["Last month", report.lastMonth],
+      [],
+      ["Course", "Applications"],
+      ...report.topCourses.map(([n, c]) => [n, c]),
+    ];
+    downloadCsv(rows, `bible-school-report-${new Date().toISOString().slice(0, 10)}.csv`);
   };
 
   const answerFields = (form?.fields || []).filter((f) => f.type !== "section_heading");
 
+  const pct = (n) => (report.total ? Math.round((n / report.total) * 100) : 0);
+
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
+      <CardHeader className="flex flex-row items-center justify-between gap-2 flex-wrap">
         <CardTitle className="text-base">Bible School Applications ({applications.length})</CardTitle>
-        <Button size="sm" variant="outline" className="gap-1.5" onClick={exportCsv} disabled={filtered.length === 0}>
-          <Download className="h-4 w-4" /> Export CSV
-        </Button>
+        <div className="flex gap-2">
+          <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setShowReport((s) => !s)}>
+            <BarChart3 className="h-4 w-4" /> {showReport ? "Hide" : "Report"}
+          </Button>
+          <Button size="sm" variant="outline" className="gap-1.5" onClick={exportCsv} disabled={filtered.length === 0}>
+            <Download className="h-4 w-4" /> Export CSV
+          </Button>
+        </div>
       </CardHeader>
       <CardContent className="space-y-3">
-        <div className="relative">
-          <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search name, email, course, status" className="pl-8" />
+        {showReport && (
+          <div className="rounded-md border p-3 space-y-3 bg-muted/30">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-semibold">Report (filtered results)</h3>
+              <Button size="sm" variant="ghost" className="gap-1.5" onClick={exportReport} disabled={report.total === 0}>
+                <Download className="h-3.5 w-3.5" /> Export report
+              </Button>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              <Stat label="Total" value={report.total} />
+              <Stat label="Submitted" value={`${report.byStatus.submitted || 0} (${pct(report.byStatus.submitted || 0)}%)`} />
+              <Stat label="Approved" value={`${report.byStatus.approved || 0} (${pct(report.byStatus.approved || 0)}%)`} />
+              <Stat label="Rejected" value={`${report.byStatus.rejected || 0} (${pct(report.byStatus.rejected || 0)}%)`} />
+              <Stat label="This month" value={report.thisMonth} />
+              <Stat label="Last month" value={report.lastMonth} />
+            </div>
+            {report.topCourses.length > 0 && (
+              <div>
+                <div className="text-xs font-semibold text-muted-foreground mb-1">Top courses</div>
+                <div className="border rounded-md divide-y bg-background">
+                  {report.topCourses.map(([name, count]) => (
+                    <div key={name} className="flex justify-between px-2 py-1 text-sm">
+                      <span className="truncate">{name}</span>
+                      <span className="text-muted-foreground">{count}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        <div className="flex flex-col gap-2">
+          <div className="relative">
+            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search name, email, course, status" className="pl-8" />
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="h-9"><SelectValue placeholder="Status" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All statuses</SelectItem>
+                <SelectItem value="submitted">Submitted</SelectItem>
+                <SelectItem value="approved">Approved</SelectItem>
+                <SelectItem value="rejected">Rejected</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={courseFilter} onValueChange={setCourseFilter}>
+              <SelectTrigger className="h-9"><SelectValue placeholder="Course" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All courses</SelectItem>
+                {courseOptions.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="h-9" aria-label="From date" />
+            <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="h-9" aria-label="To date" />
+          </div>
+          {hasFilters && (
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <span>{filtered.length} of {applications.length} shown</span>
+              <Button size="sm" variant="ghost" className="h-7 gap-1" onClick={clearFilters}>
+                <X className="h-3 w-3" /> Clear filters
+              </Button>
+            </div>
+          )}
         </div>
+
+        {canDelete && selectedIds.size > 0 && (
+          <div className="flex items-center justify-between rounded-md border bg-muted/40 px-3 py-2">
+            <span className="text-sm">{selectedIds.size} selected</span>
+            <div className="flex gap-2">
+              <Button size="sm" variant="ghost" onClick={() => setSelectedIds(new Set())}>Clear</Button>
+              <Button
+                size="sm"
+                variant="destructive"
+                className="gap-1.5"
+                onClick={() => setConfirmDelete({ ids: Array.from(selectedIds), label: `${selectedIds.size} applications` })}
+              >
+                <Trash2 className="h-3.5 w-3.5" /> Delete selected
+              </Button>
+            </div>
+          </div>
+        )}
 
         {isLoading ? (
           <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
         ) : filtered.length === 0 ? (
-          <p className="text-sm text-muted-foreground text-center py-6">No applications yet.</p>
+          <p className="text-sm text-muted-foreground text-center py-6">
+            {applications.length === 0 ? "No applications yet." : "No applications match the current filters."}
+          </p>
         ) : (
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
+                  {canDelete && (
+                    <TableHead className="w-8">
+                      <Checkbox checked={allFilteredSelected} onCheckedChange={toggleSelectAll} aria-label="Select all" />
+                    </TableHead>
+                  )}
                   <TableHead>Submitted</TableHead>
                   <TableHead>Applicant</TableHead>
                   <TableHead>Email</TableHead>
@@ -160,15 +373,37 @@ export default function WoFBIApplicationsTab() {
               <TableBody>
                 {filtered.map((a) => (
                   <TableRow key={a.id}>
+                    {canDelete && (
+                      <TableCell>
+                        <Checkbox
+                          checked={selectedIds.has(a.id)}
+                          onCheckedChange={() => toggleSelect(a.id)}
+                          aria-label={`Select ${a.first_name} ${a.last_name}`}
+                        />
+                      </TableCell>
+                    )}
                     <TableCell className="text-xs">{new Date(a.created_at).toLocaleDateString()}</TableCell>
                     <TableCell className="font-medium">{a.first_name} {a.last_name}</TableCell>
                     <TableCell className="text-xs">{a.email}</TableCell>
                     <TableCell className="text-xs">{a.course?.name || "—"}</TableCell>
                     <TableCell><Badge variant={STATUS_VARIANT[a.status]} className="capitalize">{a.status}</Badge></TableCell>
                     <TableCell className="text-right">
-                      <Button size="sm" variant="outline" onClick={() => setDetail(a)} className="gap-1.5">
-                        <Eye className="h-3.5 w-3.5" /> View
-                      </Button>
+                      <div className="flex justify-end gap-1">
+                        <Button size="sm" variant="outline" onClick={() => setDetail(a)} className="gap-1.5">
+                          <Eye className="h-3.5 w-3.5" /> View
+                        </Button>
+                        {canDelete && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="text-destructive hover:text-destructive"
+                            onClick={() => setConfirmDelete({ ids: [a.id], label: `${a.first_name} ${a.last_name}` })}
+                            aria-label="Delete application"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        )}
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -182,9 +417,9 @@ export default function WoFBIApplicationsTab() {
         <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Application — {detail?.first_name} {detail?.last_name}</DialogTitle>
-            <p className="text-xs text-muted-foreground">
+            <DialogDescription>
               Submitted {detail && new Date(detail.created_at).toLocaleString()} · {detail?.email} · Course: {detail?.course?.name || "—"}
-            </p>
+            </DialogDescription>
           </DialogHeader>
           {detail && (
             <div className="space-y-3">
@@ -216,7 +451,7 @@ export default function WoFBIApplicationsTab() {
               </div>
             </div>
           )}
-          <DialogFooter className="gap-2">
+          <DialogFooter className="gap-2 flex-wrap">
             {detail?.status !== "approved" && (
               <Button className="gap-1.5" onClick={() => updateStatus.mutate({ id: detail.id, status: "approved" })}>
                 <CheckCircle2 className="h-4 w-4" /> Approve
@@ -227,10 +462,67 @@ export default function WoFBIApplicationsTab() {
                 <XCircle className="h-4 w-4" /> Reject
               </Button>
             )}
+            {canDelete && detail && (
+              <Button
+                variant="outline"
+                className="gap-1.5 text-destructive hover:text-destructive"
+                onClick={() => setConfirmDelete({ ids: [detail.id], label: `${detail.first_name} ${detail.last_name}` })}
+              >
+                <Trash2 className="h-4 w-4" /> Delete
+              </Button>
+            )}
             <Button variant="outline" onClick={() => setDetail(null)}>Close</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={!!confirmDelete} onOpenChange={(v) => !v && setConfirmDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete application{confirmDelete?.ids.length > 1 ? "s" : ""}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete <strong>{confirmDelete?.label}</strong>. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteApplications.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={deleteApplications.isPending}
+              onClick={(e) => {
+                e.preventDefault();
+                if (confirmDelete) deleteApplications.mutate(confirmDelete.ids);
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleteApplications.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
+}
+
+function Stat({ label, value }) {
+  return (
+    <div className="rounded-md border bg-background p-2">
+      <div className="text-xs text-muted-foreground">{label}</div>
+      <div className="text-lg font-semibold">{value}</div>
+    </div>
+  );
+}
+
+function downloadCsv(rows, filename) {
+  const escape = (v) => {
+    const s = String(v ?? "");
+    return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  };
+  const csv = rows.map((r) => (r || []).map(escape).join(",")).join("\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
 }
