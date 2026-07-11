@@ -156,7 +156,7 @@ Deno.serve(async (req) => {
     // User doesn't exist — check for pending invitation
     const { data: existingInvite } = await supabase
       .from("tenant_invitations")
-      .select("id")
+      .select("id, token")
       .eq("tenant_id", tenant_id)
       .eq("email", normalizedEmail)
       .eq("status", "pending")
@@ -178,7 +178,7 @@ Deno.serve(async (req) => {
       let email_warning: string | undefined;
       if (tenant) {
         const siteUrl = "https://app.churchmanagementsuite.org";
-        const signupUrl = `${siteUrl}/t/${tenant.slug}/auth`;
+        const signupUrl = `${siteUrl}/accept-invite?token=${existingInvite.token}`;
 
         const emailResult = await supabase.functions.invoke("send-transactional-email", {
           body: {
@@ -234,7 +234,7 @@ Deno.serve(async (req) => {
     // Send invitation email via transactional email system
     if (tenant) {
       const siteUrl = "https://app.churchmanagementsuite.org";
-      const signupUrl = `${siteUrl}/t/${tenant.slug}/auth`;
+      const signupUrl = `${siteUrl}/accept-invite?token=${invitation.token}`;
 
       console.log("Sending invitation email", { email: normalizedEmail, signupUrl, tenant: tenant.name });
 
