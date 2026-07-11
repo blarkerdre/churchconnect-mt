@@ -1,60 +1,92 @@
-## Goal
-Allow a person who already has a Lovable Cloud account (from Tenant A) to accept an admin's invitation to Tenant B by signing in with their existing email/password — no second signup required.
+# Extended Bible School Application Form
 
-## Current gap
-- `invite-to-tenant` already auto-adds an invitee if their email matches an existing `profiles` row (creates the `tenant_memberships` row directly). Good.
-- But when the invitee is invited under an email that is NOT yet in `profiles`, we create a `tenant_invitations` row and email them a link to `/t/:slug/auth`. That page today only supports signup or password-reset. If they already have an account under that email, the flow gets confusing:
-  - They can log in, but `acceptPendingInvitations` in `TenantContext` calls `accept_tenant_invitation` RPC — this already works IF the invite email matches the logged-in user's email.
-- However, an admin may invite `alice@work.com` while Alice's existing account is `alice@personal.com`. Today there's no way for her to claim that invite with her existing credentials.
-- There is also no explicit "Accept Invitation" UI: users must guess to sign in on the tenant auth page.
+Replace the current short registration form with an optional, admin-configurable "long form" that mirrors the paper WOFBI application. Admins can toggle it on/off, edit fields, and view submissions in a new tab.
 
-## What to build
+## Scope
 
-### 1. Dedicated accept-invitation page
-New route: `/accept-invite?token=<invitation_token>`
+- Public registration (`/t/:tenantSlug/bible-school/register`) shows either:
+  - The existing short form (when the long form is OFF), or
+  - The full application form (when ON), rendered from a per-tenant field schema.
+- Admins in Bible School (`/exam-management`) get:
+  - A toggle: "Use detailed application form"
+  - A "Form Editor" to add/edit/remove/reorder fields
+  - A new tab "Applications" listing submissions (view + export CSV)
 
-- Public route (no tenant slug required).
-- Loads the invitation via a new SECURITY DEFINER RPC `get_invitation_details(_token uuid)` that returns `{ tenant_name, tenant_slug, email, role, status, expired }` for pending invites only.
-- Shows: "You've been invited to join **{Tenant Name}** as {role} (invited email: {email})."
-- Three action states:
-  - **Not signed in** → two tabs:
-    - *Sign in with existing account* (email + password). After login, auto-accept.
-    - *Create new account* (deep-links to `/t/:slug/auth` signup, prefilled email).
-  - **Signed in, email matches invitation** → single "Accept invitation" button.
-  - **Signed in, email does NOT match invitation** → banner: "This invitation was sent to {invite.email}, but you're signed in as {user.email}." Offer:
-    - "Accept anyway with this account" (links current auth user to the invite's tenant, ignoring the email mismatch — admin-approved by definition since they sent it).
-    - "Sign out and use a different account."
+## Data model (1 migration)
 
-### 2. New RPC: `accept_tenant_invitation_by_token`
-- SECURITY DEFINER.
-- Params: `_token uuid`, `_allow_email_mismatch boolean default false`.
-- Validates invitation is pending & not expired.
-- If email matches `auth.email()` OR `_allow_email_mismatch` is true, insert into `tenant_memberships` (on-conflict update role), mark invitation `accepted`, and if a `members` row exists in that tenant with the invitee's email but no `user_id`, link it (mirrors `auto_link_member_by_email` scoped to that tenant).
-- Returns `{ tenant_slug }` so the client can redirect to `/t/:slug`.
+**New table `wofbi_application_forms`** (one row per tenant, holds schema + toggle)
+- `tenant_id` (unique)
+- `enabled` boolean default false
+- `title` text (default "Word of Faith Bible Institute — Application Form")
+- `intro_text` text
+- `fields` jsonb — ordered array of field definitions:
+  ```
+  { id, label, type, required, options?, placeholder?, help_text?, section? }
+  ```
+  Supported types: `text`, `textarea`, `email`, `tel`, `date`, `select`, `radio`, `checkbox`, `yes_no`, `section_heading`.
+- Seeded on first read with fields matching the paper form: Surname, First name, Gender (M/F), DOB, Nationality, Marital status (M/S/O), Address, Post code, Tel, Mobile, Employed (Y/N) + occupation, Academic background, Born again (Y/N) + when + where, Current place of worship, Pastor's address & post code, Pastor name, Present activity group, Previous Bible college info, Coming with children (Y/N) + ages, How heard about (A–E options + friend/graduate name+tel), Declaration name + signature agreement, Consent Y/N.
 
-### 3. Update invitation email
-`invite-to-tenant` currently sends `signupUrl = /t/:slug/auth`. Change to `acceptUrl = /accept-invite?token=<invitation.id>`. Email copy: "Accept your invitation — sign in with your existing account or create a new one."
+**New table `wofbi_applications`** (submissions)
+- `tenant_id`, `course_id` (FK exam_titles), `member_id` (nullable, linked when member created), `email`, `first_name`, `last_name`, `phone`
+- `answers` jsonb — `{ field_id: value }` for every configured field
+- `status` text default 'submitted' ('submitted' | 'approved' | 'rejected')
+- `reviewed_by`, `reviewed_at`, `notes`
 
-### 4. Update `TenantContext.acceptPendingInvitations`
-Keep as-is for the common case (same email). No change needed — the new flow supplements it.
+**Grants + RLS**
+- Both tables: `GRANT SELECT, INSERT, UPDATE, DELETE ... TO authenticated; GRANT ALL ... TO service_role`.
+- `wofbi_application_forms`: `GRANT SELECT TO anon` (public form needs schema); read policy: anon+authenticated select where tenant matches; write: admins only via `has_role`/tenant-owner check.
+- `wofbi_applications`: no anon; insert via service role in edge function; select/update for admins of the tenant; the submitter's linked member can select their own row.
 
-### 5. Tenant switcher hint
-When a user has more than one tenant membership, no change needed — `TenantContext` already picks up the new membership on next refresh. After accepting, call `refreshTenantContext()` and navigate to `/t/:new-slug`.
+## Public flow
 
-## Files to change / add
+Update `src/pages/PublicWoFBIRegistration.jsx`:
+1. After resolving tenant, fetch `wofbi_application_forms` row.
+2. If `enabled=false` → render existing short form (unchanged).
+3. If `enabled=true` → render a dynamic form from `fields`, plus course selector and consent. Client-side validation for required fields.
+4. On submit, POST to a new/updated edge function.
 
-- `supabase/migrations/<new>.sql` — `get_invitation_details` + `accept_tenant_invitation_by_token` RPCs.
-- `src/pages/AcceptInvite.jsx` — new page.
-- `src/App.jsx` — register `/accept-invite` route (public, outside tenant layout).
-- `supabase/functions/invite-to-tenant/index.ts` — swap `signupUrl` for `acceptUrl` using invitation id as token; update template data key if needed.
-- `supabase/functions/_shared/email-templates/invite.tsx` (or whichever `tenant-invitation` template is in use) — minor copy tweak: "sign in or sign up to accept."
+Update edge function `supabase/functions/public-wofbi-register/index.ts`:
+- Accept new payload shape `{ tenant_id, course_id, first_name, last_name, email, phone, answers, gdpr_consent, website }`.
+- Same rate limit, honeypot, and tenant resolution as today.
+- Server-side validation: iterate the tenant's `fields` schema, ensure required ones present, enforce max length per field, sanitize strings.
+- Create/find `members` row (as today), insert `course_registrations` (as today), AND insert `wofbi_applications` row with full `answers`.
+- Trigger existing welcome + course registration emails.
+
+## Admin UI
+
+In `src/pages/ExamManagement.jsx`, add:
+
+1. **New tab "Applications"** in the existing Tabs list (alongside current tabs):
+   - Table: date, applicant name, email, course, status, actions (View, Approve, Reject).
+   - Detail dialog showing all `answers` grouped by section, with links to the linked member.
+   - CSV export button.
+2. **Under Settings/Course setup area** (or a new "Application Form" section), a card with:
+   - Enabled switch (writes `wofbi_application_forms.enabled`).
+   - Title + intro text inputs.
+   - Field list: drag-to-reorder rows, each with edit dialog (label, type, required, options for select/radio, help text, section grouping). Add / delete field buttons.
+   - "Reset to WOFBI default" button.
+   - Preview button that renders the current schema in a dialog.
+
+All changes tenant-scoped via `useTenantQuery` and guarded by `isAdmin || isTenantAdmin`.
 
 ## Non-goals
-- No change to the existing auto-add path (existing profile email match still short-circuits directly to `tenant_memberships`).
-- No change to `auto_link_member_by_email` on signup.
-- No cross-tenant password sharing / SSO changes — Supabase Auth already has one global identity per email.
 
-## Security
-- Token = `tenant_invitations.id` (uuid). Invitation is single-use and status-guarded.
-- Email-mismatch acceptance is allowed because the admin explicitly issued the invite for that tenant; the accepting user must still be authenticated and must possess the token from the emailed link.
-- RLS on `tenant_memberships` untouched; RPC is SECURITY DEFINER with `search_path = public`.
+- No PDF upload of the paper form (fields are captured digitally).
+- No payment/tuition tracking (kept out per project scope — financial tracking excluded).
+- No changes to exam-taking, grading, certificates, or the existing member/registration linking model.
+
+## Files
+
+**New**
+- `supabase/migrations/<ts>_wofbi_application_form.sql`
+- `src/components/exams/WoFBIApplicationFormEditor.jsx`
+- `src/components/exams/WoFBIApplicationsTab.jsx`
+- `src/components/exams/WoFBIDynamicForm.jsx` (renderer used by public page and preview)
+
+**Edited**
+- `src/pages/PublicWoFBIRegistration.jsx` (branch on `enabled`)
+- `src/pages/ExamManagement.jsx` (new tab + form editor entry point)
+- `supabase/functions/public-wofbi-register/index.ts` (accept `answers`, insert application)
+- `src/integrations/supabase/types.ts` (regenerated after migration)
+
+Approve to proceed and I'll build in this order: migration → edge function → public renderer → admin editor + applications tab.
