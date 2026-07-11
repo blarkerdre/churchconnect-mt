@@ -635,7 +635,7 @@ export default function WoFBIApplicationsTab() {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete application{confirmDelete?.ids.length > 1 ? "s" : ""}?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete <strong>{confirmDelete?.label}</strong>. This action cannot be undone.
+              This will permanently delete <strong>{confirmDelete?.label}</strong> and all linked Bible School records (course registration, exam attempts, results, certificate and lecturer ratings). This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
