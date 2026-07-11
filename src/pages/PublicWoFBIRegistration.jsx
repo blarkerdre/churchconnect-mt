@@ -26,6 +26,8 @@ const emptyForm = {
 
 export default function PublicWoFBIRegistration() {
   const { tenantSlug } = useParams();
+  const [searchParams] = useSearchParams();
+  const { user, myMember } = useAuth();
   const [form, setForm] = useState(emptyForm);
   const [answers, setAnswers] = useState({});
   const [saving, setSaving] = useState(false);
@@ -38,6 +40,29 @@ export default function PublicWoFBIRegistration() {
   const [tenantLogo, setTenantLogo] = useState(null);
   const [appForm, setAppForm] = useState(null);
   const [loadingAppForm, setLoadingAppForm] = useState(true);
+
+  const isAuthed = !!user;
+
+  // Prefill from signed-in member profile
+  useEffect(() => {
+    if (myMember) {
+      setForm((f) => ({
+        ...f,
+        first_name: f.first_name || myMember.first_name || "",
+        last_name: f.last_name || myMember.last_name || "",
+        email: f.email || myMember.email || user?.email || "",
+        phone: f.phone || myMember.phone || "",
+      }));
+    } else if (user?.email) {
+      setForm((f) => ({ ...f, email: f.email || user.email }));
+    }
+  }, [myMember, user]);
+
+  // Preselect course from ?course_id=
+  useEffect(() => {
+    const preCourse = searchParams.get("course_id");
+    if (preCourse) setForm((f) => ({ ...f, course_id: preCourse }));
+  }, [searchParams]);
 
   useEffect(() => {
     if (tenantSlug) {
