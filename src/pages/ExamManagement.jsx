@@ -919,13 +919,22 @@ function CourseRegistrationsView({ course }) {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: async (id) => {
-      const { error } = await supabase.from("course_registrations").delete().eq("id", id).eq("tenant_id", tenantId);
-      if (error) throw error;
+    mutationFn: async (reg) => {
+      if (reg.member_id) {
+        const { error } = await supabase.rpc("cascade_delete_bible_school_records", {
+          _member_id: reg.member_id,
+          _course_id: course.id,
+        });
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from("course_registrations").delete().eq("id", reg.id).eq("tenant_id", tenantId);
+        if (error) throw error;
+      }
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["course-registrations", course.id] });
-      toast({ title: "Registration removed" });
+      qc.invalidateQueries({ queryKey: ["wofbi-applications"] });
+      toast({ title: "Bible School records removed", description: "Registration, exam attempts, results, certificate, ratings and application form response were deleted." });
       setDeleteTarget(null);
     },
     onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
