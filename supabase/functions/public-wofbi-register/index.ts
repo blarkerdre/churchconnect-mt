@@ -114,7 +114,20 @@ Deno.serve(async (req) => {
 
     const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
       req.headers.get("cf-connecting-ip") || "unknown";
-    if (isRateLimited(ip)) {
+
+    // Optional: identify signed-in caller via Bearer token
+    let authUserId: string | null = null;
+    const authHeader = req.headers.get("Authorization") || req.headers.get("authorization");
+    if (authHeader?.toLowerCase().startsWith("bearer ")) {
+      const token = authHeader.slice(7).trim();
+      if (token) {
+        const { data: userRes } = await supabase.auth.getUser(token);
+        if (userRes?.user?.id) authUserId = userRes.user.id;
+      }
+    }
+
+    // Skip rate limit for authenticated users (they're already identifiable)
+    if (!authUserId && isRateLimited(ip)) {
       return new Response(JSON.stringify({ error: "Too many registrations. Please try again later." }), {
         status: 429,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -200,36 +213,50 @@ Deno.serve(async (req) => {
     let memberId: string | null = null;
     let isNewMember = false;
 
-    const { data: existingMember } = await supabase
-      .from("members")
-      .select("id")
-      .eq("email", email)
-      .eq("tenant_id", tenantId)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    if (existingMember) {
-      memberId = existingMember.id;
-    } else {
-      const { data: newMember, error: insertError } = await supabase
+    // Prefer linking by authenticated user_id when available
+    if (authUserId) {
+      const { data: linkedMember } = await supabase
         .from("members")
-        .insert({
-          first_name: firstName,
-          last_name: lastName,
-          email,
-          phone,
-          membership_status: "First Timer",
-          gdpr_consent: true,
-          gdpr_consent_date: new Date().toISOString(),
-          tenant_id: tenantId,
-        })
         .select("id")
-        .single();
+        .eq("user_id", authUserId)
+        .eq("tenant_id", tenantId)
+        .maybeSingle();
+      if (linkedMember) memberId = linkedMember.id;
+    }
 
-      if (insertError) throw insertError;
-      memberId = newMember.id;
-      isNewMember = true;
+    if (!memberId) {
+      const { data: existingMember } = await supabase
+        .from("members")
+        .select("id")
+        .eq("email", email)
+        .eq("tenant_id", tenantId)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (existingMember) {
+        memberId = existingMember.id;
+      } else {
+        const { data: newMember, error: insertError } = await supabase
+          .from("members")
+          .insert({
+            first_name: firstName,
+            last_name: lastName,
+            email,
+            phone,
+            membership_status: "First Timer",
+            gdpr_consent: true,
+            gdpr_consent_date: new Date().toISOString(),
+            tenant_id: tenantId,
+            ...(authUserId ? { user_id: authUserId } : {}),
+          })
+          .select("id")
+          .single();
+
+        if (insertError) throw insertError;
+        memberId = newMember.id;
+        isNewMember = true;
+      }
     }
 
     const { data: existingReg } = await supabase

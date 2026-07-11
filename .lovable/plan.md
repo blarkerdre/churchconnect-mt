@@ -1,92 +1,54 @@
-# Extended Bible School Application Form
+# Allow signed-in users to fill the Bible School application
 
-Replace the current short registration form with an optional, admin-configurable "long form" that mirrors the paper WOFBI application. Admins can toggle it on/off, edit fields, and view submissions in a new tab.
+Currently `/t/:tenantSlug/register/wofbi` is a public, unauthenticated form. When the admin toggle is on, we want authenticated members to be able to apply too — both from inside the app and by reusing the public URL while signed in.
 
-## Scope
+## 1. Reuse the public page for signed-in users
 
-- Public registration (`/t/:tenantSlug/bible-school/register`) shows either:
-  - The existing short form (when the long form is OFF), or
-  - The full application form (when ON), rendered from a per-tenant field schema.
-- Admins in Bible School (`/exam-management`) get:
-  - A toggle: "Use detailed application form"
-  - A "Form Editor" to add/edit/remove/reorder fields
-  - A new tab "Applications" listing submissions (view + export CSV)
+Edit `src/pages/PublicWoFBIRegistration.jsx`:
+- Detect the current session via `useAuth` (safe fallback if no `AuthProvider` wraps the route — we'll wrap it, see step 3).
+- If a session exists AND that user has a `members` row in the resolved tenant, prefill `first_name`, `last_name`, `email`, `phone` and mark these fields read-only (email at minimum).
+- Show a small banner: "Signed in as {email} — this application will be linked to your member profile."
+- On submit, include `user_id` in the payload so the edge function links the submission to the existing member instead of creating a duplicate.
+- After submit, the "Login / Create Account" CTA becomes "Go to Bible School".
 
-## Data model (1 migration)
+## 2. In-app entry point (Bible School / My Exams)
 
-**New table `wofbi_application_forms`** (one row per tenant, holds schema + toggle)
-- `tenant_id` (unique)
-- `enabled` boolean default false
-- `title` text (default "Word of Faith Bible Institute — Application Form")
-- `intro_text` text
-- `fields` jsonb — ordered array of field definitions:
-  ```
-  { id, label, type, required, options?, placeholder?, help_text?, section? }
-  ```
-  Supported types: `text`, `textarea`, `email`, `tel`, `date`, `select`, `radio`, `checkbox`, `yes_no`, `section_heading`.
-- Seeded on first read with fields matching the paper form: Surname, First name, Gender (M/F), DOB, Nationality, Marital status (M/S/O), Address, Post code, Tel, Mobile, Employed (Y/N) + occupation, Academic background, Born again (Y/N) + when + where, Current place of worship, Pastor's address & post code, Pastor name, Present activity group, Previous Bible college info, Coming with children (Y/N) + ages, How heard about (A–E options + friend/graduate name+tel), Declaration name + signature agreement, Consent Y/N.
+Add a "Register for a course" button on the member-facing Bible School surface (the same page where members see their exams — currently rendered inside `ExamManagement.jsx` / member view). The button is only shown when `wofbi_application_forms.enabled = true` for the tenant AND the member does not already have a `course_registrations` row for every open course.
 
-**New table `wofbi_applications`** (submissions)
-- `tenant_id`, `course_id` (FK exam_titles), `member_id` (nullable, linked when member created), `email`, `first_name`, `last_name`, `phone`
-- `answers` jsonb — `{ field_id: value }` for every configured field
-- `status` text default 'submitted' ('submitted' | 'approved' | 'rejected')
-- `reviewed_by`, `reviewed_at`, `notes`
+Two options for the click target — plan chooses **B** for simplicity:
+- A. Open the dynamic form inline in a dialog.
+- B. **Navigate to `/t/:tenantSlug/register/wofbi`** (which now supports signed-in users from step 1). Simpler, single source of truth.
 
-**Grants + RLS**
-- Both tables: `GRANT SELECT, INSERT, UPDATE, DELETE ... TO authenticated; GRANT ALL ... TO service_role`.
-- `wofbi_application_forms`: `GRANT SELECT TO anon` (public form needs schema); read policy: anon+authenticated select where tenant matches; write: admins only via `has_role`/tenant-owner check.
-- `wofbi_applications`: no anon; insert via service role in edge function; select/update for admins of the tenant; the submitter's linked member can select their own row.
+Also add a matching entry point on the member Dashboard when the toggle is on (small card: "Bible School applications are open").
 
-## Public flow
+## 3. Routing
 
-Update `src/pages/PublicWoFBIRegistration.jsx`:
-1. After resolving tenant, fetch `wofbi_application_forms` row.
-2. If `enabled=false` → render existing short form (unchanged).
-3. If `enabled=true` → render a dynamic form from `fields`, plus course selector and consent. Client-side validation for required fields.
-4. On submit, POST to a new/updated edge function.
+In `src/App.jsx`, the `/t/:tenantSlug/register/wofbi` route currently renders without an `AuthProvider`. Wrap it (like `/accept-invite`) so `useAuth` works, but keep the route public — anonymous users still see the form as today.
 
-Update edge function `supabase/functions/public-wofbi-register/index.ts`:
-- Accept new payload shape `{ tenant_id, course_id, first_name, last_name, email, phone, answers, gdpr_consent, website }`.
-- Same rate limit, honeypot, and tenant resolution as today.
-- Server-side validation: iterate the tenant's `fields` schema, ensure required ones present, enforce max length per field, sanitize strings.
-- Create/find `members` row (as today), insert `course_registrations` (as today), AND insert `wofbi_applications` row with full `answers`.
-- Trigger existing welcome + course registration emails.
+## 4. Edge function `public-wofbi-register`
 
-## Admin UI
+Update `supabase/functions/public-wofbi-register/index.ts`:
+- Accept an optional `Authorization: Bearer <access_token>` header. When present, verify it with the service-role client (`supabase.auth.getUser(token)`), then:
+  - Look up the caller's `members` row in the tenant by `user_id`. If found, use that `member_id` instead of matching by email; do NOT create a new member.
+  - Ignore the client-supplied name/email for the member record — trust the linked profile — but still store what was submitted inside `wofbi_applications.answers` and top-level fields.
+- If no auth header, behavior is unchanged (existing public flow).
+- Keep the rate limit; skip it for authenticated calls (or use `user_id` as the key).
+- Duplicate-registration check (`course_registrations` for this member + course) already prevents double-apply.
 
-In `src/pages/ExamManagement.jsx`, add:
+## 5. Client submission
 
-1. **New tab "Applications"** in the existing Tabs list (alongside current tabs):
-   - Table: date, applicant name, email, course, status, actions (View, Approve, Reject).
-   - Detail dialog showing all `answers` grouped by section, with links to the linked member.
-   - CSV export button.
-2. **Under Settings/Course setup area** (or a new "Application Form" section), a card with:
-   - Enabled switch (writes `wofbi_application_forms.enabled`).
-   - Title + intro text inputs.
-   - Field list: drag-to-reorder rows, each with edit dialog (label, type, required, options for select/radio, help text, section grouping). Add / delete field buttons.
-   - "Reset to WOFBI default" button.
-   - Preview button that renders the current schema in a dialog.
+`PublicWoFBIRegistration.jsx` submits to the function. When signed in, attach the current access token in the `Authorization` header so the function can identify the user.
 
-All changes tenant-scoped via `useTenantQuery` and guarded by `isAdmin || isTenantAdmin`.
+## Files to touch
+
+- edit `src/pages/PublicWoFBIRegistration.jsx` — session detection, prefill, auth header
+- edit `src/App.jsx` — wrap the WOFBI register route in `AuthProvider`
+- edit `supabase/functions/public-wofbi-register/index.ts` — optional auth, member lookup by user_id
+- edit `src/pages/ExamManagement.jsx` (member view section) — "Register for a course" button when toggle is on
+- edit `src/components/dashboard/MemberDashboard.jsx` — optional entry card when toggle is on
 
 ## Non-goals
 
-- No PDF upload of the paper form (fields are captured digitally).
-- No payment/tuition tracking (kept out per project scope — financial tracking excluded).
-- No changes to exam-taking, grading, certificates, or the existing member/registration linking model.
-
-## Files
-
-**New**
-- `supabase/migrations/<ts>_wofbi_application_form.sql`
-- `src/components/exams/WoFBIApplicationFormEditor.jsx`
-- `src/components/exams/WoFBIApplicationsTab.jsx`
-- `src/components/exams/WoFBIDynamicForm.jsx` (renderer used by public page and preview)
-
-**Edited**
-- `src/pages/PublicWoFBIRegistration.jsx` (branch on `enabled`)
-- `src/pages/ExamManagement.jsx` (new tab + form editor entry point)
-- `supabase/functions/public-wofbi-register/index.ts` (accept `answers`, insert application)
-- `src/integrations/supabase/types.ts` (regenerated after migration)
-
-Approve to proceed and I'll build in this order: migration → edge function → public renderer → admin editor + applications tab.
+- No change to the form schema, admin editor, or Applications tab.
+- No change to `wofbi_applications` table.
+- No change to the anonymous flow behavior.
