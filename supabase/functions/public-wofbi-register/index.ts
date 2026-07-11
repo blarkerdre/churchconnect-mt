@@ -252,6 +252,41 @@ Deno.serve(async (req) => {
 
     if (regError) throw regError;
 
+    // Persist detailed application answers if the tenant has enabled the long form.
+    try {
+      const { data: appFormCfg } = await supabase
+        .from("wofbi_application_forms")
+        .select("enabled, fields")
+        .eq("tenant_id", tenantId)
+        .maybeSingle();
+
+      const rawAnswers = (body.answers && typeof body.answers === "object") ? body.answers : {};
+      const cleanAnswers: Record<string, unknown> = {};
+      const fields = Array.isArray(appFormCfg?.fields) ? appFormCfg!.fields : [];
+      for (const f of fields) {
+        if (!f?.id || f.type === "section_heading") continue;
+        const v = rawAnswers[f.id];
+        if (v === undefined || v === null) continue;
+        if (typeof v === "string") cleanAnswers[f.id] = v.slice(0, 2000);
+        else if (typeof v === "boolean") cleanAnswers[f.id] = v;
+        else cleanAnswers[f.id] = String(v).slice(0, 2000);
+      }
+
+      await supabase.from("wofbi_applications").insert({
+        tenant_id: tenantId,
+        course_id: courseId,
+        member_id: memberId,
+        first_name: firstName,
+        last_name: lastName,
+        email,
+        phone,
+        answers: cleanAnswers,
+        status: "submitted",
+      });
+    } catch (appErr) {
+      console.error("Failed to store application row:", appErr);
+    }
+
     if (isNewMember && email) {
       triggerWelcomeEmail(email, firstName, lastName, tenantId);
     }
