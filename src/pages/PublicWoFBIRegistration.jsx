@@ -133,11 +133,18 @@ export default function PublicWoFBIRegistration() {
     setSaving(true);
     try {
       const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+      const headers = { "Content-Type": "application/json" };
+      if (isAuthed) {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.access_token) {
+          headers["Authorization"] = `Bearer ${session.access_token}`;
+        }
+      }
       const res = await fetch(
         `https://${projectId}.supabase.co/functions/v1/public-wofbi-register`,
         {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers,
           body: JSON.stringify({
             ...form,
             tenant_id: resolvedTenantId,
