@@ -232,6 +232,7 @@ export function AuthProvider({ children }) {
         isAdmin, isUnitLeader, isWSFLeader, isMember, isReportsOfficer, isReadOnly,
         isTenantOwner, isTenantAdmin,
         refreshUser: () => user && fetchUserData(user.id, user.email),
+        refetchMemberForTenant,
       }}
     >
       {children}
