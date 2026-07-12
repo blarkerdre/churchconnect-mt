@@ -39,6 +39,7 @@ import { toast } from "sonner";
 const allNavItems = [
   { name: "Dashboard", icon: LayoutDashboard, path: "/", access: null },
   { name: "My Profile", icon: Users, path: "/my-profile", access: null },
+  { name: "My Data", icon: Users, path: "/my-data", access: null },
   { name: "Members", icon: Users, path: "/members", access: "leader" },
   { name: "Events", icon: CalendarDays, path: "/events", access: null },
   { name: "Church Unit", icon: ClipboardList, path: "/church-unit", access: null },

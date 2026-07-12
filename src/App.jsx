@@ -51,6 +51,10 @@ const MyFamily = lazy(() => import("@/pages/MyFamily"));
 const Inventory = lazy(() => import("@/pages/Inventory"));
 const ChurchUnit = lazy(() => import("@/pages/ChurchUnit"));
 const AcceptInvite = lazy(() => import("@/pages/AcceptInvite"));
+const MyData = lazy(() => import("@/pages/MyData"));
+const Privacy = lazy(() => import("@/pages/Privacy"));
+import CookieConsentBanner from "@/components/gdpr/CookieConsentBanner";
+import MFASetupDialog from "@/components/gdpr/MFASetupDialog";
 
 function PageFallback() {
   return (
@@ -178,6 +182,7 @@ function AppPages() {
       <Routes>
         <Route path="/" element={<Dashboard />} />
         <Route path="/my-profile" element={<MyProfile />} />
+        <Route path="/my-data" element={<ProtectedRoute><MyData /></ProtectedRoute>} />
         <Route path="/members" element={<FeatureGate path="/members"><Members /></FeatureGate>} />
         <Route path="/events" element={<FeatureGate path="/events"><Events /></FeatureGate>} />
         <Route path="/attendance" element={<Navigate to="/church-unit?tab=attendance" replace />} />
@@ -270,6 +275,8 @@ function AppRoutes() {
         <Route path="/onboard" element={<Onboard />} />
         <Route path="/unsubscribe" element={<Unsubscribe />} />
         <Route path="/trust" element={<Trust />} />
+        <Route path="/privacy" element={<Privacy />} />
+        <Route path="/t/:tenantSlug/privacy" element={<Privacy />} />
         <Route path="/accept-invite" element={<AuthProvider><AcceptInvite /></AuthProvider>} />
 
         {/* Tenant-prefixed public routes */}
@@ -288,11 +295,23 @@ function AppRoutes() {
   );
 }
 
+function AuthedShell() {
+  return (
+    <AuthProvider>
+      <MFASetupDialog />
+    </AuthProvider>
+  );
+}
+
 function App() {
   return (
     <QueryClientProvider client={queryClientInstance}>
       <Router>
         <AppRoutes />
+        <AuthProvider>
+          <MFASetupDialog />
+        </AuthProvider>
+        <CookieConsentBanner />
       </Router>
       <Toaster />
       <SonnerToaster />
