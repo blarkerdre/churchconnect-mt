@@ -17,11 +17,21 @@ Deno.serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
+
+    // Restrict to internal callers (pg_cron / trusted server) presenting the service role key
+    const bearer = (req.headers.get("Authorization") ?? "").replace("Bearer ", "");
+    if (bearer !== serviceKey) {
+      return new Response(JSON.stringify({ error: "Forbidden" }), {
+        status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     if (!stripeKey) {
       return new Response(JSON.stringify({ error: "STRIPE_SECRET_KEY not configured" }), {
         status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
 
     const admin = createClient(supabaseUrl, serviceKey);
     const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" as any });
