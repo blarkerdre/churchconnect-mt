@@ -134,6 +134,15 @@ export function TenantProvider({ children }) {
   }, [user, fetchMemberships, selectTenant, tenantSlugFromUrl]);
 
   const tenantId = currentTenant?.tenant_id || null;
+
+  // Re-fetch the auth hook's `myMember` scoped to the active tenant so users with
+  // member rows in multiple tenants always see the correct one.
+  useEffect(() => {
+    if (tenantId && refetchMemberForTenant) {
+      refetchMemberForTenant(tenantId);
+    }
+  }, [tenantId, refetchMemberForTenant]);
+
   const tenantSlug = currentTenant?.tenants?.slug || null;
   const tenantRole = currentTenant?.role || null;
   const isTenantAdmin = tenantRole === "admin" || tenantRole === "owner" || (isSuperAdmin && !!currentTenant);
