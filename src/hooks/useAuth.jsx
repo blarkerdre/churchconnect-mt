@@ -20,6 +20,7 @@ const AuthContext = createContext({
   isAdmin: false, isUnitLeader: false, isWSFLeader: false, isMember: false, isReportsOfficer: false, isReadOnly: false,
   isTenantOwner: false, isTenantAdmin: false,
   refreshUser: () => {},
+  refetchMemberForTenant: async () => {},
 });
 
 export function AuthProvider({ children }) {
