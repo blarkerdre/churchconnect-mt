@@ -43,6 +43,8 @@ import PasswordConfirmDialog from "@/components/shared/PasswordConfirmDialog";
 import ExternalLinksSection from "@/components/settings/ExternalLinksSection";
 import DangerZoneSection from "@/components/settings/DangerZoneSection";
 import ConsentPrivacySection from "@/components/settings/ConsentPrivacySection";
+import DataRequestsSection from "@/components/settings/DataRequestsSection";
+import RetentionSection from "@/components/settings/RetentionSection";
 
 import ApiKeysSection from "@/components/settings/ApiKeysSection";
 import TenantFeaturesSection from "@/components/settings/TenantFeaturesSection";
