@@ -1,38 +1,21 @@
-# Unify Bible School Applications & Registrations
+# Tighten tenant scoping on Bible School components
 
-## Problem
-Romoke appears under a course's **Registrations** (she has a `course_registrations` row, approved) but not under the top-level **Applications** tab (no `wofbi_applications` row). The two lists come from different tables, so anyone enrolled directly (admin add, internal flow) is invisible in Applications.
+The Bible School surfaces are already tenant-scoped almost everywhere (reads filter on `tenant_id`, inserts inject it, updates/deletes assert it). RLS also protects every affected table. Two queries deviate from the "explicit `tenant_id` on every query" rule and should be brought in line.
 
-## Fix — UI only, no schema changes
+## Changes
 
-Extend the **Applications tab** (`src/components/exams/WoFBIApplicationsTab.jsx`) so it lists a unified feed of Bible School applicants from both sources:
+1. **`src/components/exams/SubjectManager.jsx`** (list query, ~line 30)
+   - The `exam_subjects` select filters only by `course_id`. Add `.eq("tenant_id", tenantId)` and gate the query with `enabled: !!tenantId` so it matches the pattern used elsewhere.
 
-1. **Two queries in parallel, merged in memory:**
-   - Existing `wofbi_applications` query (unchanged).
-   - New query on `course_registrations` joined with `members` and `exam_titles`, tenant-scoped.
-2. **Merge logic:** for every `course_registrations` row, check if a `wofbi_applications` row already exists for the same `(member_id, course_id)`. If yes → skip (the application row wins). If no → synthesize a display-only row:
-   ```
-   { id: `reg:${registration.id}`, source: "direct",
-     first_name, last_name, email, phone (from members),
-     course: exam_titles row, status: registration.status,
-     answers: {}, created_at: registration.registered_at }
-   ```
-3. **UI adjustments:**
-   - Add a small **Source** badge column: "Application form" vs "Direct enrolment".
-   - Add a **Source** filter (all / form / direct) alongside status/course filters.
-   - Existing search, date, course, status filters keep working since synthetic rows use the same shape.
-   - Report tallies naturally include both.
-4. **Row actions on synthetic (direct) rows:**
-   - **View detail** → opens a simplified dialog showing member + course + registration status (no answers section).
-   - **Approve / Reject** buttons → update `course_registrations.status` instead of `wofbi_applications.status`. If admin wants a full application record they can still use the app form; no auto-creation.
-   - **Delete** → routes to the existing `cascade_delete_bible_school_records` RPC (already handles linked members).
-   - Bulk-select works the same; the mutation branches by `source`.
-5. **Tab count** in `TabsTrigger` header shows the merged total.
-
-## Files touched
-- `src/components/exams/WoFBIApplicationsTab.jsx` — add second query, merge, source badge/filter, action branching.
+2. **`src/components/exams/QcReport.jsx`** (delete mutation, ~line 114)
+   - The delete on `lecturer_qc_checks` targets a row by `id` only. Add `.eq("tenant_id", tenantId)` to the delete filter so a stray id from another tenant can never be targeted from this client.
 
 ## Out of scope
-- No DB migration, no trigger, no backfill of `wofbi_applications` rows.
-- Per-course Registrations view inside Management stays as-is (it's the drill-down).
-- Romoke's data won't change; she'll simply now show up in Applications tagged "Direct enrolment — approved".
+
+- No schema, RLS, or edge function changes — every table involved already has tenant-scoped RLS and the edge functions (`grade-exam`, `render-statement-pdf`, `issue-certificate`) already resolve tenant server-side from the member/session.
+- No refactor of the many correctly-scoped queries across `ExamManagement.jsx`, `WoFBIApplicationsTab`, `WoFBIApplicationFormEditor`, `LecturerManager`, `LecturerFeedbackReport`, `RateLecturerDialog`, `QcCheckDialog`, `CourseResultsView`, `StatementOfResult`, `TakeExamDialog`.
+
+## Verification
+
+- Load `/t/<slug>/exam-management`, open a course's Subjects tab — list still renders.
+- Create/edit/delete a QC check in the QC Report — behaviour unchanged.
