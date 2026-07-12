@@ -36,6 +36,9 @@ Deno.serve(async (req) => {
     const token = authHeader.replace("Bearer ", "");
     const isServiceRole = token === serviceKey;
 
+    const svcClient = createClient(supabaseUrl, serviceKey);
+    let callerUserId: string | null = null;
+
     if (!isServiceRole) {
       const anonClient = createClient(supabaseUrl, supabaseAnonKey, {
         global: { headers: { Authorization: authHeader } },
@@ -47,10 +50,46 @@ Deno.serve(async (req) => {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      const svcClient = createClient(supabaseUrl, serviceKey);
-      const { data: isAdmin } = await svcClient.rpc("is_admin", { _user_id: user.id });
-      const { data: isLeader } = await svcClient.rpc("has_role", { _user_id: user.id, _role: "unit_leader" });
-      if (!isAdmin && !isLeader) {
+      callerUserId = user.id;
+    }
+
+    const supabase = svcClient;
+
+    const { case_id, tenant_id: bodyTenantId, is_new_request } = await req.json();
+
+    if (!case_id) {
+      return new Response(JSON.stringify({ error: "case_id required" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Load the real pastoral care case — never trust client-supplied content
+    const { data: pcRecord, error: pcErr } = await supabase
+      .from("pastoral_care")
+      .select("id, tenant_id, assigned_to, subject, care_type, description")
+      .eq("id", case_id)
+      .maybeSingle();
+
+    if (pcErr || !pcRecord) {
+      return new Response(JSON.stringify({ error: "Pastoral care case not found" }), {
+        status: 404,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const tenant_id = pcRecord.tenant_id;
+    const assigned_to = pcRecord.assigned_to;
+    const subject = pcRecord.subject;
+    const care_type = pcRecord.care_type;
+    const description = pcRecord.description;
+
+    if (!isServiceRole && callerUserId) {
+      const [{ data: isAdmin }, { data: isTenantLeader }] = await Promise.all([
+        svcClient.rpc("is_admin", { _user_id: callerUserId, _tenant_id: tenant_id }),
+        svcClient.rpc("has_role", { _user_id: callerUserId, _role: "unit_leader", _tenant_id: tenant_id }),
+      ]);
+      if (!isAdmin && !isTenantLeader) {
         return new Response(JSON.stringify({ error: "Forbidden" }), {
           status: 403,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -58,15 +97,19 @@ Deno.serve(async (req) => {
       }
     }
 
-    const supabase = createClient(supabaseUrl, serviceKey);
-
-    const { assigned_to, subject, care_type, description, case_id, tenant_id, is_new_request } = await req.json();
+    if (bodyTenantId && bodyTenantId !== tenant_id) {
+      return new Response(JSON.stringify({ error: "Tenant mismatch" }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     if (!assigned_to) {
       return new Response(JSON.stringify({ message: "No assignee" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
 
     // Fetch tenant settings for sender name
     let churchName = "Winners Chapel International Cardiff";
