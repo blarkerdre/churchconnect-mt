@@ -1,72 +1,141 @@
-# GDPR Compliance Audit — ChurchConnect
+# GDPR Compliance Implementation Plan
 
-Produce a thorough, evidence-based GDPR compliance assessment of the app as it exists in this codebase (frontend, edge functions, database, storage, third-party integrations). Deliver a written report; **no code changes** in this pass.
+Scope: implement everything actionable in code (P1 fixes + consent/transparency + data subject rights UI). Legal artefacts (DPIA, ROPA, DPA, sub-processor register) remain the tenant's responsibility.
 
-## Scope of the audit
+---
 
-Assessed against UK GDPR + EU GDPR (Arts. 5, 6, 7, 9, 12–22, 25, 28, 30, 32, 33–34, 35, 44–49) and PECR where relevant (cookies, marketing comms).
+## 1. Data Subject Rights (DSR) Portal — `/my-data`
 
-Areas reviewed:
+New member-facing page (linked from profile menu) with four tabs:
 
-1. **Lawful basis & consent**
-   - `useConsentText`, `ConsentPrivacySection`, public registration forms, first-timer capture, WoFBI form, testimony, feedback.
-   - Consent granularity, withdrawal, records, age-of-consent (children's church).
-2. **Special-category data (Art. 9)**
-   - Religious affiliation, health/pastoral care notes, children's data, life-event requests.
-3. **Data minimisation & purpose limitation**
-   - `members` (44 cols), `first_timers`, `children`, `contacts`, pastoral care, call log, SMS log.
-4. **Transparency (Arts. 12–14)**
-   - Privacy policy link handling, notices on public forms, in-app disclosures.
-5. **Data subject rights (Arts. 15–22)**
-   - Access/export (`export-tenant-data` is tenant-wide, super-admin only — no per-member SAR flow).
-   - Rectification, erasure, restriction, portability, objection, automated decision-making.
-6. **Security of processing (Art. 32)**
-   - RLS coverage, tenant isolation, storage RLS, edge function auth, service-role usage, recent fixes (billing_cron, pickup, roster notify, training attendees).
-   - Encryption in transit/at rest, secrets handling, password policy (HIBP), MFA.
-7. **Data residency & international transfers (Arts. 44–49)**
-   - UK eu-west-2 claim vs. actual Supabase region; Stripe, Twilio, Resend/email provider, Lovable AI Gateway, push (FCM/APNs), Google OAuth — transfer mechanisms (SCCs/UK IDTA).
-8. **Retention & deletion**
-   - `purge-all-data` (30-day archive), `purged_data_archives`, audit_log retention, email/SMS logs, suppressed_emails, backups.
-9. **Processors & sub-processors (Art. 28)**
-   - Supabase, Lovable, Stripe, Twilio, email provider, push providers, DomiFort. DPA coverage + sub-processor list.
-10. **Records of processing (Art. 30)** — is there a ROPA?
-11. **DPIA (Art. 35)** — children's data + special category triggers.
-12. **Breach response (Arts. 33–34)** — 72-hour notification process, contacts.
-13. **Cookies / tracking (PECR)** — cookie banner, analytics, tracking pixels.
-14. **Children's data**
-    - `children`, `child_checkins`, `child_pickup_delegations`, `child_guardians`. Parental consent, minimum age.
-15. **Marketing comms**
-    - Announcements, birthday messages, bulk SMS/WhatsApp/email, unsubscribe (`handle-email-unsubscribe`, `email_unsubscribe_tokens`, `suppressed_emails`), SMS opt-out.
-16. **Audit logging** — completeness and tamper resistance.
-17. **Access control** — role model, tenant switching re-auth, super-admin powers.
-18. **Public endpoints** — public registration, WoFBI, testimony, presentation — anti-abuse and data exposure.
+- **Access / Export** — button calls new `export-member-data` edge function. Returns JSON bundle of every table row where `user_id = auth.uid()` or `member_id` matches, plus signed URLs for uploaded documents/photos. Rate-limited to 1/day.
+- **Rectify** — deep link into existing profile edit form; adds a "correction requested" note when non-editable fields (e.g. legal name on financial receipts) are flagged.
+- **Erasure request** — opens `erasure_requests` queue (see §2).
+- **Withdraw consent** — toggles for each granular consent flag stored on `members` (see §3).
 
-## Method
+## 2. Admin-approved erasure queue
 
-- Read relevant edge functions, hooks, and RLS policies (batched).
-- Query DB for: policies on sensitive tables (`members`, `children`, `pastoral_care`, `life_event_requests`, `child_*`, `call_log`, `sms_log`, `email_send_log`, `audit_log`), tables missing RLS, columns holding PII/special-category.
-- Run supabase linter + review latest security scan (do **not** fix findings in this pass).
-- Cross-check `supabase/config.toml` `verify_jwt=false` functions for data exposure.
-- Inventory third-party data flows from `supabase/functions/*` and secrets.
+New table `erasure_requests`:
+- `id, tenant_id, member_id, user_id, reason, status (pending|approved|rejected|completed), requested_at, reviewed_by, reviewed_at, review_note, completed_at`
+- RLS: member sees own; tenant admin/pastor sees tenant scope; service_role full.
 
-## Deliverable
+Flow:
+1. Member submits from `/my-data`.
+2. Notification to tenant admins (in-app + email via existing queue).
+3. Admin reviews in **Settings → Data Requests**. Approve → runs `process-erasure` edge function which:
+   - Anonymises `members` row (name → "Erased Member", strips email/phone/dob/address/notes/photo).
+   - Nulls `user_id` FKs on shared history (attendance, followups, pastoral_care) — retains statistical rows.
+   - Deletes personal artefacts (sermon_notes, testimonies, feedback, push_subscriptions).
+   - Snapshots to `purged_data_archives` with `scope='member'`, 30-day recovery.
+   - Deletes `auth.users` row if member has no other tenant memberships.
+   - Writes audit_log entry.
+4. Reject → status recorded, member notified with reason.
 
-A single Markdown report saved to `/mnt/documents/ChurchConnect_GDPR_Compliance_Report.md` **and** a matching PDF at `/mnt/documents/ChurchConnect_GDPR_Compliance_Report.pdf`, containing:
+Legal-hold override: admin can mark request "retain-under-legal-obligation" with mandatory note.
 
-- Executive summary + overall RAG rating
-- Per-area findings with: requirement, evidence (file/table/policy), status (Compliant / Partial / Gap / Not assessable), severity (High/Med/Low), recommendation
-- Prioritised remediation backlog (P1/P2/P3) with concrete actions and owners (app-owner vs. platform)
-- Appendices: data inventory, processor list w/ transfer basis, retention matrix, RLS coverage summary, open items requiring user input (DPO, controller identity, DPA copies, ROPA, DPIA, cookie inventory)
+## 3. Granular consent + consent audit trail
 
-## Out of scope
+Add to `members`:
+- `consent_privacy_accepted_at` (existing consent capture, keep)
+- `consent_marketing` (bool, default false)
+- `consent_photos` (bool, default false)
+- `consent_pastoral_contact` (bool, default true)
+- `consent_third_party_sharing` (bool, default false)
 
-- No code, RLS, or config changes.
-- Not legal advice — organisational/legal items (DPO appointment, ROPA authorship, DPIA sign-off, DPA execution) are flagged for the user's legal review.
-- Does not cover physical/organisational controls outside the app (staff training, contracts, physical security).
+New table `consent_events` (append-only audit): `id, tenant_id, member_id, consent_type, granted, source (registration|profile|dsr_portal|admin), ip_hash, user_agent, occurred_at`. Populated by trigger on `members` update.
 
-## Assumptions (confirm or correct before I start)
+Registration forms, first-timer form, WoFBI form and profile page get individual toggles instead of a single blanket consent. Bulk comms filters honour `consent_marketing`; photo galleries/announcement uploads filter by `consent_photos`.
 
-1. Controller = each tenant church; Lovable/app-owner = processor. Correct?
-2. Target jurisdictions: UK + EU only.
-3. Report format: Markdown + PDF (same style as prior SLA — navy/gold cover, Playfair headings). OK?
-4. I should include recommendations but **not** implement any fixes in this pass.
+**Parental consent for children**: `children` gets `parent_consent_given_by`, `parent_consent_at`, `parent_consent_ip_hash`. Child check-in creation requires a guardian on `child_guardians` to have granted consent — enforced by trigger.
+
+## 4. Full cookie/PECR consent manager
+
+New `<CookieConsentBanner />` mounted in `App.jsx`:
+- Three categories: **Necessary** (auth, tenant) always on; **Functional** (tour completions, preferences); **Analytics** (any future pixel).
+- Preferences persisted in `localStorage` (`cc_consent_v1`) + logged to `consent_events` when user is authenticated.
+- "Manage cookies" link in footer + Trust page to re-open at any time.
+- Existing non-essential storage (tour completion, install prompt dismissals) gated on Functional consent.
+
+## 5. Retention automation
+
+New table `retention_policies` (tenant-scoped, defaults seeded):
+- `first_timers` → 2 years since `created_at` if not converted
+- `pastoral_care` closed cases → 6 years
+- `call_log`, `sms_log`, `email_send_log` → 2 years
+- `notifications` (read) → 90 days
+- `audit_log` → 6 years
+- `purged_data_archives` → 30 days (already handled)
+
+New cron edge function `enforce-retention` runs daily, deletes rows past policy, writes audit summary. Admin UI at **Settings → Retention** to view/adjust (bounded to legal minima).
+
+## 6. MFA prompt (soft nudge for all roles)
+
+- Enable TOTP factor via Supabase auth (already supported).
+- New `MFASetupDialog` shown once per session for users without a verified factor.
+- "Remind me later" dismissal stored on `profiles.mfa_prompt_snoozed_until` (7-day snooze).
+- Settings → Security section for enrol / remove / regenerate recovery codes.
+- No hard block — matches chosen policy.
+
+## 7. Rate limiting on public endpoints
+
+Ad-hoc token-bucket in Postgres (`public_endpoint_rate_limits` table: `ip_hash, endpoint, window_start, count`). Applied to: `send-testimony`, `PublicRegistration`, `PublicWoFBIRegistration`, `handle-email-unsubscribe`, `export-member-data`. Configurable per endpoint; default 10/hour per IP.
+
+(Noted: the platform has no standard rate-limit primitive; this is an ad-hoc implementation accepted as a tradeoff for GDPR/abuse posture.)
+
+## 8. Transparency: in-app Privacy Notice
+
+New `/privacy` route rendering a structured, tenant-branded notice pulling from:
+- `app_settings.privacy_policy_url` (existing external link — kept)
+- Plus in-app sections: what data is collected, purposes, lawful bases, retention periods (from §5), recipients (Stripe/Twilio/Resend/Lovable Cloud), data subject rights (link to `/my-data`), DPO contact (new `app_settings.dpo_contact`).
+
+Footer + registration/first-timer/WoFBI forms link here alongside the external policy.
+
+## 9. Admin: Data Requests dashboard
+
+New page **Settings → Data Requests** (admin only):
+- Tabs: Erasure requests, Export requests log, Rectification notes.
+- KPIs: open count, avg response time, overdue (>30 days) badge.
+
+---
+
+## Technical notes
+
+**New tables** (all with tenant_id, RLS, GRANTs, timestamps + update trigger):
+- `erasure_requests`, `consent_events`, `retention_policies`, `public_endpoint_rate_limits`
+
+**New edge functions**:
+- `export-member-data` (auth required, rate-limited, returns member-scoped JSON + signed URLs)
+- `process-erasure` (admin auth + tenant scope check, anonymises + archives)
+- `enforce-retention` (cron, service-role, per-tenant policy walk)
+
+**Modified tables** (via migration):
+- `members` — add consent columns
+- `children` — add parental consent columns
+- `profiles` — add `mfa_prompt_snoozed_until`
+
+**Modified components**:
+- `App.jsx` — mount CookieConsentBanner, MFASetupDialog
+- `MemberFormDialog`, `PublicRegistration`, `PublicWoFBIRegistration`, `WelcomeQuestions`, `TestimonyFormDialog` — swap blanket consent → granular toggles
+- `BulkMembersPanel`, `DirectSendPanel`, `AnnouncementForm` — filter recipients by `consent_marketing`
+- `ChildFormDialog` — add parental consent capture
+- `AppLayout` footer — add /privacy + Manage cookies links
+- Profile page — add "My Data" entry
+
+**Not in scope** (user's responsibility):
+- Drafting the actual privacy policy copy (I'll scaffold placeholder text you must review with counsel)
+- Signing DPAs with Stripe/Twilio/Resend/Lovable
+- Publishing ROPA/DPIA documents
+- Confirming UK data residency claims with each sub-processor
+
+## Delivery order
+
+1. Migration: new tables, columns, RLS, GRANTs, triggers
+2. Edge functions: export-member-data, process-erasure, enforce-retention
+3. `/my-data` portal + `/privacy` page
+4. Admin Data Requests page + Retention settings
+5. Granular consent toggles across forms + audit trigger
+6. Cookie banner + MFA nudge
+7. Rate limits on public endpoints
+8. Update security memory noting the accepted ad-hoc rate-limit approach and DSR flow
+
+Approve to proceed and I'll implement in that order.
