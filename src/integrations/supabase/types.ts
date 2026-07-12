@@ -870,6 +870,9 @@ export type Database = {
           last_name: string
           medical_notes: string | null
           notes: string | null
+          parent_consent_at: string | null
+          parent_consent_given_by: string | null
+          parent_consent_ip_hash: string | null
           photo_url: string | null
           primary_guardian_member_id: string
           tenant_id: string
@@ -887,6 +890,9 @@ export type Database = {
           last_name: string
           medical_notes?: string | null
           notes?: string | null
+          parent_consent_at?: string | null
+          parent_consent_given_by?: string | null
+          parent_consent_ip_hash?: string | null
           photo_url?: string | null
           primary_guardian_member_id: string
           tenant_id: string
@@ -904,12 +910,22 @@ export type Database = {
           last_name?: string
           medical_notes?: string | null
           notes?: string | null
+          parent_consent_at?: string | null
+          parent_consent_given_by?: string | null
+          parent_consent_ip_hash?: string | null
           photo_url?: string | null
           primary_guardian_member_id?: string
           tenant_id?: string
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "children_parent_consent_given_by_fkey"
+            columns: ["parent_consent_given_by"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "children_primary_guardian_member_id_fkey"
             columns: ["primary_guardian_member_id"]
@@ -1018,6 +1034,60 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "church_units_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      consent_events: {
+        Row: {
+          consent_type: string
+          granted: boolean
+          id: string
+          ip_hash: string | null
+          member_id: string | null
+          occurred_at: string
+          source: string
+          tenant_id: string | null
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          consent_type: string
+          granted: boolean
+          id?: string
+          ip_hash?: string | null
+          member_id?: string | null
+          occurred_at?: string
+          source?: string
+          tenant_id?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          consent_type?: string
+          granted?: boolean
+          id?: string
+          ip_hash?: string | null
+          member_id?: string | null
+          occurred_at?: string
+          source?: string
+          tenant_id?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "consent_events_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "consent_events_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -1517,6 +1587,69 @@ export type Database = {
           used_at?: string | null
         }
         Relationships: []
+      }
+      erasure_requests: {
+        Row: {
+          archive_id: string | null
+          completed_at: string | null
+          created_at: string
+          id: string
+          member_id: string | null
+          reason: string | null
+          review_note: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          tenant_id: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          archive_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          member_id?: string | null
+          reason?: string | null
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          tenant_id: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          archive_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          member_id?: string | null
+          reason?: string | null
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          tenant_id?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "erasure_requests_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "erasure_requests_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       event_reactions: {
         Row: {
@@ -3307,6 +3440,11 @@ export type Database = {
           bfc_completed: boolean | null
           church_unit: string | null
           city: string | null
+          consent_marketing: boolean
+          consent_pastoral_contact: boolean
+          consent_photos: boolean
+          consent_third_party_sharing: boolean
+          consent_updated_at: string | null
           created_at: string
           data_retention_reviewed_at: string | null
           date_of_birth: string | null
@@ -3353,6 +3491,11 @@ export type Database = {
           bfc_completed?: boolean | null
           church_unit?: string | null
           city?: string | null
+          consent_marketing?: boolean
+          consent_pastoral_contact?: boolean
+          consent_photos?: boolean
+          consent_third_party_sharing?: boolean
+          consent_updated_at?: string | null
           created_at?: string
           data_retention_reviewed_at?: string | null
           date_of_birth?: string | null
@@ -3399,6 +3542,11 @@ export type Database = {
           bfc_completed?: boolean | null
           church_unit?: string | null
           city?: string | null
+          consent_marketing?: boolean
+          consent_pastoral_contact?: boolean
+          consent_photos?: boolean
+          consent_third_party_sharing?: boolean
+          consent_updated_at?: string | null
           created_at?: string
           data_retention_reviewed_at?: string | null
           date_of_birth?: string | null
@@ -3862,6 +4010,7 @@ export type Database = {
           email: string | null
           full_name: string | null
           id: string
+          mfa_prompt_snoozed_until: string | null
           tenant_id: string | null
           updated_at: string
           user_id: string
@@ -3872,6 +4021,7 @@ export type Database = {
           email?: string | null
           full_name?: string | null
           id?: string
+          mfa_prompt_snoozed_until?: string | null
           tenant_id?: string | null
           updated_at?: string
           user_id: string
@@ -3882,6 +4032,7 @@ export type Database = {
           email?: string | null
           full_name?: string | null
           id?: string
+          mfa_prompt_snoozed_until?: string | null
           tenant_id?: string | null
           updated_at?: string
           user_id?: string
@@ -3895,6 +4046,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      public_endpoint_rate_limits: {
+        Row: {
+          count: number
+          created_at: string
+          endpoint: string
+          id: string
+          ip_hash: string
+          window_start: string
+        }
+        Insert: {
+          count?: number
+          created_at?: string
+          endpoint: string
+          id?: string
+          ip_hash: string
+          window_start?: string
+        }
+        Update: {
+          count?: number
+          created_at?: string
+          endpoint?: string
+          id?: string
+          ip_hash?: string
+          window_start?: string
+        }
+        Relationships: []
       }
       purged_data_archives: {
         Row: {
@@ -3972,6 +4150,59 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      retention_policies: {
+        Row: {
+          created_at: string
+          data_category: string
+          description: string | null
+          enabled: boolean
+          id: string
+          last_run_at: string | null
+          last_run_deleted_count: number | null
+          max_days: number
+          min_days: number
+          retention_days: number
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          data_category: string
+          description?: string | null
+          enabled?: boolean
+          id?: string
+          last_run_at?: string | null
+          last_run_deleted_count?: number | null
+          max_days?: number
+          min_days?: number
+          retention_days: number
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          data_category?: string
+          description?: string | null
+          enabled?: boolean
+          id?: string
+          last_run_at?: string | null
+          last_run_deleted_count?: number | null
+          max_days?: number
+          min_days?: number
+          retention_days?: number
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "retention_policies_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       scheduled_communications: {
         Row: {
@@ -5952,6 +6183,15 @@ export type Database = {
       cascade_delete_bible_school_records: {
         Args: { _course_id?: string; _member_id: string }
         Returns: Json
+      }
+      check_and_bump_rate_limit: {
+        Args: {
+          _endpoint: string
+          _ip_hash: string
+          _limit: number
+          _window_minutes?: number
+        }
+        Returns: boolean
       }
       check_tenant_storage_quota: {
         Args: { _added_bytes?: number; _tenant_id: string }
