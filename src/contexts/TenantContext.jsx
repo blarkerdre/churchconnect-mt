@@ -22,7 +22,7 @@ const TenantContext = createContext({
 const DEFAULT_TENANT_ID = "d8bbbdae-d9b3-4999-912d-3aa5999884b0";
 
 export function TenantProvider({ children }) {
-  const { user, loading: authLoading, roles } = useAuth();
+  const { user, loading: authLoading, roles, refetchMemberForTenant } = useAuth();
   const isSuperAdmin = (roles || []).includes("super_admin");
   const [currentTenant, setCurrentTenant] = useState(null);
   const [tenantMemberships, setTenantMemberships] = useState([]);
@@ -134,6 +134,15 @@ export function TenantProvider({ children }) {
   }, [user, fetchMemberships, selectTenant, tenantSlugFromUrl]);
 
   const tenantId = currentTenant?.tenant_id || null;
+
+  // Re-fetch the auth hook's `myMember` scoped to the active tenant so users with
+  // member rows in multiple tenants always see the correct one.
+  useEffect(() => {
+    if (tenantId && refetchMemberForTenant) {
+      refetchMemberForTenant(tenantId);
+    }
+  }, [tenantId, refetchMemberForTenant]);
+
   const tenantSlug = currentTenant?.tenants?.slug || null;
   const tenantRole = currentTenant?.role || null;
   const isTenantAdmin = tenantRole === "admin" || tenantRole === "owner" || (isSuperAdmin && !!currentTenant);

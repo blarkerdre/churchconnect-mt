@@ -20,6 +20,7 @@ const AuthContext = createContext({
   isAdmin: false, isUnitLeader: false, isWSFLeader: false, isMember: false, isReportsOfficer: false, isReadOnly: false,
   isTenantOwner: false, isTenantAdmin: false,
   refreshUser: () => {},
+  refetchMemberForTenant: async () => {},
 });
 
 export function AuthProvider({ children }) {
@@ -98,7 +99,7 @@ export function AuthProvider({ children }) {
         supabase.from("profiles").select("*").eq("user_id", userId).maybeSingle(),
         supabase.from("user_roles").select("role").eq("user_id", userId),
         supabase.from("unit_leader_assignments").select("unit_name").eq("user_id", userId),
-        supabase.from("members").select("*, wsf_centres!fk_members_wsf_centre(name)").eq("user_id", userId).maybeSingle(),
+        supabase.from("members").select("*, wsf_centres!fk_members_wsf_centre(name)").eq("user_id", userId).order("created_at", { ascending: false }).limit(1).maybeSingle(),
         supabase.from("tenant_memberships").select("tenant_id, role, tenants(slug)").eq("user_id", userId),
       ]);
 
@@ -136,6 +137,34 @@ export function AuthProvider({ children }) {
       setDataLoaded(true);
     }
   }
+
+  // Refetch the member record scoped to a specific tenant. Called by TenantContext
+  // once the active tenant is known, so `myMember` reflects the current tenant even
+  // when the user has member rows in multiple tenants.
+  const refetchMemberForTenant = async (tenantId) => {
+    if (!user?.id || !tenantId) return;
+    try {
+      const { data } = await supabase
+        .from("members")
+        .select("*, wsf_centres!fk_members_wsf_centre(name)")
+        .eq("user_id", user.id)
+        .eq("tenant_id", tenantId)
+        .maybeSingle();
+      setMyMember(data);
+      if (data?.id) {
+        const { data: centres } = await supabase
+          .from("wsf_centres")
+          .select("name")
+          .eq("tenant_id", tenantId)
+          .eq("leader_id", data.id);
+        setLeaderCentres(centres?.map((c) => c.name) || []);
+      } else {
+        setLeaderCentres([]);
+      }
+    } catch (err) {
+      console.warn("refetchMemberForTenant failed:", err?.message || err);
+    }
+  };
 
   const signUp = async (email, password, fullName, tenantSlug) => {
     const { data, error } = await supabase.auth.signUp({
@@ -203,6 +232,7 @@ export function AuthProvider({ children }) {
         isAdmin, isUnitLeader, isWSFLeader, isMember, isReportsOfficer, isReadOnly,
         isTenantOwner, isTenantAdmin,
         refreshUser: () => user && fetchUserData(user.id, user.email),
+        refetchMemberForTenant,
       }}
     >
       {children}
