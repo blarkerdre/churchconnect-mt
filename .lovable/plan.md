@@ -1,48 +1,72 @@
+# GDPR Compliance Audit — ChurchConnect
 
-## Plan: ChurchConnect Service Level Agreement (DOCX + PDF)
+Produce a thorough, evidence-based GDPR compliance assessment of the app as it exists in this codebase (frontend, edge functions, database, storage, third-party integrations). Deliver a written report; **no code changes** in this pass.
 
-Produce a professional, self-contained SLA document for ChurchConnect and save both formats to `/mnt/documents/` for download. No app/code changes.
+## Scope of the audit
 
-### Deliverables
-- `/mnt/documents/ChurchConnect_SLA.docx`
-- `/mnt/documents/ChurchConnect_SLA.pdf`
+Assessed against UK GDPR + EU GDPR (Arts. 5, 6, 7, 9, 12–22, 25, 28, 30, 32, 33–34, 35, 44–49) and PECR where relevant (cookies, marketing comms).
 
-### Document sections
-1. **Parties & effective date** — ChurchConnect (Service Provider) and the Church/Tenant (Customer); placeholder fields for name, effective date.
-2. **Definitions** — Service, Tenant, Uptime, Downtime, Scheduled Maintenance, Support Hours, Incident, Severity, Personal Data.
-3. **Scope of Service** — Multi-tenant church management platform (members, attendance, communications, follow-ups, pastoral care, events, children church, transport, exams/Bible School, home cells, tenant admin). Hosted on Lovable Cloud, UK data residency (eu-west-2).
-4. **Service availability** — Target **99.5% monthly uptime** (≈3.6 hours max downtime/month). Measurement window, exclusions (scheduled maintenance, force majeure, customer-caused, third-party providers such as SMS/Email/WhatsApp/Voice, tenant misconfiguration).
-5. **Scheduled maintenance** — Notice period (≥48h for standard, best-effort for emergency), typical off-peak windows, excluded from uptime calc.
-6. **Support** — Channels (in-app, email to tenant admin → dev team). **Standard response SLAs**:
-   - **P1 (Critical / service unavailable):** 4 business hours response
-   - **P2 (Major / significant impairment):** 1 business day
-   - **P3 (Minor / cosmetic / question):** 3 business days
-   - Support hours: UK business hours, Mon–Fri, excluding UK public holidays. Response ≠ resolution.
-7. **No service credits** — Explicitly states remedies are limited to corrective action and support; no financial credits are offered.
-8. **Customer responsibilities** — Accurate configuration, user provisioning, role assignments, message content compliance, third-party provider accounts (Twilio, Resend, Stripe, etc.), data-subject request handling, safeguarding oversight for Children Church, keeping credentials private.
-9. **Data protection & security** — UK data residency, RLS tenant isolation, role-based access, encryption in transit, backups managed by the underlying platform, breach notification process, subprocessor list references the Trust page.
-10. **Data retention, export & deletion** — Tenant admins can archive/delete via Danger Zone; export options; deletion workflow.
-11. **Third-party dependencies** — Communications (SMS, WhatsApp, Voice, Email), Payments (Stripe), Maps/geocoding. Outages of third parties fall outside uptime commitments.
-12. **Confidentiality** — Mutual, standard clauses.
-13. **Fees & billing** — Reference to the Customer's pricing plan; overage handling; suspension for non-payment.
-14. **Term, suspension & termination** — Monthly rolling, termination for cause, data export window after termination.
-15. **Limitation of liability & disclaimer** — Service provided "as is"; liability capped at fees paid in prior 12 months; excludes indirect/consequential loss.
-16. **Governing law** — England & Wales, exclusive jurisdiction.
-17. **Contact** — Church administrator first line; escalation to ChurchConnect team.
-18. **Signature block** — Provider + Customer.
+Areas reviewed:
 
-### Style
-- Cover page with ChurchConnect wordmark text, navy (#0C2340-ish) heading color, gold accent rule, Playfair-style serif for headings (Georgia fallback in DOCX), sans body.
-- Numbered sections, clear hierarchy, footer with page numbers and "ChurchConnect SLA — v1.0".
-- "Last updated" date auto-set to today.
+1. **Lawful basis & consent**
+   - `useConsentText`, `ConsentPrivacySection`, public registration forms, first-timer capture, WoFBI form, testimony, feedback.
+   - Consent granularity, withdrawal, records, age-of-consent (children's church).
+2. **Special-category data (Art. 9)**
+   - Religious affiliation, health/pastoral care notes, children's data, life-event requests.
+3. **Data minimisation & purpose limitation**
+   - `members` (44 cols), `first_timers`, `children`, `contacts`, pastoral care, call log, SMS log.
+4. **Transparency (Arts. 12–14)**
+   - Privacy policy link handling, notices on public forms, in-app disclosures.
+5. **Data subject rights (Arts. 15–22)**
+   - Access/export (`export-tenant-data` is tenant-wide, super-admin only — no per-member SAR flow).
+   - Rectification, erasure, restriction, portability, objection, automated decision-making.
+6. **Security of processing (Art. 32)**
+   - RLS coverage, tenant isolation, storage RLS, edge function auth, service-role usage, recent fixes (billing_cron, pickup, roster notify, training attendees).
+   - Encryption in transit/at rest, secrets handling, password policy (HIBP), MFA.
+7. **Data residency & international transfers (Arts. 44–49)**
+   - UK eu-west-2 claim vs. actual Supabase region; Stripe, Twilio, Resend/email provider, Lovable AI Gateway, push (FCM/APNs), Google OAuth — transfer mechanisms (SCCs/UK IDTA).
+8. **Retention & deletion**
+   - `purge-all-data` (30-day archive), `purged_data_archives`, audit_log retention, email/SMS logs, suppressed_emails, backups.
+9. **Processors & sub-processors (Art. 28)**
+   - Supabase, Lovable, Stripe, Twilio, email provider, push providers, DomiFort. DPA coverage + sub-processor list.
+10. **Records of processing (Art. 30)** — is there a ROPA?
+11. **DPIA (Art. 35)** — children's data + special category triggers.
+12. **Breach response (Arts. 33–34)** — 72-hour notification process, contacts.
+13. **Cookies / tracking (PECR)** — cookie banner, analytics, tracking pixels.
+14. **Children's data**
+    - `children`, `child_checkins`, `child_pickup_delegations`, `child_guardians`. Parental consent, minimum age.
+15. **Marketing comms**
+    - Announcements, birthday messages, bulk SMS/WhatsApp/email, unsubscribe (`handle-email-unsubscribe`, `email_unsubscribe_tokens`, `suppressed_emails`), SMS opt-out.
+16. **Audit logging** — completeness and tamper resistance.
+17. **Access control** — role model, tenant switching re-auth, super-admin powers.
+18. **Public endpoints** — public registration, WoFBI, testimony, presentation — anti-abuse and data exposure.
 
-### Technical approach
-- Generate DOCX with `docx` (Node) following the DOCX skill: US Letter / A4 page, proper style overrides for Heading1/2, dual widths on any tables, DXA units, smart quotes.
-- Generate PDF with ReportLab Platypus (matching layout/typography) — do not convert the DOCX, to avoid LibreOffice quirks and keep exact styling.
-- QA both: render DOCX → PDF images and inspect each page; render PDF → images and inspect each page; fix overflow/clipping/font issues before delivering.
-- Emit `<presentation-artifact>` tags for both files.
+## Method
 
-### Out of scope
-- No changes to app routes, pages, or code.
-- No `/sla` in-app page (user chose standalone document only).
-- Not a legally reviewed contract — document will include a plain-English disclaimer that it is a template and should be reviewed by the church's own legal counsel before signature.
+- Read relevant edge functions, hooks, and RLS policies (batched).
+- Query DB for: policies on sensitive tables (`members`, `children`, `pastoral_care`, `life_event_requests`, `child_*`, `call_log`, `sms_log`, `email_send_log`, `audit_log`), tables missing RLS, columns holding PII/special-category.
+- Run supabase linter + review latest security scan (do **not** fix findings in this pass).
+- Cross-check `supabase/config.toml` `verify_jwt=false` functions for data exposure.
+- Inventory third-party data flows from `supabase/functions/*` and secrets.
+
+## Deliverable
+
+A single Markdown report saved to `/mnt/documents/ChurchConnect_GDPR_Compliance_Report.md` **and** a matching PDF at `/mnt/documents/ChurchConnect_GDPR_Compliance_Report.pdf`, containing:
+
+- Executive summary + overall RAG rating
+- Per-area findings with: requirement, evidence (file/table/policy), status (Compliant / Partial / Gap / Not assessable), severity (High/Med/Low), recommendation
+- Prioritised remediation backlog (P1/P2/P3) with concrete actions and owners (app-owner vs. platform)
+- Appendices: data inventory, processor list w/ transfer basis, retention matrix, RLS coverage summary, open items requiring user input (DPO, controller identity, DPA copies, ROPA, DPIA, cookie inventory)
+
+## Out of scope
+
+- No code, RLS, or config changes.
+- Not legal advice — organisational/legal items (DPO appointment, ROPA authorship, DPIA sign-off, DPA execution) are flagged for the user's legal review.
+- Does not cover physical/organisational controls outside the app (staff training, contracts, physical security).
+
+## Assumptions (confirm or correct before I start)
+
+1. Controller = each tenant church; Lovable/app-owner = processor. Correct?
+2. Target jurisdictions: UK + EU only.
+3. Report format: Markdown + PDF (same style as prior SLA — navy/gold cover, Playfair headings). OK?
+4. I should include recommendations but **not** implement any fixes in this pass.
