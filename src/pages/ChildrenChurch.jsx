@@ -730,11 +730,12 @@ function PickupPanel({ tenantId, isLeader }) {
   });
 
   const { data: guardians = [] } = useQuery({
-    queryKey: ["cc-guardians", selected?.child_id],
-    enabled: !!selected?.child_id,
+    queryKey: ["cc-guardians", tenantId, selected?.child_id],
+    enabled: !!selected?.child_id && !!tenantId,
     queryFn: async () => {
       const { data } = await supabase.from("child_guardians")
         .select("*, members:member_id(id, first_name, last_name, phone)")
+        .eq("tenant_id", tenantId)
         .eq("child_id", selected.child_id).eq("can_pickup", true);
       return data || [];
     },
