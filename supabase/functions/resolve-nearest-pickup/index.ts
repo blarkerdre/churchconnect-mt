@@ -76,6 +76,20 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Verify caller belongs to the requested tenant (prevents cross-tenant lookups)
+    const { data: membership } = await supabase
+      .from("tenant_memberships")
+      .select("tenant_id")
+      .eq("user_id", ures.user.id)
+      .eq("tenant_id", tenant_id)
+      .maybeSingle();
+    if (!membership) {
+      return new Response(JSON.stringify({ error: "Forbidden" }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
 
     const passenger = await geocode(postcode);
     if (!passenger) {
