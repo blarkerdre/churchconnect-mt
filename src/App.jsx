@@ -51,6 +51,10 @@ const MyFamily = lazy(() => import("@/pages/MyFamily"));
 const Inventory = lazy(() => import("@/pages/Inventory"));
 const ChurchUnit = lazy(() => import("@/pages/ChurchUnit"));
 const AcceptInvite = lazy(() => import("@/pages/AcceptInvite"));
+const MyData = lazy(() => import("@/pages/MyData"));
+const Privacy = lazy(() => import("@/pages/Privacy"));
+import CookieConsentBanner from "@/components/gdpr/CookieConsentBanner";
+import MFASetupDialog from "@/components/gdpr/MFASetupDialog";
 
 function PageFallback() {
   return (
