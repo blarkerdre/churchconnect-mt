@@ -26,13 +26,17 @@ export default function SubjectManager({ course, onSelectSubject, selectedSubjec
   const { data: subjects = [], isLoading } = useQuery({
     queryKey: ["exam-subjects", course.id, tenantId],
     queryFn: async () => {
-      const { data, error } = await scopeQuery(
-        supabase.from("exam_subjects").select("*").eq("course_id", course.id).order("sort_order").order("created_at")
-      );
+      const { data, error } = await supabase
+        .from("exam_subjects")
+        .select("*")
+        .eq("course_id", course.id)
+        .eq("tenant_id", tenantId)
+        .order("sort_order")
+        .order("created_at");
       if (error) throw error;
       return data;
     },
-    enabled: !!course.id,
+    enabled: !!course.id && !!tenantId,
   });
 
   const saveMutation = useMutation({
