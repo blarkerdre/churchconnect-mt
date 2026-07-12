@@ -111,7 +111,7 @@ export default function QcReport() {
 
   const deleteMutation = useMutation({
     mutationFn: async (id) => {
-      const { error } = await supabase.from("lecturer_qc_checks").delete().eq("id", id);
+      const { error } = await supabase.from("lecturer_qc_checks").delete().eq("id", id).eq("tenant_id", tenantId);
       if (error) throw error;
     },
     onSuccess: () => {
