@@ -138,6 +138,34 @@ export function AuthProvider({ children }) {
     }
   }
 
+  // Refetch the member record scoped to a specific tenant. Called by TenantContext
+  // once the active tenant is known, so `myMember` reflects the current tenant even
+  // when the user has member rows in multiple tenants.
+  const refetchMemberForTenant = async (tenantId) => {
+    if (!user?.id || !tenantId) return;
+    try {
+      const { data } = await supabase
+        .from("members")
+        .select("*, wsf_centres!fk_members_wsf_centre(name)")
+        .eq("user_id", user.id)
+        .eq("tenant_id", tenantId)
+        .maybeSingle();
+      setMyMember(data);
+      if (data?.id) {
+        const { data: centres } = await supabase
+          .from("wsf_centres")
+          .select("name")
+          .eq("tenant_id", tenantId)
+          .eq("leader_id", data.id);
+        setLeaderCentres(centres?.map((c) => c.name) || []);
+      } else {
+        setLeaderCentres([]);
+      }
+    } catch (err) {
+      console.warn("refetchMemberForTenant failed:", err?.message || err);
+    }
+  };
+
   const signUp = async (email, password, fullName, tenantSlug) => {
     const { data, error } = await supabase.auth.signUp({
       email,
