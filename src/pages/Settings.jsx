@@ -1768,10 +1768,14 @@ export default function Settings() {
         )}
 
         {canOwnerOnly && (
-          <TabsContent value="consent">
+          <TabsContent value="consent" className="space-y-6">
             <ConsentPrivacySection />
+            <DataRequestsSection />
+            <RetentionSection />
           </TabsContent>
         )}
+
+
 
         {canOwnerOnly && (
           <TabsContent value="api">
