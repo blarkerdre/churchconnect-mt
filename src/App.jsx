@@ -275,6 +275,8 @@ function AppRoutes() {
         <Route path="/onboard" element={<Onboard />} />
         <Route path="/unsubscribe" element={<Unsubscribe />} />
         <Route path="/trust" element={<Trust />} />
+        <Route path="/privacy" element={<Privacy />} />
+        <Route path="/t/:tenantSlug/privacy" element={<Privacy />} />
         <Route path="/accept-invite" element={<AuthProvider><AcceptInvite /></AuthProvider>} />
 
         {/* Tenant-prefixed public routes */}
