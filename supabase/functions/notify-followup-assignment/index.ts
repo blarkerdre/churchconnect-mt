@@ -36,8 +36,11 @@ Deno.serve(async (req) => {
     const token = authHeader.replace("Bearer ", "");
     const isServiceRole = token === serviceKey;
 
+    const svcClient = createClient(supabaseUrl, serviceKey);
+    let callerUserId: string | null = null;
+
     if (!isServiceRole) {
-      // Validate as user JWT and check role
+      // Validate as user JWT
       const anonClient = createClient(supabaseUrl, supabaseAnonKey, {
         global: { headers: { Authorization: authHeader } },
       });
@@ -48,10 +51,47 @@ Deno.serve(async (req) => {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      const svcClient = createClient(supabaseUrl, serviceKey);
-      const { data: isAdmin } = await svcClient.rpc("is_admin", { _user_id: user.id });
-      const { data: isLeader } = await svcClient.rpc("has_role", { _user_id: user.id, _role: "unit_leader" });
-      if (!isAdmin && !isLeader) {
+      callerUserId = user.id;
+    }
+
+    const supabase = svcClient;
+
+    const { followup_id, tenant_id: bodyTenantId } = await req.json();
+
+    if (!followup_id) {
+      return new Response(JSON.stringify({ error: "followup_id required" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Load the real follow-up record — never trust client-supplied content
+    const { data: followup, error: fuErr } = await supabase
+      .from("followups")
+      .select("id, tenant_id, assigned_to, member_name, description, followup_type")
+      .eq("id", followup_id)
+      .maybeSingle();
+
+    if (fuErr || !followup) {
+      return new Response(JSON.stringify({ error: "Follow-up not found" }), {
+        status: 404,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const tenant_id = followup.tenant_id;
+    const assigned_to = followup.assigned_to;
+    const member_name = followup.member_name;
+    const description = followup.description;
+    const followup_type = followup.followup_type;
+
+    // Enforce tenant-scoped authorization for non-service-role callers
+    if (!isServiceRole && callerUserId) {
+      const [{ data: isAdmin }, { data: isTenantLeader }] = await Promise.all([
+        svcClient.rpc("is_admin", { _user_id: callerUserId, _tenant_id: tenant_id }),
+        svcClient.rpc("has_role", { _user_id: callerUserId, _role: "unit_leader", _tenant_id: tenant_id }),
+      ]);
+      if (!isAdmin && !isTenantLeader) {
         return new Response(JSON.stringify({ error: "Forbidden" }), {
           status: 403,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -59,15 +99,20 @@ Deno.serve(async (req) => {
       }
     }
 
-    const supabase = createClient(supabaseUrl, serviceKey);
-
-    const { assigned_to, member_name, description, followup_id, followup_type, tenant_id } = await req.json();
+    // Optional consistency check: reject mismatched body tenant_id
+    if (bodyTenantId && bodyTenantId !== tenant_id) {
+      return new Response(JSON.stringify({ error: "Tenant mismatch" }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     if (!assigned_to) {
       return new Response(JSON.stringify({ message: "No assignee" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
 
     // Fetch tenant settings for sender name
     let churchName = "Winners Chapel International Cardiff";
