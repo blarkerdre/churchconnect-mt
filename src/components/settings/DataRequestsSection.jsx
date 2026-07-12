@@ -36,7 +36,7 @@ export default function DataRequestsSection() {
         review_note: review_note || null,
         reviewed_by: user.id,
         reviewed_at: new Date().toISOString(),
-      }).eq("id", req.id);
+      }).eq("id", req.id).eq("tenant_id", tenantId);
       if (error) throw error;
     },
     onSuccess: () => {
