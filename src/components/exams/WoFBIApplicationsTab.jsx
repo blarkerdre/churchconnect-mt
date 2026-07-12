@@ -18,8 +18,15 @@ import { Loader2, Search, Download, Eye, CheckCircle2, XCircle, Trash2, BarChart
 
 const STATUS_VARIANT = {
   submitted: "secondary",
+  pending: "secondary",
   approved: "default",
+  active: "default",
   rejected: "destructive",
+};
+
+const SOURCE_LABEL = {
+  form: "Application form",
+  direct: "Direct enrolment",
 };
 
 export default function WoFBIApplicationsTab() {
@@ -30,6 +37,7 @@ export default function WoFBIApplicationsTab() {
   const [q, setQ] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [courseFilter, setCourseFilter] = useState("all");
+  const [sourceFilter, setSourceFilter] = useState("all");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [answerFilters, setAnswerFilters] = useState([]); // [{ id, fieldId, value }]
@@ -53,7 +61,7 @@ export default function WoFBIApplicationsTab() {
     },
   });
 
-  const { data: applications = [], isLoading } = useQuery({
+  const { data: appRows = [], isLoading: appsLoading } = useQuery({
     queryKey: ["wofbi-applications", tenantId],
     enabled: !!tenantId,
     queryFn: async () => {
@@ -68,9 +76,82 @@ export default function WoFBIApplicationsTab() {
     },
   });
 
+  const { data: regRows = [], isLoading: regsLoading } = useQuery({
+    queryKey: ["wofbi-direct-registrations", tenantId],
+    enabled: !!tenantId,
+    queryFn: async () => {
+      const { data, error } = await scopeQuery(
+        supabase
+          .from("course_registrations")
+          .select("id, member_id, course_id, status, registered_at, course:exam_titles(id, name), member:members(id, first_name, last_name, email, phone)")
+          .order("registered_at", { ascending: false })
+      );
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  const isLoading = appsLoading || regsLoading;
+
+  // Merge: application rows win over direct registrations for the same (member_id, course_id).
+  const applications = useMemo(() => {
+    const appKey = (a) => `${a.member_id || ""}|${a.course_id || ""}`;
+    const appKeys = new Set(appRows.filter((a) => a.member_id && a.course_id).map(appKey));
+    const formRows = appRows.map((a) => ({ ...a, source: "form" }));
+    const syntheticRows = regRows
+      .filter((r) => !(r.member_id && r.course_id && appKeys.has(`${r.member_id}|${r.course_id}`)))
+      .map((r) => ({
+        id: `reg:${r.id}`,
+        registration_id: r.id,
+        source: "direct",
+        tenant_id: tenantId,
+        member_id: r.member_id,
+        course_id: r.course_id,
+        first_name: r.member?.first_name || "",
+        last_name: r.member?.last_name || "",
+        email: r.member?.email || "",
+        phone: r.member?.phone || "",
+        course: r.course || null,
+        member: r.member || null,
+        status: r.status,
+        answers: {},
+        created_at: r.registered_at,
+      }));
+    return [...formRows, ...syntheticRows].sort(
+      (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    );
+  }, [appRows, regRows, tenantId]);
+
   const updateStatus = useMutation({
     mutationFn: async ({ id, status }) => {
       const app = applications.find((a) => a.id === id);
+      if (!app) throw new Error("Row not found");
+
+      // Direct registration path — update course_registrations status only.
+      if (app.source === "direct") {
+        const regStatus = status === "approved" ? "approved" : status === "rejected" ? "rejected" : status;
+        const patch = { status: regStatus };
+        if (regStatus === "approved") {
+          patch.approved_at = new Date().toISOString();
+          patch.approved_by = user?.id || null;
+        }
+        const { error } = await supabase
+          .from("course_registrations")
+          .update(patch)
+          .eq("id", app.registration_id)
+          .eq("tenant_id", tenantId);
+        if (error) throw error;
+        await logAudit(
+          "course_registration.status_changed",
+          "course_registrations",
+          app.registration_id,
+          { status: regStatus, via: "bible_school_applications_tab" },
+          tenantId
+        );
+        return { status, enrolled: false, alreadyEnrolled: false, unlinked: false, source: "direct" };
+      }
+
+      // Form application path (original behaviour).
       const { error } = await supabase
         .from("wofbi_applications")
         .update({ status, reviewed_by: user?.id, reviewed_at: new Date().toISOString() })
@@ -82,7 +163,7 @@ export default function WoFBIApplicationsTab() {
       let alreadyEnrolled = false;
       let unlinked = false;
 
-      if (status === "approved" && app) {
+      if (status === "approved") {
         if (app.member_id && app.course_id) {
           const { data: existing } = await supabase
             .from("course_registrations")
@@ -116,13 +197,16 @@ export default function WoFBIApplicationsTab() {
         );
       }
 
-      return { status, enrolled, alreadyEnrolled, unlinked };
+      return { status, enrolled, alreadyEnrolled, unlinked, source: "form" };
     },
     onSuccess: (res) => {
       qc.invalidateQueries({ queryKey: ["wofbi-applications", tenantId] });
+      qc.invalidateQueries({ queryKey: ["wofbi-direct-registrations", tenantId] });
+      qc.invalidateQueries({ queryKey: ["course-registrations"] });
       if (res.status === "approved") {
-        qc.invalidateQueries({ queryKey: ["course-registrations"] });
-        if (res.enrolled) {
+        if (res.source === "direct") {
+          toast({ title: "Registration approved" });
+        } else if (res.enrolled) {
           toast({ title: "Applicant approved and enrolled", description: "A course registration has been created." });
         } else if (res.alreadyEnrolled) {
           toast({ title: "Approved", description: "Applicant was already enrolled in this course." });
@@ -132,7 +216,7 @@ export default function WoFBIApplicationsTab() {
           toast({ title: "Application approved" });
         }
       } else {
-        toast({ title: "Application updated" });
+        toast({ title: res.source === "direct" ? "Registration updated" : "Application updated" });
       }
       setDetail(null);
     },
@@ -142,10 +226,12 @@ export default function WoFBIApplicationsTab() {
   const deleteApplications = useMutation({
     mutationFn: async (ids) => {
       const toDelete = applications.filter((a) => ids.includes(a.id));
-      // For linked applicants, cascade-delete all Bible School records for their course.
-      // For unlinked (public) applications, just delete the application row.
-      const linked = toDelete.filter((a) => a.member_id);
-      const unlinked = toDelete.filter((a) => !a.member_id);
+      const formRows = toDelete.filter((a) => a.source !== "direct");
+      const directRows = toDelete.filter((a) => a.source === "direct");
+
+      // Form applications: cascade for linked, plain delete for unlinked (original behaviour).
+      const linked = formRows.filter((a) => a.member_id);
+      const unlinked = formRows.filter((a) => !a.member_id);
 
       for (const a of linked) {
         const { error } = await supabase.rpc("cascade_delete_bible_school_records", {
@@ -164,14 +250,31 @@ export default function WoFBIApplicationsTab() {
         if (error) throw error;
       }
 
-      // audit each application deletion (cascade RPC already logs its own detailed entry)
+      // Direct registrations: cascade Bible School records via the same RPC.
+      for (const a of directRows) {
+        if (a.member_id) {
+          const { error } = await supabase.rpc("cascade_delete_bible_school_records", {
+            _member_id: a.member_id,
+            _course_id: a.course_id || null,
+          });
+          if (error) throw error;
+        } else {
+          const { error } = await supabase
+            .from("course_registrations")
+            .delete()
+            .eq("id", a.registration_id)
+            .eq("tenant_id", tenantId);
+          if (error) throw error;
+        }
+      }
+
       await Promise.all(
         toDelete.map((a) =>
           logAudit(
-            "wofbi_application.deleted",
-            "wofbi_applications",
-            a.id,
-            { name: `${a.first_name} ${a.last_name}`, email: a.email, course: a.course?.name || null, cascaded: !!a.member_id },
+            a.source === "direct" ? "course_registration.deleted" : "wofbi_application.deleted",
+            a.source === "direct" ? "course_registrations" : "wofbi_applications",
+            a.source === "direct" ? a.registration_id : a.id,
+            { name: `${a.first_name} ${a.last_name}`, email: a.email, course: a.course?.name || null, source: a.source, cascaded: !!a.member_id },
             tenantId
           )
         )
@@ -180,9 +283,10 @@ export default function WoFBIApplicationsTab() {
     },
     onSuccess: (count) => {
       qc.invalidateQueries({ queryKey: ["wofbi-applications", tenantId] });
+      qc.invalidateQueries({ queryKey: ["wofbi-direct-registrations", tenantId] });
       qc.invalidateQueries({ queryKey: ["course-registrations"] });
       toast({
-        title: count > 1 ? `Deleted ${count} applications` : "Application deleted",
+        title: count > 1 ? `Deleted ${count} entries` : "Entry deleted",
         description: "All linked Bible School records (registration, exam attempts, results, certificate, ratings) were also removed.",
       });
       setSelectedIds(new Set());
@@ -207,13 +311,21 @@ export default function WoFBIApplicationsTab() {
 
   const getFieldMeta = (fieldId) => filterableFields.find((f) => f.id === fieldId);
 
+  const statusMatches = (rowStatus, filter) => {
+    if (filter === "all") return true;
+    if (filter === "approved") return rowStatus === "approved" || rowStatus === "active";
+    if (filter === "submitted") return rowStatus === "submitted" || rowStatus === "pending";
+    return rowStatus === filter;
+  };
+
   const filtered = useMemo(() => {
     const s = q.trim().toLowerCase();
     const from = dateFrom ? new Date(dateFrom).getTime() : null;
-    const to = dateTo ? new Date(dateTo).getTime() + 86400000 : null; // include end date
+    const to = dateTo ? new Date(dateTo).getTime() + 86400000 : null;
     return applications.filter((a) => {
-      if (statusFilter !== "all" && a.status !== statusFilter) return false;
+      if (!statusMatches(a.status, statusFilter)) return false;
       if (courseFilter !== "all" && a.course?.id !== courseFilter) return false;
+      if (sourceFilter !== "all" && a.source !== sourceFilter) return false;
       if (from || to) {
         const t = new Date(a.created_at).getTime();
         if (from && t < from) return false;
@@ -226,6 +338,7 @@ export default function WoFBIApplicationsTab() {
       for (const af of answerFilters) {
         const field = getFieldMeta(af.fieldId);
         if (!field) continue;
+        if (a.source === "direct") return false; // direct rows have no answers
         const v = a.answers?.[af.fieldId];
         if (field.type === "checkbox") {
           const want = af.value === "true";
@@ -239,14 +352,22 @@ export default function WoFBIApplicationsTab() {
       }
       return true;
     });
-  }, [applications, q, statusFilter, courseFilter, dateFrom, dateTo, answerFilters, filterableFields]);
+  }, [applications, q, statusFilter, courseFilter, sourceFilter, dateFrom, dateTo, answerFilters, filterableFields]);
 
-  const hasFilters = statusFilter !== "all" || courseFilter !== "all" || dateFrom || dateTo || q || answerFilters.length > 0;
+  const hasFilters =
+    statusFilter !== "all" ||
+    courseFilter !== "all" ||
+    sourceFilter !== "all" ||
+    dateFrom ||
+    dateTo ||
+    q ||
+    answerFilters.length > 0;
 
   const clearFilters = () => {
     setQ("");
     setStatusFilter("all");
     setCourseFilter("all");
+    setSourceFilter("all");
     setDateFrom("");
     setDateTo("");
     setAnswerFilters([]);
@@ -287,8 +408,6 @@ export default function WoFBIApplicationsTab() {
     return value;
   };
 
-
-
   const toggleSelect = (id) => {
     setSelectedIds((prev) => {
       const next = new Set(prev);
@@ -310,16 +429,21 @@ export default function WoFBIApplicationsTab() {
     });
   };
 
+  const normStatus = (s) => (s === "active" ? "approved" : s === "pending" ? "submitted" : s);
+
   const report = useMemo(() => {
     const total = filtered.length;
     const byStatus = { submitted: 0, approved: 0, rejected: 0 };
+    const bySource = { form: 0, direct: 0 };
     const byCourse = new Map();
     const now = new Date();
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
     const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1).getTime();
     let thisMonth = 0, lastMonth = 0;
     filtered.forEach((a) => {
-      byStatus[a.status] = (byStatus[a.status] || 0) + 1;
+      const st = normStatus(a.status);
+      byStatus[st] = (byStatus[st] || 0) + 1;
+      bySource[a.source] = (bySource[a.source] || 0) + 1;
       const key = a.course?.name || "—";
       byCourse.set(key, (byCourse.get(key) || 0) + 1);
       const t = new Date(a.created_at).getTime();
@@ -329,13 +453,14 @@ export default function WoFBIApplicationsTab() {
     const topCourses = Array.from(byCourse.entries())
       .sort((a, b) => b[1] - a[1])
       .slice(0, 5);
-    return { total, byStatus, topCourses, thisMonth, lastMonth };
+    return { total, byStatus, bySource, topCourses, thisMonth, lastMonth };
   }, [filtered]);
 
   const exportCsv = () => {
     const fields = form?.fields || [];
     const headers = [
       "Submitted",
+      "Source",
       "First name",
       "Last name",
       "Email",
@@ -346,6 +471,7 @@ export default function WoFBIApplicationsTab() {
     ];
     const rows = filtered.map((a) => [
       new Date(a.created_at).toISOString(),
+      SOURCE_LABEL[a.source] || a.source,
       a.first_name,
       a.last_name,
       a.email,
@@ -370,6 +496,8 @@ export default function WoFBIApplicationsTab() {
       ["Submitted", report.byStatus.submitted || 0],
       ["Approved", report.byStatus.approved || 0],
       ["Rejected", report.byStatus.rejected || 0],
+      ["Application form", report.bySource.form || 0],
+      ["Direct enrolment", report.bySource.direct || 0],
       ["This month", report.thisMonth],
       ["Last month", report.lastMonth],
       [],
@@ -383,6 +511,9 @@ export default function WoFBIApplicationsTab() {
   const answerFields = (form?.fields || []).filter((f) => f.type !== "section_heading");
 
   const pct = (n) => (report.total ? Math.round((n / report.total) * 100) : 0);
+
+  const isApprovedStatus = (s) => s === "approved" || s === "active";
+  const isRejectedStatus = (s) => s === "rejected";
 
   return (
     <Card>
@@ -411,6 +542,8 @@ export default function WoFBIApplicationsTab() {
               <Stat label="Submitted" value={`${report.byStatus.submitted || 0} (${pct(report.byStatus.submitted || 0)}%)`} />
               <Stat label="Approved" value={`${report.byStatus.approved || 0} (${pct(report.byStatus.approved || 0)}%)`} />
               <Stat label="Rejected" value={`${report.byStatus.rejected || 0} (${pct(report.byStatus.rejected || 0)}%)`} />
+              <Stat label="Application form" value={report.bySource.form || 0} />
+              <Stat label="Direct enrolment" value={report.bySource.direct || 0} />
               <Stat label="This month" value={report.thisMonth} />
               <Stat label="Last month" value={report.lastMonth} />
             </div>
@@ -435,12 +568,12 @@ export default function WoFBIApplicationsTab() {
             <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search name, email, course, status" className="pl-8" />
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger className="h-9"><SelectValue placeholder="Status" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All statuses</SelectItem>
-                <SelectItem value="submitted">Submitted</SelectItem>
+                <SelectItem value="submitted">Submitted / Pending</SelectItem>
                 <SelectItem value="approved">Approved</SelectItem>
                 <SelectItem value="rejected">Rejected</SelectItem>
               </SelectContent>
@@ -454,13 +587,21 @@ export default function WoFBIApplicationsTab() {
                 ))}
               </SelectContent>
             </Select>
+            <Select value={sourceFilter} onValueChange={setSourceFilter}>
+              <SelectTrigger className="h-9"><SelectValue placeholder="Source" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All sources</SelectItem>
+                <SelectItem value="form">Application form</SelectItem>
+                <SelectItem value="direct">Direct enrolment</SelectItem>
+              </SelectContent>
+            </Select>
             <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="h-9" aria-label="From date" />
             <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="h-9" aria-label="To date" />
           </div>
 
           {filterableFields.length > 0 && (
             <div className="rounded-md border p-2 space-y-2 bg-muted/20">
-              <div className="text-xs font-semibold text-muted-foreground">Filter by form answers</div>
+              <div className="text-xs font-semibold text-muted-foreground">Filter by form answers (application-form entries only)</div>
               {answerFilters.length > 0 && (
                 <div className="flex flex-wrap gap-1.5">
                   {answerFilters.map((af) => {
@@ -546,7 +687,7 @@ export default function WoFBIApplicationsTab() {
                 size="sm"
                 variant="destructive"
                 className="gap-1.5"
-                onClick={() => setConfirmDelete({ ids: Array.from(selectedIds), label: `${selectedIds.size} applications` })}
+                onClick={() => setConfirmDelete({ ids: Array.from(selectedIds), label: `${selectedIds.size} entries` })}
               >
                 <Trash2 className="h-3.5 w-3.5" /> Delete selected
               </Button>
@@ -574,6 +715,7 @@ export default function WoFBIApplicationsTab() {
                   <TableHead>Applicant</TableHead>
                   <TableHead>Email</TableHead>
                   <TableHead>Course</TableHead>
+                  <TableHead>Source</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
@@ -594,33 +736,38 @@ export default function WoFBIApplicationsTab() {
                     <TableCell className="font-medium">{a.first_name} {a.last_name}</TableCell>
                     <TableCell className="text-xs">{a.email}</TableCell>
                     <TableCell className="text-xs">{a.course?.name || "—"}</TableCell>
-                    <TableCell><Badge variant={STATUS_VARIANT[a.status]} className="capitalize">{a.status}</Badge></TableCell>
+                    <TableCell>
+                      <Badge variant={a.source === "direct" ? "outline" : "secondary"} className="text-[10px]">
+                        {SOURCE_LABEL[a.source]}
+                      </Badge>
+                    </TableCell>
+                    <TableCell><Badge variant={STATUS_VARIANT[a.status] || "secondary"} className="capitalize">{a.status}</Badge></TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-1">
                         <Button size="sm" variant="outline" onClick={() => setDetail(a)} className="gap-1.5">
                           <Eye className="h-3.5 w-3.5" /> View
                         </Button>
-                        {a.status !== "approved" && (
+                        {!isApprovedStatus(a.status) && (
                           <Button
                             size="sm"
                             variant="ghost"
                             className="text-primary hover:text-primary"
                             onClick={() => updateStatus.mutate({ id: a.id, status: "approved" })}
                             disabled={updateStatus.isPending}
-                            aria-label="Approve application"
+                            aria-label="Approve"
                             title="Approve"
                           >
                             <CheckCircle2 className="h-3.5 w-3.5" />
                           </Button>
                         )}
-                        {a.status !== "rejected" && (
+                        {!isRejectedStatus(a.status) && (
                           <Button
                             size="sm"
                             variant="ghost"
                             className="text-destructive hover:text-destructive"
                             onClick={() => updateStatus.mutate({ id: a.id, status: "rejected" })}
                             disabled={updateStatus.isPending}
-                            aria-label="Reject application"
+                            aria-label="Reject"
                             title="Reject"
                           >
                             <XCircle className="h-3.5 w-3.5" />
@@ -632,7 +779,7 @@ export default function WoFBIApplicationsTab() {
                             variant="ghost"
                             className="text-destructive hover:text-destructive"
                             onClick={() => setConfirmDelete({ ids: [a.id], label: `${a.first_name} ${a.last_name}` })}
-                            aria-label="Delete application"
+                            aria-label="Delete"
                           >
                             <Trash2 className="h-3.5 w-3.5" />
                           </Button>
@@ -650,48 +797,63 @@ export default function WoFBIApplicationsTab() {
       <Dialog open={!!detail} onOpenChange={(v) => !v && setDetail(null)}>
         <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Application — {detail?.first_name} {detail?.last_name}</DialogTitle>
+            <DialogTitle>
+              {detail?.source === "direct" ? "Direct enrolment" : "Application"} — {detail?.first_name} {detail?.last_name}
+            </DialogTitle>
             <DialogDescription>
-              Submitted {detail && new Date(detail.created_at).toLocaleString()} · {detail?.email} · Course: {detail?.course?.name || "—"}
+              {detail?.source === "direct" ? "Registered" : "Submitted"} {detail && new Date(detail.created_at).toLocaleString()} · {detail?.email || "—"} · Course: {detail?.course?.name || "—"}
             </DialogDescription>
           </DialogHeader>
           {detail && (
             <div className="space-y-3">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-sm">Status:</span>
-                <Badge variant={STATUS_VARIANT[detail.status]} className="capitalize">{detail.status}</Badge>
+                <Badge variant={STATUS_VARIANT[detail.status] || "secondary"} className="capitalize">{detail.status}</Badge>
+                <Badge variant={detail.source === "direct" ? "outline" : "secondary"} className="text-[10px]">
+                  {SOURCE_LABEL[detail.source]}
+                </Badge>
               </div>
-              <div className="border rounded-md divide-y">
-                {(form?.fields || []).map((f) => {
-                  if (f.type === "section_heading") {
+              {detail.source === "direct" ? (
+                <div className="rounded-md border p-3 text-sm space-y-1 bg-muted/20">
+                  <p className="text-muted-foreground">
+                    This entry was created directly as a course registration (not via the Bible School application form),
+                    so no application answers were captured.
+                  </p>
+                  {detail.phone && <p><span className="text-muted-foreground">Phone:</span> {detail.phone}</p>}
+                </div>
+              ) : (
+                <div className="border rounded-md divide-y">
+                  {(form?.fields || []).map((f) => {
+                    if (f.type === "section_heading") {
+                      return (
+                        <div key={f.id} className="p-2 bg-muted/50 text-xs font-semibold uppercase tracking-wide text-primary">
+                          {f.label}
+                        </div>
+                      );
+                    }
+                    const v = detail.answers?.[f.id];
+                    const display = v === true ? "Yes" : v === false ? "No" : (v ?? "—");
                     return (
-                      <div key={f.id} className="p-2 bg-muted/50 text-xs font-semibold uppercase tracking-wide text-primary">
-                        {f.label}
+                      <div key={f.id} className="p-2 grid grid-cols-3 gap-2 text-sm">
+                        <div className="text-muted-foreground col-span-1">{f.label}</div>
+                        <div className="col-span-2 whitespace-pre-wrap break-words">{display || "—"}</div>
                       </div>
                     );
-                  }
-                  const v = detail.answers?.[f.id];
-                  const display = v === true ? "Yes" : v === false ? "No" : (v ?? "—");
-                  return (
-                    <div key={f.id} className="p-2 grid grid-cols-3 gap-2 text-sm">
-                      <div className="text-muted-foreground col-span-1">{f.label}</div>
-                      <div className="col-span-2 whitespace-pre-wrap break-words">{display || "—"}</div>
-                    </div>
-                  );
-                })}
-                {answerFields.length === 0 && (
-                  <div className="p-2 text-sm text-muted-foreground">No detailed answers captured.</div>
-                )}
-              </div>
+                  })}
+                  {answerFields.length === 0 && (
+                    <div className="p-2 text-sm text-muted-foreground">No detailed answers captured.</div>
+                  )}
+                </div>
+              )}
             </div>
           )}
           <DialogFooter className="gap-2 flex-wrap">
-            {detail?.status !== "approved" && (
+            {detail && !isApprovedStatus(detail.status) && (
               <Button className="gap-1.5" onClick={() => updateStatus.mutate({ id: detail.id, status: "approved" })}>
                 <CheckCircle2 className="h-4 w-4" /> Approve
               </Button>
             )}
-            {detail?.status !== "rejected" && (
+            {detail && !isRejectedStatus(detail.status) && (
               <Button variant="destructive" className="gap-1.5" onClick={() => updateStatus.mutate({ id: detail.id, status: "rejected" })}>
                 <XCircle className="h-4 w-4" /> Reject
               </Button>
@@ -713,7 +875,7 @@ export default function WoFBIApplicationsTab() {
       <AlertDialog open={!!confirmDelete} onOpenChange={(v) => !v && setConfirmDelete(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete application{confirmDelete?.ids.length > 1 ? "s" : ""}?</AlertDialogTitle>
+            <AlertDialogTitle>Delete entr{confirmDelete?.ids.length > 1 ? "ies" : "y"}?</AlertDialogTitle>
             <AlertDialogDescription>
               This will permanently delete <strong>{confirmDelete?.label}</strong> and all linked Bible School records (course registration, exam attempts, results, certificate and lecturer ratings). This action cannot be undone.
             </AlertDialogDescription>
