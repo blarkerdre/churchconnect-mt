@@ -182,6 +182,7 @@ function AppPages() {
       <Routes>
         <Route path="/" element={<Dashboard />} />
         <Route path="/my-profile" element={<MyProfile />} />
+        <Route path="/my-data" element={<ProtectedRoute><MyData /></ProtectedRoute>} />
         <Route path="/members" element={<FeatureGate path="/members"><Members /></FeatureGate>} />
         <Route path="/events" element={<FeatureGate path="/events"><Events /></FeatureGate>} />
         <Route path="/attendance" element={<Navigate to="/church-unit?tab=attendance" replace />} />
