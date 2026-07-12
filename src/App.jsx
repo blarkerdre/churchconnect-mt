@@ -295,11 +295,23 @@ function AppRoutes() {
   );
 }
 
+function AuthedShell() {
+  return (
+    <AuthProvider>
+      <MFASetupDialog />
+    </AuthProvider>
+  );
+}
+
 function App() {
   return (
     <QueryClientProvider client={queryClientInstance}>
       <Router>
         <AppRoutes />
+        <AuthProvider>
+          <MFASetupDialog />
+        </AuthProvider>
+        <CookieConsentBanner />
       </Router>
       <Toaster />
       <SonnerToaster />
