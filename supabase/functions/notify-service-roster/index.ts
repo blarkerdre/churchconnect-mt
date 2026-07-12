@@ -39,6 +39,7 @@ Deno.serve(async (req) => {
       });
     }
 
+    let callerUserId: string | null = null;
     if (!isServiceRole) {
       const anon = createClient(supabaseUrl, anonKey, {
         global: { headers: { Authorization: authHeader } },
@@ -49,6 +50,7 @@ Deno.serve(async (req) => {
           status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
+      callerUserId = user.id;
     }
 
     const { data: group, error: gErr } = await supabase
@@ -58,11 +60,30 @@ Deno.serve(async (req) => {
         status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+    // Always enforce roster's real tenant vs caller-supplied tenant_id
     if (tenant_id && group.tenant_id !== tenant_id) {
       return new Response(JSON.stringify({ error: "Tenant mismatch" }), {
         status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    // Authorization: caller must be admin/owner of the tenant, or the leading unit_leader
+    if (!isServiceRole && callerUserId) {
+      const [{ data: isAdmin }, { data: leadsUnit }] = await Promise.all([
+        supabase.rpc("is_admin", { _user_id: callerUserId, _tenant_id: group.tenant_id }),
+        supabase.rpc("user_leads_unit", {
+          _user_id: callerUserId,
+          _unit_name: group.unit_name,
+          _tenant_id: group.tenant_id,
+        }),
+      ]);
+      if (!isAdmin && !leadsUnit) {
+        return new Response(JSON.stringify({ error: "Forbidden" }), {
+          status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
+
 
     // Tasks in this roster
     const { data: tasks = [] } = await supabase
