@@ -199,7 +199,7 @@ export default function WoFBIApplicationsTab() {
 
       return { status, enrolled, alreadyEnrolled, unlinked, source: "form" };
     },
-    onSuccess: (res) => {
+    onSuccess: (res, variables) => {
       qc.invalidateQueries({ queryKey: ["wofbi-applications", tenantId] });
       qc.invalidateQueries({ queryKey: ["wofbi-direct-registrations", tenantId] });
       qc.invalidateQueries({ queryKey: ["course-registrations"] });
@@ -215,12 +215,37 @@ export default function WoFBIApplicationsTab() {
         } else {
           toast({ title: "Application approved" });
         }
+        // For form applications, silently provision an account + email a magic link so the applicant can write the exam without signing up.
+        if (res.source === "form" && variables?.id) {
+          provisionExamAccount.mutate({ id: variables.id, silent: true });
+        }
       } else {
         toast({ title: res.source === "direct" ? "Registration updated" : "Application updated" });
       }
       setDetail(null);
     },
     onError: (e) => toast({ title: "Update failed", description: e.message, variant: "destructive" }),
+  });
+
+  const provisionExamAccount = useMutation({
+    mutationFn: async ({ id }) => {
+      const { data, error } = await supabase.functions.invoke("provision-exam-account", {
+        body: { application_id: id },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      return data;
+    },
+    onSuccess: (_data, vars) => {
+      if (!vars?.silent) toast({ title: "Exam link sent", description: "The applicant has been emailed a one-click sign-in link." });
+    },
+    onError: (e, vars) => {
+      toast({
+        title: vars?.silent ? "Approved — but exam link failed" : "Failed to send exam link",
+        description: e.message,
+        variant: "destructive",
+      });
+    },
   });
 
   const deleteApplications = useMutation({
