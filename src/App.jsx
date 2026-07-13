@@ -51,6 +51,7 @@ const MyFamily = lazy(() => import("@/pages/MyFamily"));
 const Inventory = lazy(() => import("@/pages/Inventory"));
 const ChurchUnit = lazy(() => import("@/pages/ChurchUnit"));
 const AcceptInvite = lazy(() => import("@/pages/AcceptInvite"));
+const AuthExamCallback = lazy(() => import("@/pages/AuthExamCallback"));
 const MyData = lazy(() => import("@/pages/MyData"));
 const Privacy = lazy(() => import("@/pages/Privacy"));
 import CookieConsentBanner from "@/components/gdpr/CookieConsentBanner";
@@ -278,6 +279,7 @@ function AppRoutes() {
         <Route path="/privacy" element={<Privacy />} />
         <Route path="/t/:tenantSlug/privacy" element={<Privacy />} />
         <Route path="/accept-invite" element={<AuthProvider><AcceptInvite /></AuthProvider>} />
+        <Route path="/auth/exam-callback" element={<AuthProvider><AuthExamCallback /></AuthProvider>} />
 
         {/* Tenant-prefixed public routes */}
         <Route path="/t/:tenantSlug/auth" element={<AuthProvider><Auth /></AuthProvider>} />
