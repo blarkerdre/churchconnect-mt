@@ -45,6 +45,7 @@ Deno.serve(async (req) => {
       });
     }
     const token = authHeader.replace("Bearer ", "");
+    let callerUserId: string | null = null;
     if (token !== serviceKey) {
       // Verify it's a valid user JWT
       const authClient = createClient(supabaseUrl, anonKey, {
@@ -58,11 +59,58 @@ Deno.serve(async (req) => {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
+      callerUserId = data.user.id;
     }
 
     const supabase = createClient(supabaseUrl, serviceKey);
     const body = (await req.json()) as ReqBody;
-    const { request_id, tenant_id, member_id, request_type, unit_name, wsf_centre_id } = body;
+    let { request_id, tenant_id, member_id, request_type, unit_name, wsf_centre_id } = body;
+
+    // If a request_id was provided, always derive trusted fields from the DB row
+    // rather than trusting client-supplied tenant_id/member_id/unit_name/etc.
+    if (request_id) {
+      const { data: reqRow, error: reqErr } = await supabase
+        .from("unit_join_requests")
+        .select("id, tenant_id, member_id, request_type, unit_name, wsf_centre_id, requested_by")
+        .eq("id", request_id)
+        .maybeSingle();
+      if (reqErr || !reqRow) {
+        return new Response(JSON.stringify({ error: "Join request not found" }), {
+          status: 404,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      tenant_id = reqRow.tenant_id;
+      member_id = reqRow.member_id;
+      request_type = reqRow.request_type as "unit" | "home_cell";
+      unit_name = reqRow.unit_name;
+      wsf_centre_id = reqRow.wsf_centre_id;
+    }
+
+    // Authorize: caller (if user JWT) must belong to the target tenant, or be
+    // the member the request is about, or the person who filed the request.
+    if (callerUserId) {
+      const { data: belongs } = await supabase.rpc("user_belongs_to_tenant", {
+        _user_id: callerUserId,
+        _tenant_id: tenant_id,
+      });
+      let allowed = belongs === true;
+      if (!allowed && member_id) {
+        const { data: m } = await supabase
+          .from("members")
+          .select("user_id")
+          .eq("id", member_id)
+          .eq("tenant_id", tenant_id)
+          .maybeSingle();
+        if (m?.user_id === callerUserId) allowed = true;
+      }
+      if (!allowed) {
+        return new Response(JSON.stringify({ error: "Forbidden" }), {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
 
     if (!tenant_id || !member_id || !request_type) {
       return new Response(JSON.stringify({ error: "Missing fields" }), {
