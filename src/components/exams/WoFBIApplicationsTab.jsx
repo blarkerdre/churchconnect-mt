@@ -755,13 +755,14 @@ export default function WoFBIApplicationsTab() {
                             <XCircle className="h-3.5 w-3.5" />
                           </Button>
                         )}
-                        {canDelete && (
+                        {canDelete && a.source !== "direct" && (
                           <Button
                             size="sm"
                             variant="ghost"
                             className="text-destructive hover:text-destructive"
                             onClick={() => setConfirmDelete({ ids: [a.id], label: `${a.first_name} ${a.last_name}` })}
-                            aria-label="Delete"
+                            aria-label="Delete application"
+                            title="Delete application (registration is kept)"
                           >
                             <Trash2 className="h-3.5 w-3.5" />
                           </Button>
@@ -859,7 +860,7 @@ export default function WoFBIApplicationsTab() {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete entr{confirmDelete?.ids.length > 1 ? "ies" : "y"}?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete <strong>{confirmDelete?.label}</strong> and all linked Bible School records (course registration, exam attempts, results, certificate and lecturer ratings). This action cannot be undone.
+              This will permanently delete the application for <strong>{confirmDelete?.label}</strong>. Their course registration, exam attempts, results and certificate (if any) will be kept — delete those from the Registrations tab. This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
