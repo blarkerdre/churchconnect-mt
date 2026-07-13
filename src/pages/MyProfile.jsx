@@ -32,7 +32,7 @@ import { Info as InfoIcon } from "lucide-react";
 import ModuleTour from "@/components/tour/ModuleTour";
 
 const GENDERS = ["Male", "Female"];
-const MEMBERSHIP_STATUSES = ["Active", "First Timer", "New Convert", "Visitor"];
+const MEMBERSHIP_STATUSES = ["Active", "First Timer", "New Convert", "Visitor", "Bible School"];
 const HIDE_SPIRITUAL_STATUSES = ["First Timer", "New Convert", "Visitor"];
 const SHOW_BAPTISM_STATUSES = ["First Timer", "New Convert"];
 
