@@ -268,7 +268,7 @@ export default function LecturerFeedbackReport() {
           <div>
             <Label className="text-xs">Course</Label>
             <Select value={filters.courseId} onValueChange={(v) => setFilters((f) => ({ ...f, courseId: v, subjectId: "all" }))}>
-              <SelectTrigger className="h-8 text-xs &gt;span:truncate"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="h-8 text-xs [&>span]:truncate"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All courses</SelectItem>
                 {courses.map(([id, name]) => <SelectItem key={id} value={id}>{name}</SelectItem>)}
@@ -278,7 +278,7 @@ export default function LecturerFeedbackReport() {
           <div>
             <Label className="text-xs">Subject</Label>
             <Select value={filters.subjectId} onValueChange={(v) => setFilters((f) => ({ ...f, subjectId: v }))}>
-              <SelectTrigger className="h-8 text-xs &gt;span:truncate"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="h-8 text-xs [&>span]:truncate"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All subjects</SelectItem>
                 {subjects.map(([id, name]) => <SelectItem key={id} value={id}>{name}</SelectItem>)}
@@ -288,7 +288,7 @@ export default function LecturerFeedbackReport() {
           <div>
             <Label className="text-xs">Lecturer</Label>
             <Select value={filters.lecturerId} onValueChange={(v) => setFilters((f) => ({ ...f, lecturerId: v }))}>
-              <SelectTrigger className="h-8 text-xs &gt;span:truncate"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="h-8 text-xs [&>span]:truncate"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All lecturers</SelectItem>
                 {lecturers.map(([id, name]) => <SelectItem key={id} value={id}>{name}</SelectItem>)}
@@ -298,7 +298,7 @@ export default function LecturerFeedbackReport() {
           <div>
             <Label className="text-xs">Level</Label>
             <Select value={filters.level} onValueChange={(v) => setFilters((f) => ({ ...f, level: v }))}>
-              <SelectTrigger className="h-8 text-xs &gt;span:truncate"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="h-8 text-xs [&>span]:truncate"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All levels</SelectItem>
                 {levels.map((l) => <SelectItem key={l} value={l}>{l}</SelectItem>)}
@@ -316,7 +316,7 @@ export default function LecturerFeedbackReport() {
           <div>
             <Label className="text-xs">Have again</Label>
             <Select value={filters.haveAgain} onValueChange={(v) => setFilters((f) => ({ ...f, haveAgain: v }))}>
-              <SelectTrigger className="h-8 text-xs &gt;span:truncate"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="h-8 text-xs [&>span]:truncate"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Any</SelectItem>
                 {Object.entries(OPTION_LABELS.have_again).map(([k, l]) => <SelectItem key={k} value={k}>{l}</SelectItem>)}
