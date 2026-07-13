@@ -1,19 +1,17 @@
-## Goal
-Add new modules to the Tenant Admin → Modules toggle list so tenants can enable/disable them alongside existing ones.
+## Plan: Add Phone Call & WhatsApp modules + auto-sync feature list
 
-## Change
-Edit `src/lib/feature-modules.js` to append five new entries to `FEATURE_MODULES`:
+### 1. Add missing modules to `src/lib/feature-modules.js`
+Append two entries so they show up in Tenant Admin → Modules:
+- `phone-call` — "Phone Call" — Outbound phone calls via configured voice provider (Twilio/etc.)
+- `whatsapp` — "WhatsApp" — WhatsApp messaging via configured provider
 
-- `children-church` — Children Church — Secure child drop-off, pickup PIN, guardians & delegations
-- `unit-tasks` — Unit Tasks — Task groups, assignments, and comments for units
-- `inventory` — Inventory — Items, categories, and inspection checklists
-- `reports` — Reports Hub — Cross-module reports for the Reports Officer role
-- `certificates` — Certificates — Issue and approve training/course certificates
+### 2. Auto-update behavior
+`TenantFeaturesSection.jsx` already renders by mapping over `FEATURE_MODULES`. So any new entry added to `src/lib/feature-modules.js` automatically appears in Tenant Admin with no further code changes.
 
-## Notes
-- Keys match the existing route paths so the current `disabled_features` guard (`/${key}`) in `TenantFeaturesSection.jsx` and sidebar filtering keep working with no other changes.
-- No schema, RLS, or UI-component changes. Purely a data-list update.
-- Existing tenants keep their current disabled_features array; new modules default to enabled.
+To make this contract explicit and prevent drift, add a short header comment to `feature-modules.js`:
+> "Single source of truth for tenant-toggleable modules. Add a new entry here and it will automatically appear in Tenant Admin → Modules and be honored by sidebar/route filtering via `disabled_features`."
 
-## Verification
-Open Tenant Admin → Settings → Modules and confirm the five new rows appear with working toggles (Super Admin view — read-only badge remains for non-super admins, per current design).
+### Notes
+- Purely a data-list update — no schema, RLS, or UI logic changes.
+- Existing `disabled_features` guard continues to work; new modules default to enabled for all tenants.
+- Sub-feature toggles for SMS/WhatsApp already exist in `useSubFeature.js` (`communications.whatsapp`) and remain untouched.
