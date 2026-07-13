@@ -218,6 +218,7 @@ Deno.serve(async (req) => {
             courseName,
             magicLink,
             tenantName,
+            courses,
           },
         },
       });
