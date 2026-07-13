@@ -861,6 +861,10 @@ export type Database = {
         Row: {
           age_group: string | null
           allergies: string | null
+          consent_medical_emergency: boolean
+          consent_notes: string | null
+          consent_pastoral_contact: boolean
+          consent_photos: boolean
           created_at: string
           date_of_birth: string | null
           first_name: string
@@ -873,6 +877,9 @@ export type Database = {
           parent_consent_at: string | null
           parent_consent_given_by: string | null
           parent_consent_ip_hash: string | null
+          parental_consent_at: string | null
+          parental_consent_by: string | null
+          parental_consent_given: boolean
           photo_url: string | null
           primary_guardian_member_id: string
           tenant_id: string
@@ -881,6 +888,10 @@ export type Database = {
         Insert: {
           age_group?: string | null
           allergies?: string | null
+          consent_medical_emergency?: boolean
+          consent_notes?: string | null
+          consent_pastoral_contact?: boolean
+          consent_photos?: boolean
           created_at?: string
           date_of_birth?: string | null
           first_name: string
@@ -893,6 +904,9 @@ export type Database = {
           parent_consent_at?: string | null
           parent_consent_given_by?: string | null
           parent_consent_ip_hash?: string | null
+          parental_consent_at?: string | null
+          parental_consent_by?: string | null
+          parental_consent_given?: boolean
           photo_url?: string | null
           primary_guardian_member_id: string
           tenant_id: string
@@ -901,6 +915,10 @@ export type Database = {
         Update: {
           age_group?: string | null
           allergies?: string | null
+          consent_medical_emergency?: boolean
+          consent_notes?: string | null
+          consent_pastoral_contact?: boolean
+          consent_photos?: boolean
           created_at?: string
           date_of_birth?: string | null
           first_name?: string
@@ -913,6 +931,9 @@ export type Database = {
           parent_consent_at?: string | null
           parent_consent_given_by?: string | null
           parent_consent_ip_hash?: string | null
+          parental_consent_at?: string | null
+          parental_consent_by?: string | null
+          parental_consent_given?: boolean
           photo_url?: string | null
           primary_guardian_member_id?: string
           tenant_id?: string
@@ -922,6 +943,13 @@ export type Database = {
           {
             foreignKeyName: "children_parent_consent_given_by_fkey"
             columns: ["parent_consent_given_by"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "children_parental_consent_by_fkey"
+            columns: ["parental_consent_by"]
             isOneToOne: false
             referencedRelation: "members"
             referencedColumns: ["id"]
