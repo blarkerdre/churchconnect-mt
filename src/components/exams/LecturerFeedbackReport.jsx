@@ -357,7 +357,7 @@ export default function LecturerFeedbackReport() {
             </div>
 
             {/* Breakdowns */}
-            <Tabs defaultValue="lecturer">
+            <Tabs value={activeTab} onValueChange={setActiveTab}>
               <TabsList>
                 <TabsTrigger value="lecturer">By lecturer</TabsTrigger>
                 <TabsTrigger value="subject">By subject</TabsTrigger>
