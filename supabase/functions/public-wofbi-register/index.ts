@@ -244,7 +244,7 @@ Deno.serve(async (req) => {
             last_name: lastName,
             email,
             phone,
-            membership_status: "First Timer",
+            membership_status: "Bible School",
             gdpr_consent: true,
             gdpr_consent_date: new Date().toISOString(),
             tenant_id: tenantId,
