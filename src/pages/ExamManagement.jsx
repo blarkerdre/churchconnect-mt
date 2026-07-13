@@ -832,7 +832,7 @@ export default function ExamManagement() {
         </TabsContent>
 
         <TabsContent value="lecturer" className="space-y-4 mt-4">
-          {adminLecturerRatingEnabled && myMember?.id && (
+          {adminLecturerRatingEnabled && isAdmin && (
             <div className="flex justify-end">
               <Button variant="outline" onClick={() => setAdminRateOpen(true)} className="gap-2">
                 <Star className="h-4 w-4" /> Rate a Lecturer
