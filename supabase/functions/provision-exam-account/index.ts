@@ -251,7 +251,7 @@ Deno.serve(async (req) => {
         body: {
           templateName: "bible-school-exam-ready",
           recipientEmail: emailLower,
-          idempotencyKey: `bs-exam-ready-${app.id}-${Date.now()}`,
+          idempotencyKey: `bs-exam-ready-${app.id || registration_id || memberId}-${Date.now()}`,
           templateData: {
             firstName: app.first_name,
             courseName,
