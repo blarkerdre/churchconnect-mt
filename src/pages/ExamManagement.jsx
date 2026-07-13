@@ -16,7 +16,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "@/components/ui/use-toast";
-import { Loader2, Plus, Trash2, Edit, BookOpen, Save, Tag, Layers, Eye, CheckCircle2, Download, Users, QrCode, Search, FileText, Star } from "lucide-react";
+import { Loader2, Plus, Trash2, Edit, BookOpen, Save, Tag, Layers, Eye, CheckCircle2, Download, Users, QrCode, Search, FileText, Star, Mail } from "lucide-react";
 import WoFBIRegistrationQRCode from "@/components/exams/WoFBIRegistrationQRCode";
 import SubjectManager from "@/components/exams/SubjectManager";
 import CourseResultsView from "@/components/exams/CourseResultsView";
@@ -871,6 +871,8 @@ function CourseRegistrationsView({ course }) {
   const [searchTerm, setSearchTerm] = useState("");
   const [editingNumberId, setEditingNumberId] = useState(null);
   const [editingNumberValue, setEditingNumberValue] = useState("");
+  const [sentLinkIds, setSentLinkIds] = useState(() => new Set());
+  const [sendingLinkId, setSendingLinkId] = useState(null);
 
   const { data: registrations = [], isLoading } = useQuery({
     queryKey: ["course-registrations", course.id],
@@ -917,6 +919,31 @@ function CourseRegistrationsView({ course }) {
       setEditingNumberValue("");
     },
     onError: (err) => toast({ title: "Update failed", description: err.message, variant: "destructive" }),
+  });
+
+  const sendExamLinkMutation = useMutation({
+    mutationFn: async (registrationId) => {
+      setSendingLinkId(registrationId);
+      const { data, error } = await supabase.functions.invoke("provision-exam-account", {
+        body: { registration_id: registrationId },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      return { registrationId, data };
+    },
+    onSuccess: ({ registrationId }) => {
+      setSentLinkIds((prev) => {
+        const next = new Set(prev);
+        next.add(registrationId);
+        return next;
+      });
+      setSendingLinkId(null);
+      toast({ title: "Exam link sent", description: "The applicant has been emailed a one-click sign-in link." });
+    },
+    onError: (err) => {
+      setSendingLinkId(null);
+      toast({ title: "Failed to send exam link", description: err.message, variant: "destructive" });
+    },
   });
 
   const deleteMutation = useMutation({
@@ -1136,6 +1163,20 @@ function CourseRegistrationsView({ course }) {
                             <CheckCircle2 className="h-3.5 w-3.5" /> Approve
                           </Button>
                         )}
+                        {canManageNumbers && isApproved && r.members?.email && (() => {
+                          const alreadySent = sentLinkIds.has(r.id) || !!r.members?.user_id;
+                          const isSending = sendingLinkId === r.id;
+                          return (
+                            <Button size="sm" variant="outline" className="h-7 gap-1 text-xs"
+                              onClick={() => sendExamLinkMutation.mutate(r.id)}
+                              disabled={isSending}
+                              title="Email the applicant a one-click sign-in link to write the exam."
+                            >
+                              {isSending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Mail className="h-3.5 w-3.5" />}
+                              {alreadySent ? "Resend link" : "Send exam link"}
+                            </Button>
+                          );
+                        })()}
                         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setDeleteTarget(r)}>
                           <Trash2 className="h-3.5 w-3.5 text-destructive" />
                         </Button>
