@@ -25,6 +25,7 @@ const statusColors = {
   "Inactive": "bg-muted text-muted-foreground",
   "New Convert": "bg-accent/10 text-accent",
   "First Timer": "bg-chart-4/10 text-chart-4",
+  "Bible School": "bg-chart-2/10 text-chart-2",
 };
 
 export default function Members() {
