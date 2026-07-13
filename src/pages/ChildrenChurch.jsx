@@ -340,6 +340,51 @@ function WalkInRegisterDialog({ open, onOpenChange, tenantId, onRegistered }) {
             ))}
           </div>
 
+          <div className="space-y-3 border rounded p-3 bg-primary/5">
+            <div className="flex items-center gap-2">
+              <ShieldCheck className="h-4 w-4 text-primary" />
+              <p className="text-sm font-semibold">Parental consent</p>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {renderConsentText(consentText, privacyUrl)}
+            </p>
+            <div className="flex items-start justify-between gap-3">
+              <div className="text-sm min-w-0">
+                <Label className="font-medium">
+                  I am the parent/legal guardian and give consent for these children's data to be held and processed
+                  <span className="text-destructive"> *</span>
+                </Label>
+              </div>
+              <Switch checked={!!consent.given} onCheckedChange={(v) => setConsent(s => ({ ...s, given: v }))} />
+            </div>
+            <div className="flex items-start justify-between gap-3">
+              <div className="text-sm min-w-0">
+                <Label>Photos &amp; media</Label>
+                <p className="text-xs text-muted-foreground">Child may appear in service photos/videos.</p>
+              </div>
+              <Switch checked={!!consent.photos} onCheckedChange={(v) => setConsent(s => ({ ...s, photos: v }))} />
+            </div>
+            <div className="flex items-start justify-between gap-3">
+              <div className="text-sm min-w-0">
+                <Label>Pastoral contact</Label>
+                <p className="text-xs text-muted-foreground">Leaders may follow up about the child's welfare.</p>
+              </div>
+              <Switch checked={!!consent.pastoral} onCheckedChange={(v) => setConsent(s => ({ ...s, pastoral: v }))} />
+            </div>
+            <div className="flex items-start justify-between gap-3">
+              <div className="text-sm min-w-0">
+                <Label>Emergency medical care</Label>
+                <p className="text-xs text-muted-foreground">Permission to seek emergency care if you can't be reached.</p>
+              </div>
+              <Switch checked={!!consent.emergency} onCheckedChange={(v) => setConsent(s => ({ ...s, emergency: v }))} />
+            </div>
+            <div>
+              <Label>Consent notes (optional)</Label>
+              <Textarea rows={2} value={consent.notes} onChange={(e) => setConsent(s => ({ ...s, notes: e.target.value }))} placeholder="e.g. no photos on social media" />
+            </div>
+          </div>
+
+
           <DialogFooter>
             <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
             <Button onClick={submit} disabled={busy}>{busy ? "Saving…" : "Register & continue check-in"}</Button>
