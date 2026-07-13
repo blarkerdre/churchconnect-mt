@@ -32,7 +32,7 @@ import { Info as InfoIcon } from "lucide-react";
 import ModuleTour from "@/components/tour/ModuleTour";
 
 const GENDERS = ["Male", "Female"];
-const MEMBERSHIP_STATUSES = ["Active", "First Timer", "New Convert", "Visitor"];
+const MEMBERSHIP_STATUSES = ["Active", "First Timer", "New Convert", "Visitor", "Bible School"];
 const HIDE_SPIRITUAL_STATUSES = ["First Timer", "New Convert", "Visitor"];
 const SHOW_BAPTISM_STATUSES = ["First Timer", "New Convert"];
 
@@ -41,6 +41,7 @@ const statusColors = {
   "Inactive": "bg-muted text-muted-foreground",
   "New Convert": "bg-accent/10 text-accent",
   "First Timer": "bg-chart-4/10 text-chart-4",
+  "Bible School": "bg-chart-2/10 text-chart-2",
   "Visitor": "bg-primary/10 text-primary",
 };
 
@@ -806,7 +807,7 @@ function CreateMemberProfile({ user, onCreated, wsfCentres, churchUnits }) {
     }
   };
 
-  const MEMBERSHIP_STATUSES = ["Active", "Inactive", "First Timer", "New Convert", "Visitor"];
+  const MEMBERSHIP_STATUSES = ["Active", "Inactive", "First Timer", "New Convert", "Visitor", "Bible School"];
 
   const SwitchRow = ({ id, label, checked, onChange }) => (
     <div className="flex items-center justify-between p-3 rounded-xl bg-muted/50 border border-border">
