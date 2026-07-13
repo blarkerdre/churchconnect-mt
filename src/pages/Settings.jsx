@@ -1673,7 +1673,8 @@ export default function Settings() {
         </TabsContent>
 
         {canOwnerOnly && (
-          <TabsContent value="billing">
+          <TabsContent value="billing" className="space-y-4">
+            <SLASection />
             <BillingSection />
           </TabsContent>
         )}
