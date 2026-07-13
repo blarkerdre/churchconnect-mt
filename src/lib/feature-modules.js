@@ -14,4 +14,9 @@ export const FEATURE_MODULES = [
   { key: "sms", label: "SMS", description: "SMS messaging capability" },
   { key: "sermon-notes", label: "Sermon Notes", description: "Sermon notes management" },
   { key: "testimony", label: "Testimony", description: "Member testimony sharing" },
+  { key: "children-church", label: "Children Church", description: "Secure child drop-off, pickup PIN, guardians & delegations" },
+  { key: "unit-tasks", label: "Unit Tasks", description: "Task groups, assignments, and comments for units" },
+  { key: "inventory", label: "Inventory", description: "Items, categories, and inspection checklists" },
+  { key: "reports", label: "Reports Hub", description: "Cross-module reports for the Reports Officer role" },
+  { key: "certificates", label: "Certificates", description: "Issue and approve training/course certificates" },
 ];
