@@ -286,8 +286,22 @@ export default function PublicWoFBIRegistration() {
 
             <div className="space-y-1">
               <Label htmlFor="email">Email *</Label>
-              <Input id="email" type="email" value={form.email}
-                onChange={(e) => set("email", e.target.value)} maxLength={255} required />
+              <Input
+                id="email"
+                type="email"
+                value={form.email}
+                onChange={(e) => set("email", e.target.value)}
+                maxLength={255}
+                required
+                readOnly={isAuthed}
+                aria-readonly={isAuthed}
+                className={isAuthed ? "bg-muted cursor-not-allowed" : undefined}
+              />
+              {isAuthed && (
+                <p className="text-xs text-muted-foreground">
+                  Using your signed-in email. Sign out to apply with a different address.
+                </p>
+              )}
             </div>
 
             <div className="space-y-1">
