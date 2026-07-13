@@ -15,7 +15,7 @@ const EXPECTED_COLUMNS = [
   "date_of_birth", "emergency_contact_name", "emergency_contact_phone",
 ];
 
-const VALID_STATUSES = ["Active", "New Convert", "First Timer"];
+const VALID_STATUSES = ["Active", "New Convert", "First Timer", "Bible School"];
 const VALID_GENDERS = ["Male", "Female"];
 
 function parseCSV(text) {
