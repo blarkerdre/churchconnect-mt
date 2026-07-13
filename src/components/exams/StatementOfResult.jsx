@@ -51,19 +51,21 @@ function formatSessionLabel(session) {
   return `${now.toLocaleString("en-GB", { month: "long" }).toUpperCase()} ${now.getFullYear()}`;
 }
 
-export default function StatementOfResult({ open, onOpenChange, member, course, subjects, memberSubjects }) {
+/**
+ * Loads session, student number, and template metadata for a member's
+ * statement of result. Shared by the standalone dialog and the inline preview.
+ */
+function useStatementData({ enabled, member, course, subjects }) {
   const { currentTenant } = useTenant();
   const [session, setSession] = useState(null);
   const [studentNumber, setStudentNumber] = useState("");
   const [template, setTemplate] = useState(null);
-  const [downloadingPdf, setDownloadingPdf] = useState(false);
 
   useEffect(() => {
-    if (!open || !member?.id || !course?.id || !currentTenant?.id) return;
+    if (!enabled || !member?.id || !course?.id || !currentTenant?.id) return;
     let cancelled = false;
 
     (async () => {
-      // 1. Registration (may already store a student_number and session_id)
       const { data: reg } = await supabase
         .from("course_registrations")
         .select("id, student_number, session_id, registered_at")
@@ -72,7 +74,6 @@ export default function StatementOfResult({ open, onOpenChange, member, course, 
         .eq("member_id", member.id)
         .maybeSingle();
 
-      // 2. Session — prefer registration's session, else most recent attempt's session
       let sess = null;
       if (reg?.session_id) {
         const { data } = await supabase
@@ -104,7 +105,6 @@ export default function StatementOfResult({ open, onOpenChange, member, course, 
         }
       }
 
-      // 3. Sequence — position among registrations for this course + (optional) session
       let seq = 1;
       if (reg?.id) {
         let q = supabase
@@ -119,7 +119,6 @@ export default function StatementOfResult({ open, onOpenChange, member, course, 
         if (idx >= 0) seq = idx + 1;
       }
 
-      // 4. Certificate template for signatory + logo
       const { data: tmpl } = await supabase
         .from("certificate_templates")
         .select("signatory_name, signatory_title, dean_signature_url, logo_url, crest_image_url, church_name, wofbi_logo_url, centre_name")
@@ -144,7 +143,22 @@ export default function StatementOfResult({ open, onOpenChange, member, course, 
     })();
 
     return () => { cancelled = true; };
-  }, [open, member?.id, course?.id, currentTenant?.id, subjects]);
+  }, [enabled, member?.id, course?.id, currentTenant?.id, subjects]);
+
+  return { session, studentNumber, template, currentTenant };
+}
+
+/**
+ * Inline preview of the Statement of Result — no Dialog wrapper, no action
+ * buttons. Reused by `StatementOfResult` and `SendResultsDialog`.
+ */
+export function StatementPreview({ member, course, subjects, memberSubjects, enabled = true }) {
+  const { session, studentNumber, template, currentTenant } = useStatementData({
+    enabled,
+    member,
+    course,
+    subjects,
+  });
 
   if (!member || !course) return null;
 
@@ -153,16 +167,115 @@ export default function StatementOfResult({ open, onOpenChange, member, course, 
     { label: "Merit", min_percentage: 65 },
     { label: "Pass", min_percentage: 50 },
   ];
-
   const letterBands = resolveLetterGradeBands(course);
 
-  const rows = subjects.map((s) => {
-    const sub = memberSubjects[s.id];
+  const rows = (subjects || []).map((s) => {
+    const sub = (memberSubjects || {})[s.id];
     const pct = sub && sub.total_points > 0 ? (sub.score / sub.total_points) * 100 : 0;
     const letter = sub ? getLetterGrade(pct, letterBands).letter : "—";
     return { name: s.name, score: sub?.score ?? 0, total: sub?.total_points ?? 0, pct, letter, taken: !!sub };
   });
 
+  const totalScore = rows.reduce((s, r) => s + r.score, 0);
+  const totalPoints = rows.reduce((s, r) => s + r.total, 0);
+  const overallPct = totalPoints > 0 ? (totalScore / totalPoints) * 100 : 0;
+  const overallGrade = getGradeClassification(overallPct, classifications);
+
+  const sessionLabel = formatSessionLabel(session);
+  const churchName = template?.church_name || currentTenant?.name || "";
+  const centreName =
+    template?.centre_name ||
+    (currentTenant?.name && template?.church_name && template.church_name !== currentTenant.name
+      ? currentTenant.name
+      : "");
+  const logoUrl =
+    template?.wofbi_logo_url ||
+    template?.crest_image_url ||
+    template?.logo_url ||
+    currentTenant?.logo_url ||
+    "";
+
+  return (
+    <div className="space-y-4">
+      <div className="text-center space-y-1 border-b pb-3">
+        {logoUrl ? <img src={logoUrl} alt="Logo" className="h-24 mx-auto mb-1" /> : null}
+        <p className="text-2xl font-black tracking-wide">{(churchName || "").toUpperCase()}</p>
+        {centreName ? <p className="text-sm font-bold uppercase tracking-wide">{centreName.toUpperCase()}</p> : null}
+        <p className="text-sm font-bold">STATEMENT OF RESULT</p>
+        <p className="text-sm font-bold">
+          {(course.name || "").toUpperCase()} {sessionLabel}
+        </p>
+      </div>
+
+      <div className="flex justify-between items-baseline text-sm">
+        <div>
+          <span className="font-bold">NAME: </span>
+          <span className="text-base font-serif text-primary">{member.name}</span>
+        </div>
+        <div className="font-bold underline text-xs">{studentNumber || "—"}</div>
+      </div>
+
+      <div className="border rounded overflow-hidden">
+        <div className="grid grid-cols-[1fr_auto] bg-primary/10 px-3 py-2 text-xs font-bold">
+          <div>Module Title</div>
+          <div className="text-right">Grades</div>
+        </div>
+        {rows.map((r) => (
+          <div
+            key={r.name}
+            className="grid grid-cols-[1fr_auto] px-3 py-1.5 text-sm border-t border-border/50"
+          >
+            <div className="uppercase">{r.name}</div>
+            <div className="text-right font-bold tabular-nums">{r.taken ? r.letter : "—"}</div>
+          </div>
+        ))}
+        <div className="grid grid-cols-[1fr_auto] bg-primary/10 px-3 py-2 text-sm font-bold border-t">
+          <div />
+          <div className="text-right">Overall Result: {overallGrade}</div>
+        </div>
+      </div>
+
+      <div>
+        <p className="text-xs font-bold italic underline mb-1">Explanatory Notes</p>
+        <div className="grid grid-cols-2 gap-x-4 text-[11px]">
+          <div className="font-semibold">Result</div>
+          <div className="font-semibold">Grades</div>
+          {letterBands.map((b) => (
+            <React.Fragment key={b.letter}>
+              <div>{b.label}</div>
+              <div>{b.letter} &nbsp;{b.min}-{b.max}</div>
+            </React.Fragment>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function StatementOfResult({ open, onOpenChange, member, course, subjects, memberSubjects }) {
+  const { currentTenant } = useTenant();
+  const { session, studentNumber, template } = useStatementData({
+    enabled: open,
+    member,
+    course,
+    subjects,
+  });
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
+
+  if (!member || !course) return null;
+
+  const classifications = course.grade_classifications || [
+    { label: "Distinction", min_percentage: 75 },
+    { label: "Merit", min_percentage: 65 },
+    { label: "Pass", min_percentage: 50 },
+  ];
+  const letterBands = resolveLetterGradeBands(course);
+  const rows = (subjects || []).map((s) => {
+    const sub = (memberSubjects || {})[s.id];
+    const pct = sub && sub.total_points > 0 ? (sub.score / sub.total_points) * 100 : 0;
+    const letter = sub ? getLetterGrade(pct, letterBands).letter : "—";
+    return { name: s.name, score: sub?.score ?? 0, total: sub?.total_points ?? 0, pct, letter, taken: !!sub };
+  });
   const totalScore = rows.reduce((s, r) => s + r.score, 0);
   const totalPoints = rows.reduce((s, r) => s + r.total, 0);
   const overallPct = totalPoints > 0 ? (totalScore / totalPoints) * 100 : 0;
@@ -352,58 +465,13 @@ export default function StatementOfResult({ open, onOpenChange, member, course, 
         </TenantDialogHeader>
 
         <div className="space-y-4 max-h-[70vh] overflow-y-auto">
-          {/* On-screen preview mirrors the printable layout */}
-          <div className="text-center space-y-1 border-b pb-3">
-            {logoUrl ? <img src={logoUrl} alt="Logo" className="h-24 mx-auto mb-1" /> : null}
-            <p className="text-2xl font-black tracking-wide">{(churchName || "").toUpperCase()}</p>
-            {centreName ? <p className="text-sm font-bold uppercase tracking-wide">{centreName.toUpperCase()}</p> : null}
-            <p className="text-sm font-bold">STATEMENT OF RESULT</p>
-            <p className="text-sm font-bold">
-              {(course.name || "").toUpperCase()} {sessionLabel}
-            </p>
-          </div>
-
-          <div className="flex justify-between items-baseline text-sm">
-            <div>
-              <span className="font-bold">NAME: </span>
-              <span className="text-base font-serif text-primary">{member.name}</span>
-            </div>
-            <div className="font-bold underline text-xs">{studentNumber || "—"}</div>
-          </div>
-
-          <div className="border rounded overflow-hidden">
-            <div className="grid grid-cols-[1fr_auto] bg-primary/10 px-3 py-2 text-xs font-bold">
-              <div>Module Title</div>
-              <div className="text-right">Grades</div>
-            </div>
-            {rows.map((r) => (
-              <div
-                key={r.name}
-                className="grid grid-cols-[1fr_auto] px-3 py-1.5 text-sm border-t border-border/50"
-              >
-                <div className="uppercase">{r.name}</div>
-                <div className="text-right font-bold tabular-nums">{r.taken ? r.letter : "—"}</div>
-              </div>
-            ))}
-            <div className="grid grid-cols-[1fr_auto] bg-primary/10 px-3 py-2 text-sm font-bold border-t">
-              <div />
-              <div className="text-right">Overall Result: {overallGrade}</div>
-            </div>
-          </div>
-
-          <div>
-            <p className="text-xs font-bold italic underline mb-1">Explanatory Notes</p>
-            <div className="grid grid-cols-2 gap-x-4 text-[11px]">
-              <div className="font-semibold">Result</div>
-              <div className="font-semibold">Grades</div>
-              {letterBands.map((b) => (
-                <React.Fragment key={b.letter}>
-                  <div>{b.label}</div>
-                  <div>{b.letter} &nbsp;{b.min}-{b.max}</div>
-                </React.Fragment>
-              ))}
-            </div>
-          </div>
+          <StatementPreview
+            member={member}
+            course={course}
+            subjects={subjects}
+            memberSubjects={memberSubjects}
+            enabled={open}
+          />
 
           <div className="flex flex-wrap justify-center gap-2 pt-2">
             <Button variant="outline" size="sm" className="gap-1.5" onClick={handlePrint}>
