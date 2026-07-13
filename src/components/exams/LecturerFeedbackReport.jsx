@@ -243,28 +243,28 @@ export default function LecturerFeedbackReport() {
   };
 
   return (
-    <Card className="border-0 shadow-sm">
+    <Card className="border-0 shadow-sm min-w-0">
       <CardHeader className="pb-3">
-        <div className="flex flex-wrap items-start justify-between gap-2">
-          <div>
+        <div className="flex flex-wrap items-start justify-between gap-2 min-w-0">
+          <div className="min-w-0">
             <CardTitle className="text-base font-display flex items-center gap-2">
               <BarChart3 className="h-4 w-4 text-primary" /> Feedback Report & Analytics
             </CardTitle>
             <CardDescription>Filter, analyse and export lecturer feedback.</CardDescription>
           </div>
-          <div className="flex gap-2">
-            <Button size="sm" variant="outline" className="gap-1.5" onClick={downloadCSV} disabled={!filtered.length}>
+          <div className="flex flex-wrap gap-2 shrink-0">
+            <Button size="sm" variant="outline" className="gap-1.5 shrink-0" onClick={downloadCSV} disabled={!filtered.length}>
               <Download className="h-3.5 w-3.5" /> Export CSV
             </Button>
-            <Button size="sm" variant="outline" className="gap-1.5" onClick={() => window.print()}>
+            <Button size="sm" variant="outline" className="gap-1.5 shrink-0" onClick={() => window.print()}>
               <Printer className="h-3.5 w-3.5" /> Print
             </Button>
           </div>
         </div>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-4 min-w-0">
         {/* Filters */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 p-3 border rounded-lg bg-muted/30">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 p-3 border rounded-lg bg-muted/30 min-w-0">
           <div>
             <Label className="text-xs">Course</Label>
             <Select value={filters.courseId} onValueChange={(v) => setFilters((f) => ({ ...f, courseId: v, subjectId: "all" }))}>
