@@ -1,3 +1,6 @@
+// Single source of truth for tenant-toggleable modules.
+// Add a new entry here and it will automatically appear in Tenant Admin → Modules
+// and be honored by sidebar/route filtering via `disabled_features`.
 export const FEATURE_MODULES = [
   { key: "members", label: "Members", description: "Member directory and management" },
   { key: "events", label: "Events", description: "Event scheduling and registration" },
