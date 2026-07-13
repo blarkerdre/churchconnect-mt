@@ -184,8 +184,10 @@ Deno.serve(async (req) => {
           memberId = created.id;
         }
       }
-      // Link back on application
-      await admin.from("wofbi_applications").update({ member_id: memberId }).eq("id", app.id).eq("tenant_id", app.tenant_id);
+      // Link back on application (only if we have an application row)
+      if (app.id) {
+        await admin.from("wofbi_applications").update({ member_id: memberId }).eq("id", app.id).eq("tenant_id", app.tenant_id);
+      }
     }
 
     // 3. Ensure course registration exists and is approved/active
