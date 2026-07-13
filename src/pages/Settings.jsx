@@ -48,6 +48,7 @@ import RetentionSection from "@/components/settings/RetentionSection";
 
 import ApiKeysSection from "@/components/settings/ApiKeysSection";
 import TenantFeaturesSection from "@/components/settings/TenantFeaturesSection";
+import SLASection from "@/components/tenants/SLASection";
 import ReplayToursSection from "@/components/settings/ReplayToursSection";
 
 import DashboardBannerSettings from "@/components/settings/DashboardBannerSettings";
@@ -221,6 +222,7 @@ function BillingSection() {
         <p className="text-xs text-muted-foreground mt-1">View your subscription status and make payments</p>
       </CardHeader>
       <CardContent className="space-y-4">
+        <SLASection />
         {subLoading ? (
           <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Loading...</div>
         ) : !subscription ? (
