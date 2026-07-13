@@ -48,6 +48,7 @@ import RetentionSection from "@/components/settings/RetentionSection";
 
 import ApiKeysSection from "@/components/settings/ApiKeysSection";
 import TenantFeaturesSection from "@/components/settings/TenantFeaturesSection";
+import SLASection from "@/components/tenants/SLASection";
 import ReplayToursSection from "@/components/settings/ReplayToursSection";
 
 import DashboardBannerSettings from "@/components/settings/DashboardBannerSettings";
@@ -1672,7 +1673,8 @@ export default function Settings() {
         </TabsContent>
 
         {canOwnerOnly && (
-          <TabsContent value="billing">
+          <TabsContent value="billing" className="space-y-4">
+            <SLASection />
             <BillingSection />
           </TabsContent>
         )}
