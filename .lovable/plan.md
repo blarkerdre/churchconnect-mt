@@ -1,33 +1,47 @@
 ## Goal
 
-When someone applies via the public Bible School form and a new member record is created for them, mark their `membership_status` as **"Bible School"** instead of **"First Timer"**. Existing members keep their current status untouched.
+Stop auto-sending the exam sign-in link on approval. Move sending (and resending) to a manual admin action on each row in **Bible School Management → Registrations**.
 
 ## Changes
 
-### 1. DB migration — extend the `membership_status` enum
-Add `'Bible School'` to the existing `public.membership_status` enum. No data backfill; only new applicants get the new value going forward. (If you want, we can also retro-tag existing members who have an approved Bible School registration — flag me if so.)
+### 1. `src/components/exams/WoFBIApplicationsTab.jsx`
+- In the approval `onSuccess` (around line 218–221), **remove** the auto-call to `provisionExamAccount.mutate({ id: variables.id, silent: true })`. Approval will no longer email anything to the applicant automatically.
+- Keep the existing `send-course-registration-email` "you're enrolled" confirmation as-is (that's not the exam link).
+- Keep the existing manual "Resend exam sign-in link" button (line ~823) on this tab too — still useful for form-source applications.
 
-### 2. `supabase/functions/public-wofbi-register/index.ts`
-- Change the new-member insert from `membership_status: "First Timer"` to `membership_status: "Bible School"`.
-- No change to the "existing member found by email/user_id" branch — we don't overwrite their status.
+### 2. `supabase/functions/provision-exam-account/index.ts`
+Extend the function to accept **either** input, so it can be triggered from the Registrations tab where we only have a `course_registrations` row:
+- Existing: `{ application_id }`
+- New: `{ registration_id }` — loads the registration, derives `tenant_id`, `member_id`, `course_id`, and the member's `email`/`first_name`/`last_name`/`phone`. If there is a matching `wofbi_applications` row (same tenant + member + course), use it; otherwise proceed directly from the registration + member.
+- Same admin/owner authorization check against the derived `tenant_id`.
+- Same magic-link generation + `bible-school-exam-ready` email send.
+- Require the registration to be `approved`/`active` (mirrors the current "must be approved" guard).
+- Return `{ ok: true, member_id, user_id }` as today.
 
-### 3. Frontend — surface the new status
+No schema/migration changes.
 
-Add `"Bible School"` to the status dropdowns and badge colours so admins can see/filter it consistently:
+### 3. `src/pages/ExamManagement.jsx` — Registrations tab
+In the actions cell of each registration row (around lines 1129–1143):
+- Add a new button visible when `isApproved && r.members?.email`:
+  - Label: **Send exam link** if no send has happened yet, **Resend link** otherwise.
+  - Icon: `Mail` (or `Send`) from lucide-react.
+  - `onClick`: invoke `supabase.functions.invoke("provision-exam-account", { body: { registration_id: r.id } })` via a `useMutation`.
+  - Toast on success: "Exam link sent" / on error: "Failed to send exam link".
+  - Disabled while pending.
+- Track "has been sent" client-side per session (a `Set` of registration ids in local state, seeded from any rows where the member already has a `user_id` — a good proxy that provisioning has already run). This is a lightweight cue for the Resend vs Send label; no DB column added.
 
-- `src/components/members/MemberFormDialog.jsx` — add to `STATUSES`.
-- `src/pages/MyProfile.jsx` — add to both `MEMBERSHIP_STATUSES` arrays and the badge colour map.
-- `src/pages/Members.jsx` — add a badge colour entry (reuse an existing chart token).
-- `src/components/members/BulkImportDialog.jsx` — add to `VALID_STATUSES` so CSV imports accept it.
+Permission: gate with the same `canManageNumbers` used for the Approve button, so only admins/lecturers with number-management rights can send links.
 
-Do not add it to `HIDE_SPIRITUAL_STATUSES` / `SHOW_BAPTISM_STATUSES` — Bible School applicants are typically already established members, so spiritual/emergency-contact sections should remain visible.
+### 4. Copy / UX
+- Approval toast text stays as-is but no longer implies an email was sent. The new Registrations-tab button is the explicit send action.
+- Tooltip on the button: "Email the applicant a one-click sign-in link to write the exam."
 
 ## Out of scope
-- No changes to Applications tab / Bible School Management logic.
-- No retroactive update of existing "First Timer" records — only new public applicants going forward.
-- No changes to reporting, follow-up categorisation, or WSF/leader dashboards; those keep treating "First Timer" as-is.
+- No changes to the approval flow itself, student-number generation, course registration creation, or the transactional email template.
+- No changes to auth, RLS, or `course_registrations` columns.
+- No retroactive send for previously approved registrations — admins press the new button when they're ready.
 
 ## Result
-- Public Bible School application → new member created with `membership_status = "Bible School"`.
-- Existing members keep their current status when they apply.
-- Admins can see, filter, edit, and bulk-import the "Bible School" status everywhere member status appears.
+- Approving an application (form or direct) no longer emails the exam link automatically.
+- Admins send the exam link from **Bible School Management → Registrations** with a per-row **Send exam link / Resend link** button.
+- Existing "Resend exam sign-in link" button on the Applications tab remains for form-application workflows.
