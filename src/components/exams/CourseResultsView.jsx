@@ -11,6 +11,7 @@ import PrintReportButton from "@/components/PrintReportButton";
 import { toast } from "@/components/ui/use-toast";
 import { getGradeClassification } from "@/lib/grade-utils";
 import StatementOfResult from "@/components/exams/StatementOfResult";
+import SendResultsDialog from "@/components/exams/SendResultsDialog";
 import DangerConfirmDialog from "@/components/exams/DangerConfirmDialog";
 import { logAudit } from "@/lib/audit";
 import { useAuth } from "@/hooks/useAuth";
