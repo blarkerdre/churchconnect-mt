@@ -482,6 +482,15 @@ export default function MyFamily() {
                       <div className="flex gap-2 mt-1 flex-wrap">
                         {c.age_group && <Badge variant="outline">{c.age_group}</Badge>}
                         {c.allergies && <Badge variant="destructive" className="text-[10px]">Allergy: {c.allergies}</Badge>}
+                        {c.parental_consent_given ? (
+                          <Badge variant="outline" className="text-[10px] border-emerald-300 text-emerald-700">
+                            <ShieldCheck className="h-3 w-3 mr-1" /> Consent {c.parental_consent_at ? `· ${format(new Date(c.parental_consent_at), "d MMM yyyy")}` : "given"}
+                          </Badge>
+                        ) : (
+                          <Badge variant="destructive" className="text-[10px]">
+                            <AlertTriangle className="h-3 w-3 mr-1" /> Consent required
+                          </Badge>
+                        )}
                       </div>
                     </div>
                     {active && (
