@@ -34,6 +34,7 @@ import DomifortIntegrationSection from "@/components/tenants/DomifortIntegration
 import BroadcastAlertSection from "@/components/alerts/BroadcastAlertSection";
 import PlatformUsersTab from "@/components/tenants/PlatformUsersTab";
 import PricingTab from "@/components/tenants/PricingTab";
+import SLATemplateAdmin from "@/components/tenants/SLATemplateAdmin";
 
 import { FEATURE_MODULES } from "@/lib/feature-modules";
 import ModuleTour from "@/components/tour/ModuleTour";
@@ -452,6 +453,7 @@ export default function TenantAdmin() {
          <TabsTrigger data-tour="ta-billing" value="pricing"><BarChart3 className="h-3.5 w-3.5 mr-1" />Pricing</TabsTrigger>
          <TabsTrigger value="analytics"><BarChart3 className="h-3.5 w-3.5 mr-1" />Analytics</TabsTrigger>
          <TabsTrigger data-tour="ta-integrations" value="integrations"><Link className="h-3.5 w-3.5 mr-1" />Integrations</TabsTrigger>
+         <TabsTrigger value="sla"><FileSignature className="h-3.5 w-3.5 mr-1" />SLA</TabsTrigger>
          <TabsTrigger value="broadcast"><Megaphone className="h-3.5 w-3.5 mr-1" />Broadcast</TabsTrigger>
         </TabsList>
 
@@ -729,6 +731,10 @@ export default function TenantAdmin() {
 
         <TabsContent value="integrations">
           <DomifortIntegrationSection />
+        </TabsContent>
+
+        <TabsContent value="sla">
+          <SLATemplateAdmin />
         </TabsContent>
 
         <TabsContent value="broadcast">
