@@ -879,6 +879,7 @@ function CourseRegistrationsView({ course }) {
         .from("course_registrations")
         .select("id, registered_at, member_id, student_number, status, approved_at, members(first_name, last_name, email, phone, user_id)")
         .eq("course_id", course.id)
+        .in("status", ["approved", "active"])
         .order("registered_at", { ascending: false });
       if (error) throw error;
       return data;
