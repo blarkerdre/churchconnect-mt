@@ -219,6 +219,20 @@ export default function WoFBIApplicationsTab() {
         if (res.source === "form" && variables?.id) {
           provisionExamAccount.mutate({ id: variables.id, silent: true });
         }
+        // Send the course-registration confirmation email now that the applicant is actually enrolled.
+        if (res.enrolled) {
+          const approved = applications.find((a) => a.id === variables?.id);
+          if (approved?.email) {
+            supabase.functions.invoke("send-course-registration-email", {
+              body: {
+                email: approved.email,
+                first_name: approved.first_name || "Friend",
+                course_name: approved.course?.name || "Bible School Course",
+                tenant_id: tenantId,
+              },
+            }).catch((err) => console.error("Registration email failed:", err));
+          }
+        }
       } else {
         toast({ title: res.source === "direct" ? "Registration updated" : "Application updated" });
       }

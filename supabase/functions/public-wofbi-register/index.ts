@@ -259,25 +259,25 @@ Deno.serve(async (req) => {
       }
     }
 
-    const { data: existingReg } = await supabase
-      .from("course_registrations")
-      .select("id")
-      .eq("member_id", memberId)
+    // Guard against duplicate applications for the same tenant/course/email.
+    const { data: existingApp } = await supabase
+      .from("wofbi_applications")
+      .select("id, status")
+      .eq("tenant_id", tenantId)
       .eq("course_id", courseId)
+      .eq("email", email)
+      .in("status", ["submitted", "approved"])
       .maybeSingle();
 
-    if (existingReg) {
-      return new Response(JSON.stringify({ error: "You are already registered for this course." }), {
+    if (existingApp) {
+      const msg = existingApp.status === "approved"
+        ? "You are already enrolled in this course."
+        : "You have already applied for this course. We'll be in touch once your application is reviewed.";
+      return new Response(JSON.stringify({ error: msg }), {
         status: 409,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-
-    const { error: regError } = await supabase
-      .from("course_registrations")
-      .insert({ member_id: memberId, course_id: courseId, tenant_id: tenantId });
-
-    if (regError) throw regError;
 
     // Persist detailed application answers if the tenant has enabled the long form.
     try {
@@ -299,7 +299,7 @@ Deno.serve(async (req) => {
         else cleanAnswers[f.id] = String(v).slice(0, 2000);
       }
 
-      await supabase.from("wofbi_applications").insert({
+      const { error: appInsErr } = await supabase.from("wofbi_applications").insert({
         tenant_id: tenantId,
         course_id: courseId,
         member_id: memberId,
@@ -310,17 +310,20 @@ Deno.serve(async (req) => {
         answers: cleanAnswers,
         status: "submitted",
       });
+      if (appInsErr) throw appInsErr;
     } catch (appErr) {
       console.error("Failed to store application row:", appErr);
+      return new Response(JSON.stringify({ error: "Registration failed. Please try again." }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     if (isNewMember && email) {
       triggerWelcomeEmail(email, firstName, lastName, tenantId);
     }
-
-    if (email) {
-      triggerCourseRegistrationEmail(email, firstName, course.name, tenantId);
-    }
+    // Note: course-registration confirmation email is sent when an admin approves the application,
+    // not here. This ensures applicants aren't told they're enrolled before review.
 
     return new Response(JSON.stringify({
       success: true,
