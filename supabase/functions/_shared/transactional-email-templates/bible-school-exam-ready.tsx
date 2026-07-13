@@ -6,14 +6,16 @@ import type { TemplateEntry } from './registry.ts'
 
 const SITE_NAME = "ChurchConnect"
 
+interface CourseInfo { name: string; student_number?: string | null }
 interface Props {
   firstName?: string
   courseName?: string
   magicLink?: string
   tenantName?: string
+  courses?: CourseInfo[]
 }
 
-const BibleSchoolExamReadyEmail = ({ firstName, courseName, magicLink, tenantName }: Props) => (
+const BibleSchoolExamReadyEmail = ({ firstName, courseName, magicLink, tenantName, courses }: Props) => (
   <Html lang="en" dir="ltr">
     <Head />
     <Preview>Your Bible School exam is ready</Preview>
@@ -26,6 +28,19 @@ const BibleSchoolExamReadyEmail = ({ firstName, courseName, magicLink, tenantNam
           Your application for <strong>{courseName || 'Bible School'}</strong> at{' '}
           {tenantName || SITE_NAME} has been approved. You can now write your exam.
         </Text>
+        {courses && courses.some((c) => c.student_number) && (
+          <Section style={numberBox}>
+            <Text style={numberLabel}>Your student number{courses.filter((c) => c.student_number).length > 1 ? 's' : ''}</Text>
+            {courses.filter((c) => c.student_number).map((c) => (
+              <Text key={c.name} style={numberValue}>
+                {c.name}: <strong>{c.student_number}</strong>
+              </Text>
+            ))}
+            <Text style={hint}>
+              Please keep this safe — you'll need it for your exam and certificate.
+            </Text>
+          </Section>
+        )}
         <Text style={text}>
           Click the button below to securely sign in and start your exam.
           No password is needed — this link signs you in automatically.
