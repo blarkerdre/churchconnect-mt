@@ -529,6 +529,18 @@ export default function CourseResultsView({ course }) {
         onConfirm={() => deleteResultMutation.mutateAsync({ memberId: deleteMember.id })}
       />
     )}
+    {sendDialog && (
+      <SendResultsDialog
+        open={!!sendDialog}
+        onOpenChange={(v) => { if (!v) setSendDialog(null); }}
+        course={course}
+        subjects={subjects}
+        members={members
+          .filter((m) => sendDialog.memberIds.includes(m.id))
+          .map((m) => ({ id: m.id, name: m.name, passed: m.passed, subjects: m.subjects }))}
+        onSent={() => { clearSelection(); setSendDialog(null); }}
+      />
+    )}
     </>
   );
 }
