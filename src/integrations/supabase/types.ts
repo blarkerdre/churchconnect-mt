@@ -6350,6 +6350,14 @@ export type Database = {
         Args: { p_reason?: string; p_request_id: string }
         Returns: undefined
       }
+      delete_bible_school_application_only: {
+        Args: { _application_id: string }
+        Returns: Json
+      }
+      delete_bible_school_registration_only: {
+        Args: { _registration_id: string }
+        Returns: Json
+      }
       delete_email: {
         Args: { message_id: number; queue_name: string }
         Returns: boolean
