@@ -449,18 +449,20 @@ export default function LecturerFeedbackReport() {
               <TabsContent value="distribution" className="mt-3 space-y-4">
                 {filtered.length === 0 ? <EmptyState /> : (
                   <>
-                    <div>
+                    <div className="min-w-0">
                       <p className="text-xs font-medium mb-2">Overall rating distribution</p>
-                      <div className="h-48 w-full">
-                        <ResponsiveContainer>
-                          <BarChart data={ratingHistogram}>
-                            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                            <XAxis dataKey="rating" tick={{ fontSize: 11 }} />
-                            <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
-                            <Tooltip />
-                            <Bar dataKey="count" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
-                          </BarChart>
-                        </ResponsiveContainer>
+                      <div className="w-full min-w-0">
+                        {activeTab === "distribution" && (
+                          <ResponsiveContainer width="100%" height={192} debounce={50}>
+                            <BarChart data={ratingHistogram}>
+                              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                              <XAxis dataKey="rating" tick={{ fontSize: 11 }} />
+                              <YAxis allowDecimals={false} tick={{ fontSize: 11 }} width={28} />
+                              <Tooltip />
+                              <Bar dataKey="count" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                            </BarChart>
+                          </ResponsiveContainer>
+                        )}
                       </div>
                     </div>
                     {distribution.map((d) => (
