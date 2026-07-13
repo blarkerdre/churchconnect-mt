@@ -13,7 +13,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Baby, Search, LogIn, LogOut, ShieldAlert, Clock, FileBarChart2, Download, Eye, User, UserPlus, Copy, Plus, Trash2, Mail } from "lucide-react";
+import { Baby, Search, LogIn, LogOut, ShieldAlert, ShieldCheck, Clock, FileBarChart2, Download, Eye, User, UserPlus, Copy, Plus, Trash2, Mail } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { useConsentText, renderConsentText } from "@/hooks/useConsentText";
 import { toast } from "sonner";
 import { format, formatDistanceToNow } from "date-fns";
 import { useAppSetting } from "@/hooks/useAppSetting";
@@ -215,16 +217,20 @@ function ClaimInviteButton({ tenantId, memberId, defaultPhone, defaultEmail, ten
 function WalkInRegisterDialog({ open, onOpenChange, tenantId, onRegistered }) {
   const { data: ageGroupsSetting } = useAppSetting("children_age_groups", DEFAULT_AGE_GROUPS);
   const AGE_GROUPS = Array.isArray(ageGroupsSetting) && ageGroupsSetting.length ? ageGroupsSetting : DEFAULT_AGE_GROUPS;
+  const { consentText, privacyUrl } = useConsentText(tenantId);
   const empty = { first_name: "", last_name: "", date_of_birth: "", gender: "", age_group: "", allergies: "", medical_notes: "" };
+  const emptyConsent = { given: false, photos: false, pastoral: true, emergency: false, notes: "" };
   const [parent, setParent] = useState({ first_name: "", last_name: "", phone: "", email: "", notes: "" });
   const [photoIdSeen, setPhotoIdSeen] = useState(false);
   const [children, setChildren] = useState([{ ...empty }]);
+  const [consent, setConsent] = useState({ ...emptyConsent });
   const [busy, setBusy] = useState(false);
 
   const reset = () => {
     setParent({ first_name: "", last_name: "", phone: "", email: "", notes: "" });
     setPhotoIdSeen(false);
     setChildren([{ ...empty }]);
+    setConsent({ ...emptyConsent });
   };
 
   const updateChild = (i, patch) => setChildren(cs => cs.map((c, idx) => idx === i ? { ...c, ...patch } : c));
@@ -239,6 +245,7 @@ function WalkInRegisterDialog({ open, onOpenChange, tenantId, onRegistered }) {
     for (const c of cleanChildren) {
       if (!c.date_of_birth && !c.age_group) return toast.error(`Age group or DOB required for ${c.first_name}`);
     }
+    if (!consent.given) return toast.error("Parental consent is required to register");
     setBusy(true);
     try {
       const { data, error } = await supabase.rpc("register_walkin_family", {
@@ -249,6 +256,7 @@ function WalkInRegisterDialog({ open, onOpenChange, tenantId, onRegistered }) {
           notes: [parent.notes, "Photo ID seen at drop-off"].filter(Boolean).join(" — "),
         },
         _children: cleanChildren,
+        _consent: consent,
       });
       if (error) throw error;
       toast.success("Walk-in family registered");
@@ -331,6 +339,51 @@ function WalkInRegisterDialog({ open, onOpenChange, tenantId, onRegistered }) {
               </div>
             ))}
           </div>
+
+          <div className="space-y-3 border rounded p-3 bg-primary/5">
+            <div className="flex items-center gap-2">
+              <ShieldCheck className="h-4 w-4 text-primary" />
+              <p className="text-sm font-semibold">Parental consent</p>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {renderConsentText(consentText, privacyUrl)}
+            </p>
+            <div className="flex items-start justify-between gap-3">
+              <div className="text-sm min-w-0">
+                <Label className="font-medium">
+                  I am the parent/legal guardian and give consent for these children's data to be held and processed
+                  <span className="text-destructive"> *</span>
+                </Label>
+              </div>
+              <Switch checked={!!consent.given} onCheckedChange={(v) => setConsent(s => ({ ...s, given: v }))} />
+            </div>
+            <div className="flex items-start justify-between gap-3">
+              <div className="text-sm min-w-0">
+                <Label>Photos &amp; media</Label>
+                <p className="text-xs text-muted-foreground">Child may appear in service photos/videos.</p>
+              </div>
+              <Switch checked={!!consent.photos} onCheckedChange={(v) => setConsent(s => ({ ...s, photos: v }))} />
+            </div>
+            <div className="flex items-start justify-between gap-3">
+              <div className="text-sm min-w-0">
+                <Label>Pastoral contact</Label>
+                <p className="text-xs text-muted-foreground">Leaders may follow up about the child's welfare.</p>
+              </div>
+              <Switch checked={!!consent.pastoral} onCheckedChange={(v) => setConsent(s => ({ ...s, pastoral: v }))} />
+            </div>
+            <div className="flex items-start justify-between gap-3">
+              <div className="text-sm min-w-0">
+                <Label>Emergency medical care</Label>
+                <p className="text-xs text-muted-foreground">Permission to seek emergency care if you can't be reached.</p>
+              </div>
+              <Switch checked={!!consent.emergency} onCheckedChange={(v) => setConsent(s => ({ ...s, emergency: v }))} />
+            </div>
+            <div>
+              <Label>Consent notes (optional)</Label>
+              <Textarea rows={2} value={consent.notes} onChange={(e) => setConsent(s => ({ ...s, notes: e.target.value }))} placeholder="e.g. no photos on social media" />
+            </div>
+          </div>
+
 
           <DialogFooter>
             <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
