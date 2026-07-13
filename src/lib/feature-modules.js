@@ -1,3 +1,6 @@
+// Single source of truth for tenant-toggleable modules.
+// Add a new entry here and it will automatically appear in Tenant Admin → Modules
+// and be honored by sidebar/route filtering via `disabled_features`.
 export const FEATURE_MODULES = [
   { key: "members", label: "Members", description: "Member directory and management" },
   { key: "events", label: "Events", description: "Event scheduling and registration" },
@@ -19,4 +22,6 @@ export const FEATURE_MODULES = [
   { key: "inventory", label: "Inventory", description: "Items, categories, and inspection checklists" },
   { key: "reports", label: "Reports Hub", description: "Cross-module reports for the Reports Officer role" },
   { key: "certificates", label: "Certificates", description: "Issue and approve training/course certificates" },
+  { key: "phone-call", label: "Phone Call", description: "Outbound phone calls via configured voice provider" },
+  { key: "whatsapp", label: "WhatsApp", description: "WhatsApp messaging via configured provider" },
 ];
