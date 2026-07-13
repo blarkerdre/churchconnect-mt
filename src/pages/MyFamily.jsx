@@ -14,7 +14,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Baby, Plus, ShieldCheck, KeyRound, Trash2, UserPlus, Share2, Clock } from "lucide-react";
+import { Baby, Plus, ShieldCheck, KeyRound, Trash2, UserPlus, Share2, Clock, AlertTriangle } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { useAppSetting } from "@/hooks/useAppSetting";
@@ -31,19 +32,36 @@ function ChildForm({ open, onOpenChange, child, memberId, onSaved }) {
   const [form, setForm] = useState(() => child || {
     first_name: "", last_name: "", date_of_birth: "", gender: "", age_group: "",
     allergies: "", medical_notes: "", notes: "",
+    parental_consent_given: false,
+    consent_photos: false,
+    consent_pastoral_contact: true,
+    consent_medical_emergency: false,
+    consent_notes: "",
   });
   React.useEffect(() => {
-    setForm(child || { first_name: "", last_name: "", date_of_birth: "", gender: "", age_group: "", allergies: "", medical_notes: "", notes: "" });
+    setForm(child || {
+      first_name: "", last_name: "", date_of_birth: "", gender: "", age_group: "",
+      allergies: "", medical_notes: "", notes: "",
+      parental_consent_given: false,
+      consent_photos: false,
+      consent_pastoral_contact: true,
+      consent_medical_emergency: false,
+      consent_notes: "",
+    });
   }, [child, open]);
 
   const save = useMutation({
     mutationFn: async () => {
       if (!form.first_name || !form.last_name) throw new Error("Name required");
+      if (!form.parental_consent_given) throw new Error("Parental consent is required to save this child");
+      const wasConsented = !!child?.parental_consent_given;
       const payload = {
         ...form,
         date_of_birth: form.date_of_birth || null,
         gender: form.gender || null,
         age_group: form.age_group || null,
+        parental_consent_at: wasConsented ? (child.parental_consent_at || new Date().toISOString()) : new Date().toISOString(),
+        parental_consent_by: wasConsented ? (child.parental_consent_by || memberId) : memberId,
       };
       if (child?.id) {
         // Preserve the original registering parent on edits by co-parents
@@ -92,6 +110,52 @@ function ChildForm({ open, onOpenChange, child, memberId, onSaved }) {
           <div><Label>Allergies</Label><Input value={form.allergies || ""} onChange={e => setForm({ ...form, allergies: e.target.value })} placeholder="e.g. peanuts" /></div>
           <div><Label>Medical notes</Label><Textarea rows={2} value={form.medical_notes || ""} onChange={e => setForm({ ...form, medical_notes: e.target.value })} /></div>
           <div><Label>Notes for workers</Label><Textarea rows={2} value={form.notes || ""} onChange={e => setForm({ ...form, notes: e.target.value })} /></div>
+
+          <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 space-y-3">
+            <div className="flex items-start gap-2">
+              <ShieldCheck className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+              <div className="text-xs text-muted-foreground">
+                Parental consent (required). You can change these at any time.
+              </div>
+            </div>
+
+            <label className="flex items-start justify-between gap-3 cursor-pointer">
+              <div className="text-sm">
+                <p className="font-medium">I am the parent/legal guardian and consent to my child's data being held and processed <span className="text-destructive">*</span></p>
+                <p className="text-xs text-muted-foreground">Required to register this child.</p>
+              </div>
+              <Switch checked={!!form.parental_consent_given} onCheckedChange={v => setForm({ ...form, parental_consent_given: v })} />
+            </label>
+
+            <label className="flex items-start justify-between gap-3 cursor-pointer">
+              <div className="text-sm">
+                <p className="font-medium">Photos & media</p>
+                <p className="text-xs text-muted-foreground">Child may appear in Children Church photos and posts.</p>
+              </div>
+              <Switch checked={!!form.consent_photos} onCheckedChange={v => setForm({ ...form, consent_photos: v })} />
+            </label>
+
+            <label className="flex items-start justify-between gap-3 cursor-pointer">
+              <div className="text-sm">
+                <p className="font-medium">Pastoral contact</p>
+                <p className="text-xs text-muted-foreground">Leaders may reach out for welfare and follow-up.</p>
+              </div>
+              <Switch checked={!!form.consent_pastoral_contact} onCheckedChange={v => setForm({ ...form, consent_pastoral_contact: v })} />
+            </label>
+
+            <label className="flex items-start justify-between gap-3 cursor-pointer">
+              <div className="text-sm">
+                <p className="font-medium">Emergency medical care</p>
+                <p className="text-xs text-muted-foreground">Workers may seek emergency medical care if I cannot be reached.</p>
+              </div>
+              <Switch checked={!!form.consent_medical_emergency} onCheckedChange={v => setForm({ ...form, consent_medical_emergency: v })} />
+            </label>
+
+            <div>
+              <Label className="text-xs">Consent notes (optional)</Label>
+              <Textarea rows={2} value={form.consent_notes || ""} onChange={e => setForm({ ...form, consent_notes: e.target.value })} placeholder="e.g. no photos on social media" maxLength={500} />
+            </div>
+          </div>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
@@ -418,6 +482,15 @@ export default function MyFamily() {
                       <div className="flex gap-2 mt-1 flex-wrap">
                         {c.age_group && <Badge variant="outline">{c.age_group}</Badge>}
                         {c.allergies && <Badge variant="destructive" className="text-[10px]">Allergy: {c.allergies}</Badge>}
+                        {c.parental_consent_given ? (
+                          <Badge variant="outline" className="text-[10px] border-emerald-300 text-emerald-700">
+                            <ShieldCheck className="h-3 w-3 mr-1" /> Consent {c.parental_consent_at ? `· ${format(new Date(c.parental_consent_at), "d MMM yyyy")}` : "given"}
+                          </Badge>
+                        ) : (
+                          <Badge variant="destructive" className="text-[10px]">
+                            <AlertTriangle className="h-3 w-3 mr-1" /> Consent required
+                          </Badge>
+                        )}
                       </div>
                     </div>
                     {active && (
