@@ -871,6 +871,8 @@ function CourseRegistrationsView({ course }) {
   const [searchTerm, setSearchTerm] = useState("");
   const [editingNumberId, setEditingNumberId] = useState(null);
   const [editingNumberValue, setEditingNumberValue] = useState("");
+  const [sentLinkIds, setSentLinkIds] = useState(() => new Set());
+  const [sendingLinkId, setSendingLinkId] = useState(null);
 
   const { data: registrations = [], isLoading } = useQuery({
     queryKey: ["course-registrations", course.id],
