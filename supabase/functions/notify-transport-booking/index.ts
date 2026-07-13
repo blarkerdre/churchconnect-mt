@@ -34,6 +34,7 @@ Deno.serve(async (req) => {
     const supabase = createClient(supabaseUrl, serviceKey);
 
     // Allow either service-role (internal callers) or a valid user JWT (browser)
+    let callerUserId: string | null = null;
     if (token !== serviceKey) {
       const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
       const userClient = createClient(supabaseUrl, anonKey, {
@@ -45,8 +46,30 @@ Deno.serve(async (req) => {
           status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
+      callerUserId = claims.claims.sub as string;
     }
     const body = await req.json();
+
+    // Authorize: any user JWT caller must belong to the tenant referenced in
+    // the request body. Prevents cross-tenant abuse of this notification
+    // function (spam/phishing of another tenant's members and leaders).
+    const bodyTenantId: string | undefined = body?.tenant_id;
+    if (callerUserId) {
+      if (!bodyTenantId) {
+        return new Response(JSON.stringify({ error: "Missing tenant_id" }), {
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const { data: belongs } = await supabase.rpc("user_belongs_to_tenant", {
+        _user_id: callerUserId,
+        _tenant_id: bodyTenantId,
+      });
+      if (belongs !== true) {
+        return new Response(JSON.stringify({ error: "Forbidden" }), {
+          status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
 
     // Short-circuit: driver_route notification (in-app only)
     if (body.notification_type === "driver_route") {
