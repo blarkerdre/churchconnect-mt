@@ -374,18 +374,11 @@ export default function CourseResultsView({ course }) {
                 )}
                 <div className="flex-1" />
                 <Button
-                  variant="outline" size="sm" className="h-7 text-xs gap-1"
+                  size="sm" className="h-7 text-xs gap-1"
                   disabled={selected.size === 0 || sendingBulk}
-                  onClick={() => sendStatements(Array.from(selected))}
+                  onClick={() => setSendDialog({ memberIds: Array.from(selected) })}
                 >
-                  {sendingBulk ? <Loader2 className="h-3 w-3 animate-spin" /> : <Mail className="h-3 w-3" />} Email Statement
-                </Button>
-                <Button
-                  variant="outline" size="sm" className="h-7 text-xs gap-1"
-                  disabled={selected.size === 0 || sendingBulk}
-                  onClick={() => sendCertificates(Array.from(selected))}
-                >
-                  {sendingBulk ? <Loader2 className="h-3 w-3 animate-spin" /> : <Award className="h-3 w-3" />} Email Certificate
+                  <Send className="h-3 w-3" /> Preview & Send…
                 </Button>
               </div>
             )}
