@@ -6571,10 +6571,20 @@ export type Database = {
           read_ct: number
         }[]
       }
-      register_walkin_family: {
-        Args: { _children: Json; _parent: Json; _tenant_id: string }
-        Returns: Json
-      }
+      register_walkin_family:
+        | {
+            Args: { _children: Json; _parent: Json; _tenant_id: string }
+            Returns: Json
+          }
+        | {
+            Args: {
+              _children: Json
+              _consent?: Json
+              _parent: Json
+              _tenant_id: string
+            }
+            Returns: Json
+          }
       release_child: {
         Args: {
           _adult_member_id?: string

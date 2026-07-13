@@ -1,49 +1,43 @@
-## Add parent consent for children
+## Add parental consent to walk-in family registration
 
-Currently, the `children` table has no consent fields. When a parent adds a child in **My Family → Add child** (and via the Children Church intake), we need to capture explicit parental consent before that child can be checked in / photographed / receive pastoral contact — matching the GDPR consent pattern already used for adult members (`ConsentTogglesGroup`).
+The `WalkInRegisterDialog` in `src/pages/ChildrenChurch.jsx` currently creates a visitor parent + child records without capturing parental consent, so newly-registered walk-in children fail the `parental_consent_given` gate we just added and cannot be checked in.
 
-### 1. Database (migration)
+### 1. UI — `WalkInRegisterDialog` (`src/pages/ChildrenChurch.jsx`)
 
-Add nullable columns to `public.children`:
-- `parental_consent_given boolean NOT NULL DEFAULT false` — required master consent by parent/guardian
-- `parental_consent_at timestamptz` — timestamp when consent was given
-- `parental_consent_by uuid` — member_id of parent who gave consent
-- `consent_photos boolean NOT NULL DEFAULT false` — child may appear in service photos/videos
-- `consent_pastoral_contact boolean NOT NULL DEFAULT true` — leaders may follow up re: child welfare
-- `consent_medical_emergency boolean NOT NULL DEFAULT false` — permission to seek emergency medical care if parent unreachable
-- `consent_notes text` — optional freeform (e.g. "no photos on social media")
+Add a **Parental Consent** block to the dialog (below the Children section, before the footer), mirroring the pattern used in My Family:
 
-Log each change into existing `consent_events` table with `subject_type = 'child'` and `subject_id = child.id` so we keep an audit trail (same pattern as member consent).
-
-No RLS changes — the existing children policies already restrict to primary guardian + co-guardians + Children Church workers.
-
-### 2. UI — My Family → Add / Edit child (`src/pages/MyFamily.jsx`)
-
-Extend `ChildForm` with a new **Parental Consent** section (collapsible card at the bottom of the form) containing:
-- Master toggle "I confirm I am the parent/legal guardian and give consent for this child's data to be held and processed" (**required to save**).
+- Master toggle: *"I confirm I am the parent/legal guardian and give consent for these children's data to be held and processed"* — **required to submit** (block with toast if off).
 - Sub-toggles: Photos & media, Pastoral contact, Emergency medical care.
 - Optional consent notes textarea.
+- Consent applies to **all** children being registered in this dialog (single family, single parent present).
+- Include a short line linking to the tenant Privacy Policy via `useConsentText` (already imported pattern).
 
-Save behaviour:
-- Block save if master consent is off (toast: "Parental consent is required").
-- On save, stamp `parental_consent_at = now()` and `parental_consent_by = memberId` when consent transitions off → on.
-- Insert a row into `consent_events` describing the change (grant/revoke, which flags).
+State additions in the dialog: `consent = { given, photos, pastoral, emergency, notes }` with sensible defaults (`pastoral: true`, others `false`).
 
-Display on the child card in My Family: a small "Consent: ✓ given DD MMM YYYY" line, or a red "Consent required" pill if missing.
+Reset consent along with the rest of the form.
 
-### 3. UI — Children Church check-in (`src/pages/ChildrenChurch.jsx`)
+### 2. RPC — `register_walkin_family`
 
-Block check-in for a child where `parental_consent_given = false`. Show a banner in the check-in row: *"Parent consent required — ask parent to complete consent in My Family before check-in."* Photo capture and photo display in the child roster respect `consent_photos = false` (hide/blur photo, show placeholder).
+Extend the SECURITY DEFINER function (migration) to accept a `_consent jsonb` parameter and stamp the new consent columns on every inserted child row:
 
-### 4. Out of scope
+- `parental_consent_given` ← `_consent->>'given'` (bool, required true; raise if false)
+- `parental_consent_at` ← `now()`
+- `parental_consent_by` ← `v_member_id` (the parent member just created/matched)
+- `consent_photos`, `consent_pastoral_contact`, `consent_medical_emergency` ← from `_consent`
+- `consent_notes` ← from `_consent`
 
-- No changes to adult member consent flow.
-- No changes to guardians/delegations flow.
-- No new tenant-level setting text (reuses existing tenant privacy policy URL via `useConsentText`).
+Also insert one row per child into `consent_events` (`subject_type = 'child'`, `subject_id = v_child_id`, `action = 'grant'`, `flags` = jsonb of the toggle state) for the audit trail. Keep GRANT EXECUTE to `authenticated`.
+
+The client passes the new `_consent` payload in the `supabase.rpc("register_walkin_family", …)` call.
+
+### 3. Out of scope
+
+- No change to My Family consent flow (already implemented).
+- No change to child check-in gating (already respects `parental_consent_given`; walk-in children will now pass because consent is captured at registration).
+- No change to `child_guardians` / delegation flow.
 
 ### Files touched
 
-- new migration adding columns to `public.children`
-- `src/pages/MyFamily.jsx` — extend `ChildForm`, add consent display on card
-- `src/pages/ChildrenChurch.jsx` — gate check-in + respect photo consent
-- `src/integrations/supabase/types.ts` regenerates automatically after migration
+- new migration replacing `public.register_walkin_family` with the `_consent jsonb` signature + `consent_events` inserts
+- `src/pages/ChildrenChurch.jsx` — extend `WalkInRegisterDialog` state, UI, submit payload
+- `src/integrations/supabase/types.ts` regenerates automatically
