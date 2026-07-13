@@ -1,61 +1,61 @@
 ## Goal
 
-In the Bible School **Registrations** tab (`src/pages/ExamManagement.jsx`), let admins send/resend the exam sign-in link to many approved registrants in one action, and show a clear "Link sent" status per row.
+In Course Results (`src/components/exams/CourseResultsView.jsx`), let admins send the **Statement of Result** and the **Certificate** separately or together, and **preview both** before sending — for a single member or in bulk.
 
-## Changes
+## Changes (frontend only)
 
-### 1. Row-level "sent" status column
-- Add a **Exam link** status column (or badge in the existing actions/status cell) rendered from `sentLinkIds` (already seeded from rows where `user_id IS NOT NULL`, meaning provisioning ran at least once).
-- Values:
-  - `Not sent` — grey outline badge (approved rows without `user_id` and not in `sentLinkIds`).
-  - `Sent` — green badge with check icon (row is in `sentLinkIds` or `user_id` present).
-  - `Sending…` — while that row's id is in an in-flight set.
-- Only show for rows where `isApproved && members?.email`. For unapproved rows show `—`.
+### 1. New "Send Results" dialog — `src/components/exams/SendResultsDialog.jsx`
 
-### 2. Selection UI
-- Add a leading **checkbox column** to the registrations table header + each eligible row (approved + has email). Header checkbox = select-all-eligible on current filtered view.
-- Track `selectedIds: Set<string>` in state. Reset when filters/tab change.
-- Show a **selection toolbar** above the table when `selectedIds.size > 0`:
-  - `"N selected"` text
-  - Button **Send exam link to selected** (label switches to `Resend link to selected` when every selected row is already in `sentLinkIds`; if mixed, keep `Send / resend link to selected`).
-  - Button **Clear selection**.
+A single dialog reused for per-member and bulk. Props: `open`, `onOpenChange`, `course`, `members` (array of `{ id, name, passed, subjects, member_email? }`), `tenantId`, `onSent`.
 
-### 3. Bulk send mutation
-- Add `sendBulkExamLinksMutation` in `ExamManagement.jsx`. It:
-  1. Takes an array of `registration_id`s.
-  2. Iterates sequentially (or in small concurrency batches of 3) calling the existing `sendExamLinkMutation` logic — i.e. `supabase.functions.invoke("provision-exam-account", { body: { registration_id } })`. Sequential-with-small-concurrency avoids hammering `admin.auth.admin.listUsers` in the edge function.
-  3. Tracks per-row state via a `sendingIds: Set` and appends to `sentLinkIds` on each success.
-  4. Collects successes + failures. On completion, toast: `"Sent N link(s). M failed."` with failure details in a secondary toast/console.
-  5. Invalidates `course-registrations` and `wofbi-applications` queries once at the end.
-- Existing single-row **Send / Resend** button in the actions cell stays; it just wraps the same underlying invoke.
+Sections:
 
-### 4. "Send to all approved" convenience
-- In the selection toolbar (visible whenever the current filter view has ≥1 eligible row), also render a secondary button **Select all approved with email** that sets `selectedIds` to every eligible row across the current filtered dataset (not just current page). This gives the "send to all" affordance without an extra confirm — the actual send still requires clicking `Send exam link to selected`, and that click opens a `DangerConfirmDialog`-style confirm when count > 5 to prevent accidents.
+- **What to send** — two checkboxes (default both on):
+  - `Statement of Result`
+  - `Certificate` (only enabled if at least one selected member has `passed === true`; shows helper text "N of M eligible" when some are not passed)
+- **Recipients summary** — list selected members with badges: `Statement ✓`, `Certificate ✓ / — not passed`.
+- **Preview panel** with a member switcher (dropdown of selected members) and two tabs:
+  - **Statement** — inline render using the existing `StatementOfResult` on-screen preview markup (reuse the JSX block that already builds the on-screen statement in `StatementOfResult.jsx`; extract to a small `StatementPreview` subcomponent exporting the render body without the outer Dialog wrapper).
+  - **Certificate** — image returned from `supabase.functions.invoke("issue-certificate", { body: { member_id, training_type: course.name, tenant_id, preview: true, admin_override: true, reissue: <existingCompletion> } })`. Shows spinner while loading; error state if the member is not passed.
+- **Footer** — `Cancel` and `Send N …` primary button. Button label reflects selection:
+  - Both: `Send statement & certificate to N`
+  - Statement only: `Send statement to N`
+  - Certificate only: `Send certificate to N eligible` (N excludes not-passed)
+  - Confirm dialog when total send count > 5.
 
-### 5. Confirm dialog for bulk sends
-- Reuse existing `DangerConfirmDialog` (or a lighter `ConfirmDialog` if one exists — otherwise inline `AlertDialog`). Copy:
-  - Title: `Send exam link to N registrant(s)?`
-  - Body: `Each recipient will get a single-use magic sign-in link by email. Resending replaces any previous unused link.`
-  - Confirm label: `Send links`.
+Send logic on confirm:
+1. If Statement selected → one call to `send-statement-email` with all `member_ids`.
+2. If Certificate selected → sequential `issue-certificate` calls (mirroring current `sendCertificates` in `CourseResultsView.jsx`), filtered to `passed` members, using `reissue: existingSet.has(id)`, `admin_override: true`, `send_certificate_email: true`.
+3. Aggregate result toast: `Statements: X sent, Y failed · Certificates: A sent, B failed (C skipped)`.
+4. Invalidate `training-completions` and `course-attempts`; call `onSent()`; close.
 
-### 6. Visual status persistence across reload
-- `sentLinkIds` currently seeds from `user_id IS NOT NULL`. Keep that. Additionally, treat any row with `student_number` present or any prior successful send in this session as "sent". No schema change — `user_id` already reliably reflects that provisioning + link generation ran.
+### 2. Wire into `CourseResultsView.jsx`
 
-## Technical notes
+- Add `sendDialog` state `{ open, memberIds }`.
+- **Bulk toolbar (line ~374-388)**: replace the two buttons "Email Statement" and "Email Certificate" with a single primary button `Preview & Send…` that opens the dialog with `selected` ids. Keep an "Advanced" split later if needed — not now.
+- **Per-row (line ~450-473)**: replace the two per-row `Email` / `Certificate` buttons with a single `Send…` ghost button per row (icon `Send`) opening the dialog with just that member. Row-level "Statement" view button (opens `StatementOfResult` in read-only) stays unchanged.
+- Keep the existing standalone `sendStatements` / `sendCertificates` functions available but no longer wired to buttons — safe to delete once the dialog is in.
 
-- No backend/edge function changes. `provision-exam-account` already accepts `registration_id` and is idempotent per user (reuses existing auth user + member).
-- No new DB columns. Sent state is derived from `course_registrations.user_id` (proxy for "we've provisioned + emailed at least once") plus in-session `sentLinkIds`.
-- Concurrency: cap at 3 parallel invokes using a simple `Promise.all` over sliced chunks.
-- Keep the Applications tab unchanged.
+### 3. Extract `StatementPreview` from `StatementOfResult.jsx`
+
+Refactor: move the on-screen preview JSX (currently inside the Dialog around `StatementOfResult.jsx:355`) into a named export `StatementPreview` that takes the same computed props (`course`, `member`, `subjects`, `tenant`, etc.). `StatementOfResult` keeps wrapping it in a Dialog with print/download buttons. `SendResultsDialog` imports and renders `<StatementPreview .../>` directly for each member — no duplicate markup.
 
 ## Out of scope
 
-- No "last sent at" timestamp column (would need a schema change; can be added later).
-- No per-tenant rate limiting UI.
-- No changes to the email template or magic-link expiry.
+- No backend/edge function changes. Both `send-statement-email` (accepts `member_ids[]`) and `issue-certificate` (supports `preview: true`) already do what's needed.
+- No PDF preview inside the dialog for the statement (HTML preview mirrors the PDF layout, matches current behavior).
+- No scheduling, "send later", or per-recipient template overrides.
+- No changes to the Applications tab or Registrations tab.
+
+## Technical notes
+
+- Certificate preview response shape (from existing `IssueCertificateDialog`): `{ image, meta }`. Reuse handling.
+- Certificate eligibility mirrors current logic: only `passedMembers` receive certs; not-passed selections are marked "skipped".
+- Concurrency for cert sends: sequential (matches current implementation) to avoid concurrent inserts on `training_completions`.
+- No new tables or RPCs.
 
 ## Result
 
-- Admins can multi-select approved registrants (or select all eligible) and send/resend exam links in one action.
-- Each row shows `Sent` / `Not sent` / `Sending…` status.
-- Existing single-row Send/Resend button and Applications tab behavior are unchanged.
+Admins can, from Course Results:
+- Select one or many members, click **Preview & Send**, choose Statement / Certificate / both, flip through per-member previews, then send in one action.
+- Row-level `Send…` opens the same dialog scoped to that member.
