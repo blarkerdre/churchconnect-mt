@@ -664,17 +664,19 @@ function CheckInPanel({ tenantId, tenantSlug }) {
               <div className="space-y-1">
                 {selectedFamily.children.map(c => {
                   const checked = selectedChildIds.includes(c.id);
+                  const noConsent = !c.parental_consent_given;
                   return (
-                    <button key={c.id} className={`w-full text-left border rounded p-2 flex justify-between items-center ${checked ? "border-primary bg-primary/5" : ""}`}
-                      onClick={() => setSelectedChildIds(checked ? selectedChildIds.filter(x => x !== c.id) : [...selectedChildIds, c.id])}>
+                    <button key={c.id} disabled={noConsent} className={`w-full text-left border rounded p-2 flex justify-between items-center ${checked ? "border-primary bg-primary/5" : ""} ${noConsent ? "opacity-60 cursor-not-allowed" : ""}`}
+                      onClick={() => { if (noConsent) return; setSelectedChildIds(checked ? selectedChildIds.filter(x => x !== c.id) : [...selectedChildIds, c.id]); }}>
                       <div>
                         <p className="text-sm font-medium">{c.first_name} {c.last_name}</p>
-                        <div className="flex gap-1 mt-1">
+                        <div className="flex gap-1 mt-1 flex-wrap">
                           {c.age_group && <Badge variant="outline" className="text-[10px]">{c.age_group}</Badge>}
                           {c.allergies && <Badge variant="destructive" className="text-[10px]">⚠ {c.allergies}</Badge>}
+                          {noConsent && <Badge variant="destructive" className="text-[10px]">Consent required</Badge>}
                         </div>
                       </div>
-                      <input type="checkbox" readOnly checked={checked} className="h-4 w-4" />
+                      <input type="checkbox" readOnly checked={checked} disabled={noConsent} className="h-4 w-4" />
                     </button>
                   );
                 })}
