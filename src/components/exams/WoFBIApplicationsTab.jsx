@@ -14,7 +14,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { toast } from "@/components/ui/use-toast";
-import { Loader2, Search, Download, Eye, CheckCircle2, XCircle, Trash2, BarChart3, X, Send } from "lucide-react";
+import { Loader2, Search, Download, Eye, CheckCircle2, XCircle, Trash2, BarChart3, X } from "lucide-react";
 
 const STATUS_VARIANT = {
   submitted: "secondary",
@@ -239,92 +239,37 @@ export default function WoFBIApplicationsTab() {
     onError: (e) => toast({ title: "Update failed", description: e.message, variant: "destructive" }),
   });
 
-  const provisionExamAccount = useMutation({
-    mutationFn: async ({ id }) => {
-      const { data, error } = await supabase.functions.invoke("provision-exam-account", {
-        body: { application_id: id },
-      });
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
-      return data;
-    },
-    onSuccess: (_data, vars) => {
-      if (!vars?.silent) toast({ title: "Exam link sent", description: "The applicant has been emailed a one-click sign-in link." });
-    },
-    onError: (e, vars) => {
-      toast({
-        title: vars?.silent ? "Approved — but exam link failed" : "Failed to send exam link",
-        description: e.message,
-        variant: "destructive",
-      });
-    },
-  });
-
   const deleteApplications = useMutation({
     mutationFn: async (ids) => {
       const toDelete = applications.filter((a) => ids.includes(a.id));
-      const formRows = toDelete.filter((a) => a.source !== "direct");
-      const directRows = toDelete.filter((a) => a.source === "direct");
-
-      // Form applications: cascade for linked, plain delete for unlinked (original behaviour).
-      const linked = formRows.filter((a) => a.member_id);
-      const unlinked = formRows.filter((a) => !a.member_id);
-
-      for (const a of linked) {
-        const { error } = await supabase.rpc("cascade_delete_bible_school_records", {
-          _member_id: a.member_id,
-          _course_id: a.course_id || null,
+      // Applications tab now deletes ONLY application rows. Registrations / exam data
+      // are handled from the Registrations tab.
+      const formRows = toDelete.filter((a) => a.source !== "direct" && a.id);
+      for (const a of formRows) {
+        const { error } = await supabase.rpc("delete_bible_school_application_only", {
+          _application_id: a.id,
         });
         if (error) throw error;
       }
-
-      if (unlinked.length > 0) {
-        const { error } = await supabase
-          .from("wofbi_applications")
-          .delete()
-          .in("id", unlinked.map((a) => a.id))
-          .eq("tenant_id", tenantId);
-        if (error) throw error;
-      }
-
-      // Direct registrations: cascade Bible School records via the same RPC.
-      for (const a of directRows) {
-        if (a.member_id) {
-          const { error } = await supabase.rpc("cascade_delete_bible_school_records", {
-            _member_id: a.member_id,
-            _course_id: a.course_id || null,
-          });
-          if (error) throw error;
-        } else {
-          const { error } = await supabase
-            .from("course_registrations")
-            .delete()
-            .eq("id", a.registration_id)
-            .eq("tenant_id", tenantId);
-          if (error) throw error;
-        }
-      }
-
       await Promise.all(
-        toDelete.map((a) =>
+        formRows.map((a) =>
           logAudit(
-            a.source === "direct" ? "course_registration.deleted" : "wofbi_application.deleted",
-            a.source === "direct" ? "course_registrations" : "wofbi_applications",
-            a.source === "direct" ? a.registration_id : a.id,
-            { name: `${a.first_name} ${a.last_name}`, email: a.email, course: a.course?.name || null, source: a.source, cascaded: !!a.member_id },
+            "wofbi_application.deleted",
+            "wofbi_applications",
+            a.id,
+            { name: `${a.first_name} ${a.last_name}`, email: a.email, course: a.course?.name || null, source: a.source },
             tenantId
           )
         )
       );
-      return ids.length;
+      return formRows.length;
     },
     onSuccess: (count) => {
       qc.invalidateQueries({ queryKey: ["wofbi-applications", tenantId] });
       qc.invalidateQueries({ queryKey: ["wofbi-direct-registrations", tenantId] });
-      qc.invalidateQueries({ queryKey: ["course-registrations"] });
       toast({
-        title: count > 1 ? `Deleted ${count} entries` : "Entry deleted",
-        description: "All linked Bible School records (registration, exam attempts, results, certificate, ratings) were also removed.",
+        title: count > 1 ? `Deleted ${count} applications` : "Application deleted",
+        description: "The course registration, exam attempts and certificate (if any) were kept. Remove those from the Registrations tab.",
       });
       setSelectedIds(new Set());
       setConfirmDelete(null);
@@ -808,19 +753,6 @@ export default function WoFBIApplicationsTab() {
                             title="Reject"
                           >
                             <XCircle className="h-3.5 w-3.5" />
-                          </Button>
-                        )}
-                        {isApprovedStatus(a.status) && a.source === "form" && (
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="text-primary hover:text-primary"
-                            onClick={() => provisionExamAccount.mutate({ id: a.id })}
-                            disabled={provisionExamAccount.isPending}
-                            aria-label="Send exam link"
-                            title="Resend exam sign-in link"
-                          >
-                            <Send className="h-3.5 w-3.5" />
                           </Button>
                         )}
                         {canDelete && (
