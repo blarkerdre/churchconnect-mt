@@ -73,6 +73,7 @@ export const template = {
     courseName: 'Bible Foundation Course',
     magicLink: 'https://app.example.com/auth/exam-callback?token=demo',
     tenantName: 'Winners Chapel Cardiff',
+    courses: [{ name: 'Bible Foundation Course', student_number: 'WCC/BFC/2026/0001' }],
   },
 } satisfies TemplateEntry
 
