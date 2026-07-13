@@ -411,7 +411,7 @@ function CheckInPanel({ tenantId, tenantSlug }) {
 
       // 2) Matching active children by name
       const childQ = supabase.from("children")
-        .select("id, first_name, last_name, age_group, allergies, primary_guardian_member_id")
+        .select("id, first_name, last_name, age_group, allergies, primary_guardian_member_id, parental_consent_given")
         .eq("tenant_id", tenantId).eq("is_active", true)
         .or(`first_name.ilike.${like},last_name.ilike.${like}`)
         .limit(20);
@@ -451,7 +451,7 @@ function CheckInPanel({ tenantId, tenantSlug }) {
 
       // Fetch all active children for these parents (primary guardian)
       const { data: childrenByPrimary = [] } = await supabase.from("children")
-        .select("id, first_name, last_name, age_group, allergies, primary_guardian_member_id")
+        .select("id, first_name, last_name, age_group, allergies, primary_guardian_member_id, parental_consent_given")
         .eq("tenant_id", tenantId).eq("is_active", true)
         .in("primary_guardian_member_id", Array.from(parentIds));
 
@@ -465,7 +465,7 @@ function CheckInPanel({ tenantId, tenantSlug }) {
       let extraChildren = [];
       if (extraChildIds.length) {
         const { data } = await supabase.from("children")
-          .select("id, first_name, last_name, age_group, allergies, primary_guardian_member_id")
+          .select("id, first_name, last_name, age_group, allergies, primary_guardian_member_id, parental_consent_given")
           .eq("tenant_id", tenantId).eq("is_active", true)
           .in("id", extraChildIds);
         extraChildren = data || [];
