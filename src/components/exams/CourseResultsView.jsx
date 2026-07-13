@@ -448,22 +448,10 @@ export default function CourseResultsView({ course }) {
                               size="sm"
                               className="h-6 text-[10px] px-1.5 gap-0.5"
                               disabled={sendingBulk}
-                              onClick={() => sendStatements([m.id])}
-                              title="Email Statement of Result to this member"
+                              onClick={() => setSendDialog({ memberIds: [m.id] })}
+                              title="Preview & send statement / certificate"
                             >
-                              <Send className="h-3 w-3" /> Email
-                            </Button>
-                          )}
-                          {isAdmin && m.subjectsTaken === subjects.length && m.passed && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-6 text-[10px] px-1.5 gap-0.5"
-                              disabled={sendingBulk}
-                              onClick={() => sendCertificates([m.id])}
-                              title="Email certificate to this member"
-                            >
-                              <Award className="h-3 w-3" /> Certificate
+                              <Send className="h-3 w-3" /> Send…
                             </Button>
                           )}
                           {subjects.map(s => {
