@@ -514,6 +514,10 @@ function CheckInPanel({ tenantId, tenantSlug }) {
       if (!broughtById) throw new Error("Select who brought the child");
       const pin = Math.floor(100000 + Math.random() * 900000).toString();
       const snapshot = (selectedFamily.children || []).filter(c => selectedChildIds.includes(c.id));
+      const missingConsent = snapshot.filter(c => !c.parental_consent_given);
+      if (missingConsent.length) {
+        throw new Error(`Parental consent required for ${missingConsent.map(c => c.first_name).join(", ")}. Ask parent to complete consent in My Family.`);
+      }
       for (const cid of selectedChildIds) {
         const { error } = await supabase.rpc("checkin_child", {
           _child_id: cid, _pin: pin, _parent_member_id: broughtById,
