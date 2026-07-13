@@ -215,10 +215,8 @@ export default function WoFBIApplicationsTab() {
         } else {
           toast({ title: "Application approved" });
         }
-        // For form applications, silently provision an account + email a magic link so the applicant can write the exam without signing up.
-        if (res.source === "form" && variables?.id) {
-          provisionExamAccount.mutate({ id: variables.id, silent: true });
-        }
+        // Exam sign-in link is now sent manually from Bible School Management → Registrations.
+        // (Previously auto-sent here on approval.)
         // Send the course-registration confirmation email now that the applicant is actually enrolled.
         if (res.enrolled) {
           const approved = applications.find((a) => a.id === variables?.id);
