@@ -921,6 +921,31 @@ function CourseRegistrationsView({ course }) {
     onError: (err) => toast({ title: "Update failed", description: err.message, variant: "destructive" }),
   });
 
+  const sendExamLinkMutation = useMutation({
+    mutationFn: async (registrationId) => {
+      setSendingLinkId(registrationId);
+      const { data, error } = await supabase.functions.invoke("provision-exam-account", {
+        body: { registration_id: registrationId },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      return { registrationId, data };
+    },
+    onSuccess: ({ registrationId }) => {
+      setSentLinkIds((prev) => {
+        const next = new Set(prev);
+        next.add(registrationId);
+        return next;
+      });
+      setSendingLinkId(null);
+      toast({ title: "Exam link sent", description: "The applicant has been emailed a one-click sign-in link." });
+    },
+    onError: (err) => {
+      setSendingLinkId(null);
+      toast({ title: "Failed to send exam link", description: err.message, variant: "destructive" });
+    },
+  });
+
   const deleteMutation = useMutation({
     mutationFn: async (reg) => {
       if (reg.member_id) {
