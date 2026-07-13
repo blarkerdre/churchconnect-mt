@@ -62,6 +62,7 @@ function toCSV(rows) {
 export default function LecturerFeedbackReport() {
   const { tenantId } = useTenantQuery();
   const [filters, setFilters] = useState(emptyFilters);
+  const [activeTab, setActiveTab] = useState("lecturer");
 
   const { data: ratings = [], isLoading } = useQuery({
     queryKey: ["lecturer-ratings-report", tenantId],
