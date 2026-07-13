@@ -94,3 +94,6 @@ const button = {
 }
 const hr = { borderColor: '#e2e8f0', margin: '28px 0' }
 const footer = { fontSize: '13px', color: '#94a3b8', margin: '0', whiteSpace: 'pre-line' as const }
+const numberBox = { backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '16px 20px', margin: '20px 0' }
+const numberLabel = { fontSize: '12px', textTransform: 'uppercase' as const, letterSpacing: '0.05em', color: '#64748b', margin: '0 0 8px', fontWeight: 'bold' as const }
+const numberValue = { fontSize: '15px', color: '#1a2d4d', margin: '0 0 4px', fontFamily: "'Courier New', monospace" }
