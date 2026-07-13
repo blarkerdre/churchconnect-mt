@@ -110,6 +110,52 @@ function ChildForm({ open, onOpenChange, child, memberId, onSaved }) {
           <div><Label>Allergies</Label><Input value={form.allergies || ""} onChange={e => setForm({ ...form, allergies: e.target.value })} placeholder="e.g. peanuts" /></div>
           <div><Label>Medical notes</Label><Textarea rows={2} value={form.medical_notes || ""} onChange={e => setForm({ ...form, medical_notes: e.target.value })} /></div>
           <div><Label>Notes for workers</Label><Textarea rows={2} value={form.notes || ""} onChange={e => setForm({ ...form, notes: e.target.value })} /></div>
+
+          <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 space-y-3">
+            <div className="flex items-start gap-2">
+              <ShieldCheck className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+              <div className="text-xs text-muted-foreground">
+                Parental consent (required). You can change these at any time.
+              </div>
+            </div>
+
+            <label className="flex items-start justify-between gap-3 cursor-pointer">
+              <div className="text-sm">
+                <p className="font-medium">I am the parent/legal guardian and consent to my child's data being held and processed <span className="text-destructive">*</span></p>
+                <p className="text-xs text-muted-foreground">Required to register this child.</p>
+              </div>
+              <Switch checked={!!form.parental_consent_given} onCheckedChange={v => setForm({ ...form, parental_consent_given: v })} />
+            </label>
+
+            <label className="flex items-start justify-between gap-3 cursor-pointer">
+              <div className="text-sm">
+                <p className="font-medium">Photos & media</p>
+                <p className="text-xs text-muted-foreground">Child may appear in Children Church photos and posts.</p>
+              </div>
+              <Switch checked={!!form.consent_photos} onCheckedChange={v => setForm({ ...form, consent_photos: v })} />
+            </label>
+
+            <label className="flex items-start justify-between gap-3 cursor-pointer">
+              <div className="text-sm">
+                <p className="font-medium">Pastoral contact</p>
+                <p className="text-xs text-muted-foreground">Leaders may reach out for welfare and follow-up.</p>
+              </div>
+              <Switch checked={!!form.consent_pastoral_contact} onCheckedChange={v => setForm({ ...form, consent_pastoral_contact: v })} />
+            </label>
+
+            <label className="flex items-start justify-between gap-3 cursor-pointer">
+              <div className="text-sm">
+                <p className="font-medium">Emergency medical care</p>
+                <p className="text-xs text-muted-foreground">Workers may seek emergency medical care if I cannot be reached.</p>
+              </div>
+              <Switch checked={!!form.consent_medical_emergency} onCheckedChange={v => setForm({ ...form, consent_medical_emergency: v })} />
+            </label>
+
+            <div>
+              <Label className="text-xs">Consent notes (optional)</Label>
+              <Textarea rows={2} value={form.consent_notes || ""} onChange={e => setForm({ ...form, consent_notes: e.target.value })} placeholder="e.g. no photos on social media" maxLength={500} />
+            </div>
+          </div>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
