@@ -215,16 +215,20 @@ function ClaimInviteButton({ tenantId, memberId, defaultPhone, defaultEmail, ten
 function WalkInRegisterDialog({ open, onOpenChange, tenantId, onRegistered }) {
   const { data: ageGroupsSetting } = useAppSetting("children_age_groups", DEFAULT_AGE_GROUPS);
   const AGE_GROUPS = Array.isArray(ageGroupsSetting) && ageGroupsSetting.length ? ageGroupsSetting : DEFAULT_AGE_GROUPS;
+  const { consentText, privacyUrl } = useConsentText(tenantId);
   const empty = { first_name: "", last_name: "", date_of_birth: "", gender: "", age_group: "", allergies: "", medical_notes: "" };
+  const emptyConsent = { given: false, photos: false, pastoral: true, emergency: false, notes: "" };
   const [parent, setParent] = useState({ first_name: "", last_name: "", phone: "", email: "", notes: "" });
   const [photoIdSeen, setPhotoIdSeen] = useState(false);
   const [children, setChildren] = useState([{ ...empty }]);
+  const [consent, setConsent] = useState({ ...emptyConsent });
   const [busy, setBusy] = useState(false);
 
   const reset = () => {
     setParent({ first_name: "", last_name: "", phone: "", email: "", notes: "" });
     setPhotoIdSeen(false);
     setChildren([{ ...empty }]);
+    setConsent({ ...emptyConsent });
   };
 
   const updateChild = (i, patch) => setChildren(cs => cs.map((c, idx) => idx === i ? { ...c, ...patch } : c));
@@ -239,6 +243,7 @@ function WalkInRegisterDialog({ open, onOpenChange, tenantId, onRegistered }) {
     for (const c of cleanChildren) {
       if (!c.date_of_birth && !c.age_group) return toast.error(`Age group or DOB required for ${c.first_name}`);
     }
+    if (!consent.given) return toast.error("Parental consent is required to register");
     setBusy(true);
     try {
       const { data, error } = await supabase.rpc("register_walkin_family", {
@@ -249,6 +254,7 @@ function WalkInRegisterDialog({ open, onOpenChange, tenantId, onRegistered }) {
           notes: [parent.notes, "Photo ID seen at drop-off"].filter(Boolean).join(" — "),
         },
         _children: cleanChildren,
+        _consent: consent,
       });
       if (error) throw error;
       toast.success("Walk-in family registered");
