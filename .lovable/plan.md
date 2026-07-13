@@ -1,61 +1,41 @@
-## Goal
+# Fix: Lecturer Feedback tab layout keeps resizing on mobile
 
-In Course Results (`src/components/exams/CourseResultsView.jsx`), let admins send the **Statement of Result** and the **Certificate** separately or together, and **preview both** before sending — for a single member or in bulk.
+## Diagnosis
 
-## Changes (frontend only)
+On a 384px viewport the Lecturer Feedback Report card oscillates because of two interacting layout issues in `src/components/exams/LecturerFeedbackReport.jsx`:
 
-### 1. New "Send Results" dialog — `src/components/exams/SendResultsDialog.jsx`
+1. **Recharts `ResponsiveContainer` with no explicit `width`/`height` props** (lines 453–463) is wrapped in `<div className="h-48 w-full">`. On narrow screens, when its measured width crosses a threshold that adds/removes a Y-axis tick label, the SVG re-lays out, the parent's intrinsic width nudges, and the container re-measures — a classic recharts feedback loop. It only kicks in when the "Distribution" tab is active, but any user who lands there sees the whole card shimmy.
 
-A single dialog reused for per-member and bulk. Props: `open`, `onOpenChange`, `course`, `members` (array of `{ id, name, passed, subjects, member_email? }`), `tenantId`, `onSent`.
+2. **Filter grid + summary tiles overflow the row.** The filter card uses `grid-cols-1 sm:grid-cols-2 lg:grid-cols-4` inside a parent that isn't `min-w-0`, and `SelectTrigger` content (long course/lecturer names) plus the search input can push the grid past 384px. That triggers a horizontal scrollbar on the outer `Card`, which then removes itself when React re-renders shorter content — causing the whole card to breathe in/out.
 
-Sections:
+3. **Summary tile trend Badge** wraps to a new line intermittently as `summary.trend` recomputes, adding/removing tile height across the 2-col mobile grid.
 
-- **What to send** — two checkboxes (default both on):
-  - `Statement of Result`
-  - `Certificate` (only enabled if at least one selected member has `passed === true`; shows helper text "N of M eligible" when some are not passed)
-- **Recipients summary** — list selected members with badges: `Statement ✓`, `Certificate ✓ / — not passed`.
-- **Preview panel** with a member switcher (dropdown of selected members) and two tabs:
-  - **Statement** — inline render using the existing `StatementOfResult` on-screen preview markup (reuse the JSX block that already builds the on-screen statement in `StatementOfResult.jsx`; extract to a small `StatementPreview` subcomponent exporting the render body without the outer Dialog wrapper).
-  - **Certificate** — image returned from `supabase.functions.invoke("issue-certificate", { body: { member_id, training_type: course.name, tenant_id, preview: true, admin_override: true, reissue: <existingCompletion> } })`. Shows spinner while loading; error state if the member is not passed.
-- **Footer** — `Cancel` and `Send N …` primary button. Button label reflects selection:
-  - Both: `Send statement & certificate to N`
-  - Statement only: `Send statement to N`
-  - Certificate only: `Send certificate to N eligible` (N excludes not-passed)
-  - Confirm dialog when total send count > 5.
+## Changes (frontend only, single file)
 
-Send logic on confirm:
-1. If Statement selected → one call to `send-statement-email` with all `member_ids`.
-2. If Certificate selected → sequential `issue-certificate` calls (mirroring current `sendCertificates` in `CourseResultsView.jsx`), filtered to `passed` members, using `reissue: existingSet.has(id)`, `admin_override: true`, `send_certificate_email: true`.
-3. Aggregate result toast: `Statements: X sent, Y failed · Certificates: A sent, B failed (C skipped)`.
-4. Invalidate `training-completions` and `course-attempts`; call `onSent()`; close.
+`src/components/exams/LecturerFeedbackReport.jsx`
 
-### 2. Wire into `CourseResultsView.jsx`
+1. **Stabilise the chart container**
+   - Replace `<div className="h-48 w-full"><ResponsiveContainer>…` with `<ResponsiveContainer width="100%" height={192} debounce={50}>…` directly, and wrap in `<div className="w-full min-w-0">`. Explicit numeric `height` + `debounce` breaks recharts' resize loop.
 
-- Add `sendDialog` state `{ open, memberIds }`.
-- **Bulk toolbar (line ~374-388)**: replace the two buttons "Email Statement" and "Email Certificate" with a single primary button `Preview & Send…` that opens the dialog with `selected` ids. Keep an "Advanced" split later if needed — not now.
-- **Per-row (line ~450-473)**: replace the two per-row `Email` / `Certificate` buttons with a single `Send…` ghost button per row (icon `Send`) opening the dialog with just that member. Row-level "Statement" view button (opens `StatementOfResult` in read-only) stays unchanged.
-- Keep the existing standalone `sendStatements` / `sendCertificates` functions available but no longer wired to buttons — safe to delete once the dialog is in.
+2. **Prevent horizontal overflow of the card**
+   - Add `min-w-0` to `CardContent` and to the filter grid wrapper.
+   - Add `truncate` on `SelectValue` triggers (`className="h-8 text-xs [&>span]:truncate"`).
+   - Wrap the header action buttons row in `flex-wrap` (already partly there) and add `shrink-0` to the buttons.
 
-### 3. Extract `StatementPreview` from `StatementOfResult.jsx`
+3. **Keep summary tiles uniform height**
+   - Add `min-h-[64px]` to `SummaryTile`'s root and `flex-wrap` on the value+trend row so the badge doesn't push tile height taller than its neighbours.
 
-Refactor: move the on-screen preview JSX (currently inside the Dialog around `StatementOfResult.jsx:355`) into a named export `StatementPreview` that takes the same computed props (`course`, `member`, `subjects`, `tenant`, etc.). `StatementOfResult` keeps wrapping it in a Dialog with print/download buttons. `SendResultsDialog` imports and renders `<StatementPreview .../>` directly for each member — no duplicate markup.
+4. **Guard the Distribution tab render**
+   - Change `<TabsContent value="distribution">` so the chart only mounts when the tab is actually selected (use Radix `forceMount`-free default — already the case — but additionally gate the `ResponsiveContainer` behind a `useState` `activeTab` so switching away unmounts recharts cleanly and prevents residual ResizeObserver callbacks).
 
 ## Out of scope
 
-- No backend/edge function changes. Both `send-statement-email` (accepts `member_ids[]`) and `issue-certificate` (supports `preview: true`) already do what's needed.
-- No PDF preview inside the dialog for the statement (HTML preview mirrors the PDF layout, matches current behavior).
-- No scheduling, "send later", or per-recipient template overrides.
-- No changes to the Applications tab or Registrations tab.
+- No data/query changes, no edge-function or RLS changes.
+- No visual redesign — same tiles, tables, and chart, just stabilised.
+- Desktop layout is unaffected (changes are additive: `min-w-0`, `truncate`, fixed chart height).
 
-## Technical notes
+## Verification
 
-- Certificate preview response shape (from existing `IssueCertificateDialog`): `{ image, meta }`. Reuse handling.
-- Certificate eligibility mirrors current logic: only `passedMembers` receive certs; not-passed selections are marked "skipped".
-- Concurrency for cert sends: sequential (matches current implementation) to avoid concurrent inserts on `training_completions`.
-- No new tables or RPCs.
-
-## Result
-
-Admins can, from Course Results:
-- Select one or many members, click **Preview & Send**, choose Statement / Certificate / both, flip through per-member previews, then send in one action.
-- Row-level `Send…` opens the same dialog scoped to that member.
+- Open `/exams` → Lecturer Feedback tab on the 384px preview; card no longer oscillates.
+- Switch to Distribution tab; chart renders once at 192px tall and stays put.
+- Long lecturer/course names truncate inside their Select triggers instead of widening the grid.

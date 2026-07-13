@@ -62,6 +62,7 @@ function toCSV(rows) {
 export default function LecturerFeedbackReport() {
   const { tenantId } = useTenantQuery();
   const [filters, setFilters] = useState(emptyFilters);
+  const [activeTab, setActiveTab] = useState("lecturer");
 
   const { data: ratings = [], isLoading } = useQuery({
     queryKey: ["lecturer-ratings-report", tenantId],
@@ -242,32 +243,32 @@ export default function LecturerFeedbackReport() {
   };
 
   return (
-    <Card className="border-0 shadow-sm">
+    <Card className="border-0 shadow-sm min-w-0">
       <CardHeader className="pb-3">
-        <div className="flex flex-wrap items-start justify-between gap-2">
-          <div>
+        <div className="flex flex-wrap items-start justify-between gap-2 min-w-0">
+          <div className="min-w-0">
             <CardTitle className="text-base font-display flex items-center gap-2">
               <BarChart3 className="h-4 w-4 text-primary" /> Feedback Report & Analytics
             </CardTitle>
             <CardDescription>Filter, analyse and export lecturer feedback.</CardDescription>
           </div>
-          <div className="flex gap-2">
-            <Button size="sm" variant="outline" className="gap-1.5" onClick={downloadCSV} disabled={!filtered.length}>
+          <div className="flex flex-wrap gap-2 shrink-0">
+            <Button size="sm" variant="outline" className="gap-1.5 shrink-0" onClick={downloadCSV} disabled={!filtered.length}>
               <Download className="h-3.5 w-3.5" /> Export CSV
             </Button>
-            <Button size="sm" variant="outline" className="gap-1.5" onClick={() => window.print()}>
+            <Button size="sm" variant="outline" className="gap-1.5 shrink-0" onClick={() => window.print()}>
               <Printer className="h-3.5 w-3.5" /> Print
             </Button>
           </div>
         </div>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-4 min-w-0">
         {/* Filters */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 p-3 border rounded-lg bg-muted/30">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 p-3 border rounded-lg bg-muted/30 min-w-0">
           <div>
             <Label className="text-xs">Course</Label>
             <Select value={filters.courseId} onValueChange={(v) => setFilters((f) => ({ ...f, courseId: v, subjectId: "all" }))}>
-              <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="h-8 text-xs [&>span]:truncate"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All courses</SelectItem>
                 {courses.map(([id, name]) => <SelectItem key={id} value={id}>{name}</SelectItem>)}
@@ -277,7 +278,7 @@ export default function LecturerFeedbackReport() {
           <div>
             <Label className="text-xs">Subject</Label>
             <Select value={filters.subjectId} onValueChange={(v) => setFilters((f) => ({ ...f, subjectId: v }))}>
-              <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="h-8 text-xs [&>span]:truncate"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All subjects</SelectItem>
                 {subjects.map(([id, name]) => <SelectItem key={id} value={id}>{name}</SelectItem>)}
@@ -287,7 +288,7 @@ export default function LecturerFeedbackReport() {
           <div>
             <Label className="text-xs">Lecturer</Label>
             <Select value={filters.lecturerId} onValueChange={(v) => setFilters((f) => ({ ...f, lecturerId: v }))}>
-              <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="h-8 text-xs [&>span]:truncate"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All lecturers</SelectItem>
                 {lecturers.map(([id, name]) => <SelectItem key={id} value={id}>{name}</SelectItem>)}
@@ -297,7 +298,7 @@ export default function LecturerFeedbackReport() {
           <div>
             <Label className="text-xs">Level</Label>
             <Select value={filters.level} onValueChange={(v) => setFilters((f) => ({ ...f, level: v }))}>
-              <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="h-8 text-xs [&>span]:truncate"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All levels</SelectItem>
                 {levels.map((l) => <SelectItem key={l} value={l}>{l}</SelectItem>)}
@@ -315,7 +316,7 @@ export default function LecturerFeedbackReport() {
           <div>
             <Label className="text-xs">Have again</Label>
             <Select value={filters.haveAgain} onValueChange={(v) => setFilters((f) => ({ ...f, haveAgain: v }))}>
-              <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="h-8 text-xs [&>span]:truncate"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Any</SelectItem>
                 {Object.entries(OPTION_LABELS.have_again).map(([k, l]) => <SelectItem key={k} value={k}>{l}</SelectItem>)}
@@ -356,7 +357,7 @@ export default function LecturerFeedbackReport() {
             </div>
 
             {/* Breakdowns */}
-            <Tabs defaultValue="lecturer">
+            <Tabs value={activeTab} onValueChange={setActiveTab}>
               <TabsList>
                 <TabsTrigger value="lecturer">By lecturer</TabsTrigger>
                 <TabsTrigger value="subject">By subject</TabsTrigger>
@@ -448,18 +449,20 @@ export default function LecturerFeedbackReport() {
               <TabsContent value="distribution" className="mt-3 space-y-4">
                 {filtered.length === 0 ? <EmptyState /> : (
                   <>
-                    <div>
+                    <div className="min-w-0">
                       <p className="text-xs font-medium mb-2">Overall rating distribution</p>
-                      <div className="h-48 w-full">
-                        <ResponsiveContainer>
-                          <BarChart data={ratingHistogram}>
-                            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                            <XAxis dataKey="rating" tick={{ fontSize: 11 }} />
-                            <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
-                            <Tooltip />
-                            <Bar dataKey="count" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
-                          </BarChart>
-                        </ResponsiveContainer>
+                      <div className="w-full min-w-0">
+                        {activeTab === "distribution" && (
+                          <ResponsiveContainer width="100%" height={192} debounce={50}>
+                            <BarChart data={ratingHistogram}>
+                              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                              <XAxis dataKey="rating" tick={{ fontSize: 11 }} />
+                              <YAxis allowDecimals={false} tick={{ fontSize: 11 }} width={28} />
+                              <Tooltip />
+                              <Bar dataKey="count" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                            </BarChart>
+                          </ResponsiveContainer>
+                        )}
                       </div>
                     </div>
                     {distribution.map((d) => (
@@ -491,12 +494,12 @@ export default function LecturerFeedbackReport() {
 
 function SummaryTile({ label, value, trend }) {
   return (
-    <div className="border rounded-lg p-2.5">
-      <p className="text-[10px] text-muted-foreground uppercase tracking-wide">{label}</p>
-      <div className="flex items-center gap-1.5 mt-0.5">
-        <p className="text-lg font-semibold">{value}</p>
+    <div className="border rounded-lg p-2.5 min-h-[68px] min-w-0">
+      <p className="text-[10px] text-muted-foreground uppercase tracking-wide truncate">{label}</p>
+      <div className="flex flex-wrap items-center gap-1.5 mt-0.5 min-w-0">
+        <p className="text-lg font-semibold truncate">{value}</p>
         {trend && (
-          <Badge variant="outline" className="text-[9px] gap-0.5 px-1.5">
+          <Badge variant="outline" className="text-[9px] gap-0.5 px-1.5 shrink-0">
             {trend.dir === "up" && <TrendingUp className="h-3 w-3 text-chart-3" />}
             {trend.dir === "down" && <TrendingDown className="h-3 w-3 text-destructive" />}
             {trend.dir === "flat" && <Minus className="h-3 w-3" />}
