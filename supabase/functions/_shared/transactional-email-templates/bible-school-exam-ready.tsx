@@ -6,14 +6,16 @@ import type { TemplateEntry } from './registry.ts'
 
 const SITE_NAME = "ChurchConnect"
 
+interface CourseInfo { name: string; student_number?: string | null }
 interface Props {
   firstName?: string
   courseName?: string
   magicLink?: string
   tenantName?: string
+  courses?: CourseInfo[]
 }
 
-const BibleSchoolExamReadyEmail = ({ firstName, courseName, magicLink, tenantName }: Props) => (
+const BibleSchoolExamReadyEmail = ({ firstName, courseName, magicLink, tenantName, courses }: Props) => (
   <Html lang="en" dir="ltr">
     <Head />
     <Preview>Your Bible School exam is ready</Preview>
@@ -26,6 +28,19 @@ const BibleSchoolExamReadyEmail = ({ firstName, courseName, magicLink, tenantNam
           Your application for <strong>{courseName || 'Bible School'}</strong> at{' '}
           {tenantName || SITE_NAME} has been approved. You can now write your exam.
         </Text>
+        {courses && courses.some((c) => c.student_number) && (
+          <Section style={numberBox}>
+            <Text style={numberLabel}>Your student number{courses.filter((c) => c.student_number).length > 1 ? 's' : ''}</Text>
+            {courses.filter((c) => c.student_number).map((c) => (
+              <Text key={c.name} style={numberValue}>
+                {c.name}: <strong>{c.student_number}</strong>
+              </Text>
+            ))}
+            <Text style={hint}>
+              Please keep this safe — you'll need it for your exam and certificate.
+            </Text>
+          </Section>
+        )}
         <Text style={text}>
           Click the button below to securely sign in and start your exam.
           No password is needed — this link signs you in automatically.
@@ -58,6 +73,7 @@ export const template = {
     courseName: 'Bible Foundation Course',
     magicLink: 'https://app.example.com/auth/exam-callback?token=demo',
     tenantName: 'Winners Chapel Cardiff',
+    courses: [{ name: 'Bible Foundation Course', student_number: 'WCC/BFC/2026/0001' }],
   },
 } satisfies TemplateEntry
 
@@ -78,3 +94,6 @@ const button = {
 }
 const hr = { borderColor: '#e2e8f0', margin: '28px 0' }
 const footer = { fontSize: '13px', color: '#94a3b8', margin: '0', whiteSpace: 'pre-line' as const }
+const numberBox = { backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '16px 20px', margin: '20px 0' }
+const numberLabel = { fontSize: '12px', textTransform: 'uppercase' as const, letterSpacing: '0.05em', color: '#64748b', margin: '0 0 8px', fontWeight: 'bold' as const }
+const numberValue = { fontSize: '15px', color: '#1a2d4d', margin: '0 0 4px', fontFamily: "'Courier New', monospace" }

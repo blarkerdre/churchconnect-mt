@@ -152,10 +152,11 @@ Deno.serve(async (req) => {
     }
 
     // 3. Ensure course registration exists and is approved/active
+    const courses: Array<{ name: string; student_number: string | null }> = [];
     if (app.course_id && memberId) {
       const { data: reg } = await admin
         .from("course_registrations")
-        .select("id, status")
+        .select("id, status, student_number")
         .eq("tenant_id", app.tenant_id)
         .eq("member_id", memberId)
         .eq("course_id", app.course_id)
@@ -177,6 +178,15 @@ Deno.serve(async (req) => {
           .eq("id", reg.id)
           .eq("tenant_id", app.tenant_id);
       }
+      // Re-read to capture the trigger-assigned student_number
+      const { data: regAfter } = await admin
+        .from("course_registrations")
+        .select("student_number")
+        .eq("tenant_id", app.tenant_id)
+        .eq("member_id", memberId)
+        .eq("course_id", app.course_id)
+        .maybeSingle();
+      courses.push({ name: courseName, student_number: regAfter?.student_number || null });
     }
 
     // 4. Generate magic link
@@ -208,6 +218,7 @@ Deno.serve(async (req) => {
             courseName,
             magicLink,
             tenantName,
+            courses,
           },
         },
       });
