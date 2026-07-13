@@ -1124,114 +1124,234 @@ function CourseRegistrationsView({ course }) {
         ) : filteredRegistrations.length === 0 ? (
           <p className="text-sm text-muted-foreground text-center py-8">{registrations.length > 0 ? "No registrations match the selected filter." : "No members registered for this course yet."}</p>
         ) : (
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-muted/50">
-                  <TableHead className="font-semibold">Name</TableHead>
-                  <TableHead className="font-semibold">Email</TableHead>
-                  <TableHead className="font-semibold">Phone</TableHead>
-                  <TableHead className="font-semibold">Source</TableHead>
-                  <TableHead className="font-semibold">Status</TableHead>
-                  <TableHead className="font-semibold">Student No.</TableHead>
-                  <TableHead className="font-semibold">Registered</TableHead>
-                  <TableHead className="font-semibold text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredRegistrations.map(r => {
-                  const isEditing = editingNumberId === r.id;
-                  const isApproved = r.status === "approved";
-                  return (
-                  <TableRow key={r.id}>
-                    <TableCell className="font-medium">{r.members?.first_name} {r.members?.last_name}</TableCell>
-                    <TableCell className="text-sm text-muted-foreground">{r.members?.email || "—"}</TableCell>
-                    <TableCell className="text-sm text-muted-foreground">{r.members?.phone || "—"}</TableCell>
-                    <TableCell>
-                      <Badge variant={r.members?.user_id ? "default" : "outline"}>
-                        {r.members?.user_id ? "Member" : "QR / Public"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={isApproved ? "default" : "secondary"} className={isApproved ? "bg-emerald-600 hover:bg-emerald-600" : ""}>
-                        {isApproved ? "Approved" : (r.status || "pending")}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-sm">
-                      {isEditing ? (
-                        <div className="flex items-center gap-1">
-                          <Input
-                            value={editingNumberValue}
-                            onChange={e => setEditingNumberValue(e.target.value)}
-                            className="h-7 w-[220px] text-xs font-mono"
-                            placeholder="TENANT/COURSE/MONTH/YYYY/NNN"
-                          />
-                          <Button size="icon" variant="ghost" className="h-7 w-7"
-                            onClick={() => updateNumberMutation.mutate({ id: r.id, value: editingNumberValue.trim() })}
-                            disabled={updateNumberMutation.isPending}
-                          >
-                            <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
-                          </Button>
-                          <Button size="icon" variant="ghost" className="h-7 w-7"
-                            onClick={() => { setEditingNumberId(null); setEditingNumberValue(""); }}
-                          >
-                            <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
-                          </Button>
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-1.5">
-                          <span className={r.student_number ? "font-mono text-xs" : "text-muted-foreground italic text-xs"}>
-                            {r.student_number || "—"}
-                          </span>
-                          {canManageNumbers && (
-                            <Button size="icon" variant="ghost" className="h-6 w-6"
-                              onClick={() => { setEditingNumberId(r.id); setEditingNumberValue(r.student_number || ""); }}
-                              title="Edit student number"
-                            >
-                              <Edit className="h-3 w-3" />
-                            </Button>
-                          )}
-                        </div>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">{new Date(r.registered_at).toLocaleDateString()}</TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-1">
-                        {canManageNumbers && !isApproved && (
-                          <Button size="sm" variant="outline" className="h-7 gap-1 text-xs"
-                            onClick={() => approveMutation.mutate(r.id)}
-                            disabled={approveMutation.isPending}
-                          >
-                            <CheckCircle2 className="h-3.5 w-3.5" /> Approve
+          <>
+            {(() => {
+              const eligibleRows = filteredRegistrations.filter(r => r.status === "approved" && r.members?.email);
+              const eligibleIds = eligibleRows.map(r => r.id);
+              const selectedEligibleCount = eligibleIds.filter(id => selectedIds.has(id)).length;
+              const allSelected = eligibleIds.length > 0 && selectedEligibleCount === eligibleIds.length;
+              const someSelected = selectedEligibleCount > 0 && !allSelected;
+              const toggleAll = (checked) => {
+                setSelectedIds(prev => {
+                  const next = new Set(prev);
+                  if (checked) eligibleIds.forEach(id => next.add(id));
+                  else eligibleIds.forEach(id => next.delete(id));
+                  return next;
+                });
+              };
+              const toggleOne = (id, checked) => {
+                setSelectedIds(prev => {
+                  const next = new Set(prev);
+                  if (checked) next.add(id); else next.delete(id);
+                  return next;
+                });
+              };
+              const selectedArr = eligibleIds.filter(id => selectedIds.has(id));
+              const bulkPending = sendBulkExamLinksMutation.isPending;
+              const allSelectedAreSent = selectedArr.length > 0 && selectedArr.every(id => {
+                const row = filteredRegistrations.find(r => r.id === id);
+                return sentLinkIds.has(id) || !!row?.members?.user_id;
+              });
+              const bulkLabel = allSelectedAreSent ? "Resend link to selected" : "Send exam link to selected";
+              const doBulkSend = () => {
+                if (selectedArr.length === 0) return;
+                if (selectedArr.length > 5) setBulkConfirmOpen(true);
+                else sendBulkExamLinksMutation.mutate(selectedArr);
+              };
+              return (
+                <>
+                  {canManageNumbers && eligibleIds.length > 0 && (
+                    <div className="flex flex-wrap items-center justify-between gap-2 mb-3 px-3 py-2 rounded-md border bg-muted/30">
+                      <div className="text-xs text-muted-foreground">
+                        {selectedArr.length > 0
+                          ? <><span className="font-medium text-foreground">{selectedArr.length}</span> selected of {eligibleIds.length} approved</>
+                          : <>{eligibleIds.length} approved registrant{eligibleIds.length === 1 ? "" : "s"} with email available</>}
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Button size="sm" variant="ghost" className="h-7 text-xs"
+                          onClick={() => toggleAll(!allSelected)}>
+                          {allSelected ? "Deselect all" : "Select all approved"}
+                        </Button>
+                        {selectedArr.length > 0 && (
+                          <Button size="sm" variant="ghost" className="h-7 text-xs"
+                            onClick={() => setSelectedIds(new Set())}>
+                            Clear
                           </Button>
                         )}
-                        {canManageNumbers && isApproved && r.members?.email && (() => {
-                          const alreadySent = sentLinkIds.has(r.id) || !!r.members?.user_id;
-                          const isSending = sendingLinkId === r.id;
-                          return (
-                            <Button size="sm" variant="outline" className="h-7 gap-1 text-xs"
-                              onClick={() => sendExamLinkMutation.mutate(r.id)}
-                              disabled={isSending}
-                              title="Email the applicant a one-click sign-in link to write the exam."
-                            >
-                              {isSending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Mail className="h-3.5 w-3.5" />}
-                              {alreadySent ? "Resend link" : "Send exam link"}
-                            </Button>
-                          );
-                        })()}
-                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setDeleteTarget(r)}>
-                          <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                        <Button size="sm" className="h-7 gap-1 text-xs"
+                          disabled={selectedArr.length === 0 || bulkPending}
+                          onClick={doBulkSend}>
+                          {bulkPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Mail className="h-3.5 w-3.5" />}
+                          {bulkLabel}{selectedArr.length > 0 ? ` (${selectedArr.length})` : ""}
                         </Button>
                       </div>
-                    </TableCell>
-                  </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          </div>
+                    </div>
+                  )}
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-muted/50">
+                          {canManageNumbers && (
+                            <TableHead className="w-8">
+                              <Checkbox
+                                checked={allSelected ? true : (someSelected ? "indeterminate" : false)}
+                                onCheckedChange={(v) => toggleAll(!!v)}
+                                disabled={eligibleIds.length === 0}
+                                aria-label="Select all eligible"
+                              />
+                            </TableHead>
+                          )}
+                          <TableHead className="font-semibold">Name</TableHead>
+                          <TableHead className="font-semibold">Email</TableHead>
+                          <TableHead className="font-semibold">Phone</TableHead>
+                          <TableHead className="font-semibold">Source</TableHead>
+                          <TableHead className="font-semibold">Status</TableHead>
+                          <TableHead className="font-semibold">Exam link</TableHead>
+                          <TableHead className="font-semibold">Student No.</TableHead>
+                          <TableHead className="font-semibold">Registered</TableHead>
+                          <TableHead className="font-semibold text-right">Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredRegistrations.map(r => {
+                          const isEditing = editingNumberId === r.id;
+                          const isApproved = r.status === "approved";
+                          const eligible = isApproved && !!r.members?.email;
+                          const isSending = sendingIds.has(r.id);
+                          const alreadySent = sentLinkIds.has(r.id) || !!r.members?.user_id;
+                          return (
+                          <TableRow key={r.id} data-state={selectedIds.has(r.id) ? "selected" : undefined}>
+                            {canManageNumbers && (
+                              <TableCell>
+                                {eligible ? (
+                                  <Checkbox
+                                    checked={selectedIds.has(r.id)}
+                                    onCheckedChange={(v) => toggleOne(r.id, !!v)}
+                                    aria-label="Select row"
+                                  />
+                                ) : null}
+                              </TableCell>
+                            )}
+                            <TableCell className="font-medium">{r.members?.first_name} {r.members?.last_name}</TableCell>
+                            <TableCell className="text-sm text-muted-foreground">{r.members?.email || "—"}</TableCell>
+                            <TableCell className="text-sm text-muted-foreground">{r.members?.phone || "—"}</TableCell>
+                            <TableCell>
+                              <Badge variant={r.members?.user_id ? "default" : "outline"}>
+                                {r.members?.user_id ? "Member" : "QR / Public"}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant={isApproved ? "default" : "secondary"} className={isApproved ? "bg-emerald-600 hover:bg-emerald-600" : ""}>
+                                {isApproved ? "Approved" : (r.status || "pending")}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              {!eligible ? (
+                                <span className="text-xs text-muted-foreground">—</span>
+                              ) : isSending ? (
+                                <Badge variant="outline" className="gap-1 text-xs">
+                                  <Loader2 className="h-3 w-3 animate-spin" /> Sending…
+                                </Badge>
+                              ) : alreadySent ? (
+                                <Badge variant="outline" className="gap-1 text-xs border-emerald-600/40 text-emerald-700 dark:text-emerald-400">
+                                  <CheckCircle2 className="h-3 w-3" /> Sent
+                                </Badge>
+                              ) : (
+                                <Badge variant="outline" className="text-xs text-muted-foreground">Not sent</Badge>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-sm">
+                              {isEditing ? (
+                                <div className="flex items-center gap-1">
+                                  <Input
+                                    value={editingNumberValue}
+                                    onChange={e => setEditingNumberValue(e.target.value)}
+                                    className="h-7 w-[220px] text-xs font-mono"
+                                    placeholder="TENANT/COURSE/MONTH/YYYY/NNN"
+                                  />
+                                  <Button size="icon" variant="ghost" className="h-7 w-7"
+                                    onClick={() => updateNumberMutation.mutate({ id: r.id, value: editingNumberValue.trim() })}
+                                    disabled={updateNumberMutation.isPending}
+                                  >
+                                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+                                  </Button>
+                                  <Button size="icon" variant="ghost" className="h-7 w-7"
+                                    onClick={() => { setEditingNumberId(null); setEditingNumberValue(""); }}
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
+                                  </Button>
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-1.5">
+                                  <span className={r.student_number ? "font-mono text-xs" : "text-muted-foreground italic text-xs"}>
+                                    {r.student_number || "—"}
+                                  </span>
+                                  {canManageNumbers && (
+                                    <Button size="icon" variant="ghost" className="h-6 w-6"
+                                      onClick={() => { setEditingNumberId(r.id); setEditingNumberValue(r.student_number || ""); }}
+                                      title="Edit student number"
+                                    >
+                                      <Edit className="h-3 w-3" />
+                                    </Button>
+                                  )}
+                                </div>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-sm text-muted-foreground">{new Date(r.registered_at).toLocaleDateString()}</TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex items-center justify-end gap-1">
+                                {canManageNumbers && !isApproved && (
+                                  <Button size="sm" variant="outline" className="h-7 gap-1 text-xs"
+                                    onClick={() => approveMutation.mutate(r.id)}
+                                    disabled={approveMutation.isPending}
+                                  >
+                                    <CheckCircle2 className="h-3.5 w-3.5" /> Approve
+                                  </Button>
+                                )}
+                                {canManageNumbers && eligible && (
+                                  <Button size="sm" variant="outline" className="h-7 gap-1 text-xs"
+                                    onClick={() => sendExamLinkMutation.mutate(r.id)}
+                                    disabled={isSending}
+                                    title="Email the applicant a one-click sign-in link to write the exam."
+                                  >
+                                    {isSending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Mail className="h-3.5 w-3.5" />}
+                                    {alreadySent ? "Resend link" : "Send exam link"}
+                                  </Button>
+                                )}
+                                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setDeleteTarget(r)}>
+                                  <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  </div>
+                  <AlertDialog open={bulkConfirmOpen} onOpenChange={setBulkConfirmOpen}>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Send exam link to {selectedArr.length} registrant{selectedArr.length === 1 ? "" : "s"}?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Each recipient will get a single-use magic sign-in link by email. Resending replaces any previous unused link.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={() => { setBulkConfirmOpen(false); sendBulkExamLinksMutation.mutate(selectedArr); }}>
+                          Send links
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </>
+              );
+            })()}
+          </>
         )}
       </CardContent>
+
 
 
       <DangerConfirmDialog
