@@ -494,12 +494,12 @@ export default function LecturerFeedbackReport() {
 
 function SummaryTile({ label, value, trend }) {
   return (
-    <div className="border rounded-lg p-2.5">
-      <p className="text-[10px] text-muted-foreground uppercase tracking-wide">{label}</p>
-      <div className="flex items-center gap-1.5 mt-0.5">
-        <p className="text-lg font-semibold">{value}</p>
+    <div className="border rounded-lg p-2.5 min-h-[68px] min-w-0">
+      <p className="text-[10px] text-muted-foreground uppercase tracking-wide truncate">{label}</p>
+      <div className="flex flex-wrap items-center gap-1.5 mt-0.5 min-w-0">
+        <p className="text-lg font-semibold truncate">{value}</p>
         {trend && (
-          <Badge variant="outline" className="text-[9px] gap-0.5 px-1.5">
+          <Badge variant="outline" className="text-[9px] gap-0.5 px-1.5 shrink-0">
             {trend.dir === "up" && <TrendingUp className="h-3 w-3 text-chart-3" />}
             {trend.dir === "down" && <TrendingDown className="h-3 w-3 text-destructive" />}
             {trend.dir === "flat" && <Minus className="h-3 w-3" />}
