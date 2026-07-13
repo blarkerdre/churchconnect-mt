@@ -32,19 +32,36 @@ function ChildForm({ open, onOpenChange, child, memberId, onSaved }) {
   const [form, setForm] = useState(() => child || {
     first_name: "", last_name: "", date_of_birth: "", gender: "", age_group: "",
     allergies: "", medical_notes: "", notes: "",
+    parental_consent_given: false,
+    consent_photos: false,
+    consent_pastoral_contact: true,
+    consent_medical_emergency: false,
+    consent_notes: "",
   });
   React.useEffect(() => {
-    setForm(child || { first_name: "", last_name: "", date_of_birth: "", gender: "", age_group: "", allergies: "", medical_notes: "", notes: "" });
+    setForm(child || {
+      first_name: "", last_name: "", date_of_birth: "", gender: "", age_group: "",
+      allergies: "", medical_notes: "", notes: "",
+      parental_consent_given: false,
+      consent_photos: false,
+      consent_pastoral_contact: true,
+      consent_medical_emergency: false,
+      consent_notes: "",
+    });
   }, [child, open]);
 
   const save = useMutation({
     mutationFn: async () => {
       if (!form.first_name || !form.last_name) throw new Error("Name required");
+      if (!form.parental_consent_given) throw new Error("Parental consent is required to save this child");
+      const wasConsented = !!child?.parental_consent_given;
       const payload = {
         ...form,
         date_of_birth: form.date_of_birth || null,
         gender: form.gender || null,
         age_group: form.age_group || null,
+        parental_consent_at: wasConsented ? (child.parental_consent_at || new Date().toISOString()) : new Date().toISOString(),
+        parental_consent_by: wasConsented ? (child.parental_consent_by || memberId) : memberId,
       };
       if (child?.id) {
         // Preserve the original registering parent on edits by co-parents
