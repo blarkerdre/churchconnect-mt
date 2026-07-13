@@ -1,21 +1,49 @@
-# Tighten tenant scoping on Bible School components
+## Add parent consent for children
 
-The Bible School surfaces are already tenant-scoped almost everywhere (reads filter on `tenant_id`, inserts inject it, updates/deletes assert it). RLS also protects every affected table. Two queries deviate from the "explicit `tenant_id` on every query" rule and should be brought in line.
+Currently, the `children` table has no consent fields. When a parent adds a child in **My Family → Add child** (and via the Children Church intake), we need to capture explicit parental consent before that child can be checked in / photographed / receive pastoral contact — matching the GDPR consent pattern already used for adult members (`ConsentTogglesGroup`).
 
-## Changes
+### 1. Database (migration)
 
-1. **`src/components/exams/SubjectManager.jsx`** (list query, ~line 30)
-   - The `exam_subjects` select filters only by `course_id`. Add `.eq("tenant_id", tenantId)` and gate the query with `enabled: !!tenantId` so it matches the pattern used elsewhere.
+Add nullable columns to `public.children`:
+- `parental_consent_given boolean NOT NULL DEFAULT false` — required master consent by parent/guardian
+- `parental_consent_at timestamptz` — timestamp when consent was given
+- `parental_consent_by uuid` — member_id of parent who gave consent
+- `consent_photos boolean NOT NULL DEFAULT false` — child may appear in service photos/videos
+- `consent_pastoral_contact boolean NOT NULL DEFAULT true` — leaders may follow up re: child welfare
+- `consent_medical_emergency boolean NOT NULL DEFAULT false` — permission to seek emergency medical care if parent unreachable
+- `consent_notes text` — optional freeform (e.g. "no photos on social media")
 
-2. **`src/components/exams/QcReport.jsx`** (delete mutation, ~line 114)
-   - The delete on `lecturer_qc_checks` targets a row by `id` only. Add `.eq("tenant_id", tenantId)` to the delete filter so a stray id from another tenant can never be targeted from this client.
+Log each change into existing `consent_events` table with `subject_type = 'child'` and `subject_id = child.id` so we keep an audit trail (same pattern as member consent).
 
-## Out of scope
+No RLS changes — the existing children policies already restrict to primary guardian + co-guardians + Children Church workers.
 
-- No schema, RLS, or edge function changes — every table involved already has tenant-scoped RLS and the edge functions (`grade-exam`, `render-statement-pdf`, `issue-certificate`) already resolve tenant server-side from the member/session.
-- No refactor of the many correctly-scoped queries across `ExamManagement.jsx`, `WoFBIApplicationsTab`, `WoFBIApplicationFormEditor`, `LecturerManager`, `LecturerFeedbackReport`, `RateLecturerDialog`, `QcCheckDialog`, `CourseResultsView`, `StatementOfResult`, `TakeExamDialog`.
+### 2. UI — My Family → Add / Edit child (`src/pages/MyFamily.jsx`)
 
-## Verification
+Extend `ChildForm` with a new **Parental Consent** section (collapsible card at the bottom of the form) containing:
+- Master toggle "I confirm I am the parent/legal guardian and give consent for this child's data to be held and processed" (**required to save**).
+- Sub-toggles: Photos & media, Pastoral contact, Emergency medical care.
+- Optional consent notes textarea.
 
-- Load `/t/<slug>/exam-management`, open a course's Subjects tab — list still renders.
-- Create/edit/delete a QC check in the QC Report — behaviour unchanged.
+Save behaviour:
+- Block save if master consent is off (toast: "Parental consent is required").
+- On save, stamp `parental_consent_at = now()` and `parental_consent_by = memberId` when consent transitions off → on.
+- Insert a row into `consent_events` describing the change (grant/revoke, which flags).
+
+Display on the child card in My Family: a small "Consent: ✓ given DD MMM YYYY" line, or a red "Consent required" pill if missing.
+
+### 3. UI — Children Church check-in (`src/pages/ChildrenChurch.jsx`)
+
+Block check-in for a child where `parental_consent_given = false`. Show a banner in the check-in row: *"Parent consent required — ask parent to complete consent in My Family before check-in."* Photo capture and photo display in the child roster respect `consent_photos = false` (hide/blur photo, show placeholder).
+
+### 4. Out of scope
+
+- No changes to adult member consent flow.
+- No changes to guardians/delegations flow.
+- No new tenant-level setting text (reuses existing tenant privacy policy URL via `useConsentText`).
+
+### Files touched
+
+- new migration adding columns to `public.children`
+- `src/pages/MyFamily.jsx` — extend `ChildForm`, add consent display on card
+- `src/pages/ChildrenChurch.jsx` — gate check-in + respect photo consent
+- `src/integrations/supabase/types.ts` regenerates automatically after migration
