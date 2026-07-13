@@ -4383,6 +4383,39 @@ export type Database = {
           },
         ]
       }
+      sla_templates: {
+        Row: {
+          body_html: string
+          created_at: string
+          created_by: string | null
+          id: string
+          is_active: boolean
+          title: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          body_html: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          title?: string
+          updated_at?: string
+          version: number
+        }
+        Update: {
+          body_html?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          title?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: []
+      }
       sms_log: {
         Row: {
           channel: string
@@ -4835,6 +4868,56 @@ export type Database = {
           },
           {
             foreignKeyName: "tenant_payments_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tenant_sla_signatures: {
+        Row: {
+          created_at: string
+          id: string
+          ip_address: unknown
+          merged_body_html: string
+          signed_at: string
+          signed_by_email: string | null
+          signed_by_name: string
+          signed_by_user_id: string
+          template_version: number
+          tenant_id: string
+          user_agent: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          ip_address?: unknown
+          merged_body_html: string
+          signed_at?: string
+          signed_by_email?: string | null
+          signed_by_name: string
+          signed_by_user_id: string
+          template_version: number
+          tenant_id: string
+          user_agent?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          ip_address?: unknown
+          merged_body_html?: string
+          signed_at?: string
+          signed_by_email?: string | null
+          signed_by_name?: string
+          signed_by_user_id?: string
+          template_version?: number
+          tenant_id?: string
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_sla_signatures_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
