@@ -411,7 +411,7 @@ function CheckInPanel({ tenantId, tenantSlug }) {
 
       // 2) Matching active children by name
       const childQ = supabase.from("children")
-        .select("id, first_name, last_name, age_group, allergies, primary_guardian_member_id")
+        .select("id, first_name, last_name, age_group, allergies, primary_guardian_member_id, parental_consent_given")
         .eq("tenant_id", tenantId).eq("is_active", true)
         .or(`first_name.ilike.${like},last_name.ilike.${like}`)
         .limit(20);
@@ -451,7 +451,7 @@ function CheckInPanel({ tenantId, tenantSlug }) {
 
       // Fetch all active children for these parents (primary guardian)
       const { data: childrenByPrimary = [] } = await supabase.from("children")
-        .select("id, first_name, last_name, age_group, allergies, primary_guardian_member_id")
+        .select("id, first_name, last_name, age_group, allergies, primary_guardian_member_id, parental_consent_given")
         .eq("tenant_id", tenantId).eq("is_active", true)
         .in("primary_guardian_member_id", Array.from(parentIds));
 
@@ -465,7 +465,7 @@ function CheckInPanel({ tenantId, tenantSlug }) {
       let extraChildren = [];
       if (extraChildIds.length) {
         const { data } = await supabase.from("children")
-          .select("id, first_name, last_name, age_group, allergies, primary_guardian_member_id")
+          .select("id, first_name, last_name, age_group, allergies, primary_guardian_member_id, parental_consent_given")
           .eq("tenant_id", tenantId).eq("is_active", true)
           .in("id", extraChildIds);
         extraChildren = data || [];
@@ -514,6 +514,10 @@ function CheckInPanel({ tenantId, tenantSlug }) {
       if (!broughtById) throw new Error("Select who brought the child");
       const pin = Math.floor(100000 + Math.random() * 900000).toString();
       const snapshot = (selectedFamily.children || []).filter(c => selectedChildIds.includes(c.id));
+      const missingConsent = snapshot.filter(c => !c.parental_consent_given);
+      if (missingConsent.length) {
+        throw new Error(`Parental consent required for ${missingConsent.map(c => c.first_name).join(", ")}. Ask parent to complete consent in My Family.`);
+      }
       for (const cid of selectedChildIds) {
         const { error } = await supabase.rpc("checkin_child", {
           _child_id: cid, _pin: pin, _parent_member_id: broughtById,
@@ -660,17 +664,19 @@ function CheckInPanel({ tenantId, tenantSlug }) {
               <div className="space-y-1">
                 {selectedFamily.children.map(c => {
                   const checked = selectedChildIds.includes(c.id);
+                  const noConsent = !c.parental_consent_given;
                   return (
-                    <button key={c.id} className={`w-full text-left border rounded p-2 flex justify-between items-center ${checked ? "border-primary bg-primary/5" : ""}`}
-                      onClick={() => setSelectedChildIds(checked ? selectedChildIds.filter(x => x !== c.id) : [...selectedChildIds, c.id])}>
+                    <button key={c.id} disabled={noConsent} className={`w-full text-left border rounded p-2 flex justify-between items-center ${checked ? "border-primary bg-primary/5" : ""} ${noConsent ? "opacity-60 cursor-not-allowed" : ""}`}
+                      onClick={() => { if (noConsent) return; setSelectedChildIds(checked ? selectedChildIds.filter(x => x !== c.id) : [...selectedChildIds, c.id]); }}>
                       <div>
                         <p className="text-sm font-medium">{c.first_name} {c.last_name}</p>
-                        <div className="flex gap-1 mt-1">
+                        <div className="flex gap-1 mt-1 flex-wrap">
                           {c.age_group && <Badge variant="outline" className="text-[10px]">{c.age_group}</Badge>}
                           {c.allergies && <Badge variant="destructive" className="text-[10px]">⚠ {c.allergies}</Badge>}
+                          {noConsent && <Badge variant="destructive" className="text-[10px]">Consent required</Badge>}
                         </div>
                       </div>
-                      <input type="checkbox" readOnly checked={checked} className="h-4 w-4" />
+                      <input type="checkbox" readOnly checked={checked} disabled={noConsent} className="h-4 w-4" />
                     </button>
                   );
                 })}
