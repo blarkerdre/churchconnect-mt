@@ -873,7 +873,9 @@ function CourseRegistrationsView({ course }) {
   const [editingNumberId, setEditingNumberId] = useState(null);
   const [editingNumberValue, setEditingNumberValue] = useState("");
   const [sentLinkIds, setSentLinkIds] = useState(() => new Set());
-  const [sendingLinkId, setSendingLinkId] = useState(null);
+  const [sendingIds, setSendingIds] = useState(() => new Set());
+  const [selectedIds, setSelectedIds] = useState(() => new Set());
+  const [bulkConfirmOpen, setBulkConfirmOpen] = useState(false);
 
   const { data: registrations = [], isLoading } = useQuery({
     queryKey: ["course-registrations", course.id],
