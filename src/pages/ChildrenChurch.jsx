@@ -13,7 +13,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Baby, Search, LogIn, LogOut, ShieldAlert, Clock, FileBarChart2, Download, Eye, User, UserPlus, Copy, Plus, Trash2, Mail } from "lucide-react";
+import { Baby, Search, LogIn, LogOut, ShieldAlert, ShieldCheck, Clock, FileBarChart2, Download, Eye, User, UserPlus, Copy, Plus, Trash2, Mail } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { useConsentText, renderConsentText } from "@/hooks/useConsentText";
 import { toast } from "sonner";
 import { format, formatDistanceToNow } from "date-fns";
 import { useAppSetting } from "@/hooks/useAppSetting";
