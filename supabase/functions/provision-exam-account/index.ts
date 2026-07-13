@@ -40,15 +40,52 @@ Deno.serve(async (req) => {
 
     const body = await req.json().catch(() => ({}));
     const application_id: string | undefined = body?.application_id;
-    if (!application_id) return json({ error: "Missing application_id" }, 400);
+    const registration_id: string | undefined = body?.registration_id;
+    if (!application_id && !registration_id) {
+      return json({ error: "Missing application_id or registration_id" }, 400);
+    }
 
-    // Load application
-    const { data: app, error: appErr } = await admin
-      .from("wofbi_applications")
-      .select("id, tenant_id, course_id, member_id, first_name, last_name, email, phone, status")
-      .eq("id", application_id)
-      .maybeSingle();
-    if (appErr || !app) return json({ error: "Application not found" }, 404);
+    // Load application — either directly, or derived from a course_registrations row.
+    let app: any = null;
+    if (application_id) {
+      const { data, error } = await admin
+        .from("wofbi_applications")
+        .select("id, tenant_id, course_id, member_id, first_name, last_name, email, phone, status")
+        .eq("id", application_id)
+        .maybeSingle();
+      if (error || !data) return json({ error: "Application not found" }, 404);
+      app = data;
+    } else {
+      const { data: reg, error: regErr } = await admin
+        .from("course_registrations")
+        .select("id, tenant_id, course_id, member_id, status, members(first_name, last_name, email, phone)")
+        .eq("id", registration_id!)
+        .maybeSingle();
+      if (regErr || !reg) return json({ error: "Registration not found" }, 404);
+      if (!["approved", "active"].includes(reg.status)) {
+        return json({ error: "Registration must be approved before sending exam link" }, 400);
+      }
+      if (!reg.members?.email) return json({ error: "Member has no email on file" }, 400);
+      // Try to find a matching wofbi_applications row (tenant + member + course)
+      const { data: matchedApp } = await admin
+        .from("wofbi_applications")
+        .select("id, tenant_id, course_id, member_id, first_name, last_name, email, phone, status")
+        .eq("tenant_id", reg.tenant_id)
+        .eq("member_id", reg.member_id)
+        .eq("course_id", reg.course_id)
+        .maybeSingle();
+      app = matchedApp || {
+        id: null,
+        tenant_id: reg.tenant_id,
+        course_id: reg.course_id,
+        member_id: reg.member_id,
+        first_name: reg.members.first_name,
+        last_name: reg.members.last_name,
+        email: reg.members.email,
+        phone: reg.members.phone,
+        status: "approved",
+      };
+    }
 
     // Authorize: caller must be admin/owner of this tenant
     const { data: membership } = await admin
