@@ -948,21 +948,15 @@ function CourseRegistrationsView({ course }) {
 
   const deleteMutation = useMutation({
     mutationFn: async (reg) => {
-      if (reg.member_id) {
-        const { error } = await supabase.rpc("cascade_delete_bible_school_records", {
-          _member_id: reg.member_id,
-          _course_id: course.id,
-        });
-        if (error) throw error;
-      } else {
-        const { error } = await supabase.from("course_registrations").delete().eq("id", reg.id).eq("tenant_id", tenantId);
-        if (error) throw error;
-      }
+      const { error } = await supabase.rpc("delete_bible_school_registration_only", {
+        _registration_id: reg.id,
+      });
+      if (error) throw error;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["course-registrations", course.id] });
       qc.invalidateQueries({ queryKey: ["wofbi-applications"] });
-      toast({ title: "Bible School records removed", description: "Registration, exam attempts, results, certificate, ratings and application form response were deleted." });
+      toast({ title: "Registration removed", description: "Exam attempts, results, certificate and lecturer ratings for this course were also deleted. The Bible School application record was kept." });
       setDeleteTarget(null);
     },
     onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
@@ -1204,7 +1198,7 @@ function CourseRegistrationsView({ course }) {
           "All exam attempts, answers and results for this course will be permanently deleted.",
           "The issued certificate / training completion for this course will be deleted.",
           "Their lecturer ratings for this course will be deleted.",
-          "Their Bible School application form response for this course will be deleted.",
+          "Their Bible School application record will be kept — delete it from the Applications tab if needed.",
         ]}
         isPending={deleteMutation.isPending}
         onConfirm={() => deleteTarget && deleteMutation.mutate(deleteTarget)}
