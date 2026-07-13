@@ -14,7 +14,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { toast } from "@/components/ui/use-toast";
-import { Loader2, Search, Download, Eye, CheckCircle2, XCircle, Trash2, BarChart3, X } from "lucide-react";
+import { Loader2, Search, Download, Eye, CheckCircle2, XCircle, Trash2, BarChart3, X, Send } from "lucide-react";
 
 const STATUS_VARIANT = {
   submitted: "secondary",
@@ -796,6 +796,19 @@ export default function WoFBIApplicationsTab() {
                             title="Reject"
                           >
                             <XCircle className="h-3.5 w-3.5" />
+                          </Button>
+                        )}
+                        {isApprovedStatus(a.status) && a.source === "form" && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="text-primary hover:text-primary"
+                            onClick={() => provisionExamAccount.mutate({ id: a.id })}
+                            disabled={provisionExamAccount.isPending}
+                            aria-label="Send exam link"
+                            title="Resend exam sign-in link"
+                          >
+                            <Send className="h-3.5 w-3.5" />
                           </Button>
                         )}
                         {canDelete && (
