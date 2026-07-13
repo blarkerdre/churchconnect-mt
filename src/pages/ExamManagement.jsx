@@ -924,7 +924,6 @@ function CourseRegistrationsView({ course }) {
     onError: (err) => toast({ title: "Update failed", description: err.message, variant: "destructive" }),
   });
 
-  const sendExamLinkMutation = useMutation({
   const markSending = (id, on) => setSendingIds((prev) => {
     const next = new Set(prev);
     if (on) next.add(id); else next.delete(id);
