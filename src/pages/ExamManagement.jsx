@@ -925,27 +925,73 @@ function CourseRegistrationsView({ course }) {
   });
 
   const sendExamLinkMutation = useMutation({
-    mutationFn: async (registrationId) => {
-      setSendingLinkId(registrationId);
+  const markSending = (id, on) => setSendingIds((prev) => {
+    const next = new Set(prev);
+    if (on) next.add(id); else next.delete(id);
+    return next;
+  });
+
+  const sendOne = async (registrationId) => {
+    markSending(registrationId, true);
+    try {
       const { data, error } = await supabase.functions.invoke("provision-exam-account", {
         body: { registration_id: registrationId },
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
-      return { registrationId, data };
-    },
-    onSuccess: ({ registrationId }) => {
       setSentLinkIds((prev) => {
         const next = new Set(prev);
         next.add(registrationId);
         return next;
       });
-      setSendingLinkId(null);
+      return { ok: true, registrationId };
+    } catch (err) {
+      return { ok: false, registrationId, error: err };
+    } finally {
+      markSending(registrationId, false);
+    }
+  };
+
+  const sendExamLinkMutation = useMutation({
+    mutationFn: async (registrationId) => {
+      const res = await sendOne(registrationId);
+      if (!res.ok) throw res.error;
+      return res;
+    },
+    onSuccess: () => {
       toast({ title: "Exam link sent", description: "The applicant has been emailed a one-click sign-in link." });
     },
     onError: (err) => {
-      setSendingLinkId(null);
       toast({ title: "Failed to send exam link", description: err.message, variant: "destructive" });
+    },
+  });
+
+  const sendBulkExamLinksMutation = useMutation({
+    mutationFn: async (ids) => {
+      const results = [];
+      const CONCURRENCY = 3;
+      for (let i = 0; i < ids.length; i += CONCURRENCY) {
+        const chunk = ids.slice(i, i + CONCURRENCY);
+        const chunkResults = await Promise.all(chunk.map((id) => sendOne(id)));
+        results.push(...chunkResults);
+      }
+      return results;
+    },
+    onSuccess: (results) => {
+      const ok = results.filter((r) => r.ok).length;
+      const failed = results.length - ok;
+      qc.invalidateQueries({ queryKey: ["course-registrations", course.id] });
+      qc.invalidateQueries({ queryKey: ["wofbi-applications"] });
+      setSelectedIds(new Set());
+      if (failed === 0) {
+        toast({ title: `Sent ${ok} exam link${ok === 1 ? "" : "s"}` });
+      } else {
+        toast({
+          title: `Sent ${ok}, failed ${failed}`,
+          description: results.filter((r) => !r.ok).slice(0, 3).map((r) => r.error?.message).filter(Boolean).join(" • ") || undefined,
+          variant: failed > ok ? "destructive" : "default",
+        });
+      }
     },
   });
 
