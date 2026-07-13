@@ -11,6 +11,7 @@ import PrintReportButton from "@/components/PrintReportButton";
 import { toast } from "@/components/ui/use-toast";
 import { getGradeClassification } from "@/lib/grade-utils";
 import StatementOfResult from "@/components/exams/StatementOfResult";
+import SendResultsDialog from "@/components/exams/SendResultsDialog";
 import DangerConfirmDialog from "@/components/exams/DangerConfirmDialog";
 import { logAudit } from "@/lib/audit";
 import { useAuth } from "@/hooks/useAuth";
@@ -34,6 +35,7 @@ export default function CourseResultsView({ course }) {
   const [selected, setSelected] = useState(() => new Set());
   const [sendingBulk, setSendingBulk] = useState(false);
   const [deleteMember, setDeleteMember] = useState(null);
+  const [sendDialog, setSendDialog] = useState(null); // { memberIds: string[] }
 
   const classifications = course.grade_classifications || [
     { label: "Distinction", min_percentage: 75 },
@@ -372,18 +374,11 @@ export default function CourseResultsView({ course }) {
                 )}
                 <div className="flex-1" />
                 <Button
-                  variant="outline" size="sm" className="h-7 text-xs gap-1"
+                  size="sm" className="h-7 text-xs gap-1"
                   disabled={selected.size === 0 || sendingBulk}
-                  onClick={() => sendStatements(Array.from(selected))}
+                  onClick={() => setSendDialog({ memberIds: Array.from(selected) })}
                 >
-                  {sendingBulk ? <Loader2 className="h-3 w-3 animate-spin" /> : <Mail className="h-3 w-3" />} Email Statement
-                </Button>
-                <Button
-                  variant="outline" size="sm" className="h-7 text-xs gap-1"
-                  disabled={selected.size === 0 || sendingBulk}
-                  onClick={() => sendCertificates(Array.from(selected))}
-                >
-                  {sendingBulk ? <Loader2 className="h-3 w-3 animate-spin" /> : <Award className="h-3 w-3" />} Email Certificate
+                  <Send className="h-3 w-3" /> Preview & Send…
                 </Button>
               </div>
             )}
@@ -453,22 +448,10 @@ export default function CourseResultsView({ course }) {
                               size="sm"
                               className="h-6 text-[10px] px-1.5 gap-0.5"
                               disabled={sendingBulk}
-                              onClick={() => sendStatements([m.id])}
-                              title="Email Statement of Result to this member"
+                              onClick={() => setSendDialog({ memberIds: [m.id] })}
+                              title="Preview & send statement / certificate"
                             >
-                              <Send className="h-3 w-3" /> Email
-                            </Button>
-                          )}
-                          {isAdmin && m.subjectsTaken === subjects.length && m.passed && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-6 text-[10px] px-1.5 gap-0.5"
-                              disabled={sendingBulk}
-                              onClick={() => sendCertificates([m.id])}
-                              title="Email certificate to this member"
-                            >
-                              <Award className="h-3 w-3" /> Certificate
+                              <Send className="h-3 w-3" /> Send…
                             </Button>
                           )}
                           {subjects.map(s => {
@@ -544,6 +527,18 @@ export default function CourseResultsView({ course }) {
         confirmLabel="Delete result"
         isPending={deleteResultMutation.isPending}
         onConfirm={() => deleteResultMutation.mutateAsync({ memberId: deleteMember.id })}
+      />
+    )}
+    {sendDialog && (
+      <SendResultsDialog
+        open={!!sendDialog}
+        onOpenChange={(v) => { if (!v) setSendDialog(null); }}
+        course={course}
+        subjects={subjects}
+        members={members
+          .filter((m) => sendDialog.memberIds.includes(m.id))
+          .map((m) => ({ id: m.id, name: m.name, passed: m.passed, subjects: m.subjects }))}
+        onSent={() => { clearSelection(); setSendDialog(null); }}
       />
     )}
     </>
