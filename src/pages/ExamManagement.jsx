@@ -1163,6 +1163,20 @@ function CourseRegistrationsView({ course }) {
                             <CheckCircle2 className="h-3.5 w-3.5" /> Approve
                           </Button>
                         )}
+                        {canManageNumbers && isApproved && r.members?.email && (() => {
+                          const alreadySent = sentLinkIds.has(r.id) || !!r.members?.user_id;
+                          const isSending = sendingLinkId === r.id;
+                          return (
+                            <Button size="sm" variant="outline" className="h-7 gap-1 text-xs"
+                              onClick={() => sendExamLinkMutation.mutate(r.id)}
+                              disabled={isSending}
+                              title="Email the applicant a one-click sign-in link to write the exam."
+                            >
+                              {isSending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Mail className="h-3.5 w-3.5" />}
+                              {alreadySent ? "Resend link" : "Send exam link"}
+                            </Button>
+                          );
+                        })()}
                         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setDeleteTarget(r)}>
                           <Trash2 className="h-3.5 w-3.5 text-destructive" />
                         </Button>
