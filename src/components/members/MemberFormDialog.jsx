@@ -28,7 +28,7 @@ import DangerConfirmDialog from "@/components/exams/DangerConfirmDialog";
 import { diffUnitMembership, submitJoinRequests } from "@/hooks/usePendingJoinRequests";
 import { Info as InfoIcon } from "lucide-react";
 
-const STATUSES = ["Active", "New Convert", "First Timer", "Visitor"];
+const STATUSES = ["Active", "New Convert", "First Timer", "Visitor", "Bible School"];
 const GENDERS = ["Male", "Female"];
 const HIDE_SPIRITUAL_STATUSES = ["First Timer", "New Convert", "Visitor"];
 const SHOW_BAPTISM_STATUSES = ["First Timer", "New Convert"];
