@@ -1,35 +1,33 @@
-## Why you see two "Blarker Dre" rows
+## Goal
 
-There are two rows in `course_registrations` for the same member (Blarker Dre, `blarkerdre@yahoo.com`) in Demo Church, but they are for **two different courses**:
+When someone applies via the public Bible School form and a new member record is created for them, mark their `membership_status` as **"Bible School"** instead of **"First Timer"**. Existing members keep their current status untouched.
 
-| Course | Status | Registered |
-|---|---|---|
-| Leadership Diploma Course (LDC) | `pending` | 14 May 2026 |
-| Leadership Certificate Course (LCC) | `approved` | 14 May 2026 (approved 13 Jul 2026) |
+## Changes
 
-Both were created by the **old public-register flow** (before we removed the `course_registrations` insert from `public-wofbi-register`). They are legacy rows — there is **no matching `wofbi_applications` record** for either.
+### 1. DB migration — extend the `membership_status` enum
+Add `'Bible School'` to the existing `public.membership_status` enum. No data backfill; only new applicants get the new value going forward. (If you want, we can also retro-tag existing members who have an approved Bible School registration — flag me if so.)
 
-Why they still show as "two applications":
-- **Applications tab** merges `wofbi_applications` with any leftover `course_registrations` rows that have no matching application. With zero application rows for this person, both legacy registrations surface as synthetic "direct" entries → looks like two applications.
-- **Bible School Management** (per-course list) now filters to `approved/active`, so only the LCC row would appear there under LCC. The LDC pending row is hidden there but still visible in the Applications tab.
+### 2. `supabase/functions/public-wofbi-register/index.ts`
+- Change the new-member insert from `membership_status: "First Timer"` to `membership_status: "Bible School"`.
+- No change to the "existing member found by email/user_id" branch — we don't overwrite their status.
 
-The earlier cleanup migration only deleted pending `course_registrations` rows that had a matching `wofbi_applications` row. Blarker has no application rows, so the legacy pending LDC row was not cleaned up.
+### 3. Frontend — surface the new status
 
-## Fix
+Add `"Bible School"` to the status dropdowns and badge colours so admins can see/filter it consistently:
 
-Broaden the legacy cleanup to remove pre-fix `pending` `course_registrations` rows that have no matching `wofbi_applications` row either — these can only have been created by the old public flow, since admin-created rows are inserted as `approved`/`active`.
+- `src/components/members/MemberFormDialog.jsx` — add to `STATUSES`.
+- `src/pages/MyProfile.jsx` — add to both `MEMBERSHIP_STATUSES` arrays and the badge colour map.
+- `src/pages/Members.jsx` — add a badge colour entry (reuse an existing chart token).
+- `src/components/members/BulkImportDialog.jsx` — add to `VALID_STATUSES` so CSV imports accept it.
 
-### Data-only migration
-Delete `course_registrations` rows where:
-- `status = 'pending'`
-- `approved_at IS NULL`
-- No `wofbi_applications` row exists for the same `tenant_id + course_id + member_id`
-
-This will remove the stale LDC `pending` row for Blarker Dre (and any other similar legacy leftovers across tenants) without touching approved/active registrations or any admin-created rows.
-
-### Expected result after cleanup
-- Applications tab for Demo Church: Blarker Dre appears **once** — as the approved LCC registration (source: direct).
-- Bible School Management: unchanged — LCC shows Blarker Dre; LDC shows no one.
+Do not add it to `HIDE_SPIRITUAL_STATUSES` / `SHOW_BAPTISM_STATUSES` — Bible School applicants are typically already established members, so spiritual/emergency-contact sections should remain visible.
 
 ## Out of scope
-- No code changes. The public-register / approve / Bible School Management logic from the previous fix already prevents new duplicates. This is purely a legacy data cleanup.
+- No changes to Applications tab / Bible School Management logic.
+- No retroactive update of existing "First Timer" records — only new public applicants going forward.
+- No changes to reporting, follow-up categorisation, or WSF/leader dashboards; those keep treating "First Timer" as-is.
+
+## Result
+- Public Bible School application → new member created with `membership_status = "Bible School"`.
+- Existing members keep their current status when they apply.
+- Admins can see, filter, edit, and bulk-import the "Bible School" status everywhere member status appears.

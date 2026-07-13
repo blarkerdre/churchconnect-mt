@@ -6905,6 +6905,7 @@ export type Database = {
         | "New Convert"
         | "First Timer"
         | "Visitor"
+        | "Bible School"
       pastoral_care_status: "Open" | "In Progress" | "Resolved" | "Closed"
       pastoral_care_type:
         | "Counselling"
@@ -7117,6 +7118,7 @@ export const Constants = {
         "New Convert",
         "First Timer",
         "Visitor",
+        "Bible School",
       ],
       pastoral_care_status: ["Open", "In Progress", "Resolved", "Closed"],
       pastoral_care_type: [
