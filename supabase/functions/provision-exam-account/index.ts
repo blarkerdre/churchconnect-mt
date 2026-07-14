@@ -245,9 +245,13 @@ Deno.serve(async (req) => {
     const magicLink = linkData?.properties?.action_link;
     if (!magicLink) return json({ error: "No action_link returned" }, 500);
 
-    // 5. Send email
+    // 5. Send email — invoke with explicit service-role Authorization so
+    // send-transactional-email's in-code auth check accepts the call.
+    let emailSent = true;
+    let emailError: string | null = null;
     try {
-      await admin.functions.invoke("send-transactional-email", {
+      const { error: invokeErr } = await admin.functions.invoke("send-transactional-email", {
+        headers: { Authorization: `Bearer ${serviceKey}` },
         body: {
           templateName: "bible-school-exam-ready",
           recipientEmail: emailLower,
@@ -261,12 +265,19 @@ Deno.serve(async (req) => {
           },
         },
       });
+      if (invokeErr) {
+        emailSent = false;
+        emailError = (invokeErr as any)?.message || String(invokeErr);
+        console.error("send-transactional-email returned error:", invokeErr);
+      }
     } catch (e) {
+      emailSent = false;
+      emailError = (e as Error).message || String(e);
       console.error("send-transactional-email failed:", e);
       // Non-fatal — return link so admin can share manually if needed.
     }
 
-    return json({ ok: true, member_id: memberId, user_id: userId });
+    return json({ ok: true, member_id: memberId, user_id: userId, magic_link: magicLink, email_sent: emailSent, email_error: emailError });
   } catch (e) {
     console.error("provision-exam-account error:", e);
     return json({ error: (e as Error).message || "Unexpected error" }, 500);
