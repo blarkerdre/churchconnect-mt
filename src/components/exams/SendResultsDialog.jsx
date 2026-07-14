@@ -113,9 +113,14 @@ export default function SendResultsDialog({
         if (cancelled) return;
         if (error) throw error;
         if (data?.error) throw new Error(data.error);
+        const rawImage = data?.image_base64 || data?.image;
+        if (!rawImage) throw new Error("Certificate preview did not return an image");
+        const imageSrc = rawImage.startsWith("data:image/")
+          ? rawImage
+          : `data:image/png;base64,${rawImage}`;
         setCertPreviews((p) => ({
           ...p,
-          [activeMemberId]: { image: data.image_base64, loading: false },
+          [activeMemberId]: { image: imageSrc, loading: false },
         }));
       } catch (e) {
         if (cancelled) return;
