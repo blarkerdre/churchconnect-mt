@@ -215,22 +215,9 @@ export default function WoFBIApplicationsTab() {
         } else {
           toast({ title: "Application approved" });
         }
-        // Exam sign-in link is now sent manually from Bible School Management → Registrations.
-        // (Previously auto-sent here on approval.)
-        // Send the course-registration confirmation email now that the applicant is actually enrolled.
-        if (res.enrolled) {
-          const approved = applications.find((a) => a.id === variables?.id);
-          if (approved?.email) {
-            supabase.functions.invoke("send-course-registration-email", {
-              body: {
-                email: approved.email,
-                first_name: approved.first_name || "Friend",
-                course_name: approved.course?.name || "Bible School Course",
-                tenant_id: tenantId,
-              },
-            }).catch((err) => console.error("Registration email failed:", err));
-          }
-        }
+        // No email is sent on approval here. The student-number email is sent from
+        // Bible School Management → Registrations when the admin approves there,
+        // and the exam sign-in link is sent separately via "Send exam link".
       } else {
         toast({ title: res.source === "direct" ? "Registration updated" : "Application updated" });
       }
