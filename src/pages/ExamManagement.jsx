@@ -910,12 +910,30 @@ function CourseRegistrationsView({ course }) {
     mutationFn: async (id) => {
       const { data, error } = await supabase.rpc("approve_course_registration", { _registration_id: id });
       if (error) throw error;
-      return data;
-    },
-    onSuccess: (data) => {
-      qc.invalidateQueries({ queryKey: ["course-registrations", tenantId, course.id] });
       const num = Array.isArray(data) ? data[0]?.student_number : data?.student_number;
-      toast({ title: "Registration approved", description: num ? `Student No. ${num}` : undefined });
+      // Fire-and-await the student-number email so we can surface failure.
+      let emailError = null;
+      try {
+        const { data: emailData, error: emailErr } = await supabase.functions.invoke("send-student-number-email", {
+          body: { registration_id: id },
+        });
+        if (emailErr) emailError = emailErr.message || String(emailErr);
+        else if (emailData?.error) emailError = emailData.error;
+        else if (emailData?.email_sent === false) emailError = emailData?.email_error || "Email failed to send";
+      } catch (e) {
+        emailError = e.message || String(e);
+      }
+      return { student_number: num, emailError };
+    },
+    onSuccess: ({ student_number, emailError }) => {
+      qc.invalidateQueries({ queryKey: ["course-registrations", tenantId, course.id] });
+      toast({
+        title: emailError ? "Approved — email failed" : "Approved & student number emailed",
+        description: student_number
+          ? `Student No. ${student_number}${emailError ? ` · ${emailError}` : ""}`
+          : (emailError || undefined),
+        variant: emailError ? "destructive" : undefined,
+      });
     },
     onError: (err) => toast({ title: "Approval failed", description: err.message, variant: "destructive" }),
   });
