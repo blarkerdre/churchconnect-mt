@@ -952,6 +952,14 @@ function CourseRegistrationsView({ course }) {
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
+      if (data && data.email_sent === false) {
+        return {
+          ok: false,
+          registrationId,
+          error: new Error(data.email_error || "Email failed to send"),
+          magic_link: data.magic_link,
+        };
+      }
       setSentLinkIds((prev) => {
         const next = new Set(prev);
         next.add(registrationId);
