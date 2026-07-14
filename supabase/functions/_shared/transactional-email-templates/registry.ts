@@ -19,6 +19,7 @@ import { template as tenantInvoice } from './tenant-invoice.tsx'
 import { template as birthdayGreeting } from './birthday-greeting.tsx'
 import { template as adminDirectMessage } from './admin-direct-message.tsx'
 import { template as bibleSchoolExamReady } from './bible-school-exam-ready.tsx'
+import { template as bibleSchoolStudentNumber } from './bible-school-student-number.tsx'
 
 export const TEMPLATES: Record<string, TemplateEntry> = {
   'welcome-member': welcomeMember,
@@ -31,4 +32,5 @@ export const TEMPLATES: Record<string, TemplateEntry> = {
   'birthday-greeting': birthdayGreeting,
   'admin-direct-message': adminDirectMessage,
   'bible-school-exam-ready': bibleSchoolExamReady,
+  'bible-school-student-number': bibleSchoolStudentNumber,
 }
