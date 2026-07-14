@@ -65,8 +65,42 @@ function toCSV(rows) {
 
 export default function LecturerFeedbackReport() {
   const { tenantId } = useTenantQuery();
+  const { isTenantAdmin, isTenantOwner, roles = [] } = useAuth();
+  const isSuperAdmin = roles.includes("super_admin") || roles.includes("admin");
+  const canDelete = isTenantAdmin || isTenantOwner || isSuperAdmin;
+  const queryClient = useQueryClient();
   const [filters, setFilters] = useState(emptyFilters);
   const [activeTab, setActiveTab] = useState("lecturer");
+  const [pendingDelete, setPendingDelete] = useState(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const handleDelete = async () => {
+    if (!pendingDelete) return;
+    setDeleting(true);
+    try {
+      const { error } = await supabase
+        .from("lecturer_ratings")
+        .delete()
+        .eq("id", pendingDelete.id)
+        .eq("tenant_id", tenantId);
+      if (error) throw error;
+      await logAudit("lecturer_rating_delete", "lecturer_ratings", pendingDelete.id, {
+        lecturer: pendingDelete.lecturers?.name,
+        student: pendingDelete.members
+          ? `${pendingDelete.members.first_name} ${pendingDelete.members.last_name}`
+          : null,
+        subject: pendingDelete.exam_subjects?.name,
+      }, tenantId);
+      queryClient.invalidateQueries({ queryKey: ["lecturer-ratings-report", tenantId] });
+      toast({ title: "Feedback deleted" });
+      setPendingDelete(null);
+    } catch (err) {
+      toast({ title: "Delete failed", description: err.message, variant: "destructive" });
+    } finally {
+      setDeleting(false);
+    }
+  };
+
 
   const { data: ratings = [], isLoading } = useQuery({
     queryKey: ["lecturer-ratings-report", tenantId],
