@@ -171,6 +171,7 @@ Deno.serve(async (req) => {
       template_name: "course-registration",
       recipient_email: normalizedEmail,
       status: "pending",
+      ...(tenant_id ? { tenant_id } : {}),
     });
 
     if (!apiKey) {
