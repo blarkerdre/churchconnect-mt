@@ -30,7 +30,7 @@ export const WoFBICourseRegistrationEmail: React.FC<WoFBICourseRegistrationEmail
       <Body style={main}>
         <Container style={container}>
           <Section style={headerSection}>
-            <Text style={headerText}>Winners Chapel International Cardiff</Text>
+            <Text style={headerText}>{tenantName || 'Your Church'}</Text>
           </Section>
 
           <Section style={contentSection}>
