@@ -267,8 +267,10 @@ Deno.serve(async (req) => {
       });
       if (invokeErr) {
         emailSent = false;
-        emailError = (invokeErr as any)?.message || String(invokeErr);
-        console.error("send-transactional-email returned error:", invokeErr);
+        const status = (invokeErr as any)?.context?.status;
+        const baseMsg = (invokeErr as any)?.message || String(invokeErr);
+        emailError = status ? `[${status}] ${baseMsg}` : baseMsg;
+        console.error("send-transactional-email returned error:", { status, invokeErr });
       }
     } catch (e) {
       emailSent = false;
