@@ -16,6 +16,7 @@ interface WoFBICourseRegistrationEmailProps {
   courseName?: string
   siteUrl?: string
   tenantName?: string
+  studentNumber?: string | null
 }
 
 export const WoFBICourseRegistrationEmail: React.FC<WoFBICourseRegistrationEmailProps> = ({
@@ -23,6 +24,7 @@ export const WoFBICourseRegistrationEmail: React.FC<WoFBICourseRegistrationEmail
   firstName = 'Friend',
   courseName = 'Bible School Course',
   siteUrl = 'https://churchmanagementsuite.org',
+  studentNumber,
 }) => {
   return (
     <Html>
