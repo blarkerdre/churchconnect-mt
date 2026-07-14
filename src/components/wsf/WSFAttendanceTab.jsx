@@ -39,7 +39,7 @@ export default function WSFAttendanceTab({ centres }) {
     enabled: !!user,
   });
 
-  const ledCentres = centres.filter(c => c.leader_id && userMember?.id && c.leader_id === userMember.id);
+  const ledCentres = centres.filter(c => userMember?.id && (c.leader_id === userMember.id || c.host_member_id === userMember.id));
   const isWsfLeader = ledCentres.length > 0;
   const canAccess = isAdmin || isWsfLeader || isReportsOfficer;
   const canWrite = isAdmin || isWsfLeader;
