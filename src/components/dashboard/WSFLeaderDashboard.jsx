@@ -22,7 +22,7 @@ export default function WSFLeaderDashboard() {
   const { tenantId, scopeQuery } = useTenantQuery();
   const roleLabel = tenantRole ? tenantRole.charAt(0).toUpperCase() + tenantRole.slice(1) : "";
 
-  // Get centres this user leads
+  // Get centres this user leads OR hosts (house provider)
   const { data: ledCentres = [], isLoading: centresLoading } = useQuery({
     queryKey: ["wsf-led-centres", myMember?.id, tenantId],
     queryFn: async () => {
@@ -30,7 +30,7 @@ export default function WSFLeaderDashboard() {
         supabase
           .from("wsf_centres")
           .select("*")
-          .eq("leader_id", myMember.id)
+          .or(`leader_id.eq.${myMember.id},host_member_id.eq.${myMember.id}`)
       );
       if (error) throw error;
       return data;
