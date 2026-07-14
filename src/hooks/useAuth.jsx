@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useState, useCallback, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 const noop = async () => ({ data: null, error: new Error("Auth not initialized") });
@@ -141,7 +141,7 @@ export function AuthProvider({ children }) {
   // Refetch the member record scoped to a specific tenant. Called by TenantContext
   // once the active tenant is known, so `myMember` reflects the current tenant even
   // when the user has member rows in multiple tenants.
-  const refetchMemberForTenant = async (tenantId) => {
+  const refetchMemberForTenant = useCallback(async (tenantId) => {
     if (!user?.id || !tenantId) return;
     try {
       const { data } = await supabase
@@ -164,7 +164,11 @@ export function AuthProvider({ children }) {
     } catch (err) {
       console.warn("refetchMemberForTenant failed:", err?.message || err);
     }
-  };
+  }, [user?.id]);
+
+  const refreshUser = useCallback(() => {
+    if (user) fetchUserData(user.id, user.email);
+  }, [user]);
 
   const signUp = async (email, password, fullName, tenantSlug) => {
     const { data, error } = await supabase.auth.signUp({
@@ -224,17 +228,19 @@ export function AuthProvider({ children }) {
   // Reports Officer is read-only unless they ALSO hold a write-capable role
   const isReadOnly = isReportsOfficer && !isAdmin && !isUnitLeader && !isWSFLeader;
 
+  const value = useMemo(() => ({
+    user, profile, roles, loading, dataLoaded, leaderUnits, leaderCentres, myMember, tenantMemberships,
+    signUp, signIn, signOut, resetPassword, updatePassword,
+    isAdmin, isUnitLeader, isWSFLeader, isMember, isReportsOfficer, isReadOnly,
+    isTenantOwner, isTenantAdmin,
+    refreshUser,
+    refetchMemberForTenant,
+  }), [user, profile, roles, loading, dataLoaded, leaderUnits, leaderCentres, myMember, tenantMemberships,
+       isAdmin, isUnitLeader, isWSFLeader, isMember, isReportsOfficer, isReadOnly, isTenantOwner, isTenantAdmin,
+       refreshUser, refetchMemberForTenant]);
+
   return (
-    <AuthContext.Provider
-       value={{
-        user, profile, roles, loading, dataLoaded, leaderUnits, leaderCentres, myMember, tenantMemberships,
-        signUp, signIn, signOut, resetPassword, updatePassword,
-        isAdmin, isUnitLeader, isWSFLeader, isMember, isReportsOfficer, isReadOnly,
-        isTenantOwner, isTenantAdmin,
-        refreshUser: () => user && fetchUserData(user.id, user.email),
-        refetchMemberForTenant,
-      }}
-    >
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );
