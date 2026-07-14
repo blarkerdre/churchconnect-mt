@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from "react";
+import React, { useMemo, useState, useEffect, useRef } from "react";
 import { Dialog, DialogContent, DialogFooter } from "@/components/ui/dialog";
 import TenantDialogHeader from "@/components/ui/TenantDialogHeader";
 import { Button } from "@/components/ui/button";
@@ -59,22 +59,30 @@ export default function SendResultsDialog({
     }
   }, [open, members]);
 
+  // Track which member ids have a fetch in-flight or already completed, so
+  // the load effect doesn't self-cancel when it triggers its own state update.
+  const inflightRef = useRef(new Set());
+  const membersRef = useRef(members);
+  useEffect(() => { membersRef.current = members; }, [members]);
+
   useEffect(() => {
     if (!open) {
       setCertPreviews({});
+      inflightRef.current = new Set();
     }
   }, [open]);
 
+  const activePassed = !!members.find((m) => m.id === activeMemberId)?.passed;
+
   // Load cert preview for the active member on demand.
   useEffect(() => {
-    if (!open || !activeMemberId || !sendCertificate) return;
-    const active = members.find((m) => m.id === activeMemberId);
-    if (!active || !active.passed) return;
-    if (certPreviews[activeMemberId]) return;
+    if (!open || !activeMemberId || !sendCertificate || !activePassed) return;
+    if (inflightRef.current.has(activeMemberId)) return;
+    inflightRef.current.add(activeMemberId);
+
+    setCertPreviews((p) => (p[activeMemberId] ? p : { ...p, [activeMemberId]: { loading: true } }));
 
     let cancelled = false;
-    setCertPreviews((p) => ({ ...p, [activeMemberId]: { loading: true } }));
-
     (async () => {
       try {
         // Detect existing completion so we preview a reissue when appropriate.
@@ -111,6 +119,7 @@ export default function SendResultsDialog({
         }));
       } catch (e) {
         if (cancelled) return;
+        inflightRef.current.delete(activeMemberId);
         setCertPreviews((p) => ({
           ...p,
           [activeMemberId]: { loading: false, error: e.message || "Failed to load preview" },
@@ -121,7 +130,10 @@ export default function SendResultsDialog({
     return () => {
       cancelled = true;
     };
-  }, [open, activeMemberId, sendCertificate, members, course.tenant_id, course.name, certPreviews]);
+    // Intentionally exclude `members` (unstable reference) and `certPreviews`
+    // (updated inside the effect) to avoid cancelling the in-flight fetch.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, activeMemberId, sendCertificate, activePassed, course.tenant_id, course.name]);
 
   const activeMember = members.find((m) => m.id === activeMemberId) || null;
 
