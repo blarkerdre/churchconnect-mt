@@ -182,6 +182,7 @@ Deno.serve(async (req) => {
         recipient_email: normalizedEmail,
         status: "failed",
         error_message: "Missing LOVABLE_API_KEY",
+        ...(tenant_id ? { tenant_id } : {}),
       });
       return new Response(JSON.stringify({ error: "Server configuration error" }), {
         status: 500,
