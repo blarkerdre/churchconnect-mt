@@ -21,10 +21,10 @@ export default function WSFManagement() {
     queryKey: ["my-member-record", user?.id, tenantId],
     queryFn: async () => {
       if (!user?.id) return null;
-      const { data } = await supabase.from("members").select("id").eq("user_id", user.id).eq("tenant_id", tenantId).single();
+      const { data } = await supabase.from("members").select("id").eq("user_id", user.id).eq("tenant_id", tenantId).maybeSingle();
       return data;
     },
-    enabled: !!user?.id && isWSFLeader && !isAdmin,
+    enabled: !!user?.id && !isAdmin,
   });
 
   const { data: centres = [] } = useQuery({
@@ -67,10 +67,13 @@ export default function WSFManagement() {
     enabled: leaderIds.length > 0,
   });
 
-  // Get member counts per centre for leaders
-  const ledCentres = !isAdmin && isWSFLeader && myMember
-    ? centres.filter(c => c.leader_id === myMember.id)
+  // Get member counts per centre for leaders/hosts
+  const ledCentres = !isAdmin && myMember
+    ? centres.filter(c => c.leader_id === myMember.id || c.host_member_id === myMember.id)
     : [];
+  const isHomeCellHost = !isAdmin && myMember
+    ? centres.some(c => c.host_member_id === myMember.id)
+    : false;
 
   const visibleCentres = (isAdmin || isReportsOfficer) ? centres : ledCentres;
 
@@ -89,7 +92,7 @@ export default function WSFManagement() {
     enabled: ledCentres.length > 0,
   });
 
-  if (!isAdmin && !isWSFLeader && !isReportsOfficer) {
+  if (!isAdmin && !isWSFLeader && !isReportsOfficer && !isHomeCellHost) {
     return (
       <Card className="border-0 shadow-sm">
       <ModuleTour tourId="wsf-v1" />
