@@ -269,7 +269,7 @@ function AppRoutes() {
         {/* Bare public routes → redirect to default tenant */}
         <Route path="/register" element={<DefaultTenantRedirect to="register" />} />
         <Route path="/bible-school-register" element={<DefaultTenantRedirect to="bible-school-register" />} />
-        <Route path="/auth" element={<AuthProvider><Auth /></AuthProvider>} />
+        <Route path="/auth" element={<Auth />} />
 
         {/* Tenant-independent public routes */}
         <Route path="/presentation" element={<Presentation />} />
@@ -278,30 +278,22 @@ function AppRoutes() {
         <Route path="/trust" element={<Trust />} />
         <Route path="/privacy" element={<Privacy />} />
         <Route path="/t/:tenantSlug/privacy" element={<Privacy />} />
-        <Route path="/accept-invite" element={<AuthProvider><AcceptInvite /></AuthProvider>} />
-        <Route path="/auth/exam-callback" element={<AuthProvider><AuthExamCallback /></AuthProvider>} />
+        <Route path="/accept-invite" element={<AcceptInvite />} />
+        <Route path="/auth/exam-callback" element={<AuthExamCallback />} />
 
         {/* Tenant-prefixed public routes */}
-        <Route path="/t/:tenantSlug/auth" element={<AuthProvider><Auth /></AuthProvider>} />
+        <Route path="/t/:tenantSlug/auth" element={<Auth />} />
         <Route path="/t/:tenantSlug/register" element={<PublicRegistration />} />
-        <Route path="/t/:tenantSlug/bible-school-register" element={<AuthProvider><PublicWoFBIRegistration /></AuthProvider>} />
+        <Route path="/t/:tenantSlug/bible-school-register" element={<PublicWoFBIRegistration />} />
 
         {/* Public reset-password routes */}
-        <Route path="/reset-password" element={<AuthProvider><ResetPassword /></AuthProvider>} />
-        <Route path="/t/:tenantSlug/reset-password" element={<AuthProvider><ResetPassword /></AuthProvider>} />
+        <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="/t/:tenantSlug/reset-password" element={<ResetPassword />} />
 
         {/* Authenticated routes — current paths */}
-        <Route path="/*" element={<AuthProvider><AuthRoutes /></AuthProvider>} />
+        <Route path="/*" element={<AuthRoutes />} />
       </Routes>
     </Suspense>
-  );
-}
-
-function AuthedShell() {
-  return (
-    <AuthProvider>
-      <MFASetupDialog />
-    </AuthProvider>
   );
 }
 
@@ -309,16 +301,14 @@ function App() {
   return (
     <QueryClientProvider client={queryClientInstance}>
       <Router>
-        <AppRoutes />
         <AuthProvider>
+          <AppRoutes />
           <MFASetupDialog />
+          <CookieConsentBanner />
         </AuthProvider>
-        <CookieConsentBanner />
       </Router>
       <Toaster />
       <SonnerToaster />
     </QueryClientProvider>
   );
 }
-
-export default App;
