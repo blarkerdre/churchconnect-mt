@@ -913,7 +913,7 @@ function CourseRegistrationsView({ course }) {
       return data;
     },
     onSuccess: (data) => {
-      qc.invalidateQueries({ queryKey: ["course-registrations", course.id] });
+      qc.invalidateQueries({ queryKey: ["course-registrations", tenantId, course.id] });
       const num = Array.isArray(data) ? data[0]?.student_number : data?.student_number;
       toast({ title: "Registration approved", description: num ? `Student No. ${num}` : undefined });
     },
@@ -930,7 +930,7 @@ function CourseRegistrationsView({ course }) {
       if (error) throw error;
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["course-registrations", course.id] });
+      qc.invalidateQueries({ queryKey: ["course-registrations", tenantId, course.id] });
       toast({ title: "Student number updated" });
       setEditingNumberId(null);
       setEditingNumberValue("");
@@ -993,7 +993,7 @@ function CourseRegistrationsView({ course }) {
     onSuccess: (results) => {
       const ok = results.filter((r) => r.ok).length;
       const failed = results.length - ok;
-      qc.invalidateQueries({ queryKey: ["course-registrations", course.id] });
+      qc.invalidateQueries({ queryKey: ["course-registrations", tenantId, course.id] });
       qc.invalidateQueries({ queryKey: ["wofbi-applications"] });
       setSelectedIds(new Set());
       if (failed === 0) {
@@ -1016,7 +1016,7 @@ function CourseRegistrationsView({ course }) {
       if (error) throw error;
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["course-registrations", course.id] });
+      qc.invalidateQueries({ queryKey: ["course-registrations", tenantId, course.id] });
       qc.invalidateQueries({ queryKey: ["wofbi-applications"] });
       toast({ title: "Registration removed", description: "Exam attempts, results, certificate and lecturer ratings for this course were also deleted. The Bible School application record was kept." });
       setDeleteTarget(null);
