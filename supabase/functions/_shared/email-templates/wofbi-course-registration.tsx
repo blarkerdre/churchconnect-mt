@@ -15,9 +15,11 @@ interface WoFBICourseRegistrationEmailProps {
   firstName?: string
   courseName?: string
   siteUrl?: string
+  tenantName?: string
 }
 
 export const WoFBICourseRegistrationEmail: React.FC<WoFBICourseRegistrationEmailProps> = ({
+  tenantName,
   firstName = 'Friend',
   courseName = 'Bible School Course',
   siteUrl = 'https://churchmanagementsuite.org',
@@ -28,7 +30,7 @@ export const WoFBICourseRegistrationEmail: React.FC<WoFBICourseRegistrationEmail
       <Body style={main}>
         <Container style={container}>
           <Section style={headerSection}>
-            <Text style={headerText}>Winners Chapel International Cardiff</Text>
+            <Text style={headerText}>{tenantName || 'Your Church'}</Text>
           </Section>
 
           <Section style={contentSection}>
@@ -68,7 +70,7 @@ export const WoFBICourseRegistrationEmail: React.FC<WoFBICourseRegistrationEmail
 
           <Section style={footerSection}>
             <Text style={footerText}>
-              Winners Chapel International Cardiff — Bible School
+              {tenantName || 'Your Church'} — Bible School
             </Text>
             <Text style={footerText}>
               This email was sent because you registered for a Bible School course.
