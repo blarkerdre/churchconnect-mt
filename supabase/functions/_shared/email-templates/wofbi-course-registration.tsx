@@ -47,6 +47,16 @@ export const WoFBICourseRegistrationEmail: React.FC<WoFBICourseRegistrationEmail
               the Bible School.
             </Text>
 
+            {studentNumber ? (
+              <Section style={numberBox}>
+                <Text style={numberLabel}>Your student number</Text>
+                <Text style={numberValue}><strong>{studentNumber}</strong></Text>
+                <Text style={hint}>
+                  Please keep this safe — you'll need it for your exam and certificate.
+                </Text>
+              </Section>
+            ) : null}
+
             <Text style={paragraph}>
               Please keep an eye on announcements for class schedules, materials, and
               any updates regarding your course. We encourage you to attend all sessions
