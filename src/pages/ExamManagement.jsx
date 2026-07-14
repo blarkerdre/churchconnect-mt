@@ -1007,6 +1007,37 @@ function CourseRegistrationsView({ course }) {
     },
   });
 
+  const sendConfirmationEmailMutation = useMutation({
+    mutationFn: async (registrationId) => {
+      setSendingRegEmailIds((prev) => {
+        const next = new Set(prev);
+        next.add(registrationId);
+        return next;
+      });
+      try {
+        const { data, error } = await supabase.functions.invoke("send-course-registration-email", {
+          body: { registration_id: registrationId },
+        });
+        if (error) throw error;
+        if (data?.error) throw new Error(data.error);
+        return registrationId;
+      } finally {
+        setSendingRegEmailIds((prev) => {
+          const next = new Set(prev);
+          next.delete(registrationId);
+          return next;
+        });
+      }
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["course-registrations", tenantId, course.id] });
+      toast({ title: "Confirmation email sent" });
+    },
+    onError: (err) => {
+      toast({ title: "Failed to send confirmation", description: err.message, variant: "destructive" });
+    },
+  });
+
   const sendBulkExamLinksMutation = useMutation({
     mutationFn: async (ids) => {
       const results = [];
