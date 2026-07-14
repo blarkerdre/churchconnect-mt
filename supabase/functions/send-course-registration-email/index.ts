@@ -153,6 +153,7 @@ Deno.serve(async (req) => {
       firstName: first_name || "Friend",
       courseName: course_name || "Bible School Course",
       siteUrl: tenantSiteUrl,
+      tenantName: senderName,
     };
 
     const [html, text, unsubscribeToken] = await Promise.all([
