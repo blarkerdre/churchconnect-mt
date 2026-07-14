@@ -231,6 +231,7 @@ Deno.serve(async (req) => {
         recipient_email: normalizedEmail,
         status: "failed",
         error_message: errMsg.slice(0, 1000),
+        ...(tenant_id ? { tenant_id } : {}),
       });
       return new Response(JSON.stringify({ error: "Failed to send email" }), {
         status: 500,
