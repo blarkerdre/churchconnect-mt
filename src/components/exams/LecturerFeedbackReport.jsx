@@ -1,7 +1,8 @@
 import { useState, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
+import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,9 +12,12 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Slider } from "@/components/ui/slider";
-import { Loader2, BarChart3, Download, Printer, RotateCcw, TrendingUp, TrendingDown, Minus } from "lucide-react";
+import { Loader2, BarChart3, Download, Printer, RotateCcw, TrendingUp, TrendingDown, Minus, Trash2 } from "lucide-react";
 import { OPTION_LABELS, CATEGORICAL_FIELDS } from "@/lib/lecturer-feedback-options";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
+import PasswordConfirmDialog from "@/components/shared/PasswordConfirmDialog";
+import { toast } from "@/components/ui/use-toast";
+import { logAudit } from "@/lib/audit";
 
 const emptyFilters = {
   courseId: "all",
@@ -61,8 +65,42 @@ function toCSV(rows) {
 
 export default function LecturerFeedbackReport() {
   const { tenantId } = useTenantQuery();
+  const { isTenantAdmin, isTenantOwner, roles = [] } = useAuth();
+  const isSuperAdmin = roles.includes("super_admin") || roles.includes("admin");
+  const canDelete = isTenantAdmin || isTenantOwner || isSuperAdmin;
+  const queryClient = useQueryClient();
   const [filters, setFilters] = useState(emptyFilters);
   const [activeTab, setActiveTab] = useState("lecturer");
+  const [pendingDelete, setPendingDelete] = useState(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const handleDelete = async () => {
+    if (!pendingDelete) return;
+    setDeleting(true);
+    try {
+      const { error } = await supabase
+        .from("lecturer_ratings")
+        .delete()
+        .eq("id", pendingDelete.id)
+        .eq("tenant_id", tenantId);
+      if (error) throw error;
+      await logAudit("lecturer_rating_delete", "lecturer_ratings", pendingDelete.id, {
+        lecturer: pendingDelete.lecturers?.name,
+        student: pendingDelete.members
+          ? `${pendingDelete.members.first_name} ${pendingDelete.members.last_name}`
+          : null,
+        subject: pendingDelete.exam_subjects?.name,
+      }, tenantId);
+      queryClient.invalidateQueries({ queryKey: ["lecturer-ratings-report", tenantId] });
+      toast({ title: "Feedback deleted" });
+      setPendingDelete(null);
+    } catch (err) {
+      toast({ title: "Delete failed", description: err.message, variant: "destructive" });
+    } finally {
+      setDeleting(false);
+    }
+  };
+
 
   const { data: ratings = [], isLoading } = useQuery({
     queryKey: ["lecturer-ratings-report", tenantId],
@@ -363,6 +401,7 @@ export default function LecturerFeedbackReport() {
                 <TabsTrigger value="subject">By subject</TabsTrigger>
                 <TabsTrigger value="course">By course</TabsTrigger>
                 <TabsTrigger value="distribution">Distribution</TabsTrigger>
+                {canDelete && <TabsTrigger value="entries">Entries</TabsTrigger>}
               </TabsList>
 
               <TabsContent value="lecturer" className="mt-3">
@@ -484,10 +523,71 @@ export default function LecturerFeedbackReport() {
                   </>
                 )}
               </TabsContent>
+
+              {canDelete && (
+                <TabsContent value="entries" className="mt-3">
+                  {filtered.length === 0 ? <EmptyState /> : (
+                    <div className="overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Date</TableHead>
+                            <TableHead>Lecturer</TableHead>
+                            <TableHead>Subject</TableHead>
+                            <TableHead>Student</TableHead>
+                            <TableHead className="text-right">Rating</TableHead>
+                            <TableHead>Have again</TableHead>
+                            <TableHead>Comment</TableHead>
+                            <TableHead className="text-right">Actions</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {filtered.map((r) => (
+                            <TableRow key={r.id}>
+                              <TableCell className="text-xs whitespace-nowrap">{new Date(r.created_at).toLocaleDateString()}</TableCell>
+                              <TableCell>{r.lecturers?.name || "—"}</TableCell>
+                              <TableCell className="text-sm text-muted-foreground">{r.exam_subjects?.name || "—"}</TableCell>
+                              <TableCell className="text-sm">{r.members ? `${r.members.first_name} ${r.members.last_name}` : "—"}</TableCell>
+                              <TableCell className="text-right tabular-nums">{r.overall_rating ?? "—"}</TableCell>
+                              <TableCell className="text-xs">{OPTION_LABELS.have_again?.[r.have_again] || "—"}</TableCell>
+                              <TableCell className="max-w-[240px] truncate text-xs text-muted-foreground" title={r.comments || ""}>{r.comments || "—"}</TableCell>
+                              <TableCell className="text-right">
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                                  onClick={() => setPendingDelete(r)}
+                                  aria-label="Delete feedback"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  )}
+                </TabsContent>
+              )}
             </Tabs>
           </>
         )}
       </CardContent>
+
+      <PasswordConfirmDialog
+        open={!!pendingDelete}
+        onOpenChange={(o) => { if (!o) setPendingDelete(null); }}
+        title="Delete lecturer feedback"
+        description={
+          pendingDelete
+            ? `This will permanently delete the feedback${pendingDelete.lecturers?.name ? ` for ${pendingDelete.lecturers.name}` : ""}${pendingDelete.members ? ` submitted by ${pendingDelete.members.first_name} ${pendingDelete.members.last_name}` : ""}. This action cannot be undone.`
+            : "This action cannot be undone."
+        }
+        confirmLabel="Delete feedback"
+        isPending={deleting}
+        onConfirm={handleDelete}
+      />
     </Card>
   );
 }
