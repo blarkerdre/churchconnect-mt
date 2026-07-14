@@ -1,47 +1,39 @@
-# Manual Course Registration Confirmation Email
+## Why emails show "sent" but never arrive at Yahoo
 
-## Goal
-Stop auto-sending the course registration confirmation email. Add a manual **Send** button in the Course Registrations list (Exam Management), include the student number in the email content, and track sent status with a Resend affordance.
+`status = sent` in `email_send_log` means Mailgun (via Lovable Emails) **accepted** the message — not that Yahoo delivered it to the inbox. Every recent send in the log targets a single `@yahoo.com` address, the recipient is not in `suppressed_emails`, and the queue is healthy.
 
-## Changes
+The most likely cause is a **DMARC alignment mismatch**:
 
-### 1. Database
-New migration adds a nullable timestamp column to track when the confirmation was sent:
-- `course_registrations.registration_email_sent_at timestamptz`
+- Messages are DKIM-signed and SPF-authenticated on `notify.app.churchmanagementsuite.org` (the verified Lovable subdomain).
+- But the visible `From:` header uses `noreply@app.churchmanagementsuite.org` (the **root** domain).
+- Yahoo enforces DMARC strictly. If the root domain's DMARC record is missing, or is set to `p=reject/quarantine` without `aspf=r`/`adkim=r`, Yahoo silently drops or bulk-folders mail whose signing domain ≠ From domain — even after Mailgun accepts it.
 
-No backfill — historical rows show as not sent.
+## Fix
 
-### 2. Email template
-Update `supabase/functions/_shared/email-templates/wofbi-course-registration.tsx` to accept and render a `studentNumber` prop in a highlighted box (similar to the Bible School student-number template). Keep the existing greeting/CTA structure and brand styling.
+Change the `From:` address to use the same subdomain that already signs the mail, so DKIM/SPF/DMARC align natively without any DNS change.
 
-### 3. Edge function `send-course-registration-email`
-- Accept `registration_id` (preferred) in the request body. Look up the registration → member (email, first_name), course (name), student_number, and tenant_id server-side using the service role.
-- Require an authenticated admin caller (admin of the resolved tenant) or service role. Remove the "own-email" self-send path since this is admin-only now.
-- Pass `studentNumber` into the template.
-- After a successful send, stamp `registration_email_sent_at = now()` on the matching `course_registrations` row.
-- Keep legacy inline fields as a fallback if `registration_id` is not supplied, but do not stamp the DB in that path.
+### Files to edit
 
-### 4. Remove auto-send
-- `supabase/functions/public-wofbi-register/index.ts`: remove the `triggerCourseRegistrationEmail` call and its helper. Application approval / registration no longer emails the confirmation automatically.
-- `src/pages/ExamManagement.jsx` (member self-register path around L1590): remove the `supabase.functions.invoke("send-course-registration-email", ...)` call.
+1. `supabase/functions/send-transactional-email/index.ts`
+   - Change `FROM_DOMAIN` constant (line 16) from `"app.churchmanagementsuite.org"` to `"notify.app.churchmanagementsuite.org"`.
 
-### 5. UI — Course Registrations list
-In `CourseRegistrationsView` (`src/pages/ExamManagement.jsx`):
-- Extend the select to include `registration_email_sent_at` (already selects `student_number`).
-- Add a new column/action **Send confirmation**:
-  - If `registration_email_sent_at` is null and `student_number` is present → show **Send** button.
-  - If `student_number` is missing → button disabled with tooltip "Assign a student number first".
-  - If `registration_email_sent_at` is set → show a **Sent** badge with the timestamp and a **Resend** button.
-- On click, call `send-course-registration-email` with `{ registration_id }`. On success, invalidate `["course-registrations", tenantId, course.id]` and toast "Confirmation email sent".
-- Track in-flight sends with a local `sendingRegEmailIds` Set (mirrors `sendingIds` pattern used for exam links).
+2. `supabase/functions/send-course-registration-email/index.ts`
+   - Change `FROM_DOMAIN` constant (line 15) the same way.
 
-## Out of scope
-- Applications tab UI (approval flow), Bible School application page, exam-link flow, RLS/roles/RPCs, backfilling historical rows, bulk send.
+Result: emails will be sent from `noreply@notify.app.churchmanagementsuite.org`, matching the signing/sender domain. This is the standard, best-deliverability configuration for subdomain-delegated Lovable Emails.
 
-## Files
-- `supabase/migrations/<new>.sql` — add `registration_email_sent_at`
-- `supabase/functions/_shared/email-templates/wofbi-course-registration.tsx` — add student number block
-- `supabase/functions/send-course-registration-email/index.ts` — registration_id lookup, admin-only, stamp sent_at
-- `supabase/functions/public-wofbi-register/index.ts` — remove auto-trigger
-- `src/pages/ExamManagement.jsx` — remove self-register auto-send; add Send/Resend UI in registrations table
-- Deploy: `send-course-registration-email`, `public-wofbi-register`
+### Deploy
+
+Deploy both edge functions after the edit:
+- `send-transactional-email`
+- `send-course-registration-email`
+
+### Verification
+
+After deploy, trigger one exam-link send and one registration confirmation to the Yahoo address and confirm arrival. If mail still doesn't land in the inbox, the next step (out of scope of this plan) is to add/adjust a DMARC TXT record on `app.churchmanagementsuite.org` with a relaxed alignment policy — but the change above resolves the alignment issue without touching DNS.
+
+### Out of scope
+
+- No DNS changes.
+- No template, queue, retry, or logging changes.
+- Not re-triggering the 92 historical DLQ messages.
