@@ -1,39 +1,23 @@
-# Fix: "Rate a Lecturer" button hidden on Bible School → Feedback for WCI Cardiff
+## Why "Ade Me" appears
 
-## Diagnosis
+`Ade Me` is a course registration in the **Demo Church (TEST)** tenant, enrolled on the "Basic Certificate Course" (a demo-tenant course). It is not a WCI Cardiff record.
 
-In `src/pages/ExamManagement.jsx` the admin "Rate a Lecturer" button is gated on two conditions:
+It leaks onto the WCI Cardiff Bible School → Management → **Registrations** view because of stale state after tenant switching:
 
-```jsx
-{adminLecturerRatingEnabled && myMember?.id && (
-  <Button …>Rate a Lecturer</Button>
-)}
-```
+1. `src/pages/ExamManagement.jsx` keeps `selectedCourse` in local component state and only auto-selects a course when `!selectedCourse`. When you switch tenants, the previously selected demo-tenant course object stays in state, so WCI Cardiff visually appears to have that course selected.
+2. `CourseRegistrationsView` (line 880) queries `course_registrations` filtered only by `course_id`, with no `tenant_id` guard. As a super-admin, RLS lets you read across tenants, so the demo registration (Ade Me) is returned even though the active tenant is WCI Cardiff.
 
-- `adminLecturerRatingEnabled` — verified true for WCI Cardiff (`tenants.settings.wofbi_lecturer_rating_enabled = true`).
-- `myMember?.id` — false for the current signed-in admin because they don't have a linked `members` row in the `wci-cardiff` tenant (typical for super-admin / cross-tenant admin).
+Result: WCI Cardiff has 0 courses/registrations of its own, but the leftover demo course selection surfaces demo-tenant registrations.
 
-`RateLecturerDialog` already tolerates a missing member (`member_id: myMember?.id || null` — see line 186), so the `myMember?.id` gate is unnecessarily strict.
+## Fix
 
-## Change
+Two small, defensive changes in `src/pages/ExamManagement.jsx`:
 
-Single-file frontend edit — `src/pages/ExamManagement.jsx` line 835:
+1. **Reset course selection on tenant switch.** Clear `selectedCourse`, `selectedSubject`, `showResults`, and `showRegistrations` in a `useEffect` keyed on `tenantId`, so switching tenants forces re-selection from the current tenant's `examTitles`.
+2. **Tenant-scope the registrations query in `CourseRegistrationsView`.** Add `.eq("tenant_id", tenantId)` to the `course_registrations` select (line 883–888) and include `tenantId` in the query key so cache is per-tenant. Same guard for the invalidations already keyed by `course.id`.
 
-- Drop the `myMember?.id` requirement so the button appears whenever the tenant setting is on and the user is an admin.
-- Keep the tenant-setting gate untouched.
-
-```diff
-- {adminLecturerRatingEnabled && myMember?.id && (
-+ {adminLecturerRatingEnabled && isAdmin && (
-```
-
-`isAdmin` is already destructured from `useAuth()` on line 61, so no new imports.
+No schema, RLS, or backend changes needed. Purely frontend state hygiene + a defensive tenant filter.
 
 ## Out of scope
-
-- No changes to `RateLecturerDialog`, DB schema, RLS, or the member-facing rate button (line 1595) — that path still requires the member's own profile as expected.
-- No changes to the tenant setting or to super-admin membership provisioning.
-
-## Verification
-
-Sign in as the WCI Cardiff admin, navigate to Bible School → Feedback tab; the "Rate a Lecturer" button appears in the top-right. Opening it lists lecturers and allows submission (member_id stored as null on the row).
+- No changes to RLS or the super-admin cross-tenant read policy.
+- No changes to the Applications tab (already tenant-scoped via `scopeQuery`).

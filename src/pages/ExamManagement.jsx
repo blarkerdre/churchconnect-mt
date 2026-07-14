@@ -93,9 +93,21 @@ export default function ExamManagement() {
     },
   });
 
-  // Auto-select first course
+  // Reset course/subject/view selection when the active tenant changes so
+  // stale cross-tenant course objects don't leak into the new tenant's view.
   React.useEffect(() => {
-    if (examTitles.length > 0 && !selectedCourse) {
+    setSelectedCourse(null);
+    setSelectedSubject(null);
+    setShowResults(false);
+    setShowRegistrations(false);
+  }, [tenantId]);
+
+  // Auto-select first course (only if the current selection isn't in the
+  // active tenant's course list — prevents cross-tenant leakage).
+  React.useEffect(() => {
+    if (examTitles.length === 0) return;
+    const stillValid = selectedCourse && examTitles.some((t) => t.id === selectedCourse.id);
+    if (!stillValid) {
       setSelectedCourse(examTitles[0]);
     }
   }, [examTitles, selectedCourse]);
@@ -878,18 +890,20 @@ function CourseRegistrationsView({ course }) {
   const [bulkConfirmOpen, setBulkConfirmOpen] = useState(false);
 
   const { data: registrations = [], isLoading } = useQuery({
-    queryKey: ["course-registrations", course.id],
+    queryKey: ["course-registrations", tenantId, course.id],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let q = supabase
         .from("course_registrations")
         .select("id, registered_at, member_id, student_number, status, approved_at, members(first_name, last_name, email, phone, user_id)")
         .eq("course_id", course.id)
         .in("status", ["approved", "active"])
         .order("registered_at", { ascending: false });
+      if (tenantId) q = q.eq("tenant_id", tenantId);
+      const { data, error } = await q;
       if (error) throw error;
       return data;
     },
-    enabled: !!course?.id,
+    enabled: !!course?.id && !!tenantId,
   });
 
   const approveMutation = useMutation({
@@ -899,7 +913,7 @@ function CourseRegistrationsView({ course }) {
       return data;
     },
     onSuccess: (data) => {
-      qc.invalidateQueries({ queryKey: ["course-registrations", course.id] });
+      qc.invalidateQueries({ queryKey: ["course-registrations", tenantId, course.id] });
       const num = Array.isArray(data) ? data[0]?.student_number : data?.student_number;
       toast({ title: "Registration approved", description: num ? `Student No. ${num}` : undefined });
     },
@@ -916,7 +930,7 @@ function CourseRegistrationsView({ course }) {
       if (error) throw error;
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["course-registrations", course.id] });
+      qc.invalidateQueries({ queryKey: ["course-registrations", tenantId, course.id] });
       toast({ title: "Student number updated" });
       setEditingNumberId(null);
       setEditingNumberValue("");
@@ -979,7 +993,7 @@ function CourseRegistrationsView({ course }) {
     onSuccess: (results) => {
       const ok = results.filter((r) => r.ok).length;
       const failed = results.length - ok;
-      qc.invalidateQueries({ queryKey: ["course-registrations", course.id] });
+      qc.invalidateQueries({ queryKey: ["course-registrations", tenantId, course.id] });
       qc.invalidateQueries({ queryKey: ["wofbi-applications"] });
       setSelectedIds(new Set());
       if (failed === 0) {
@@ -1002,7 +1016,7 @@ function CourseRegistrationsView({ course }) {
       if (error) throw error;
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["course-registrations", course.id] });
+      qc.invalidateQueries({ queryKey: ["course-registrations", tenantId, course.id] });
       qc.invalidateQueries({ queryKey: ["wofbi-applications"] });
       toast({ title: "Registration removed", description: "Exam attempts, results, certificate and lecturer ratings for this course were also deleted. The Bible School application record was kept." });
       setDeleteTarget(null);
