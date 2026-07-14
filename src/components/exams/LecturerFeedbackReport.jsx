@@ -1,7 +1,8 @@
 import { useState, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
+import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,9 +12,12 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Slider } from "@/components/ui/slider";
-import { Loader2, BarChart3, Download, Printer, RotateCcw, TrendingUp, TrendingDown, Minus } from "lucide-react";
+import { Loader2, BarChart3, Download, Printer, RotateCcw, TrendingUp, TrendingDown, Minus, Trash2 } from "lucide-react";
 import { OPTION_LABELS, CATEGORICAL_FIELDS } from "@/lib/lecturer-feedback-options";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
+import PasswordConfirmDialog from "@/components/shared/PasswordConfirmDialog";
+import { toast } from "@/components/ui/use-toast";
+import { logAudit } from "@/lib/audit";
 
 const emptyFilters = {
   courseId: "all",
