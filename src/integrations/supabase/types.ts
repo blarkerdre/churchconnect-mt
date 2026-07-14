@@ -1185,6 +1185,7 @@ export type Database = {
           id: string
           member_id: string
           registered_at: string
+          registration_email_sent_at: string | null
           session_id: string | null
           status: string
           student_number: string | null
@@ -1198,6 +1199,7 @@ export type Database = {
           id?: string
           member_id: string
           registered_at?: string
+          registration_email_sent_at?: string | null
           session_id?: string | null
           status?: string
           student_number?: string | null
@@ -1211,6 +1213,7 @@ export type Database = {
           id?: string
           member_id?: string
           registered_at?: string
+          registration_email_sent_at?: string | null
           session_id?: string | null
           status?: string
           student_number?: string | null
