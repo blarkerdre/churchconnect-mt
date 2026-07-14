@@ -1191,7 +1191,7 @@ function CourseRegistrationsView({ course }) {
               const bulkPending = sendBulkExamLinksMutation.isPending;
               const allSelectedAreSent = selectedArr.length > 0 && selectedArr.every(id => {
                 const row = filteredRegistrations.find(r => r.id === id);
-                return sentLinkIds.has(id) || !!row?.members?.user_id;
+                return sentLinkIds.has(id) || !!row?.exam_link_sent_at;
               });
               const bulkLabel = allSelectedAreSent ? "Resend link to selected" : "Send exam link to selected";
               const doBulkSend = () => {
