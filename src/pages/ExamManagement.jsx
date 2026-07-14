@@ -1259,7 +1259,7 @@ function CourseRegistrationsView({ course }) {
                           const isApproved = r.status === "approved";
                           const eligible = isApproved && !!r.members?.email;
                           const isSending = sendingIds.has(r.id);
-                          const alreadySent = sentLinkIds.has(r.id) || !!r.members?.user_id;
+                          const alreadySent = sentLinkIds.has(r.id) || !!r.exam_link_sent_at;
                           return (
                           <TableRow key={r.id} data-state={selectedIds.has(r.id) ? "selected" : undefined}>
                             {canManageNumbers && (
