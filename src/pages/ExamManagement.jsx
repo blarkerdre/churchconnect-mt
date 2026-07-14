@@ -890,18 +890,20 @@ function CourseRegistrationsView({ course }) {
   const [bulkConfirmOpen, setBulkConfirmOpen] = useState(false);
 
   const { data: registrations = [], isLoading } = useQuery({
-    queryKey: ["course-registrations", course.id],
+    queryKey: ["course-registrations", tenantId, course.id],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let q = supabase
         .from("course_registrations")
         .select("id, registered_at, member_id, student_number, status, approved_at, members(first_name, last_name, email, phone, user_id)")
         .eq("course_id", course.id)
         .in("status", ["approved", "active"])
         .order("registered_at", { ascending: false });
+      if (tenantId) q = q.eq("tenant_id", tenantId);
+      const { data, error } = await q;
       if (error) throw error;
       return data;
     },
-    enabled: !!course?.id,
+    enabled: !!course?.id && !!tenantId,
   });
 
   const approveMutation = useMutation({
