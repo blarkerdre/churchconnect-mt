@@ -70,7 +70,7 @@ export const WoFBICourseRegistrationEmail: React.FC<WoFBICourseRegistrationEmail
 
           <Section style={footerSection}>
             <Text style={footerText}>
-              Winners Chapel International Cardiff — Bible School
+              {tenantName || 'Your Church'} — Bible School
             </Text>
             <Text style={footerText}>
               This email was sent because you registered for a Bible School course.
