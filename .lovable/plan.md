@@ -1,41 +1,40 @@
-# Fix app-wide flicker and slowness
+## Goal
 
-## Root cause
-The `AuthProvider` + `TenantProvider` pair is stuck in a re-render/refetch loop, and the loop runs in several parallel `AuthProvider` instances at once.
+Allow a Home Cell's **House Provider** (the member set as `host_member_id` on a `wsf_centres` row) to record and view attendance for that centre — same rights the centre's Leader already has. Admins/Reports Officers behaviour is unchanged. Providers only get access to the centre(s) they host.
 
-1. `src/hooks/useAuth.jsx` — `refetchMemberForTenant` is defined as a plain function inside `AuthProvider`, so it gets a new identity on every render. The `AuthContext.Provider value={{...}}` object is also rebuilt inline every render.
-2. `src/contexts/TenantContext.jsx` — has:
-   ```js
-   useEffect(() => {
-     if (tenantId && refetchMemberForTenant) refetchMemberForTenant(tenantId);
-   }, [tenantId, refetchMemberForTenant]);
-   ```
-   Because `refetchMemberForTenant` is unstable, this effect fires on every render → calls `setMyMember` in `useAuth` → `AuthProvider` re-renders → new `refetchMemberForTenant` → effect fires again. Infinite loop.
-3. `src/App.jsx` — mounts `<AuthProvider>` multiple times (around `AppRoutes` authenticated tree, `/auth`, `/accept-invite`, `/auth/exam-callback`, `/reset-password`, `/t/:slug/auth`, `/t/:slug/bible-school-register`, `/t/:slug/reset-password`, and around `MFASetupDialog` at the router root). Each instance runs its own `supabase.auth.onAuthStateChange` and its own loop → 2–3× duplicated fetches and re-renders on every auth event.
+## Backend (RLS)
 
-## Changes
+Update two security-definer helpers so both leader **and** host qualify as "leader of this centre":
 
-### 1. `src/hooks/useAuth.jsx` — memoize the unstable bits (surgical fix)
-- Wrap `refetchMemberForTenant` in `useCallback` keyed on `user?.id`. This alone breaks the render loop.
-- Wrap the context `value` in `useMemo` keyed on its actual dependencies (`user, profile, roles, loading, dataLoaded, leaderUnits, leaderCentres, myMember, tenantMemberships`).
-- Also memoize `refreshUser` the same way so it doesn't churn consumers.
+- `public.is_wsf_leader_for_centre(_user_id, _centre_id)` — currently checks `wc.leader_id = m.id`. Extend to also match `wc.host_member_id = m.id`.
+- `public.is_home_cell_leader_for_centre(_user_id, _centre_id, _tenant_id)` — same extension.
 
-No behaviour change; only identity stability.
+No RLS policy rewrites needed; the existing policies on `wsf_attendance_reports` (and any others that call these helpers) automatically start accepting hosts. No new column, no new grants.
 
-### 2. `src/App.jsx` — mount `AuthProvider` exactly once
-Move a single `<AuthProvider>` to wrap the whole `<Router>` subtree (inside `QueryClientProvider`). Remove every nested `<AuthProvider>` from:
-- The wrapper around `MFASetupDialog`
-- `AppRoutes` routes for `/auth`, `/accept-invite`, `/auth/exam-callback`, `/reset-password`, `/t/:slug/auth`, `/t/:slug/bible-school-register`, `/t/:slug/reset-password`, and the `/*` authenticated block
+## Frontend
 
-One provider = one auth listener = one fetch per event. Public pages that already used `useAuth` keep working because the single provider is now above them.
+1. `src/components/wsf/WSFAttendanceTab.jsx` (line 42)
+   - Change `ledCentres` filter to include centres where `c.host_member_id === userMember.id` in addition to `c.leader_id === userMember.id`.
+   - `canWrite` / `canAccess` derive from `ledCentres`, so hosts get the "Record Attendance" button and can see their own centre's reports automatically.
 
-### 3. Verification
-1. Flush HMR and reload the preview.
-2. Open React DevTools Profiler on the Dashboard; confirm the app is idle after mount (no continuous render commits every ~100ms).
-3. Watch Network tab — should see one burst of `profiles / user_roles / unit_leader_assignments / members / tenant_memberships` on load, and none afterwards while idle.
-4. Navigate around; UI should no longer flash.
+2. `src/pages/WSFManagement.jsx`
+   - Access gate at line 92: also allow when the user hosts at least one centre (compute `isHomeCellHost` from `centres` + `myMember.id`).
+   - `myMember` query at line 27: enable it whenever `user?.id` is set and not admin (so hosts without the `wsf_leader` role still get their member id).
+   - `ledCentres` at line 71: include centres where `host_member_id === myMember.id`.
+
+3. `src/components/dashboard/WSFLeaderDashboard.jsx`
+   - Query "centres this user leads" (line 30) so it returns centres matched by `leader_id` **or** `host_member_id` (single query with `.or("leader_id.eq.<id>,host_member_id.eq.<id>")`).
+   - Empty-state copy stays; it now triggers only when the user neither leads nor hosts.
+
+4. Routing / sidebar entry to `/wsf` (Home Cell page) — verify hosts can navigate there. If the sidebar link is gated purely on `isWSFLeader`, extend the gate to also show it when the user hosts a centre. (I'll confirm in the implementation pass; likely one condition in `AppLayout.jsx` / nav config.)
 
 ## Out of scope
-- No changes to `useAuth`'s fetch logic, token-refresh handling, or the underlying queries.
-- No changes to `TenantContext` logic (the effect there becomes correct once its dependency is stable). If we still see extra runs after step 1, we'll narrow that effect's deps in a follow-up.
-- No changes to individual pages or their query hooks.
+
+- No new role, no changes to `user_roles`, no changes to who can create/edit centres.
+- Reports Officer, Admin, Unit Leader logic untouched.
+- Home Cell join-request approval and other host-only flows remain as they are today.
+
+## Technical notes
+
+- Both helper functions are `SECURITY DEFINER STABLE` — replacing them with `CREATE OR REPLACE FUNCTION` keeps existing grants and policy references intact.
+- `host_member_id` is already tenant-scoped via `wsf_centres.tenant_id`, so the extended predicate stays inside the tenant boundary.
