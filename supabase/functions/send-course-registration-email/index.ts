@@ -213,6 +213,7 @@ Deno.serve(async (req) => {
         template_name: "course-registration",
         recipient_email: normalizedEmail,
         status: "sent",
+        ...(tenant_id ? { tenant_id } : {}),
       });
 
       console.log("Course registration email sent", { email: normalizedEmail, messageId, course_name });
