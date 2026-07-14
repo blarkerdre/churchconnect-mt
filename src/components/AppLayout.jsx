@@ -78,8 +78,24 @@ export default function Layout({ children }) {
   const { isAvailable: installAvailable, isInstalled, canPrompt, isIOSSafari } = useInstallPrompt();
   const location = useLocation();
   const navigate = useNavigate();
-  const { signOut, user, profile, isAdmin, isUnitLeader, isWSFLeader, isReportsOfficer, roles, leaderUnits, isTenantOwner, isTenantAdmin } = useAuth();
+  const { signOut, user, profile, isAdmin, isUnitLeader, isWSFLeader, isReportsOfficer, roles, leaderUnits, isTenantOwner, isTenantAdmin, myMember } = useAuth();
   const { currentTenant, tenantId, tenantSlug, tenantMemberships, switchTenant } = useTenant();
+
+  // Home Cell house-provider check — hosts get the same Home Cell menu access as leaders
+  const { data: hostedCentresCount = 0 } = useQuery({
+    queryKey: ["my-hosted-centres-count", tenantId, myMember?.id],
+    enabled: !!tenantId && !!myMember?.id,
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from("wsf_centres")
+        .select("id", { count: "exact", head: true })
+        .eq("tenant_id", tenantId)
+        .eq("host_member_id", myMember.id);
+      if (error) return 0;
+      return count || 0;
+    },
+  });
+  const isHomeCellHost = hostedCentresCount > 0;
   const queryClient = useQueryClient();
   useMessageAlerts();
   const tenantPrefix = tenantSlug ? `/t/${tenantSlug}` : "";
@@ -128,7 +144,7 @@ export default function Layout({ children }) {
     if (item.access === "admin") return isAdmin;
     if (item.access === "reports") return isAdmin || isReportsOfficer;
     if (item.access === "leader") return isAdmin || isUnitLeader || isReportsOfficer;
-    if (item.access === "wsf") return isAdmin || isWSFLeader || isReportsOfficer;
+    if (item.access === "wsf") return isAdmin || isWSFLeader || isReportsOfficer || isHomeCellHost;
     if (item.access === "followup_member") return isAdmin || isFollowupUnit || isFollowupMember || isReportsOfficer;
     if (item.access === "training") return isAdmin || isSuperAdmin || isTrainingAccess || isReportsOfficer;
     if (item.access === "training_report") return isAdmin || isSuperAdmin || isUnitLeader || isTrainingRepMember || isReportsOfficer;
