@@ -1,0 +1,1 @@
+ALTER TABLE public.course_registrations ADD COLUMN IF NOT EXISTS registration_email_sent_at timestamptz;
