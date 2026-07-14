@@ -1181,6 +1181,7 @@ export type Database = {
           approved_at: string | null
           approved_by: string | null
           course_id: string
+          exam_link_sent_at: string | null
           id: string
           member_id: string
           registered_at: string
@@ -1193,6 +1194,7 @@ export type Database = {
           approved_at?: string | null
           approved_by?: string | null
           course_id: string
+          exam_link_sent_at?: string | null
           id?: string
           member_id: string
           registered_at?: string
@@ -1205,6 +1207,7 @@ export type Database = {
           approved_at?: string | null
           approved_by?: string | null
           course_id?: string
+          exam_link_sent_at?: string | null
           id?: string
           member_id?: string
           registered_at?: string

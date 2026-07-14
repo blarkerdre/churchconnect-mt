@@ -894,7 +894,7 @@ function CourseRegistrationsView({ course }) {
     queryFn: async () => {
       let q = supabase
         .from("course_registrations")
-        .select("id, registered_at, member_id, student_number, status, approved_at, members(first_name, last_name, email, phone, user_id)")
+        .select("id, registered_at, member_id, student_number, status, approved_at, exam_link_sent_at, members(first_name, last_name, email, phone, user_id)")
         .eq("course_id", course.id)
         .in("status", ["approved", "active"])
         .order("registered_at", { ascending: false });
@@ -998,6 +998,7 @@ function CourseRegistrationsView({ course }) {
       return res;
     },
     onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["course-registrations", tenantId, course.id] });
       toast({ title: "Exam link sent", description: "The applicant has been emailed a one-click sign-in link." });
     },
     onError: (err) => {
@@ -1190,7 +1191,7 @@ function CourseRegistrationsView({ course }) {
               const bulkPending = sendBulkExamLinksMutation.isPending;
               const allSelectedAreSent = selectedArr.length > 0 && selectedArr.every(id => {
                 const row = filteredRegistrations.find(r => r.id === id);
-                return sentLinkIds.has(id) || !!row?.members?.user_id;
+                return sentLinkIds.has(id) || !!row?.exam_link_sent_at;
               });
               const bulkLabel = allSelectedAreSent ? "Resend link to selected" : "Send exam link to selected";
               const doBulkSend = () => {
@@ -1258,7 +1259,7 @@ function CourseRegistrationsView({ course }) {
                           const isApproved = r.status === "approved";
                           const eligible = isApproved && !!r.members?.email;
                           const isSending = sendingIds.has(r.id);
-                          const alreadySent = sentLinkIds.has(r.id) || !!r.members?.user_id;
+                          const alreadySent = sentLinkIds.has(r.id) || !!r.exam_link_sent_at;
                           return (
                           <TableRow key={r.id} data-state={selectedIds.has(r.id) ? "selected" : undefined}>
                             {canManageNumbers && (

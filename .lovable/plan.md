@@ -1,31 +1,44 @@
+## Goal
+The Exam link column should show "Sent" only when the exam link has actually been emailed for that registration. A member who happens to have an auth account for other reasons must not appear as "Sent". Once sent, the button becomes "Resend link".
+
+## Root cause
+In `src/pages/ExamManagement.jsx`, the UI computes:
+```
+const alreadySent = sentLinkIds.has(r.id) || !!r.members?.user_id;
+```
+The `!!r.members?.user_id` fallback treats any linked auth user as "exam link sent", which is wrong.
+
 ## Changes
 
-### 1. Restore student number in exam-ready email
-Edit `supabase/functions/_shared/transactional-email-templates/bible-school-exam-ready.tsx`:
-- Re-add `courses?: { name, student_number }[]` prop and render the `numberBox` section (label + per-course student number + hint) above the "Start my exam" button.
-- Keep the magic-link button and expiry hint.
+### 1. Track real sends in the database
+Add a column `exam_link_sent_at timestamptz` on `course_registrations`. Set it when `provision-exam-account` successfully sends the exam-ready email.
 
-### 2. Pass student number through provisioning
-Edit `supabase/functions/provision-exam-account/index.ts`:
-- When building `templateData`, include `courses: [{ name: courseName, student_number: registration.student_number }]` (or the existing multi-course shape if it already loads several) so the exam-ready template can render it.
+- Migration: `ALTER TABLE public.course_registrations ADD COLUMN exam_link_sent_at timestamptz;` (nullable, no backfill — historical unknown sends stay null, i.e. "Not sent", which matches the user's requirement).
+- Edit `supabase/functions/provision-exam-account/index.ts`: after `send-transactional-email` returns without error (i.e. `emailSent === true`), update the matching `course_registrations` row (`tenant_id + member_id + course_id`) with `exam_link_sent_at = now()`. Do NOT set it if the email invoke failed.
 
-### 3. Stop email on approve in Bible School Applications page
-Edit `src/components/exams/WoFBIApplicationsTab.jsx` (~line 220–231):
-- Remove the `supabase.functions.invoke("send-course-registration-email", ...)` call fired after approval.
-- Leave the toast + enrolment behavior intact.
+### 2. Read the flag on the Registrations page
+Edit `src/pages/ExamManagement.jsx`:
+- Include `exam_link_sent_at` in the `course_registrations` select for that page.
+- Replace the `alreadySent` derivation with:
+  ```
+  const alreadySent = sentLinkIds.has(r.id) || !!r.exam_link_sent_at;
+  ```
+  (drop the `members.user_id` fallback entirely).
+- Button label logic already switches to "Resend link" when `alreadySent` is true — keep as-is; it will now only appear after a real send.
+- Bulk label ("Resend link to selected" vs "Send exam link to selected") continues to work off the same flag.
 
-### 4. Keep approve → student-number email in Registrations
-No change to `src/pages/ExamManagement.jsx` `approveMutation` — it already calls `send-student-number-email` after `approve_course_registration`. This remains the only path that emails the student number.
+### 3. Invalidate query after send
+On successful single/bulk send, the mutations already call `qc.invalidateQueries(["course-registrations", ...])`. Confirm both `sendExamLinkMutation.onSuccess` (single) and the bulk one invalidate — add the invalidate to the single-send success handler if missing, so the badge picks up `exam_link_sent_at` from the DB on next render (in addition to the optimistic `sentLinkIds` set).
 
-### 5. Deploy
-Redeploy `provision-exam-account`. Templates are bundled with the send function so also redeploy `send-transactional-email`.
+### 4. Deploy
+Redeploy `provision-exam-account`.
 
 ## Out of scope
-- `send-course-registration-email` function itself (left in place, just no longer invoked from Applications approve).
-- `send-student-number-email` function and Registrations page approve flow.
-- RLS, roles, RPCs, other Bible School screens.
+- Applications tab, Bible School application page, approve flow, student-number email.
+- RLS/policies/roles/RPCs.
+- Backfilling `exam_link_sent_at` for prior sends — historical rows will show "Not sent" until an admin resends (matches "should only show as sent when exam link is sent").
 
 ## Files touched
-- `supabase/functions/_shared/transactional-email-templates/bible-school-exam-ready.tsx` (edit)
-- `supabase/functions/provision-exam-account/index.ts` (edit — add courses to templateData)
-- `src/components/exams/WoFBIApplicationsTab.jsx` (edit — remove approval email invoke)
+- `supabase/migrations/<new>.sql` (add column)
+- `supabase/functions/provision-exam-account/index.ts` (stamp column on success)
+- `src/pages/ExamManagement.jsx` (select the column, drop user_id fallback, ensure invalidate on single-send success)

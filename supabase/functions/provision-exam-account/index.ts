@@ -272,6 +272,14 @@ Deno.serve(async (req) => {
         const baseMsg = (invokeErr as any)?.message || String(invokeErr);
         emailError = status ? `[${status}] ${baseMsg}` : baseMsg;
         console.error("send-transactional-email returned error:", { status, invokeErr });
+      } else if (app.course_id && memberId) {
+        // Stamp exam_link_sent_at so the UI can accurately show "Sent" / "Resend link".
+        await admin
+          .from("course_registrations")
+          .update({ exam_link_sent_at: new Date().toISOString() })
+          .eq("tenant_id", app.tenant_id)
+          .eq("member_id", memberId)
+          .eq("course_id", app.course_id);
       }
     } catch (e) {
       emailSent = false;
