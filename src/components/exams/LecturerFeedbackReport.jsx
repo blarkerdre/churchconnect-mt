@@ -523,10 +523,71 @@ export default function LecturerFeedbackReport() {
                   </>
                 )}
               </TabsContent>
+
+              {canDelete && (
+                <TabsContent value="entries" className="mt-3">
+                  {filtered.length === 0 ? <EmptyState /> : (
+                    <div className="overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Date</TableHead>
+                            <TableHead>Lecturer</TableHead>
+                            <TableHead>Subject</TableHead>
+                            <TableHead>Student</TableHead>
+                            <TableHead className="text-right">Rating</TableHead>
+                            <TableHead>Have again</TableHead>
+                            <TableHead>Comment</TableHead>
+                            <TableHead className="text-right">Actions</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {filtered.map((r) => (
+                            <TableRow key={r.id}>
+                              <TableCell className="text-xs whitespace-nowrap">{new Date(r.created_at).toLocaleDateString()}</TableCell>
+                              <TableCell>{r.lecturers?.name || "—"}</TableCell>
+                              <TableCell className="text-sm text-muted-foreground">{r.exam_subjects?.name || "—"}</TableCell>
+                              <TableCell className="text-sm">{r.members ? `${r.members.first_name} ${r.members.last_name}` : "—"}</TableCell>
+                              <TableCell className="text-right tabular-nums">{r.overall_rating ?? "—"}</TableCell>
+                              <TableCell className="text-xs">{OPTION_LABELS.have_again?.[r.have_again] || "—"}</TableCell>
+                              <TableCell className="max-w-[240px] truncate text-xs text-muted-foreground" title={r.comments || ""}>{r.comments || "—"}</TableCell>
+                              <TableCell className="text-right">
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                                  onClick={() => setPendingDelete(r)}
+                                  aria-label="Delete feedback"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  )}
+                </TabsContent>
+              )}
             </Tabs>
           </>
         )}
       </CardContent>
+
+      <PasswordConfirmDialog
+        open={!!pendingDelete}
+        onOpenChange={(o) => { if (!o) setPendingDelete(null); }}
+        title="Delete lecturer feedback"
+        description={
+          pendingDelete
+            ? `This will permanently delete the feedback${pendingDelete.lecturers?.name ? ` for ${pendingDelete.lecturers.name}` : ""}${pendingDelete.members ? ` submitted by ${pendingDelete.members.first_name} ${pendingDelete.members.last_name}` : ""}. This action cannot be undone.`
+            : "This action cannot be undone."
+        }
+        confirmLabel="Delete feedback"
+        isPending={deleting}
+        onConfirm={handleDelete}
+      />
     </Card>
   );
 }
