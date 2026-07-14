@@ -72,7 +72,38 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { email, first_name, course_name, tenant_id } = await req.json();
+    const body = await req.json();
+    let { email, first_name, course_name, tenant_id, registration_id, student_number } = body ?? {};
+
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      serviceRoleKey,
+      { auth: { autoRefreshToken: false, persistSession: false } },
+    );
+
+    // If registration_id supplied, load canonical data from DB (preferred admin flow)
+    let registrationRow: { id: string; tenant_id: string; student_number: string | null } | null = null;
+    if (registration_id && typeof registration_id === "string") {
+      const { data: reg, error: regErr } = await supabase
+        .from("course_registrations")
+        .select("id, tenant_id, student_number, member_id, course_id, members(first_name, email), exam_titles:course_id(name)")
+        .eq("id", registration_id)
+        .maybeSingle();
+      if (regErr || !reg) {
+        return new Response(JSON.stringify({ error: "Registration not found" }), {
+          status: 404,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const memberRow = Array.isArray((reg as any).members) ? (reg as any).members[0] : (reg as any).members;
+      const courseRow = Array.isArray((reg as any).exam_titles) ? (reg as any).exam_titles[0] : (reg as any).exam_titles;
+      email = memberRow?.email ?? email;
+      first_name = memberRow?.first_name ?? first_name;
+      course_name = courseRow?.name ?? course_name;
+      tenant_id = reg.tenant_id;
+      student_number = reg.student_number ?? null;
+      registrationRow = { id: reg.id, tenant_id: reg.tenant_id, student_number: reg.student_number };
+    }
 
     if (!email || typeof email !== "string") {
       return new Response(JSON.stringify({ error: "Email is required" }), {
@@ -82,15 +113,9 @@ Deno.serve(async (req) => {
     }
 
     const normalizedEmail = normalizeEmail(email);
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      serviceRoleKey,
-      { auth: { autoRefreshToken: false, persistSession: false } },
-    );
 
-    // Authorization: allow service-role server-to-server calls, OR an
-    // authenticated user who is either an admin of the tenant OR sending
-    // to their own email address. Prevents email-spam abuse.
+    // Authorization: allow service-role server-to-server calls, OR an authenticated
+    // tenant admin. Admin-only for this flow (no self-send).
     const isServiceRole = authHeader === `Bearer ${serviceRoleKey}`;
     if (!isServiceRole) {
       const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
@@ -105,9 +130,8 @@ Deno.serve(async (req) => {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      const callerEmail = normalizeEmail(userData.user.email ?? "");
-      let allowed = !!callerEmail && callerEmail === normalizedEmail;
-      if (!allowed && tenant_id) {
+      let allowed = false;
+      if (tenant_id) {
         const { data: isAdmin } = await supabase.rpc("is_admin", {
           _user_id: userData.user.id,
           _tenant_id: tenant_id,
@@ -154,6 +178,7 @@ Deno.serve(async (req) => {
       courseName: course_name || "Bible School Course",
       siteUrl: tenantSiteUrl,
       tenantName: senderName,
+      studentNumber: student_number || null,
     };
 
     const [html, text, unsubscribeToken] = await Promise.all([
@@ -215,6 +240,14 @@ Deno.serve(async (req) => {
         status: "sent",
         ...(tenant_id ? { tenant_id } : {}),
       });
+
+      if (registrationRow) {
+        const { error: stampErr } = await supabase
+          .from("course_registrations")
+          .update({ registration_email_sent_at: new Date().toISOString() })
+          .eq("id", registrationRow.id);
+        if (stampErr) console.error("Failed to stamp registration_email_sent_at:", stampErr);
+      }
 
       console.log("Course registration email sent", { email: normalizedEmail, messageId, course_name });
 

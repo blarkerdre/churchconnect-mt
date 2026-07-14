@@ -1,44 +1,47 @@
-## Goal
-The Exam link column should show "Sent" only when the exam link has actually been emailed for that registration. A member who happens to have an auth account for other reasons must not appear as "Sent". Once sent, the button becomes "Resend link".
+# Manual Course Registration Confirmation Email
 
-## Root cause
-In `src/pages/ExamManagement.jsx`, the UI computes:
-```
-const alreadySent = sentLinkIds.has(r.id) || !!r.members?.user_id;
-```
-The `!!r.members?.user_id` fallback treats any linked auth user as "exam link sent", which is wrong.
+## Goal
+Stop auto-sending the course registration confirmation email. Add a manual **Send** button in the Course Registrations list (Exam Management), include the student number in the email content, and track sent status with a Resend affordance.
 
 ## Changes
 
-### 1. Track real sends in the database
-Add a column `exam_link_sent_at timestamptz` on `course_registrations`. Set it when `provision-exam-account` successfully sends the exam-ready email.
+### 1. Database
+New migration adds a nullable timestamp column to track when the confirmation was sent:
+- `course_registrations.registration_email_sent_at timestamptz`
 
-- Migration: `ALTER TABLE public.course_registrations ADD COLUMN exam_link_sent_at timestamptz;` (nullable, no backfill — historical unknown sends stay null, i.e. "Not sent", which matches the user's requirement).
-- Edit `supabase/functions/provision-exam-account/index.ts`: after `send-transactional-email` returns without error (i.e. `emailSent === true`), update the matching `course_registrations` row (`tenant_id + member_id + course_id`) with `exam_link_sent_at = now()`. Do NOT set it if the email invoke failed.
+No backfill — historical rows show as not sent.
 
-### 2. Read the flag on the Registrations page
-Edit `src/pages/ExamManagement.jsx`:
-- Include `exam_link_sent_at` in the `course_registrations` select for that page.
-- Replace the `alreadySent` derivation with:
-  ```
-  const alreadySent = sentLinkIds.has(r.id) || !!r.exam_link_sent_at;
-  ```
-  (drop the `members.user_id` fallback entirely).
-- Button label logic already switches to "Resend link" when `alreadySent` is true — keep as-is; it will now only appear after a real send.
-- Bulk label ("Resend link to selected" vs "Send exam link to selected") continues to work off the same flag.
+### 2. Email template
+Update `supabase/functions/_shared/email-templates/wofbi-course-registration.tsx` to accept and render a `studentNumber` prop in a highlighted box (similar to the Bible School student-number template). Keep the existing greeting/CTA structure and brand styling.
 
-### 3. Invalidate query after send
-On successful single/bulk send, the mutations already call `qc.invalidateQueries(["course-registrations", ...])`. Confirm both `sendExamLinkMutation.onSuccess` (single) and the bulk one invalidate — add the invalidate to the single-send success handler if missing, so the badge picks up `exam_link_sent_at` from the DB on next render (in addition to the optimistic `sentLinkIds` set).
+### 3. Edge function `send-course-registration-email`
+- Accept `registration_id` (preferred) in the request body. Look up the registration → member (email, first_name), course (name), student_number, and tenant_id server-side using the service role.
+- Require an authenticated admin caller (admin of the resolved tenant) or service role. Remove the "own-email" self-send path since this is admin-only now.
+- Pass `studentNumber` into the template.
+- After a successful send, stamp `registration_email_sent_at = now()` on the matching `course_registrations` row.
+- Keep legacy inline fields as a fallback if `registration_id` is not supplied, but do not stamp the DB in that path.
 
-### 4. Deploy
-Redeploy `provision-exam-account`.
+### 4. Remove auto-send
+- `supabase/functions/public-wofbi-register/index.ts`: remove the `triggerCourseRegistrationEmail` call and its helper. Application approval / registration no longer emails the confirmation automatically.
+- `src/pages/ExamManagement.jsx` (member self-register path around L1590): remove the `supabase.functions.invoke("send-course-registration-email", ...)` call.
+
+### 5. UI — Course Registrations list
+In `CourseRegistrationsView` (`src/pages/ExamManagement.jsx`):
+- Extend the select to include `registration_email_sent_at` (already selects `student_number`).
+- Add a new column/action **Send confirmation**:
+  - If `registration_email_sent_at` is null and `student_number` is present → show **Send** button.
+  - If `student_number` is missing → button disabled with tooltip "Assign a student number first".
+  - If `registration_email_sent_at` is set → show a **Sent** badge with the timestamp and a **Resend** button.
+- On click, call `send-course-registration-email` with `{ registration_id }`. On success, invalidate `["course-registrations", tenantId, course.id]` and toast "Confirmation email sent".
+- Track in-flight sends with a local `sendingRegEmailIds` Set (mirrors `sendingIds` pattern used for exam links).
 
 ## Out of scope
-- Applications tab, Bible School application page, approve flow, student-number email.
-- RLS/policies/roles/RPCs.
-- Backfilling `exam_link_sent_at` for prior sends — historical rows will show "Not sent" until an admin resends (matches "should only show as sent when exam link is sent").
+- Applications tab UI (approval flow), Bible School application page, exam-link flow, RLS/roles/RPCs, backfilling historical rows, bulk send.
 
-## Files touched
-- `supabase/migrations/<new>.sql` (add column)
-- `supabase/functions/provision-exam-account/index.ts` (stamp column on success)
-- `src/pages/ExamManagement.jsx` (select the column, drop user_id fallback, ensure invalidate on single-send success)
+## Files
+- `supabase/migrations/<new>.sql` — add `registration_email_sent_at`
+- `supabase/functions/_shared/email-templates/wofbi-course-registration.tsx` — add student number block
+- `supabase/functions/send-course-registration-email/index.ts` — registration_id lookup, admin-only, stamp sent_at
+- `supabase/functions/public-wofbi-register/index.ts` — remove auto-trigger
+- `src/pages/ExamManagement.jsx` — remove self-register auto-send; add Send/Resend UI in registrations table
+- Deploy: `send-course-registration-email`, `public-wofbi-register`

@@ -886,6 +886,7 @@ function CourseRegistrationsView({ course }) {
   const [editingNumberValue, setEditingNumberValue] = useState("");
   const [sentLinkIds, setSentLinkIds] = useState(() => new Set());
   const [sendingIds, setSendingIds] = useState(() => new Set());
+  const [sendingRegEmailIds, setSendingRegEmailIds] = useState(() => new Set());
   const [selectedIds, setSelectedIds] = useState(() => new Set());
   const [bulkConfirmOpen, setBulkConfirmOpen] = useState(false);
 
@@ -894,7 +895,7 @@ function CourseRegistrationsView({ course }) {
     queryFn: async () => {
       let q = supabase
         .from("course_registrations")
-        .select("id, registered_at, member_id, student_number, status, approved_at, exam_link_sent_at, members(first_name, last_name, email, phone, user_id)")
+        .select("id, registered_at, member_id, student_number, status, approved_at, exam_link_sent_at, registration_email_sent_at, members(first_name, last_name, email, phone, user_id)")
         .eq("course_id", course.id)
         .in("status", ["approved", "active"])
         .order("registered_at", { ascending: false });
@@ -1003,6 +1004,37 @@ function CourseRegistrationsView({ course }) {
     },
     onError: (err) => {
       toast({ title: "Failed to send exam link", description: err.message, variant: "destructive" });
+    },
+  });
+
+  const sendConfirmationEmailMutation = useMutation({
+    mutationFn: async (registrationId) => {
+      setSendingRegEmailIds((prev) => {
+        const next = new Set(prev);
+        next.add(registrationId);
+        return next;
+      });
+      try {
+        const { data, error } = await supabase.functions.invoke("send-course-registration-email", {
+          body: { registration_id: registrationId },
+        });
+        if (error) throw error;
+        if (data?.error) throw new Error(data.error);
+        return registrationId;
+      } finally {
+        setSendingRegEmailIds((prev) => {
+          const next = new Set(prev);
+          next.delete(registrationId);
+          return next;
+        });
+      }
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["course-registrations", tenantId, course.id] });
+      toast({ title: "Confirmation email sent" });
+    },
+    onError: (err) => {
+      toast({ title: "Failed to send confirmation", description: err.message, variant: "destructive" });
     },
   });
 
@@ -1359,6 +1391,23 @@ function CourseRegistrationsView({ course }) {
                                     {alreadySent ? "Resend link" : "Send exam link"}
                                   </Button>
                                 )}
+                                {canManageNumbers && eligible && (() => {
+                                  const regEmailSent = !!r.registration_email_sent_at;
+                                  const hasNumber = !!r.student_number;
+                                  const isSendingRegEmail = sendingRegEmailIds.has(r.id);
+                                  return (
+                                    <Button size="sm" variant="outline" className="h-7 gap-1 text-xs"
+                                      onClick={() => sendConfirmationEmailMutation.mutate(r.id)}
+                                      disabled={isSendingRegEmail || !hasNumber}
+                                      title={hasNumber
+                                        ? "Email the applicant a registration confirmation including their student number."
+                                        : "Assign a student number first"}
+                                    >
+                                      {isSendingRegEmail ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Mail className="h-3.5 w-3.5" />}
+                                      {regEmailSent ? "Resend confirmation" : "Send confirmation"}
+                                    </Button>
+                                  );
+                                })()}
                                 <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setDeleteTarget(r)}>
                                   <Trash2 className="h-3.5 w-3.5 text-destructive" />
                                 </Button>
@@ -1581,21 +1630,10 @@ function MemberExamsView({ memberId, memberRecord, courses, loading }) {
       if (error) throw error;
       return courseId;
     },
-    onSuccess: (courseId) => {
+    onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["my-course-registrations"] });
       toast({ title: "Registered successfully!" });
-      // Send registration confirmation email
-      const course = courses?.find(c => c.id === courseId);
-      if (memberRecord?.email) {
-        supabase.functions.invoke("send-course-registration-email", {
-          body: {
-            email: memberRecord.email,
-            first_name: memberRecord.first_name || "Friend",
-            course_name: course?.name || "Bible School Course",
-            tenant_id: tenantId,
-          },
-        }).catch(err => console.error("Registration email failed:", err));
-      }
+      // Confirmation email is sent manually by an admin from the Registrations list.
     },
     onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });

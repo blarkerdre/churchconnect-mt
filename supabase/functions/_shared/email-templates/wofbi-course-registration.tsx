@@ -16,6 +16,7 @@ interface WoFBICourseRegistrationEmailProps {
   courseName?: string
   siteUrl?: string
   tenantName?: string
+  studentNumber?: string | null
 }
 
 export const WoFBICourseRegistrationEmail: React.FC<WoFBICourseRegistrationEmailProps> = ({
@@ -23,6 +24,7 @@ export const WoFBICourseRegistrationEmail: React.FC<WoFBICourseRegistrationEmail
   firstName = 'Friend',
   courseName = 'Bible School Course',
   siteUrl = 'https://churchmanagementsuite.org',
+  studentNumber,
 }) => {
   return (
     <Html>
@@ -44,6 +46,16 @@ export const WoFBICourseRegistrationEmail: React.FC<WoFBICourseRegistrationEmail
               You have been successfully registered for <strong>{courseName}</strong> at
               the Bible School.
             </Text>
+
+            {studentNumber ? (
+              <Section style={numberBox}>
+                <Text style={numberLabel}>Your student number</Text>
+                <Text style={numberValue}><strong>{studentNumber}</strong></Text>
+                <Text style={hint}>
+                  Please keep this safe — you'll need it for your exam and certificate.
+                </Text>
+              </Section>
+            ) : null}
 
             <Text style={paragraph}>
               Please keep an eye on announcements for class schedules, materials, and
@@ -162,4 +174,35 @@ const footerText: React.CSSProperties = {
   fontSize: '12px',
   lineHeight: '1.5',
   margin: '0 0 4px',
+}
+
+const numberBox: React.CSSProperties = {
+  backgroundColor: '#ffffff',
+  border: '1px solid #e2e8f0',
+  borderRadius: '8px',
+  padding: '16px 20px',
+  margin: '4px 0 20px',
+}
+
+const numberLabel: React.CSSProperties = {
+  fontSize: '12px',
+  textTransform: 'uppercase' as const,
+  letterSpacing: '0.05em',
+  color: '#64748b',
+  margin: '0 0 8px',
+  fontWeight: 'bold' as const,
+}
+
+const numberValue: React.CSSProperties = {
+  fontSize: '16px',
+  color: '#1a2d4d',
+  margin: '0 0 8px',
+  fontFamily: "'Courier New', monospace",
+}
+
+const hint: React.CSSProperties = {
+  fontSize: '13px',
+  color: '#94a3b8',
+  lineHeight: '1.5',
+  margin: '0',
 }
