@@ -1,39 +1,33 @@
-## Why emails show "sent" but never arrive at Yahoo
+## Bug
 
-`status = sent` in `email_send_log` means Mailgun (via Lovable Emails) **accepted** the message — not that Yahoo delivered it to the inbox. Every recent send in the log targets a single `@yahoo.com` address, the recipient is not in `suppressed_emails`, and the queue is healthy.
+In `src/components/exams/SendResultsDialog.jsx`, the certificate-preview `useEffect` (starts around line 69) lists `certPreviews` in its dependency array while also calling `setCertPreviews` inside the effect. This creates a self-cancelling race:
 
-The most likely cause is a **DMARC alignment mismatch**:
+1. Effect runs, guard passes, we call `setCertPreviews(... {loading:true})` and kick off `supabase.functions.invoke("issue-certificate", { preview:true })`.
+2. That `setCertPreviews` re-renders the parent, changing `certPreviews`.
+3. React runs the effect **cleanup**, setting `cancelled = true`, then re-runs the effect. The re-run bails at `if (certPreviews[activeMemberId]) return;` because the loading entry is now present.
+4. The in-flight async eventually resolves — but `cancelled` is already `true`, so the success/error branch returns early and **never clears the `loading:true` state**.
 
-- Messages are DKIM-signed and SPF-authenticated on `notify.app.churchmanagementsuite.org` (the verified Lovable subdomain).
-- But the visible `From:` header uses `noreply@app.churchmanagementsuite.org` (the **root** domain).
-- Yahoo enforces DMARC strictly. If the root domain's DMARC record is missing, or is set to `p=reject/quarantine` without `aspf=r`/`adkim=r`, Yahoo silently drops or bulk-folders mail whose signing domain ≠ From domain — even after Mailgun accepts it.
+Result: the certificate preview shows the spinner forever, even though the edge function returned the image. The Bible School (WoFBI) certificate preview is the one that surfaces this most visibly.
+
+Also contributing: the parent (`CourseResultsView`) passes a freshly-created `members` array on every render (`members.filter(...).map(...)` inline in JSX), which further multiplies effect re-runs.
 
 ## Fix
 
-Change the `From:` address to use the same subdomain that already signs the mail, so DKIM/SPF/DMARC align natively without any DNS change.
+Only touch `src/components/exams/SendResultsDialog.jsx`. No edge function, RLS, template, or backend changes.
 
-### Files to edit
+1. **Break the state feedback loop.** Remove `certPreviews` from the effect's dependency array. Replace the "already have preview?" guard with a `useRef` set (`inflightRef` / `loadedRef`) that tracks which member ids have been kicked off or completed, so the guard no longer depends on rendered state.
+2. **Keep cancellation correctness.** Retain the `cancelled` flag but scope it to genuine unmount / dialog-close / activeMember switch. Because deps no longer include `certPreviews` or the unstable `members` reference, the effect won't cancel itself mid-flight.
+3. **Stabilise the `members` input.** Depend on `activeMemberId` and a small primitive (e.g. `activePassed = !!activeMember?.passed`) rather than the whole `members` array. Look up `activeMember` inside the effect body from the latest prop via a ref if needed.
+4. **Reset tracking when the dialog closes.** In the existing `open`-close effect that already clears `certPreviews`, also clear the new refs so reopening the dialog re-fetches cleanly.
+5. **Preserve existing behaviour.** Loading/error UI, `issue-certificate` call shape (`preview: true`, reissue detection via `training_completions`), and the send flow stay identical.
 
-1. `supabase/functions/send-transactional-email/index.ts`
-   - Change `FROM_DOMAIN` constant (line 16) from `"app.churchmanagementsuite.org"` to `"notify.app.churchmanagementsuite.org"`.
+## Verification
 
-2. `supabase/functions/send-course-registration-email/index.ts`
-   - Change `FROM_DOMAIN` constant (line 15) the same way.
+- Reproduce: open Course Results → select a passed Bible School member → click **Preview & Send…** → confirm the certificate preview image renders (no perpetual spinner) and switching between members loads their preview correctly.
+- Confirm existing behaviour: statement preview still renders, "Send" still works, closing/reopening the dialog re-fetches, error state still shows the failure message.
 
-Result: emails will be sent from `noreply@notify.app.churchmanagementsuite.org`, matching the signing/sender domain. This is the standard, best-deliverability configuration for subdomain-delegated Lovable Emails.
+## Out of scope
 
-### Deploy
-
-Deploy both edge functions after the edit:
-- `send-transactional-email`
-- `send-course-registration-email`
-
-### Verification
-
-After deploy, trigger one exam-link send and one registration confirmation to the Yahoo address and confirm arrival. If mail still doesn't land in the inbox, the next step (out of scope of this plan) is to add/adjust a DMARC TXT record on `app.churchmanagementsuite.org` with a relaxed alignment policy — but the change above resolves the alignment issue without touching DNS.
-
-### Out of scope
-
-- No DNS changes.
-- No template, queue, retry, or logging changes.
-- Not re-triggering the 92 historical DLQ messages.
+- `issue-certificate` edge function, template configuration, DNS / email delivery.
+- Statement of Result (`StatementOfResult` / `StatementPreview`) — its preview renders synchronously and is not affected by this bug.
+- Refactoring `CourseResultsView`'s `members` memoisation beyond what's needed for this fix.
