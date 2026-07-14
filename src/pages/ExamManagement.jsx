@@ -998,6 +998,7 @@ function CourseRegistrationsView({ course }) {
       return res;
     },
     onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["course-registrations", tenantId, course.id] });
       toast({ title: "Exam link sent", description: "The applicant has been emailed a one-click sign-in link." });
     },
     onError: (err) => {
