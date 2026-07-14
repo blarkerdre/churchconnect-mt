@@ -241,6 +241,14 @@ Deno.serve(async (req) => {
         ...(tenant_id ? { tenant_id } : {}),
       });
 
+      if (registrationRow) {
+        const { error: stampErr } = await supabase
+          .from("course_registrations")
+          .update({ registration_email_sent_at: new Date().toISOString() })
+          .eq("id", registrationRow.id);
+        if (stampErr) console.error("Failed to stamp registration_email_sent_at:", stampErr);
+      }
+
       console.log("Course registration email sent", { email: normalizedEmail, messageId, course_name });
 
       return new Response(JSON.stringify({ success: true, message_id: messageId }), {
