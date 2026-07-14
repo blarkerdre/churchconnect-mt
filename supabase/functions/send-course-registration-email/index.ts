@@ -12,7 +12,7 @@ const corsHeaders = {
 
 const SITE_NAME = "mychurchconnect";
 const SENDER_DOMAIN = "notify.app.churchmanagementsuite.org";
-const FROM_DOMAIN = "app.churchmanagementsuite.org";
+const FROM_DOMAIN = "notify.app.churchmanagementsuite.org";
 const ROOT_DOMAIN = "app.churchmanagementsuite.org";
 
 function normalizeEmail(email: string) {
