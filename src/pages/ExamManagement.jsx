@@ -1630,21 +1630,10 @@ function MemberExamsView({ memberId, memberRecord, courses, loading }) {
       if (error) throw error;
       return courseId;
     },
-    onSuccess: (courseId) => {
+    onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["my-course-registrations"] });
       toast({ title: "Registered successfully!" });
-      // Send registration confirmation email
-      const course = courses?.find(c => c.id === courseId);
-      if (memberRecord?.email) {
-        supabase.functions.invoke("send-course-registration-email", {
-          body: {
-            email: memberRecord.email,
-            first_name: memberRecord.first_name || "Friend",
-            course_name: course?.name || "Bible School Course",
-            tenant_id: tenantId,
-          },
-        }).catch(err => console.error("Registration email failed:", err));
-      }
+      // Confirmation email is sent manually by an admin from the Registrations list.
     },
     onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
