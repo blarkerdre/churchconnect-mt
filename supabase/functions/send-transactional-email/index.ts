@@ -54,6 +54,35 @@ Deno.serve(async (req) => {
     )
   }
 
+  // Authentication: require either service role key (internal callers) or a valid signed-in user JWT.
+  // The function is deployed with verify_jwt=false so we validate in-code to allow both cases.
+  const authHeader = req.headers.get('Authorization') || ''
+  const bearer = authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : ''
+  const anonKey = Deno.env.get('SUPABASE_ANON_KEY') || ''
+  let isAuthorized = false
+  if (bearer && bearer === supabaseServiceKey) {
+    isAuthorized = true
+  } else if (bearer && bearer !== anonKey) {
+    try {
+      const authClient = createClient(supabaseUrl, anonKey, {
+        global: { headers: { Authorization: `Bearer ${bearer}` } },
+      })
+      const { data, error } = await authClient.auth.getClaims(bearer)
+      if (!error && data?.claims?.sub) {
+        isAuthorized = true
+      }
+    } catch (e) {
+      console.error('Auth verification failed', e)
+    }
+  }
+  if (!isAuthorized) {
+    return new Response(
+      JSON.stringify({ error: 'Unauthorized' }),
+      { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    )
+  }
+
+
   // Parse request body
   let templateName: string
   let recipientEmail: string
