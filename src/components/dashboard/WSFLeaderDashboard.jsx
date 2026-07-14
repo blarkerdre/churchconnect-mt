@@ -108,7 +108,7 @@ export default function WSFLeaderDashboard() {
     return (
       <Card className="border-0 shadow-sm">
         <CardContent className="p-8 text-center text-muted-foreground">
-          You are not assigned as a leader to any Home Cell centre yet.
+          You are not assigned as a leader or house provider to any Home Cell centre yet.
         </CardContent>
       </Card>
     );
