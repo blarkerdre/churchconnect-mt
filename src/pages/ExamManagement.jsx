@@ -93,9 +93,21 @@ export default function ExamManagement() {
     },
   });
 
-  // Auto-select first course
+  // Reset course/subject/view selection when the active tenant changes so
+  // stale cross-tenant course objects don't leak into the new tenant's view.
   React.useEffect(() => {
-    if (examTitles.length > 0 && !selectedCourse) {
+    setSelectedCourse(null);
+    setSelectedSubject(null);
+    setShowResults(false);
+    setShowRegistrations(false);
+  }, [tenantId]);
+
+  // Auto-select first course (only if the current selection isn't in the
+  // active tenant's course list — prevents cross-tenant leakage).
+  React.useEffect(() => {
+    if (examTitles.length === 0) return;
+    const stillValid = selectedCourse && examTitles.some((t) => t.id === selectedCourse.id);
+    if (!stillValid) {
       setSelectedCourse(examTitles[0]);
     }
   }, [examTitles, selectedCourse]);
