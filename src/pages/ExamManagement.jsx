@@ -1391,6 +1391,23 @@ function CourseRegistrationsView({ course }) {
                                     {alreadySent ? "Resend link" : "Send exam link"}
                                   </Button>
                                 )}
+                                {canManageNumbers && eligible && (() => {
+                                  const regEmailSent = !!r.registration_email_sent_at;
+                                  const hasNumber = !!r.student_number;
+                                  const isSendingRegEmail = sendingRegEmailIds.has(r.id);
+                                  return (
+                                    <Button size="sm" variant="outline" className="h-7 gap-1 text-xs"
+                                      onClick={() => sendConfirmationEmailMutation.mutate(r.id)}
+                                      disabled={isSendingRegEmail || !hasNumber}
+                                      title={hasNumber
+                                        ? "Email the applicant a registration confirmation including their student number."
+                                        : "Assign a student number first"}
+                                    >
+                                      {isSendingRegEmail ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Mail className="h-3.5 w-3.5" />}
+                                      {regEmailSent ? "Resend confirmation" : "Send confirmation"}
+                                    </Button>
+                                  );
+                                })()}
                                 <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setDeleteTarget(r)}>
                                   <Trash2 className="h-3.5 w-3.5 text-destructive" />
                                 </Button>
