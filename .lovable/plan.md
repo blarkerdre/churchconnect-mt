@@ -1,44 +1,25 @@
-## Goal
-Let tenant admins/owners delete individual lecturer feedback entries from the Bible School → Lecturer Feedback report.
+# Fix hardcoded church name in Bible School registration email
+
+## Problem
+The Bible School (WoFBI) course registration email always shows "Winners Chapel International Cardiff" in the header and footer — even when sent from Demo Church or any other tenant. The tenant name is hardcoded in the email template.
+
+## Root cause
+`supabase/functions/_shared/email-templates/wofbi-course-registration.tsx` literally hardcodes the string `Winners Chapel International Cardiff` in both the header banner and the footer. The sender function `send-course-registration-email/index.ts` already looks up the tenant's display name (as `senderName`, from `tenants.settings.email_sender_name` or `tenants.name`), but never passes it into the template's props.
 
 ## Changes
 
-### 1. Database (migration)
-Add a DELETE RLS policy on `lecturer_ratings` for admins/owners:
+1. **`supabase/functions/_shared/email-templates/wofbi-course-registration.tsx`**
+   - Add `tenantName?: string` to `WoFBICourseRegistrationEmailProps`.
+   - Replace the two hardcoded `Winners Chapel International Cardiff` strings (header and footer) with `{tenantName || 'Your Church'}`.
+   - Keep the "Bible School" suffix wording in the footer.
 
-```sql
-CREATE POLICY "Admins can delete tenant ratings"
-ON public.lecturer_ratings
-FOR DELETE
-TO authenticated
-USING (
-  user_has_tenant_access(tenant_id) AND (
-    has_role(auth.uid(), 'admin'::app_role)
-    OR has_role(auth.uid(), 'super_admin'::app_role)
-    OR EXISTS (
-      SELECT 1 FROM tenant_memberships tm
-      WHERE tm.user_id = auth.uid()
-        AND tm.tenant_id = lecturer_ratings.tenant_id
-        AND tm.role = ANY (ARRAY['owner'::tenant_role, 'admin'::tenant_role])
-    )
-  )
-);
-```
+2. **`supabase/functions/send-course-registration-email/index.ts`**
+   - Pass `tenantName: senderName` into `templateProps` so the already-resolved tenant display name flows into the template.
+   - No other logic changes — auth, unsubscribe token, logging, and send flow all stay the same.
 
-Existing "Students can delete own rating" policy stays (students can still withdraw their own submission).
+3. **Deploy** the `send-course-registration-email` function after the edit so the change goes live.
 
-### 2. UI — `src/components/exams/LecturerFeedbackReport.jsx`
-- Add a new **"Entries"** tab (alongside By lecturer / subject / course / distribution).
-- Table columns: Date, Lecturer, Subject, Course, Student, Rating, Have again, Comment (truncated), Actions.
-- Uses the already-fetched `filtered` array so all filters apply.
-- Only visible to tenant admins/owners/super admins (via `useAuth().isTenantAdmin || isTenantOwner || isSuperAdmin`).
-- Actions cell has a Trash icon button that opens `PasswordConfirmDialog` (existing component) requiring password re-auth.
-- On confirm: `supabase.from("lecturer_ratings").delete().eq("id", r.id).eq("tenant_id", tenantId)`, then `logAudit("lecturer_rating_delete", "lecturer_ratings", id, { lecturer, student }, tenantId)`, invalidate `["lecturer-ratings-report", tenantId]`, toast success.
-
-### 3. Out of scope
-No changes to student-facing `RateLecturerDialog`, QC checks, or other exam modules.
-
-## Technical notes
-- Uses existing `PasswordConfirmDialog` for the destructive confirmation (matches project pattern).
-- Query key already tenant-scoped; delete uses explicit `tenant_id` guard per multi-tenancy rules.
-- Non-admin users won't see the Entries tab at all, so no accidental delete surface.
+## Out of scope
+- No DB/schema changes.
+- No changes to other Bible School emails (exam-ready, results, etc.) — those already use `tenantName` correctly.
+- No branding/logo changes.
