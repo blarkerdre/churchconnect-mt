@@ -6,14 +6,16 @@ import type { TemplateEntry } from './registry.ts'
 
 const SITE_NAME = "ChurchConnect"
 
+interface CourseInfo { name: string; student_number?: string | null }
 interface Props {
   firstName?: string
   courseName?: string
   magicLink?: string
   tenantName?: string
+  courses?: CourseInfo[]
 }
 
-const BibleSchoolExamReadyEmail = ({ firstName, courseName, magicLink, tenantName }: Props) => (
+const BibleSchoolExamReadyEmail = ({ firstName, courseName, magicLink, tenantName, courses }: Props) => (
   <Html lang="en" dir="ltr">
     <Head />
     <Preview>Your Bible School exam is ready</Preview>
@@ -26,6 +28,21 @@ const BibleSchoolExamReadyEmail = ({ firstName, courseName, magicLink, tenantNam
           Your <strong>{courseName || 'Bible School'}</strong> exam at{' '}
           {tenantName || SITE_NAME} is ready. You can now sit your exam.
         </Text>
+        {courses && courses.some((c) => c.student_number) && (
+          <Section style={numberBox}>
+            <Text style={numberLabel}>
+              Your student number{courses.filter((c) => c.student_number).length > 1 ? 's' : ''}
+            </Text>
+            {courses.filter((c) => c.student_number).map((c) => (
+              <Text key={c.name} style={numberValue}>
+                {c.name}: <strong>{c.student_number}</strong>
+              </Text>
+            ))}
+            <Text style={hint}>
+              You'll need this to sit your exam and for your certificate.
+            </Text>
+          </Section>
+        )}
         <Text style={text}>
           Click the button below to securely sign in and start your exam.
           No password is needed — this link signs you in automatically.
@@ -58,6 +75,7 @@ export const template = {
     courseName: 'Bible Foundation Course',
     magicLink: 'https://app.example.com/auth/exam-callback?token=demo',
     tenantName: 'Winners Chapel Cardiff',
+    courses: [{ name: 'Bible Foundation Course', student_number: 'WCC/BFC/2026/0001' }],
   },
 } satisfies TemplateEntry
 
