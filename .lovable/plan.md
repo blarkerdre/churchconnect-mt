@@ -1,40 +1,60 @@
 ## Goal
 
-Allow a Home Cell's **House Provider** (the member set as `host_member_id` on a `wsf_centres` row) to record and view attendance for that centre — same rights the centre's Leader already has. Admins/Reports Officers behaviour is unchanged. Providers only get access to the centre(s) they host.
+Split the current single "approve + email everything" flow in Bible School management → Registrations into two distinct actions:
 
-## Backend (RLS)
+1. **Approve** — assigns the student number (as today) AND emails the applicant their student number only.
+2. **Send exam link** — emails a one-click magic link to start the exam only (no student number in this email).
 
-Update two security-definer helpers so both leader **and** host qualify as "leader of this centre":
+## Changes
 
-- `public.is_wsf_leader_for_centre(_user_id, _centre_id)` — currently checks `wc.leader_id = m.id`. Extend to also match `wc.host_member_id = m.id`.
-- `public.is_home_cell_leader_for_centre(_user_id, _centre_id, _tenant_id)` — same extension.
+### 1. New email template — student number only
+Create `supabase/functions/_shared/transactional-email-templates/bible-school-student-number.tsx`, modeled on `bible-school-exam-ready.tsx`:
+- Congratulates the applicant on approval.
+- Shows student number(s) prominently.
+- No magic link / no "Start my exam" button.
+- Explains that a separate exam link will follow when their exam is ready.
 
-No RLS policy rewrites needed; the existing policies on `wsf_attendance_reports` (and any others that call these helpers) automatically start accepting hosts. No new column, no new grants.
+Register it in `supabase/functions/_shared/transactional-email-templates/registry.ts` as `bible-school-student-number`.
 
-## Frontend
+### 2. Trim the existing exam-ready template
+Edit `bible-school-exam-ready.tsx` to remove the student-number section (numberBox). It becomes the exam-link-only email: intro, "Start my exam" button, expiry hint, sign-off. Copy adjusted so it no longer implies "approval just happened".
 
-1. `src/components/wsf/WSFAttendanceTab.jsx` (line 42)
-   - Change `ledCentres` filter to include centres where `c.host_member_id === userMember.id` in addition to `c.leader_id === userMember.id`.
-   - `canWrite` / `canAccess` derive from `ledCentres`, so hosts get the "Record Attendance" button and can see their own centre's reports automatically.
+### 3. New edge function — send student number email
+Create `supabase/functions/send-student-number-email/index.ts` (admin-only, mirrors auth/authorization pattern in `provision-exam-account`):
+- Input: `registration_id` (or `application_id`).
+- Loads the course registration + member + course + tenant.
+- Requires `status ∈ {approved, active}` and a non-empty `student_number`.
+- Invokes `send-transactional-email` with template `bible-school-student-number`, idempotency key `bs-student-number-<registration_id>`.
+- Does NOT create auth users, magic links, or touch course status. Purely notification.
 
-2. `src/pages/WSFManagement.jsx`
-   - Access gate at line 92: also allow when the user hosts at least one centre (compute `isHomeCellHost` from `centres` + `myMember.id`).
-   - `myMember` query at line 27: enable it whenever `user?.id` is set and not admin (so hosts without the `wsf_leader` role still get their member id).
-   - `ledCentres` at line 71: include centres where `host_member_id === myMember.id`.
+Deploy this function after creation.
 
-3. `src/components/dashboard/WSFLeaderDashboard.jsx`
-   - Query "centres this user leads" (line 30) so it returns centres matched by `leader_id` **or** `host_member_id` (single query with `.or("leader_id.eq.<id>,host_member_id.eq.<id>")`).
-   - Empty-state copy stays; it now triggers only when the user neither leads nor hosts.
+### 4. Wire Approve → student number email
+In `src/pages/ExamManagement.jsx` `approveMutation` (around line 909):
+- After the RPC succeeds and returns a `student_number`, invoke `send-student-number-email` with the registration id.
+- Toast: "Approved — student number emailed" on success; on email failure keep the approval toast but show a secondary destructive toast "Student number email failed".
+- Keep the existing student-number display in the toast.
 
-4. Routing / sidebar entry to `/wsf` (Home Cell page) — verify hosts can navigate there. If the sidebar link is gated purely on `isWSFLeader`, extend the gate to also show it when the user hosts a centre. (I'll confirm in the implementation pass; likely one condition in `AppLayout.jsx` / nav config.)
+### 5. Keep Send exam link behavior, adjust copy
+`provision-exam-account` already handles user provisioning + magic link generation + emailing. Since the exam-ready template no longer includes the student number, we can:
+- Stop passing `courses` in the `templateData` from `provision-exam-account` (the trimmed template ignores it anyway — safe to leave, but we'll drop it for clarity).
+- No functional change to the button; existing bulk "Send exam link to selected" continues to work.
+
+### 6. No DB / RLS changes
+No schema, policies, roles, or RPC changes. `approve_course_registration` RPC keeps its current behavior.
 
 ## Out of scope
+- Auth, roles, RLS.
+- Retry/queue tuning.
+- Any other Bible School screens (applications tab, exam pages).
+- Removing student number display from the UI.
 
-- No new role, no changes to `user_roles`, no changes to who can create/edit centres.
-- Reports Officer, Admin, Unit Leader logic untouched.
-- Home Cell join-request approval and other host-only flows remain as they are today.
+## Files touched
+- `supabase/functions/_shared/transactional-email-templates/bible-school-student-number.tsx` (new)
+- `supabase/functions/_shared/transactional-email-templates/bible-school-exam-ready.tsx` (edit — drop student number block)
+- `supabase/functions/_shared/transactional-email-templates/registry.ts` (edit — register new template)
+- `supabase/functions/send-student-number-email/index.ts` (new)
+- `supabase/functions/provision-exam-account/index.ts` (edit — drop `courses` from templateData)
+- `src/pages/ExamManagement.jsx` (edit — approveMutation invokes new function; toasts updated)
 
-## Technical notes
-
-- Both helper functions are `SECURITY DEFINER STABLE` — replacing them with `CREATE OR REPLACE FUNCTION` keeps existing grants and policy references intact.
-- `host_member_id` is already tenant-scoped via `wsf_centres.tenant_id`, so the extended predicate stays inside the tenant boundary.
+Deploy affected edge functions after edits.
