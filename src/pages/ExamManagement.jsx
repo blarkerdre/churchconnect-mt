@@ -894,7 +894,7 @@ function CourseRegistrationsView({ course }) {
     queryFn: async () => {
       let q = supabase
         .from("course_registrations")
-        .select("id, registered_at, member_id, student_number, status, approved_at, members(first_name, last_name, email, phone, user_id)")
+        .select("id, registered_at, member_id, student_number, status, approved_at, exam_link_sent_at, members(first_name, last_name, email, phone, user_id)")
         .eq("course_id", course.id)
         .in("status", ["approved", "active"])
         .order("registered_at", { ascending: false });
