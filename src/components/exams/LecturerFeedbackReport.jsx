@@ -401,6 +401,7 @@ export default function LecturerFeedbackReport() {
                 <TabsTrigger value="subject">By subject</TabsTrigger>
                 <TabsTrigger value="course">By course</TabsTrigger>
                 <TabsTrigger value="distribution">Distribution</TabsTrigger>
+                {canDelete && <TabsTrigger value="entries">Entries</TabsTrigger>}
               </TabsList>
 
               <TabsContent value="lecturer" className="mt-3">
