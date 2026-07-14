@@ -82,11 +82,43 @@ Deno.serve(async (req) => {
     // Tenant membership check
     const { data: membership } = await supabase
       .from("tenant_memberships")
-      .select("tenant_id")
+      .select("tenant_id, role")
       .eq("tenant_id", tenant_id)
       .eq("user_id", userId)
       .maybeSingle();
     if (!membership) {
+      return new Response(JSON.stringify({ error: "Forbidden" }), {
+        status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Authorization: must be tenant admin/owner, app-level admin, or a
+    // Transportation/Kingdom Chariot unit leader. Tenant membership alone is
+    // NOT sufficient — this function uses the service role to update other
+    // members' transportation bookings, which RLS otherwise restricts.
+    const isTenantAdmin = ["owner", "admin"].includes(String(membership.role || "").toLowerCase());
+    let authorized = isTenantAdmin;
+    if (!authorized) {
+      const { data: roles } = await supabase
+        .from("user_roles")
+        .select("role, tenant_id")
+        .eq("user_id", userId);
+      const adminRoles = (roles || []).filter((r: any) =>
+        r.role === "admin" && (r.tenant_id === tenant_id || r.tenant_id === null)
+      );
+      if (adminRoles.length) authorized = true;
+    }
+    if (!authorized) {
+      const { data: leader } = await supabase
+        .from("unit_leader_assignments")
+        .select("unit_name")
+        .eq("tenant_id", tenant_id)
+        .eq("user_id", userId)
+        .in("unit_name", ["Transportation", "Kingdom Chariot"])
+        .limit(1);
+      if (leader && leader.length) authorized = true;
+    }
+    if (!authorized) {
       return new Response(JSON.stringify({ error: "Forbidden" }), {
         status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
