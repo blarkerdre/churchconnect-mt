@@ -1,30 +1,41 @@
-# Fix: Exam link email not delivered
+## Goal
+Stop the "success toast but no email arrives" bug for **Send exam link** in Bible School → Exam Management. Today the UI reports success even when the inner email send fails silently.
 
-## What's happening
+## Root cause (confirmed so far)
+- `provision-exam-account` returns `{ ok: true, magic_link, email_sent, email_error }`.
+- `email_sent` can be `false` (invoke of `send-transactional-email` failed), but the client (`src/pages/ExamManagement.jsx` → `sendOne` / `sendExamLinkMutation`) only checks `data.error` and `error`. It does NOT read `email_sent` / `email_error`, so failures show as a green "Exam link sent" toast.
+- The most recent successful `bible-school-exam-ready` send in `email_send_log` is 12:31:36 UTC. Any attempts after that produced no `email_send_log` row and no HTTP call log — but the admin still saw a success toast. That is the silent-failure path.
 
-When an admin clicks "Send exam link", `provision-exam-account` provisions the user/member/registration and then invokes `send-transactional-email` to email the magic link. That inner invoke is now returning **401 Unauthorized**, and because `provision-exam-account` wraps it in a try/catch that only logs, the outer request still returns `{ ok: true }` — so the UI shows success while no email is queued. Recent `email_send_log` has no `bible-school-exam-ready` rows today, confirming the send never enqueued.
+## Changes
 
-The 401 was introduced by the earlier `open_send_transactional_email` security fix, which requires the caller to present either the service-role key or a valid signed-in user JWT. The `admin.functions.invoke(...)` call inside `provision-exam-account` is not reliably presenting the service-role key as `Authorization: Bearer …`, so it's rejected.
+### 1. Client — honestly report per-registration email status
+File: `src/pages/ExamManagement.jsx`
 
-## Fix
+- In `sendOne`, after a non-error response, inspect `data.email_sent`:
+  - `true` → mark as sent (current success path).
+  - `false` → return `{ ok: false, registrationId, error: new Error(data.email_error || "Email failed to send"), magic_link: data.magic_link }`.
+- In `sendExamLinkMutation.onError`, keep the destructive toast but include the returned `email_error` text so we see the real reason.
+- In `sendExamLinkMutation.onSuccess`, keep the success toast unchanged.
+- For the bulk path (`sendBulkExamLinksMutation`), count `email_sent === false` results as failures in the summary toast.
 
-Update `supabase/functions/provision-exam-account/index.ts` so the invocation of `send-transactional-email` explicitly forwards a valid bearer token, and surface (not swallow) the error so future regressions are visible:
+No behavioural change when everything works; only removes the silent-success case.
 
-1. Pass an explicit `Authorization` header to `admin.functions.invoke("send-transactional-email", ...)` using the service-role key from `Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")`. This matches the "service role" branch of `send-transactional-email`'s in-code auth check.
-2. If the invoke returns an error, include a warning field (e.g. `email_sent: false`, `email_error: <message>`) in the response so the UI/admin can see when the email didn't go out — but still return the magic link so the admin can share it manually as a fallback. Do not throw; provisioning success shouldn't be undone by an email hiccup.
-3. Redeploy `provision-exam-account`.
+### 2. Server — richer diagnostics (small, additive)
+File: `supabase/functions/provision-exam-account/index.ts`
 
-No other functions, templates, or DB changes are needed. `send-transactional-email` itself stays as-is — its stricter auth is correct and required for the security finding.
+- When `admin.functions.invoke("send-transactional-email", ...)` returns an error, also capture and return the HTTP status if available (`(invokeErr as any)?.context?.status`) in `email_error`, so the client toast tells us whether it's 401 / 403 / 5xx.
+- No change to auth, template, or magic-link generation. Still returns `magic_link` so an admin can share it manually if needed.
 
-## Verification
-
-- Trigger "Send exam link" from Bible School applications.
-- Confirm a new `bible-school-exam-ready` row appears in `email_send_log` with `status: sent`.
-- Confirm the recipient receives the magic-link email.
-- Confirm `provision-exam-account` logs no `send-transactional-email failed` entry.
+### 3. Verification
+1. Deploy `provision-exam-account`.
+2. Ask the admin to click **Send exam link** for the same registration once more.
+3. Watch:
+   - `email_send_log` for a new row (any status).
+   - `provision-exam-account` and `send-transactional-email` edge function logs.
+   - The toast text — with the change above it will now show the real failure reason instead of a false success.
+4. Based on the surfaced error, apply the targeted fix (e.g. suppression, template registry mismatch, auth). No speculative changes now.
 
 ## Out of scope
-
-- No changes to `send-transactional-email`'s auth logic.
-- No changes to the email template or the magic-link generation.
-- No changes to any other caller of `send-transactional-email` (they either run in the browser with a user JWT — which the auth check already accepts — or should be audited separately if 401s appear).
+- Changing `send-transactional-email` auth logic.
+- Template or magic-link changes.
+- Any change to other emails (course-registration, birthday, etc.) — those are sending fine.
