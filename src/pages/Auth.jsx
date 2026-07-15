@@ -170,7 +170,11 @@ export default function Auth() {
     if (slug) {
       return <Navigate to={`/t/${slug}`} replace />;
     }
-    // Signed in but no tenant — auto sign-out effect above will clear the session.
+    // Signed in but no tenant — force sign-out (safety net if the effect didn't fire).
+    if (!didAutoSignOutRef.current) {
+      didAutoSignOutRef.current = true;
+      signOut();
+    }
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="animate-pulse text-muted-foreground">Signing out…</div>
