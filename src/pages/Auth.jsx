@@ -53,6 +53,9 @@ export default function Auth() {
   // has no access to any church, so we don't leave them signed in.
   const didAutoSignOutRef = useRef(false);
   useEffect(() => {
+    if (!user) didAutoSignOutRef.current = false;
+  }, [user]);
+  useEffect(() => {
     if (didAutoSignOutRef.current) return;
     if (!user || !dataLoaded) return;
     if (tenantSlug) return;
@@ -167,7 +170,11 @@ export default function Auth() {
     if (slug) {
       return <Navigate to={`/t/${slug}`} replace />;
     }
-    // Signed in but no tenant — auto sign-out effect above will clear the session.
+    // Signed in but no tenant — force sign-out (safety net if the effect didn't fire).
+    if (!didAutoSignOutRef.current) {
+      didAutoSignOutRef.current = true;
+      signOut();
+    }
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="animate-pulse text-muted-foreground">Signing out…</div>
