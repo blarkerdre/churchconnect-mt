@@ -167,30 +167,13 @@ export default function Auth() {
     if (slug) {
       return <Navigate to={`/t/${slug}`} replace />;
     }
-    // Signed in but no tenant resolved — show a chooser instead of bouncing.
+    // Signed in but no tenant — auto sign-out effect above will clear the session.
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        <Card className="w-full max-w-md border-0 shadow-lg">
-          <CardHeader className="text-center">
-            <CardTitle className="font-display text-xl">You're already signed in</CardTitle>
-            <CardDescription className="break-all">{user.email}</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <Button className="w-full" onClick={() => { window.location.href = "/"; }}>
-              Continue
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
-            <Button
-              variant="outline"
-              className="w-full"
-              onClick={async () => { await signOut(); }}
-            >
-              Sign out and use another account
-            </Button>
-          </CardContent>
-        </Card>
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="animate-pulse text-muted-foreground">Signing out…</div>
       </div>
     );
+
   }
 
   const handleSubmit = async (e) => {
