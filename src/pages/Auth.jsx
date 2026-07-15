@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Navigate, useParams } from "react-router-dom";
 import { DEFAULT_TENANT_ID } from "@/contexts/TenantContext";
 import { useAuth } from "@/hooks/useAuth";
@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Mail, Lock, User, ArrowRight, Eye, EyeOff, CheckCircle2 } from "lucide-react";
+
 
 import { useToast } from "@/components/ui/use-toast";
 import { useQuery } from "@tanstack/react-query";
@@ -46,6 +47,27 @@ export default function Auth() {
     const t = setTimeout(() => setWaitedForData(true), 4000);
     return () => clearTimeout(t);
   }, [user, dataLoaded]);
+
+  // Auto sign-out accounts with no tenant membership. Credentials still
+  // authenticate against auth.users, but without a tenant row the account
+  // has no access to any church, so we don't leave them signed in.
+  const didAutoSignOutRef = useRef(false);
+  useEffect(() => {
+    if (didAutoSignOutRef.current) return;
+    if (!user || !dataLoaded) return;
+    if (tenantSlug) return;
+    if (claimToken && !claimDone) return;
+    const hasMembership = !!tenantMemberships?.[0]?.tenants?.slug;
+    if (hasMembership) return;
+    didAutoSignOutRef.current = true;
+    toast({
+      title: "No church access",
+      description: "This account isn't linked to any church. Please contact your church admin.",
+      variant: "destructive",
+    });
+    signOut();
+  }, [user, dataLoaded, tenantSlug, tenantMemberships, claimToken, claimDone, signOut, toast]);
+
 
   useEffect(() => {
     if (!signupCooldown) return;
@@ -145,30 +167,13 @@ export default function Auth() {
     if (slug) {
       return <Navigate to={`/t/${slug}`} replace />;
     }
-    // Signed in but no tenant resolved — show a chooser instead of bouncing.
+    // Signed in but no tenant — auto sign-out effect above will clear the session.
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        <Card className="w-full max-w-md border-0 shadow-lg">
-          <CardHeader className="text-center">
-            <CardTitle className="font-display text-xl">You're already signed in</CardTitle>
-            <CardDescription className="break-all">{user.email}</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <Button className="w-full" onClick={() => { window.location.href = "/"; }}>
-              Continue
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
-            <Button
-              variant="outline"
-              className="w-full"
-              onClick={async () => { await signOut(); }}
-            >
-              Sign out and use another account
-            </Button>
-          </CardContent>
-        </Card>
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="animate-pulse text-muted-foreground">Signing out…</div>
       </div>
     );
+
   }
 
   const handleSubmit = async (e) => {
