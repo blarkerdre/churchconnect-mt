@@ -48,6 +48,27 @@ export default function Auth() {
     return () => clearTimeout(t);
   }, [user, dataLoaded]);
 
+  // Auto sign-out accounts with no tenant membership. Credentials still
+  // authenticate against auth.users, but without a tenant row the account
+  // has no access to any church, so we don't leave them signed in.
+  const didAutoSignOutRef = useRef(false);
+  useEffect(() => {
+    if (didAutoSignOutRef.current) return;
+    if (!user || !dataLoaded) return;
+    if (tenantSlug) return;
+    if (claimToken && !claimDone) return;
+    const hasMembership = !!tenantMemberships?.[0]?.tenants?.slug;
+    if (hasMembership) return;
+    didAutoSignOutRef.current = true;
+    toast({
+      title: "No church access",
+      description: "This account isn't linked to any church. Please contact your church admin.",
+      variant: "destructive",
+    });
+    signOut();
+  }, [user, dataLoaded, tenantSlug, tenantMemberships, claimToken, claimDone, signOut, toast]);
+
+
   useEffect(() => {
     if (!signupCooldown) return;
     const interval = setInterval(() => {
