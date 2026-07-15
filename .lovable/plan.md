@@ -1,26 +1,28 @@
-# Why the email appears on /auth
+## Goal
 
-Supabase persists the auth session in the browser's local storage. On page load, `useAuth.jsx` calls `supabase.auth.getSession()` and restores the previous session — so `blarkerdre@yahoo.com` is "signed on" because that browser previously logged in as that user and never signed out.
+Prevent auth accounts (like `blarkerdre@yahoo.com`) that have zero rows in `tenant_memberships` from remaining signed in. Credentials still authenticate against `auth.users`, but the app will immediately sign them out and show a clear message.
 
-Normally `Auth.jsx` redirects a signed-in user away (`<Navigate to={...} />`), but on the root `/auth` (no `tenantSlug`), it redirects using `tenantMemberships[0]?.tenants?.slug`. If that user has no tenant memberships loaded, they fall through to `/`, which may bounce back to `/auth`, leaving the email visible in whatever UI reads the session.
+## Change
 
-# Plan: show a "Continue as / Sign out" prompt on /auth
+Edit `src/pages/Auth.jsx` only. No DB, RLS, or `useAuth` changes.
 
-When a session is restored on `/auth` and we can't cleanly redirect (no tenant slug resolved), stop rendering the login form and instead show a small card:
+In the existing "signed in but no tenant resolved" branch (after `dataLoaded` is true and `tenantMemberships[0]?.tenants?.slug` is missing):
 
-- "You're signed in as **blarkerdre@yahoo.com**"
-- Primary button: **Continue** → navigate to `/` (or the resolved tenant route if available)
-- Secondary button: **Sign out and use another account** → `signOut()` then stay on `/auth` to reveal the login form
-
-## Changes
-
-**`src/pages/Auth.jsx`**
-- Import `signOut` from `useAuth`.
-- Before the existing `if (user)` redirect block, if `user` exists AND no `tenantSlug` in URL AND no `tenantMemberships[0]?.tenants?.slug`, render the "Continue as / Sign out" card instead of `<Navigate />`.
-- Keep existing redirect behavior when a tenant slug is available (URL or membership).
-- "Sign out" calls `signOut()` — component re-renders with `user = null` and the normal login form shows.
+1. Instead of rendering the "Continue / Sign out" card, call `signOut()` once via a `useEffect` guarded by a local `didAutoSignOut` ref/state so it fires exactly once.
+2. Show a toast: "No church access — this account isn't linked to any church. Please contact your church admin."
+3. While signing out, render the existing "Loading…" placeholder. After `signOut()` resolves, `user` becomes `null` and the normal login form renders automatically.
+4. Preserve current behavior when `tenantSlug` is in the URL or a membership slug resolves — those still redirect as before.
+5. Keep the `claimToken` branch intact (claim runs first; only auto-sign-out if no claim is pending).
 
 ## Out of scope
 
-- No changes to `useAuth`, session storage strategy, or tenant resolution logic.
-- No auto sign-out on `/auth` (would log out users who intentionally revisit the page).
+- Deleting the auth user (`blarkerdre@yahoo.com` will still exist; it just can't stay signed in).
+- Any RLS, policy, role, or RPC change.
+- Any change to `useAuth`, session persistence, or Supabase config.
+- Signup flow changes — signup already requires a tenant slug.
+
+## Technical notes
+
+- Uses existing `signOut` from `useAuth` and existing `useToast`.
+- Gate the effect on `user && dataLoaded && !tenantSlug && !tenantMemberships?.[0]?.tenants?.slug && !claimToken`.
+- Use a `useRef(false)` flag to avoid a sign-out loop if `dataLoaded` flips during the async call.

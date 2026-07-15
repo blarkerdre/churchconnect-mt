@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Navigate, useParams } from "react-router-dom";
 import { DEFAULT_TENANT_ID } from "@/contexts/TenantContext";
 import { useAuth } from "@/hooks/useAuth";
@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Mail, Lock, User, ArrowRight, Eye, EyeOff, CheckCircle2 } from "lucide-react";
+
 
 import { useToast } from "@/components/ui/use-toast";
 import { useQuery } from "@tanstack/react-query";
