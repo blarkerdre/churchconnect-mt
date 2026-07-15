@@ -53,6 +53,9 @@ export default function Auth() {
   // has no access to any church, so we don't leave them signed in.
   const didAutoSignOutRef = useRef(false);
   useEffect(() => {
+    if (!user) didAutoSignOutRef.current = false;
+  }, [user]);
+  useEffect(() => {
     if (didAutoSignOutRef.current) return;
     if (!user || !dataLoaded) return;
     if (tenantSlug) return;
