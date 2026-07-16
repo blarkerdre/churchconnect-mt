@@ -148,20 +148,6 @@ export default function WoFBIApplicationsTab() {
       const app = applications.find((a) => a.id === id);
       if (!app) throw new Error("Row not found");
 
-      const sendConfirmationEmail = async (registrationId) => {
-        try {
-          const { data, error } = await supabase.functions.invoke("send-student-number-email", {
-            body: { registration_id: registrationId },
-          });
-          if (error) return error.message || String(error);
-          if (data?.error) return data.error;
-          if (data?.email_sent === false) return data?.email_error || "Email failed to send";
-          return null;
-        } catch (e) {
-          return e.message || String(e);
-        }
-      };
-
       // Direct registration path — update course_registrations status only.
       if (app.source === "direct") {
         const regStatus = status === "approved" ? "approved" : status === "rejected" ? "rejected" : status;
@@ -183,11 +169,7 @@ export default function WoFBIApplicationsTab() {
           { status: regStatus, via: "bible_school_applications_tab" },
           tenantId
         );
-        let emailError = null;
-        if (regStatus === "approved") {
-          emailError = await sendConfirmationEmail(app.registration_id);
-        }
-        return { status, enrolled: false, alreadyEnrolled: false, unlinked: false, source: "direct", emailError };
+        return { status, enrolled: false, alreadyEnrolled: false, unlinked: false, source: "direct" };
       }
 
       // Form application path.
@@ -201,8 +183,6 @@ export default function WoFBIApplicationsTab() {
       let enrolled = false;
       let alreadyEnrolled = false;
       let unlinked = false;
-      let registrationId = app.registration_id || null;
-      let emailError = null;
 
       if (status === "approved") {
         if (app.member_id && app.course_id) {
@@ -215,23 +195,17 @@ export default function WoFBIApplicationsTab() {
             .maybeSingle();
           if (existing) {
             alreadyEnrolled = true;
-            registrationId = existing.id;
           } else {
-            const { data: inserted, error: insErr } = await supabase
-              .from("course_registrations")
-              .insert({
-                tenant_id: tenantId,
-                member_id: app.member_id,
-                course_id: app.course_id,
-                status: "active",
-                registered_at: new Date().toISOString(),
-                registration_origin: app.registration_origin || "public_qr",
-              })
-              .select("id")
-              .single();
+            const { error: insErr } = await supabase.from("course_registrations").insert({
+              tenant_id: tenantId,
+              member_id: app.member_id,
+              course_id: app.course_id,
+              status: "active",
+              registered_at: new Date().toISOString(),
+              registration_origin: app.registration_origin || "public_qr",
+            });
             if (insErr) throw insErr;
             enrolled = true;
-            registrationId = inserted?.id || null;
           }
         } else if (!app.member_id) {
           unlinked = true;
@@ -243,33 +217,28 @@ export default function WoFBIApplicationsTab() {
           { member_id: app.member_id || null, course_id: app.course_id || null, enrolled, already_enrolled: alreadyEnrolled, unlinked },
           tenantId
         );
-        if (registrationId) {
-          emailError = await sendConfirmationEmail(registrationId);
-        }
       }
 
-      return { status, enrolled, alreadyEnrolled, unlinked, source: "form", emailError };
+      return { status, enrolled, alreadyEnrolled, unlinked, source: "form" };
     },
     onSuccess: (res) => {
       qc.invalidateQueries({ queryKey: ["wofbi-applications", tenantId] });
       qc.invalidateQueries({ queryKey: ["wofbi-direct-registrations", tenantId] });
       qc.invalidateQueries({ queryKey: ["course-registrations"] });
       if (res.status === "approved") {
-        const emailNote = res.emailError ? ` · Email: ${res.emailError}` : "";
-        if (res.unlinked) {
+        if (res.source === "direct") {
+          toast({ title: "Registration approved" });
+        } else if (res.enrolled) {
+          toast({ title: "Applicant approved and enrolled", description: "A course registration has been created." });
+        } else if (res.alreadyEnrolled) {
+          toast({ title: "Approved", description: "Applicant was already enrolled in this course." });
+        } else if (res.unlinked) {
           toast({ title: "Approved", description: "Link this applicant to a member record to enrol them into the course." });
         } else {
-          const baseDesc = res.enrolled
-            ? "A course registration has been created."
-            : res.alreadyEnrolled
-            ? "Applicant was already enrolled."
-            : "";
-          toast({
-            title: res.emailError ? "Approved — email failed" : "Approved & confirmation emailed",
-            description: (baseDesc + emailNote).trim() || undefined,
-            variant: res.emailError ? "destructive" : undefined,
-          });
+          toast({ title: "Application approved" });
         }
+        // No email is sent from the Applications tab. The confirmation email with
+        // student number is sent from Bible School → Registrations on approve.
       } else {
         toast({ title: res.source === "direct" ? "Registration updated" : "Application updated" });
       }
