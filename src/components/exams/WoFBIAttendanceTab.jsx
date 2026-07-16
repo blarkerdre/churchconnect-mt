@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogFooter } from "@/components/ui/dialog";
 import TenantDialogHeader from "@/components/ui/TenantDialogHeader";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Plus, QrCode, Trash2, Download, CheckCircle2, XCircle, Clock } from "lucide-react";
+import { Loader2, Plus, QrCode, Trash2, Download, CheckCircle2, XCircle, Clock, ChevronDown, ChevronRight, Pencil } from "lucide-react";
 import WoFBIAttendanceQRDialog from "./WoFBIAttendanceQRDialog";
 
 function pct(num, den) {
@@ -48,6 +48,9 @@ export default function WoFBIAttendanceTab() {
   const [newOpen, setNewOpen] = useState(false);
   const [qrSession, setQrSession] = useState(null);
   const [rosterSession, setRosterSession] = useState(null);
+  const [expandedStudents, setExpandedStudents] = useState({});
+  const [editRecord, setEditRecord] = useState(null); // { record, session, registration }
+  const [editForm, setEditForm] = useState({ status: "present", checked_in_at: "", checked_out_at: "" });
 
   const [form, setForm] = useState({
     title: "",
@@ -148,7 +151,7 @@ export default function WoFBIAttendanceTab() {
       const ids = sessions.map((s) => s.id);
       const { data, error } = await supabase
         .from("wofbi_attendance_records")
-        .select("session_id, registration_id, status, checked_in_at, checked_out_at, duration_minutes")
+        .select("id, session_id, registration_id, member_id, status, checked_in_at, checked_out_at, duration_minutes")
         .in("session_id", ids);
       if (error) throw error;
       return data || [];
@@ -291,6 +294,97 @@ export default function WoFBIAttendanceTab() {
     },
     onError: (e) => toast({ title: "Update failed", description: e.message, variant: "destructive" }),
   });
+
+  const saveEdit = useMutation({
+    mutationFn: async () => {
+      if (!editRecord) throw new Error("No record");
+      const { session, registration, record } = editRecord;
+      const inAt = editForm.checked_in_at ? new Date(editForm.checked_in_at) : null;
+      const outAt = editForm.checked_out_at ? new Date(editForm.checked_out_at) : null;
+      if (editForm.status === "absent") {
+        if (record?.id) {
+          const { error } = await supabase
+            .from("wofbi_attendance_records")
+            .delete()
+            .eq("id", record.id)
+            .eq("tenant_id", tenantId);
+          if (error) throw error;
+        }
+        return;
+      }
+      if (!inAt) throw new Error("Time in is required");
+      if (outAt && outAt < inAt) throw new Error("Time out must be after time in");
+      const duration = outAt ? Math.max(0, Math.round((outAt - inAt) / 60000)) : null;
+      if (record?.id) {
+        const { error } = await supabase
+          .from("wofbi_attendance_records")
+          .update({
+            status: editForm.status,
+            checked_in_at: inAt.toISOString(),
+            checked_out_at: outAt ? outAt.toISOString() : null,
+            duration_minutes: duration,
+          })
+          .eq("id", record.id)
+          .eq("tenant_id", tenantId);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from("wofbi_attendance_records").insert(
+          withTenant({
+            session_id: session.id,
+            registration_id: registration.id,
+            member_id: registration.member_id,
+            status: editForm.status,
+            checked_in_at: inAt.toISOString(),
+            checked_out_at: outAt ? outAt.toISOString() : null,
+            duration_minutes: duration,
+            source: "manual",
+          })
+        );
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      toast({ title: "Attendance updated" });
+      setEditRecord(null);
+      qc.invalidateQueries({ queryKey: ["wofbi-att-all-records"] });
+      qc.invalidateQueries({ queryKey: ["wofbi-att-roster-records"] });
+      qc.invalidateQueries({ queryKey: ["wofbi-att-record-counts"] });
+    },
+    onError: (e) => toast({ title: "Save failed", description: e.message, variant: "destructive" }),
+  });
+
+  const deleteRecord = useMutation({
+    mutationFn: async (id) => {
+      const { error } = await supabase
+        .from("wofbi_attendance_records")
+        .delete()
+        .eq("id", id)
+        .eq("tenant_id", tenantId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({ title: "Attendance record deleted" });
+      qc.invalidateQueries({ queryKey: ["wofbi-att-all-records"] });
+      qc.invalidateQueries({ queryKey: ["wofbi-att-roster-records"] });
+      qc.invalidateQueries({ queryKey: ["wofbi-att-record-counts"] });
+    },
+    onError: (e) => toast({ title: "Delete failed", description: e.message, variant: "destructive" }),
+  });
+
+  const openEdit = (session, registration, record) => {
+    const toLocal = (iso) => {
+      if (!iso) return "";
+      const d = new Date(iso);
+      const off = d.getTimezoneOffset() * 60000;
+      return new Date(d - off).toISOString().slice(0, 16);
+    };
+    setEditRecord({ session, registration, record });
+    setEditForm({
+      status: record?.status || "present",
+      checked_in_at: toLocal(record?.checked_in_at) || `${session.session_date}T09:00`,
+      checked_out_at: toLocal(record?.checked_out_at),
+    });
+  };
 
   // Attendance % per student
   const perStudent = useMemo(() => {
@@ -454,6 +548,7 @@ export default function WoFBIAttendanceTab() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-8"></TableHead>
                   <TableHead>Student #</TableHead>
                   <TableHead>Name</TableHead>
                   <TableHead>Present</TableHead>
@@ -465,28 +560,96 @@ export default function WoFBIAttendanceTab() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {perStudent.map((s) => (
-                  <TableRow key={s.registration.id}>
-                    <TableCell>{s.registration.student_number || "—"}</TableCell>
-                    <TableCell className="font-medium">
-                      {`${s.registration.members?.first_name || ""} ${s.registration.members?.last_name || ""}`.trim() || "Unknown"}
-                    </TableCell>
-                    <TableCell>{s.present}</TableCell>
-                    <TableCell>{s.late}</TableCell>
-                    <TableCell>{s.absent}</TableCell>
-                    <TableCell className="whitespace-nowrap">{fmtDuration(s.totalMinutes)}</TableCell>
-                    <TableCell>
-                      {s.missingCheckouts > 0 ? (
-                        <Badge variant="secondary" className="bg-amber-100 text-amber-800">{s.missingCheckouts}</Badge>
-                      ) : "—"}
-                    </TableCell>
-                    <TableCell>
-                      <Badge className={s.percent >= 75 ? "bg-green-100 text-green-800" : s.percent >= 50 ? "bg-amber-100 text-amber-800" : "bg-red-100 text-red-800"}>
-                        {s.percent}%
-                      </Badge>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                {perStudent.map((s) => {
+                  const expanded = !!expandedStudents[s.registration.id];
+                  const studentRecs = allRecords.filter((x) => x.registration_id === s.registration.id);
+                  const recByS = new Map(studentRecs.map((r) => [r.session_id, r]));
+                  const sortedSessions = [...sessions].sort((a, b) => a.session_date.localeCompare(b.session_date));
+                  return (
+                    <React.Fragment key={s.registration.id}>
+                      <TableRow className="cursor-pointer" onClick={() => setExpandedStudents((p) => ({ ...p, [s.registration.id]: !expanded }))}>
+                        <TableCell>
+                          {expanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                        </TableCell>
+                        <TableCell>{s.registration.student_number || "—"}</TableCell>
+                        <TableCell className="font-medium">
+                          {`${s.registration.members?.first_name || ""} ${s.registration.members?.last_name || ""}`.trim() || "Unknown"}
+                        </TableCell>
+                        <TableCell>{s.present}</TableCell>
+                        <TableCell>{s.late}</TableCell>
+                        <TableCell>{s.absent}</TableCell>
+                        <TableCell className="whitespace-nowrap">{fmtDuration(s.totalMinutes)}</TableCell>
+                        <TableCell>
+                          {s.missingCheckouts > 0 ? (
+                            <Badge variant="secondary" className="bg-amber-100 text-amber-800">{s.missingCheckouts}</Badge>
+                          ) : "—"}
+                        </TableCell>
+                        <TableCell>
+                          <Badge className={s.percent >= 75 ? "bg-green-100 text-green-800" : s.percent >= 50 ? "bg-amber-100 text-amber-800" : "bg-red-100 text-red-800"}>
+                            {s.percent}%
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                      {expanded && (
+                        <TableRow className="bg-muted/30 hover:bg-muted/30">
+                          <TableCell colSpan={9} className="p-0">
+                            <div className="p-3">
+                              <Table>
+                                <TableHeader>
+                                  <TableRow>
+                                    <TableHead>Date</TableHead>
+                                    <TableHead>Session</TableHead>
+                                    <TableHead>Status</TableHead>
+                                    <TableHead>Time in</TableHead>
+                                    <TableHead>Time out</TableHead>
+                                    <TableHead>Duration</TableHead>
+                                    <TableHead className="text-right">Actions</TableHead>
+                                  </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                  {sortedSessions.map((sess) => {
+                                    const rec = recByS.get(sess.id);
+                                    const status = rec?.status || "absent";
+                                    return (
+                                      <TableRow key={sess.id}>
+                                        <TableCell className="whitespace-nowrap text-xs">{sess.session_date}</TableCell>
+                                        <TableCell className="text-xs">{sess.title}</TableCell>
+                                        <TableCell>
+                                          {status === "present" && <Badge className="bg-green-100 text-green-800">Present</Badge>}
+                                          {status === "late" && <Badge className="bg-amber-100 text-amber-800">Late</Badge>}
+                                          {status === "absent" && <Badge variant="secondary">Absent</Badge>}
+                                        </TableCell>
+                                        <TableCell className="text-xs whitespace-nowrap">{fmtTime(rec?.checked_in_at)}</TableCell>
+                                        <TableCell className="text-xs whitespace-nowrap">{fmtTime(rec?.checked_out_at)}</TableCell>
+                                        <TableCell className="text-xs whitespace-nowrap">{fmtDuration(rec?.duration_minutes)}</TableCell>
+                                        <TableCell className="text-right space-x-1 whitespace-nowrap">
+                                          <Button size="sm" variant="outline" className="gap-1" onClick={() => openEdit(sess, s.registration, rec)}>
+                                            <Pencil className="h-3 w-3" /> Edit
+                                          </Button>
+                                          {rec?.id && (
+                                            <Button
+                                              size="sm"
+                                              variant="ghost"
+                                              onClick={() => {
+                                                if (confirm("Delete this attendance record?")) deleteRecord.mutate(rec.id);
+                                              }}
+                                            >
+                                              <Trash2 className="h-3 w-3" />
+                                            </Button>
+                                          )}
+                                        </TableCell>
+                                      </TableRow>
+                                    );
+                                  })}
+                                </TableBody>
+                              </Table>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </React.Fragment>
+                  );
+                })}
               </TableBody>
             </Table>
           )}
@@ -608,6 +771,54 @@ export default function WoFBIAttendanceTab() {
               </TableBody>
             </Table>
           </div>
+        </DialogContent>
+      </Dialog>
+      {/* Edit record dialog */}
+      <Dialog open={!!editRecord} onOpenChange={(v) => !v && setEditRecord(null)}>
+        <DialogContent className="max-w-md">
+          <TenantDialogHeader>Edit attendance</TenantDialogHeader>
+          {editRecord && (
+            <div className="space-y-4 py-2">
+              <div className="text-sm">
+                <div className="font-medium">
+                  {`${editRecord.registration.members?.first_name || ""} ${editRecord.registration.members?.last_name || ""}`.trim()}
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  {editRecord.session.session_date} · {editRecord.session.title}
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Status</Label>
+                <Select value={editForm.status} onValueChange={(v) => setEditForm((f) => ({ ...f, status: v }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="present">Present</SelectItem>
+                    <SelectItem value="late">Late</SelectItem>
+                    <SelectItem value="absent">Absent (removes record)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              {editForm.status !== "absent" && (
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label>Time in *</Label>
+                    <Input type="datetime-local" value={editForm.checked_in_at} onChange={(e) => setEditForm((f) => ({ ...f, checked_in_at: e.target.value }))} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Time out</Label>
+                    <Input type="datetime-local" value={editForm.checked_out_at} onChange={(e) => setEditForm((f) => ({ ...f, checked_out_at: e.target.value }))} />
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setEditRecord(null)}>Cancel</Button>
+            <Button onClick={() => saveEdit.mutate()} disabled={saveEdit.isPending}>
+              {saveEdit.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+              Save
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
