@@ -1118,6 +1118,13 @@ function CourseRegistrationsView({ course }) {
     if (sourceFilter === "member" && o !== "member_self") return false;
     if (sourceFilter === "public" && o !== "public_qr") return false;
     if (sourceFilter === "admin" && o !== "admin") return false;
+    if (statusFilter !== "all") {
+      const emailSent = !!r.registration_email_sent_at;
+      const linkSent = !!r.exam_link_sent_at;
+      if (statusFilter === "email_pending" && emailSent) return false;
+      if (statusFilter === "link_pending" && (!emailSent || linkSent)) return false;
+      if (statusFilter === "link_sent" && !linkSent) return false;
+    }
     if (fromTs || toTs) {
       const ts = new Date(r.registered_at).getTime();
       if (fromTs && ts < fromTs) return false;
