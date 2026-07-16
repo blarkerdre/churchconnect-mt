@@ -332,10 +332,15 @@ export default function WoFBIApplicationsTab() {
 
   const getFieldMeta = (fieldId) => filterableFields.find((f) => f.id === fieldId);
 
-  const statusMatches = (rowStatus, filter) => {
+  const statusMatches = (row, filter) => {
+    const rowStatus = row.status;
+    const approved = rowStatus === "approved" || rowStatus === "active";
     if (filter === "all") return true;
-    if (filter === "approved") return rowStatus === "approved" || rowStatus === "active";
+    if (filter === "approved") return approved;
     if (filter === "submitted") return rowStatus === "submitted" || rowStatus === "pending";
+    if (filter === "email_pending") return approved && !row.registration_email_sent_at;
+    if (filter === "link_pending") return approved && !!row.registration_email_sent_at && !row.exam_link_sent_at;
+    if (filter === "link_sent") return approved && !!row.exam_link_sent_at;
     return rowStatus === filter;
   };
 
@@ -344,7 +349,7 @@ export default function WoFBIApplicationsTab() {
     const from = dateFrom ? new Date(dateFrom).getTime() : null;
     const to = dateTo ? new Date(dateTo).getTime() + 86400000 : null;
     return applications.filter((a) => {
-      if (!statusMatches(a.status, statusFilter)) return false;
+      if (!statusMatches(a, statusFilter)) return false;
       if (courseFilter !== "all" && a.course?.id !== courseFilter) return false;
       if (sourceFilter !== "all" && a.source !== sourceFilter) return false;
       if (from || to) {
