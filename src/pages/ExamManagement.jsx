@@ -1420,16 +1420,21 @@ function CourseRegistrationsView({ course }) {
                                     <CheckCircle2 className="h-3.5 w-3.5" /> Approve
                                   </Button>
                                 )}
-                                {canManageNumbers && eligible && (
-                                  <Button size="sm" variant="outline" className="h-7 gap-1 text-xs"
-                                    onClick={() => sendExamLinkMutation.mutate(r.id)}
-                                    disabled={isSending}
-                                    title="Email the applicant a one-click sign-in link to write the exam."
-                                  >
-                                    {isSending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Mail className="h-3.5 w-3.5" />}
-                                    {alreadySent ? "Resend link" : "Send exam link"}
-                                  </Button>
-                                )}
+                                {canManageNumbers && eligible && (() => {
+                                  const confirmationSent = !!r.registration_email_sent_at;
+                                  return (
+                                    <Button size="sm" variant="outline" className="h-7 gap-1 text-xs"
+                                      onClick={() => sendExamLinkMutation.mutate(r.id)}
+                                      disabled={isSending || !confirmationSent}
+                                      title={confirmationSent
+                                        ? "Email the applicant a one-click sign-in link to write the exam."
+                                        : "Send the registration confirmation email first."}
+                                    >
+                                      {isSending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Mail className="h-3.5 w-3.5" />}
+                                      {alreadySent ? "Resend exam link" : "Send exam link"}
+                                    </Button>
+                                  );
+                                })()}
                                 {canManageNumbers && eligible && (() => {
                                   const regEmailSent = !!r.registration_email_sent_at;
                                   const hasNumber = !!r.student_number;
