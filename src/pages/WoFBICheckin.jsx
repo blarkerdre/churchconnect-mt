@@ -4,7 +4,16 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Loader2, CheckCircle2, Clock, XCircle, LogIn } from "lucide-react";
+import { Loader2, CheckCircle2, Clock, XCircle, LogIn, LogOut } from "lucide-react";
+
+function fmtDuration(mins) {
+  if (mins == null) return "";
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  if (h && m) return `${h}h ${m}m`;
+  if (h) return `${h}h`;
+  return `${m}m`;
+}
 
 const ERROR_MESSAGES = {
   not_authenticated: "Please sign in to check in.",
