@@ -69,14 +69,36 @@ Deno.serve(async (req) => {
           continue;
         }
 
-        // Clean up account-level rows first (defensive) and clear any FKs
-        // that would block the auth deletion. The user has no tenant_memberships
-        // at this point, so we clear across all tenants unconditionally.
+        // Clean up account-level rows first (defensive) and null every FK
+        // column that references auth.users with ON DELETE NO ACTION. The
+        // user has no tenant_memberships at this point, so we clear across
+        // all tenants unconditionally.
         await supabase.from("user_roles").delete().eq("user_id", u.id);
         await supabase.from("profiles").delete().eq("user_id", u.id);
-        await supabase.from("transportation").update({ driver_user_id: null }).eq("driver_user_id", u.id);
-        await supabase.from("transportation").update({ user_id: null }).eq("user_id", u.id);
-        await supabase.from("members").update({ user_id: null }).eq("user_id", u.id);
+        const nullifyTargets: [string, string][] = [
+          ["app_settings", "updated_by"],
+          ["attendance_sessions", "created_by"],
+          ["call_log", "caller_id"],
+          ["events", "created_by"],
+          ["first_timers", "follow_up_assigned_to"],
+          ["followups", "assigned_to"],
+          ["followups", "created_by"],
+          ["messages", "recipient_id"],
+          ["messages", "sender_id"],
+          ["pastoral_care", "assigned_to"],
+          ["pastoral_care", "created_by"],
+          ["scheduled_communications", "created_by"],
+          ["tenant_api_keys", "created_by"],
+          ["transportation", "driver_user_id"],
+          ["transportation", "user_id"],
+          ["wsf_attendance", "recorded_by"],
+          ["members", "user_id"],
+        ];
+        await Promise.all(
+          nullifyTargets.map(([tbl, col]) =>
+            supabase.from(tbl).update({ [col]: null }).eq(col, u.id),
+          ),
+        );
 
         const { error: delErr } = await supabase.auth.admin.deleteUser(u.id);
         if (delErr) {
