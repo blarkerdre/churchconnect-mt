@@ -1,42 +1,54 @@
-# Plan: Magic-link check-in for Bible School attendance
+# Plan: Set "Bible School" status only on approval
 
-Let approved Bible School applicants check in without ever creating a password. If they're not signed in when they scan the QR, they enter their email and receive a one-time sign-in link that returns them straight to the check-in page.
+Right now the public registration edge function sets `members.membership_status = 'Bible School'` at submission time. Move that assignment so it only happens when an admin approves the application.
 
 ## Changes
 
-### 1. `src/pages/WoFBICheckin.jsx` — magic-link entry point
+### 1. `supabase/functions/public-wofbi-register/index.ts`
 
-Replace the current "Please sign in" branch (shown when `state.error === "not_authenticated"`) with an inline email form:
+- When creating a new `members` row for a public applicant, set `membership_status = 'Visitor'` instead of `'Bible School'`.
+  - Rationale: matches the semantic — they've expressed interest but aren't enrolled yet. `Visitor` is an existing status already used elsewhere in the app.
+- When linking to an existing member (same email in tenant), do **not** touch `membership_status`.
+- Keep everything else identical: `gdpr_consent`, `gdpr_consent_date`, tenant scoping, `wofbi_applications` insert with `status = 'submitted'`.
 
-- Input: email address (pre-validated).
-- Button: **Email me a sign-in link**.
-- Calls `supabase.auth.signInWithOtp({ email, options: { emailRedirectTo: <absolute /wofbi/checkin/:token URL>, shouldCreateUser: true } })`.
-  - `shouldCreateUser: true` covers applicants who never signed up — Supabase creates the auth user on first click.
-  - `emailRedirectTo` sends them right back to the QR page; `useAuth` picks up the new session and the RPC runs automatically.
-- On success: show "Check your email — we sent a sign-in link to <email>. Open it on this device."
-- On error: show the Supabase error message (rate-limit friendly).
+### 2. Approval trigger — no change needed
 
-Keep the existing "already signed in" flow and error branches unchanged.
+`trg_ensure_member_for_wofbi_app_ins/upd` (from the earlier migration) already inserts new members with `membership_status = 'Bible School'` on approval.
 
-### 2. Supabase Auth config
+Add one small change to that function: when approval fires and a member already exists **with status `'Visitor'`** (i.e. the applicant we created at submission time), update them to `'Bible School'`. Do **not** overwrite any other status (Active, First Timer, New Convert, etc. stay as-is).
 
-Ensure email OTP / magic link is enabled at the project level (it's on by default for email auth, so this is a verification step, not a code change). No `configure_auth` call needed unless it's been disabled.
+This is a `CREATE OR REPLACE FUNCTION` migration — no schema change.
 
-### 3. Nothing else changes
+### 3. Existing data
 
-- `wofbi_checkin` RPC is unchanged — the email-fallback + `user_id` backfill from the earlier migration already handles the case where the member row was created before the auth user existed.
-- No new tables, no trigger changes, no edge function.
-- Public registration and admin approval flows are untouched.
+Applicants who are currently sitting with `membership_status='Bible School'` but whose application is still `submitted` (not yet approved) should be reverted to `'Visitor'` so the new rule is consistent.
+
+Handled by a one-off data update:
+
+```
+UPDATE members m
+SET membership_status = 'Visitor'
+WHERE m.membership_status = 'Bible School'
+  AND EXISTS (
+    SELECT 1 FROM wofbi_applications a
+    WHERE a.member_id = m.id AND a.status = 'submitted'
+  )
+  AND NOT EXISTS (
+    SELECT 1 FROM wofbi_applications a2
+    WHERE a2.member_id = m.id AND a2.status = 'approved'
+  );
+```
+
+Members whose application is already approved keep `'Bible School'`. Members with other statuses are untouched.
+
+## Not changing
+
+- `wofbi_checkin` RPC.
+- Application form / QR / attendance flows.
+- Magic-link check-in.
+- Admin UI.
 
 ## Technical notes
 
-- `signInWithOtp` with `shouldCreateUser: true` is the standard Supabase magic-link flow. Auth emails route through the existing Lovable auth email pipeline (`auth-email-hook`), so branding/templates carry over automatically.
-- The redirect URL must be absolute: `` `${window.location.origin}/wofbi/checkin/${token}` ``.
-- Applicants who typo their email at the check-in page (different from the one on their application) will end up with a member row that can't be matched. The RPC's email fallback matches on the applicant's application email, so we should tell them on the form: "Use the same email you registered with."
-- Rate limit: Supabase caps auth emails per hour per project. If tenants run big Bible School sessions, `rate_limit_email_sent` may need raising later — flag but don't change now.
-
-## Out of scope
-
-- No auto-provisioning on approval.
-- No SMS OTP.
-- No change to the standard `/auth` sign-in page for members who *do* have passwords.
+- The trigger update is a `SECURITY DEFINER` function replacement; the trigger binding stays the same.
+- No new columns, no RLS changes, no GRANT changes.
