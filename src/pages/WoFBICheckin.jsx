@@ -54,9 +54,30 @@ export default function WoFBICheckin() {
     return () => { active = false; };
   }, [token, user, authLoading]);
 
-  const handleLogin = () => {
-    const returnTo = `/wofbi/checkin/${token}`;
-    navigate(`/auth?redirect=${encodeURIComponent(returnTo)}`);
+  const [magicEmail, setMagicEmail] = useState("");
+  const [magicSending, setMagicSending] = useState(false);
+  const [magicSent, setMagicSent] = useState(false);
+  const [magicError, setMagicError] = useState(null);
+
+  const handleSendMagicLink = async (e) => {
+    e?.preventDefault?.();
+    if (!magicEmail || !/^\S+@\S+\.\S+$/.test(magicEmail)) {
+      setMagicError("Please enter a valid email address.");
+      return;
+    }
+    setMagicSending(true);
+    setMagicError(null);
+    const redirectTo = `${window.location.origin}/wofbi/checkin/${token}`;
+    const { error } = await supabase.auth.signInWithOtp({
+      email: magicEmail.trim().toLowerCase(),
+      options: { emailRedirectTo: redirectTo, shouldCreateUser: true },
+    });
+    setMagicSending(false);
+    if (error) {
+      setMagicError(error.message);
+      return;
+    }
+    setMagicSent(true);
   };
 
   if (authLoading || state.loading) {
