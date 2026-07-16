@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogFooter } from "@/components/ui/dialog";
 import TenantDialogHeader from "@/components/ui/TenantDialogHeader";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Plus, QrCode, Trash2, Download, CheckCircle2, XCircle, Clock } from "lucide-react";
+import { Loader2, Plus, QrCode, Trash2, Download, CheckCircle2, XCircle, Clock, ChevronDown, ChevronRight, Pencil } from "lucide-react";
 import WoFBIAttendanceQRDialog from "./WoFBIAttendanceQRDialog";
 
 function pct(num, den) {
