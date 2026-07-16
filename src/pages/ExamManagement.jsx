@@ -1192,6 +1192,17 @@ function CourseRegistrationsView({ course }) {
                 <SelectItem value="admin">Admin</SelectItem>
               </SelectContent>
             </Select>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-[170px] h-8 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Statuses</SelectItem>
+                <SelectItem value="email_pending">Confirmation pending</SelectItem>
+                <SelectItem value="link_pending">Exam link pending</SelectItem>
+                <SelectItem value="link_sent">Exam link sent</SelectItem>
+              </SelectContent>
+            </Select>
             <div className="flex items-center gap-1">
               <label className="text-[11px] text-muted-foreground">From</label>
               <Input
