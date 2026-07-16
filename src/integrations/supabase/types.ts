@@ -1186,6 +1186,7 @@ export type Database = {
           member_id: string
           registered_at: string
           registration_email_sent_at: string | null
+          registration_origin: string | null
           session_id: string | null
           status: string
           student_number: string | null
@@ -1200,6 +1201,7 @@ export type Database = {
           member_id: string
           registered_at?: string
           registration_email_sent_at?: string | null
+          registration_origin?: string | null
           session_id?: string | null
           status?: string
           student_number?: string | null
@@ -1214,6 +1216,7 @@ export type Database = {
           member_id?: string
           registered_at?: string
           registration_email_sent_at?: string | null
+          registration_origin?: string | null
           session_id?: string | null
           status?: string
           student_number?: string | null
@@ -5948,6 +5951,7 @@ export type Database = {
           member_id: string | null
           notes: string | null
           phone: string | null
+          registration_origin: string | null
           reviewed_at: string | null
           reviewed_by: string | null
           status: string
@@ -5965,6 +5969,7 @@ export type Database = {
           member_id?: string | null
           notes?: string | null
           phone?: string | null
+          registration_origin?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
           status?: string
@@ -5982,6 +5987,7 @@ export type Database = {
           member_id?: string | null
           notes?: string | null
           phone?: string | null
+          registration_origin?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
           status?: string

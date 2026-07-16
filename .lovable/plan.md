@@ -1,56 +1,53 @@
-## Diagnosis so far
+## Why the source label flipped
 
-Your logs and DB confirm the app is doing its job correctly:
+In the Bible School registrations table (`ExamManagement.jsx`), the "Source" column is **not** stored on the registration. It's computed on the fly from the member record:
 
-- Every exam-link and confirmation email has a `pending` → `sent` pair in `email_send_log` (e.g. exam link to `mayodare@gmail.com` at 13:04, course-reg to `blarkerdre@yahoo.com` at 13:27).
-- Neither recipient is in `suppressed_emails`.
-- Domain `notify.app.churchmanagementsuite.org` is verified, queue is healthy (98 sent in last 7 days).
-- `provision-exam-account` returned `emailSent: true` for `mayodare@gmail.com`.
+```js
+r.members?.user_id ? "Member" : "QR / Public"
+```
 
-"Sent" means the email provider (Mailgun, via Lovable Emails) accepted the message. The user has already checked spam. That means the message was **dropped or silently filtered downstream of us** — a deliverability problem at the recipient's mail server, not a code bug.
+- If the linked `members` row has NO `user_id` → shown as **QR / Public**
+- If the linked `members` row HAS a `user_id` → shown as **Member**
 
-The 92 dead-lettered emails from earlier are a separate historical issue and were **not** retried.
+So the registration itself never changed. What changed is the underlying `members.user_id`:
 
-## Most likely causes (in order)
+1. Someone submits the public Bible School form via the QR link → a `members` row is created/matched with `user_id = null` → row shows **QR / Public**.
+2. Later, when an admin approves and clicks "Send Exam Link", the `provision-exam-account` Edge Function creates an auth user for that email and links it back to the member (`members.user_id` gets set).
+3. On the next reload the same registration is now classified as **Member**, because the derivation is live, not historical.
 
-1. **Gmail/Yahoo silently spam-binning or dropping** a new sender subdomain that has no reputation and no DMARC policy yet. This is by far the most common cause of "sent but never received" for Gmail/Yahoo.
-2. **Recipient-side rules / forwarding / catch-all filters** discarding before inbox.
-3. **Mailgun accepted the message but then bounced/deferred it** after acceptance — not visible in our `email_send_log`, only in Mailgun's own event log.
+The same flip happens if the applicant later signs up / accepts an invite with the same email — the member gets a `user_id` and every past registration for that member re-labels itself.
 
-## Investigation plan (no code changes yet)
+This is a display artifact, not data loss. But it makes reporting on "how did they originally register" unreliable, and it explains the surprise.
 
-**Step 1 — Pull actual delivery events from Mailgun** for the four `message_id`s below and report per-message status (`delivered`, `failed`, `rejected`, `complained`, or missing):
+## Proposed fix
 
-- `b68114a7-…` exam link → mayodare@gmail.com (13:04)
-- `9d7621a5-…` course-registration → blarkerdre@yahoo.com (13:27)
-- `4b3d01b9-…` welcome-registration → blarkerdre@yahoo.com (13:12)
-- `0a961e83-…` course-registration → mayodare@gmail.com (12:43)
+Capture the true origin at write time and use it for display/filtering, instead of inferring from a mutable field.
 
-This is the authoritative answer to "did it actually leave Mailgun and did the recipient's server accept it?". Done via a read-only Mailgun API call through the connector gateway — no code deployed.
+### Steps
 
-**Step 2 — Interpret events:**
+1. **Schema** — add an immutable origin column to `course_registrations`:
+   ```
+   registration_origin text  -- 'public_qr' | 'member_self' | 'admin' | 'import'
+   ```
+   Default `'admin'` for legacy rows. Backfill:
+   - rows created by `public-wofbi-register` with no auth header → `'public_qr'`
+   - rows created by `public-wofbi-register` with an authed user → `'member_self'`
+   - everything else → `'admin'`
+   (We can only backfill accurately going forward; historical rows use `members.user_id` as best-effort seed.)
 
-- If Mailgun shows `delivered` → the recipient's mail server accepted it; it's being filtered/hidden on their side (Gmail "All Mail", filters, forwarding). Ask the recipient to search all folders (not just Spam) for the sender domain, and check filters/forwarding rules.
-- If Mailgun shows `failed` / `rejected` / `bounced` → we get the exact SMTP reason (e.g. "550 5.7.26 unauthenticated mail is prohibited" → DMARC missing).
-- If Mailgun shows no event at all → the send didn't actually reach Mailgun despite our `sent` log row; escalate to Lovable support.
+2. **Write path** — `public-wofbi-register` sets `registration_origin` based on whether the request carried a valid Authorization header. `ExamManagement`'s admin add-member flow sets `'admin'`.
 
-**Step 3 — Deliverability posture check** (regardless of Step 2 result):
+3. **Read path** — `ExamManagement.jsx` derives the Source badge/CSV/filter from `r.registration_origin` instead of `r.members?.user_id`. Filter options become: All / Public (QR) / Member self-service / Admin.
 
-- Verify SPF, DKIM, and DMARC records on `notify.app.churchmanagementsuite.org` via a public MX lookup.
-- If DMARC is missing (very likely — Lovable delegates SPF/DKIM but DMARC is optional on the root), Gmail is much more likely to silently bin. This is a DNS record on `_dmarc.app.churchmanagementsuite.org` at the root registrar (NOT the delegated subdomain), so the user has to add it.
-- Confirm the "From" address (`noreply@notify.app.churchmanagementsuite.org`) aligns with the delegated sender domain — it does, per the current `send-transactional-email` config, so no alignment failure expected.
+4. **Keep old signal too** — still show a small secondary badge "Has account" when `members.user_id` is set, so admins can see who has logged in without conflating it with origin.
 
-## Deliverable
+### Out of scope
 
-A short report per message with:
-- Mailgun event status + reason
-- Whether the issue is app-side (none expected), sender-config-side (DMARC / warmup), or recipient-side (filters/forwarding).
-- Concrete next action (add DMARC TXT record, ask recipient to whitelist, or resend).
+- No changes to email delivery, provisioning, or grading.
+- No change to `wofbi_applications.source` (form vs direct) — that one is already stable.
 
-## Not in scope for this plan
+### Technical notes
 
-- Editing any Edge Function or template (the app is working correctly).
-- Re-triggering the 92 historical DLQ emails (separate task if you want it).
-- Switching email providers.
-
-Approve to run Step 1 (the Mailgun event lookup) and I'll follow through with the report and next steps.
+- File touched: `src/pages/ExamManagement.jsx` (source derivation at ~L1090, L1111, L1155, L1313; CSV at L1106).
+- Edge function touched: `supabase/functions/public-wofbi-register/index.ts` — insert `registration_origin`.
+- Migration: `ALTER TABLE public.course_registrations ADD COLUMN registration_origin text; CREATE INDEX ...; UPDATE ... backfill; ` plus a comment. RLS unchanged (column inherits table policies). No new GRANTs needed.

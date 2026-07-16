@@ -181,6 +181,7 @@ export default function WoFBIApplicationsTab() {
               course_id: app.course_id,
               status: "active",
               registered_at: new Date().toISOString(),
+              registration_origin: app.registration_origin || "public_qr",
             });
             if (insErr) throw insErr;
             enrolled = true;

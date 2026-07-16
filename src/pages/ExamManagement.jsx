@@ -895,7 +895,7 @@ function CourseRegistrationsView({ course }) {
     queryFn: async () => {
       let q = supabase
         .from("course_registrations")
-        .select("id, registered_at, member_id, student_number, status, approved_at, exam_link_sent_at, registration_email_sent_at, members(first_name, last_name, email, phone, user_id)")
+        .select("id, registered_at, member_id, student_number, status, approved_at, exam_link_sent_at, registration_email_sent_at, registration_origin, members(first_name, last_name, email, phone, user_id)")
         .eq("course_id", course.id)
         .in("status", ["approved", "active"])
         .order("registered_at", { ascending: false });
@@ -1086,9 +1086,20 @@ function CourseRegistrationsView({ course }) {
   const fromTs = dateFrom ? new Date(`${dateFrom}T00:00:00`).getTime() : null;
   const toTs = dateTo ? new Date(`${dateTo}T23:59:59.999`).getTime() : null;
 
+  // Derive Source: prefer immutable registration_origin; fall back to legacy inference for old rows.
+  const originOf = (r) => {
+    if (r.registration_origin) return r.registration_origin;
+    return r.members?.user_id ? "member_self" : "public_qr";
+  };
+  const originLabel = (o) => (
+    o === "admin" ? "Admin" : o === "member_self" ? "Member" : "QR / Public"
+  );
+
   const filteredRegistrations = registrations.filter(r => {
-    if (sourceFilter === "member" && !r.members?.user_id) return false;
-    if (sourceFilter === "public" && r.members?.user_id) return false;
+    const o = originOf(r);
+    if (sourceFilter === "member" && o !== "member_self") return false;
+    if (sourceFilter === "public" && o !== "public_qr") return false;
+    if (sourceFilter === "admin" && o !== "admin") return false;
     if (fromTs || toTs) {
       const ts = new Date(r.registered_at).getTime();
       if (fromTs && ts < fromTs) return false;
@@ -1108,7 +1119,7 @@ function CourseRegistrationsView({ course }) {
       `${r.members?.first_name || ""} ${r.members?.last_name || ""}`.trim(),
       r.members?.email || "",
       r.members?.phone || "",
-      r.members?.user_id ? "Member" : "QR / Public",
+      originLabel(originOf(r)),
       r.status || "pending",
       r.student_number || "",
       new Date(r.registered_at).toLocaleDateString(),
@@ -1151,8 +1162,9 @@ function CourseRegistrationsView({ course }) {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Sources</SelectItem>
-                <SelectItem value="member">Member</SelectItem>
                 <SelectItem value="public">QR / Public</SelectItem>
+                <SelectItem value="member">Member</SelectItem>
+                <SelectItem value="admin">Admin</SelectItem>
               </SelectContent>
             </Select>
             <div className="flex items-center gap-1">
@@ -1309,9 +1321,19 @@ function CourseRegistrationsView({ course }) {
                             <TableCell className="text-sm text-muted-foreground">{r.members?.email || "—"}</TableCell>
                             <TableCell className="text-sm text-muted-foreground">{r.members?.phone || "—"}</TableCell>
                             <TableCell>
-                              <Badge variant={r.members?.user_id ? "default" : "outline"}>
-                                {r.members?.user_id ? "Member" : "QR / Public"}
-                              </Badge>
+                              {(() => {
+                                const o = originOf(r);
+                                return (
+                                  <div className="flex items-center gap-1">
+                                    <Badge variant={o === "public_qr" ? "outline" : "default"}>
+                                      {originLabel(o)}
+                                    </Badge>
+                                    {r.members?.user_id && o === "public_qr" && (
+                                      <Badge variant="secondary" className="text-[10px]">Has account</Badge>
+                                    )}
+                                  </div>
+                                );
+                              })()}
                             </TableCell>
                             <TableCell>
                               <Badge variant={isApproved ? "default" : "secondary"} className={isApproved ? "bg-emerald-600 hover:bg-emerald-600" : ""}>
@@ -1626,7 +1648,7 @@ function MemberExamsView({ memberId, memberRecord, courses, loading }) {
 
   const registerMutation = useMutation({
     mutationFn: async (courseId) => {
-      const { error } = await supabase.from("course_registrations").insert(withTenant({ member_id: memberId, course_id: courseId }));
+      const { error } = await supabase.from("course_registrations").insert(withTenant({ member_id: memberId, course_id: courseId, registration_origin: "member_self" }));
       if (error) throw error;
       return courseId;
     },
