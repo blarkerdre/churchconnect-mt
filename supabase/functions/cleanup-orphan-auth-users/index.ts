@@ -69,9 +69,14 @@ Deno.serve(async (req) => {
           continue;
         }
 
-        // Clean up account-level rows first (defensive)
+        // Clean up account-level rows first (defensive) and clear any FKs
+        // that would block the auth deletion. The user has no tenant_memberships
+        // at this point, so we clear across all tenants unconditionally.
         await supabase.from("user_roles").delete().eq("user_id", u.id);
         await supabase.from("profiles").delete().eq("user_id", u.id);
+        await supabase.from("transportation").update({ driver_user_id: null }).eq("driver_user_id", u.id);
+        await supabase.from("transportation").update({ user_id: null }).eq("user_id", u.id);
+        await supabase.from("members").update({ user_id: null }).eq("user_id", u.id);
 
         const { error: delErr } = await supabase.auth.admin.deleteUser(u.id);
         if (delErr) {
