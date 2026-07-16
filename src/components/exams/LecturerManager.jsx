@@ -30,6 +30,7 @@ export default function LecturerManager() {
   const [feedbackLecturer, setFeedbackLecturer] = useState(null);
 
   const ratingEnabled = !!currentTenant?.settings?.wofbi_lecturer_rating_enabled;
+  const qcEnabled = !!currentTenant?.settings?.wofbi_qc_enabled;
 
   const { data: lecturers = [], isLoading } = useQuery({
     queryKey: ["lecturers", tenantId],
