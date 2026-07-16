@@ -1626,7 +1626,7 @@ function MemberExamsView({ memberId, memberRecord, courses, loading }) {
 
   const registerMutation = useMutation({
     mutationFn: async (courseId) => {
-      const { error } = await supabase.from("course_registrations").insert(withTenant({ member_id: memberId, course_id: courseId }));
+      const { error } = await supabase.from("course_registrations").insert(withTenant({ member_id: memberId, course_id: courseId, registration_origin: "member_self" }));
       if (error) throw error;
       return courseId;
     },
