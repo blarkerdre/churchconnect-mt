@@ -143,7 +143,7 @@ export default function RateLecturerDialog({ open, onOpenChange }) {
       if (data) {
         setForm((f) => ({
           ...f,
-          level: data.level || f.level,
+          
           session_description: data.session_description || "",
           delivery: data.delivery || "",
           time_keeping: data.time_keeping || "",
@@ -154,10 +154,8 @@ export default function RateLecturerDialog({ open, onOpenChange }) {
           comments: data.comments || "",
         }));
       } else {
-        const lect = lecturers.find((l) => l.id === form.lecturer_id);
         setForm((f) => ({
           ...f,
-          level: f.level || lect?.level || "",
           session_description: "",
           delivery: "",
           time_keeping: "",
