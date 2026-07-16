@@ -1684,55 +1684,28 @@ function MemberExamsView({ memberId, memberRecord, courses, loading }) {
         throw new Error("Your member profile is missing an email address. Please update your profile first.");
       }
 
-      // Already enrolled?
-      {
-        let q = supabase
-          .from("course_registrations")
-          .select("id")
-          .eq("member_id", memberId)
-          .eq("course_id", courseId);
-        if (tenantId) q = q.eq("tenant_id", tenantId);
-        const { data } = await q.maybeSingle();
-        if (data) {
-          const err = new Error("You are already enrolled in this course.");
-          err.__friendly = true;
-          throw err;
-        }
-      }
-
-      // Existing pending/approved application?
-      {
-        let q = supabase
-          .from("wofbi_applications")
-          .select("id, status")
-          .eq("member_id", memberId)
-          .eq("course_id", courseId)
-          .in("status", ["submitted", "pending", "approved"]);
-        if (tenantId) q = q.eq("tenant_id", tenantId);
-        const { data } = await q.maybeSingle();
-        if (data) {
-          const err = new Error(
-            data.status === "approved"
-              ? "Your application for this course has already been approved."
-              : "Your application for this course is already submitted and awaiting review."
-          );
-          err.__friendly = true;
-          throw err;
-        }
-      }
-
-      const { error } = await supabase.from("wofbi_applications").insert(withTenant({
-        member_id: memberId,
-        course_id: courseId,
-        first_name: memberRecord.first_name || "",
-        last_name: memberRecord.last_name || "",
-        email: memberRecord.email,
-        phone: memberRecord.phone || null,
-        status: "submitted",
-        registration_origin: "member_self",
-        answers: {},
-      }));
+      // Delegate to the public-wofbi-register edge function so the same code path
+      // that handles QR / public form submissions also handles member self-register.
+      // The function detects the signed-in user via the Authorization header and
+      // stamps registration_origin = "member_self" automatically.
+      const { data, error } = await supabase.functions.invoke("public-wofbi-register", {
+        body: {
+          tenant_id: tenantId,
+          course_id: courseId,
+          first_name: memberRecord.first_name || "",
+          last_name: memberRecord.last_name || "",
+          email: memberRecord.email,
+          phone: memberRecord.phone || null,
+          gdpr_consent: true,
+          answers: {},
+        },
+      });
       if (error) throw error;
+      if (data?.error) {
+        const err = new Error(data.error);
+        err.__friendly = true;
+        throw err;
+      }
       return courseId;
     },
     onSuccess: () => {
