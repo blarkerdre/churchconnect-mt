@@ -132,6 +132,26 @@ export default function QcCheckDialog({ open, onOpenChange, editRecord = null })
     },
   });
 
+  // Training Rep members for QC Team Member dropdown
+  const { data: trainingReps = [] } = useQuery({
+    queryKey: ["training-rep-members", tenantId],
+    enabled: !!tenantId && open,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("members")
+        .select("id, first_name, last_name, church_unit")
+        .eq("tenant_id", tenantId)
+        .not("church_unit", "is", null)
+        .ilike("church_unit", "%Training Rep%")
+        .order("first_name");
+      if (error) throw error;
+      return (data || []).filter((m) => {
+        const units = (m.church_unit || "").split(",").map((u) => u.trim().toLowerCase());
+        return units.includes("training rep");
+      });
+    },
+  });
+
   useEffect(() => {
     if (!open) return;
     if (editRecord) {
