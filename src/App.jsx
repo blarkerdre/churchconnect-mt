@@ -286,6 +286,8 @@ function AppRoutes() {
         <Route path="/t/:tenantSlug/auth" element={<Auth />} />
         <Route path="/t/:tenantSlug/register" element={<PublicRegistration />} />
         <Route path="/t/:tenantSlug/bible-school-register" element={<PublicWoFBIRegistration />} />
+        <Route path="/wofbi/checkin/:token" element={<WoFBICheckin />} />
+        <Route path="/t/:tenantSlug/wofbi/checkin/:token" element={<WoFBICheckin />} />
 
         {/* Public reset-password routes */}
         <Route path="/reset-password" element={<ResetPassword />} />
