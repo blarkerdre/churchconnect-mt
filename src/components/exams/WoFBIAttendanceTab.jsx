@@ -223,10 +223,35 @@ export default function WoFBIAttendanceTab() {
   });
 
   const markStatus = useMutation({
-    mutationFn: async ({ registration, status }) => {
+    mutationFn: async ({ registration, status, action }) => {
       if (!rosterSession) throw new Error("No session");
-      // Find existing
       const existing = rosterRecords.find((r) => r.registration_id === registration.id);
+
+      // Time-out actions
+      if (action === "set_time_out") {
+        if (!existing) throw new Error("Set a time-in first");
+        const now = new Date();
+        const inAt = existing.checked_in_at ? new Date(existing.checked_in_at) : now;
+        const duration = Math.max(0, Math.round((now - inAt) / 60000));
+        const { error } = await supabase
+          .from("wofbi_attendance_records")
+          .update({ checked_out_at: now.toISOString(), duration_minutes: duration })
+          .eq("id", existing.id)
+          .eq("tenant_id", tenantId);
+        if (error) throw error;
+        return;
+      }
+      if (action === "clear_time_out") {
+        if (!existing) return;
+        const { error } = await supabase
+          .from("wofbi_attendance_records")
+          .update({ checked_out_at: null, duration_minutes: null })
+          .eq("id", existing.id)
+          .eq("tenant_id", tenantId);
+        if (error) throw error;
+        return;
+      }
+
       if (status === "absent") {
         if (existing) {
           const { error } = await supabase
@@ -241,7 +266,7 @@ export default function WoFBIAttendanceTab() {
       if (existing) {
         const { error } = await supabase
           .from("wofbi_attendance_records")
-          .update({ status, checked_in_at: new Date().toISOString() })
+          .update({ status, checked_in_at: existing.checked_in_at || new Date().toISOString() })
           .eq("id", existing.id)
           .eq("tenant_id", tenantId);
         if (error) throw error;
@@ -252,6 +277,7 @@ export default function WoFBIAttendanceTab() {
             registration_id: registration.id,
             member_id: registration.member_id,
             status,
+            checked_in_at: new Date().toISOString(),
             source: "manual",
           })
         );
