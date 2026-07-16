@@ -896,6 +896,7 @@ function CourseRegistrationsView({ course }) {
   const canManageNumbers = !!(isAdmin || isTenantAdmin || isTenantOwner);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [sourceFilter, setSourceFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
@@ -1117,6 +1118,13 @@ function CourseRegistrationsView({ course }) {
     if (sourceFilter === "member" && o !== "member_self") return false;
     if (sourceFilter === "public" && o !== "public_qr") return false;
     if (sourceFilter === "admin" && o !== "admin") return false;
+    if (statusFilter !== "all") {
+      const emailSent = !!r.registration_email_sent_at;
+      const linkSent = !!r.exam_link_sent_at;
+      if (statusFilter === "email_pending" && emailSent) return false;
+      if (statusFilter === "link_pending" && (!emailSent || linkSent)) return false;
+      if (statusFilter === "link_sent" && !linkSent) return false;
+    }
     if (fromTs || toTs) {
       const ts = new Date(r.registered_at).getTime();
       if (fromTs && ts < fromTs) return false;
@@ -1182,6 +1190,17 @@ function CourseRegistrationsView({ course }) {
                 <SelectItem value="public">QR / Public</SelectItem>
                 <SelectItem value="member">Member</SelectItem>
                 <SelectItem value="admin">Admin</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-[170px] h-8 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Statuses</SelectItem>
+                <SelectItem value="email_pending">Confirmation pending</SelectItem>
+                <SelectItem value="link_pending">Exam link pending</SelectItem>
+                <SelectItem value="link_sent">Exam link sent</SelectItem>
               </SelectContent>
             </Select>
             <div className="flex items-center gap-1">
@@ -1420,16 +1439,21 @@ function CourseRegistrationsView({ course }) {
                                     <CheckCircle2 className="h-3.5 w-3.5" /> Approve
                                   </Button>
                                 )}
-                                {canManageNumbers && eligible && (
-                                  <Button size="sm" variant="outline" className="h-7 gap-1 text-xs"
-                                    onClick={() => sendExamLinkMutation.mutate(r.id)}
-                                    disabled={isSending}
-                                    title="Email the applicant a one-click sign-in link to write the exam."
-                                  >
-                                    {isSending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Mail className="h-3.5 w-3.5" />}
-                                    {alreadySent ? "Resend link" : "Send exam link"}
-                                  </Button>
-                                )}
+                                {canManageNumbers && eligible && (() => {
+                                  const confirmationSent = !!r.registration_email_sent_at;
+                                  return (
+                                    <Button size="sm" variant="outline" className="h-7 gap-1 text-xs"
+                                      onClick={() => sendExamLinkMutation.mutate(r.id)}
+                                      disabled={isSending || !confirmationSent}
+                                      title={confirmationSent
+                                        ? "Email the applicant a one-click sign-in link to write the exam."
+                                        : "Send the registration confirmation email first."}
+                                    >
+                                      {isSending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Mail className="h-3.5 w-3.5" />}
+                                      {alreadySent ? "Resend exam link" : "Send exam link"}
+                                    </Button>
+                                  );
+                                })()}
                                 {canManageNumbers && eligible && (() => {
                                   const regEmailSent = !!r.registration_email_sent_at;
                                   const hasNumber = !!r.student_number;
