@@ -1,47 +1,34 @@
+# Plan: Auto-create member on Bible School application approval
 
-## Goal
-1. Surface each student's **time-in and time-out per session** on the attendance report.
-2. Let admins **edit and delete** individual attendance records straight from the report.
+Enable non-member applicants (registered via the public Bible School application form) to use the attendance check-in after approval.
 
-## Report UI changes (`WoFBIAttendanceTab.jsx`)
+## Approach
 
-Replace the current single-row-per-student summary with an expandable report:
+When an admin approves a `wofbi_applications` row, ensure a `members` row exists in the same tenant for that applicant. This satisfies the `wofbi_checkin` RPC's `not_a_member` gate without changing the RPC.
 
-- **Summary row per student** (existing columns: #, Name, Present, Late, Absent, Total hours, Missing out, Attendance %) plus a chevron toggle.
-- **Expanded panel per student**: a sub-table listing every course session in chronological order with columns:
-  - Session date
-  - Session title
-  - Status (Present / Late / Absent)
-  - Time in
-  - Time out
-  - Duration
-  - Actions: **Edit** and **Delete** (admin only)
+## Changes
 
-The expanded rows read from the same `allRecords` query, which already returns `checked_in_at`, `checked_out_at`, `duration_minutes` (extended in this plan to also include `id`).
+1. **Migration – trigger on `wofbi_applications` approval**
+   - Create a `SECURITY DEFINER` function `ensure_member_for_wofbi_application()` that runs `AFTER UPDATE` when `status` transitions to `approved` (and `AFTER INSERT` when status is already `approved`).
+   - Logic:
+     - If `application.member_id` is set and that member exists in the same tenant → no-op.
+     - Else, look up an existing `members` row in the tenant by `email` (case-insensitive). If found, link it back onto the application (`member_id`).
+     - Else, insert a new `members` row with: `first_name`, `last_name`, `email`, `phone`, `tenant_id`, `membership_status = 'Bible School'`, `gdpr_consent = true`, `gdpr_consent_date = now()`. Save the new id onto `application.member_id`.
+   - Attach the trigger to `wofbi_applications`.
+   - `search_path = public` on the function.
 
-CSV export unchanged (stays at student summary level).
+2. **Course registration linkage**
+   - On approval, also ensure a `course_registrations` row exists for `(tenant_id, course_id, member_id)` with an approved status (existing approval flow likely already does this; only add if missing to keep the second RPC gate satisfied).
 
-## Edit dialog
+3. **Backfill**
+   - One-time SQL inside the same migration: for every `wofbi_applications` row already `approved` without a valid `member_id`, run the same ensure-member logic so existing approved applicants can check in immediately.
 
-New small dialog `WoFBIAttendanceRecordEditDialog` inside the tab file:
-- Fields: Status (present / late / absent), Time in (`datetime-local`), Time out (`datetime-local`, optional).
-- On save:
-  - If status = **absent** → delete the record.
-  - Else upsert into `wofbi_attendance_records` with the given `checked_in_at`/`checked_out_at`, recompute `duration_minutes` client-side (`max(0, round((out - in)/60000))`, or `null` when no time-out), keep `session_id`, `registration_id`, `member_id`, `tenant_id`, `source = "manual"`.
-- Guarded by `isAdmin` (already enforced at the tab level).
+## Not changing
 
-## Delete action
+- `wofbi_checkin` RPC (gates remain).
+- The public registration Edge Function (already creates a member on submission in most paths; the trigger just covers gaps and pre-existing rows).
+- Attendance UI.
 
-Inline **Delete** button on each expanded row → confirm dialog (`window.confirm`) → `delete from wofbi_attendance_records where id = ? and tenant_id = ?`. Invalidate `wofbi-att-all-records`, `wofbi-att-roster-records`, `wofbi-att-record-counts`.
+## Notes
 
-## Query tweak
-
-Extend the `allRecords` select to include `id, session_id, registration_id, status, checked_in_at, checked_out_at, duration_minutes` so edit/delete can target rows directly (currently missing `id`).
-
-## Out of scope
-- Bulk edit / bulk delete.
-- Editing session-level fields from the report (that stays in the sessions table).
-- Server-side audit trail (existing tenant-scoped RLS + logs remain as they are).
-
-## Files touched
-- `src/components/exams/WoFBIAttendanceTab.jsx` — expandable report rows, edit dialog, delete mutation, `allRecords` select fix.
+- No auth user is created here — a member row without `user_id` is enough for the RPC's member check when it matches by `member_id`. If the RPC strictly requires `user_id` match, I'll adjust by matching on email/member link. I'll verify the RPC's exact member lookup before writing the migration and adapt if needed.
