@@ -1119,7 +1119,7 @@ function CourseRegistrationsView({ course }) {
       `${r.members?.first_name || ""} ${r.members?.last_name || ""}`.trim(),
       r.members?.email || "",
       r.members?.phone || "",
-      r.members?.user_id ? "Member" : "QR / Public",
+      originLabel(originOf(r)),
       r.status || "pending",
       r.student_number || "",
       new Date(r.registered_at).toLocaleDateString(),
