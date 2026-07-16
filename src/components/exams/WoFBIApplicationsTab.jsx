@@ -29,6 +29,12 @@ const SOURCE_LABEL = {
   direct: "Direct enrolment",
 };
 
+const ORIGIN_LABEL = {
+  public_qr: "QR / Public",
+  member_self: "Member self-register",
+  admin: "Admin",
+};
+
 export default function WoFBIApplicationsTab() {
   const qc = useQueryClient();
   const { user, isTenantAdmin, isTenantOwner, isAdmin } = useAuth();
@@ -707,9 +713,14 @@ export default function WoFBIApplicationsTab() {
                     <TableCell className="text-xs">{a.email}</TableCell>
                     <TableCell className="text-xs">{a.course?.name || "—"}</TableCell>
                     <TableCell>
-                      <Badge variant={a.source === "direct" ? "outline" : "secondary"} className="text-[10px]">
-                        {SOURCE_LABEL[a.source]}
-                      </Badge>
+                      <div className="flex flex-col gap-1">
+                        <Badge variant={a.source === "direct" ? "outline" : "secondary"} className="text-[10px]">
+                          {SOURCE_LABEL[a.source]}
+                        </Badge>
+                        {a.source === "form" && a.registration_origin && ORIGIN_LABEL[a.registration_origin] && (
+                          <span className="text-[10px] text-muted-foreground">{ORIGIN_LABEL[a.registration_origin]}</span>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell><Badge variant={STATUS_VARIANT[a.status] || "secondary"} className="capitalize">{a.status}</Badge></TableCell>
                     <TableCell className="text-right">
