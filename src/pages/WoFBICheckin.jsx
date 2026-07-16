@@ -72,13 +72,6 @@ export default function WoFBICheckin() {
           <CardTitle className="text-center">Bible School Check-in</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4 text-center">
-          {state.result && (
-            <>
-              {state.result.status === "late" ? (
-                <Clock className="h-12 w-12 mx-auto text-amber-500" />
-              ) : (
-                <CheckCircle2 className="h-12 w-12 mx-auto text-green-600" />
-              )}
           {state.result && (() => {
             const r = state.result;
             const isOut = r.action === "checked_out";
