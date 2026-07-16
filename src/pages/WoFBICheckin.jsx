@@ -124,11 +124,43 @@ export default function WoFBICheckin() {
               </>
             );
           })()}
-          {state.error === "not_authenticated" && (
+          {state.error === "not_authenticated" && !magicSent && (
+            <form onSubmit={handleSendMagicLink} className="space-y-3 text-left">
+              <Mail className="h-12 w-12 mx-auto text-primary" />
+              <p className="text-sm text-center">
+                Enter your email to receive a one-time sign-in link. No password needed.
+              </p>
+              <p className="text-xs text-center text-muted-foreground">
+                Use the same email you registered with.
+              </p>
+              <div className="space-y-1.5">
+                <Label htmlFor="magic-email">Email</Label>
+                <Input
+                  id="magic-email"
+                  type="email"
+                  autoComplete="email"
+                  inputMode="email"
+                  required
+                  value={magicEmail}
+                  onChange={(e) => setMagicEmail(e.target.value)}
+                  placeholder="you@example.com"
+                />
+              </div>
+              {magicError && <p className="text-xs text-red-600">{magicError}</p>}
+              <Button type="submit" className="w-full" disabled={magicSending}>
+                {magicSending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                Email me a sign-in link
+              </Button>
+            </form>
+          )}
+          {state.error === "not_authenticated" && magicSent && (
             <>
-              <LogIn className="h-12 w-12 mx-auto text-primary" />
-              <p className="text-sm">Please sign in to check in.</p>
-              <Button className="w-full" onClick={handleLogin}>Sign in</Button>
+              <CheckCheck className="h-12 w-12 mx-auto text-green-600" />
+              <p className="text-sm font-semibold">Check your email</p>
+              <p className="text-xs text-muted-foreground">
+                We sent a sign-in link to <span className="font-medium">{magicEmail}</span>. Open it
+                on this device to complete check-in.
+              </p>
             </>
           )}
           {state.error && state.error !== "not_authenticated" && (
