@@ -61,7 +61,7 @@ const emptyForm = {
   course_id: "",
   subject_id: "",
   lecturer_id: "",
-  level: "",
+  
   session_description: "",
   delivery: "",
   time_keeping: "",
