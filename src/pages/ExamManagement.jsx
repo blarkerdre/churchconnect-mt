@@ -886,6 +886,10 @@ export default function ExamManagement() {
         <TabsContent value="app-form" className="space-y-4 mt-4">
           <WoFBIApplicationFormEditor />
         </TabsContent>
+
+        <TabsContent value="attendance" className="space-y-4 mt-4">
+          <WoFBIAttendanceTab />
+        </TabsContent>
       </Tabs>
     </div>
   );
