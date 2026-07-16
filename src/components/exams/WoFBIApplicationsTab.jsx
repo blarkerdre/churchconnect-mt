@@ -26,8 +26,13 @@ const STATUS_VARIANT = {
 
 const SOURCE_LABEL = {
   form: "Application form",
-  member_self: "Member self-register",
   direct: "Direct enrolment",
+};
+
+const ORIGIN_LABEL = {
+  public_qr: "QR / Public",
+  member_self: "Member self-register",
+  admin: "Admin",
 };
 
 export default function WoFBIApplicationsTab() {
