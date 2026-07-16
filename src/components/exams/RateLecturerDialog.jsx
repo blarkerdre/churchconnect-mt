@@ -61,7 +61,7 @@ const emptyForm = {
   course_id: "",
   subject_id: "",
   lecturer_id: "",
-  level: "",
+  
   session_description: "",
   delivery: "",
   time_keeping: "",
@@ -143,7 +143,7 @@ export default function RateLecturerDialog({ open, onOpenChange }) {
       if (data) {
         setForm((f) => ({
           ...f,
-          level: data.level || f.level,
+          
           session_description: data.session_description || "",
           delivery: data.delivery || "",
           time_keeping: data.time_keeping || "",
@@ -154,10 +154,8 @@ export default function RateLecturerDialog({ open, onOpenChange }) {
           comments: data.comments || "",
         }));
       } else {
-        const lect = lecturers.find((l) => l.id === form.lecturer_id);
         setForm((f) => ({
           ...f,
-          level: f.level || lect?.level || "",
           session_description: "",
           delivery: "",
           time_keeping: "",
@@ -185,7 +183,7 @@ export default function RateLecturerDialog({ open, onOpenChange }) {
         lecturer_id: form.lecturer_id,
         member_id: myMember?.id || null,
         submitted_by: user.id,
-        level: form.level.trim() || null,
+        level: null,
         session_description: form.session_description || null,
         delivery: form.delivery || null,
         time_keeping: form.time_keeping || null,
@@ -263,10 +261,6 @@ export default function RateLecturerDialog({ open, onOpenChange }) {
                     ))}
                   </SelectContent>
                 </Select>
-              </div>
-              <div>
-                <Label>Level</Label>
-                <Input value={form.level} maxLength={100} placeholder="e.g. BFC / BCC / LCC / LDC" onChange={(e) => set("level", e.target.value)} />
               </div>
             </div>
 
