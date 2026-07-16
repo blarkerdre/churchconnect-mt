@@ -1086,9 +1086,20 @@ function CourseRegistrationsView({ course }) {
   const fromTs = dateFrom ? new Date(`${dateFrom}T00:00:00`).getTime() : null;
   const toTs = dateTo ? new Date(`${dateTo}T23:59:59.999`).getTime() : null;
 
+  // Derive Source: prefer immutable registration_origin; fall back to legacy inference for old rows.
+  const originOf = (r) => {
+    if (r.registration_origin) return r.registration_origin;
+    return r.members?.user_id ? "member_self" : "public_qr";
+  };
+  const originLabel = (o) => (
+    o === "admin" ? "Admin" : o === "member_self" ? "Member" : "QR / Public"
+  );
+
   const filteredRegistrations = registrations.filter(r => {
-    if (sourceFilter === "member" && !r.members?.user_id) return false;
-    if (sourceFilter === "public" && r.members?.user_id) return false;
+    const o = originOf(r);
+    if (sourceFilter === "member" && o !== "member_self") return false;
+    if (sourceFilter === "public" && o !== "public_qr") return false;
+    if (sourceFilter === "admin" && o !== "admin") return false;
     if (fromTs || toTs) {
       const ts = new Date(r.registered_at).getTime();
       if (fromTs && ts < fromTs) return false;
