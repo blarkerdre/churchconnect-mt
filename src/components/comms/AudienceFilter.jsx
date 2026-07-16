@@ -20,6 +20,7 @@ const STATUS_OPTIONS = [
   { value: "Inactive", label: "Inactive" },
   { value: "New Convert", label: "New Convert" },
   { value: "Visitor", label: "Visitor" },
+  { value: "Bible School", label: "Bible School" },
 ];
 
 const ACCOUNT_OPTIONS = [
