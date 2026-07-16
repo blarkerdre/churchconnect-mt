@@ -1,46 +1,67 @@
 ## Goal
 
-Unify the Bible School registration flow so a signed-in member registering from the Bible School page follows the same path as a public form/QR applicant:
+Unify the Bible School approve → email → exam-link flow so it works the same whether the applicant came via the application form (toggle ON) or via direct/member/public registration (toggle OFF). Also add status filters on both the Applications and Registrations pages.
 
-1. Self-register → creates a `wofbi_applications` row (status `submitted`, `registration_origin = 'member_self'`), NOT a `course_registrations` row.
-2. Admin reviews in **Bible School → Applications**, approves → the existing approval code inserts `course_registrations` (carrying the `member_self` origin).
-3. Admin then sends/resends the **confirmation email** and **exam sign-in link** from **Registrations** using the buttons that already exist.
+## Flow (single source of truth)
+
+For every Bible School row, admin action follows the same three-step lifecycle, driven by `course_registrations` timestamps:
+
+```text
+[Submitted / Pending]
+      │  Approve button
+      ▼
+[Approved]  → automatically sends the registration confirmation email (with student number)
+              button flips to "Resend confirmation"
+              "Send exam link" button becomes enabled
+      │  Send exam link
+      ▼
+[Exam link sent]
+              button flips to "Resend exam link"
+```
+
+State is derived from row fields already present:
+- `status` in ("approved","active") → step 2 reached
+- `registration_email_sent_at` set → confirmation has been sent (show Resend)
+- `exam_link_sent_at` set → exam link has been sent (show Resend)
 
 ## Changes
 
-### 1. `src/pages/ExamManagement.jsx` — `registerMutation` (member self-register on Bible School page)
-Replace the direct `course_registrations` insert with an insert into `wofbi_applications`:
-- Fields: `tenant_id`, `course_id`, `member_id`, `first_name`, `last_name`, `email`, `phone` (from the signed-in member's row), `status: 'submitted'`, `registration_origin: 'member_self'`, `answers: {}`.
-- Guard against duplicates: if a `submitted` or `approved` application already exists for `(tenant_id, course_id, email)`, or a `course_registrations` row already exists for `(member_id, course_id)`, show a friendly toast ("Application already submitted" / "Already enrolled") and do not insert.
-- Success toast copy: "Application submitted — you'll be notified once it's approved."
-- Invalidate `["wofbi-applications"]` and `["my-course-registrations"]`.
+### 1. `src/components/exams/WoFBIApplicationsTab.jsx` — auto-send confirmation on Approve
+In `updateStatus` mutation, when `status === "approved"`:
+- **Form path (existing):** after creating the `course_registrations` row (or detecting one already exists), fetch its `id` and invoke `supabase.functions.invoke("send-student-number-email", { body: { registration_id } })`. This is the exact function the Registrations tab already calls on approve — it stamps `registration_email_sent_at` and includes the student number. Surface `emailError` in the success toast the same way `approveMutation` in `ExamManagement.jsx` (lines 927–957) does.
+- **Direct path:** after updating the `course_registrations` row to `approved`, do the same invocation so direct/member/public rows get the identical confirmation email.
 
-Also update the "Registered" badge logic in the member-facing course list so it reflects application status too:
-- Show **"Application pending"** when the member has a `submitted` application for that course.
-- Show **"Registered"** when a `course_registrations` row exists (unchanged).
-- Query `wofbi_applications` (course_id, status) alongside the existing `my-course-registrations` query and disable the Register button when either applies.
+No change to what gets sent for `rejected`/other statuses.
 
-### 2. `src/components/exams/WoFBIApplicationsTab.jsx` — no logic change needed
-The approval path (lines 166–199) already:
-- Creates `course_registrations` with `registration_origin: app.registration_origin || 'public_qr'`.
-- Emits audit + invalidates the Registrations query.
+Remove the outdated comment at lines 225–227 that says "No email is sent on approval here."
 
-Because member self-registration will now carry `registration_origin: 'member_self'` on the application row, approved rows land in Registrations with **Source = Member**, and the Registrations tab's existing Send/Resend confirmation and Send/Resend exam link buttons work identically to Public/QR rows.
+### 2. Applications tab — add status filter clarity
+The status filter already exists (`statusFilter` with `all/submitted/approved/rejected`). Extend it with two derived options that read the joined `course_registrations` row for approved applications so admins can find rows stuck between steps:
+- **"Approved — email pending"** (approved but `registration_email_sent_at` is null)
+- **"Exam link sent"** (`exam_link_sent_at` is set)
+- **"Exam link pending"** (approved + email sent, but no exam link yet)
 
-We will:
-- Update `SOURCE_LABEL` (line 29) to include `member_self: "Member self-register"` so member applications are labelled clearly in the Applications tab.
-- Extend the source filter dropdown (line 560) with a `member_self` option.
+Implementation: in the existing `regRows` query already fetched by this tab, also select `registration_email_sent_at` and `exam_link_sent_at`. Build a lookup by `(member_id, course_id)` and by `registration_id` for direct rows; use it in `statusMatches` for the new options.
 
-### 3. No DB migration
-`wofbi_applications` already has `registration_origin`, `member_id`, `answers`, and the `submitted/approved` status vocabulary. No schema change needed.
+### 3. `src/pages/ExamManagement.jsx` — Registrations tab
+- **Auto-send on approve:** already implemented in `approveMutation` (lines 927–957). No change needed.
+- **Button state logic (lines ~1398–1450):** already correct — `alreadySent = sentLinkIds.has(r.id) || !!r.exam_link_sent_at` flips exam-link label, and `regEmailSent = !!r.registration_email_sent_at` flips confirmation label. Verify and leave as-is.
+- **Gate "Send exam link"** so it's only enabled once `registration_email_sent_at` is set (or the row's `status` is `approved/active` AND the confirmation button has been used). Show a small helper tooltip "Send confirmation email first" when disabled.
+- **Add status filter** to the header toolbar (next to the existing Source/date filters):
+  - `all` (default)
+  - `approved_email_pending` — no `registration_email_sent_at`
+  - `email_sent_link_pending` — email sent, no `exam_link_sent_at`
+  - `link_sent` — `exam_link_sent_at` set
+  Apply in the existing `filteredRegistrations` chain (lines 1115–1131).
 
-### 4. Out of scope
-- No changes to `public-wofbi-register` edge function.
-- No changes to `send-course-registration-email` edge function.
-- No changes to the exam-link sender.
-- No new columns, no RLS changes.
-- Direct admin enrolments (if any exist via other paths) are untouched.
+### 4. No DB migration
+All required columns (`registration_email_sent_at`, `exam_link_sent_at`, `student_number`, `approved_at`, `status`, `registration_origin`) already exist on `course_registrations`. No edge-function changes required — `send-student-number-email` and `provision-exam-account` are reused.
+
+### 5. Out of scope
+- No changes to `send-student-number-email`, `send-course-registration-email`, `provision-exam-account`, or `approve_course_registration` RPC.
+- No changes to the public registration edge function or member-self registration flow.
+- No changes to the delete flows or exam-taking flows.
 
 ## Files touched
-- `src/pages/ExamManagement.jsx` (member-side `registerMutation` + pending-application query + button state)
-- `src/components/exams/WoFBIApplicationsTab.jsx` (source label + filter option)
+- `src/components/exams/WoFBIApplicationsTab.jsx` — auto-send confirmation on approve (both form + direct paths); extended status filter with email/link-pending options; select the two timestamp columns in `regRows`.
+- `src/pages/ExamManagement.jsx` — add status filter to Registrations toolbar; disable "Send exam link" until confirmation email has been sent.
