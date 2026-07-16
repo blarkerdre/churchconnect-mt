@@ -162,6 +162,7 @@ export default function QcCheckDialog({ open, onOpenChange, editRecord = null })
         exam_subject_id: editRecord.exam_subject_id || "",
         check_date: editRecord.check_date || new Date().toISOString().slice(0, 10),
         tier: editRecord.tier || "",
+        qc_member_id: editRecord.qc_member_id || "",
         qc_member_name: editRecord.qc_member_name || "",
         started_on_time: editRecord.started_on_time || 0,
         finished_on_time: editRecord.finished_on_time || 0,
