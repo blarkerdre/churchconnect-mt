@@ -149,7 +149,7 @@ Deno.serve(async (req) => {
       const { data: newUser, error: createErr } = await admin.auth.admin.createUser({
         email: emailLower,
         email_confirm: true,
-        user_metadata: { full_name: `${app.first_name} ${app.last_name}`.trim() },
+        user_metadata: { full_name: `${app.first_name} ${app.last_name}`.trim(), ...(slug ? { tenant_slug: slug } : {}) },
       });
       if (createErr) {
         console.error("[provision-exam-account] createUser failed", { message: createErr.message, status: (createErr as any).status, code: (createErr as any).code, name: createErr.name });
