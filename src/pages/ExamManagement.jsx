@@ -1803,6 +1803,7 @@ function MemberExamsView({ memberId, memberRecord, courses, loading }) {
         <div className="space-y-4">
           {activeCourses.map(course => {
             const isRegistered = registrations.includes(course.id);
+            const isPending = !isRegistered && pendingApplications.includes(course.id);
             const subjects = allSubjects.filter(s => s.course_id === course.id);
             const completedSubjectIds = subjects.filter(s => bestBySubject[s.id]).map(s => s.id);
             const totalScore = completedSubjectIds.reduce((sum, id) => sum + (bestBySubject[id]?.score || 0), 0);
@@ -1825,6 +1826,11 @@ function MemberExamsView({ memberId, memberRecord, courses, loading }) {
                           <CheckCircle2 className="h-3 w-3 mr-1" /> Registered
                         </Badge>
                       )}
+                      {isPending && (
+                        <Badge variant="outline" className="text-xs">
+                          Application pending
+                        </Badge>
+                      )}
                       {allDone && course.send_result_email && (
                         <Badge variant={passed ? "default" : "destructive"} className="text-xs">
                           {passed ? getGradeClassification(aggPct, course.grade_classifications || DEFAULT_GRADE_CLASSIFICATIONS) : "Fail"}
@@ -1839,7 +1845,9 @@ function MemberExamsView({ memberId, memberRecord, courses, loading }) {
                   </div>
 
                   {!isRegistered ? (
-                    course.registration_open ? (
+                    isPending ? (
+                      <p className="text-xs text-muted-foreground italic">Your application is awaiting admin approval. You'll be notified by email once approved.</p>
+                    ) : course.registration_open ? (
                       appFormEnabled && wofbiRegisterPath ? (
                         <Button asChild size="sm" className="gap-1.5">
                           <a href={`${wofbiRegisterPath}?course_id=${course.id}`}>
