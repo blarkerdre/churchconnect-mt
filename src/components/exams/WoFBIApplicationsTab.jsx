@@ -601,6 +601,9 @@ export default function WoFBIApplicationsTab() {
                 <SelectItem value="all">All statuses</SelectItem>
                 <SelectItem value="submitted">Submitted / Pending</SelectItem>
                 <SelectItem value="approved">Approved</SelectItem>
+                <SelectItem value="email_pending">Approved — email pending</SelectItem>
+                <SelectItem value="link_pending">Exam link pending</SelectItem>
+                <SelectItem value="link_sent">Exam link sent</SelectItem>
                 <SelectItem value="rejected">Rejected</SelectItem>
               </SelectContent>
             </Select>
