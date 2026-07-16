@@ -1638,6 +1638,21 @@ function MemberExamsView({ memberId, memberRecord, courses, loading }) {
     enabled: !!memberId,
   });
 
+  const { data: pendingApplications = [] } = useQuery({
+    queryKey: ["my-wofbi-applications", memberId, tenantId],
+    queryFn: async () => {
+      let query = supabase
+        .from("wofbi_applications")
+        .select("course_id, status")
+        .eq("member_id", memberId)
+        .in("status", ["submitted", "pending"]);
+      if (tenantId) query = query.eq("tenant_id", tenantId);
+      const { data, error } = await query;
+      if (error) throw error;
+      return (data || []).map(r => r.course_id);
+    },
+    enabled: !!memberId,
+  });
 
   const { data: allSubjects = [] } = useQuery({
     queryKey: ["all-exam-subjects", tenantId],
@@ -1665,16 +1680,74 @@ function MemberExamsView({ memberId, memberRecord, courses, loading }) {
 
   const registerMutation = useMutation({
     mutationFn: async (courseId) => {
-      const { error } = await supabase.from("course_registrations").insert(withTenant({ member_id: memberId, course_id: courseId, registration_origin: "member_self" }));
+      if (!memberRecord?.email) {
+        throw new Error("Your member profile is missing an email address. Please update your profile first.");
+      }
+
+      // Already enrolled?
+      {
+        let q = supabase
+          .from("course_registrations")
+          .select("id")
+          .eq("member_id", memberId)
+          .eq("course_id", courseId);
+        if (tenantId) q = q.eq("tenant_id", tenantId);
+        const { data } = await q.maybeSingle();
+        if (data) {
+          const err = new Error("You are already enrolled in this course.");
+          err.__friendly = true;
+          throw err;
+        }
+      }
+
+      // Existing pending/approved application?
+      {
+        let q = supabase
+          .from("wofbi_applications")
+          .select("id, status")
+          .eq("member_id", memberId)
+          .eq("course_id", courseId)
+          .in("status", ["submitted", "pending", "approved"]);
+        if (tenantId) q = q.eq("tenant_id", tenantId);
+        const { data } = await q.maybeSingle();
+        if (data) {
+          const err = new Error(
+            data.status === "approved"
+              ? "Your application for this course has already been approved."
+              : "Your application for this course is already submitted and awaiting review."
+          );
+          err.__friendly = true;
+          throw err;
+        }
+      }
+
+      const { error } = await supabase.from("wofbi_applications").insert(withTenant({
+        member_id: memberId,
+        course_id: courseId,
+        first_name: memberRecord.first_name || "",
+        last_name: memberRecord.last_name || "",
+        email: memberRecord.email,
+        phone: memberRecord.phone || null,
+        status: "submitted",
+        registration_origin: "member_self",
+        answers: {},
+      }));
       if (error) throw error;
       return courseId;
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["my-course-registrations"] });
-      toast({ title: "Registered successfully!" });
-      // Confirmation email is sent manually by an admin from the Registrations list.
+      qc.invalidateQueries({ queryKey: ["my-wofbi-applications"] });
+      qc.invalidateQueries({ queryKey: ["wofbi-applications"] });
+      toast({
+        title: "Application submitted",
+        description: "You'll be notified once your registration has been approved.",
+      });
     },
-    onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+    onError: (err) => toast({
+      title: err?.__friendly ? "Registration" : "Error",
+      description: err.message,
+      variant: err?.__friendly ? "default" : "destructive",
+    }),
   });
 
   const bestBySubject = {};
