@@ -203,7 +203,7 @@ export default function QcCheckDialog({ open, onOpenChange, editRecord = null })
         qc_member_name: autoName,
       });
     }
-  }, [open, editRecord]);
+  }, [open, editRecord, currentMember]);
 
   const total = useMemo(
     () =>
