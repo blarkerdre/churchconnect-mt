@@ -89,7 +89,7 @@ export default function WoFBIApplicationsTab() {
       const { data, error } = await scopeQuery(
         supabase
           .from("course_registrations")
-          .select("id, member_id, course_id, status, registered_at, course:exam_titles(id, name), member:members(id, first_name, last_name, email, phone)")
+          .select("id, member_id, course_id, status, registered_at, registration_email_sent_at, exam_link_sent_at, course:exam_titles(id, name), member:members(id, first_name, last_name, email, phone)")
           .order("registered_at", { ascending: false })
       );
       if (error) throw error;
