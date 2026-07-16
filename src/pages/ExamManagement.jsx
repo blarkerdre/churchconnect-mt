@@ -896,6 +896,7 @@ function CourseRegistrationsView({ course }) {
   const canManageNumbers = !!(isAdmin || isTenantAdmin || isTenantOwner);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [sourceFilter, setSourceFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
