@@ -20,6 +20,7 @@ const emptyForm = {
   exam_subject_id: "",
   check_date: new Date().toISOString().slice(0, 10),
   tier: "",
+  qc_member_id: "",
   qc_member_name: "",
   started_on_time: 0,
   finished_on_time: 0,
