@@ -21,6 +21,24 @@ function pct(num, den) {
   return `${Math.round((num / den) * 100)}%`;
 }
 
+function fmtDuration(mins) {
+  if (mins == null || mins <= 0) return "—";
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  if (h && m) return `${h}h ${m}m`;
+  if (h) return `${h}h`;
+  return `${m}m`;
+}
+
+function fmtTime(iso) {
+  if (!iso) return "—";
+  try {
+    return new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  } catch {
+    return "—";
+  }
+}
+
 export default function WoFBIAttendanceTab() {
   const { user, isAdmin } = useAuth();
   const qc = useQueryClient();
@@ -130,7 +148,7 @@ export default function WoFBIAttendanceTab() {
       const ids = sessions.map((s) => s.id);
       const { data, error } = await supabase
         .from("wofbi_attendance_records")
-        .select("session_id, registration_id, status")
+        .select("session_id, registration_id, status, checked_in_at, checked_out_at, duration_minutes")
         .in("session_id", ids);
       if (error) throw error;
       return data || [];
@@ -205,10 +223,35 @@ export default function WoFBIAttendanceTab() {
   });
 
   const markStatus = useMutation({
-    mutationFn: async ({ registration, status }) => {
+    mutationFn: async ({ registration, status, action }) => {
       if (!rosterSession) throw new Error("No session");
-      // Find existing
       const existing = rosterRecords.find((r) => r.registration_id === registration.id);
+
+      // Time-out actions
+      if (action === "set_time_out") {
+        if (!existing) throw new Error("Set a time-in first");
+        const now = new Date();
+        const inAt = existing.checked_in_at ? new Date(existing.checked_in_at) : now;
+        const duration = Math.max(0, Math.round((now - inAt) / 60000));
+        const { error } = await supabase
+          .from("wofbi_attendance_records")
+          .update({ checked_out_at: now.toISOString(), duration_minutes: duration })
+          .eq("id", existing.id)
+          .eq("tenant_id", tenantId);
+        if (error) throw error;
+        return;
+      }
+      if (action === "clear_time_out") {
+        if (!existing) return;
+        const { error } = await supabase
+          .from("wofbi_attendance_records")
+          .update({ checked_out_at: null, duration_minutes: null })
+          .eq("id", existing.id)
+          .eq("tenant_id", tenantId);
+        if (error) throw error;
+        return;
+      }
+
       if (status === "absent") {
         if (existing) {
           const { error } = await supabase
@@ -223,7 +266,7 @@ export default function WoFBIAttendanceTab() {
       if (existing) {
         const { error } = await supabase
           .from("wofbi_attendance_records")
-          .update({ status, checked_in_at: new Date().toISOString() })
+          .update({ status, checked_in_at: existing.checked_in_at || new Date().toISOString() })
           .eq("id", existing.id)
           .eq("tenant_id", tenantId);
         if (error) throw error;
@@ -234,6 +277,7 @@ export default function WoFBIAttendanceTab() {
             registration_id: registration.id,
             member_id: registration.member_id,
             status,
+            checked_in_at: new Date().toISOString(),
             source: "manual",
           })
         );
@@ -257,19 +301,23 @@ export default function WoFBIAttendanceTab() {
       const late = recs.filter((x) => x.status === "late").length;
       const attended = present + late;
       const absent = Math.max(0, totalSessions - attended);
+      const totalMinutes = recs.reduce((sum, x) => sum + (x.duration_minutes || 0), 0);
+      const missingCheckouts = recs.filter((x) => x.checked_in_at && !x.checked_out_at).length;
       return {
         registration: r,
         present,
         late,
         absent,
         totalSessions,
+        totalMinutes,
+        missingCheckouts,
         percent: totalSessions ? Math.round((attended / totalSessions) * 100) : 0,
       };
     });
   }, [roster, allRecords, sessions.length]);
 
   const exportCsv = () => {
-    const header = ["Student number", "Name", "Present", "Late", "Absent", "Total sessions", "Attendance %"];
+    const header = ["Student number", "Name", "Present", "Late", "Absent", "Total sessions", "Attendance %", "Total hours", "Missing check-outs"];
     const rows = perStudent.map((s) => [
       s.registration.student_number || "",
       `${s.registration.members?.first_name || ""} ${s.registration.members?.last_name || ""}`.trim(),
@@ -278,6 +326,8 @@ export default function WoFBIAttendanceTab() {
       s.absent,
       s.totalSessions,
       s.percent,
+      (s.totalMinutes / 60).toFixed(2),
+      s.missingCheckouts,
     ]);
     const csv = [header, ...rows].map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(",")).join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
@@ -409,6 +459,8 @@ export default function WoFBIAttendanceTab() {
                   <TableHead>Present</TableHead>
                   <TableHead>Late</TableHead>
                   <TableHead>Absent</TableHead>
+                  <TableHead>Total hours</TableHead>
+                  <TableHead>Missing out</TableHead>
                   <TableHead>Attendance %</TableHead>
                 </TableRow>
               </TableHeader>
@@ -422,6 +474,12 @@ export default function WoFBIAttendanceTab() {
                     <TableCell>{s.present}</TableCell>
                     <TableCell>{s.late}</TableCell>
                     <TableCell>{s.absent}</TableCell>
+                    <TableCell className="whitespace-nowrap">{fmtDuration(s.totalMinutes)}</TableCell>
+                    <TableCell>
+                      {s.missingCheckouts > 0 ? (
+                        <Badge variant="secondary" className="bg-amber-100 text-amber-800">{s.missingCheckouts}</Badge>
+                      ) : "—"}
+                    </TableCell>
                     <TableCell>
                       <Badge className={s.percent >= 75 ? "bg-green-100 text-green-800" : s.percent >= 50 ? "bg-amber-100 text-amber-800" : "bg-red-100 text-red-800"}>
                         {s.percent}%
@@ -496,15 +554,18 @@ export default function WoFBIAttendanceTab() {
 
       {/* Roster override dialog */}
       <Dialog open={!!rosterSession} onOpenChange={(v) => !v && setRosterSession(null)}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-3xl">
           <TenantDialogHeader>Roster · {rosterSession?.title}</TenantDialogHeader>
-          <div className="max-h-[60vh] overflow-y-auto">
+          <div className="max-h-[65vh] overflow-y-auto">
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Student</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Set</TableHead>
+                  <TableHead>Time in</TableHead>
+                  <TableHead>Time out</TableHead>
+                  <TableHead>Duration</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -524,16 +585,25 @@ export default function WoFBIAttendanceTab() {
                         {status === "late" && <Badge className="bg-amber-100 text-amber-800 gap-1"><Clock className="h-3 w-3" /> Late</Badge>}
                         {status === "absent" && <Badge variant="secondary" className="gap-1"><XCircle className="h-3 w-3" /> Absent</Badge>}
                       </TableCell>
-                      <TableCell className="text-right space-x-1">
+                      <TableCell className="text-xs whitespace-nowrap">{fmtTime(rec?.checked_in_at)}</TableCell>
+                      <TableCell className="text-xs whitespace-nowrap">{fmtTime(rec?.checked_out_at)}</TableCell>
+                      <TableCell className="text-xs whitespace-nowrap">{fmtDuration(rec?.duration_minutes)}</TableCell>
+                      <TableCell className="text-right space-x-1 whitespace-nowrap">
                         <Button size="sm" variant={status === "present" ? "default" : "outline"} onClick={() => markStatus.mutate({ registration: r, status: "present" })}>Present</Button>
                         <Button size="sm" variant={status === "late" ? "default" : "outline"} onClick={() => markStatus.mutate({ registration: r, status: "late" })}>Late</Button>
                         <Button size="sm" variant={status === "absent" ? "default" : "outline"} onClick={() => markStatus.mutate({ registration: r, status: "absent" })}>Absent</Button>
+                        {rec && !rec.checked_out_at && (
+                          <Button size="sm" variant="outline" onClick={() => markStatus.mutate({ registration: r, action: "set_time_out" })}>Time-out</Button>
+                        )}
+                        {rec?.checked_out_at && (
+                          <Button size="sm" variant="ghost" onClick={() => markStatus.mutate({ registration: r, action: "clear_time_out" })}>Clear out</Button>
+                        )}
                       </TableCell>
                     </TableRow>
                   );
                 })}
                 {roster.length === 0 && (
-                  <TableRow><TableCell colSpan={3} className="text-center text-sm text-muted-foreground py-6">No registered students.</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={6} className="text-center text-sm text-muted-foreground py-6">No registered students.</TableCell></TableRow>
                 )}
               </TableBody>
             </Table>

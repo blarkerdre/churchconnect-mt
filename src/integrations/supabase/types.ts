@@ -6031,7 +6031,9 @@ export type Database = {
       wofbi_attendance_records: {
         Row: {
           checked_in_at: string
+          checked_out_at: string | null
           created_at: string
+          duration_minutes: number | null
           id: string
           member_id: string
           registration_id: string
@@ -6043,7 +6045,9 @@ export type Database = {
         }
         Insert: {
           checked_in_at?: string
+          checked_out_at?: string | null
           created_at?: string
+          duration_minutes?: number | null
           id?: string
           member_id: string
           registration_id: string
@@ -6055,7 +6059,9 @@ export type Database = {
         }
         Update: {
           checked_in_at?: string
+          checked_out_at?: string | null
           created_at?: string
+          duration_minutes?: number | null
           id?: string
           member_id?: string
           registration_id?: string

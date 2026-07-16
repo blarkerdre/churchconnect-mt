@@ -1,82 +1,49 @@
-## Bible School on-premise attendance (QR check-in)
 
-Add a per-course Attendance tab under **Bible School** where admins run QR-based check-in sessions and view an attendance % report per student.
+## Goal
+Track each Bible School student's daily **time-in and time-out** for the full duration of a course, via the existing QR check-in flow, and surface totals (hours attended, days present) in the report.
 
-### Data model
+## Data model changes
+Extend `wofbi_attendance_records` (one row per student per session/day) with:
+- `checked_out_at timestamptz` — set on second scan of the same day
+- `duration_minutes int` — computed on check-out (`checked_out_at - checked_in_at`)
 
-New tables (tenant-scoped, RLS + GRANTs, standard `created_at`/`updated_at`):
+Keep the existing unique `(session_id, registration_id)` so one record per student per day. `checked_in_at` already exists and becomes the "time in".
 
-- **`wofbi_attendance_sessions`**
-  - `course_id` → `exam_titles.id`
-  - `subject_id` (nullable) → `exam_subjects.id` (optional: which subject/lesson)
-  - `session_date`, `title`, `notes`
-  - `status` (`open` / `closed`)
-  - `qr_token` (uuid, unique) — rotates when session opens
-  - `late_after` (time, optional) — check-ins after this timestamp on the session date are marked "Late"
-  - `created_by`
+## RPC changes
+Update `wofbi_checkin(qr_token)`:
+- First scan of the day for a student → insert row, set `checked_in_at = now()`, status `present`/`late` (existing logic).
+- Second scan same day (record exists, `checked_out_at IS NULL`) → set `checked_out_at = now()`, compute `duration_minutes`, return `{ action: "checked_out", duration_minutes }`.
+- Third+ scan → return existing record with a friendly "already checked out" message. No further mutation.
+- Admin can still manually override via the roster panel (unchanged); manual entries can set/clear time-out too.
 
-- **`wofbi_attendance_records`**
-  - `session_id` → `wofbi_attendance_sessions.id`
-  - `registration_id` → `course_registrations.id` (roster row)
-  - `member_id`
-  - `status` (`present` / `late` / `absent`)
-  - `checked_in_at`
-  - Unique `(session_id, registration_id)`
+## UI changes
 
-RLS:
-- Admins & lecturers of the tenant can read/write both tables.
-- Students can insert their own record via QR flow (below).
+### `WoFBICheckin.jsx` (student-facing scan page)
+- Show whether this scan was a **Time-in** or **Time-out**, along with the timestamp and (on check-out) the total minutes for the day.
 
-### QR check-in flow
+### `WoFBIAttendanceTab.jsx`
+- **Sessions table**: add a "Checked out" count column alongside Present / Late.
+- **Roster panel** (per session): show `Time in`, `Time out`, `Duration` columns. Admin buttons:
+  - "Set time-in now" / "Set time-out now"
+  - "Clear time-out"
+  - Existing Present / Late / Absent buttons remain for manual overrides.
+- **Attendance report** (per course): add columns
+  - `Days present`, `Days late`, `Days absent` (already effectively there)
+  - `Total hours` (sum of `duration_minutes` across sessions, rendered as `Hh Mm`)
+  - `Avg hours / day` (total hours ÷ days attended)
+  - `Missing check-outs` (days with time-in but no time-out)
+- CSV export gains the same columns.
 
-- Admin opens a session on the Attendance tab → app generates/rotates `qr_token` and shows a big QR + short code.
-- QR encodes: `/wofbi/checkin/:qr_token` (public route, tenant-resolved from session).
-- Student opens link on their phone:
-  - If signed in and enrolled in the course → one-tap "Check me in" → inserts record (present or late based on `late_after` vs now).
-  - If not signed in → prompted to log in first, then redirected back to the same URL.
-  - If not enrolled in that course → shown "Not on the roster" message.
-- Duplicate scans return the existing record (idempotent).
-- Closing the session freezes new check-ins; all remaining registrants stay `absent` for reporting.
+### New session dialog
+Add an optional **"Auto-close after (minutes)"** hint next to `late_after` — purely informational; sessions still close only when an admin closes them. Not required, can be skipped if you'd rather keep the form as-is.
 
-Because check-in inserts must work for the student, add a `SECURITY DEFINER` RPC `wofbi_checkin(qr_token uuid)` that validates: session is open, tenant match, caller has an active `course_registrations` row on that course, computes present/late from `late_after`, and upserts the record. Keeps RLS strict and avoids granting direct INSERT to students.
+## Out of scope
+- Auto-closing sessions on a schedule.
+- Geofencing / verifying the student is on premises for check-out.
+- Editing historical `checked_in_at` / `checked_out_at` timestamps beyond "now" (can add a datetime picker later if needed).
 
-### UI
-
-New file `src/components/exams/WoFBIAttendanceTab.jsx`, mounted as a new tab `TabsTrigger value="attendance"` in `src/pages/ExamManagement.jsx`.
-
-Tab layout:
-
-- **Course selector** (reuses `exam_titles`).
-- **Sessions list** for that course: date, title, present/late/absent counts, status, actions (Show QR, Close, Edit, Delete).
-- **New session** dialog: date, title, optional subject, optional "Mark late after" time.
-- **QR dialog**: fullscreen-friendly QR (existing `qrcode` lib), the short URL, live-updating count of check-ins (Supabase Realtime on `wofbi_attendance_records` filtered by `session_id`), "Close session" button.
-- **Roster panel** (per session): registrant list with status pill; admin can manually override a student's status (present/late/absent) if needed.
-
-**Attendance % report per student** (sub-section of the tab):
-
-- For the selected course, table of registrants with:
-  - Sessions attended (present + late)
-  - Sessions late
-  - Sessions absent
-  - Attendance % = (present + late) / total sessions
-- CSV export button.
-
-Public check-in page:
-
-- New route `/wofbi/checkin/:token` → `src/pages/WoFBICheckin.jsx`.
-- Calls the `wofbi_checkin` RPC, shows success/late/failure state with the session title and student's name.
-
-### Files touched
-
-- Migration: create the two tables + GRANTs + RLS + `wofbi_checkin` RPC.
-- `src/pages/ExamManagement.jsx` — add the tab.
-- `src/components/exams/WoFBIAttendanceTab.jsx` — new.
-- `src/components/exams/WoFBIAttendanceQRDialog.jsx` — new (QR + live count).
-- `src/pages/WoFBICheckin.jsx` — new public page.
-- `src/App.jsx` (or router) — register `/wofbi/checkin/:token`.
-
-### Notes / non-goals
-
-- Does not touch general church `attendance_sessions` — Bible School attendance lives entirely in its own tables so registrant-only rosters and per-course reporting stay clean.
-- No email/SMS on check-in.
-- Manual admin marking is available as a fallback, but the primary path is QR self check-in.
+## Files touched
+- New migration: alter `wofbi_attendance_records` (add columns); replace `wofbi_checkin` RPC.
+- `src/components/exams/WoFBIAttendanceTab.jsx` — roster columns, report columns, CSV export.
+- `src/pages/WoFBICheckin.jsx` — display time-in vs time-out result.
+- `src/integrations/supabase/types.ts` — regenerated after migration.
