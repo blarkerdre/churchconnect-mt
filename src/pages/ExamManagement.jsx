@@ -285,8 +285,24 @@ export default function ExamManagement() {
     onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
 
-  // If not admin, show member view
+  const { isMemberOfUnit: isTrainingRep } = useUnitMembership("Training Rep");
+  const qcEnabled = !!currentTenant?.settings?.wofbi_qc_enabled;
+
+  // If not admin, show member view (or QC-only view for Training Rep members when QC is enabled)
   if (!isAdmin) {
+    if (isTrainingRep && qcEnabled) {
+      return (
+        <div className="space-y-6">
+          <div>
+            <h1 className="text-xl font-display font-bold text-foreground flex items-center gap-2">
+              <BookOpen className="h-5 w-5 text-primary" /> Bible School — Quality Control
+            </h1>
+            <p className="text-sm text-muted-foreground mt-1">Record and review lecturer QC checks.</p>
+          </div>
+          <QcReport />
+        </div>
+      );
+    }
     return <MemberExamsView memberId={myMember?.id} memberRecord={myMember} courses={examTitles} loading={titlesLoading} />;
   }
 
