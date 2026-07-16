@@ -79,17 +79,51 @@ export default function Members() {
       const { error } = await supabase.from("members").delete().eq("id", member.id).eq("tenant_id", tenantId);
       if (error) throw error;
 
-      // If member had a linked auth account, delete that too
+      // If member had a linked auth account, try to delete that too — but
+      // only when they have no memberships in other tenants (so we never
+      // strand a user who still belongs to another church).
+      let authOutcome = "no_account"; // no_account | deleted | retained_other_tenants | retained_error
       if (member.user_id) {
-        const { data, error: fnError } = await supabase.functions.invoke("admin-delete-user", {
-          body: { user_id: member.user_id },
-        });
-        if (fnError) console.warn("Could not delete auth account:", fnError.message);
+        // Also drop this tenant's membership row so a stale row doesn't
+        // keep the auth account alive for a user we just deleted here.
+        await supabase.from("tenant_memberships")
+          .delete()
+          .eq("user_id", member.user_id)
+          .eq("tenant_id", tenantId);
+
+        const { count } = await supabase
+          .from("tenant_memberships")
+          .select("id", { count: "exact", head: true })
+          .eq("user_id", member.user_id);
+
+        if ((count ?? 0) > 0) {
+          authOutcome = "retained_other_tenants";
+        } else {
+          const { data, error: fnError } = await supabase.functions.invoke("admin-delete-user", {
+            body: { user_id: member.user_id },
+          });
+          if (fnError || data?.error) {
+            console.warn("Could not delete auth account:", fnError?.message || data?.error);
+            authOutcome = "retained_error";
+          } else {
+            authOutcome = "deleted";
+          }
+        }
       }
+      return { authOutcome };
     },
-    onSuccess: () => {
+    onSuccess: ({ authOutcome }) => {
       queryClient.invalidateQueries({ queryKey: ["members"] });
-      toast({ title: "Member deleted" });
+      const messages = {
+        no_account: "Member deleted",
+        deleted: "Member and login account deleted",
+        retained_other_tenants: "Member deleted. Login retained — user still belongs to another church.",
+        retained_error: "Member deleted, but the login account could not be removed. Only a super-admin can delete login accounts.",
+      };
+      toast({
+        title: messages[authOutcome] || "Member deleted",
+        variant: authOutcome === "retained_error" ? "destructive" : "default",
+      });
     },
     onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
