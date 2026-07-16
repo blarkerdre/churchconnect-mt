@@ -244,21 +244,30 @@ Deno.serve(async (req) => {
     const nextPath = slug ? `/t/${slug}/exam-management` : "/exam-management";
     const redirectTo = `${origin}/auth/exam-callback?next=${encodeURIComponent(nextPath)}`;
 
+    console.log("[provision-exam-account] generating magic link", { emailLower, redirectTo });
     const { data: linkData, error: linkErr } = await admin.auth.admin.generateLink({
       type: "magiclink",
       email: emailLower,
       options: { redirectTo },
     });
-    if (linkErr) return json({ error: `Failed to generate magic link: ${linkErr.message}` }, 500);
+    if (linkErr) {
+      console.error("[provision-exam-account] generateLink failed", { message: linkErr.message, status: (linkErr as any).status, code: (linkErr as any).code, name: linkErr.name });
+      return json({ error: `Failed to generate magic link: ${linkErr.message}`, code: (linkErr as any).code, status: (linkErr as any).status }, 500);
+    }
     const magicLink = linkData?.properties?.action_link;
-    if (!magicLink) return json({ error: "No action_link returned" }, 500);
+    if (!magicLink) {
+      console.error("[provision-exam-account] no action_link in generateLink response", { linkData });
+      return json({ error: "No action_link returned" }, 500);
+    }
+    console.log("[provision-exam-account] magic link generated", { hasLink: true });
 
     // 5. Send email — invoke with explicit service-role Authorization so
     // send-transactional-email's in-code auth check accepts the call.
     let emailSent = true;
     let emailError: string | null = null;
     try {
-      const { error: invokeErr } = await admin.functions.invoke("send-transactional-email", {
+      console.log("[provision-exam-account] invoking send-transactional-email", { emailLower, template: "bible-school-exam-ready", tenant_id: app.tenant_id });
+      const { data: invokeData, error: invokeErr } = await admin.functions.invoke("send-transactional-email", {
         headers: { Authorization: `Bearer ${serviceKey}` },
         body: {
           templateName: "bible-school-exam-ready",
@@ -277,25 +286,30 @@ Deno.serve(async (req) => {
       if (invokeErr) {
         emailSent = false;
         const status = (invokeErr as any)?.context?.status;
+        const ctxBody = (invokeErr as any)?.context?.body;
         const baseMsg = (invokeErr as any)?.message || String(invokeErr);
         emailError = status ? `[${status}] ${baseMsg}` : baseMsg;
-        console.error("send-transactional-email returned error:", { status, invokeErr });
-      } else if (app.course_id && memberId) {
-        // Stamp exam_link_sent_at so the UI can accurately show "Sent" / "Resend link".
-        await admin
-          .from("course_registrations")
-          .update({ exam_link_sent_at: new Date().toISOString() })
-          .eq("tenant_id", app.tenant_id)
-          .eq("member_id", memberId)
-          .eq("course_id", app.course_id);
+        console.error("[provision-exam-account] send-transactional-email returned error", { status, message: baseMsg, ctxBody, invokeData });
+      } else {
+        console.log("[provision-exam-account] send-transactional-email ok", { invokeData });
+        if (app.course_id && memberId) {
+          // Stamp exam_link_sent_at so the UI can accurately show "Sent" / "Resend link".
+          await admin
+            .from("course_registrations")
+            .update({ exam_link_sent_at: new Date().toISOString() })
+            .eq("tenant_id", app.tenant_id)
+            .eq("member_id", memberId)
+            .eq("course_id", app.course_id);
+        }
       }
     } catch (e) {
       emailSent = false;
       emailError = (e as Error).message || String(e);
-      console.error("send-transactional-email failed:", e);
+      console.error("[provision-exam-account] send-transactional-email threw", e);
       // Non-fatal — return link so admin can share manually if needed.
     }
 
+    console.log("[provision-exam-account] done", { memberId, userId, emailSent, emailError });
     return json({ ok: true, member_id: memberId, user_id: userId, magic_link: magicLink, email_sent: emailSent, email_error: emailError });
   } catch (e) {
     console.error("provision-exam-account error:", e);
