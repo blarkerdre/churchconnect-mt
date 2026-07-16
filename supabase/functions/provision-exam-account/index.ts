@@ -127,21 +127,27 @@ Deno.serve(async (req) => {
     let page = 1;
     while (!userId) {
       const { data: list, error: listErr } = await admin.auth.admin.listUsers({ page, perPage: 200 });
-      if (listErr) break;
+      if (listErr) { console.error("[provision-exam-account] listUsers error", listErr); break; }
       const found = list.users.find((u: any) => (u.email || "").toLowerCase() === emailLower);
       if (found) { userId = found.id; break; }
       if (!list.users.length || list.users.length < 200) break;
       page++;
       if (page > 25) break;
     }
+    console.log("[provision-exam-account] listUsers result", { existingUserId: userId, pagesScanned: page });
     if (!userId) {
+      console.log("[provision-exam-account] creating auth user", { emailLower });
       const { data: newUser, error: createErr } = await admin.auth.admin.createUser({
         email: emailLower,
         email_confirm: true,
         user_metadata: { full_name: `${app.first_name} ${app.last_name}`.trim() },
       });
-      if (createErr) return json({ error: `Failed to create user: ${createErr.message}` }, 500);
+      if (createErr) {
+        console.error("[provision-exam-account] createUser failed", { message: createErr.message, status: (createErr as any).status, code: (createErr as any).code, name: createErr.name });
+        return json({ error: `Failed to create user: ${createErr.message}`, code: (createErr as any).code, status: (createErr as any).status }, 500);
+      }
       userId = newUser.user.id;
+      console.log("[provision-exam-account] created auth user", { userId });
     }
 
     // 2. Ensure member row for this tenant + user
