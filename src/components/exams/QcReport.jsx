@@ -92,6 +92,12 @@ function SummaryTile({ label, value }) {
 export default function QcReport() {
   const qc = useQueryClient();
   const { tenantId } = useTenantQuery();
+  const { user, isAdmin } = useAuth();
+  const { currentTenant } = useTenant();
+  const { isMemberOfUnit: isTrainingRep } = useUnitMembership("Training Rep");
+  const qcEnabled = !!currentTenant?.settings?.wofbi_qc_enabled;
+  const canCreate = isAdmin || (isTrainingRep && qcEnabled);
+  const canDelete = isAdmin;
   const [filters, setFilters] = useState(emptyFilters);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editRecord, setEditRecord] = useState(null);
