@@ -226,6 +226,7 @@ Deno.serve(async (req) => {
           registered_at: new Date().toISOString(),
           approved_at: new Date().toISOString(),
           approved_by: callerUserId,
+          registration_origin: "admin",
         });
       } else if (!["approved", "active"].includes(reg.status)) {
         await admin
