@@ -183,7 +183,7 @@ export default function RateLecturerDialog({ open, onOpenChange }) {
         lecturer_id: form.lecturer_id,
         member_id: myMember?.id || null,
         submitted_by: user.id,
-        level: form.level.trim() || null,
+        level: null,
         session_description: form.session_description || null,
         delivery: form.delivery || null,
         time_keeping: form.time_keeping || null,
