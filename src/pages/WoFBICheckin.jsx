@@ -79,16 +79,35 @@ export default function WoFBICheckin() {
               ) : (
                 <CheckCircle2 className="h-12 w-12 mx-auto text-green-600" />
               )}
-              <div>
-                <p className="text-lg font-semibold">
-                  You're checked in {state.result.status === "late" ? "(Late)" : ""}
-                </p>
-                <p className="text-sm text-muted-foreground">{state.result.session_title}</p>
-                <p className="text-xs text-muted-foreground">{state.result.session_date}</p>
-              </div>
-              <Button variant="outline" className="w-full" onClick={() => navigate("/")}>Done</Button>
-            </>
-          )}
+          {state.result && (() => {
+            const r = state.result;
+            const isOut = r.action === "checked_out";
+            const already = r.action === "already_checked_out";
+            const Icon = isOut || already ? LogOut : (r.status === "late" ? Clock : CheckCircle2);
+            const iconColor = isOut ? "text-blue-600" : already ? "text-slate-500" : (r.status === "late" ? "text-amber-500" : "text-green-600");
+            const title = isOut
+              ? "Time-out recorded"
+              : already
+                ? "Already checked out"
+                : `Time-in recorded${r.status === "late" ? " (Late)" : ""}`;
+            return (
+              <>
+                <Icon className={`h-12 w-12 mx-auto ${iconColor}`} />
+                <div>
+                  <p className="text-lg font-semibold">{title}</p>
+                  <p className="text-sm text-muted-foreground">{r.session_title}</p>
+                  <p className="text-xs text-muted-foreground">{r.session_date}</p>
+                  {(isOut || already) && r.duration_minutes != null && (
+                    <p className="mt-2 text-sm">Time on premises: <span className="font-semibold">{fmtDuration(r.duration_minutes)}</span></p>
+                  )}
+                  {!isOut && !already && (
+                    <p className="mt-2 text-xs text-muted-foreground">Scan again when you leave to record your time-out.</p>
+                  )}
+                </div>
+                <Button variant="outline" className="w-full" onClick={() => navigate("/")}>Done</Button>
+              </>
+            );
+          })()}
           {state.error === "not_authenticated" && (
             <>
               <LogIn className="h-12 w-12 mx-auto text-primary" />
