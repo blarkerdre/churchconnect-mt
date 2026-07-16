@@ -1321,9 +1321,19 @@ function CourseRegistrationsView({ course }) {
                             <TableCell className="text-sm text-muted-foreground">{r.members?.email || "—"}</TableCell>
                             <TableCell className="text-sm text-muted-foreground">{r.members?.phone || "—"}</TableCell>
                             <TableCell>
-                              <Badge variant={r.members?.user_id ? "default" : "outline"}>
-                                {r.members?.user_id ? "Member" : "QR / Public"}
-                              </Badge>
+                              {(() => {
+                                const o = originOf(r);
+                                return (
+                                  <div className="flex items-center gap-1">
+                                    <Badge variant={o === "public_qr" ? "outline" : "default"}>
+                                      {originLabel(o)}
+                                    </Badge>
+                                    {r.members?.user_id && o === "public_qr" && (
+                                      <Badge variant="secondary" className="text-[10px]">Has account</Badge>
+                                    )}
+                                  </div>
+                                );
+                              })()}
                             </TableCell>
                             <TableCell>
                               <Badge variant={isApproved ? "default" : "secondary"} className={isApproved ? "bg-emerald-600 hover:bg-emerald-600" : ""}>
