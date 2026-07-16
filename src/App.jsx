@@ -35,6 +35,7 @@ const ResetPassword = lazy(() => import("@/pages/ResetPassword"));
 const MyProfile = lazy(() => import("@/pages/MyProfile"));
 const PublicRegistration = lazy(() => import("@/pages/PublicRegistration"));
 const PublicWoFBIRegistration = lazy(() => import("@/pages/PublicWoFBIRegistration"));
+const WoFBICheckin = lazy(() => import("@/pages/WoFBICheckin"));
 const Onboard = lazy(() => import("@/pages/Onboard"));
 const TenantAdmin = lazy(() => import("@/pages/TenantAdmin"));
 const Presentation = lazy(() => import("@/pages/Presentation"));
@@ -285,6 +286,8 @@ function AppRoutes() {
         <Route path="/t/:tenantSlug/auth" element={<Auth />} />
         <Route path="/t/:tenantSlug/register" element={<PublicRegistration />} />
         <Route path="/t/:tenantSlug/bible-school-register" element={<PublicWoFBIRegistration />} />
+        <Route path="/wofbi/checkin/:token" element={<WoFBICheckin />} />
+        <Route path="/t/:tenantSlug/wofbi/checkin/:token" element={<WoFBICheckin />} />
 
         {/* Public reset-password routes */}
         <Route path="/reset-password" element={<ResetPassword />} />
