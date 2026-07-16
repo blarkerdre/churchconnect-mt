@@ -1162,8 +1162,9 @@ function CourseRegistrationsView({ course }) {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Sources</SelectItem>
-                <SelectItem value="member">Member</SelectItem>
                 <SelectItem value="public">QR / Public</SelectItem>
+                <SelectItem value="member">Member</SelectItem>
+                <SelectItem value="admin">Admin</SelectItem>
               </SelectContent>
             </Select>
             <div className="flex items-center gap-1">
