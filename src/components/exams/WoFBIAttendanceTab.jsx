@@ -21,6 +21,24 @@ function pct(num, den) {
   return `${Math.round((num / den) * 100)}%`;
 }
 
+function fmtDuration(mins) {
+  if (mins == null || mins <= 0) return "—";
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  if (h && m) return `${h}h ${m}m`;
+  if (h) return `${h}h`;
+  return `${m}m`;
+}
+
+function fmtTime(iso) {
+  if (!iso) return "—";
+  try {
+    return new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  } catch {
+    return "—";
+  }
+}
+
 export default function WoFBIAttendanceTab() {
   const { user, isAdmin } = useAuth();
   const qc = useQueryClient();
