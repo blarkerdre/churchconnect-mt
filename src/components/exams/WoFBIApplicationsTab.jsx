@@ -102,8 +102,21 @@ export default function WoFBIApplicationsTab() {
   // Merge: application rows win over direct registrations for the same (member_id, course_id).
   const applications = useMemo(() => {
     const appKey = (a) => `${a.member_id || ""}|${a.course_id || ""}`;
+    const regByKey = new Map();
+    regRows.forEach((r) => {
+      if (r.member_id && r.course_id) regByKey.set(`${r.member_id}|${r.course_id}`, r);
+    });
     const appKeys = new Set(appRows.filter((a) => a.member_id && a.course_id).map(appKey));
-    const formRows = appRows.map((a) => ({ ...a, source: "form" }));
+    const formRows = appRows.map((a) => {
+      const reg = a.member_id && a.course_id ? regByKey.get(`${a.member_id}|${a.course_id}`) : null;
+      return {
+        ...a,
+        source: "form",
+        registration_id: reg?.id || null,
+        registration_email_sent_at: reg?.registration_email_sent_at || null,
+        exam_link_sent_at: reg?.exam_link_sent_at || null,
+      };
+    });
     const syntheticRows = regRows
       .filter((r) => !(r.member_id && r.course_id && appKeys.has(`${r.member_id}|${r.course_id}`)))
       .map((r) => ({
@@ -122,6 +135,8 @@ export default function WoFBIApplicationsTab() {
         status: r.status,
         answers: {},
         created_at: r.registered_at,
+        registration_email_sent_at: r.registration_email_sent_at || null,
+        exam_link_sent_at: r.exam_link_sent_at || null,
       }));
     return [...formRows, ...syntheticRows].sort(
       (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
