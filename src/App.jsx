@@ -35,6 +35,7 @@ const ResetPassword = lazy(() => import("@/pages/ResetPassword"));
 const MyProfile = lazy(() => import("@/pages/MyProfile"));
 const PublicRegistration = lazy(() => import("@/pages/PublicRegistration"));
 const PublicWoFBIRegistration = lazy(() => import("@/pages/PublicWoFBIRegistration"));
+const WoFBICheckin = lazy(() => import("@/pages/WoFBICheckin"));
 const Onboard = lazy(() => import("@/pages/Onboard"));
 const TenantAdmin = lazy(() => import("@/pages/TenantAdmin"));
 const Presentation = lazy(() => import("@/pages/Presentation"));
