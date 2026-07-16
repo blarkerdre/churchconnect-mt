@@ -85,12 +85,10 @@ export default function PublicWoFBIRegistration() {
         setLoadingCourses(false);
       });
     setLoadingAppForm(true);
-    supabase.from("wofbi_application_forms")
-      .select("enabled, title, intro_text, fields")
-      .eq("tenant_id", resolvedTenantId)
-      .maybeSingle()
+    supabase.rpc("get_public_wofbi_application_form", { _tenant_id: resolvedTenantId })
       .then(({ data }) => {
-        setAppForm(data || null);
+        const row = Array.isArray(data) ? data[0] : data;
+        setAppForm(row || null);
         setLoadingAppForm(false);
       });
   }, [resolvedTenantId]);
