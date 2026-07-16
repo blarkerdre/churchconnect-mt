@@ -58,6 +58,18 @@ export default function LecturerManager() {
     onError: (e) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
+  const toggleQcFeature = useMutation({
+    mutationFn: async (enabled) => {
+      const newSettings = { ...(currentTenant?.settings || {}), wofbi_qc_enabled: enabled };
+      const { error } = await supabase.from("tenants").update({ settings: newSettings }).eq("id", tenantId);
+      if (error) throw error;
+      await logAudit("wofbi_qc_toggle", "tenants", tenantId, { enabled }, tenantId);
+      await refreshTenantContext?.();
+    },
+    onSuccess: () => toast({ title: "Setting saved" }),
+    onError: (e) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+
   const saveMutation = useMutation({
     mutationFn: async () => {
       if (!form.name.trim()) throw new Error("Name is required");
