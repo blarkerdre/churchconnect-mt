@@ -262,10 +262,6 @@ export default function RateLecturerDialog({ open, onOpenChange }) {
                   </SelectContent>
                 </Select>
               </div>
-              <div>
-                <Label>Level</Label>
-                <Input value={form.level} maxLength={100} placeholder="e.g. BFC / BCC / LCC / LDC" onChange={(e) => set("level", e.target.value)} />
-              </div>
             </div>
 
             {QUESTIONS.map((q) => (
