@@ -4,7 +4,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Loader2, CheckCircle2, Clock, XCircle, LogIn, LogOut } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Loader2, CheckCircle2, Clock, XCircle, Mail, LogOut, CheckCheck } from "lucide-react";
 
 function fmtDuration(mins) {
   if (mins == null) return "";
@@ -52,9 +54,30 @@ export default function WoFBICheckin() {
     return () => { active = false; };
   }, [token, user, authLoading]);
 
-  const handleLogin = () => {
-    const returnTo = `/wofbi/checkin/${token}`;
-    navigate(`/auth?redirect=${encodeURIComponent(returnTo)}`);
+  const [magicEmail, setMagicEmail] = useState("");
+  const [magicSending, setMagicSending] = useState(false);
+  const [magicSent, setMagicSent] = useState(false);
+  const [magicError, setMagicError] = useState(null);
+
+  const handleSendMagicLink = async (e) => {
+    e?.preventDefault?.();
+    if (!magicEmail || !/^\S+@\S+\.\S+$/.test(magicEmail)) {
+      setMagicError("Please enter a valid email address.");
+      return;
+    }
+    setMagicSending(true);
+    setMagicError(null);
+    const redirectTo = `${window.location.origin}/wofbi/checkin/${token}`;
+    const { error } = await supabase.auth.signInWithOtp({
+      email: magicEmail.trim().toLowerCase(),
+      options: { emailRedirectTo: redirectTo, shouldCreateUser: true },
+    });
+    setMagicSending(false);
+    if (error) {
+      setMagicError(error.message);
+      return;
+    }
+    setMagicSent(true);
   };
 
   if (authLoading || state.loading) {
@@ -101,11 +124,43 @@ export default function WoFBICheckin() {
               </>
             );
           })()}
-          {state.error === "not_authenticated" && (
+          {state.error === "not_authenticated" && !magicSent && (
+            <form onSubmit={handleSendMagicLink} className="space-y-3 text-left">
+              <Mail className="h-12 w-12 mx-auto text-primary" />
+              <p className="text-sm text-center">
+                Enter your email to receive a one-time sign-in link. No password needed.
+              </p>
+              <p className="text-xs text-center text-muted-foreground">
+                Use the same email you registered with.
+              </p>
+              <div className="space-y-1.5">
+                <Label htmlFor="magic-email">Email</Label>
+                <Input
+                  id="magic-email"
+                  type="email"
+                  autoComplete="email"
+                  inputMode="email"
+                  required
+                  value={magicEmail}
+                  onChange={(e) => setMagicEmail(e.target.value)}
+                  placeholder="you@example.com"
+                />
+              </div>
+              {magicError && <p className="text-xs text-red-600">{magicError}</p>}
+              <Button type="submit" className="w-full" disabled={magicSending}>
+                {magicSending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                Email me a sign-in link
+              </Button>
+            </form>
+          )}
+          {state.error === "not_authenticated" && magicSent && (
             <>
-              <LogIn className="h-12 w-12 mx-auto text-primary" />
-              <p className="text-sm">Please sign in to check in.</p>
-              <Button className="w-full" onClick={handleLogin}>Sign in</Button>
+              <CheckCheck className="h-12 w-12 mx-auto text-green-600" />
+              <p className="text-sm font-semibold">Check your email</p>
+              <p className="text-xs text-muted-foreground">
+                We sent a sign-in link to <span className="font-medium">{magicEmail}</span>. Open it
+                on this device to complete check-in.
+              </p>
             </>
           )}
           {state.error && state.error !== "not_authenticated" && (
