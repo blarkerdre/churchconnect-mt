@@ -1,67 +1,34 @@
 ## Goal
 
-1. Delete `mayodare@gmail.com`'s orphan auth account now.
-2. Add a scheduled cleanup that periodically removes any `auth.users` with zero `tenant_memberships` (and no super-admin role).
+Find out why clicking **Send exam link** for `mayodare@gmail.com` (approved 12:38 UTC, `exam_link_sent_at` still null, no `bible-school-exam-ready` row in `email_send_log`) is failing silently. Right now the function boots but produces zero application logs, so we can't tell whether it fails at `listUsers`, `createUser`, `generateLink`, or the `send-transactional-email` invoke.
 
-## Step 1 — Delete mayodare now
+## Change
 
-Call `admin-delete-user` for `user_id = b0e0d7a8-8fad-4a49-9e84-63ceb853fd78` from an authenticated super-admin session. She has 0 rows in `profiles`, `user_roles`, `tenant_memberships`, `members` so the impact is limited to removing the auth row.
+Add structured logging (and slightly more defensive error surfacing) to `supabase/functions/provision-exam-account/index.ts` — no behaviour change, just observability.
 
-I'll trigger it via `supabase.functions.invoke` in the browser context (super-admin logged in) — or via a one-off `curl_edge_functions` call with an explicit super-admin bearer.
+Log lines to add (one `console.log` per checkpoint, prefixed with `[provision-exam-account]` and including `application_id`/`registration_id` + `emailLower` for correlation):
 
-## Step 2 — Scheduled orphan cleanup
+1. Entry: incoming body (`application_id`, `registration_id`, caller sub).
+2. After loading the application/registration row: tenant_id, course_id, member_id, status.
+3. After the admin check: role found.
+4. After the `listUsers` loop: whether an existing user was matched, and how many pages scanned.
+5. Around `admin.auth.admin.createUser`: log the attempt and, on error, log `createErr.message`, `createErr.status`, and `createErr.code` before returning.
+6. After member ensure: memberId + whether it was created or matched.
+7. Around `admin.auth.admin.generateLink`: log success (masked) or `linkErr.message`/`status`/`code`.
+8. Around the `send-transactional-email` invoke: log the returned `status` and `invokeErr` details (already partly logged — expand to include the response body when available via `(invokeErr as any)?.context?.body`).
+9. Final return: `email_sent`, `email_error`.
 
-**New edge function**: `supabase/functions/cleanup-orphan-auth-users/index.ts`
-- Uses service role.
-- No caller check (invoked by pg_cron with anon key + secret header, or via internal cron). Guard with a shared secret header `x-cron-secret` compared to a new secret `CRON_ORPHAN_CLEANUP_SECRET`.
-- Logic:
-  1. Load `auth.users` (via `admin.listUsers`, paged).
-  2. For each user, skip if:
-     - has any `tenant_memberships` row, OR
-     - has any `user_roles` row with role `super_admin`, OR
-     - created within the last 24 hours (avoid deleting brand-new signups mid-onboarding).
-  3. Otherwise call `admin.deleteUser(id)`.
-  4. Insert a summary row into `audit_log` with `tenant_id = null`, action `orphan_auth_cleanup`, count deleted, and list of user_ids/emails.
-- Returns `{ scanned, deleted, skipped }`.
+Also: when `createUser` fails, include its error in the JSON response (`{ error, code, status }`) so the client toast surfaces it too.
 
-**Secret**: generate `CRON_ORPHAN_CLEANUP_SECRET` (random 48 chars) via `generate_secret`.
+## Verify
 
-**Cron job** (via `supabase--insert`, not migration, since it embeds project URL + anon key):
-```sql
-select cron.schedule(
-  'cleanup-orphan-auth-users-daily',
-  '15 3 * * *',        -- daily at 03:15 UTC
-  $$
-  select net.http_post(
-    url := 'https://<project>.supabase.co/functions/v1/cleanup-orphan-auth-users',
-    headers := jsonb_build_object(
-      'Content-Type','application/json',
-      'apikey','<ANON_KEY>',
-      'x-cron-secret','<CRON_ORPHAN_CLEANUP_SECRET>'
-    ),
-    body := '{}'::jsonb
-  );
-  $$
-);
-```
-Prereq: enable `pg_cron` and `pg_net` extensions (migration).
-
-## Files to change
-
-- `supabase/functions/cleanup-orphan-auth-users/index.ts` — new
-- Migration: `create extension if not exists pg_cron; create extension if not exists pg_net;`
-- `supabase--insert`: schedule the cron job
-- `secrets--generate_secret`: `CRON_ORPHAN_CLEANUP_SECRET`
-- One-off invoke: delete mayodare's `user_id` immediately
+1. Deploy the function.
+2. In Exam Management, click **Send exam link** for mayodare.
+3. Read edge-function logs for `provision-exam-account` and confirm we see the full breadcrumb trail and the exact failing step / GoTrue error message.
+4. Fix the underlying cause in a follow-up once we know what it is (most likely a stale identity/FK from her recent auth-user delete, or a `send-transactional-email` rejection).
 
 ## Out of scope
 
-- No UI surface for orphan cleanup (runs silently on cron).
-- No change to `admin-delete-user`.
-- No change to the Members delete flow (already fixed last turn).
-
-## Risks / notes
-
-- The 24-hour skip prevents killing accounts of users who signed up but haven't been added to a tenant yet.
-- Super-admins without a `tenant_memberships` row are protected by the `user_roles` check.
-- Cron secret prevents public invocation.
+- No change to the flow, auth checks, member linking, or email template.
+- No change to `send-transactional-email` or `admin-delete-user`.
+- Actual root-cause fix comes after we have the error message.
