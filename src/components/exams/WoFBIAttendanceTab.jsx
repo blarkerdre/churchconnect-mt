@@ -548,6 +548,7 @@ export default function WoFBIAttendanceTab() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-8"></TableHead>
                   <TableHead>Student #</TableHead>
                   <TableHead>Name</TableHead>
                   <TableHead>Present</TableHead>
@@ -559,28 +560,96 @@ export default function WoFBIAttendanceTab() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {perStudent.map((s) => (
-                  <TableRow key={s.registration.id}>
-                    <TableCell>{s.registration.student_number || "—"}</TableCell>
-                    <TableCell className="font-medium">
-                      {`${s.registration.members?.first_name || ""} ${s.registration.members?.last_name || ""}`.trim() || "Unknown"}
-                    </TableCell>
-                    <TableCell>{s.present}</TableCell>
-                    <TableCell>{s.late}</TableCell>
-                    <TableCell>{s.absent}</TableCell>
-                    <TableCell className="whitespace-nowrap">{fmtDuration(s.totalMinutes)}</TableCell>
-                    <TableCell>
-                      {s.missingCheckouts > 0 ? (
-                        <Badge variant="secondary" className="bg-amber-100 text-amber-800">{s.missingCheckouts}</Badge>
-                      ) : "—"}
-                    </TableCell>
-                    <TableCell>
-                      <Badge className={s.percent >= 75 ? "bg-green-100 text-green-800" : s.percent >= 50 ? "bg-amber-100 text-amber-800" : "bg-red-100 text-red-800"}>
-                        {s.percent}%
-                      </Badge>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                {perStudent.map((s) => {
+                  const expanded = !!expandedStudents[s.registration.id];
+                  const studentRecs = allRecords.filter((x) => x.registration_id === s.registration.id);
+                  const recByS = new Map(studentRecs.map((r) => [r.session_id, r]));
+                  const sortedSessions = [...sessions].sort((a, b) => a.session_date.localeCompare(b.session_date));
+                  return (
+                    <React.Fragment key={s.registration.id}>
+                      <TableRow className="cursor-pointer" onClick={() => setExpandedStudents((p) => ({ ...p, [s.registration.id]: !expanded }))}>
+                        <TableCell>
+                          {expanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                        </TableCell>
+                        <TableCell>{s.registration.student_number || "—"}</TableCell>
+                        <TableCell className="font-medium">
+                          {`${s.registration.members?.first_name || ""} ${s.registration.members?.last_name || ""}`.trim() || "Unknown"}
+                        </TableCell>
+                        <TableCell>{s.present}</TableCell>
+                        <TableCell>{s.late}</TableCell>
+                        <TableCell>{s.absent}</TableCell>
+                        <TableCell className="whitespace-nowrap">{fmtDuration(s.totalMinutes)}</TableCell>
+                        <TableCell>
+                          {s.missingCheckouts > 0 ? (
+                            <Badge variant="secondary" className="bg-amber-100 text-amber-800">{s.missingCheckouts}</Badge>
+                          ) : "—"}
+                        </TableCell>
+                        <TableCell>
+                          <Badge className={s.percent >= 75 ? "bg-green-100 text-green-800" : s.percent >= 50 ? "bg-amber-100 text-amber-800" : "bg-red-100 text-red-800"}>
+                            {s.percent}%
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                      {expanded && (
+                        <TableRow className="bg-muted/30 hover:bg-muted/30">
+                          <TableCell colSpan={9} className="p-0">
+                            <div className="p-3">
+                              <Table>
+                                <TableHeader>
+                                  <TableRow>
+                                    <TableHead>Date</TableHead>
+                                    <TableHead>Session</TableHead>
+                                    <TableHead>Status</TableHead>
+                                    <TableHead>Time in</TableHead>
+                                    <TableHead>Time out</TableHead>
+                                    <TableHead>Duration</TableHead>
+                                    <TableHead className="text-right">Actions</TableHead>
+                                  </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                  {sortedSessions.map((sess) => {
+                                    const rec = recByS.get(sess.id);
+                                    const status = rec?.status || "absent";
+                                    return (
+                                      <TableRow key={sess.id}>
+                                        <TableCell className="whitespace-nowrap text-xs">{sess.session_date}</TableCell>
+                                        <TableCell className="text-xs">{sess.title}</TableCell>
+                                        <TableCell>
+                                          {status === "present" && <Badge className="bg-green-100 text-green-800">Present</Badge>}
+                                          {status === "late" && <Badge className="bg-amber-100 text-amber-800">Late</Badge>}
+                                          {status === "absent" && <Badge variant="secondary">Absent</Badge>}
+                                        </TableCell>
+                                        <TableCell className="text-xs whitespace-nowrap">{fmtTime(rec?.checked_in_at)}</TableCell>
+                                        <TableCell className="text-xs whitespace-nowrap">{fmtTime(rec?.checked_out_at)}</TableCell>
+                                        <TableCell className="text-xs whitespace-nowrap">{fmtDuration(rec?.duration_minutes)}</TableCell>
+                                        <TableCell className="text-right space-x-1 whitespace-nowrap">
+                                          <Button size="sm" variant="outline" className="gap-1" onClick={() => openEdit(sess, s.registration, rec)}>
+                                            <Pencil className="h-3 w-3" /> Edit
+                                          </Button>
+                                          {rec?.id && (
+                                            <Button
+                                              size="sm"
+                                              variant="ghost"
+                                              onClick={() => {
+                                                if (confirm("Delete this attendance record?")) deleteRecord.mutate(rec.id);
+                                              }}
+                                            >
+                                              <Trash2 className="h-3 w-3" />
+                                            </Button>
+                                          )}
+                                        </TableCell>
+                                      </TableRow>
+                                    );
+                                  })}
+                                </TableBody>
+                              </Table>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </React.Fragment>
+                  );
+                })}
               </TableBody>
             </Table>
           )}
