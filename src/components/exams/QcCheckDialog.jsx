@@ -192,7 +192,16 @@ export default function QcCheckDialog({ open, onOpenChange, editRecord = null })
         recording_submitted: editRecord.recording_submitted,
       });
     } else {
-      setForm(emptyForm);
+      const units = (currentMember?.church_unit || "").split(",").map((u) => u.trim().toLowerCase());
+      const isTrainingRep = units.includes("training rep");
+      const autoName = isTrainingRep && currentMember
+        ? `${currentMember.first_name || ""} ${currentMember.last_name || ""}`.trim()
+        : "";
+      setForm({
+        ...emptyForm,
+        qc_member_id: isTrainingRep && currentMember ? currentMember.id : "",
+        qc_member_name: autoName,
+      });
     }
   }, [open, editRecord]);
 
