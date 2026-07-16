@@ -1,34 +1,56 @@
-## Goal
+## Diagnosis so far
 
-Find out why clicking **Send exam link** for `mayodare@gmail.com` (approved 12:38 UTC, `exam_link_sent_at` still null, no `bible-school-exam-ready` row in `email_send_log`) is failing silently. Right now the function boots but produces zero application logs, so we can't tell whether it fails at `listUsers`, `createUser`, `generateLink`, or the `send-transactional-email` invoke.
+Your logs and DB confirm the app is doing its job correctly:
 
-## Change
+- Every exam-link and confirmation email has a `pending` → `sent` pair in `email_send_log` (e.g. exam link to `mayodare@gmail.com` at 13:04, course-reg to `blarkerdre@yahoo.com` at 13:27).
+- Neither recipient is in `suppressed_emails`.
+- Domain `notify.app.churchmanagementsuite.org` is verified, queue is healthy (98 sent in last 7 days).
+- `provision-exam-account` returned `emailSent: true` for `mayodare@gmail.com`.
 
-Add structured logging (and slightly more defensive error surfacing) to `supabase/functions/provision-exam-account/index.ts` — no behaviour change, just observability.
+"Sent" means the email provider (Mailgun, via Lovable Emails) accepted the message. The user has already checked spam. That means the message was **dropped or silently filtered downstream of us** — a deliverability problem at the recipient's mail server, not a code bug.
 
-Log lines to add (one `console.log` per checkpoint, prefixed with `[provision-exam-account]` and including `application_id`/`registration_id` + `emailLower` for correlation):
+The 92 dead-lettered emails from earlier are a separate historical issue and were **not** retried.
 
-1. Entry: incoming body (`application_id`, `registration_id`, caller sub).
-2. After loading the application/registration row: tenant_id, course_id, member_id, status.
-3. After the admin check: role found.
-4. After the `listUsers` loop: whether an existing user was matched, and how many pages scanned.
-5. Around `admin.auth.admin.createUser`: log the attempt and, on error, log `createErr.message`, `createErr.status`, and `createErr.code` before returning.
-6. After member ensure: memberId + whether it was created or matched.
-7. Around `admin.auth.admin.generateLink`: log success (masked) or `linkErr.message`/`status`/`code`.
-8. Around the `send-transactional-email` invoke: log the returned `status` and `invokeErr` details (already partly logged — expand to include the response body when available via `(invokeErr as any)?.context?.body`).
-9. Final return: `email_sent`, `email_error`.
+## Most likely causes (in order)
 
-Also: when `createUser` fails, include its error in the JSON response (`{ error, code, status }`) so the client toast surfaces it too.
+1. **Gmail/Yahoo silently spam-binning or dropping** a new sender subdomain that has no reputation and no DMARC policy yet. This is by far the most common cause of "sent but never received" for Gmail/Yahoo.
+2. **Recipient-side rules / forwarding / catch-all filters** discarding before inbox.
+3. **Mailgun accepted the message but then bounced/deferred it** after acceptance — not visible in our `email_send_log`, only in Mailgun's own event log.
 
-## Verify
+## Investigation plan (no code changes yet)
 
-1. Deploy the function.
-2. In Exam Management, click **Send exam link** for mayodare.
-3. Read edge-function logs for `provision-exam-account` and confirm we see the full breadcrumb trail and the exact failing step / GoTrue error message.
-4. Fix the underlying cause in a follow-up once we know what it is (most likely a stale identity/FK from her recent auth-user delete, or a `send-transactional-email` rejection).
+**Step 1 — Pull actual delivery events from Mailgun** for the four `message_id`s below and report per-message status (`delivered`, `failed`, `rejected`, `complained`, or missing):
 
-## Out of scope
+- `b68114a7-…` exam link → mayodare@gmail.com (13:04)
+- `9d7621a5-…` course-registration → blarkerdre@yahoo.com (13:27)
+- `4b3d01b9-…` welcome-registration → blarkerdre@yahoo.com (13:12)
+- `0a961e83-…` course-registration → mayodare@gmail.com (12:43)
 
-- No change to the flow, auth checks, member linking, or email template.
-- No change to `send-transactional-email` or `admin-delete-user`.
-- Actual root-cause fix comes after we have the error message.
+This is the authoritative answer to "did it actually leave Mailgun and did the recipient's server accept it?". Done via a read-only Mailgun API call through the connector gateway — no code deployed.
+
+**Step 2 — Interpret events:**
+
+- If Mailgun shows `delivered` → the recipient's mail server accepted it; it's being filtered/hidden on their side (Gmail "All Mail", filters, forwarding). Ask the recipient to search all folders (not just Spam) for the sender domain, and check filters/forwarding rules.
+- If Mailgun shows `failed` / `rejected` / `bounced` → we get the exact SMTP reason (e.g. "550 5.7.26 unauthenticated mail is prohibited" → DMARC missing).
+- If Mailgun shows no event at all → the send didn't actually reach Mailgun despite our `sent` log row; escalate to Lovable support.
+
+**Step 3 — Deliverability posture check** (regardless of Step 2 result):
+
+- Verify SPF, DKIM, and DMARC records on `notify.app.churchmanagementsuite.org` via a public MX lookup.
+- If DMARC is missing (very likely — Lovable delegates SPF/DKIM but DMARC is optional on the root), Gmail is much more likely to silently bin. This is a DNS record on `_dmarc.app.churchmanagementsuite.org` at the root registrar (NOT the delegated subdomain), so the user has to add it.
+- Confirm the "From" address (`noreply@notify.app.churchmanagementsuite.org`) aligns with the delegated sender domain — it does, per the current `send-transactional-email` config, so no alignment failure expected.
+
+## Deliverable
+
+A short report per message with:
+- Mailgun event status + reason
+- Whether the issue is app-side (none expected), sender-config-side (DMARC / warmup), or recipient-side (filters/forwarding).
+- Concrete next action (add DMARC TXT record, ask recipient to whitelist, or resend).
+
+## Not in scope for this plan
+
+- Editing any Edge Function or template (the app is working correctly).
+- Re-triggering the 92 historical DLQ emails (separate task if you want it).
+- Switching email providers.
+
+Approve to run Step 1 (the Mailgun event lookup) and I'll follow through with the report and next steps.
