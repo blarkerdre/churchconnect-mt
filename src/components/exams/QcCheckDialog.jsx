@@ -152,6 +152,22 @@ export default function QcCheckDialog({ open, onOpenChange, editRecord = null })
     },
   });
 
+  // Signed-in user's member record for this tenant (for auto-fill)
+  const { data: currentMember } = useQuery({
+    queryKey: ["current-member-for-qc", tenantId, user?.id],
+    enabled: !!tenantId && !!user?.id && open,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("members")
+        .select("id, first_name, last_name, church_unit")
+        .eq("tenant_id", tenantId)
+        .eq("user_id", user.id)
+        .maybeSingle();
+      if (error) throw error;
+      return data || null;
+    },
+  });
+
   useEffect(() => {
     if (!open) return;
     if (editRecord) {
@@ -176,9 +192,18 @@ export default function QcCheckDialog({ open, onOpenChange, editRecord = null })
         recording_submitted: editRecord.recording_submitted,
       });
     } else {
-      setForm(emptyForm);
+      const units = (currentMember?.church_unit || "").split(",").map((u) => u.trim().toLowerCase());
+      const isTrainingRep = units.includes("training rep");
+      const autoName = isTrainingRep && currentMember
+        ? `${currentMember.first_name || ""} ${currentMember.last_name || ""}`.trim()
+        : "";
+      setForm({
+        ...emptyForm,
+        qc_member_id: isTrainingRep && currentMember ? currentMember.id : "",
+        qc_member_name: autoName,
+      });
     }
-  }, [open, editRecord]);
+  }, [open, editRecord, currentMember]);
 
   const total = useMemo(
     () =>
