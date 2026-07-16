@@ -554,15 +554,18 @@ export default function WoFBIAttendanceTab() {
 
       {/* Roster override dialog */}
       <Dialog open={!!rosterSession} onOpenChange={(v) => !v && setRosterSession(null)}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-3xl">
           <TenantDialogHeader>Roster · {rosterSession?.title}</TenantDialogHeader>
-          <div className="max-h-[60vh] overflow-y-auto">
+          <div className="max-h-[65vh] overflow-y-auto">
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Student</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Set</TableHead>
+                  <TableHead>Time in</TableHead>
+                  <TableHead>Time out</TableHead>
+                  <TableHead>Duration</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -582,16 +585,25 @@ export default function WoFBIAttendanceTab() {
                         {status === "late" && <Badge className="bg-amber-100 text-amber-800 gap-1"><Clock className="h-3 w-3" /> Late</Badge>}
                         {status === "absent" && <Badge variant="secondary" className="gap-1"><XCircle className="h-3 w-3" /> Absent</Badge>}
                       </TableCell>
-                      <TableCell className="text-right space-x-1">
+                      <TableCell className="text-xs whitespace-nowrap">{fmtTime(rec?.checked_in_at)}</TableCell>
+                      <TableCell className="text-xs whitespace-nowrap">{fmtTime(rec?.checked_out_at)}</TableCell>
+                      <TableCell className="text-xs whitespace-nowrap">{fmtDuration(rec?.duration_minutes)}</TableCell>
+                      <TableCell className="text-right space-x-1 whitespace-nowrap">
                         <Button size="sm" variant={status === "present" ? "default" : "outline"} onClick={() => markStatus.mutate({ registration: r, status: "present" })}>Present</Button>
                         <Button size="sm" variant={status === "late" ? "default" : "outline"} onClick={() => markStatus.mutate({ registration: r, status: "late" })}>Late</Button>
                         <Button size="sm" variant={status === "absent" ? "default" : "outline"} onClick={() => markStatus.mutate({ registration: r, status: "absent" })}>Absent</Button>
+                        {rec && !rec.checked_out_at && (
+                          <Button size="sm" variant="outline" onClick={() => markStatus.mutate({ registration: r, action: "set_time_out" })}>Time-out</Button>
+                        )}
+                        {rec?.checked_out_at && (
+                          <Button size="sm" variant="ghost" onClick={() => markStatus.mutate({ registration: r, action: "clear_time_out" })}>Clear out</Button>
+                        )}
                       </TableCell>
                     </TableRow>
                   );
                 })}
                 {roster.length === 0 && (
-                  <TableRow><TableCell colSpan={3} className="text-center text-sm text-muted-foreground py-6">No registered students.</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={6} className="text-center text-sm text-muted-foreground py-6">No registered students.</TableCell></TableRow>
                 )}
               </TableBody>
             </Table>
