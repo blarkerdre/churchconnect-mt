@@ -328,7 +328,7 @@ export default function QcCheckDialog({ open, onOpenChange, editRecord = null })
               </Select>
             </div>
             <div>
-              <Label>Subject (optional)</Label>
+              <Label>Subject *</Label>
               <Select value={form.exam_subject_id} onValueChange={(v) => set("exam_subject_id", v)} disabled={!form.exam_title_id}>
                 <SelectTrigger><SelectValue placeholder={form.exam_title_id ? "Select a subject" : "Select a course first"} /></SelectTrigger>
                 <SelectContent>
@@ -338,7 +338,25 @@ export default function QcCheckDialog({ open, onOpenChange, editRecord = null })
             </div>
             <div>
               <Label>QC Team Member *</Label>
-              <Input value={form.qc_member_name} maxLength={200} onChange={(e) => set("qc_member_name", e.target.value)} placeholder="Name of QC team member" />
+              <Select
+                value={form.qc_member_id}
+                onValueChange={(v) => {
+                  const m = trainingReps.find((x) => x.id === v);
+                  const name = m ? `${m.first_name || ""} ${m.last_name || ""}`.trim() : "";
+                  setForm((f) => ({ ...f, qc_member_id: v, qc_member_name: name }));
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={trainingReps.length ? "Select a Training Rep member" : "No Training Rep members found"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {trainingReps.map((m) => (
+                    <SelectItem key={m.id} value={m.id}>
+                      {`${m.first_name || ""} ${m.last_name || ""}`.trim() || "Unnamed"}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
