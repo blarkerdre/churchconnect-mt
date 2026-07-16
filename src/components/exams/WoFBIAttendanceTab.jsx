@@ -48,6 +48,9 @@ export default function WoFBIAttendanceTab() {
   const [newOpen, setNewOpen] = useState(false);
   const [qrSession, setQrSession] = useState(null);
   const [rosterSession, setRosterSession] = useState(null);
+  const [expandedStudents, setExpandedStudents] = useState({});
+  const [editRecord, setEditRecord] = useState(null); // { record, session, registration }
+  const [editForm, setEditForm] = useState({ status: "present", checked_in_at: "", checked_out_at: "" });
 
   const [form, setForm] = useState({
     title: "",
