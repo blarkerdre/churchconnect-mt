@@ -4,7 +4,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Loader2, CheckCircle2, Clock, XCircle, LogIn, LogOut } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Loader2, CheckCircle2, Clock, XCircle, Mail, LogOut, CheckCheck } from "lucide-react";
 
 function fmtDuration(mins) {
   if (mins == null) return "";
