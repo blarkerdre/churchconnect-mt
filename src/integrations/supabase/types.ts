@@ -3040,6 +3040,7 @@ export type Database = {
           orderliness_note: string | null
           orderliness_score: number | null
           qa_observations: string | null
+          qc_member_id: string | null
           qc_member_name: string | null
           recording_submitted: boolean | null
           started_on_time: number | null
@@ -3067,6 +3068,7 @@ export type Database = {
           orderliness_note?: string | null
           orderliness_score?: number | null
           qa_observations?: string | null
+          qc_member_id?: string | null
           qc_member_name?: string | null
           recording_submitted?: boolean | null
           started_on_time?: number | null
@@ -3094,6 +3096,7 @@ export type Database = {
           orderliness_note?: string | null
           orderliness_score?: number | null
           qa_observations?: string | null
+          qc_member_id?: string | null
           qc_member_name?: string | null
           recording_submitted?: boolean | null
           started_on_time?: number | null
@@ -3123,6 +3126,13 @@ export type Database = {
             columns: ["lecturer_id"]
             isOneToOne: false
             referencedRelation: "lecturers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lecturer_qc_checks_qc_member_id_fkey"
+            columns: ["qc_member_id"]
+            isOneToOne: false
+            referencedRelation: "members"
             referencedColumns: ["id"]
           },
         ]
