@@ -1,50 +1,67 @@
-## Diagnosis
+## Goal
 
-`mayodare@gmail.com` can still sign in because **her auth account was never deleted** — only her *member* record was removed from the church directory.
+1. Delete `mayodare@gmail.com`'s orphan auth account now.
+2. Add a scheduled cleanup that periodically removes any `auth.users` with zero `tenant_memberships` (and no super-admin role).
 
-Evidence from the database:
+## Step 1 — Delete mayodare now
 
-- `auth.users` still has her row: `id b0e0d7a8-…`, `deleted_at: null`, `last_sign_in_at: 2026-07-16 11:41:53` (successful login today).
-- `public.profiles`, `public.user_roles`, `public.tenant_memberships` for her user_id: **0 rows** (cleared).
-- `public.members`: 1 row — she was re-added as a fresh member at 11:33 today (linked back to the same `user_id`).
-- Audit log shows repeated `member_delete` actions on her email, but **no `admin-delete-user` / auth deletion event**.
+Call `admin-delete-user` for `user_id = b0e0d7a8-8fad-4a49-9e84-63ceb853fd78` from an authenticated super-admin session. She has 0 rows in `profiles`, `user_roles`, `tenant_memberships`, `members` so the impact is limited to removing the auth row.
 
-So what has been happening:
+I'll trigger it via `supabase.functions.invoke` in the browser context (super-admin logged in) — or via a one-off `curl_edge_functions` call with an explicit super-admin bearer.
 
-1. An admin deletes her from **Members** (Church Management → Members → Delete). That only removes the `members` row and its tenant-scoped data. It does **not** call the `admin-delete-user` edge function, so `auth.users` is untouched.
-2. Her Supabase login credentials remain valid, so `signInWithPassword` succeeds.
-3. Because she has no `tenant_memberships`, the auto-signout guard on `/auth` (added earlier) is what should immediately kick her back out — that guard is the correct enforcement point, not "prevent sign-in".
+## Step 2 — Scheduled orphan cleanup
 
-Supabase itself has no way to reject a password login based on "no tenant" — the credential is either valid or not. The two real options are:
+**New edge function**: `supabase/functions/cleanup-orphan-auth-users/index.ts`
+- Uses service role.
+- No caller check (invoked by pg_cron with anon key + secret header, or via internal cron). Guard with a shared secret header `x-cron-secret` compared to a new secret `CRON_ORPHAN_CLEANUP_SECRET`.
+- Logic:
+  1. Load `auth.users` (via `admin.listUsers`, paged).
+  2. For each user, skip if:
+     - has any `tenant_memberships` row, OR
+     - has any `user_roles` row with role `super_admin`, OR
+     - created within the last 24 hours (avoid deleting brand-new signups mid-onboarding).
+  3. Otherwise call `admin.deleteUser(id)`.
+  4. Insert a summary row into `audit_log` with `tenant_id = null`, action `orphan_auth_cleanup`, count deleted, and list of user_ids/emails.
+- Returns `{ scanned, deleted, skipped }`.
 
-- **A. Fully delete the auth account** so `signInWithPassword` fails with "Invalid login credentials". Requires the super-admin `admin-delete-user` edge function, which deletes `auth.users` in addition to public tables.
-- **B. Keep the auth account, rely on the post-login guard** to sign her out (current behaviour). This is what the recent Auth.jsx changes already implement.
+**Secret**: generate `CRON_ORPHAN_CLEANUP_SECRET` (random 48 chars) via `generate_secret`.
 
-## Recommendation
+**Cron job** (via `supabase--insert`, not migration, since it embeds project URL + anon key):
+```sql
+select cron.schedule(
+  'cleanup-orphan-auth-users-daily',
+  '15 3 * * *',        -- daily at 03:15 UTC
+  $$
+  select net.http_post(
+    url := 'https://<project>.supabase.co/functions/v1/cleanup-orphan-auth-users',
+    headers := jsonb_build_object(
+      'Content-Type','application/json',
+      'apikey','<ANON_KEY>',
+      'x-cron-secret','<CRON_ORPHAN_CLEANUP_SECRET>'
+    ),
+    body := '{}'::jsonb
+  );
+  $$
+);
+```
+Prereq: enable `pg_cron` and `pg_net` extensions (migration).
 
-Pick one — no code change is needed just to *explain* today's login, but to make "delete" actually block future logins we need option A.
+## Files to change
 
-### Option A — Wire "Delete member" to also delete the auth account (recommended)
+- `supabase/functions/cleanup-orphan-auth-users/index.ts` — new
+- Migration: `create extension if not exists pg_cron; create extension if not exists pg_net;`
+- `supabase--insert`: schedule the cron job
+- `secrets--generate_secret`: `CRON_ORPHAN_CLEANUP_SECRET`
+- One-off invoke: delete mayodare's `user_id` immediately
 
-When an admin deletes a member from the Members page, if that member has a linked `user_id` **and** no other `tenant_memberships` remain after the delete, call the existing `admin-delete-user` edge function to remove the auth user too.
+## Out of scope
 
-Scope of change (single file, presentation/wiring only, no new business logic):
+- No UI surface for orphan cleanup (runs silently on cron).
+- No change to `admin-delete-user`.
+- No change to the Members delete flow (already fixed last turn).
 
-- `src/pages/Members.jsx` (or wherever the member delete handler lives — will confirm on entering build mode):
-  1. After the current `members` delete succeeds, if the deleted row had `user_id`, query `tenant_memberships` for that user across all tenants.
-  2. If zero remain, invoke `supabase.functions.invoke("admin-delete-user", { body: { user_id } })`.
-  3. Show a toast: "Member and login account deleted" vs. "Member deleted (login retained — user still belongs to other churches)".
-  4. Requires the deleting admin to be a super_admin (the edge function already enforces this and will 403 otherwise). For non-super-admins we skip the auth delete silently and show "Member deleted (login account retained)".
+## Risks / notes
 
-No DB migration, no RLS change, no changes to `admin-delete-user` itself.
-
-### Option B — Do nothing in code, document the behaviour
-
-The auto-signout guard already blocks her from *using* the app: she lands on `/auth`, sees "No church access", and is signed out. If that is acceptable, we close this as expected behaviour and I'll just add a note.
-
-## Question for you
-
-Which do you want?
-
-- A: Make "Delete member" also delete the auth account when the user has no other tenant memberships (only super_admins get the auth-delete step; others see a clear toast).
-- B: Leave as-is — rely on the post-login auto-signout guard.
+- The 24-hour skip prevents killing accounts of users who signed up but haven't been added to a tenant yet.
+- Super-admins without a `tenant_memberships` row are protected by the `user_roles` check.
+- Cron secret prevents public invocation.
