@@ -140,6 +140,20 @@ export default function LecturerManager() {
           />
         </div>
 
+        <div className="flex items-center justify-between border rounded-lg p-3">
+          <div className="pr-3">
+            <p className="text-sm font-medium">Enable Quality Control checks</p>
+            <p className="text-xs text-muted-foreground">
+              When on, members of the "Training Rep" church unit can add QC checks for lecturers.
+            </p>
+          </div>
+          <Switch
+            checked={qcEnabled}
+            onCheckedChange={(v) => toggleQcFeature.mutate(v)}
+            disabled={toggleQcFeature.isPending}
+          />
+        </div>
+
         {ratingEnabled && !isLoading && lecturers.filter((l) => l.active).length === 0 && (
           <div className="rounded-lg border border-amber-300 bg-amber-50 dark:bg-amber-950/20 p-3 text-xs text-amber-800 dark:text-amber-200">
             Rating is enabled, but there are no active lecturers yet. Add an active lecturer so students can submit ratings.
