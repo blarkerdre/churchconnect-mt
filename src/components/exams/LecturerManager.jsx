@@ -30,6 +30,7 @@ export default function LecturerManager() {
   const [feedbackLecturer, setFeedbackLecturer] = useState(null);
 
   const ratingEnabled = !!currentTenant?.settings?.wofbi_lecturer_rating_enabled;
+  const qcEnabled = !!currentTenant?.settings?.wofbi_qc_enabled;
 
   const { data: lecturers = [], isLoading } = useQuery({
     queryKey: ["lecturers", tenantId],
@@ -51,6 +52,18 @@ export default function LecturerManager() {
       const { error } = await supabase.from("tenants").update({ settings: newSettings }).eq("id", tenantId);
       if (error) throw error;
       await logAudit("wofbi_rating_toggle", "tenants", tenantId, { enabled }, tenantId);
+      await refreshTenantContext?.();
+    },
+    onSuccess: () => toast({ title: "Setting saved" }),
+    onError: (e) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+
+  const toggleQcFeature = useMutation({
+    mutationFn: async (enabled) => {
+      const newSettings = { ...(currentTenant?.settings || {}), wofbi_qc_enabled: enabled };
+      const { error } = await supabase.from("tenants").update({ settings: newSettings }).eq("id", tenantId);
+      if (error) throw error;
+      await logAudit("wofbi_qc_toggle", "tenants", tenantId, { enabled }, tenantId);
       await refreshTenantContext?.();
     },
     onSuccess: () => toast({ title: "Setting saved" }),
@@ -124,6 +137,20 @@ export default function LecturerManager() {
             checked={ratingEnabled}
             onCheckedChange={(v) => toggleFeature.mutate(v)}
             disabled={toggleFeature.isPending}
+          />
+        </div>
+
+        <div className="flex items-center justify-between border rounded-lg p-3">
+          <div className="pr-3">
+            <p className="text-sm font-medium">Enable Quality Control checks</p>
+            <p className="text-xs text-muted-foreground">
+              When on, members of the "Training Rep" church unit can add QC checks for lecturers.
+            </p>
+          </div>
+          <Switch
+            checked={qcEnabled}
+            onCheckedChange={(v) => toggleQcFeature.mutate(v)}
+            disabled={toggleQcFeature.isPending}
           />
         </div>
 
