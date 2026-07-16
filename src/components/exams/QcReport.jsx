@@ -305,9 +305,11 @@ export default function QcReport() {
             <CardDescription>Record and analyse lecturer QC checks against the WOFBI checklist.</CardDescription>
           </div>
           <div className="flex gap-2">
-            <Button size="sm" onClick={openNew} className="gap-1.5">
-              <Plus className="h-3.5 w-3.5" /> New QC Check
-            </Button>
+            {canCreate && (
+              <Button size="sm" onClick={openNew} className="gap-1.5">
+                <Plus className="h-3.5 w-3.5" /> New QC Check
+              </Button>
+            )}
             <Button size="sm" variant="outline" className="gap-1.5" onClick={downloadCSV} disabled={!filtered.length}>
               <Download className="h-3.5 w-3.5" /> Export CSV
             </Button>
