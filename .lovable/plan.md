@@ -1,20 +1,16 @@
-## Changes
+## Change
 
-### 1. `src/components/exams/RateLecturerDialog.jsx` (student-facing)
-- Remove the **Level** input field from the form grid.
-- Remove `level` from `emptyForm`, from the "load existing rating" effect, and from the submit payload (send `level: null`, or drop the field entirely — DB column stays for legacy rows).
-- No other question or field changes.
+In `src/components/exams/QcCheckDialog.jsx`, auto-populate the **QC Team Member** field with the currently signed-in user when creating a new QC check.
 
-### 2. `src/components/exams/QcCheckDialog.jsx`
-- Remove the **Tier** `<Select>` from the header grid.
-- Remove `tier` from `emptyForm`, from the edit-record hydration, and from the auto-fill-from-lecturer-level effect (delete that effect entirely).
-- Stop importing `TIER_OPTIONS`.
-- In the submit payload, send `tier: null` (keep DB column for legacy rows).
-- Subject is already validated as required (`if (!form.exam_subject_id) throw…`) and the trigger already shows `*`; no change needed there — the existing duplicate guard on `(tenant_id, lecturer_id, exam_subject_id)` plus the unique index already enforce "one QC per lecturer per subject", which correctly allows the same lecturer to have separate QC entries for different subjects in the same course.
+### How
+- Add a query to fetch the signed-in user's member record for this tenant (`members` where `user_id = auth user id` and `tenant_id`), selecting `id, first_name, last_name, church_unit`.
+- In the existing `useEffect` that resets the form on open (new record path, not edit), if the signed-in member exists and their `church_unit` includes "Training Rep", pre-fill `qc_member_id` and `qc_member_name` from that record.
+- Keep the dropdown editable so the user can change it if needed (e.g. an admin filling on behalf of someone).
+- Edit mode is unchanged — it keeps hydrating from `editRecord`.
+- If the signed-in user is not a Training Rep member (e.g. admin), leave the field empty as today.
 
-### 3. No DB migration
-- Existing unique index `lecturer_qc_checks_lecturer_subject_uniq` on `(tenant_id, lecturer_id, exam_subject_id)` already provides the required rule. `tier` column is left in place (nullable) so historical rows are preserved; only the UI stops writing it.
+### Out of scope
+- No DB changes, no RLS changes, no changes to the Training Rep dropdown source list.
 
 ### Files touched
-- `src/components/exams/RateLecturerDialog.jsx`
 - `src/components/exams/QcCheckDialog.jsx`

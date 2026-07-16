@@ -152,6 +152,22 @@ export default function QcCheckDialog({ open, onOpenChange, editRecord = null })
     },
   });
 
+  // Signed-in user's member record for this tenant (for auto-fill)
+  const { data: currentMember } = useQuery({
+    queryKey: ["current-member-for-qc", tenantId, user?.id],
+    enabled: !!tenantId && !!user?.id && open,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("members")
+        .select("id, first_name, last_name, church_unit")
+        .eq("tenant_id", tenantId)
+        .eq("user_id", user.id)
+        .maybeSingle();
+      if (error) throw error;
+      return data || null;
+    },
+  });
+
   useEffect(() => {
     if (!open) return;
     if (editRecord) {
