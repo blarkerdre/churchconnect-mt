@@ -26,6 +26,7 @@ const STATUS_VARIANT = {
 
 const SOURCE_LABEL = {
   form: "Application form",
+  member_self: "Member self-register",
   direct: "Direct enrolment",
 };
 
