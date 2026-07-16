@@ -88,15 +88,24 @@ Deno.serve(async (req) => {
       };
     }
 
-    // Authorize: caller must be admin/owner of this tenant
+    // Authorize: caller must be super_admin, or admin/owner of this tenant
+    const { data: superRow } = await admin
+      .from("user_roles")
+      .select("id")
+      .eq("user_id", callerUserId)
+      .eq("role", "super_admin")
+      .is("tenant_id", null)
+      .maybeSingle();
+    const isSuperAdmin = !!superRow;
+
     const { data: membership } = await admin
       .from("tenant_memberships")
       .select("role")
       .eq("tenant_id", app.tenant_id)
       .eq("user_id", callerUserId)
       .maybeSingle();
-    const isAdminRole = membership && ["owner", "admin"].includes(membership.role);
-    console.log("[provision-exam-account] loaded", { tenant_id: app.tenant_id, course_id: app.course_id, member_id: app.member_id, status: app.status, email: app.email, role: membership?.role });
+    const isAdminRole = isSuperAdmin || (membership && ["owner", "admin"].includes(membership.role));
+    console.log("[provision-exam-account] loaded", { tenant_id: app.tenant_id, course_id: app.course_id, member_id: app.member_id, status: app.status, email: app.email, role: membership?.role, isSuperAdmin });
     if (!isAdminRole) return json({ error: "Forbidden" }, 403);
 
     if (app.status !== "approved") {
