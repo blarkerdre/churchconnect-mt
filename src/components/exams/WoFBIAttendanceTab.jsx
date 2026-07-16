@@ -301,19 +301,23 @@ export default function WoFBIAttendanceTab() {
       const late = recs.filter((x) => x.status === "late").length;
       const attended = present + late;
       const absent = Math.max(0, totalSessions - attended);
+      const totalMinutes = recs.reduce((sum, x) => sum + (x.duration_minutes || 0), 0);
+      const missingCheckouts = recs.filter((x) => x.checked_in_at && !x.checked_out_at).length;
       return {
         registration: r,
         present,
         late,
         absent,
         totalSessions,
+        totalMinutes,
+        missingCheckouts,
         percent: totalSessions ? Math.round((attended / totalSessions) * 100) : 0,
       };
     });
   }, [roster, allRecords, sessions.length]);
 
   const exportCsv = () => {
-    const header = ["Student number", "Name", "Present", "Late", "Absent", "Total sessions", "Attendance %"];
+    const header = ["Student number", "Name", "Present", "Late", "Absent", "Total sessions", "Attendance %", "Total hours", "Missing check-outs"];
     const rows = perStudent.map((s) => [
       s.registration.student_number || "",
       `${s.registration.members?.first_name || ""} ${s.registration.members?.last_name || ""}`.trim(),
@@ -322,6 +326,8 @@ export default function WoFBIAttendanceTab() {
       s.absent,
       s.totalSessions,
       s.percent,
+      (s.totalMinutes / 60).toFixed(2),
+      s.missingCheckouts,
     ]);
     const csv = [header, ...rows].map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(",")).join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
