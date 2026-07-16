@@ -773,6 +773,54 @@ export default function WoFBIAttendanceTab() {
           </div>
         </DialogContent>
       </Dialog>
+      {/* Edit record dialog */}
+      <Dialog open={!!editRecord} onOpenChange={(v) => !v && setEditRecord(null)}>
+        <DialogContent className="max-w-md">
+          <TenantDialogHeader>Edit attendance</TenantDialogHeader>
+          {editRecord && (
+            <div className="space-y-4 py-2">
+              <div className="text-sm">
+                <div className="font-medium">
+                  {`${editRecord.registration.members?.first_name || ""} ${editRecord.registration.members?.last_name || ""}`.trim()}
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  {editRecord.session.session_date} · {editRecord.session.title}
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Status</Label>
+                <Select value={editForm.status} onValueChange={(v) => setEditForm((f) => ({ ...f, status: v }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="present">Present</SelectItem>
+                    <SelectItem value="late">Late</SelectItem>
+                    <SelectItem value="absent">Absent (removes record)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              {editForm.status !== "absent" && (
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label>Time in *</Label>
+                    <Input type="datetime-local" value={editForm.checked_in_at} onChange={(e) => setEditForm((f) => ({ ...f, checked_in_at: e.target.value }))} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Time out</Label>
+                    <Input type="datetime-local" value={editForm.checked_out_at} onChange={(e) => setEditForm((f) => ({ ...f, checked_out_at: e.target.value }))} />
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setEditRecord(null)}>Cancel</Button>
+            <Button onClick={() => saveEdit.mutate()} disabled={saveEdit.isPending}>
+              {saveEdit.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+              Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
