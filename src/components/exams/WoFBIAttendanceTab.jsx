@@ -459,6 +459,8 @@ export default function WoFBIAttendanceTab() {
                   <TableHead>Present</TableHead>
                   <TableHead>Late</TableHead>
                   <TableHead>Absent</TableHead>
+                  <TableHead>Total hours</TableHead>
+                  <TableHead>Missing out</TableHead>
                   <TableHead>Attendance %</TableHead>
                 </TableRow>
               </TableHeader>
@@ -472,6 +474,12 @@ export default function WoFBIAttendanceTab() {
                     <TableCell>{s.present}</TableCell>
                     <TableCell>{s.late}</TableCell>
                     <TableCell>{s.absent}</TableCell>
+                    <TableCell className="whitespace-nowrap">{fmtDuration(s.totalMinutes)}</TableCell>
+                    <TableCell>
+                      {s.missingCheckouts > 0 ? (
+                        <Badge variant="secondary" className="bg-amber-100 text-amber-800">{s.missingCheckouts}</Badge>
+                      ) : "—"}
+                    </TableCell>
                     <TableCell>
                       <Badge className={s.percent >= 75 ? "bg-green-100 text-green-800" : s.percent >= 50 ? "bg-amber-100 text-amber-800" : "bg-red-100 text-red-800"}>
                         {s.percent}%
