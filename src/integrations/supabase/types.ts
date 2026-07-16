@@ -6028,6 +6028,123 @@ export type Database = {
           },
         ]
       }
+      wofbi_attendance_records: {
+        Row: {
+          checked_in_at: string
+          created_at: string
+          id: string
+          member_id: string
+          registration_id: string
+          session_id: string
+          source: string
+          status: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          checked_in_at?: string
+          created_at?: string
+          id?: string
+          member_id: string
+          registration_id: string
+          session_id: string
+          source?: string
+          status?: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          checked_in_at?: string
+          created_at?: string
+          id?: string
+          member_id?: string
+          registration_id?: string
+          session_id?: string
+          source?: string
+          status?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wofbi_attendance_records_registration_id_fkey"
+            columns: ["registration_id"]
+            isOneToOne: false
+            referencedRelation: "course_registrations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wofbi_attendance_records_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "wofbi_attendance_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      wofbi_attendance_sessions: {
+        Row: {
+          course_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          late_after: string | null
+          notes: string | null
+          qr_token: string
+          session_date: string
+          status: string
+          subject_id: string | null
+          tenant_id: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          course_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          late_after?: string | null
+          notes?: string | null
+          qr_token?: string
+          session_date: string
+          status?: string
+          subject_id?: string | null
+          tenant_id: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          course_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          late_after?: string | null
+          notes?: string | null
+          qr_token?: string
+          session_date?: string
+          status?: string
+          subject_id?: string | null
+          tenant_id?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wofbi_attendance_sessions_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "exam_titles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wofbi_attendance_sessions_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "exam_subjects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       wsf_attendance: {
         Row: {
           centre_id: string
@@ -6885,6 +7002,7 @@ export type Database = {
         Args: { _tenant_id: string; _unit_name: string; _user_id: string }
         Returns: boolean
       }
+      wofbi_checkin: { Args: { _qr_token: string }; Returns: Json }
       write_audit: {
         Args: {
           _action: string

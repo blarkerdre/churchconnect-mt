@@ -34,6 +34,7 @@ import RateLecturerDialog from "@/components/exams/RateLecturerDialog";
 import QcReport from "@/components/exams/QcReport";
 import WoFBIApplicationsTab from "@/components/exams/WoFBIApplicationsTab";
 import WoFBIApplicationFormEditor from "@/components/exams/WoFBIApplicationFormEditor";
+import WoFBIAttendanceTab from "@/components/exams/WoFBIAttendanceTab";
 import ModuleTour from "@/components/tour/ModuleTour";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
@@ -328,6 +329,7 @@ export default function ExamManagement() {
         <TabsList>
           <TabsTrigger value="management">Management</TabsTrigger>
           <TabsTrigger value="applications">Applications</TabsTrigger>
+          <TabsTrigger value="attendance">Attendance</TabsTrigger>
           <TabsTrigger value="app-form">Application Form</TabsTrigger>
           <TabsTrigger value="lecturer">Lecturer Feedback</TabsTrigger>
           <TabsTrigger value="qc">Quality Control</TabsTrigger>
@@ -883,6 +885,10 @@ export default function ExamManagement() {
 
         <TabsContent value="app-form" className="space-y-4 mt-4">
           <WoFBIApplicationFormEditor />
+        </TabsContent>
+
+        <TabsContent value="attendance" className="space-y-4 mt-4">
+          <WoFBIAttendanceTab />
         </TabsContent>
       </Tabs>
     </div>
