@@ -292,6 +292,7 @@ Deno.serve(async (req) => {
         phone,
         answers: cleanAnswers,
         status: "submitted",
+        registration_origin: authUserId ? "member_self" : "public_qr",
       });
       if (appInsErr) throw appInsErr;
     } catch (appErr) {
