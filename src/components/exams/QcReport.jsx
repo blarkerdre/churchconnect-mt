@@ -2,6 +2,9 @@ import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
+import { useTenant } from "@/contexts/TenantContext";
+import { useAuth } from "@/hooks/useAuth";
+import { useUnitMembership } from "@/hooks/useUnitMembership";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -89,6 +92,12 @@ function SummaryTile({ label, value }) {
 export default function QcReport() {
   const qc = useQueryClient();
   const { tenantId } = useTenantQuery();
+  const { user, isAdmin } = useAuth();
+  const { currentTenant } = useTenant();
+  const { isMemberOfUnit: isTrainingRep } = useUnitMembership("Training Rep");
+  const qcEnabled = !!currentTenant?.settings?.wofbi_qc_enabled;
+  const canCreate = isAdmin || (isTrainingRep && qcEnabled);
+  const canDelete = isAdmin;
   const [filters, setFilters] = useState(emptyFilters);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editRecord, setEditRecord] = useState(null);
@@ -296,9 +305,11 @@ export default function QcReport() {
             <CardDescription>Record and analyse lecturer QC checks against the WOFBI checklist.</CardDescription>
           </div>
           <div className="flex gap-2">
-            <Button size="sm" onClick={openNew} className="gap-1.5">
-              <Plus className="h-3.5 w-3.5" /> New QC Check
-            </Button>
+            {canCreate && (
+              <Button size="sm" onClick={openNew} className="gap-1.5">
+                <Plus className="h-3.5 w-3.5" /> New QC Check
+              </Button>
+            )}
             <Button size="sm" variant="outline" className="gap-1.5" onClick={downloadCSV} disabled={!filtered.length}>
               <Download className="h-3.5 w-3.5" /> Export CSV
             </Button>
@@ -427,8 +438,12 @@ export default function QcReport() {
                             <TableCell className="text-right">
                               <div className="flex justify-end gap-1">
                                 <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setViewRecord(r)}><Eye className="h-3.5 w-3.5" /></Button>
-                                <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => openEdit(r)}><Edit className="h-3.5 w-3.5" /></Button>
-                                <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => setDeleteId(r.id)}><Trash2 className="h-3.5 w-3.5" /></Button>
+                                {(isAdmin || (canCreate && r.created_by === user?.id)) && (
+                                  <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => openEdit(r)}><Edit className="h-3.5 w-3.5" /></Button>
+                                )}
+                                {canDelete && (
+                                  <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => setDeleteId(r.id)}><Trash2 className="h-3.5 w-3.5" /></Button>
+                                )}
                               </div>
                             </TableCell>
                           </TableRow>

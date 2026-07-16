@@ -20,6 +20,7 @@ const emptyForm = {
   exam_subject_id: "",
   check_date: new Date().toISOString().slice(0, 10),
   tier: "",
+  qc_member_id: "",
   qc_member_name: "",
   started_on_time: 0,
   finished_on_time: 0,
@@ -132,6 +133,26 @@ export default function QcCheckDialog({ open, onOpenChange, editRecord = null })
     },
   });
 
+  // Training Rep members for QC Team Member dropdown
+  const { data: trainingReps = [] } = useQuery({
+    queryKey: ["training-rep-members", tenantId],
+    enabled: !!tenantId && open,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("members")
+        .select("id, first_name, last_name, church_unit")
+        .eq("tenant_id", tenantId)
+        .not("church_unit", "is", null)
+        .ilike("church_unit", "%Training Rep%")
+        .order("first_name");
+      if (error) throw error;
+      return (data || []).filter((m) => {
+        const units = (m.church_unit || "").split(",").map((u) => u.trim().toLowerCase());
+        return units.includes("training rep");
+      });
+    },
+  });
+
   useEffect(() => {
     if (!open) return;
     if (editRecord) {
@@ -141,6 +162,7 @@ export default function QcCheckDialog({ open, onOpenChange, editRecord = null })
         exam_subject_id: editRecord.exam_subject_id || "",
         check_date: editRecord.check_date || new Date().toISOString().slice(0, 10),
         tier: editRecord.tier || "",
+        qc_member_id: editRecord.qc_member_id || "",
         qc_member_name: editRecord.qc_member_name || "",
         started_on_time: editRecord.started_on_time || 0,
         finished_on_time: editRecord.finished_on_time || 0,
@@ -180,18 +202,34 @@ export default function QcCheckDialog({ open, onOpenChange, editRecord = null })
     mutationFn: async () => {
       if (!form.lecturer_id) throw new Error("Please select a lecturer");
       if (!form.exam_title_id) throw new Error("Please select a course");
-      if (!form.qc_member_name.trim()) throw new Error("Please enter the QC team member's name");
+      if (!form.exam_subject_id) throw new Error("Please select a subject");
+      if (!form.qc_member_id) throw new Error("Please select a QC team member");
 
-      // Snapshot student's avg rating for this lecturer (optionally scoped to subject)
+      // Duplicate guard: only one QC per lecturer + subject per tenant
+      {
+        let dupQ = supabase
+          .from("lecturer_qc_checks")
+          .select("id")
+          .eq("tenant_id", tenantId)
+          .eq("lecturer_id", form.lecturer_id)
+          .eq("exam_subject_id", form.exam_subject_id);
+        if (editRecord?.id) dupQ = dupQ.neq("id", editRecord.id);
+        const { data: dup, error: dupErr } = await dupQ.limit(1);
+        if (dupErr) throw dupErr;
+        if (dup && dup.length) {
+          throw new Error("A QC check already exists for this lecturer and subject.");
+        }
+      }
+
+      // Snapshot student's avg rating for this lecturer (scoped to subject)
       let studentAvg = null;
       try {
-        let q = supabase
+        const { data: rs } = await supabase
           .from("lecturer_ratings")
           .select("overall_rating")
           .eq("tenant_id", tenantId)
-          .eq("lecturer_id", form.lecturer_id);
-        if (form.exam_subject_id) q = q.eq("subject_id", form.exam_subject_id);
-        const { data: rs } = await q;
+          .eq("lecturer_id", form.lecturer_id)
+          .eq("subject_id", form.exam_subject_id);
         if (rs && rs.length) {
           studentAvg = rs.reduce((s, r) => s + (r.overall_rating || 0), 0) / rs.length;
         }
@@ -201,9 +239,10 @@ export default function QcCheckDialog({ open, onOpenChange, editRecord = null })
         tenant_id: tenantId,
         lecturer_id: form.lecturer_id,
         exam_title_id: form.exam_title_id || null,
-        exam_subject_id: form.exam_subject_id || null,
+        exam_subject_id: form.exam_subject_id,
         check_date: form.check_date,
         tier: form.tier.trim() || null,
+        qc_member_id: form.qc_member_id,
         qc_member_name: form.qc_member_name.trim(),
         started_on_time: form.started_on_time || null,
         finished_on_time: form.finished_on_time || null,
@@ -289,7 +328,7 @@ export default function QcCheckDialog({ open, onOpenChange, editRecord = null })
               </Select>
             </div>
             <div>
-              <Label>Subject (optional)</Label>
+              <Label>Subject *</Label>
               <Select value={form.exam_subject_id} onValueChange={(v) => set("exam_subject_id", v)} disabled={!form.exam_title_id}>
                 <SelectTrigger><SelectValue placeholder={form.exam_title_id ? "Select a subject" : "Select a course first"} /></SelectTrigger>
                 <SelectContent>
@@ -299,7 +338,25 @@ export default function QcCheckDialog({ open, onOpenChange, editRecord = null })
             </div>
             <div>
               <Label>QC Team Member *</Label>
-              <Input value={form.qc_member_name} maxLength={200} onChange={(e) => set("qc_member_name", e.target.value)} placeholder="Name of QC team member" />
+              <Select
+                value={form.qc_member_id}
+                onValueChange={(v) => {
+                  const m = trainingReps.find((x) => x.id === v);
+                  const name = m ? `${m.first_name || ""} ${m.last_name || ""}`.trim() : "";
+                  setForm((f) => ({ ...f, qc_member_id: v, qc_member_name: name }));
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={trainingReps.length ? "Select a Training Rep member" : "No Training Rep members found"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {trainingReps.map((m) => (
+                    <SelectItem key={m.id} value={m.id}>
+                      {`${m.first_name || ""} ${m.last_name || ""}`.trim() || "Unnamed"}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
