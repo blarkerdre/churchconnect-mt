@@ -12,14 +12,13 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/components/ui/use-toast";
 import { Loader2, ClipboardCheck } from "lucide-react";
-import { SCORE_LABELS, TIER_OPTIONS } from "@/lib/qc-options";
+import { SCORE_LABELS } from "@/lib/qc-options";
 
 const emptyForm = {
   lecturer_id: "",
   exam_title_id: "",
   exam_subject_id: "",
   check_date: new Date().toISOString().slice(0, 10),
-  tier: "",
   qc_member_id: "",
   qc_member_name: "",
   started_on_time: 0,
@@ -161,7 +160,6 @@ export default function QcCheckDialog({ open, onOpenChange, editRecord = null })
         exam_title_id: editRecord.exam_title_id || "",
         exam_subject_id: editRecord.exam_subject_id || "",
         check_date: editRecord.check_date || new Date().toISOString().slice(0, 10),
-        tier: editRecord.tier || "",
         qc_member_id: editRecord.qc_member_id || "",
         qc_member_name: editRecord.qc_member_name || "",
         started_on_time: editRecord.started_on_time || 0,
@@ -181,13 +179,6 @@ export default function QcCheckDialog({ open, onOpenChange, editRecord = null })
       setForm(emptyForm);
     }
   }, [open, editRecord]);
-
-  // Auto-fill tier from lecturer level on selection
-  useEffect(() => {
-    if (!form.lecturer_id || form.tier) return;
-    const lect = lecturers.find((l) => l.id === form.lecturer_id);
-    if (lect?.level) setForm((f) => ({ ...f, tier: lect.level }));
-  }, [form.lecturer_id, form.tier, lecturers]);
 
   const total = useMemo(
     () =>
@@ -241,7 +232,7 @@ export default function QcCheckDialog({ open, onOpenChange, editRecord = null })
         exam_title_id: form.exam_title_id || null,
         exam_subject_id: form.exam_subject_id,
         check_date: form.check_date,
-        tier: form.tier.trim() || null,
+        tier: null,
         qc_member_id: form.qc_member_id,
         qc_member_name: form.qc_member_name.trim(),
         started_on_time: form.started_on_time || null,
@@ -315,15 +306,6 @@ export default function QcCheckDialog({ open, onOpenChange, editRecord = null })
                 <SelectTrigger><SelectValue placeholder="Select a course" /></SelectTrigger>
                 <SelectContent>
                   {courses.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label>Tier</Label>
-              <Select value={form.tier} onValueChange={(v) => set("tier", v)}>
-                <SelectTrigger><SelectValue placeholder="Select tier" /></SelectTrigger>
-                <SelectContent>
-                  {TIER_OPTIONS.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
