@@ -295,6 +295,97 @@ export default function WoFBIAttendanceTab() {
     onError: (e) => toast({ title: "Update failed", description: e.message, variant: "destructive" }),
   });
 
+  const saveEdit = useMutation({
+    mutationFn: async () => {
+      if (!editRecord) throw new Error("No record");
+      const { session, registration, record } = editRecord;
+      const inAt = editForm.checked_in_at ? new Date(editForm.checked_in_at) : null;
+      const outAt = editForm.checked_out_at ? new Date(editForm.checked_out_at) : null;
+      if (editForm.status === "absent") {
+        if (record?.id) {
+          const { error } = await supabase
+            .from("wofbi_attendance_records")
+            .delete()
+            .eq("id", record.id)
+            .eq("tenant_id", tenantId);
+          if (error) throw error;
+        }
+        return;
+      }
+      if (!inAt) throw new Error("Time in is required");
+      if (outAt && outAt < inAt) throw new Error("Time out must be after time in");
+      const duration = outAt ? Math.max(0, Math.round((outAt - inAt) / 60000)) : null;
+      if (record?.id) {
+        const { error } = await supabase
+          .from("wofbi_attendance_records")
+          .update({
+            status: editForm.status,
+            checked_in_at: inAt.toISOString(),
+            checked_out_at: outAt ? outAt.toISOString() : null,
+            duration_minutes: duration,
+          })
+          .eq("id", record.id)
+          .eq("tenant_id", tenantId);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from("wofbi_attendance_records").insert(
+          withTenant({
+            session_id: session.id,
+            registration_id: registration.id,
+            member_id: registration.member_id,
+            status: editForm.status,
+            checked_in_at: inAt.toISOString(),
+            checked_out_at: outAt ? outAt.toISOString() : null,
+            duration_minutes: duration,
+            source: "manual",
+          })
+        );
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      toast({ title: "Attendance updated" });
+      setEditRecord(null);
+      qc.invalidateQueries({ queryKey: ["wofbi-att-all-records"] });
+      qc.invalidateQueries({ queryKey: ["wofbi-att-roster-records"] });
+      qc.invalidateQueries({ queryKey: ["wofbi-att-record-counts"] });
+    },
+    onError: (e) => toast({ title: "Save failed", description: e.message, variant: "destructive" }),
+  });
+
+  const deleteRecord = useMutation({
+    mutationFn: async (id) => {
+      const { error } = await supabase
+        .from("wofbi_attendance_records")
+        .delete()
+        .eq("id", id)
+        .eq("tenant_id", tenantId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({ title: "Attendance record deleted" });
+      qc.invalidateQueries({ queryKey: ["wofbi-att-all-records"] });
+      qc.invalidateQueries({ queryKey: ["wofbi-att-roster-records"] });
+      qc.invalidateQueries({ queryKey: ["wofbi-att-record-counts"] });
+    },
+    onError: (e) => toast({ title: "Delete failed", description: e.message, variant: "destructive" }),
+  });
+
+  const openEdit = (session, registration, record) => {
+    const toLocal = (iso) => {
+      if (!iso) return "";
+      const d = new Date(iso);
+      const off = d.getTimezoneOffset() * 60000;
+      return new Date(d - off).toISOString().slice(0, 16);
+    };
+    setEditRecord({ session, registration, record });
+    setEditForm({
+      status: record?.status || "present",
+      checked_in_at: toLocal(record?.checked_in_at) || `${session.session_date}T09:00`,
+      checked_out_at: toLocal(record?.checked_out_at),
+    });
+  };
+
   // Attendance % per student
   const perStudent = useMemo(() => {
     const totalSessions = sessions.length;
