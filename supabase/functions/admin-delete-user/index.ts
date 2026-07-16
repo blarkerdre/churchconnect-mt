@@ -56,6 +56,7 @@ Deno.serve(async (req) => {
         supabase.from("first_timers").update({ follow_up_assigned_to: null }).eq("follow_up_assigned_to", user_id).eq("tenant_id", tId),
         supabase.from("announcements").update({ created_by: null }).eq("created_by", user_id).eq("tenant_id", tId),
         supabase.from("transportation").update({ user_id: null }).eq("user_id", user_id).eq("tenant_id", tId),
+        supabase.from("transportation").update({ driver_user_id: null }).eq("driver_user_id", user_id).eq("tenant_id", tId),
         supabase.from("app_settings").update({ updated_by: null }).eq("updated_by", user_id).eq("tenant_id", tId),
       ]);
 
