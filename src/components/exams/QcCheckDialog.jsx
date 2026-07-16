@@ -202,18 +202,34 @@ export default function QcCheckDialog({ open, onOpenChange, editRecord = null })
     mutationFn: async () => {
       if (!form.lecturer_id) throw new Error("Please select a lecturer");
       if (!form.exam_title_id) throw new Error("Please select a course");
-      if (!form.qc_member_name.trim()) throw new Error("Please enter the QC team member's name");
+      if (!form.exam_subject_id) throw new Error("Please select a subject");
+      if (!form.qc_member_id) throw new Error("Please select a QC team member");
 
-      // Snapshot student's avg rating for this lecturer (optionally scoped to subject)
+      // Duplicate guard: only one QC per lecturer + subject per tenant
+      {
+        let dupQ = supabase
+          .from("lecturer_qc_checks")
+          .select("id")
+          .eq("tenant_id", tenantId)
+          .eq("lecturer_id", form.lecturer_id)
+          .eq("exam_subject_id", form.exam_subject_id);
+        if (editRecord?.id) dupQ = dupQ.neq("id", editRecord.id);
+        const { data: dup, error: dupErr } = await dupQ.limit(1);
+        if (dupErr) throw dupErr;
+        if (dup && dup.length) {
+          throw new Error("A QC check already exists for this lecturer and subject.");
+        }
+      }
+
+      // Snapshot student's avg rating for this lecturer (scoped to subject)
       let studentAvg = null;
       try {
-        let q = supabase
+        const { data: rs } = await supabase
           .from("lecturer_ratings")
           .select("overall_rating")
           .eq("tenant_id", tenantId)
-          .eq("lecturer_id", form.lecturer_id);
-        if (form.exam_subject_id) q = q.eq("subject_id", form.exam_subject_id);
-        const { data: rs } = await q;
+          .eq("lecturer_id", form.lecturer_id)
+          .eq("subject_id", form.exam_subject_id);
         if (rs && rs.length) {
           studentAvg = rs.reduce((s, r) => s + (r.overall_rating || 0), 0) / rs.length;
         }
@@ -223,9 +239,10 @@ export default function QcCheckDialog({ open, onOpenChange, editRecord = null })
         tenant_id: tenantId,
         lecturer_id: form.lecturer_id,
         exam_title_id: form.exam_title_id || null,
-        exam_subject_id: form.exam_subject_id || null,
+        exam_subject_id: form.exam_subject_id,
         check_date: form.check_date,
         tier: form.tier.trim() || null,
+        qc_member_id: form.qc_member_id,
         qc_member_name: form.qc_member_name.trim(),
         started_on_time: form.started_on_time || null,
         finished_on_time: form.finished_on_time || null,
