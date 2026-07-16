@@ -41,6 +41,7 @@ Deno.serve(async (req) => {
     const body = await req.json().catch(() => ({}));
     const application_id: string | undefined = body?.application_id;
     const registration_id: string | undefined = body?.registration_id;
+    console.log("[provision-exam-account] entry", { application_id, registration_id, caller: callerUserId });
     if (!application_id && !registration_id) {
       return json({ error: "Missing application_id or registration_id" }, 400);
     }
