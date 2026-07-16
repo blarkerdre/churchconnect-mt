@@ -1638,6 +1638,21 @@ function MemberExamsView({ memberId, memberRecord, courses, loading }) {
     enabled: !!memberId,
   });
 
+  const { data: pendingApplications = [] } = useQuery({
+    queryKey: ["my-wofbi-applications", memberId, tenantId],
+    queryFn: async () => {
+      let query = supabase
+        .from("wofbi_applications")
+        .select("course_id, status")
+        .eq("member_id", memberId)
+        .in("status", ["submitted", "pending"]);
+      if (tenantId) query = query.eq("tenant_id", tenantId);
+      const { data, error } = await query;
+      if (error) throw error;
+      return (data || []).map(r => r.course_id);
+    },
+    enabled: !!memberId,
+  });
 
   const { data: allSubjects = [] } = useQuery({
     queryKey: ["all-exam-subjects", tenantId],
@@ -1665,16 +1680,47 @@ function MemberExamsView({ memberId, memberRecord, courses, loading }) {
 
   const registerMutation = useMutation({
     mutationFn: async (courseId) => {
-      const { error } = await supabase.from("course_registrations").insert(withTenant({ member_id: memberId, course_id: courseId, registration_origin: "member_self" }));
+      if (!memberRecord?.email) {
+        throw new Error("Your member profile is missing an email address. Please update your profile first.");
+      }
+
+      // Delegate to the public-wofbi-register edge function so the same code path
+      // that handles QR / public form submissions also handles member self-register.
+      // The function detects the signed-in user via the Authorization header and
+      // stamps registration_origin = "member_self" automatically.
+      const { data, error } = await supabase.functions.invoke("public-wofbi-register", {
+        body: {
+          tenant_id: tenantId,
+          course_id: courseId,
+          first_name: memberRecord.first_name || "",
+          last_name: memberRecord.last_name || "",
+          email: memberRecord.email,
+          phone: memberRecord.phone || null,
+          gdpr_consent: true,
+          answers: {},
+        },
+      });
       if (error) throw error;
+      if (data?.error) {
+        const err = new Error(data.error);
+        err.__friendly = true;
+        throw err;
+      }
       return courseId;
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["my-course-registrations"] });
-      toast({ title: "Registered successfully!" });
-      // Confirmation email is sent manually by an admin from the Registrations list.
+      qc.invalidateQueries({ queryKey: ["my-wofbi-applications"] });
+      qc.invalidateQueries({ queryKey: ["wofbi-applications"] });
+      toast({
+        title: "Application submitted",
+        description: "You'll be notified once your registration has been approved.",
+      });
     },
-    onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+    onError: (err) => toast({
+      title: err?.__friendly ? "Registration" : "Error",
+      description: err.message,
+      variant: err?.__friendly ? "default" : "destructive",
+    }),
   });
 
   const bestBySubject = {};
@@ -1730,6 +1776,7 @@ function MemberExamsView({ memberId, memberRecord, courses, loading }) {
         <div className="space-y-4">
           {activeCourses.map(course => {
             const isRegistered = registrations.includes(course.id);
+            const isPending = !isRegistered && pendingApplications.includes(course.id);
             const subjects = allSubjects.filter(s => s.course_id === course.id);
             const completedSubjectIds = subjects.filter(s => bestBySubject[s.id]).map(s => s.id);
             const totalScore = completedSubjectIds.reduce((sum, id) => sum + (bestBySubject[id]?.score || 0), 0);
@@ -1752,6 +1799,11 @@ function MemberExamsView({ memberId, memberRecord, courses, loading }) {
                           <CheckCircle2 className="h-3 w-3 mr-1" /> Registered
                         </Badge>
                       )}
+                      {isPending && (
+                        <Badge variant="outline" className="text-xs">
+                          Application pending
+                        </Badge>
+                      )}
                       {allDone && course.send_result_email && (
                         <Badge variant={passed ? "default" : "destructive"} className="text-xs">
                           {passed ? getGradeClassification(aggPct, course.grade_classifications || DEFAULT_GRADE_CLASSIFICATIONS) : "Fail"}
@@ -1766,7 +1818,9 @@ function MemberExamsView({ memberId, memberRecord, courses, loading }) {
                   </div>
 
                   {!isRegistered ? (
-                    course.registration_open ? (
+                    isPending ? (
+                      <p className="text-xs text-muted-foreground italic">Your application is awaiting admin approval. You'll be notified by email once approved.</p>
+                    ) : course.registration_open ? (
                       appFormEnabled && wofbiRegisterPath ? (
                         <Button asChild size="sm" className="gap-1.5">
                           <a href={`${wofbiRegisterPath}?course_id=${course.id}`}>
