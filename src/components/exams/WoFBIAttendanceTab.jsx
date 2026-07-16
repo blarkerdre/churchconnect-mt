@@ -148,7 +148,7 @@ export default function WoFBIAttendanceTab() {
       const ids = sessions.map((s) => s.id);
       const { data, error } = await supabase
         .from("wofbi_attendance_records")
-        .select("session_id, registration_id, status")
+        .select("session_id, registration_id, status, checked_in_at, checked_out_at, duration_minutes")
         .in("session_id", ids);
       if (error) throw error;
       return data || [];
