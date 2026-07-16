@@ -329,6 +329,7 @@ export default function ExamManagement() {
         <TabsList>
           <TabsTrigger value="management">Management</TabsTrigger>
           <TabsTrigger value="applications">Applications</TabsTrigger>
+          <TabsTrigger value="attendance">Attendance</TabsTrigger>
           <TabsTrigger value="app-form">Application Form</TabsTrigger>
           <TabsTrigger value="lecturer">Lecturer Feedback</TabsTrigger>
           <TabsTrigger value="qc">Quality Control</TabsTrigger>
