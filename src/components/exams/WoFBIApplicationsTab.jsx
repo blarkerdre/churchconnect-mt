@@ -89,7 +89,7 @@ export default function WoFBIApplicationsTab() {
       const { data, error } = await scopeQuery(
         supabase
           .from("course_registrations")
-          .select("id, member_id, course_id, status, registered_at, course:exam_titles(id, name), member:members(id, first_name, last_name, email, phone)")
+          .select("id, member_id, course_id, status, registered_at, registration_email_sent_at, exam_link_sent_at, course:exam_titles(id, name), member:members(id, first_name, last_name, email, phone)")
           .order("registered_at", { ascending: false })
       );
       if (error) throw error;
@@ -102,8 +102,21 @@ export default function WoFBIApplicationsTab() {
   // Merge: application rows win over direct registrations for the same (member_id, course_id).
   const applications = useMemo(() => {
     const appKey = (a) => `${a.member_id || ""}|${a.course_id || ""}`;
+    const regByKey = new Map();
+    regRows.forEach((r) => {
+      if (r.member_id && r.course_id) regByKey.set(`${r.member_id}|${r.course_id}`, r);
+    });
     const appKeys = new Set(appRows.filter((a) => a.member_id && a.course_id).map(appKey));
-    const formRows = appRows.map((a) => ({ ...a, source: "form" }));
+    const formRows = appRows.map((a) => {
+      const reg = a.member_id && a.course_id ? regByKey.get(`${a.member_id}|${a.course_id}`) : null;
+      return {
+        ...a,
+        source: "form",
+        registration_id: reg?.id || null,
+        registration_email_sent_at: reg?.registration_email_sent_at || null,
+        exam_link_sent_at: reg?.exam_link_sent_at || null,
+      };
+    });
     const syntheticRows = regRows
       .filter((r) => !(r.member_id && r.course_id && appKeys.has(`${r.member_id}|${r.course_id}`)))
       .map((r) => ({
@@ -122,6 +135,8 @@ export default function WoFBIApplicationsTab() {
         status: r.status,
         answers: {},
         created_at: r.registered_at,
+        registration_email_sent_at: r.registration_email_sent_at || null,
+        exam_link_sent_at: r.exam_link_sent_at || null,
       }));
     return [...formRows, ...syntheticRows].sort(
       (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
@@ -132,6 +147,20 @@ export default function WoFBIApplicationsTab() {
     mutationFn: async ({ id, status }) => {
       const app = applications.find((a) => a.id === id);
       if (!app) throw new Error("Row not found");
+
+      const sendConfirmationEmail = async (registrationId) => {
+        try {
+          const { data, error } = await supabase.functions.invoke("send-student-number-email", {
+            body: { registration_id: registrationId },
+          });
+          if (error) return error.message || String(error);
+          if (data?.error) return data.error;
+          if (data?.email_sent === false) return data?.email_error || "Email failed to send";
+          return null;
+        } catch (e) {
+          return e.message || String(e);
+        }
+      };
 
       // Direct registration path — update course_registrations status only.
       if (app.source === "direct") {
@@ -154,10 +183,14 @@ export default function WoFBIApplicationsTab() {
           { status: regStatus, via: "bible_school_applications_tab" },
           tenantId
         );
-        return { status, enrolled: false, alreadyEnrolled: false, unlinked: false, source: "direct" };
+        let emailError = null;
+        if (regStatus === "approved") {
+          emailError = await sendConfirmationEmail(app.registration_id);
+        }
+        return { status, enrolled: false, alreadyEnrolled: false, unlinked: false, source: "direct", emailError };
       }
 
-      // Form application path (original behaviour).
+      // Form application path.
       const { error } = await supabase
         .from("wofbi_applications")
         .update({ status, reviewed_by: user?.id, reviewed_at: new Date().toISOString() })
@@ -168,6 +201,8 @@ export default function WoFBIApplicationsTab() {
       let enrolled = false;
       let alreadyEnrolled = false;
       let unlinked = false;
+      let registrationId = app.registration_id || null;
+      let emailError = null;
 
       if (status === "approved") {
         if (app.member_id && app.course_id) {
@@ -180,17 +215,23 @@ export default function WoFBIApplicationsTab() {
             .maybeSingle();
           if (existing) {
             alreadyEnrolled = true;
+            registrationId = existing.id;
           } else {
-            const { error: insErr } = await supabase.from("course_registrations").insert({
-              tenant_id: tenantId,
-              member_id: app.member_id,
-              course_id: app.course_id,
-              status: "active",
-              registered_at: new Date().toISOString(),
-              registration_origin: app.registration_origin || "public_qr",
-            });
+            const { data: inserted, error: insErr } = await supabase
+              .from("course_registrations")
+              .insert({
+                tenant_id: tenantId,
+                member_id: app.member_id,
+                course_id: app.course_id,
+                status: "active",
+                registered_at: new Date().toISOString(),
+                registration_origin: app.registration_origin || "public_qr",
+              })
+              .select("id")
+              .single();
             if (insErr) throw insErr;
             enrolled = true;
+            registrationId = inserted?.id || null;
           }
         } else if (!app.member_id) {
           unlinked = true;
@@ -202,29 +243,33 @@ export default function WoFBIApplicationsTab() {
           { member_id: app.member_id || null, course_id: app.course_id || null, enrolled, already_enrolled: alreadyEnrolled, unlinked },
           tenantId
         );
+        if (registrationId) {
+          emailError = await sendConfirmationEmail(registrationId);
+        }
       }
 
-      return { status, enrolled, alreadyEnrolled, unlinked, source: "form" };
+      return { status, enrolled, alreadyEnrolled, unlinked, source: "form", emailError };
     },
-    onSuccess: (res, variables) => {
+    onSuccess: (res) => {
       qc.invalidateQueries({ queryKey: ["wofbi-applications", tenantId] });
       qc.invalidateQueries({ queryKey: ["wofbi-direct-registrations", tenantId] });
       qc.invalidateQueries({ queryKey: ["course-registrations"] });
       if (res.status === "approved") {
-        if (res.source === "direct") {
-          toast({ title: "Registration approved" });
-        } else if (res.enrolled) {
-          toast({ title: "Applicant approved and enrolled", description: "A course registration has been created." });
-        } else if (res.alreadyEnrolled) {
-          toast({ title: "Approved", description: "Applicant was already enrolled in this course." });
-        } else if (res.unlinked) {
+        const emailNote = res.emailError ? ` · Email: ${res.emailError}` : "";
+        if (res.unlinked) {
           toast({ title: "Approved", description: "Link this applicant to a member record to enrol them into the course." });
         } else {
-          toast({ title: "Application approved" });
+          const baseDesc = res.enrolled
+            ? "A course registration has been created."
+            : res.alreadyEnrolled
+            ? "Applicant was already enrolled."
+            : "";
+          toast({
+            title: res.emailError ? "Approved — email failed" : "Approved & confirmation emailed",
+            description: (baseDesc + emailNote).trim() || undefined,
+            variant: res.emailError ? "destructive" : undefined,
+          });
         }
-        // No email is sent on approval here. The student-number email is sent from
-        // Bible School Management → Registrations when the admin approves there,
-        // and the exam sign-in link is sent separately via "Send exam link".
       } else {
         toast({ title: res.source === "direct" ? "Registration updated" : "Application updated" });
       }
@@ -287,10 +332,15 @@ export default function WoFBIApplicationsTab() {
 
   const getFieldMeta = (fieldId) => filterableFields.find((f) => f.id === fieldId);
 
-  const statusMatches = (rowStatus, filter) => {
+  const statusMatches = (row, filter) => {
+    const rowStatus = row.status;
+    const approved = rowStatus === "approved" || rowStatus === "active";
     if (filter === "all") return true;
-    if (filter === "approved") return rowStatus === "approved" || rowStatus === "active";
+    if (filter === "approved") return approved;
     if (filter === "submitted") return rowStatus === "submitted" || rowStatus === "pending";
+    if (filter === "email_pending") return approved && !row.registration_email_sent_at;
+    if (filter === "link_pending") return approved && !!row.registration_email_sent_at && !row.exam_link_sent_at;
+    if (filter === "link_sent") return approved && !!row.exam_link_sent_at;
     return rowStatus === filter;
   };
 
@@ -299,7 +349,7 @@ export default function WoFBIApplicationsTab() {
     const from = dateFrom ? new Date(dateFrom).getTime() : null;
     const to = dateTo ? new Date(dateTo).getTime() + 86400000 : null;
     return applications.filter((a) => {
-      if (!statusMatches(a.status, statusFilter)) return false;
+      if (!statusMatches(a, statusFilter)) return false;
       if (courseFilter !== "all" && a.course?.id !== courseFilter) return false;
       if (sourceFilter !== "all" && a.source !== sourceFilter) return false;
       if (from || to) {
@@ -551,6 +601,9 @@ export default function WoFBIApplicationsTab() {
                 <SelectItem value="all">All statuses</SelectItem>
                 <SelectItem value="submitted">Submitted / Pending</SelectItem>
                 <SelectItem value="approved">Approved</SelectItem>
+                <SelectItem value="email_pending">Approved — email pending</SelectItem>
+                <SelectItem value="link_pending">Exam link pending</SelectItem>
+                <SelectItem value="link_sent">Exam link sent</SelectItem>
                 <SelectItem value="rejected">Rejected</SelectItem>
               </SelectContent>
             </Select>
