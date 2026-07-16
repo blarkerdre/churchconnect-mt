@@ -6467,6 +6467,15 @@ export type Database = {
           name: string
         }[]
       }
+      get_public_wofbi_application_form: {
+        Args: { _tenant_id: string }
+        Returns: {
+          enabled: boolean
+          fields: Json
+          intro_text: string
+          title: string
+        }[]
+      }
       get_tenant_by_slug: {
         Args: { _slug: string }
         Returns: {
