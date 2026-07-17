@@ -449,6 +449,25 @@ export default function TeensCheckin() {
           {!result && !error && user && !pendingTeen && (
             <>
               <p className="text-sm text-muted-foreground">Tap the teen to check in / out.</p>
+              {teens.some((t) => !t.attendance_consent) && (
+                <div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-left space-y-2">
+                  <div className="flex items-start gap-2">
+                    <ShieldAlert className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
+                    <div>
+                      <p className="text-xs font-semibold text-amber-900">Parental consent needed</p>
+                      <p className="text-[11px] text-amber-800 mt-0.5">
+                        You haven't given attendance consent for
+                        {" "}<span className="font-medium">
+                          {teens.filter((t) => !t.attendance_consent).map((t) => `${t.first_name} ${t.last_name}`).join(", ")}
+                        </span>. They can't check in until consent is ticked.
+                      </p>
+                    </div>
+                  </div>
+                  <Button size="sm" className="w-full" onClick={() => navigate("/my-family")}>
+                    Manage consent
+                  </Button>
+                </div>
+              )}
               <div className="space-y-2">
                 {teens.length === 0 && (
                   <p className="text-xs text-muted-foreground">No registered teens found on your account.</p>
