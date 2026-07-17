@@ -119,6 +119,7 @@ export default function SermonRichEditor({ content, onChange }) {
         />
       </div>
       <BibleRefPopover containerRef={containerRef} />
+      <BibleBookAutocomplete editor={editor} containerRef={containerRef} />
       <HandwritingPad open={padOpen} onOpenChange={setPadOpen} onConvert={handleInsertText} />
       <InsertBibleRefDialog open={verseOpen} onOpenChange={setVerseOpen} onInsert={handleInsertVerse} />
     </div>
