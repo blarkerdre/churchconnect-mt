@@ -471,6 +471,11 @@ export default function TeensCheckin() {
           {!result && !error && mode === "self-pin" && selfTeen && (
             <div className="space-y-3 text-left">
               <p className="text-sm text-center">Hi {selfTeen.first_name}! Enter your PIN.</p>
+              <p aria-live="polite" className={`text-xs rounded-md px-2 py-1.5 ${isCheckedIn(selfTeen.id) ? "bg-green-50 text-green-800 border border-green-200" : "bg-slate-50 text-slate-700 border border-slate-200"}`}>
+                {isCheckedIn(selfTeen.id)
+                  ? "You're currently checked in — entering your PIN will check you out."
+                  : "You're not checked in yet — entering your PIN will check you in."}
+              </p>
               <div className="space-y-1.5">
                 <Label>Your 4-digit PIN</Label>
                 <Input inputMode="numeric" pattern="[0-9]*" maxLength={6} value={pin}
