@@ -353,7 +353,13 @@ export default function TeensCheckin() {
               <p className="text-sm text-center text-muted-foreground">Tap your name.</p>
               <div className="space-y-2 max-h-64 overflow-y-auto">
                 {publicTeens.length === 0 && (
-                  <p className="text-xs text-muted-foreground text-center">No teens available.</p>
+                  <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-left">
+                    <p className="text-xs font-semibold text-amber-900">No teens are eligible to check in yet.</p>
+                    <p className="text-[11px] text-amber-800 mt-1">
+                      Teens only appear here after a parent gives attendance consent in
+                      {" "}<span className="font-medium">My Family → Teenagers</span>.
+                    </p>
+                  </div>
                 )}
                 {publicTeens.map((t) => (
                   <button key={t.id} type="button"
