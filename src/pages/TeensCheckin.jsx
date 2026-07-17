@@ -546,13 +546,11 @@ export default function TeensCheckin() {
               </div>
               <div className="flex gap-2">
                 <Button variant="outline" className="flex-1" onClick={() => { setPendingTeen(null); setPin(""); }}>Cancel</Button>
-                <Button className="flex-1" disabled={busy || !pendingTeen.id || pin.length < 4}
+                <Button className="flex-1" variant={isCheckedIn(pendingTeen.id) ? "destructive" : "default"}
+                  disabled={busy || !pendingTeen.id || pin.length < 4}
                   onClick={() => doCheckin(pendingTeen.id, pin)}>
-                  {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : "Check in / out"}
+                  {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : (isCheckedIn(pendingTeen.id) ? "Check out" : "Check in")}
                 </Button>
-              </div>
-            </div>
-          )}
         </CardContent>
       </Card>
     </div>
