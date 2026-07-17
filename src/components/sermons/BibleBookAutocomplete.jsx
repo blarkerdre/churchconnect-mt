@@ -154,7 +154,7 @@ export default function BibleBookAutocomplete({ editor, containerRef }) {
     <div
       ref={menuRef}
       role="listbox"
-      className="fixed z-[9999] min-w-[180px] max-w-[260px] rounded-md border border-border bg-popover text-popover-foreground shadow-md py-1 pointer-events-auto"
+      className="fixed z-[9999] min-w-[160px] max-w-[260px] rounded-md border border-border bg-popover text-popover-foreground shadow-lg py-1 pointer-events-auto"
       style={{ left: state.x, top: state.y + 4 }}
     >
       <div
