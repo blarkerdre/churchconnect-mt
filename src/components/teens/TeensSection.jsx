@@ -10,14 +10,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Trash2, User, KeyRound } from "lucide-react";
+import { Plus, Trash2, User, KeyRound, ShieldCheck, ShieldAlert } from "lucide-react";
 import { toast } from "sonner";
+import { useAuth } from "@/hooks/useAuth";
+import { format } from "date-fns";
 
 
 
 
 function TeenForm({ open, onOpenChange, teen, memberId, onSaved }) {
   const { tenantId, withTenant } = useTenantQuery();
+  const { user } = useAuth();
   const [form, setForm] = useState(() => ({
     first_name: teen?.first_name || "",
     last_name: teen?.last_name || "",
@@ -26,6 +29,7 @@ function TeenForm({ open, onOpenChange, teen, memberId, onSaved }) {
     notes: teen?.notes || "",
     pin: "",
     clear_pin: false,
+    attendance_consent: !!teen?.attendance_consent,
   }));
   React.useEffect(() => {
     setForm({
@@ -36,6 +40,7 @@ function TeenForm({ open, onOpenChange, teen, memberId, onSaved }) {
       notes: teen?.notes || "",
       pin: "",
       clear_pin: false,
+      attendance_consent: !!teen?.attendance_consent,
     });
   }, [teen, open]);
 
@@ -49,16 +54,18 @@ function TeenForm({ open, onOpenChange, teen, memberId, onSaved }) {
         gender: form.gender || null,
         notes: form.notes || null,
       };
+      // Consent transitions (audit trail)
+      const prevConsent = !!teen?.attendance_consent;
+      if (form.attendance_consent !== prevConsent) {
+        payload.attendance_consent = form.attendance_consent;
+        payload.attendance_consent_at = form.attendance_consent ? new Date().toISOString() : null;
+        payload.attendance_consent_by = form.attendance_consent ? (user?.id || null) : null;
+      }
       if (form.clear_pin) payload.access_pin_hash = null;
       else if (form.pin) {
         if (!/^\d{4,6}$/.test(form.pin)) throw new Error("PIN must be 4-6 digits");
-        // Hash on server via RPC-less shortcut: store bcrypt via a Postgres call.
-        // We use a stored function call embedded in insert/update using rpc.
         const { data: hashed, error: hashErr } = await supabase.rpc("crypt_pin", { _pin: form.pin });
-        if (hashErr) {
-          // fall back to plain hash for update — but we prefer bcrypt so bubble error.
-          throw hashErr;
-        }
+        if (hashErr) throw hashErr;
         payload.access_pin_hash = hashed;
       }
       if (teen?.id) {
@@ -116,6 +123,30 @@ function TeenForm({ open, onOpenChange, teen, memberId, onSaved }) {
             )}
           </div>
           <div><Label>Notes</Label><Input value={form.notes || ""} onChange={(e) => setForm({ ...form, notes: e.target.value })} /></div>
+
+          <div className="rounded-md border border-primary/20 bg-primary/5 p-3 space-y-1.5">
+            <label className="flex items-start gap-2 text-sm cursor-pointer">
+              <input
+                type="checkbox"
+                className="mt-0.5"
+                checked={form.attendance_consent}
+                onChange={(e) => setForm({ ...form, attendance_consent: e.target.checked })}
+              />
+              <span>
+                <span className="font-medium">I give parental consent</span> for my teen to check in and out of on-premises Teens attendance sessions.
+              </span>
+            </label>
+            {teen?.attendance_consent && teen?.attendance_consent_at && (
+              <p className="text-[11px] text-muted-foreground pl-6">
+                Consent given on {format(new Date(teen.attendance_consent_at), "d MMM yyyy")}. Untick to revoke.
+              </p>
+            )}
+            {!form.attendance_consent && (
+              <p className="text-[11px] text-amber-700 pl-6">
+                Without consent, your teen cannot be signed in at any session.
+              </p>
+            )}
+          </div>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
@@ -180,6 +211,15 @@ export default function TeensSection({ memberId }) {
                   {t.access_pin_hash && (
                     <Badge variant="outline" className="text-[10px] border-emerald-300 text-emerald-700">
                       <KeyRound className="h-3 w-3 mr-1" /> PIN set
+                    </Badge>
+                  )}
+                  {t.attendance_consent ? (
+                    <Badge variant="outline" className="text-[10px] border-emerald-300 text-emerald-700">
+                      <ShieldCheck className="h-3 w-3 mr-1" /> Consent given
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline" className="text-[10px] border-amber-300 text-amber-700">
+                      <ShieldAlert className="h-3 w-3 mr-1" /> Consent needed
                     </Badge>
                   )}
                 </div>
