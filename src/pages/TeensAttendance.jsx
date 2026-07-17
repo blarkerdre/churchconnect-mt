@@ -564,7 +564,7 @@ function CumulativeReportDialog({ open, onOpenChange }) {
   );
 }
 
-export default function TeensAttendance() {
+export function TeensAttendancePanel() {
   const { tenantId } = useTenantQuery();
   const { user } = useAuth();
   const qc = useQueryClient();
