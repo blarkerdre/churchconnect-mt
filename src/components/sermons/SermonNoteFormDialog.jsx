@@ -187,6 +187,7 @@ export default function SermonNoteFormDialog({ open, onOpenChange, note, folders
             )}
           </div>
           <div>
+            <Label htmlFor="sn-date">Service date</Label>
             <Input id="sn-date" type="date" value={serviceDate} onChange={(e) => setServiceDate(e.target.value)} />
           </div>
           <div>
