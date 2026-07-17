@@ -727,13 +727,8 @@ export default function WoFBIAttendanceTab() {
         </DialogContent>
       </Dialog>
 
-      {/* QR dialog */}
-      <WoFBIAttendanceQRDialog
-        open={!!qrSession}
-        onOpenChange={(v) => !v && setQrSession(null)}
-        session={qrSession}
-        onClosed={() => qc.invalidateQueries({ queryKey: ["wofbi-att-sessions"] })}
-      />
+      {/* Persistent Session QR */}
+      <WoFBIPersistentQRDialog open={qrOpen} onOpenChange={setQrOpen} />
 
       {/* Roster override dialog */}
       <Dialog open={!!rosterSession} onOpenChange={(v) => !v && setRosterSession(null)}>
