@@ -4,7 +4,7 @@ import { getBookSuggestions } from "@/lib/bible/refs";
 
 const TOKEN_RE = /(?:^|[\s(\[.,;!?"'])((?:(?:[1-3])\s?|(?:I{1,3})\s?)?[A-Za-z][A-Za-z]{1,20})$/;
 
-export default function BibleBookAutocomplete({ editor }) {
+export default function BibleBookAutocomplete({ editor, containerRef }) {
   const [state, setState] = useState({ open: false, items: [], index: 0, x: 0, y: 0, caretTop: 0, from: 0, to: 0 });
   const stateRef = useRef(state);
   stateRef.current = state;
@@ -145,11 +145,11 @@ export default function BibleBookAutocomplete({ editor }) {
     <div
       ref={menuRef}
       role="listbox"
-      className="fixed z-[9999] min-w-[180px] max-w-[260px] rounded-md border border-border bg-popover text-popover-foreground shadow-md py-1"
+      className="fixed z-[9999] min-w-[180px] max-w-[260px] rounded-md border border-border bg-popover text-popover-foreground shadow-md py-1 pointer-events-auto"
       style={{ left: state.x, top: state.y + 4 }}
     >
       <div
-        className="text-[10px] uppercase tracking-wide text-muted-foreground px-2 py-1 select-none"
+        className="text-[10px] uppercase tracking-wide text-muted-foreground px-2 py-1 select-none pointer-events-auto"
         onPointerDown={(e) => e.preventDefault()}
       >
         Bible books
@@ -160,7 +160,7 @@ export default function BibleBookAutocomplete({ editor }) {
           type="button"
           role="option"
           aria-selected={i === state.index}
-          className={`w-full text-left px-2 py-2 min-h-[36px] text-sm select-none touch-manipulation ${i === state.index ? "bg-accent text-accent-foreground" : "hover:bg-accent/60 active:bg-accent"}`}
+          className={`w-full text-left px-2 py-2 min-h-[36px] text-sm select-none touch-manipulation pointer-events-auto ${i === state.index ? "bg-accent text-accent-foreground" : "hover:bg-accent/60 active:bg-accent"}`}
           onMouseMove={() => setState((p) => (p.index === i ? p : { ...p, index: i }))}
           onPointerDown={(e) => { e.preventDefault(); insert(name); }}
         >
@@ -170,5 +170,6 @@ export default function BibleBookAutocomplete({ editor }) {
     </div>
   );
 
-  return createPortal(menu, document.body);
+  const target = containerRef?.current || document.body;
+  return createPortal(menu, target);
 }
