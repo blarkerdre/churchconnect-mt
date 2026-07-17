@@ -481,7 +481,7 @@ function CumulativeReportDialog({ open, onOpenChange }) {
         ].join(","));
       });
     } else {
-      header = ["Date", "Session", "Type", "Teen", "In", "Out", "Duration (min)", "Status", "Source"];
+      header = ["Date", "Session", "Type", "Teen", "In", "Out", "Duration (min)", "Status", "Source", "Note"];
       lines = [header.join(",")];
       filtered.forEach((r) => {
         const name = `${r.teens?.first_name || ""} ${r.teens?.last_name || ""}`.trim();
@@ -495,6 +495,7 @@ function CumulativeReportDialog({ open, onOpenChange }) {
           r.duration_minutes ?? "",
           r.status || "",
           r.source || "",
+          JSON.stringify(r.session?.notes || ""),
         ].join(","));
       });
     }
