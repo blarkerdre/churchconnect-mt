@@ -291,8 +291,10 @@ function AppRoutes() {
         <Route path="/t/:tenantSlug/bible-school-register" element={<PublicWoFBIRegistration />} />
         <Route path="/wofbi/checkin/:token" element={<WoFBICheckin />} />
         <Route path="/t/:tenantSlug/wofbi/checkin/:token" element={<WoFBICheckin />} />
+        <Route path="/t/:tenantSlug/wofbi/checkin" element={<WoFBICheckinLanding />} />
         <Route path="/teens/checkin/:token" element={<TeensCheckin />} />
         <Route path="/t/:tenantSlug/teens/checkin/:token" element={<TeensCheckin />} />
+        <Route path="/t/:tenantSlug/teens/checkin" element={<TeensCheckinLanding />} />
 
         {/* Public reset-password routes */}
         <Route path="/reset-password" element={<ResetPassword />} />
