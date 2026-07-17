@@ -19,6 +19,7 @@ const referenceRoutes: Record<string, string> = {
   transport: "/transportation",
   meeting: "/wsf",
   unit_join_request: "/",
+  teen_attendance: "/teens-attendance",
 };
 
 Deno.serve(async (req) => {
