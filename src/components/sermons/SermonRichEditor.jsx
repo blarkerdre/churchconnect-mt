@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Underline from "@tiptap/extension-underline";
@@ -6,12 +6,15 @@ import Placeholder from "@tiptap/extension-placeholder";
 import { TextStyle } from "@tiptap/extension-text-style";
 import { Color } from "@tiptap/extension-color";
 import { TextAlign } from "@tiptap/extension-text-align";
-import { Bold, Italic, Underline as UnderlineIcon, List, ListOrdered, Heading2, AlignLeft, AlignCenter, AlignRight, AlignJustify, PenLine } from "lucide-react";
+import { Bold, Italic, Underline as UnderlineIcon, List, ListOrdered, Heading2, AlignLeft, AlignCenter, AlignRight, AlignJustify, PenLine, BookOpen } from "lucide-react";
 import { Toggle } from "@/components/ui/toggle";
 import { Button } from "@/components/ui/button";
 import HandwritingPad from "@/components/sermons/HandwritingPad";
+import BibleRef from "@/components/sermons/extensions/BibleRef";
+import BibleRefPopover from "@/components/sermons/BibleRefPopover";
+import InsertBibleRefDialog from "@/components/sermons/InsertBibleRefDialog";
 
-const MenuBar = ({ editor, onOpenPad }) => {
+const MenuBar = ({ editor, onOpenPad, onOpenVerse }) => {
   if (!editor) return null;
 
   const buttons = [
@@ -33,27 +36,13 @@ const MenuBar = ({ editor, onOpenPad }) => {
   return (
     <div className="flex flex-wrap items-center gap-1 border-b border-border p-1">
       {buttons.map((btn) => (
-        <Toggle
-          key={btn.label}
-          size="sm"
-          pressed={btn.active}
-          onPressedChange={btn.action}
-          aria-label={btn.label}
-          className="h-8 w-8 p-0"
-        >
+        <Toggle key={btn.label} size="sm" pressed={btn.active} onPressedChange={btn.action} aria-label={btn.label} className="h-8 w-8 p-0">
           <btn.icon className="h-4 w-4" />
         </Toggle>
       ))}
       <div className="w-px h-6 bg-border mx-0.5" />
       {alignButtons.map((btn) => (
-        <Toggle
-          key={btn.label}
-          size="sm"
-          pressed={btn.active}
-          onPressedChange={btn.action}
-          aria-label={btn.label}
-          className="h-8 w-8 p-0"
-        >
+        <Toggle key={btn.label} size="sm" pressed={btn.active} onPressedChange={btn.action} aria-label={btn.label} className="h-8 w-8 p-0">
           <btn.icon className="h-4 w-4" />
         </Toggle>
       ))}
@@ -66,14 +55,11 @@ const MenuBar = ({ editor, onOpenPad }) => {
         title="Text color"
       />
       <div className="w-px h-6 bg-border mx-0.5" />
-      <Button
-        type="button"
-        size="sm"
-        variant="ghost"
-        onClick={onOpenPad}
-        className="h-8 px-2 gap-1"
-        title="Write with pen (handwriting → text)"
-      >
+      <Button type="button" size="sm" variant="ghost" onClick={onOpenVerse} className="h-8 px-2 gap-1" title="Insert Bible verse reference">
+        <BookOpen className="h-4 w-4" />
+        <span className="text-xs hidden sm:inline">Verse</span>
+      </Button>
+      <Button type="button" size="sm" variant="ghost" onClick={onOpenPad} className="h-8 px-2 gap-1" title="Write with pen (handwriting → text)">
         <PenLine className="h-4 w-4" />
         <span className="text-xs hidden sm:inline">Pen</span>
       </Button>
@@ -83,6 +69,8 @@ const MenuBar = ({ editor, onOpenPad }) => {
 
 export default function SermonRichEditor({ content, onChange }) {
   const [padOpen, setPadOpen] = useState(false);
+  const [verseOpen, setVerseOpen] = useState(false);
+  const containerRef = useRef(null);
 
   const editor = useEditor({
     extensions: [
@@ -92,6 +80,7 @@ export default function SermonRichEditor({ content, onChange }) {
       TextStyle,
       Color,
       TextAlign.configure({ types: ["heading", "paragraph"] }),
+      BibleRef,
     ],
     content: content || "",
     onUpdate: ({ editor }) => onChange(editor.getHTML()),
@@ -99,7 +88,6 @@ export default function SermonRichEditor({ content, onChange }) {
 
   const handleInsertText = (text) => {
     if (!editor || !text) return;
-    // Convert newlines to hard breaks so multi-line handwriting stays multi-line
     const html = text
       .split(/\n+/)
       .map((line) => line.trim())
@@ -109,17 +97,30 @@ export default function SermonRichEditor({ content, onChange }) {
     editor.chain().focus().insertContent(html).run();
   };
 
+  const handleInsertVerse = (reference) => {
+    if (!editor || !reference) return;
+    editor
+      .chain()
+      .focus()
+      .insertContent([
+        { type: "text", text: reference, marks: [{ type: "bibleRef", attrs: { reference } }] },
+        { type: "text", text: " " },
+      ])
+      .run();
+  };
+
   return (
     <div className="rounded-md border border-input bg-transparent shadow-sm focus-within:ring-1 focus-within:ring-ring">
-      <MenuBar editor={editor} onOpenPad={() => setPadOpen(true)} />
-      <div className="max-h-[400px] overflow-y-auto">
+      <MenuBar editor={editor} onOpenPad={() => setPadOpen(true)} onOpenVerse={() => setVerseOpen(true)} />
+      <div ref={containerRef} className="max-h-[400px] overflow-y-auto">
         <EditorContent
           editor={editor}
-          className="prose prose-sm dark:prose-invert max-w-none px-3 py-2 min-h-[200px] focus:outline-none [&_.tiptap]:outline-none [&_.tiptap]:min-h-[200px] [&_.tiptap_p.is-editor-empty:first-child::before]:text-muted-foreground [&_.tiptap_p.is-editor-empty:first-child::before]:content-[attr(data-placeholder)] [&_.tiptap_p.is-editor-empty:first-child::before]:float-left [&_.tiptap_p.is-editor-empty:first-child::before]:h-0 [&_.tiptap_p.is-editor-empty:first-child::before]:pointer-events-none"
+          className="prose prose-sm dark:prose-invert max-w-none px-3 py-2 min-h-[200px] focus:outline-none [&_.tiptap]:outline-none [&_.tiptap]:min-h-[200px] [&_.bible-ref]:text-primary [&_.bible-ref]:underline [&_.bible-ref]:decoration-dotted [&_.bible-ref]:cursor-help [&_.tiptap_p.is-editor-empty:first-child::before]:text-muted-foreground [&_.tiptap_p.is-editor-empty:first-child::before]:content-[attr(data-placeholder)] [&_.tiptap_p.is-editor-empty:first-child::before]:float-left [&_.tiptap_p.is-editor-empty:first-child::before]:h-0 [&_.tiptap_p.is-editor-empty:first-child::before]:pointer-events-none"
         />
       </div>
+      <BibleRefPopover containerRef={containerRef} />
       <HandwritingPad open={padOpen} onOpenChange={setPadOpen} onConvert={handleInsertText} />
+      <InsertBibleRefDialog open={verseOpen} onOpenChange={setVerseOpen} onInsert={handleInsertVerse} />
     </div>
   );
 }
-
