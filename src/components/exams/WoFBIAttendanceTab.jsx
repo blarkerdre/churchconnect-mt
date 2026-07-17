@@ -46,7 +46,7 @@ export default function WoFBIAttendanceTab() {
 
   const [selectedCourseId, setSelectedCourseId] = useState("");
   const [newOpen, setNewOpen] = useState(false);
-  const [qrSession, setQrSession] = useState(null);
+  const [qrOpen, setQrOpen] = useState(false);
   const [rosterSession, setRosterSession] = useState(null);
   const [expandedStudents, setExpandedStudents] = useState({});
   const [editRecord, setEditRecord] = useState(null); // { record, session, registration }
