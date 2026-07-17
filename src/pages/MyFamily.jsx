@@ -514,6 +514,13 @@ export default function MyFamily() {
         </div>
       )}
 
+      {meMember && !showAll && (
+        <div className="pt-4 border-t">
+          <TeensSection memberId={meMember.id} />
+        </div>
+      )}
+
+
       {meMember && <ChildForm open={childOpen} onOpenChange={setChildOpen} child={editChild} memberId={meMember.id} onSaved={refetch} />}
       {guardianFor && <GuardianManager open={!!guardianFor} onOpenChange={() => setGuardianFor(null)} child={guardianFor} />}
       {delegateFor && <DelegationDialog open={!!delegateFor} onOpenChange={() => setDelegateFor(null)} child={delegateFor} />}
