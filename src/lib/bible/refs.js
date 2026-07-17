@@ -53,7 +53,7 @@ export const BOOKS = [
   ["Jonah", 31, ["jon", "jnh"]],
   ["Micah", 32, ["mic", "mi"]],
   ["Nahum", 33, ["nah", "na"]],
-  ["Habakkuk", 34, ["hab", "hk"]],
+  ["Habakkuk", 34, ["hab", "hk", "habakuk", "habbakuk", "habakkuk"]],
   ["Zephaniah", 35, ["zeph", "zep", "zp"]],
   ["Haggai", 36, ["hag", "hg"]],
   ["Zechariah", 37, ["zech", "zec", "zc"]],
