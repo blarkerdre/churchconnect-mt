@@ -1,13 +1,15 @@
-## Change
+Show session notes inside the Teens Attendance reports (`src/pages/TeensAttendance.jsx`).
 
-Remove the auto-close timer on the Teens check-in/out success screen so the page stays open until the user taps **Close**.
+## Changes
 
-### File
-- `src/pages/TeensCheckin.jsx`
+**Per-session `ReportDialog` (single session)**
+- Under the dialog title, render `session.notes` in a subtle bordered "Session note" card. Hide when empty.
+- Include a `Session note` line in the CSV export (single row above the table header).
 
-### Edits
-- Remove the 6-second `setTimeout` that calls `handleClose` after a successful check-in/out.
-- Keep the "Close" button and the "You can close this tab now." fallback message intact.
-- Leave all other behavior (random welcome/farewell image, caption, status messages) unchanged.
+**`CumulativeReportDialog` (detailed view)**
+- Add `notes` to the session projection in the query select (`session:session_id (id, title, session_type, session_date, notes)`).
+- Add a "Note" column to the detailed rows table, showing `r.session?.notes` (truncated with title tooltip when long, "—" when empty).
+- Add "Note" to the detailed CSV header and each row (JSON-encoded to preserve commas/newlines).
+- Summary view is per-teen, so notes don't apply there — leave it unchanged.
 
-No backend, RPC, or styling changes.
+No database, RLS, or other module changes.
