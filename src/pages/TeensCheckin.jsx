@@ -231,7 +231,24 @@ export default function TeensCheckin() {
             );
           })()}
 
-          {!result && error && (
+          {!result && error && error === "no_consent" && (
+            <>
+              <ShieldAlert className="h-12 w-12 mx-auto text-amber-500" />
+              <p className="text-base font-semibold">Parental consent required</p>
+              <p className="text-sm text-muted-foreground">
+                A parent needs to open <span className="font-medium">My Family → Teenagers</span>, edit this teen, tick
+                {" "}<span className="font-medium">“I give parental consent”</span>, and Save. Then try again.
+              </p>
+              <div className="flex gap-2">
+                <Button variant="outline" className="flex-1" onClick={() => setError(null)}>Back</Button>
+                {user && (
+                  <Button className="flex-1" onClick={() => navigate("/my-family")}>Open My Family</Button>
+                )}
+              </div>
+            </>
+          )}
+
+          {!result && error && error !== "no_consent" && (
             <>
               <XCircle className="h-12 w-12 mx-auto text-red-500" />
               <p className="text-sm">{ERROR_MESSAGES[error] || error}</p>
