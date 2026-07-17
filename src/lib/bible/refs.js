@@ -58,7 +58,7 @@ export const BOOKS = [
   ["Haggai", 36, ["hag", "hg"]],
   ["Zechariah", 37, ["zech", "zec", "zc", "zecharia"]],
   ["Malachi", 38, ["mal", "ml"]],
-  ["Matthew", 39, ["matt", "mt", "mat"]],
+  ["Matthew", 39, ["matt", "mt", "mat", "mathew", "mattew", "matthews"]],
   ["Mark", 40, ["mk", "mrk"]],
   ["Luke", 41, ["lk", "luk"]],
   ["John", 42, ["jn", "joh", "jhn"]],
