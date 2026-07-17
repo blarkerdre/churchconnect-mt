@@ -736,9 +736,6 @@ export default function TeensAttendance() {
                 {s.end_time ? ` – ${s.end_time?.slice(0,5)}` : ""}
               </p>
               <div className="flex gap-2 flex-wrap">
-                <Button size="sm" onClick={() => setQrSession(s)} disabled={s.status !== "open"}>
-                  <QrCode className="h-4 w-4 mr-1" /> Show QR
-                </Button>
                 <Button size="sm" variant="outline" onClick={() => setRosterSession(s)}>
                   <Users className="h-4 w-4 mr-1" /> Roster
                 </Button>
