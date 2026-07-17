@@ -48,6 +48,7 @@ const allNavItems = [
   { name: "Communications", icon: Megaphone, path: "/communications", access: null },
   { name: "Transportation", icon: Car, path: "/transportation", access: null },
   { name: "Children Church", icon: Users, path: "/children-church", access: "children_church" },
+  { name: "Teens Attendance", icon: Users, path: "/teens-attendance", access: "teens" },
   { name: "My Family", icon: Users, path: "/my-family", access: null },
   { name: "Inventory", icon: Package, path: "/inventory", access: "inventory" },
   { name: "Reports Hub", icon: FileText, path: "/reports", access: "reports" },
@@ -149,6 +150,7 @@ export default function Layout({ children }) {
     if (item.access === "training") return isAdmin || isSuperAdmin || isTrainingAccess || isReportsOfficer;
     if (item.access === "training_report") return isAdmin || isSuperAdmin || isUnitLeader || isTrainingRepMember || isReportsOfficer;
     if (item.access === "children_church") return isAdmin || isChildrenChurchMember || (isUnitLeader && (leaderUnits || []).some(u => /children/i.test(u))) || isReportsOfficer;
+    if (item.access === "teens") return isAdmin || (isUnitLeader && (leaderUnits || []).some(u => /teen|youth/i.test(u))) || isReportsOfficer;
     if (item.access === "inventory") return isAdmin || isSuperAdmin || isChurchOfficeMember;
     return false;
   });

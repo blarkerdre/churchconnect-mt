@@ -4539,6 +4539,173 @@ export type Database = {
           },
         ]
       }
+      teen_attendance_records: {
+        Row: {
+          checked_in_at: string
+          checked_in_by: string | null
+          checked_out_at: string | null
+          checked_out_by: string | null
+          created_at: string
+          duration_minutes: number | null
+          id: string
+          session_id: string
+          source: string
+          status: string
+          teen_id: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          checked_in_at?: string
+          checked_in_by?: string | null
+          checked_out_at?: string | null
+          checked_out_by?: string | null
+          created_at?: string
+          duration_minutes?: number | null
+          id?: string
+          session_id: string
+          source?: string
+          status?: string
+          teen_id: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          checked_in_at?: string
+          checked_in_by?: string | null
+          checked_out_at?: string | null
+          checked_out_by?: string | null
+          created_at?: string
+          duration_minutes?: number | null
+          id?: string
+          session_id?: string
+          source?: string
+          status?: string
+          teen_id?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "teen_attendance_records_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "teen_attendance_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "teen_attendance_records_teen_id_fkey"
+            columns: ["teen_id"]
+            isOneToOne: false
+            referencedRelation: "teens"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      teen_attendance_sessions: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          end_time: string | null
+          id: string
+          late_after: string | null
+          notes: string | null
+          qr_token: string
+          session_date: string
+          start_time: string | null
+          status: string
+          tenant_id: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          end_time?: string | null
+          id?: string
+          late_after?: string | null
+          notes?: string | null
+          qr_token?: string
+          session_date: string
+          start_time?: string | null
+          status?: string
+          tenant_id: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          end_time?: string | null
+          id?: string
+          late_after?: string | null
+          notes?: string | null
+          qr_token?: string
+          session_date?: string
+          start_time?: string | null
+          status?: string
+          tenant_id?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      teens: {
+        Row: {
+          access_pin_hash: string | null
+          created_at: string
+          date_of_birth: string | null
+          first_name: string
+          gender: string | null
+          id: string
+          is_active: boolean
+          last_name: string
+          notes: string | null
+          photo_url: string | null
+          primary_guardian_member_id: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          access_pin_hash?: string | null
+          created_at?: string
+          date_of_birth?: string | null
+          first_name: string
+          gender?: string | null
+          id?: string
+          is_active?: boolean
+          last_name: string
+          notes?: string | null
+          photo_url?: string | null
+          primary_guardian_member_id: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          access_pin_hash?: string | null
+          created_at?: string
+          date_of_birth?: string | null
+          first_name?: string
+          gender?: string | null
+          id?: string
+          is_active?: boolean
+          last_name?: string
+          notes?: string | null
+          photo_url?: string | null
+          primary_guardian_member_id?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "teens_primary_guardian_member_id_fkey"
+            columns: ["primary_guardian_member_id"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tenant_api_keys: {
         Row: {
           created_at: string
@@ -6491,6 +6658,7 @@ export type Database = {
         Args: { p_tenant_id: string; p_user_id: string }
         Returns: undefined
       }
+      crypt_pin: { Args: { _pin: string }; Returns: string }
       decline_join_request: {
         Args: { p_reason?: string; p_request_id: string }
         Returns: undefined
@@ -6715,6 +6883,10 @@ export type Database = {
         Args: { _tenant_id: string; _user_id: string }
         Returns: boolean
       }
+      is_teens_unit_member: {
+        Args: { _tenant_id: string; _user_id: string }
+        Returns: boolean
+      }
       is_tenant_admin: {
         Args: { _tenant_id: string; _user_id: string }
         Returns: boolean
@@ -6891,6 +7063,10 @@ export type Database = {
       task_is_in_user_unit: {
         Args: { _task_id: string; _tenant_id: string; _user_id: string }
         Returns: boolean
+      }
+      teen_checkin: {
+        Args: { _pin?: string; _qr_token: string; _teen_id: string }
+        Returns: Json
       }
       update_own_member_profile:
         | {
