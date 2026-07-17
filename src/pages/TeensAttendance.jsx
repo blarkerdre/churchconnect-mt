@@ -320,8 +320,13 @@ function ReportDialog({ open, onOpenChange, session }) {
   });
 
   const downloadCsv = () => {
+    const lines = [];
+    if (session?.notes) {
+      lines.push(["Session note", JSON.stringify(session.notes)].join(","));
+      lines.push("");
+    }
     const header = ["Name", "Checked in", "Late", "Checked out", "Duration (min)", "Source"];
-    const lines = [header.join(",")];
+    lines.push(header.join(","));
     rows.forEach((r) => {
       const name = `${r.teens?.first_name || ""} ${r.teens?.last_name || ""}`.trim();
       lines.push([
@@ -348,6 +353,12 @@ function ReportDialog({ open, onOpenChange, session }) {
           <DialogTitle>{session?.title} — Report</DialogTitle>
         </DialogHeader>
         <div className="space-y-2">
+          {session?.notes && (
+            <div className="rounded-md border bg-muted/40 p-3">
+              <p className="text-[11px] uppercase tracking-wide text-muted-foreground mb-1">Session note</p>
+              <p className="text-sm whitespace-pre-wrap">{session.notes}</p>
+            </div>
+          )}
           <div className="flex justify-between items-center">
             <p className="text-sm text-muted-foreground">{rows.length} record{rows.length === 1 ? "" : "s"}</p>
             <div className="flex gap-2">
@@ -408,7 +419,7 @@ function CumulativeReportDialog({ open, onOpenChange }) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("teen_attendance_records")
-        .select("id, checked_in_at, checked_out_at, duration_minutes, status, source, teens:teen_id (first_name, last_name), session:session_id (id, title, session_type, session_date)")
+        .select("id, checked_in_at, checked_out_at, duration_minutes, status, source, teens:teen_id (first_name, last_name), session:session_id (id, title, session_type, session_date, notes)")
         .eq("tenant_id", tenantId)
         .gte("checked_in_at", `${from}T00:00:00`)
         .lte("checked_in_at", `${to}T23:59:59`)
@@ -470,7 +481,7 @@ function CumulativeReportDialog({ open, onOpenChange }) {
         ].join(","));
       });
     } else {
-      header = ["Date", "Session", "Type", "Teen", "In", "Out", "Duration (min)", "Status", "Source"];
+      header = ["Date", "Session", "Type", "Teen", "In", "Out", "Duration (min)", "Status", "Source", "Note"];
       lines = [header.join(",")];
       filtered.forEach((r) => {
         const name = `${r.teens?.first_name || ""} ${r.teens?.last_name || ""}`.trim();
@@ -484,6 +495,7 @@ function CumulativeReportDialog({ open, onOpenChange }) {
           r.duration_minutes ?? "",
           r.status || "",
           r.source || "",
+          JSON.stringify(r.session?.notes || ""),
         ].join(","));
       });
     }
@@ -598,11 +610,12 @@ function CumulativeReportDialog({ open, onOpenChange }) {
                   <th className="p-2">Duration</th>
                   <th className="p-2">Status</th>
                   <th className="p-2">Source</th>
+                  <th className="p-2">Note</th>
                 </tr>
               </thead>
               <tbody>
                 {filtered.length === 0 && (
-                  <tr><td colSpan={8} className="p-4 text-center text-muted-foreground">No records for these filters.</td></tr>
+                  <tr><td colSpan={9} className="p-4 text-center text-muted-foreground">No records for these filters.</td></tr>
                 )}
                 {filtered.map((r) => (
                   <tr key={r.id} className="border-t">
@@ -616,6 +629,9 @@ function CumulativeReportDialog({ open, onOpenChange }) {
                       {r.status === "late" ? <Badge className="bg-amber-500 text-white">Late</Badge> : r.status === "on_time" ? <Badge variant="secondary">On time</Badge> : r.status || "—"}
                     </td>
                     <td className="p-2 capitalize">{r.source}</td>
+                    <td className="p-2 max-w-[200px]" title={r.session?.notes || ""}>
+                      <span className="line-clamp-2 text-xs text-muted-foreground">{r.session?.notes || "—"}</span>
+                    </td>
                   </tr>
                 ))}
               </tbody>
