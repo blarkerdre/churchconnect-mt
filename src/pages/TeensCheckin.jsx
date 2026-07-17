@@ -251,8 +251,29 @@ export default function TeensCheckin() {
           )}
           {result && !closedMsg && (() => {
             const isOut = result.action === "checked_out";
-            const already = result.action === "already_checked_out";
-            const isFarewell = isOut || already;
+            const already = result.action === "already_checked_out" || result.action === "already_checked_in";
+            const alreadyIn = result.action === "already_checked_in";
+            const isFarewell = isOut || result.action === "already_checked_out";
+            if (already) {
+              const label = alreadyIn ? "Already checked in" : "Already checked out";
+              const sub = alreadyIn
+                ? "No change — this teen is already signed in."
+                : "No change — this teen is already signed out.";
+              return (
+                <>
+                  <CheckCheck className={`h-12 w-12 mx-auto ${alreadyIn ? "text-green-600" : "text-slate-500"}`} />
+                  <div>
+                    <p className="text-xl font-bold">{label}</p>
+                    <p className="text-sm text-muted-foreground">{result.teen_name}</p>
+                    <p className="text-xs text-muted-foreground mt-1">{sub}</p>
+                  </div>
+                  <Button variant="outline" className="w-full" onClick={() => { setResult(null); setPendingTeen(null); resetSelfFlow(); setMode("choose"); }}>
+                    Back
+                  </Button>
+                  <Button className="w-full" onClick={handleClose}>Close</Button>
+                </>
+              );
+            }
             const caption = isFarewell ? "See you next time!" : "Welcome to church!";
             const subCaption = isFarewell
               ? "Time-out recorded"
