@@ -773,14 +773,7 @@ export default function TeensAttendance() {
           onSaved={() => { refetch(); qc.invalidateQueries({ queryKey: ["teen-sessions"] }); setFormSession(null); }}
         />
       )}
-      {qrSession && (
-        <TeenAttendanceQRDialog
-          open={!!qrSession}
-          onOpenChange={(o) => !o && setQrSession(null)}
-          session={qrSession}
-          onClosed={() => { refetch(); setQrSession(null); }}
-        />
-      )}
+      <TeensPersistentQRDialog open={qrOpen} onOpenChange={setQrOpen} />
       {rosterSession && (
         <RosterDialog
           open={!!rosterSession}
