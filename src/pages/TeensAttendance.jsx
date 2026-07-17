@@ -646,6 +646,8 @@ export default function TeensAttendance() {
         </CardContent></Card>
       )}
 
+      {canWrite && <PendingSelfEnrolments tenantId={tenantId} />}
+
       <div className="space-y-3">
         {canWrite && sessions.length === 0 && (
           <Card><CardContent className="p-8 text-sm text-muted-foreground text-center">No teens sessions yet.</CardContent></Card>
