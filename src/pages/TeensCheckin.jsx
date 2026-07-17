@@ -21,7 +21,7 @@ const ERROR_MESSAGES = {
   invalid_token: "This check-in link is invalid.",
   session_closed: "This session is closed.",
   invalid_teen: "That teen isn't registered here.",
-  no_consent: "A parent hasn't given attendance consent for this teen yet. Ask a parent to open My Family and tick the consent box.",
+  no_consent: "Parental consent required. A parent needs to open My Family → Teenagers, edit this teen, tick “I give parental consent”, and Save. Then try again.",
   not_authorised: "You aren't authorised to check this teen in. Ask a parent to sign in, or enter the teen's PIN.",
   not_enrolled: "You haven't set up self check-in yet. Tap 'I'm a teen' to enroll.",
   bad_pin: "That PIN doesn't match. Try again.",
