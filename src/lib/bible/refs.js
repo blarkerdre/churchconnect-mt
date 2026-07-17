@@ -41,7 +41,7 @@ export const BOOKS = [
   ["Proverbs", 19, ["prov", "prv", "pr", "pro"]],
   ["Ecclesiastes", 20, ["eccl", "ecc", "ec", "qoh", "eclesiastes", "ecclesiaste", "ecclessiastes"]],
   ["Song of Solomon", 21, ["song", "songs", "sos", "so", "songofsongs", "canticles", "cant"]],
-  ["Isaiah", 22, ["isa", "is"]],
+  ["Isaiah", 22, ["isa", "is", "isiah", "esaias"]],
   ["Jeremiah", 23, ["jer", "jr"]],
   ["Lamentations", 24, ["lam", "lm"]],
   ["Ezekiel", 25, ["ezek", "ez", "eze"]],
