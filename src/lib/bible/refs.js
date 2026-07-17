@@ -112,6 +112,32 @@ function normalizeBookToken(raw) {
   return _bookMap.has(k) ? _bookMap.get(k) : null;
 }
 
+// Autocomplete: given a partial token, return canonical book names ranked by relevance.
+// Matches canonical names and aliases, case-insensitive, ignoring dots/spaces.
+export function getBookSuggestions(query, limit = 6) {
+  const q = String(query || "").toLowerCase().replace(/\./g, "").replace(/\s+/g, "");
+  if (q.length < 1) return [];
+  const scored = [];
+  for (const [name, idx, aliases] of BOOKS) {
+    const nameKey = name.toLowerCase().replace(/\s+/g, "");
+    const displayLower = name.toLowerCase();
+    let score = -1;
+    if (nameKey.startsWith(q)) score = 100 - name.length;
+    else if (displayLower.startsWith(query.toLowerCase())) score = 90 - name.length;
+    else {
+      for (const a of aliases) {
+        const ak = a.toLowerCase().replace(/\./g, "").replace(/\s+/g, "");
+        if (ak === q) { score = Math.max(score, 95); break; }
+        if (ak.startsWith(q)) { score = Math.max(score, 80 - a.length); }
+      }
+      if (score < 0 && nameKey.includes(q)) score = 40 - name.length;
+    }
+    if (score >= 0) scored.push({ name, idx, score });
+  }
+  scored.sort((a, b) => b.score - a.score || a.name.localeCompare(b.name));
+  return scored.slice(0, limit).map((s) => s.name);
+}
+
 // Regex matches:  Book [ws] chapter[:verse[-verse]][, verse[-verse]]*
 // Book can be "1 John", "I John", "First John", "Song of Solomon", or a single word.
 const BOOK_PREFIX = "(?:(?:1|2|3|I{1,3})\\s*)?";
