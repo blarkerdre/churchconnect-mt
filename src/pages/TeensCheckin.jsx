@@ -488,19 +488,28 @@ export default function TeensCheckin() {
                 {teens.length === 0 && (
                   <p className="text-xs text-muted-foreground">No registered teens found on your account.</p>
                 )}
-                {teens.map((t) => (
-                  <button key={t.id} type="button"
-                    className="w-full flex items-center gap-3 border rounded-lg p-3 hover:bg-muted text-left disabled:opacity-60 disabled:cursor-not-allowed"
-                    onClick={() => doCheckin(t.id)}
-                    disabled={busy || !t.attendance_consent}
-                    title={!t.attendance_consent ? "Parent consent required" : undefined}>
-                    <User className="h-5 w-5 text-primary shrink-0" />
-                    <span className="text-sm font-medium flex-1">{t.first_name} {t.last_name}</span>
-                    {!t.attendance_consent && (
-                      <span className="text-[10px] uppercase px-1.5 py-0.5 rounded bg-amber-100 text-amber-800">No consent</span>
-                    )}
-                  </button>
-                ))}
+                {teens.map((t) => {
+                  const out = isCheckedIn(t.id);
+                  return (
+                    <div key={t.id}
+                      className="w-full flex items-center gap-3 border rounded-lg p-3">
+                      <User className="h-5 w-5 text-primary shrink-0" />
+                      <span className="text-sm font-medium flex-1">{t.first_name} {t.last_name}</span>
+                      {!t.attendance_consent ? (
+                        <span className="text-[10px] uppercase px-1.5 py-0.5 rounded bg-amber-100 text-amber-800">No consent</span>
+                      ) : (
+                        <Button
+                          size="sm"
+                          variant={out ? "destructive" : "default"}
+                          disabled={busy}
+                          onClick={() => doCheckin(t.id)}
+                        >
+                          {out ? "Check out" : "Check in"}
+                        </Button>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
               <p className="text-[11px] text-muted-foreground">
                 Not the parent? Ask them to sign in, or enter this teen's PIN below.
