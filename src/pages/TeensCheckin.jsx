@@ -40,6 +40,7 @@ export default function TeensCheckin() {
   const [session, setSession] = useState(null);
   const [teens, setTeens] = useState([]); // parent view (full)
   const [publicTeens, setPublicTeens] = useState([]); // self view (id, name, has_self_pin)
+  const [openIds, setOpenIds] = useState(() => new Set());
   const [loading, setLoading] = useState(true);
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
