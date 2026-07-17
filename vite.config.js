@@ -10,7 +10,13 @@ const envDefaults = {
 
 export default defineConfig({
   plugins: [react()],
-  define: { ...envDefaults },
+  define: {
+    ...envDefaults,
+    __BUILD_TIME__: JSON.stringify(new Date().toISOString()),
+    __BUILD_ID__: JSON.stringify(
+      new Date().toISOString().replace(/[^\d]/g, '').slice(0, 12)
+    ),
+  },
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
