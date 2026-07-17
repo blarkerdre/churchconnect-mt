@@ -21,6 +21,7 @@ const ERROR_MESSAGES = {
   invalid_token: "This check-in link is invalid.",
   session_closed: "This session is closed.",
   invalid_teen: "That teen isn't registered here.",
+  no_consent: "A parent hasn't given attendance consent for this teen yet. Ask a parent to open My Family and tick the consent box.",
   not_authorised: "You aren't authorised to check this teen in. Ask a parent to sign in, or enter the teen's PIN.",
 };
 
@@ -72,7 +73,7 @@ export default function TeensCheckin() {
       if (user) {
         const { data: teensData } = await supabase
           .from("teens")
-          .select("id, first_name, last_name, access_pin_hash, primary_guardian_member_id")
+          .select("id, first_name, last_name, access_pin_hash, primary_guardian_member_id, attendance_consent")
           .eq("tenant_id", s.tenant_id)
           .eq("is_active", true)
           .order("first_name");
@@ -222,12 +223,16 @@ export default function TeensCheckin() {
                   <button
                     key={t.id}
                     type="button"
-                    className="w-full flex items-center gap-3 border rounded-lg p-3 hover:bg-muted text-left"
+                    className="w-full flex items-center gap-3 border rounded-lg p-3 hover:bg-muted text-left disabled:opacity-60 disabled:cursor-not-allowed"
                     onClick={() => doCheckin(t.id)}
-                    disabled={busy}
+                    disabled={busy || !t.attendance_consent}
+                    title={!t.attendance_consent ? "Parent consent required" : undefined}
                   >
                     <User className="h-5 w-5 text-primary shrink-0" />
-                    <span className="text-sm font-medium">{t.first_name} {t.last_name}</span>
+                    <span className="text-sm font-medium flex-1">{t.first_name} {t.last_name}</span>
+                    {!t.attendance_consent && (
+                      <span className="text-[10px] uppercase px-1.5 py-0.5 rounded bg-amber-100 text-amber-800">No consent</span>
+                    )}
                   </button>
                 ))}
               </div>

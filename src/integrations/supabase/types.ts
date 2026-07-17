@@ -4612,6 +4612,7 @@ export type Database = {
           notes: string | null
           qr_token: string
           session_date: string
+          session_type: string | null
           start_time: string | null
           status: string
           tenant_id: string
@@ -4627,6 +4628,7 @@ export type Database = {
           notes?: string | null
           qr_token?: string
           session_date: string
+          session_type?: string | null
           start_time?: string | null
           status?: string
           tenant_id: string
@@ -4642,6 +4644,7 @@ export type Database = {
           notes?: string | null
           qr_token?: string
           session_date?: string
+          session_type?: string | null
           start_time?: string | null
           status?: string
           tenant_id?: string
@@ -4653,6 +4656,9 @@ export type Database = {
       teens: {
         Row: {
           access_pin_hash: string | null
+          attendance_consent: boolean
+          attendance_consent_at: string | null
+          attendance_consent_by: string | null
           created_at: string
           date_of_birth: string | null
           first_name: string
@@ -4668,6 +4674,9 @@ export type Database = {
         }
         Insert: {
           access_pin_hash?: string | null
+          attendance_consent?: boolean
+          attendance_consent_at?: string | null
+          attendance_consent_by?: string | null
           created_at?: string
           date_of_birth?: string | null
           first_name: string
@@ -4683,6 +4692,9 @@ export type Database = {
         }
         Update: {
           access_pin_hash?: string | null
+          attendance_consent?: boolean
+          attendance_consent_at?: string | null
+          attendance_consent_by?: string | null
           created_at?: string
           date_of_birth?: string | null
           first_name?: string
@@ -6880,6 +6892,10 @@ export type Database = {
         Returns: boolean
       }
       is_reports_officer: {
+        Args: { _tenant_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_teens_unit_leader: {
         Args: { _tenant_id: string; _user_id: string }
         Returns: boolean
       }
