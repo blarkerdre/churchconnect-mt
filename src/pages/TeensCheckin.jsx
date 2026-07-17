@@ -551,6 +551,9 @@ export default function TeensCheckin() {
                   onClick={() => doCheckin(pendingTeen.id, pin)}>
                   {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : (isCheckedIn(pendingTeen.id) ? "Check out" : "Check in")}
                 </Button>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
