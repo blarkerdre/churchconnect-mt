@@ -693,6 +693,11 @@ export default function TeensAttendance() {
           <p className="text-sm text-muted-foreground">On-premise check-in / check-out for registered teens.</p>
         </div>
         <div className="flex gap-2 flex-wrap">
+          {canWrite && (
+            <Button variant="outline" onClick={() => setQrOpen(true)}>
+              <QrCode className="h-4 w-4 mr-1" /> Session QR
+            </Button>
+          )}
           {canManage && (
             <Button variant="outline" onClick={() => setCumulativeOpen(true)}>
               <BarChart3 className="h-4 w-4 mr-1" /> Cumulative report
