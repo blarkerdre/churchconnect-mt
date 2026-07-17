@@ -1243,9 +1243,11 @@ export default function ChildrenChurch() {
     },
   });
 
+  const { isLeader: isTeensLeader, isMember: isTeensMember } = useTeensUnitRole();
   const canSeeAll = isLeader || isAdmin;
   const canSeeReport = isLeader || isAdmin;
-  const tabCount = 2 + (canSeeAll ? 1 : 0) + (canSeeReport ? 1 : 0);
+  const canSeeTeens = isAdmin || isLeader || isTeensLeader || isTeensMember;
+  const tabCount = 2 + (canSeeTeens ? 1 : 0) + (canSeeAll ? 1 : 0) + (canSeeReport ? 1 : 0);
 
   const tour = useTour();
   const { completed: tourDone } = useTourCompletion("children-church-v1");
@@ -1269,11 +1271,13 @@ export default function ChildrenChurch() {
         <TabsList className={`grid w-full sm:w-auto`} style={{ gridTemplateColumns: `repeat(${tabCount}, minmax(0, 1fr))` }}>
           <TabsTrigger value="checkin" data-tour="cc-tab-checkin">Check-in</TabsTrigger>
           <TabsTrigger value="pickup" data-tour="cc-tab-pickup">Pickup</TabsTrigger>
+          {canSeeTeens && <TabsTrigger value="teens">Teens</TabsTrigger>}
           {canSeeAll && <TabsTrigger value="all" data-tour="cc-tab-all">All children</TabsTrigger>}
           {canSeeReport && <TabsTrigger value="report" data-tour="cc-tab-report">Report</TabsTrigger>}
         </TabsList>
         <TabsContent value="checkin"><CheckInPanel tenantId={tenantId} tenantSlug={tenantSlug} /></TabsContent>
         <TabsContent value="pickup"><PickupPanel tenantId={tenantId} isLeader={isLeader || isAdmin} /></TabsContent>
+        {canSeeTeens && <TabsContent value="teens"><TeensAttendancePanel /></TabsContent>}
         {canSeeAll && <TabsContent value="all"><AllChildrenPanel tenantId={tenantId} /></TabsContent>}
         {canSeeReport && <TabsContent value="report"><ReportPanel tenantId={tenantId} isAdmin={isAdmin} /></TabsContent>}
       </Tabs>
