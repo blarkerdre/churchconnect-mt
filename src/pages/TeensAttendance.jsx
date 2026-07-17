@@ -15,7 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { Plus, QrCode, Calendar, LogIn, LogOut, Users, Pencil, Trash2, FileText, Lock, ShieldAlert, BarChart3, Search } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import TeenAttendanceQRDialog from "@/components/teens/TeenAttendanceQRDialog";
+import TeensPersistentQRDialog from "@/components/teens/TeensPersistentQRDialog";
 
 const SESSION_TYPES = [
   "Sunday Service",
