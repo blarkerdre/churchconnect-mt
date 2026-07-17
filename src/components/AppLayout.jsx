@@ -48,7 +48,7 @@ const allNavItems = [
   { name: "Communications", icon: Megaphone, path: "/communications", access: null },
   { name: "Transportation", icon: Car, path: "/transportation", access: null },
   { name: "Children Church", icon: Users, path: "/children-church", access: "children_church" },
-  { name: "Teens Attendance", icon: Users, path: "/teens-attendance", access: "teens" },
+  
   { name: "My Family", icon: Users, path: "/my-family", access: null },
   { name: "Inventory", icon: Package, path: "/inventory", access: "inventory" },
   { name: "Reports Hub", icon: FileText, path: "/reports", access: "reports" },
