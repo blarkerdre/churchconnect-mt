@@ -20,6 +20,7 @@ import { format } from "date-fns";
 
 function TeenForm({ open, onOpenChange, teen, memberId, onSaved }) {
   const { tenantId, withTenant } = useTenantQuery();
+  const { user } = useAuth();
   const [form, setForm] = useState(() => ({
     first_name: teen?.first_name || "",
     last_name: teen?.last_name || "",
@@ -28,6 +29,7 @@ function TeenForm({ open, onOpenChange, teen, memberId, onSaved }) {
     notes: teen?.notes || "",
     pin: "",
     clear_pin: false,
+    attendance_consent: !!teen?.attendance_consent,
   }));
   React.useEffect(() => {
     setForm({
@@ -38,6 +40,7 @@ function TeenForm({ open, onOpenChange, teen, memberId, onSaved }) {
       notes: teen?.notes || "",
       pin: "",
       clear_pin: false,
+      attendance_consent: !!teen?.attendance_consent,
     });
   }, [teen, open]);
 
@@ -51,16 +54,18 @@ function TeenForm({ open, onOpenChange, teen, memberId, onSaved }) {
         gender: form.gender || null,
         notes: form.notes || null,
       };
+      // Consent transitions (audit trail)
+      const prevConsent = !!teen?.attendance_consent;
+      if (form.attendance_consent !== prevConsent) {
+        payload.attendance_consent = form.attendance_consent;
+        payload.attendance_consent_at = form.attendance_consent ? new Date().toISOString() : null;
+        payload.attendance_consent_by = form.attendance_consent ? (user?.id || null) : null;
+      }
       if (form.clear_pin) payload.access_pin_hash = null;
       else if (form.pin) {
         if (!/^\d{4,6}$/.test(form.pin)) throw new Error("PIN must be 4-6 digits");
-        // Hash on server via RPC-less shortcut: store bcrypt via a Postgres call.
-        // We use a stored function call embedded in insert/update using rpc.
         const { data: hashed, error: hashErr } = await supabase.rpc("crypt_pin", { _pin: form.pin });
-        if (hashErr) {
-          // fall back to plain hash for update — but we prefer bcrypt so bubble error.
-          throw hashErr;
-        }
+        if (hashErr) throw hashErr;
         payload.access_pin_hash = hashed;
       }
       if (teen?.id) {
