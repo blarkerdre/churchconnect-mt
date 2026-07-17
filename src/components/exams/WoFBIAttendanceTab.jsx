@@ -460,6 +460,9 @@ export default function WoFBIAttendanceTab() {
                 ))}
               </SelectContent>
             </Select>
+            <Button variant="outline" onClick={() => setQrOpen(true)} className="gap-2">
+              <QrCode className="h-4 w-4" /> Session QR
+            </Button>
             <Button onClick={() => setNewOpen(true)} disabled={!selectedCourseId} className="gap-2">
               <Plus className="h-4 w-4" /> New session
             </Button>
