@@ -40,6 +40,7 @@ export default function TeensCheckin() {
   const [session, setSession] = useState(null);
   const [teens, setTeens] = useState([]); // parent view (full)
   const [publicTeens, setPublicTeens] = useState([]); // self view (id, name, has_self_pin)
+  const [openIds, setOpenIds] = useState(() => new Set());
   const [loading, setLoading] = useState(true);
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
@@ -101,6 +102,17 @@ export default function TeensCheckin() {
     return () => { active = false; };
   }, [token, user, authLoading]);
 
+  const refreshOpenIds = async () => {
+    const { data } = await supabase.rpc("get_teen_open_checkins", { _qr_token: token });
+    setOpenIds(new Set((data || []).map((r) => r.teen_id)));
+  };
+
+  useEffect(() => {
+    if (!session || session.status !== "open") return;
+    refreshOpenIds();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session?.id]);
+
   // Poll enrolment status
   useEffect(() => {
     if (!enrolmentId || enrolStatus === "approved" || enrolStatus === "used") return;
@@ -110,6 +122,8 @@ export default function TeensCheckin() {
     }, 3000);
     return () => clearInterval(pollRef.current);
   }, [enrolmentId, enrolStatus]);
+
+  const isCheckedIn = (id) => openIds.has(id);
 
   const doCheckin = async (teenId, withPin) => {
     setBusy(true);
@@ -121,7 +135,7 @@ export default function TeensCheckin() {
     });
     setBusy(false);
     if (rpcErr) { setError(rpcErr.message); return; }
-    if (data?.ok) { setResult(data); setPendingTeen(null); setPin(""); }
+    if (data?.ok) { setResult(data); setPendingTeen(null); setPin(""); refreshOpenIds(); }
     else { setError(data?.error || "unknown"); }
   };
 
@@ -135,7 +149,7 @@ export default function TeensCheckin() {
     });
     setBusy(false);
     if (rpcErr) { setError(rpcErr.message); return; }
-    if (data?.ok) { setResult(data); setPin(""); }
+    if (data?.ok) { setResult(data); setPin(""); refreshOpenIds(); }
     else { setError(data?.error || "unknown"); }
   };
 
@@ -339,9 +353,10 @@ export default function TeensCheckin() {
               </div>
               <div className="flex gap-2">
                 <Button variant="outline" className="flex-1" onClick={() => { setPendingTeen(null); setPin(""); setMode("choose"); }}>Back</Button>
-                <Button className="flex-1" disabled={busy || !pendingTeen?.id || pin.length < 4}
+                <Button className="flex-1" variant={isCheckedIn(pendingTeen?.id) ? "destructive" : "default"}
+                  disabled={busy || !pendingTeen?.id || pin.length < 4}
                   onClick={() => doCheckin(pendingTeen.id, pin)}>
-                  {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : "Check in / out"}
+                  {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : (isCheckedIn(pendingTeen?.id) ? "Check out" : "Check in")}
                 </Button>
               </div>
             </div>
@@ -389,9 +404,10 @@ export default function TeensCheckin() {
               </div>
               <div className="flex gap-2">
                 <Button variant="outline" className="flex-1" onClick={() => { resetSelfFlow(); setMode("self-pick"); }}>Back</Button>
-                <Button className="flex-1" disabled={busy || pin.length < 4}
+                <Button className="flex-1" variant={isCheckedIn(selfTeen.id) ? "destructive" : "default"}
+                  disabled={busy || pin.length < 4}
                   onClick={() => doSelfCheckin(selfTeen.id, pin)}>
-                  {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : "Check in / out"}
+                  {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : (isCheckedIn(selfTeen.id) ? "Check out" : "Check in")}
                 </Button>
               </div>
             </div>
@@ -448,7 +464,7 @@ export default function TeensCheckin() {
           {/* Signed-in guardian: existing flow */}
           {!result && !error && user && !pendingTeen && (
             <>
-              <p className="text-sm text-muted-foreground">Tap the teen to check in / out.</p>
+              <p className="text-sm text-muted-foreground">Tap <span className="font-medium">Check in</span> to sign a teen in, or <span className="font-medium">Check out</span> when they're leaving.</p>
               {teens.some((t) => !t.attendance_consent) && (
                 <div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-left space-y-2">
                   <div className="flex items-start gap-2">
@@ -472,19 +488,28 @@ export default function TeensCheckin() {
                 {teens.length === 0 && (
                   <p className="text-xs text-muted-foreground">No registered teens found on your account.</p>
                 )}
-                {teens.map((t) => (
-                  <button key={t.id} type="button"
-                    className="w-full flex items-center gap-3 border rounded-lg p-3 hover:bg-muted text-left disabled:opacity-60 disabled:cursor-not-allowed"
-                    onClick={() => doCheckin(t.id)}
-                    disabled={busy || !t.attendance_consent}
-                    title={!t.attendance_consent ? "Parent consent required" : undefined}>
-                    <User className="h-5 w-5 text-primary shrink-0" />
-                    <span className="text-sm font-medium flex-1">{t.first_name} {t.last_name}</span>
-                    {!t.attendance_consent && (
-                      <span className="text-[10px] uppercase px-1.5 py-0.5 rounded bg-amber-100 text-amber-800">No consent</span>
-                    )}
-                  </button>
-                ))}
+                {teens.map((t) => {
+                  const out = isCheckedIn(t.id);
+                  return (
+                    <div key={t.id}
+                      className="w-full flex items-center gap-3 border rounded-lg p-3">
+                      <User className="h-5 w-5 text-primary shrink-0" />
+                      <span className="text-sm font-medium flex-1">{t.first_name} {t.last_name}</span>
+                      {!t.attendance_consent ? (
+                        <span className="text-[10px] uppercase px-1.5 py-0.5 rounded bg-amber-100 text-amber-800">No consent</span>
+                      ) : (
+                        <Button
+                          size="sm"
+                          variant={out ? "destructive" : "default"}
+                          disabled={busy}
+                          onClick={() => doCheckin(t.id)}
+                        >
+                          {out ? "Check out" : "Check in"}
+                        </Button>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
               <p className="text-[11px] text-muted-foreground">
                 Not the parent? Ask them to sign in, or enter this teen's PIN below.
@@ -521,9 +546,10 @@ export default function TeensCheckin() {
               </div>
               <div className="flex gap-2">
                 <Button variant="outline" className="flex-1" onClick={() => { setPendingTeen(null); setPin(""); }}>Cancel</Button>
-                <Button className="flex-1" disabled={busy || !pendingTeen.id || pin.length < 4}
+                <Button className="flex-1" variant={isCheckedIn(pendingTeen.id) ? "destructive" : "default"}
+                  disabled={busy || !pendingTeen.id || pin.length < 4}
                   onClick={() => doCheckin(pendingTeen.id, pin)}>
-                  {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : "Check in / out"}
+                  {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : (isCheckedIn(pendingTeen.id) ? "Check out" : "Check in")}
                 </Button>
               </div>
             </div>
