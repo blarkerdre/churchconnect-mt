@@ -1,42 +1,78 @@
-# Plan: Magic-link check-in for Bible School attendance
+## Feature: Teen On-Premise Attendance
 
-Let approved Bible School applicants check in without ever creating a password. If they're not signed in when they scan the QR, they enter their email and receive a one-time sign-in link that returns them straight to the check-in page.
+Teens are children of members (aged ~13–17) who don't have their own login. Parents register them once in **My Family → Teens**. At church, a worker displays a **Teens session QR**. The teen scans it on any phone, picks their name from their family's teen list, and taps **Check in**. They scan again on the way out to record **Check out**. Workers can also sign a teen in/out manually.
 
-## Changes
+Only teens who have been registered by a parent (and belong to the tenant) can appear in the list — no random walk-ups.
 
-### 1. `src/pages/WoFBICheckin.jsx` — magic-link entry point
+### Data model (new)
 
-Replace the current "Please sign in" branch (shown when `state.error === "not_authenticated"`) with an inline email form:
+New tables (tenant-scoped, RLS-guarded):
 
-- Input: email address (pre-validated).
-- Button: **Email me a sign-in link**.
-- Calls `supabase.auth.signInWithOtp({ email, options: { emailRedirectTo: <absolute /wofbi/checkin/:token URL>, shouldCreateUser: true } })`.
-  - `shouldCreateUser: true` covers applicants who never signed up — Supabase creates the auth user on first click.
-  - `emailRedirectTo` sends them right back to the QR page; `useAuth` picks up the new session and the RPC runs automatically.
-- On success: show "Check your email — we sent a sign-in link to <email>. Open it on this device."
-- On error: show the Supabase error message (rate-limit friendly).
+- `teens` — teen roster
+  - `primary_guardian_member_id` → parent member
+  - `first_name`, `last_name`, `date_of_birth`, `gender`, `photo_url`
+  - `access_pin` (optional 4-digit, hashed) — used at the QR step to prevent someone else picking a teen's name off a stranger's phone
+  - `is_active`
+- `teen_attendance_sessions`
+  - `title`, `session_date`, `start_time`, `end_time`, `late_after_minutes`
+  - `qr_token` (unguessable), `status` (`open` | `closed`)
+- `teen_attendance_records`
+  - `session_id`, `teen_id`
+  - `checked_in_at`, `checked_in_by` (teen self / member user_id / worker), `status` (`present` | `late`)
+  - `checked_out_at`, `checked_out_by`, `duration_minutes`
+  - unique `(session_id, teen_id)`
 
-Keep the existing "already signed in" flow and error branches unchanged.
+RLS:
+- Guardians can read + manage their own teens.
+- Admins and users assigned to a "Teens" unit (new church unit, mirroring the Children Church leader pattern) can read all teens, run sessions, and manually sign teens in/out.
+- Everyone else: no access.
 
-### 2. Supabase Auth config
+GRANTs to `authenticated` + `service_role` on all three tables.
 
-Ensure email OTP / magic link is enabled at the project level (it's on by default for email auth, so this is a verification step, not a code change). No `configure_auth` call needed unless it's been disabled.
+### RPC: `teen_checkin(_qr_token, _teen_id, _pin?)`
 
-### 3. Nothing else changes
+Security-definer function called from the public teen check-in page. It:
 
-- `wofbi_checkin` RPC is unchanged — the email-fallback + `user_id` backfill from the earlier migration already handles the case where the member row was created before the auth user existed.
-- No new tables, no trigger changes, no edge function.
-- Public registration and admin approval flows are untouched.
+1. Resolves the session by token, rejects if closed / expired.
+2. Verifies the teen belongs to the same tenant and is active.
+3. Verifies the caller is either:
+   - the primary guardian / authorised guardian of the teen, **or**
+   - a worker in the Teens unit / admin, **or**
+   - an anonymous scanner who supplied the correct `access_pin` for that teen.
+4. Inserts `checked_in_at` on first scan; on second scan sets `checked_out_at` and computes duration. Marks `late` if past `late_after_minutes`.
+5. Returns `{ ok, action, status, teen_name, session_title, duration_minutes }`.
 
-## Technical notes
+Mirrors the existing Bible School `wofbi_checkin` RPC in shape and UX.
 
-- `signInWithOtp` with `shouldCreateUser: true` is the standard Supabase magic-link flow. Auth emails route through the existing Lovable auth email pipeline (`auth-email-hook`), so branding/templates carry over automatically.
-- The redirect URL must be absolute: `` `${window.location.origin}/wofbi/checkin/${token}` ``.
-- Applicants who typo their email at the check-in page (different from the one on their application) will end up with a member row that can't be matched. The RPC's email fallback matches on the applicant's application email, so we should tell them on the form: "Use the same email you registered with."
-- Rate limit: Supabase caps auth emails per hour per project. If tenants run big Bible School sessions, `rate_limit_email_sent` may need raising later — flag but don't change now.
+### UI changes
 
-## Out of scope
+1. **My Family → Teens tab** (`src/pages/MyFamily.jsx`)
+   - New section "Teenagers" under Family with add/edit/remove.
+   - Fields: name, DOB, gender, photo, optional 4-digit access PIN.
+   - Shows each teen's personal check-in card + a QR containing `?teen=<id>` fallback link (optional print).
 
-- No auto-provisioning on approval.
-- No SMS OTP.
-- No change to the standard `/auth` sign-in page for members who *do* have passwords.
+2. **Teens Attendance module** (new page, e.g. `src/pages/TeensAttendance.jsx`, gated behind admin / Teens unit leader)
+   - List of sessions (Today / Upcoming / Past), Create Session dialog.
+   - Per-session: "Show QR" (reuses the QR dialog pattern from `WoFBIAttendanceQRDialog`), live checked-in count, roster of who's in / who's out.
+   - Manual sign-in/out: worker picks a teen and taps **Check in** or **Check out** (writes with `checked_in_by = worker.user_id`).
+
+3. **Public teen check-in page** (new route `/teens/checkin/:token`, similar to `WoFBICheckin.jsx`)
+   - If signed in as a guardian → shows only that guardian's teens, tap a name to check in / out.
+   - If not signed in → prompts for PIN per teen (only teens with a PIN configured are pickable); alternative magic-link sign-in as the guardian is offered.
+   - Success screen shows time-in / time-out and duration, matching the Bible School UX.
+
+4. **Sidebar / navigation** — add "Teens Attendance" for admins and Teens unit leaders.
+
+### Technical details
+
+- New church unit slug `teens` (mirrors `children church`), with a `is_teens_unit_member(user_id, tenant_id)` SECURITY DEFINER helper for RLS.
+- Session QR URL: `${origin}/t/<slug>/teens/checkin/<qr_token>` (tenant-aware, like WoFBI check-in).
+- PIN storage: `access_pin_hash` (bcrypt via `pgcrypto` `crypt()`), never plain text; verified inside the RPC.
+- Realtime subscription on `teen_attendance_records` for live QR dialog count, same pattern as WoFBI.
+- Reuse `TenantDialogHeader`, `Card`, `Button`, `qrcode.react`, and the duration-formatter helper.
+- No new secrets, no edge functions required — everything is RLS + one RPC.
+
+### Out of scope
+
+- Push notifications to parents on check-in/out (can be added later using existing `push_subscriptions`).
+- Reporting / analytics beyond the session roster (can be added to Reports Hub later).
