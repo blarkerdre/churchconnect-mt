@@ -1,39 +1,21 @@
 ## Goal
+Make current check-in state visible to teens/parents on the Teens Check-in page, and prevent duplicate check-in / check-out attempts.
 
-After a teen check-in or check-out on the Teens Check-in page, stop sending them to the Church Connect home page. Instead, show a friendly, playful image ("Welcome to church!" on check-in, "See you next time!" on check-out) and close the tab.
+## Changes (frontend only — `src/pages/TeensCheckin.jsx`)
 
-## Changes
+1. **Status badges on teen rows**
+   - Guardian teen list (line ~531) and self-pick list (line ~419): show a small pill next to the name — green "Checked in" when `openIds.has(t.id)`, muted "Not checked in" otherwise. Keeps existing "No consent" / "First time" pills.
 
-### 1. Add a small pool of images
-Generate a handful of illustrated, church-friendly, cartoon-style images and save them in `src/assets/teens-checkin/`:
-- 4 "welcome" images (cheerful, funny — e.g. dancing teens, high-five, confetti) — used on successful check-in.
-- 3 "farewell" images (waving, "see you Sunday", warm goodbye) — used on successful check-out.
+2. **Status banner in PIN entry screens**
+   - `parent-pin`, `self-pin`, and signed-in `pendingTeen` PIN forms: once a teen is selected, show a small info line above the PIN input: "✓ Currently checked in — entering PIN will check them out." or "○ Not checked in yet — entering PIN will check them in."
 
-All images will be lightweight cartoon illustrations, no photorealism, matching the app's friendly tone. No text baked into the image (we overlay the caption in the UI so we can localise later).
+3. **Handle duplicate responses**
+   - `teen_checkin` / `teen_self_checkin` already return `already_checked_in` / `already_checked_out`. Extend the success card so those two actions render a distinct info state ("You're already checked in" / "You're already checked out") instead of the celebratory welcome/farewell image, and refresh `openIds` so the UI reconciles.
 
-### 2. Update `src/pages/TeensCheckin.jsx`
-- Import the image arrays.
-- On a successful RPC result, pick a random image from the appropriate pool based on `result.action`:
-  - `checked_in` / `late` → welcome pool with caption "Welcome to church!"
-  - `checked_out` / `already_checked_out` → farewell pool with caption "See you next time!"
-- Replace the existing success card body so it shows:
-  - The randomly chosen image (rounded, ~180px tall).
-  - The teen's name + session title + time-in/out summary (kept from current design).
-  - A single primary button: **Close**.
-- Change the button behaviour from `navigate("/")` to:
-  1. Call `window.close()`.
-  2. If the tab can't be closed (browser blocks it because it wasn't opened by script), replace the card content with a small "You can close this tab now." message. No redirect to `/`.
-- Auto-attempt `window.close()` after ~4 seconds so the tab clears itself without user action; the manual Close button remains as a fallback.
+4. **Guard the action buttons**
+   - Poll `refreshOpenIds` right before submit inside `doCheckin` / `doSelfCheckin` is not needed — RPC is authoritative. But disable the submit button for a short window after click (already handled by `busy`), and after a successful action re-run `refreshOpenIds` (already done). Add an `aria-live` region on the status pill so screen readers announce state changes.
 
-Only the success/checkout screen changes. Error screens, magic-link screens, and the guardian teen picker are untouched.
+No backend / RPC changes. No changes to session or enrolment flows.
 
-## Technical notes
-
-- Images generated via `imagegen` (fast tier, transparent background off, ~768×512) and referenced via ES6 imports so Vite fingerprints them.
-- Random pick uses `useMemo` seeded on the result object so the image doesn't flicker on re-render.
-- `window.close()` only works reliably on tabs the browser considers script-opened (QR scans usually qualify because they open a new tab). The fallback message covers the rest — no navigation back into the authenticated app.
-
-## Out of scope
-
-- No changes to Bible School (`WoFBICheckin.jsx`) unless you want the same treatment — happy to extend it if you say so.
-- No changes to the check-in RPCs or session logic.
+## Files touched
+- `src/pages/TeensCheckin.jsx`

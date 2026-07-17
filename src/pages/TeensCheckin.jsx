@@ -251,8 +251,29 @@ export default function TeensCheckin() {
           )}
           {result && !closedMsg && (() => {
             const isOut = result.action === "checked_out";
-            const already = result.action === "already_checked_out";
-            const isFarewell = isOut || already;
+            const already = result.action === "already_checked_out" || result.action === "already_checked_in";
+            const alreadyIn = result.action === "already_checked_in";
+            const isFarewell = isOut || result.action === "already_checked_out";
+            if (already) {
+              const label = alreadyIn ? "Already checked in" : "Already checked out";
+              const sub = alreadyIn
+                ? "No change — this teen is already signed in."
+                : "No change — this teen is already signed out.";
+              return (
+                <>
+                  <CheckCheck className={`h-12 w-12 mx-auto ${alreadyIn ? "text-green-600" : "text-slate-500"}`} />
+                  <div>
+                    <p className="text-xl font-bold">{label}</p>
+                    <p className="text-sm text-muted-foreground">{result.teen_name}</p>
+                    <p className="text-xs text-muted-foreground mt-1">{sub}</p>
+                  </div>
+                  <Button variant="outline" className="w-full" onClick={() => { setResult(null); setPendingTeen(null); resetSelfFlow(); setMode("choose"); }}>
+                    Back
+                  </Button>
+                  <Button className="w-full" onClick={handleClose}>Close</Button>
+                </>
+              );
+            }
             const caption = isFarewell ? "See you next time!" : "Welcome to church!";
             const subCaption = isFarewell
               ? "Time-out recorded"
@@ -386,6 +407,13 @@ export default function TeensCheckin() {
                   ))}
                 </select>
               </div>
+              {pendingTeen?.id && (
+                <p aria-live="polite" className={`text-xs rounded-md px-2 py-1.5 ${isCheckedIn(pendingTeen.id) ? "bg-green-50 text-green-800 border border-green-200" : "bg-slate-50 text-slate-700 border border-slate-200"}`}>
+                  {isCheckedIn(pendingTeen.id)
+                    ? "Currently checked in — entering PIN will check them out."
+                    : "Not checked in yet — entering PIN will check them in."}
+                </p>
+              )}
               <div className="space-y-1.5">
                 <Label>PIN</Label>
                 <Input inputMode="numeric" pattern="[0-9]*" maxLength={6} value={pin}
@@ -416,18 +444,24 @@ export default function TeensCheckin() {
                     </p>
                   </div>
                 )}
-                {publicTeens.map((t) => (
-                  <button key={t.id} type="button"
-                    className="w-full flex items-center gap-3 border rounded-lg p-3 hover:bg-muted text-left"
-                    onClick={() => {
-                      if (t.has_self_pin) { setSelfTeen(t); setMode("self-pin"); }
-                      else { requestEnrolment(t); }
-                    }}>
-                    <User className="h-5 w-5 text-primary shrink-0" />
-                    <span className="text-sm font-medium flex-1">{t.first_name} {t.last_name}</span>
-                    {!t.has_self_pin && <span className="text-[10px] uppercase px-1.5 py-0.5 rounded bg-blue-100 text-blue-800">First time</span>}
-                  </button>
-                ))}
+                {publicTeens.map((t) => {
+                  const inNow = isCheckedIn(t.id);
+                  return (
+                    <button key={t.id} type="button"
+                      className="w-full flex items-center gap-3 border rounded-lg p-3 hover:bg-muted text-left"
+                      onClick={() => {
+                        if (t.has_self_pin) { setSelfTeen(t); setMode("self-pin"); }
+                        else { requestEnrolment(t); }
+                      }}>
+                      <User className="h-5 w-5 text-primary shrink-0" />
+                      <span className="text-sm font-medium flex-1">{t.first_name} {t.last_name}</span>
+                      <span aria-live="polite" className={`text-[10px] uppercase px-1.5 py-0.5 rounded ${inNow ? "bg-green-100 text-green-800" : "bg-slate-100 text-slate-600"}`}>
+                        {inNow ? "Checked in" : "Not checked in"}
+                      </span>
+                      {!t.has_self_pin && <span className="text-[10px] uppercase px-1.5 py-0.5 rounded bg-blue-100 text-blue-800">First time</span>}
+                    </button>
+                  );
+                })}
               </div>
               <Button variant="ghost" size="sm" className="w-full" onClick={() => setMode("choose")}>Back</Button>
             </div>
@@ -437,6 +471,11 @@ export default function TeensCheckin() {
           {!result && !error && mode === "self-pin" && selfTeen && (
             <div className="space-y-3 text-left">
               <p className="text-sm text-center">Hi {selfTeen.first_name}! Enter your PIN.</p>
+              <p aria-live="polite" className={`text-xs rounded-md px-2 py-1.5 ${isCheckedIn(selfTeen.id) ? "bg-green-50 text-green-800 border border-green-200" : "bg-slate-50 text-slate-700 border border-slate-200"}`}>
+                {isCheckedIn(selfTeen.id)
+                  ? "You're currently checked in — entering your PIN will check you out."
+                  : "You're not checked in yet — entering your PIN will check you in."}
+              </p>
               <div className="space-y-1.5">
                 <Label>Your 4-digit PIN</Label>
                 <Input inputMode="numeric" pattern="[0-9]*" maxLength={6} value={pin}
@@ -535,6 +574,11 @@ export default function TeensCheckin() {
                       className="w-full flex items-center gap-3 border rounded-lg p-3">
                       <User className="h-5 w-5 text-primary shrink-0" />
                       <span className="text-sm font-medium flex-1">{t.first_name} {t.last_name}</span>
+                      {t.attendance_consent && (
+                        <span aria-live="polite" className={`text-[10px] uppercase px-1.5 py-0.5 rounded ${out ? "bg-green-100 text-green-800" : "bg-slate-100 text-slate-600"}`}>
+                          {out ? "Checked in" : "Not checked in"}
+                        </span>
+                      )}
                       {!t.attendance_consent ? (
                         <span className="text-[10px] uppercase px-1.5 py-0.5 rounded bg-amber-100 text-amber-800">No consent</span>
                       ) : (
@@ -579,6 +623,13 @@ export default function TeensCheckin() {
                   ))}
                 </select>
               </div>
+              {pendingTeen.id && (
+                <p aria-live="polite" className={`text-xs rounded-md px-2 py-1.5 ${isCheckedIn(pendingTeen.id) ? "bg-green-50 text-green-800 border border-green-200" : "bg-slate-50 text-slate-700 border border-slate-200"}`}>
+                  {isCheckedIn(pendingTeen.id)
+                    ? "Currently checked in — entering PIN will check them out."
+                    : "Not checked in yet — entering PIN will check them in."}
+                </p>
+              )}
               <div className="space-y-1.5">
                 <Label>4-digit PIN</Label>
                 <Input inputMode="numeric" pattern="[0-9]*" maxLength={6} value={pin}
