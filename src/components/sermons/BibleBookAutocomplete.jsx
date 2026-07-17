@@ -4,7 +4,7 @@ import { getBookSuggestions } from "@/lib/bible/refs";
 
 const TOKEN_RE = /(?:^|[\s(\[.,;!?"'])((?:(?:[1-3])\s?|(?:I{1,3})\s?)?[A-Za-z][A-Za-z]{1,20})$/;
 
-export default function BibleBookAutocomplete({ editor }) {
+export default function BibleBookAutocomplete({ editor, containerRef }) {
   const [state, setState] = useState({ open: false, items: [], index: 0, x: 0, y: 0, caretTop: 0, from: 0, to: 0 });
   const stateRef = useRef(state);
   stateRef.current = state;
