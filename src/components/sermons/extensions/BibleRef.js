@@ -58,14 +58,16 @@ export const BibleRef = Mark.create({
       markPasteRule({
         find: (text) => {
           const hits = findReferencesInText(text);
-          return hits.map((h) => ({
-            index: h.start,
-            text: h.match,
-            data: { reference: h.match },
-          }));
+          return hits.map((h) => {
+            const arr = [h.match];
+            arr.index = h.start;
+            arr.input = text;
+            arr.data = { reference: h.match };
+            return { index: h.start, text: h.match, match: arr, data: { reference: h.match } };
+          });
         },
         type: this.type,
-        getAttributes: (match) => ({ reference: match.data.reference }),
+        getAttributes: (match) => ({ reference: (match.data && match.data.reference) || match[0] }),
       }),
     ];
   },
