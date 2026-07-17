@@ -623,6 +623,13 @@ export default function TeensCheckin() {
                   ))}
                 </select>
               </div>
+              {pendingTeen.id && (
+                <p aria-live="polite" className={`text-xs rounded-md px-2 py-1.5 ${isCheckedIn(pendingTeen.id) ? "bg-green-50 text-green-800 border border-green-200" : "bg-slate-50 text-slate-700 border border-slate-200"}`}>
+                  {isCheckedIn(pendingTeen.id)
+                    ? "Currently checked in — entering PIN will check them out."
+                    : "Not checked in yet — entering PIN will check them in."}
+                </p>
+              )}
               <div className="space-y-1.5">
                 <Label>4-digit PIN</Label>
                 <Input inputMode="numeric" pattern="[0-9]*" maxLength={6} value={pin}
