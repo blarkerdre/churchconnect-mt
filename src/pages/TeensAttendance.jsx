@@ -353,6 +353,12 @@ function ReportDialog({ open, onOpenChange, session }) {
           <DialogTitle>{session?.title} — Report</DialogTitle>
         </DialogHeader>
         <div className="space-y-2">
+          {session?.notes && (
+            <div className="rounded-md border bg-muted/40 p-3">
+              <p className="text-[11px] uppercase tracking-wide text-muted-foreground mb-1">Session note</p>
+              <p className="text-sm whitespace-pre-wrap">{session.notes}</p>
+            </div>
+          )}
           <div className="flex justify-between items-center">
             <p className="text-sm text-muted-foreground">{rows.length} record{rows.length === 1 ? "" : "s"}</p>
             <div className="flex gap-2">
