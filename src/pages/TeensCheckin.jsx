@@ -437,18 +437,24 @@ export default function TeensCheckin() {
                     </p>
                   </div>
                 )}
-                {publicTeens.map((t) => (
-                  <button key={t.id} type="button"
-                    className="w-full flex items-center gap-3 border rounded-lg p-3 hover:bg-muted text-left"
-                    onClick={() => {
-                      if (t.has_self_pin) { setSelfTeen(t); setMode("self-pin"); }
-                      else { requestEnrolment(t); }
-                    }}>
-                    <User className="h-5 w-5 text-primary shrink-0" />
-                    <span className="text-sm font-medium flex-1">{t.first_name} {t.last_name}</span>
-                    {!t.has_self_pin && <span className="text-[10px] uppercase px-1.5 py-0.5 rounded bg-blue-100 text-blue-800">First time</span>}
-                  </button>
-                ))}
+                {publicTeens.map((t) => {
+                  const inNow = isCheckedIn(t.id);
+                  return (
+                    <button key={t.id} type="button"
+                      className="w-full flex items-center gap-3 border rounded-lg p-3 hover:bg-muted text-left"
+                      onClick={() => {
+                        if (t.has_self_pin) { setSelfTeen(t); setMode("self-pin"); }
+                        else { requestEnrolment(t); }
+                      }}>
+                      <User className="h-5 w-5 text-primary shrink-0" />
+                      <span className="text-sm font-medium flex-1">{t.first_name} {t.last_name}</span>
+                      <span aria-live="polite" className={`text-[10px] uppercase px-1.5 py-0.5 rounded ${inNow ? "bg-green-100 text-green-800" : "bg-slate-100 text-slate-600"}`}>
+                        {inNow ? "Checked in" : "Not checked in"}
+                      </span>
+                      {!t.has_self_pin && <span className="text-[10px] uppercase px-1.5 py-0.5 rounded bg-blue-100 text-blue-800">First time</span>}
+                    </button>
+                  );
+                })}
               </div>
               <Button variant="ghost" size="sm" className="w-full" onClick={() => setMode("choose")}>Back</Button>
             </div>
