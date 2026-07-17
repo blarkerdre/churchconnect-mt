@@ -50,13 +50,11 @@ export default function TeensCheckin() {
     let active = true;
     (async () => {
       setLoading(true);
-      // Look up session by qr_token
-      const { data: s, error: sErr } = await supabase
-        .from("teen_attendance_sessions")
-        .select("id,title,session_date,status,tenant_id")
-        .eq("qr_token", token)
-        .maybeSingle();
+      // Look up session by qr_token via SECURITY DEFINER RPC (works pre-auth)
+      const { data: sRows, error: sErr } = await supabase
+        .rpc("get_teen_session_by_token", { _qr_token: token });
       if (!active) return;
+      const s = Array.isArray(sRows) ? sRows[0] : sRows;
       if (sErr || !s) {
         setError("invalid_token");
         setLoading(false);

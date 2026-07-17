@@ -1,33 +1,32 @@
-## Goal
-Give Teens Church unit leaders (and admins) a **cumulative attendance report** across all teen attendance sessions, with filters — not just the per-session report that exists today.
+## Root cause
 
-## Findings
-- `src/pages/TeensAttendance.jsx` currently exposes a per-session `ReportDialog` (lines 243–328) reached from the "Report" button on each session row.
-- RLS on `teen_attendance_records` / `teen_attendance_sessions` already lets leaders read all rows in their tenant.
-- `useTeensUnitRole` already surfaces `isLeader`. Report actions are gated by `canManage = isAdmin || isLeader`.
+The QR check-in page opens for anyone who scans (including parents before they sign in). It looks up the session with a direct table query:
 
-## Change
-Add a **Cumulative Report** entry point at the top of the Teens Attendance page (visible only when `canManage`) that opens a new dialog `CumulativeReportDialog`. Leave the existing per-session Report button in place.
+```js
+supabase.from("teen_attendance_sessions").select(...).eq("qr_token", token)
+```
 
-### CumulativeReportDialog contents
-Query `teen_attendance_records` joined to `teen_attendance_sessions` and `teens` for the current tenant, then aggregate by teen.
+But `teen_attendance_sessions` RLS only allows `SELECT` to authenticated users who pass `user_has_tenant_access(tenant_id)`. Confirmed via `pg_policy`:
 
-Filter bar:
-- Date range (from / to) — defaults to last 90 days
-- Session type (dropdown of distinct session titles / service types)
-- Status (All / On time / Late / Missing check-out)
-- Search by teen name
+- `teen_sessions_read` → role `authenticated`, `USING (user_has_tenant_access(tenant_id))`
 
-Two views inside the dialog:
-1. **Summary by teen** (default): Name, Sessions attended, On-time %, Late count, Total hours, Missing check-outs.
-2. **Detailed rows**: Date, Session, Teen, In, Out, Duration, Status, Source — respecting the same filters.
+So when an unauthenticated scanner (or a signed-in user who isn't a tenant member yet) opens the link, RLS filters the row out, `maybeSingle()` returns `null`, and the page shows **"This check-in link is invalid."**
 
-Actions: Export CSV (current view), Print.
+The same bug exists in the Bible School flow structurally, but that page requires sign-in first via `wofbi_checkin` RPC (SECURITY DEFINER), so it doesn't hit RLS on the session table directly. The teens page reads the session *before* auth, which is where it breaks.
 
-### Files touched
-- `src/pages/TeensAttendance.jsx` — new `CumulativeReportDialog` component + a "Cumulative report" button in the header, wired behind `canManage`.
+## Fix
 
-## Out of scope
-- No DB schema changes, no RLS changes, no edge functions.
-- No changes to the existing per-session report.
-- No push/email — this is a read-only in-app report.
+Add a `SECURITY DEFINER` RPC that returns minimal, non-sensitive session info by `qr_token`, and switch the client to use it. Keeps RLS on the base table strict.
+
+1. **Migration** — create RPC `public.get_teen_session_by_token(_qr_token uuid)` that returns `id, title, session_date, status, tenant_id` for the matching row. `SECURITY DEFINER`, `SET search_path = public`, `GRANT EXECUTE TO anon, authenticated`.
+
+2. **`src/pages/TeensCheckin.jsx`** — replace the direct `teen_attendance_sessions` select with `supabase.rpc("get_teen_session_by_token", { _qr_token: token })`. Keep the same downstream logic (open/closed handling, teens load, magic-link, PIN flow). No UI changes.
+
+No changes to `teen_checkin` RPC — it already validates the token server-side.
+
+## Verification
+
+- Open the QR link while signed out → page shows session title/date and the magic-link/PIN options (not "invalid link").
+- Closed session → still shows "This session is closed."
+- Made-up token → still shows "invalid link".
+- Signed-in guardian flow (tap teen → check in) continues to work.
