@@ -1,10 +1,22 @@
 // Bible reference parsing + KJV lookup.
 // KJV JSON is loaded lazily on first use and cached in-module.
+// If the local chunk fails (offline / stale cache), we fall back to bible-api.com.
 
 let _kjvPromise = null;
+let _kjvFailed = false;
 function loadKjv() {
+  if (_kjvFailed) return Promise.reject(new Error("KJV_UNAVAILABLE"));
   if (!_kjvPromise) {
-    _kjvPromise = import("@/assets/bible/kjv.json").then((m) => m.default || m);
+    const attempt = (n) =>
+      import("@/assets/bible/kjv.json")
+        .then((m) => m.default || m)
+        .catch((err) => {
+          if (n > 0) return new Promise((r) => setTimeout(r, 400)).then(() => attempt(n - 1));
+          _kjvFailed = true;
+          _kjvPromise = null;
+          throw err;
+        });
+    _kjvPromise = attempt(1);
   }
   return _kjvPromise;
 }
