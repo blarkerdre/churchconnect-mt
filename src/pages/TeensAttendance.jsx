@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
-import { Plus, QrCode, Calendar, LogIn, LogOut, Users, Pencil, Trash2, FileText, Lock, ShieldAlert } from "lucide-react";
+import { Plus, QrCode, Calendar, LogIn, LogOut, Users, Pencil, Trash2, FileText, Lock, ShieldAlert, BarChart3, Search } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import TeenAttendanceQRDialog from "@/components/teens/TeenAttendanceQRDialog";
@@ -327,6 +327,243 @@ function ReportDialog({ open, onOpenChange, session }) {
   );
 }
 
+function CumulativeReportDialog({ open, onOpenChange }) {
+  const { tenantId } = useTenantQuery();
+  const today = format(new Date(), "yyyy-MM-dd");
+  const ninetyAgo = format(new Date(Date.now() - 90 * 24 * 60 * 60 * 1000), "yyyy-MM-dd");
+  const [from, setFrom] = useState(ninetyAgo);
+  const [to, setTo] = useState(today);
+  const [typeFilter, setTypeFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [search, setSearch] = useState("");
+  const [view, setView] = useState("summary");
+
+  const { data: rows = [], isLoading } = useQuery({
+    queryKey: ["teen-cumulative", tenantId, from, to],
+    enabled: !!tenantId && open,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("teen_attendance_records")
+        .select("id, checked_in_at, checked_out_at, duration_minutes, status, source, teens:teen_id (first_name, last_name), session:session_id (id, title, session_type, session_date)")
+        .eq("tenant_id", tenantId)
+        .gte("checked_in_at", `${from}T00:00:00`)
+        .lte("checked_in_at", `${to}T23:59:59`)
+        .order("checked_in_at", { ascending: false });
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  const sessionTypes = useMemo(() => {
+    const set = new Set();
+    rows.forEach((r) => { if (r.session?.session_type) set.add(r.session.session_type); });
+    return Array.from(set).sort();
+  }, [rows]);
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return rows.filter((r) => {
+      if (typeFilter !== "all" && r.session?.session_type !== typeFilter) return false;
+      if (statusFilter === "on_time" && r.status !== "on_time") return false;
+      if (statusFilter === "late" && r.status !== "late") return false;
+      if (statusFilter === "missing_out" && r.checked_out_at) return false;
+      if (q) {
+        const name = `${r.teens?.first_name || ""} ${r.teens?.last_name || ""}`.toLowerCase();
+        if (!name.includes(q)) return false;
+      }
+      return true;
+    });
+  }, [rows, typeFilter, statusFilter, search]);
+
+  const summary = useMemo(() => {
+    const map = new Map();
+    filtered.forEach((r) => {
+      const name = `${r.teens?.first_name || ""} ${r.teens?.last_name || ""}`.trim() || "Unknown";
+      const s = map.get(name) || { name, sessions: 0, onTime: 0, late: 0, minutes: 0, missing: 0 };
+      s.sessions += 1;
+      if (r.status === "late") s.late += 1;
+      else if (r.status === "on_time") s.onTime += 1;
+      s.minutes += r.duration_minutes || 0;
+      if (!r.checked_out_at) s.missing += 1;
+      map.set(name, s);
+    });
+    return Array.from(map.values()).sort((a, b) => b.sessions - a.sessions);
+  }, [filtered]);
+
+  const downloadCsv = () => {
+    let header, lines;
+    if (view === "summary") {
+      header = ["Name", "Sessions attended", "On time", "Late", "Total hours", "Missing check-outs"];
+      lines = [header.join(",")];
+      summary.forEach((s) => {
+        lines.push([
+          JSON.stringify(s.name),
+          s.sessions,
+          s.onTime,
+          s.late,
+          (s.minutes / 60).toFixed(1),
+          s.missing,
+        ].join(","));
+      });
+    } else {
+      header = ["Date", "Session", "Type", "Teen", "In", "Out", "Duration (min)", "Status", "Source"];
+      lines = [header.join(",")];
+      filtered.forEach((r) => {
+        const name = `${r.teens?.first_name || ""} ${r.teens?.last_name || ""}`.trim();
+        lines.push([
+          r.session?.session_date || "",
+          JSON.stringify(r.session?.title || ""),
+          r.session?.session_type || "",
+          JSON.stringify(name),
+          r.checked_in_at ? format(new Date(r.checked_in_at), "yyyy-MM-dd HH:mm") : "",
+          r.checked_out_at ? format(new Date(r.checked_out_at), "yyyy-MM-dd HH:mm") : "",
+          r.duration_minutes ?? "",
+          r.status || "",
+          r.source || "",
+        ].join(","));
+      });
+    }
+    const blob = new Blob([lines.join("\n")], { type: "text/csv" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `teens-cumulative-${view}-${from}_to_${to}.csv`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2"><BarChart3 className="h-5 w-5 text-primary" /> Cumulative Teens Attendance Report</DialogTitle>
+        </DialogHeader>
+
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
+          <div>
+            <Label className="text-xs">From</Label>
+            <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
+          </div>
+          <div>
+            <Label className="text-xs">To</Label>
+            <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} />
+          </div>
+          <div>
+            <Label className="text-xs">Session type</Label>
+            <Select value={typeFilter} onValueChange={setTypeFilter}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All types</SelectItem>
+                {sessionTypes.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label className="text-xs">Status</Label>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All</SelectItem>
+                <SelectItem value="on_time">On time</SelectItem>
+                <SelectItem value="late">Late</SelectItem>
+                <SelectItem value="missing_out">Missing check-out</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label className="text-xs">Search teen</Label>
+            <div className="relative">
+              <Search className="absolute left-2 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
+              <Input className="pl-7" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Name" />
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between gap-2 flex-wrap pt-2">
+          <div className="flex gap-1">
+            <Button size="sm" variant={view === "summary" ? "default" : "outline"} onClick={() => setView("summary")}>Summary by teen</Button>
+            <Button size="sm" variant={view === "detailed" ? "default" : "outline"} onClick={() => setView("detailed")}>Detailed rows</Button>
+          </div>
+          <div className="flex gap-2">
+            <Button size="sm" variant="outline" onClick={downloadCsv} disabled={(view === "summary" ? summary.length : filtered.length) === 0}>Export CSV</Button>
+            <Button size="sm" variant="outline" onClick={() => window.print()}>Print</Button>
+          </div>
+        </div>
+
+        <div className="border rounded-md overflow-x-auto">
+          {isLoading ? (
+            <div className="p-6 text-center text-sm text-muted-foreground">Loading…</div>
+          ) : view === "summary" ? (
+            <table className="w-full text-sm">
+              <thead className="bg-muted">
+                <tr className="text-left">
+                  <th className="p-2">Name</th>
+                  <th className="p-2">Sessions</th>
+                  <th className="p-2">On time</th>
+                  <th className="p-2">Late</th>
+                  <th className="p-2">On-time %</th>
+                  <th className="p-2">Total hours</th>
+                  <th className="p-2">Missing out</th>
+                </tr>
+              </thead>
+              <tbody>
+                {summary.length === 0 && (
+                  <tr><td colSpan={7} className="p-4 text-center text-muted-foreground">No records for these filters.</td></tr>
+                )}
+                {summary.map((s) => (
+                  <tr key={s.name} className="border-t">
+                    <td className="p-2 font-medium">{s.name}</td>
+                    <td className="p-2">{s.sessions}</td>
+                    <td className="p-2">{s.onTime}</td>
+                    <td className="p-2">{s.late}</td>
+                    <td className="p-2">{s.sessions ? Math.round((s.onTime / s.sessions) * 100) : 0}%</td>
+                    <td className="p-2">{(s.minutes / 60).toFixed(1)}</td>
+                    <td className="p-2">{s.missing > 0 ? <Badge variant="destructive">{s.missing}</Badge> : s.missing}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : (
+            <table className="w-full text-sm">
+              <thead className="bg-muted">
+                <tr className="text-left">
+                  <th className="p-2">Date</th>
+                  <th className="p-2">Session</th>
+                  <th className="p-2">Teen</th>
+                  <th className="p-2">In</th>
+                  <th className="p-2">Out</th>
+                  <th className="p-2">Duration</th>
+                  <th className="p-2">Status</th>
+                  <th className="p-2">Source</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.length === 0 && (
+                  <tr><td colSpan={8} className="p-4 text-center text-muted-foreground">No records for these filters.</td></tr>
+                )}
+                {filtered.map((r) => (
+                  <tr key={r.id} className="border-t">
+                    <td className="p-2 whitespace-nowrap">{r.session?.session_date ? format(new Date(r.session.session_date), "d MMM yyyy") : "—"}</td>
+                    <td className="p-2">{r.session?.title || "—"}</td>
+                    <td className="p-2">{r.teens?.first_name} {r.teens?.last_name}</td>
+                    <td className="p-2">{r.checked_in_at ? format(new Date(r.checked_in_at), "HH:mm") : "—"}</td>
+                    <td className="p-2">{r.checked_out_at ? format(new Date(r.checked_out_at), "HH:mm") : "—"}</td>
+                    <td className="p-2">{fmtDuration(r.duration_minutes) || "—"}</td>
+                    <td className="p-2">
+                      {r.status === "late" ? <Badge className="bg-amber-500 text-white">Late</Badge> : r.status === "on_time" ? <Badge variant="secondary">On time</Badge> : r.status || "—"}
+                    </td>
+                    <td className="p-2 capitalize">{r.source}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+        <p className="text-xs text-muted-foreground">{view === "summary" ? summary.length : filtered.length} {view === "summary" ? "teen(s)" : "record(s)"} · {from} → {to}</p>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export default function TeensAttendance() {
   const { tenantId } = useTenantQuery();
   const { user } = useAuth();
@@ -353,6 +590,7 @@ export default function TeensAttendance() {
   const [rosterSession, setRosterSession] = useState(null);
   const [reportSession, setReportSession] = useState(null);
   const [deleteSession, setDeleteSession] = useState(null);
+  const [cumulativeOpen, setCumulativeOpen] = useState(false);
 
   const { data: sessions = [], refetch } = useQuery({
     queryKey: ["teen-sessions", tenantId],
@@ -390,9 +628,16 @@ export default function TeensAttendance() {
           <h1 className="text-2xl font-display font-bold flex items-center gap-2"><Users className="h-6 w-6 text-primary" /> Teens Attendance</h1>
           <p className="text-sm text-muted-foreground">On-premise check-in / check-out for registered teens.</p>
         </div>
-        {canWrite && (
-          <Button onClick={() => setFormSession({})}><Plus className="h-4 w-4 mr-1" /> New session</Button>
-        )}
+        <div className="flex gap-2 flex-wrap">
+          {canManage && (
+            <Button variant="outline" onClick={() => setCumulativeOpen(true)}>
+              <BarChart3 className="h-4 w-4 mr-1" /> Cumulative report
+            </Button>
+          )}
+          {canWrite && (
+            <Button onClick={() => setFormSession({})}><Plus className="h-4 w-4 mr-1" /> New session</Button>
+          )}
+        </div>
       </div>
 
       {!canWrite && (
@@ -483,6 +728,11 @@ export default function TeensAttendance() {
           session={reportSession}
         />
       )}
+      {cumulativeOpen && (
+        <CumulativeReportDialog open={cumulativeOpen} onOpenChange={setCumulativeOpen} />
+      )}
+
+
 
       <AlertDialog open={!!deleteSession} onOpenChange={(o) => !o && setDeleteSession(null)}>
         <AlertDialogContent>
