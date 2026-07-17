@@ -756,3 +756,11 @@ export function TeensAttendancePanel() {
     </div>
   );
 }
+
+export default function TeensAttendance() {
+  return (
+    <div className="p-4 max-w-3xl mx-auto">
+      <TeensAttendancePanel />
+    </div>
+  );
+}
