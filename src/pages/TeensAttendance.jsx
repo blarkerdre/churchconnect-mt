@@ -628,9 +628,16 @@ export default function TeensAttendance() {
           <h1 className="text-2xl font-display font-bold flex items-center gap-2"><Users className="h-6 w-6 text-primary" /> Teens Attendance</h1>
           <p className="text-sm text-muted-foreground">On-premise check-in / check-out for registered teens.</p>
         </div>
-        {canWrite && (
-          <Button onClick={() => setFormSession({})}><Plus className="h-4 w-4 mr-1" /> New session</Button>
-        )}
+        <div className="flex gap-2 flex-wrap">
+          {canManage && (
+            <Button variant="outline" onClick={() => setCumulativeOpen(true)}>
+              <BarChart3 className="h-4 w-4 mr-1" /> Cumulative report
+            </Button>
+          )}
+          {canWrite && (
+            <Button onClick={() => setFormSession({})}><Plus className="h-4 w-4 mr-1" /> New session</Button>
+          )}
+        </div>
       </div>
 
       {!canWrite && (
