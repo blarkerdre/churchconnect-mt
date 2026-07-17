@@ -1,45 +1,39 @@
-
 ## Goal
 
-Replace per-session QR codes for Teens Attendance and Bible School Attendance with one persistent tenant-level QR per module. Scanning it:
-- If exactly one session is open → routes straight to that session's check-in flow.
-- If multiple sessions are open → shows a picker of the open sessions.
-- If none are open → shows a friendly "no active session" page.
+After a teen check-in or check-out on the Teens Check-in page, stop sending them to the Church Connect home page. Instead, show a friendly, playful image ("Welcome to church!" on check-in, "See you next time!" on check-out) and close the tab.
 
-## UX
+## Changes
 
-1. **Attendance page (workers/admins)**
-   - "Session QR code" button now opens a single QR dialog per module (Teens, Bible School) that never changes across sessions.
-   - Per-session QR button on individual sessions is removed; the "Close session" action moves inline on the session row.
-2. **Scan target page** (`/t/:slug/teens/checkin` and `/wofbi/checkin`)
-   - Fetches open sessions for the tenant/module.
-   - 0 open → friendly card: "No active check-in right now. Please wait for a leader to open a session."
-   - 1 open → auto-redirects into existing check-in flow for that session.
-   - 2+ open → list picker (title, date/time, unit if applicable) → tap to enter that session's flow.
+### 1. Add a small pool of images
+Generate a handful of illustrated, church-friendly, cartoon-style images and save them in `src/assets/teens-checkin/`:
+- 4 "welcome" images (cheerful, funny — e.g. dancing teens, high-five, confetti) — used on successful check-in.
+- 3 "farewell" images (waving, "see you Sunday", warm goodbye) — used on successful check-out.
 
-## Technical
+All images will be lightweight cartoon illustrations, no photorealism, matching the app's friendly tone. No text baked into the image (we overlay the caption in the UI so we can localise later).
 
-### URLs
+### 2. Update `src/pages/TeensCheckin.jsx`
+- Import the image arrays.
+- On a successful RPC result, pick a random image from the appropriate pool based on `result.action`:
+  - `checked_in` / `late` → welcome pool with caption "Welcome to church!"
+  - `checked_out` / `already_checked_out` → farewell pool with caption "See you next time!"
+- Replace the existing success card body so it shows:
+  - The randomly chosen image (rounded, ~180px tall).
+  - The teen's name + session title + time-in/out summary (kept from current design).
+  - A single primary button: **Close**.
+- Change the button behaviour from `navigate("/")` to:
+  1. Call `window.close()`.
+  2. If the tab can't be closed (browser blocks it because it wasn't opened by script), replace the card content with a small "You can close this tab now." message. No redirect to `/`.
+- Auto-attempt `window.close()` after ~4 seconds so the tab clears itself without user action; the manual Close button remains as a fallback.
 
-- Teens: `/t/:tenantSlug/teens/checkin` (no token). Existing token route stays for backward compatibility.
-- Bible School: `/wofbi/checkin` (tenant resolved via signed-in user or `?tenant=slug`). Existing token route stays.
+Only the success/checkout screen changes. Error screens, magic-link screens, and the guardian teen picker are untouched.
 
-### RPCs (SECURITY DEFINER, minimal exposure)
+## Technical notes
 
-- `public.list_open_teen_sessions(_tenant_slug text)` → `id, title, session_date, start_time, qr_token`.
-- `public.list_open_wofbi_sessions(_tenant_slug text)` → `id, title, session_date, qr_token`.
-- Both filter `status = 'open'` and the tenant resolved from slug. Grant EXECUTE to `anon, authenticated` (teens QR must work signed-out for guardians/self-checkin flow already supported).
+- Images generated via `imagegen` (fast tier, transparent background off, ~768×512) and referenced via ES6 imports so Vite fingerprints them.
+- Random pick uses `useMemo` seeded on the result object so the image doesn't flicker on re-render.
+- `window.close()` only works reliably on tabs the browser considers script-opened (QR scans usually qualify because they open a new tab). The fallback message covers the rest — no navigation back into the authenticated app.
 
-### Frontend
+## Out of scope
 
-- `src/pages/TeensAttendance.jsx` + `src/pages/ExamManagement.jsx` (Bible School attendance tab): replace per-row QR dialog trigger with a top-level "Session QR" button that opens a new `PersistentQRDialog` variant.
-- New `src/components/teens/TeensPersistentQRDialog.jsx` and `src/components/exams/WoFBIPersistentQRDialog.jsx` (thin wrappers over existing QR dialog UI) pointing at the tenant-level URL.
-- `src/pages/TeensCheckin.jsx`: when no `qr_token` param, call `list_open_teen_sessions`; render picker / auto-redirect / empty-state.
-- `src/pages/WoFBICheckin.jsx`: same pattern with `list_open_wofbi_sessions`.
-- Routing update in `src/App.jsx` to add the token-less variants.
-
-### Out of scope
-
-- No changes to Children's Church.
-- No changes to session creation/close logic beyond surfacing "Close" inline.
-- No change to underlying attendance records or RLS on records tables.
+- No changes to Bible School (`WoFBICheckin.jsx`) unless you want the same treatment — happy to extend it if you say so.
+- No changes to the check-in RPCs or session logic.
