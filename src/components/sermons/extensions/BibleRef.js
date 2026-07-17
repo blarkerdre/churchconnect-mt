@@ -1,4 +1,4 @@
-import { Mark, mergeAttributes, markPasteRule, markInputRule } from "@tiptap/core";
+import { Mark, mergeAttributes, markPasteRule, InputRule } from "@tiptap/core";
 import { findReferencesInText, REFERENCE_REGEX } from "@/lib/bible/refs";
 
 export const BibleRef = Mark.create({
@@ -33,29 +33,23 @@ export const BibleRef = Mark.create({
   },
 
   addInputRules() {
-    // Trigger when the user types a space/punctuation right after a reference.
+    const type = this.type;
     return [
-      {
-        find: /(?:^|\s)((?:(?:1|2|3|I{1,3})\s*)?(?:Song\s+of\s+Solomon|Song\s+of\s+Songs|[A-Za-z][A-Za-z.]{1,20}(?:\s+of\s+[A-Za-z]+)?)\.?\s+\d{1,3}(?::\d{1,3}(?:\s*-\s*\d{1,3})?(?:\s*,\s*\d{1,3}(?:\s*-\s*\d{1,3})?)*)?)([\s.,;!?)])$/,
-        handler: ({ state, range, match, chain }) => {
+      new InputRule({
+        find: /((?:(?:1|2|3|I{1,3})\s*)?(?:Song\s+of\s+Solomon|Song\s+of\s+Songs|[A-Za-z][A-Za-z.]{1,20}(?:\s+of\s+[A-Za-z]+)?)\.?\s+\d{1,3}(?::\d{1,3}(?:\s*-\s*\d{1,3})?(?:\s*,\s*\d{1,3}(?:\s*-\s*\d{1,3})?)*)?)([\s.,;!?)])$/,
+        handler: ({ state, range, match }) => {
           const raw = match[1];
-          const trailing = match[2];
+          const trailing = match[2] || "";
           if (!REFERENCE_REGEX.test(raw.trim())) return null;
-          // Compute the exact positions of the reference substring in the matched range.
-          const full = match[0];
-          const refStartInMatch = full.indexOf(raw);
-          const from = range.from + refStartInMatch;
-          const to = from + raw.length;
-          chain()
-            .setTextSelection({ from, to })
-            .setMark(this.type, { reference: raw.trim() })
-            .setTextSelection(range.to)
-            .unsetMark(this.type)
-            .insertContent(trailing)
-            .run();
-          return true;
+          const start = range.to - match[0].length;
+          const refFrom = start + match[0].indexOf(raw);
+          const refTo = refFrom + raw.length;
+          const tr = state.tr;
+          tr.addMark(refFrom, refTo, type.create({ reference: raw.trim() }));
+          // Ensure trailing char isn't marked
+          tr.removeMark(refTo, refTo + trailing.length, type);
         },
-      },
+      }),
     ];
   },
 
