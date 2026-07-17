@@ -464,7 +464,7 @@ export default function TeensCheckin() {
           {/* Signed-in guardian: existing flow */}
           {!result && !error && user && !pendingTeen && (
             <>
-              <p className="text-sm text-muted-foreground">Tap the teen to check in / out.</p>
+              <p className="text-sm text-muted-foreground">Tap <span className="font-medium">Check in</span> to sign a teen in, or <span className="font-medium">Check out</span> when they're leaving.</p>
               {teens.some((t) => !t.attendance_consent) && (
                 <div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-left space-y-2">
                   <div className="flex items-start gap-2">
