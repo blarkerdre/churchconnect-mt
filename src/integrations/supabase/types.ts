@@ -6658,6 +6658,7 @@ export type Database = {
         Args: { p_tenant_id: string; p_user_id: string }
         Returns: undefined
       }
+      crypt_pin: { Args: { _pin: string }; Returns: string }
       decline_join_request: {
         Args: { p_reason?: string; p_request_id: string }
         Returns: undefined
