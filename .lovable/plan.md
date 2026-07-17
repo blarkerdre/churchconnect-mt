@@ -1,19 +1,25 @@
-## Fix: `gen_salt(unknown) does not exist`
+## Goal
+Make the “parental consent required” state on the Teens Check-in page obvious and actionable, so cases like Ade test1 (`attendance_consent = false`) don't look like a mysterious failure.
 
-The new Teen Self Check-in RPCs call `crypt(_pin, gen_salt('bf'))` to bcrypt-hash the self-PIN, but `gen_salt` lives in the `pgcrypto` extension, which isn't currently enabled in this database. That's why the RPC errors out.
+## Changes (frontend-only, `src/pages/TeensCheckin.jsx`)
 
-### Change
+1. **Clearer inline error copy** (already mapped as `no_consent`). Reword to a two-line message with a next step:
+   > *Parental consent required.*
+   > A parent needs to open **My Family → Teenagers**, edit this teen, tick **“I give parental consent”**, and Save. Then try again.
 
-One small migration:
+2. **Signed-in guardian list — consent banner**
+   When the guardian is signed in and one or more of their teens have `attendance_consent = false`, show a prominent amber banner above the teen list listing those names, with a **Manage consent** button that navigates to `/my-family`. The teen row keeps its “No consent” badge and stays disabled (existing behaviour).
 
-1. `CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA extensions;` (Supabase's standard location for extensions).
-2. Recreate `teen_self_set_pin` (and any other new RPC using `gen_salt`/`crypt`) with `SET search_path = public, extensions` so the functions resolve `gen_salt` and `crypt` from `extensions`.
+3. **Self check-in picker — empty-state hint**
+   When `publicTeens` is empty in `self-pick` / `parent-pin` modes, replace the generic “No teens available” text with:
+   > *No teens are eligible to check in yet.* Teens only appear here after a parent gives attendance consent in **My Family → Teenagers**.
 
-No frontend changes. No data changes. No other RPCs touched.
+4. **Result screen dedicated consent block**
+   When `error === "no_consent"`, render a dedicated card (amber shield icon + heading “Parental consent required”) with the copy from item 1 and two buttons: **Back** and (when signed in) **Open My Family** → `/my-family`.
 
-### Verification
+No RPC, schema, or business-logic changes — the check-in gate itself is unchanged; only the messaging around it improves.
 
-- Run the failing self-PIN set flow again from `/teens-checkin` — the RPC should now succeed and store a bcrypt hash in `teens.self_pin_hash`.
-- Subsequent `teen_self_checkin` calls verify against that hash via `crypt(_pin, self_pin_hash) = self_pin_hash`.
-
-Shall I apply the migration?
+## Out of scope
+- Adding an admin/worker consent override.
+- Notifying the parent by email/push that consent is required.
+- Changes to `MyFamily` / `TeensSection`.
