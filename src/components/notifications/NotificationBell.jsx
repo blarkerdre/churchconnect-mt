@@ -21,10 +21,12 @@ const typeIcons = {
   announcement: Megaphone,
   event: CalendarDays,
   general: Info,
+  teen_checkin: Users,
 };
 
 const referenceTypeIcons = {
   unit_join_request: UserPlus,
+  teen_attendance: Users,
 };
 
 const typeLabels = {
@@ -36,6 +38,7 @@ const typeLabels = {
   transport: "Transport",
   meeting: "Meeting",
   unit_join_request: "Join Request",
+  teen_checkin: "Teens Attendance",
 };
 
 const referenceRoutes = {
@@ -45,6 +48,7 @@ const referenceRoutes = {
   pastoral_care: "/pastoral-care",
   transport: "/transportation",
   meeting: "/wsf",
+  teen_attendance: "/teens-attendance",
 };
 
 export default function NotificationBell() {
