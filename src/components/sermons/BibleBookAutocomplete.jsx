@@ -67,6 +67,15 @@ export default function BibleBookAutocomplete({ editor, containerRef }) {
     if (!editor || !s.open) return;
     editor.commands.insertContentAt({ from: s.from, to: s.to }, `${name} `);
     close();
+    // Swallow any ghost click dispatched by touch devices right after selection,
+    // so it doesn't land on nearby buttons (e.g. dialog Save) once the menu unmounts.
+    const swallow = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      document.removeEventListener("click", swallow, true);
+    };
+    document.addEventListener("click", swallow, true);
+    setTimeout(() => document.removeEventListener("click", swallow, true), 400);
   }, [editor, close]);
 
   useEffect(() => {

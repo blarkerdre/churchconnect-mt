@@ -1,26 +1,22 @@
-# Fix Touch Selection in Bible Book Autocomplete (Dialog Pointer-Events Lock)
+## Root cause
 
-## Root cause (verified from symptom)
+On touch, the autocomplete menu currently inserts **and closes** synchronously in `onPointerDown`. After the menu unmounts, the browser still dispatches the follow-up `click` (a "ghost click") at the same screen coordinates. On the 384px sermon-note dialog, the suggestion row sits directly above the Save button — so that ghost click lands on **Save**, which submits the form and closes the dialog. Keyboard selection isn't affected because it never produces a synthesized click.
 
-The sermon editor renders inside a Radix Dialog. When a Radix Dialog is open it sets `pointer-events: none` on the body scroll-lock element and only re-enables interactivity on descendants of DialogContent. Our autocomplete menu is portalled to `document.body`, which puts it as a sibling of the Radix dialog portal — so on touch devices the menu's element never becomes a valid pointer target and `onPointerDown` never fires. Keyboard selection works because keyboard events aren't gated by `pointer-events`.
+## Fix (single file)
 
-## Change (single file)
+`src/components/sermons/BibleBookAutocomplete.jsx` — change the option-button event model so the menu stays mounted through the entire tap sequence and swallows the ghost click:
 
-`src/components/sermons/BibleBookAutocomplete.jsx`:
+- On each option button:
+  - `onPointerDown`: only `e.preventDefault()` (keeps editor focus, does **not** insert or close).
+  - `onClick`: `e.preventDefault(); e.stopPropagation();` then call `insert(name)` (this is where the menu closes). Because the button is still mounted when the click dispatches, the click lands on the button, not on Save.
+- After `insert()` runs, install a one-shot capture-phase `click` listener on `document` that `preventDefault`+`stopPropagation`s the very next click within ~350ms and then removes itself. This absorbs any residual synthesized click from touch devices where the button unmounts before the click phase.
+- Keep the existing outside-`pointerdown` closer, keyboard shortcuts, viewport clamping, and portal-into-`containerRef` behaviour unchanged.
 
-- Portal the menu into `containerRef.current` (the editor wrapper, which is inside DialogContent), falling back to `document.body` only when the container ref isn't ready. Reinstate the `containerRef` prop use.
-- Add `pointer-events-auto` Tailwind class to the menu wrapper and every option button as a belt-and-braces override in case any ancestor still has `pointer-events: none`.
-- Keep `position: fixed` positioning (viewport-relative), which is unaffected by the portal target.
-- Keep the existing `onPointerDown` insert handler, outside-tap closer, and keyboard shortcuts.
-
-## Files touched
-
-- `src/components/sermons/BibleBookAutocomplete.jsx` — portal target + pointer-events-auto classes.
-- No other files change; `SermonRichEditor.jsx` already passes `containerRef`.
+No other files change.
 
 ## Verification
 
-- 384px preview, inside the sermon note dialog: type "matt" → menu appears; tap "Matthew" → text becomes `Matthew ` and menu closes; continue typing `6:33` → hoverable reference forms.
-- Desktop click still selects.
+- 384px, sermon-note dialog: type "Zace" → menu shows Zechariah/Zephaniah/Ezekiel. Tap "Ezekiel" (even when it visually overlaps the Save button area) → text becomes `Ezekiel `, menu closes, dialog stays open, Save is **not** triggered.
+- Desktop mouse click on an option still inserts and closes.
 - Keyboard (↑/↓/Enter/Tab/Esc) unchanged.
-- Tapping outside the popover closes it; tapping the "Bible books" header does nothing and does not insert.
+- Outside tap still closes the menu without inserting.
