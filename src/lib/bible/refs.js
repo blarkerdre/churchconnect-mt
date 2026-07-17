@@ -34,7 +34,7 @@ export const BOOKS = [
   ["1 Chronicles", 12, ["1chr", "1ch", "1chron", "ichr"]],
   ["2 Chronicles", 13, ["2chr", "2ch", "2chron", "iichr"]],
   ["Ezra", 14, ["ezr"]],
-  ["Nehemiah", 15, ["neh", "ne"]],
+  ["Nehemiah", 15, ["neh", "ne", "nehemia"]],
   ["Esther", 16, ["est", "esth", "et"]],
   ["Job", 17, ["jb"]],
   ["Psalms", 18, ["ps", "psa", "psalm", "pss"]],
