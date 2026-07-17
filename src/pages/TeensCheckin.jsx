@@ -73,7 +73,7 @@ export default function TeensCheckin() {
       if (user) {
         const { data: teensData } = await supabase
           .from("teens")
-          .select("id, first_name, last_name, access_pin_hash, primary_guardian_member_id")
+          .select("id, first_name, last_name, access_pin_hash, primary_guardian_member_id, attendance_consent")
           .eq("tenant_id", s.tenant_id)
           .eq("is_active", true)
           .order("first_name");
