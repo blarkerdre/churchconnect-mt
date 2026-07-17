@@ -123,6 +123,30 @@ function TeenForm({ open, onOpenChange, teen, memberId, onSaved }) {
             )}
           </div>
           <div><Label>Notes</Label><Input value={form.notes || ""} onChange={(e) => setForm({ ...form, notes: e.target.value })} /></div>
+
+          <div className="rounded-md border border-primary/20 bg-primary/5 p-3 space-y-1.5">
+            <label className="flex items-start gap-2 text-sm cursor-pointer">
+              <input
+                type="checkbox"
+                className="mt-0.5"
+                checked={form.attendance_consent}
+                onChange={(e) => setForm({ ...form, attendance_consent: e.target.checked })}
+              />
+              <span>
+                <span className="font-medium">I give parental consent</span> for my teen to check in and out of on-premises Teens attendance sessions.
+              </span>
+            </label>
+            {teen?.attendance_consent && teen?.attendance_consent_at && (
+              <p className="text-[11px] text-muted-foreground pl-6">
+                Consent given on {format(new Date(teen.attendance_consent_at), "d MMM yyyy")}. Untick to revoke.
+              </p>
+            )}
+            {!form.attendance_consent && (
+              <p className="text-[11px] text-amber-700 pl-6">
+                Without consent, your teen cannot be signed in at any session.
+              </p>
+            )}
+          </div>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
