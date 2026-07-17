@@ -59,6 +59,24 @@ export default function TeensCheckin() {
   const [pin, setPin] = useState("");
   const [busy, setBusy] = useState(false);
   const [mode, setMode] = useState("choose");
+  const [closedMsg, setClosedMsg] = useState(false);
+
+  const successImage = useMemo(() => {
+    if (!result) return null;
+    const isFarewell = result.action === "checked_out" || result.action === "already_checked_out";
+    return pickRandom(isFarewell ? FAREWELL_IMAGES : WELCOME_IMAGES);
+  }, [result]);
+
+  const handleClose = () => {
+    try { window.close(); } catch { /* noop */ }
+    setTimeout(() => setClosedMsg(true), 150);
+  };
+
+  useEffect(() => {
+    if (!result) return;
+    const t = setTimeout(() => { handleClose(); }, 6000);
+    return () => clearTimeout(t);
+  }, [result]);
 
   // magic-link (guardian sign-in)
   const [magicEmail, setMagicEmail] = useState("");
