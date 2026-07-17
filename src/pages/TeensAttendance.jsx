@@ -564,7 +564,7 @@ function CumulativeReportDialog({ open, onOpenChange }) {
   );
 }
 
-export function TeensAttendancePanel() {
+export default function TeensAttendance() {
   const { tenantId } = useTenantQuery();
   const { user } = useAuth();
   const qc = useQueryClient();
@@ -622,8 +622,7 @@ export function TeensAttendancePanel() {
   });
 
   return (
-    <div className="space-y-4">
-
+    <div className="p-4 space-y-4 max-w-3xl mx-auto">
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <div>
           <h1 className="text-2xl font-display font-bold flex items-center gap-2"><Users className="h-6 w-6 text-primary" /> Teens Attendance</h1>
@@ -753,14 +752,6 @@ export function TeensAttendancePanel() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
-  );
-}
-
-export default function TeensAttendance() {
-  return (
-    <div className="p-4 max-w-3xl mx-auto">
-      <TeensAttendancePanel />
     </div>
   );
 }
