@@ -15,7 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { Plus, QrCode, Calendar, LogIn, LogOut, Users, Pencil, Trash2, FileText, Lock, ShieldAlert, BarChart3, Search } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import TeenAttendanceQRDialog from "@/components/teens/TeenAttendanceQRDialog";
+import TeensPersistentQRDialog from "@/components/teens/TeensPersistentQRDialog";
 
 const SESSION_TYPES = [
   "Sunday Service",
@@ -650,7 +650,7 @@ export default function TeensAttendance() {
   const canDelete = isAdmin || isLeader;
 
   const [formSession, setFormSession] = useState(null); // {} for new, session for edit
-  const [qrSession, setQrSession] = useState(null);
+  const [qrOpen, setQrOpen] = useState(false);
   const [rosterSession, setRosterSession] = useState(null);
   const [reportSession, setReportSession] = useState(null);
   const [deleteSession, setDeleteSession] = useState(null);
@@ -693,6 +693,11 @@ export default function TeensAttendance() {
           <p className="text-sm text-muted-foreground">On-premise check-in / check-out for registered teens.</p>
         </div>
         <div className="flex gap-2 flex-wrap">
+          {canWrite && (
+            <Button variant="outline" onClick={() => setQrOpen(true)}>
+              <QrCode className="h-4 w-4 mr-1" /> Session QR
+            </Button>
+          )}
           {canManage && (
             <Button variant="outline" onClick={() => setCumulativeOpen(true)}>
               <BarChart3 className="h-4 w-4 mr-1" /> Cumulative report
@@ -731,9 +736,6 @@ export default function TeensAttendance() {
                 {s.end_time ? ` – ${s.end_time?.slice(0,5)}` : ""}
               </p>
               <div className="flex gap-2 flex-wrap">
-                <Button size="sm" onClick={() => setQrSession(s)} disabled={s.status !== "open"}>
-                  <QrCode className="h-4 w-4 mr-1" /> Show QR
-                </Button>
                 <Button size="sm" variant="outline" onClick={() => setRosterSession(s)}>
                   <Users className="h-4 w-4 mr-1" /> Roster
                 </Button>
@@ -771,14 +773,7 @@ export default function TeensAttendance() {
           onSaved={() => { refetch(); qc.invalidateQueries({ queryKey: ["teen-sessions"] }); setFormSession(null); }}
         />
       )}
-      {qrSession && (
-        <TeenAttendanceQRDialog
-          open={!!qrSession}
-          onOpenChange={(o) => !o && setQrSession(null)}
-          session={qrSession}
-          onClosed={() => { refetch(); setQrSession(null); }}
-        />
-      )}
+      <TeensPersistentQRDialog open={qrOpen} onOpenChange={setQrOpen} />
       {rosterSession && (
         <RosterDialog
           open={!!rosterSession}

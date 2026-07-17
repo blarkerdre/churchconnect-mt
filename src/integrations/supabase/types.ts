@@ -7044,6 +7044,26 @@ export type Database = {
           last_name: string
         }[]
       }
+      list_open_teen_sessions: {
+        Args: { _tenant_slug: string }
+        Returns: {
+          id: string
+          qr_token: string
+          session_date: string
+          start_time: string
+          title: string
+        }[]
+      }
+      list_open_wofbi_sessions: {
+        Args: { _tenant_slug: string }
+        Returns: {
+          course_name: string
+          id: string
+          qr_token: string
+          session_date: string
+          title: string
+        }[]
+      }
       member_eligible_for_session: {
         Args: { _member_id: string; _session_id: string }
         Returns: boolean
