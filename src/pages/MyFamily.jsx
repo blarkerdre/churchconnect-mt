@@ -22,6 +22,7 @@ import { useAppSetting } from "@/hooks/useAppSetting";
 import HelpButton from "@/components/tour/HelpButton";
 import { useTour } from "@/components/tour/TourProvider";
 import { useTourCompletion } from "@/hooks/useTourCompletion";
+import TeensSection from "@/components/teens/TeensSection";
 
 const DEFAULT_AGE_GROUPS = ["Nursery", "Toddler", "Primary", "Pre-Teen"];
 
@@ -512,6 +513,13 @@ export default function MyFamily() {
           })}
         </div>
       )}
+
+      {meMember && !showAll && (
+        <div className="pt-4 border-t">
+          <TeensSection memberId={meMember.id} />
+        </div>
+      )}
+
 
       {meMember && <ChildForm open={childOpen} onOpenChange={setChildOpen} child={editChild} memberId={meMember.id} onSaved={refetch} />}
       {guardianFor && <GuardianManager open={!!guardianFor} onOpenChange={() => setGuardianFor(null)} child={guardianFor} />}
