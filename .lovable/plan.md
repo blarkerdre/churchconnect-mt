@@ -1,53 +1,25 @@
-## What you're seeing
+## Fix sermon note display & update issues on Demo Church
 
-After a refresh (or the "Refresh" button in the sidebar), your phone's volume rocker suddenly controls **media volume** instead of ringer volume, and the on-screen volume slider can jump to whatever the media stream was last set to. It feels like "refresh changed my volume."
+### Likely root cause
+"Only in Demo Church" almost always means that tenant's device is running a stale service-worker/HTML bundle. The Bible-book autocomplete tap fix and dialog layout tweaks are in the frontend bundle, so a cached SW on the demo domain shows old behavior even when the preview looks fine.
 
-## Why it happens
+Secondary display issue: on 384px viewports, `SermonNoteFormDialog` uses `max-w-2xl` with `max-h-[60vh]` inner scroll, which crowds the editor and can clip the autocomplete portal.
 
-The notification chime code in `src/lib/notification-alert.js` sets up an **audio unlock** that runs on the very first tap/click/keydown after the page loads:
+### Changes
+1. **Mobile dialog polish** (`src/components/sermons/SermonNoteFormDialog.jsx`)
+   - Constrain to viewport: `w-[calc(100vw-1rem)] max-w-2xl max-h-[92vh] p-4 sm:p-6 flex flex-col`.
+   - Replace `max-h-[60vh] overflow-y-auto` with `flex-1 min-h-0 overflow-y-auto` so the editor grows and toolbar stays reachable.
+   - Add a visible `Label` "Service date" above the date input.
 
-- It creates an `<audio>` element pointing at `/sounds/notification.mp3`.
-- On your first interaction it calls `audio.play()` (unmuted, at volume `0.01`) to satisfy mobile autoplay rules, then pauses it.
-- Because a real media element starts playing, Android/iOS switch the volume rocker from **Ring** to **Media**, and the OS shows the media volume HUD at whatever level media is set to. On some phones that also briefly ducks other audio (Spotify/YouTube in the background).
+2. **Autocomplete visibility** (`src/components/sermons/BibleBookAutocomplete.jsx`)
+   - Raise portal z-index and ensure it renders above the dialog scroll container by keeping `position: fixed` with a viewport-relative clamp already in place — no logic change; only bump min-width on narrow screens (`min-w-[160px]`) and add a small shadow for contrast.
 
-Every refresh re-arms this unlock, so every refresh causes the same "volume changed" sensation — it's not the refresh itself, it's the silent priming play() that runs on your next tap.
+3. **Force-refresh nudge for cached tenants** (`src/components/AppLayout.jsx`)
+   - When `BUILD_TIME` differs from a stored `lastSeenBuild` in `localStorage`, show a one-time subtle toast "New build available — tap Refresh in the sidebar" (uses existing `forceRefresh`). No auto-reload.
 
-There is a second, smaller contributor: on the notifications popover, `testNotificationSound()` fires at full volume from the "Enable" button, which is expected but reinforces the effect.
+### Verification
+- Read current `SermonNoteFormDialog.jsx` and confirm structure before editing.
+- Run Playwright at 384×673: open Sermon Notes → New Note, screenshot dialog, type "Joh" in editor, tap the "John" suggestion, screenshot the inserted text.
+- Ask the user to open Demo Church, tap **Refresh** in the sidebar footer, and confirm both issues resolve.
 
-## Diagnosis status
-
-Unconfirmed on your specific device — I have not reproduced it on your phone. Before changing behaviour I want to verify by:
-
-1. Loading the app on a phone, tapping once, and watching whether the volume HUD flips from Ring to Media with no notification present.
-2. Checking whether the effect goes away if the audio-unlock priming play is removed.
-
-## Proposed fix (once confirmed)
-
-Change the audio unlock so it does not touch the media stream unless the user actually needs the chime:
-
-1. **Don't auto-prime on every page load.** Only unlock audio when:
-   - `Notification.permission === "granted"`, AND
-   - the user has opened the notification bell at least once (or clicks Enable / Test sound).
-   Users who never enable notifications will never trigger a media-stream play, so refresh won't affect their volume rocker.
-2. **Use a silent WebAudio ping instead of `<audio>.play()` for the unlock.** A zero-gain `AudioContext` oscillator satisfies the autoplay gesture requirement without registering as media playback, so Android/iOS don't switch the volume rocker to Media. The real chime still uses `<audio>` when a notification actually arrives.
-3. **Keep the explicit "Test sound" / "Enable" buttons** playing the real chime — that's user-initiated and expected.
-
-### Technical section
-
-Files touched:
-
-- `src/lib/notification-alert.js`
-  - Remove the unconditional `setupAudioUnlock()` call at module load.
-  - Replace `unlockAudio()`'s priming `audio.play()` with a WebAudio silent ping (`AudioContext` → `GainNode(gain=0)` → `OscillatorNode`, start+stop in the same tick).
-  - Expose `unlockAudio()` and call it only from: `requestNotificationPermission()` success path, `testNotificationSound()`, and the first real `triggerNotificationAlert()` (as a fallback, still gated on permission).
-- `src/components/notifications/NotificationBell.jsx`
-  - No behaviour change needed; the existing `handleEnableAlerts` already gates on permission and will call the new unlock.
-
-No changes to `forceRefresh`, the service worker, or the build-info banner — the refresh itself is not the cause.
-
-### Out of scope
-
-- Changing how the chime sounds or how loud it is.
-- Any change to push notifications, SW registration, or the build-refresh flow.
-
-Want me to verify on a phone first, or go straight to the fix?
+Proceed?
