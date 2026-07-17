@@ -197,7 +197,7 @@ function AppPages() {
         <Route path="/transportation" element={<FeatureGate path="/transportation"><Transportation /></FeatureGate>} />
         <Route path="/children-church" element={<FeatureGate path="/children-church"><ProtectedRoute><ChildrenChurch /></ProtectedRoute></FeatureGate>} />
         <Route path="/my-family" element={<ProtectedRoute><MyFamily /></ProtectedRoute>} />
-        <Route path="/teens-attendance" element={<ProtectedRoute><TeensAttendance /></ProtectedRoute>} />
+        <Route path="/teens-attendance" element={<Navigate to="/children-church" replace />} />
         <Route path="/analytics" element={<FeatureGate path="/analytics"><ReportsRoute><Analytics /></ReportsRoute></FeatureGate>} />
         <Route path="/training-reports" element={<FeatureGate path="/training-reports"><TrainingReportRoute><TrainingReports /></TrainingReportRoute></FeatureGate>} />
         <Route path="/exam-management" element={<FeatureGate path="/exam-management"><ProtectedRoute><ExamManagement /></ProtectedRoute></FeatureGate>} />
