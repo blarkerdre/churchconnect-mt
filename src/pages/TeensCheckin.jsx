@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -7,6 +7,17 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2, CheckCircle2, Clock, XCircle, LogOut, User, Mail, CheckCheck, UserCircle2, ShieldCheck, ShieldAlert } from "lucide-react";
+import welcome1 from "@/assets/teens-checkin/welcome-1.jpg";
+import welcome2 from "@/assets/teens-checkin/welcome-2.jpg";
+import welcome3 from "@/assets/teens-checkin/welcome-3.jpg";
+import welcome4 from "@/assets/teens-checkin/welcome-4.jpg";
+import farewell1 from "@/assets/teens-checkin/farewell-1.jpg";
+import farewell2 from "@/assets/teens-checkin/farewell-2.jpg";
+import farewell3 from "@/assets/teens-checkin/farewell-3.jpg";
+
+const WELCOME_IMAGES = [welcome1, welcome2, welcome3, welcome4];
+const FAREWELL_IMAGES = [farewell1, farewell2, farewell3];
+const pickRandom = (arr) => arr[Math.floor(Math.random() * arr.length)];
 
 function fmtDuration(mins) {
   if (mins == null) return "";
@@ -48,6 +59,24 @@ export default function TeensCheckin() {
   const [pin, setPin] = useState("");
   const [busy, setBusy] = useState(false);
   const [mode, setMode] = useState("choose");
+  const [closedMsg, setClosedMsg] = useState(false);
+
+  const successImage = useMemo(() => {
+    if (!result) return null;
+    const isFarewell = result.action === "checked_out" || result.action === "already_checked_out";
+    return pickRandom(isFarewell ? FAREWELL_IMAGES : WELCOME_IMAGES);
+  }, [result]);
+
+  const handleClose = () => {
+    try { window.close(); } catch { /* noop */ }
+    setTimeout(() => setClosedMsg(true), 150);
+  };
+
+  useEffect(() => {
+    if (!result) return;
+    const t = setTimeout(() => { handleClose(); }, 6000);
+    return () => clearTimeout(t);
+  }, [result]);
 
   // magic-link (guardian sign-in)
   const [magicEmail, setMagicEmail] = useState("");
@@ -214,33 +243,44 @@ export default function TeensCheckin() {
           )}
         </CardHeader>
         <CardContent className="space-y-4 text-center">
-          {result && (() => {
+          {result && closedMsg && (
+            <>
+              <CheckCheck className="h-12 w-12 mx-auto text-green-600" />
+              <p className="text-sm">You can close this tab now.</p>
+            </>
+          )}
+          {result && !closedMsg && (() => {
             const isOut = result.action === "checked_out";
             const already = result.action === "already_checked_out";
-            const Icon = isOut || already ? LogOut : (result.status === "late" ? Clock : CheckCircle2);
-            const iconColor = isOut ? "text-blue-600" : already ? "text-slate-500" : (result.status === "late" ? "text-amber-500" : "text-green-600");
-            const title = isOut
+            const isFarewell = isOut || already;
+            const caption = isFarewell ? "See you next time!" : "Welcome to church!";
+            const subCaption = isFarewell
               ? "Time-out recorded"
-              : already
-                ? "Already checked out"
-                : `Time-in recorded${result.status === "late" ? " (Late)" : ""}`;
+              : `Time-in recorded${result.status === "late" ? " (Late)" : ""}`;
             return (
               <>
-                <Icon className={`h-12 w-12 mx-auto ${iconColor}`} />
+                {successImage && (
+                  <img
+                    src={successImage}
+                    alt={caption}
+                    width={768}
+                    height={512}
+                    loading="lazy"
+                    className="w-full h-40 object-cover rounded-lg"
+                  />
+                )}
                 <div>
-                  <p className="text-lg font-semibold">{title}</p>
+                  <p className="text-xl font-bold">{caption}</p>
                   <p className="text-sm text-muted-foreground">{result.teen_name}</p>
-                  {(isOut || already) && result.duration_minutes != null && (
+                  <p className="text-xs text-muted-foreground mt-1">{subCaption}</p>
+                  {isFarewell && result.duration_minutes != null && (
                     <p className="mt-2 text-sm">Time on premises: <span className="font-semibold">{fmtDuration(result.duration_minutes)}</span></p>
-                  )}
-                  {!isOut && !already && (
-                    <p className="mt-2 text-xs text-muted-foreground">Scan again when leaving to record time-out.</p>
                   )}
                 </div>
                 <Button variant="outline" className="w-full" onClick={() => { setResult(null); setPendingTeen(null); resetSelfFlow(); setMode("choose"); }}>
                   Check in another
                 </Button>
-                <Button variant="ghost" className="w-full" onClick={() => navigate("/")}>Done</Button>
+                <Button className="w-full" onClick={handleClose}>Close</Button>
               </>
             );
           })()}
