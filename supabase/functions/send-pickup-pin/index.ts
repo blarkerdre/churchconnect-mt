@@ -82,11 +82,9 @@ Deno.serve(async (req) => {
     const childNames = (child_first_names || []).join(", ").slice(0, 120) || "your child";
 
     let notified = 0;
-    let emailed = 0;
-    let smsed = 0;
     const errors: Array<{ member_id: string; channel: string; error: string }> = [];
 
-    // In-app notifications (one row per user_id)
+    // In-app notifications (one row per user_id) — the only channel used.
     const notifRows = (recipients || [])
       .filter((r) => r.user_id)
       .map((r) => ({
@@ -106,147 +104,8 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Resolve tenant sender name for branded "from"
-    let tenantSenderName = "Church";
-    try {
-      const { data: t } = await admin.from("tenants").select("name").eq("id", tenant_id).maybeSingle();
-      if (t?.name) tenantSenderName = String(t.name);
-    } catch { /* ignore */ }
-    const senderDomain = "notify.app.churchmanagementsuite.org";
-    const fromDomain = "app.churchmanagementsuite.org";
-    const safeName = tenantSenderName.replace(/[",\\]/g, "");
-    const fromAddress = `"${safeName}" <noreply@${fromDomain}>`;
-
-    const escHtml = (s: string) =>
-      s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
-
-    // Pre-load suppressed emails
-    const { data: suppressed } = await admin.from("suppressed_emails").select("email");
-    const suppressedSet = new Set((suppressed || []).map((s: { email: string }) => s.email.toLowerCase()));
-
-    for (const adult of recipients || []) {
-      const firstName = adult.first_name || "there";
-
-      if (adult.email && !suppressedSet.has(adult.email.toLowerCase())) {
-        try {
-          // Get-or-create unsubscribe token
-          const normEmail = adult.email.trim().toLowerCase();
-          let unsubscribeToken: string;
-          const { data: existingTok } = await admin
-            .from("email_unsubscribe_tokens")
-            .select("token")
-            .eq("email", normEmail)
-            .is("used_at", null)
-            .order("created_at", { ascending: false })
-            .limit(1)
-            .maybeSingle();
-          if (existingTok?.token) {
-            unsubscribeToken = existingTok.token;
-          } else {
-            unsubscribeToken = crypto.randomUUID();
-            const { error: tErr } = await admin
-              .from("email_unsubscribe_tokens")
-              .insert({ email: normEmail, token: unsubscribeToken });
-            if (tErr) throw tErr;
-          }
-
-          const subject = "Children's Church Pickup PIN";
-          const body =
-            `Hi ${firstName},\n\n` +
-            `${childNames} has been checked in to Children's Church.\n\n` +
-            `Your pickup PIN is: ${pin}\n\n` +
-            `Please keep this PIN private and show it at pickup. ` +
-            `It will be required to collect your child.\n\nThank you.`;
-
-          const html = `<!DOCTYPE html><html><head><meta charset="utf-8"></head>
-<body style="margin:0;padding:0;background:#f4f5f7;font-family:Arial,Helvetica,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f5f7;padding:32px 16px;"><tr><td align="center">
-    <table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;background:#fff;border-radius:8px;overflow:hidden;">
-      <tr><td style="background:#1a2d4d;padding:24px 32px;text-align:center;">
-        <h1 style="margin:0;color:#fff;font-size:20px;font-weight:700;">${escHtml(tenantSenderName)}</h1>
-      </td></tr>
-      <tr><td style="padding:32px;">
-        <p style="margin:0 0 16px;color:#333;font-size:16px;">Dear ${escHtml(firstName)},</p>
-        <h2 style="margin:0 0 16px;color:#1a2d4d;font-size:18px;">${escHtml(subject)}</h2>
-        <div style="margin:0 0 16px;color:#555;font-size:15px;line-height:1.6;white-space:pre-wrap;">${escHtml(body)}</div>
-        <div style="margin:24px 0;text-align:center;">
-          <div style="display:inline-block;padding:16px 32px;background:#1a2d4d;color:#fff;font-size:28px;letter-spacing:6px;font-weight:700;border-radius:6px;">${escHtml(pin)}</div>
-        </div>
-      </td></tr>
-    </table>
-  </td></tr></table>
-</body></html>`;
-
-          const messageId = `pickup-pin-${crypto.randomUUID()}`;
-          const payload = {
-            to: adult.email,
-            from: fromAddress,
-            sender_domain: senderDomain,
-            subject,
-            html,
-            text: `Dear ${firstName},\n\n${subject}\n\n${body}\n\n${tenantSenderName}`,
-            purpose: "transactional",
-            label: "children-church-pickup-pin",
-            message_id: messageId,
-            idempotency_key: messageId,
-            unsubscribe_token: unsubscribeToken,
-            queued_at: new Date().toISOString(),
-            tenant_id,
-          };
-
-          const { error: enqueueErr } = await admin.rpc("enqueue_email", {
-            queue_name: "transactional_emails",
-            payload,
-          });
-          if (enqueueErr) throw enqueueErr;
-
-          await admin.from("email_send_log").insert({
-            message_id: messageId,
-            template_name: "children-church-pickup-pin",
-            recipient_email: adult.email,
-            status: "pending",
-            tenant_id,
-          });
-
-          emailed++;
-        } catch (err) {
-          errors.push({ member_id: adult.id, channel: "email", error: String((err as Error)?.message || err) });
-        }
-      }
-
-
-      if (adult.phone) {
-        try {
-          const res = await fetch(`${SUPABASE_URL}/functions/v1/send-sms`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${SERVICE_KEY}`,
-            },
-            body: JSON.stringify({
-              recipients: [{ phone: adult.phone, member_id: adult.id }],
-              message:
-                `Children's Church: ${childNames} checked in. ` +
-                `Pickup PIN: ${pin}. Keep private — needed at pickup.`,
-              sms_type: "children_church",
-              reference_id: null,
-              channel: "sms",
-              tenant_id,
-            }),
-          });
-          if (!res.ok) {
-            const txt = await res.text();
-            throw new Error(`send-sms ${res.status}: ${txt.slice(0, 200)}`);
-          }
-          smsed++;
-        } catch (err) {
-          errors.push({ member_id: adult.id, channel: "sms", error: String((err as Error)?.message || err) });
-        }
-      }
-    }
-
     return new Response(
-      JSON.stringify({ notified, emailed, smsed, recipients: recipients?.length || 0, errors }),
+      JSON.stringify({ notified, recipients: recipients?.length || 0, errors }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   } catch (err) {
