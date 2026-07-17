@@ -55,6 +55,8 @@ const AcceptInvite = lazy(() => import("@/pages/AcceptInvite"));
 const AuthExamCallback = lazy(() => import("@/pages/AuthExamCallback"));
 const MyData = lazy(() => import("@/pages/MyData"));
 const Privacy = lazy(() => import("@/pages/Privacy"));
+const TeensAttendance = lazy(() => import("@/pages/TeensAttendance"));
+const TeensCheckin = lazy(() => import("@/pages/TeensCheckin"));
 import CookieConsentBanner from "@/components/gdpr/CookieConsentBanner";
 import MFASetupDialog from "@/components/gdpr/MFASetupDialog";
 
