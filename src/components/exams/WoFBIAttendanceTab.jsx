@@ -14,7 +14,7 @@ import TenantDialogHeader from "@/components/ui/TenantDialogHeader";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Plus, QrCode, Trash2, Download, CheckCircle2, XCircle, Clock, ChevronDown, ChevronRight, Pencil } from "lucide-react";
-import WoFBIAttendanceQRDialog from "./WoFBIAttendanceQRDialog";
+import WoFBIPersistentQRDialog from "./WoFBIPersistentQRDialog";
 
 function pct(num, den) {
   if (!den) return "0%";
@@ -46,7 +46,7 @@ export default function WoFBIAttendanceTab() {
 
   const [selectedCourseId, setSelectedCourseId] = useState("");
   const [newOpen, setNewOpen] = useState(false);
-  const [qrSession, setQrSession] = useState(null);
+  const [qrOpen, setQrOpen] = useState(false);
   const [rosterSession, setRosterSession] = useState(null);
   const [expandedStudents, setExpandedStudents] = useState({});
   const [editRecord, setEditRecord] = useState(null); // { record, session, registration }
@@ -209,11 +209,27 @@ export default function WoFBIAttendanceTab() {
     onError: (e) => toast({ title: "Delete failed", description: e.message, variant: "destructive" }),
   });
 
+  const closeSession = useMutation({
+    mutationFn: async (id) => {
+      const { error } = await supabase
+        .from("wofbi_attendance_sessions")
+        .update({ status: "closed" })
+        .eq("id", id)
+        .eq("tenant_id", tenantId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({ title: "Session closed" });
+      qc.invalidateQueries({ queryKey: ["wofbi-att-sessions"] });
+    },
+    onError: (e) => toast({ title: "Close failed", description: e.message, variant: "destructive" }),
+  });
+
   const reopenSession = useMutation({
     mutationFn: async (id) => {
       const { error } = await supabase
         .from("wofbi_attendance_sessions")
-        .update({ status: "open", qr_token: crypto.randomUUID() })
+        .update({ status: "open" })
         .eq("id", id)
         .eq("tenant_id", tenantId);
       if (error) throw error;
@@ -460,6 +476,9 @@ export default function WoFBIAttendanceTab() {
                 ))}
               </SelectContent>
             </Select>
+            <Button variant="outline" onClick={() => setQrOpen(true)} className="gap-2">
+              <QrCode className="h-4 w-4" /> Session QR
+            </Button>
             <Button onClick={() => setNewOpen(true)} disabled={!selectedCourseId} className="gap-2">
               <Plus className="h-4 w-4" /> New session
             </Button>
@@ -499,13 +518,14 @@ export default function WoFBIAttendanceTab() {
                         )}
                       </TableCell>
                       <TableCell className="text-right space-x-2 whitespace-nowrap">
-                        <Button size="sm" variant="outline" onClick={() => setQrSession(s)} className="gap-1">
-                          <QrCode className="h-3.5 w-3.5" /> QR
-                        </Button>
                         <Button size="sm" variant="outline" onClick={() => setRosterSession(s)}>
                           Roster
                         </Button>
-                        {s.status === "closed" && (
+                        {s.status === "open" ? (
+                          <Button size="sm" variant="ghost" onClick={() => closeSession.mutate(s.id)}>
+                            Close
+                          </Button>
+                        ) : (
                           <Button size="sm" variant="ghost" onClick={() => reopenSession.mutate(s.id)}>
                             Reopen
                           </Button>
@@ -707,13 +727,8 @@ export default function WoFBIAttendanceTab() {
         </DialogContent>
       </Dialog>
 
-      {/* QR dialog */}
-      <WoFBIAttendanceQRDialog
-        open={!!qrSession}
-        onOpenChange={(v) => !v && setQrSession(null)}
-        session={qrSession}
-        onClosed={() => qc.invalidateQueries({ queryKey: ["wofbi-att-sessions"] })}
-      />
+      {/* Persistent Session QR */}
+      <WoFBIPersistentQRDialog open={qrOpen} onOpenChange={setQrOpen} />
 
       {/* Roster override dialog */}
       <Dialog open={!!rosterSession} onOpenChange={(v) => !v && setRosterSession(null)}>

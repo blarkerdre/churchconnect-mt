@@ -57,6 +57,8 @@ const MyData = lazy(() => import("@/pages/MyData"));
 const Privacy = lazy(() => import("@/pages/Privacy"));
 const TeensAttendance = lazy(() => import("@/pages/TeensAttendance"));
 const TeensCheckin = lazy(() => import("@/pages/TeensCheckin"));
+const TeensCheckinLanding = lazy(() => import("@/pages/TeensCheckinLanding"));
+const WoFBICheckinLanding = lazy(() => import("@/pages/WoFBICheckinLanding"));
 import CookieConsentBanner from "@/components/gdpr/CookieConsentBanner";
 import MFASetupDialog from "@/components/gdpr/MFASetupDialog";
 
@@ -291,8 +293,10 @@ function AppRoutes() {
         <Route path="/t/:tenantSlug/bible-school-register" element={<PublicWoFBIRegistration />} />
         <Route path="/wofbi/checkin/:token" element={<WoFBICheckin />} />
         <Route path="/t/:tenantSlug/wofbi/checkin/:token" element={<WoFBICheckin />} />
+        <Route path="/t/:tenantSlug/wofbi/checkin" element={<WoFBICheckinLanding />} />
         <Route path="/teens/checkin/:token" element={<TeensCheckin />} />
         <Route path="/t/:tenantSlug/teens/checkin/:token" element={<TeensCheckin />} />
+        <Route path="/t/:tenantSlug/teens/checkin" element={<TeensCheckinLanding />} />
 
         {/* Public reset-password routes */}
         <Route path="/reset-password" element={<ResetPassword />} />
