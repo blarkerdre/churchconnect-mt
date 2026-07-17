@@ -48,7 +48,7 @@ const referenceRoutes = {
   pastoral_care: "/pastoral-care",
   transport: "/transportation",
   meeting: "/wsf",
-  teen_attendance: "/children-church",
+  teen_attendance: "/teens-attendance",
 };
 
 export default function NotificationBell() {
