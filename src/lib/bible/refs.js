@@ -68,7 +68,7 @@ export const BOOKS = [
   ["2 Corinthians", 46, ["2cor", "2co", "iicor"]],
   ["Galatians", 47, ["gal", "gl", "ga"]],
   ["Ephesians", 48, ["eph", "ep"]],
-  ["Philippians", 49, ["phil", "php", "ph"]],
+  ["Philippians", 49, ["phil", "php", "ph", "philipians", "phillipians", "phillippians", "philipp"]],
   ["Colossians", 50, ["col", "cl"]],
   ["1 Thessalonians", 51, ["1thess", "1thes", "1th", "1ts", "ithess"]],
   ["2 Thessalonians", 52, ["2thess", "2thes", "2th", "2ts", "iithess"]],
