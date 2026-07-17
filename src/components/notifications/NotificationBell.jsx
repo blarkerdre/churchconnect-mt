@@ -5,7 +5,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
 import { useTenant } from "@/contexts/TenantContext";
 import { useNavigate } from "react-router-dom";
-import { Bell, Check, Trash2, Heart, Megaphone, CalendarDays, Info, ExternalLink, UserPlus } from "lucide-react";
+import { Bell, Check, Trash2, Heart, Megaphone, CalendarDays, Info, ExternalLink, UserPlus, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
