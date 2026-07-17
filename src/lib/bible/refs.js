@@ -1,10 +1,22 @@
 // Bible reference parsing + KJV lookup.
 // KJV JSON is loaded lazily on first use and cached in-module.
+// If the local chunk fails (offline / stale cache), we fall back to bible-api.com.
 
 let _kjvPromise = null;
+let _kjvFailed = false;
 function loadKjv() {
+  if (_kjvFailed) return Promise.reject(new Error("KJV_UNAVAILABLE"));
   if (!_kjvPromise) {
-    _kjvPromise = import("@/assets/bible/kjv.json").then((m) => m.default || m);
+    const attempt = (n) =>
+      import("@/assets/bible/kjv.json")
+        .then((m) => m.default || m)
+        .catch((err) => {
+          if (n > 0) return new Promise((r) => setTimeout(r, 400)).then(() => attempt(n - 1));
+          _kjvFailed = true;
+          _kjvPromise = null;
+          throw err;
+        });
+    _kjvPromise = attempt(1);
   }
   return _kjvPromise;
 }
@@ -148,26 +160,53 @@ export function findReferencesInText(text) {
   return results;
 }
 
+const _apiCache = new Map();
+async function fetchVersesFromApi(ref) {
+  const key = formatReference(ref);
+  if (_apiCache.has(key)) return _apiCache.get(key);
+  const url = `https://bible-api.com/${encodeURIComponent(key)}?translation=kjv`;
+  const res = await fetch(url, { cache: "force-cache" });
+  if (!res.ok) throw new Error(`API_${res.status}`);
+  const json = await res.json();
+  const items = Array.isArray(json.verses)
+    ? json.verses.map((v) => ({ n: v.verse, text: String(v.text || "").trim() }))
+    : [];
+  const out = { ref, verses: items, notFound: items.length === 0, source: "api" };
+  _apiCache.set(key, out);
+  return out;
+}
+
 export async function lookupVerses(refOrString) {
   const ref = typeof refOrString === "string" ? parseReference(refOrString) : refOrString;
   if (!ref) return null;
-  const kjv = await loadKjv();
-  const book = kjv[ref.bookIdx];
-  if (!book) return null;
-  const chapter = book.c[ref.chapter - 1];
-  if (!chapter) return { ref, verses: [], notFound: true };
-  const items = [];
-  if (!ref.verses.length) {
-    for (let i = 0; i < chapter.length; i++) items.push({ n: i + 1, text: chapter[i] });
-  } else {
-    for (const range of ref.verses) {
-      for (let i = range.start; i <= range.end; i++) {
-        const t = chapter[i - 1];
-        if (t != null) items.push({ n: i, text: t });
+  try {
+    const kjv = await loadKjv();
+    const book = kjv[ref.bookIdx];
+    if (!book) return null;
+    const chapter = book.c[ref.chapter - 1];
+    if (!chapter) return { ref, verses: [], notFound: true };
+    const items = [];
+    if (!ref.verses.length) {
+      for (let i = 0; i < chapter.length; i++) items.push({ n: i + 1, text: chapter[i] });
+    } else {
+      for (const range of ref.verses) {
+        for (let i = range.start; i <= range.end; i++) {
+          const t = chapter[i - 1];
+          if (t != null) items.push({ n: i, text: t });
+        }
       }
     }
+    return { ref, verses: items, notFound: items.length === 0, source: "local" };
+  } catch (err) {
+    // Local KJV chunk failed — fall back to public API.
+    try {
+      return await fetchVersesFromApi(ref);
+    } catch (apiErr) {
+      const e = new Error("VERSE_LOOKUP_FAILED");
+      e.cause = apiErr;
+      throw e;
+    }
   }
-  return { ref, verses: items, notFound: items.length === 0 };
 }
 
 export function chapterVerseCount(bookIdx, chapter, kjv) {
