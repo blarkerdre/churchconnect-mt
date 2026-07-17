@@ -160,26 +160,53 @@ export function findReferencesInText(text) {
   return results;
 }
 
+const _apiCache = new Map();
+async function fetchVersesFromApi(ref) {
+  const key = formatReference(ref);
+  if (_apiCache.has(key)) return _apiCache.get(key);
+  const url = `https://bible-api.com/${encodeURIComponent(key)}?translation=kjv`;
+  const res = await fetch(url, { cache: "force-cache" });
+  if (!res.ok) throw new Error(`API_${res.status}`);
+  const json = await res.json();
+  const items = Array.isArray(json.verses)
+    ? json.verses.map((v) => ({ n: v.verse, text: String(v.text || "").trim() }))
+    : [];
+  const out = { ref, verses: items, notFound: items.length === 0, source: "api" };
+  _apiCache.set(key, out);
+  return out;
+}
+
 export async function lookupVerses(refOrString) {
   const ref = typeof refOrString === "string" ? parseReference(refOrString) : refOrString;
   if (!ref) return null;
-  const kjv = await loadKjv();
-  const book = kjv[ref.bookIdx];
-  if (!book) return null;
-  const chapter = book.c[ref.chapter - 1];
-  if (!chapter) return { ref, verses: [], notFound: true };
-  const items = [];
-  if (!ref.verses.length) {
-    for (let i = 0; i < chapter.length; i++) items.push({ n: i + 1, text: chapter[i] });
-  } else {
-    for (const range of ref.verses) {
-      for (let i = range.start; i <= range.end; i++) {
-        const t = chapter[i - 1];
-        if (t != null) items.push({ n: i, text: t });
+  try {
+    const kjv = await loadKjv();
+    const book = kjv[ref.bookIdx];
+    if (!book) return null;
+    const chapter = book.c[ref.chapter - 1];
+    if (!chapter) return { ref, verses: [], notFound: true };
+    const items = [];
+    if (!ref.verses.length) {
+      for (let i = 0; i < chapter.length; i++) items.push({ n: i + 1, text: chapter[i] });
+    } else {
+      for (const range of ref.verses) {
+        for (let i = range.start; i <= range.end; i++) {
+          const t = chapter[i - 1];
+          if (t != null) items.push({ n: i, text: t });
+        }
       }
     }
+    return { ref, verses: items, notFound: items.length === 0, source: "local" };
+  } catch (err) {
+    // Local KJV chunk failed — fall back to public API.
+    try {
+      return await fetchVersesFromApi(ref);
+    } catch (apiErr) {
+      const e = new Error("VERSE_LOOKUP_FAILED");
+      e.cause = apiErr;
+      throw e;
+    }
   }
-  return { ref, verses: items, notFound: items.length === 0 };
 }
 
 export function chapterVerseCount(bookIdx, chapter, kjv) {
