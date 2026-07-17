@@ -1,38 +1,53 @@
-# Why published changes aren't showing up
+## What you're seeing
 
-Your app previously shipped a full PWA/service worker, and `public/sw.js` is now a kill-switch worker that unregisters itself and clears legacy caches. That works for *most* returning browsers, but a few scenarios can still serve stale HTML/JS on the live domain:
+After a refresh (or the "Refresh" button in the sidebar), your phone's volume rocker suddenly controls **media volume** instead of ringer volume, and the on-screen volume slider can jump to whatever the media stream was last set to. It feels like "refresh changed my volume."
 
-1. **Installed PWA on a phone/desktop** — an installed app can keep running the old service worker until the OS re-launches it and the kill-switch worker activates. Until then, users see the previous build.
-2. **Aggressive browser HTTP cache** — Safari (iOS) and some Android browsers hold `index.html` / JS chunks for a session even after publish.
-3. **Custom domain edge cache** — `app.churchmanagementsuite.org` may be sitting behind Cloudflare or another proxy that's caching HTML.
-4. **Publish scope confusion** — only **frontend** goes live when you click Publish. Edge function / DB changes deploy immediately and independently, so "not reflecting" can also mean an edge function actually did deploy but the frontend calling it wasn't republished (or vice versa).
-5. **Which URL you're viewing** — `churchconnect-mt.lovable.app` vs `app.churchmanagementsuite.org` vs the preview URL all serve the same build once published, but a stale tab on one won't refresh the other.
+## Why it happens
 
-## Diagnostic plan (no code changes yet)
+The notification chime code in `src/lib/notification-alert.js` sets up an **audio unlock** that runs on the very first tap/click/keydown after the page loads:
 
-Step 1 — Confirm which URL and which change
-- Ask you: exact live URL you're checking, and one specific change you expect to see but don't.
+- It creates an `<audio>` element pointing at `/sounds/notification.mp3`.
+- On your first interaction it calls `audio.play()` (unmuted, at volume `0.01`) to satisfy mobile autoplay rules, then pauses it.
+- Because a real media element starts playing, Android/iOS switch the volume rocker from **Ring** to **Media**, and the OS shows the media volume HUD at whatever level media is set to. On some phones that also briefly ducks other audio (Spotify/YouTube in the background).
 
-Step 2 — Verify the deploy actually shipped
-- Open the live URL in a **private/incognito window** with DevTools → Network → "Disable cache" ticked, hard-reload.
-- If the change appears here → it's a client cache / installed-PWA issue on your normal browser.
-- If it *still* doesn't appear → the publish didn't include the change (needs re-publish) or a CDN in front of the domain is caching.
+Every refresh re-arms this unlock, so every refresh causes the same "volume changed" sensation — it's not the refresh itself, it's the silent priming play() that runs on your next tap.
 
-Step 3 — Clear stuck service worker for affected users
-- DevTools → Application → Service Workers → Unregister, then Application → Storage → Clear site data, then reload.
-- On installed PWA: fully close the app (swipe away), reopen twice — the kill-switch worker activates on the second launch.
-- Users can also visit `https://<site>/?sw=off` style URL — but note the current `public/sw.js` doesn't implement that flag; it just auto-unregisters on activate.
+There is a second, smaller contributor: on the notifications popover, `testNotificationSound()` fires at full volume from the "Enable" button, which is expected but reinforces the effect.
 
-Step 4 — Check custom domain caching
-- If step 2 shows the Lovable subdomain updated but the custom domain didn't, there's a proxy/CDN in front of `app.churchmanagementsuite.org` holding HTML. Purge that cache or lower TTL.
+## Diagnosis status
 
-## Likely fix
+Unconfirmed on your specific device — I have not reproduced it on your phone. Before changing behaviour I want to verify by:
 
-Based on which step above reproduces:
-- **Installed PWA stale** → add a visible "App version" string in the footer sourced from build time, so you can tell at a glance which build a device is on; document the "close app twice" recovery.
-- **HTML cached at edge** → add/verify `Cache-Control: no-cache` on `index.html` (Lovable hosting already does this for `.lovable.app`, so this only applies if a custom proxy sits in front).
-- **Publish wasn't clicked after latest edits** → republish.
+1. Loading the app on a phone, tapping once, and watching whether the volume HUD flips from Ring to Media with no notification present.
+2. Checking whether the effect goes away if the audio-unlock priming play is removed.
 
-## Next step
+## Proposed fix (once confirmed)
 
-Please answer step 1 (URL + specific missing change) and try step 2 (incognito hard-reload). I'll then either (a) confirm it's a device cache and add a build-version badge + recovery instructions, or (b) investigate the deploy/CDN path.
+Change the audio unlock so it does not touch the media stream unless the user actually needs the chime:
+
+1. **Don't auto-prime on every page load.** Only unlock audio when:
+   - `Notification.permission === "granted"`, AND
+   - the user has opened the notification bell at least once (or clicks Enable / Test sound).
+   Users who never enable notifications will never trigger a media-stream play, so refresh won't affect their volume rocker.
+2. **Use a silent WebAudio ping instead of `<audio>.play()` for the unlock.** A zero-gain `AudioContext` oscillator satisfies the autoplay gesture requirement without registering as media playback, so Android/iOS don't switch the volume rocker to Media. The real chime still uses `<audio>` when a notification actually arrives.
+3. **Keep the explicit "Test sound" / "Enable" buttons** playing the real chime — that's user-initiated and expected.
+
+### Technical section
+
+Files touched:
+
+- `src/lib/notification-alert.js`
+  - Remove the unconditional `setupAudioUnlock()` call at module load.
+  - Replace `unlockAudio()`'s priming `audio.play()` with a WebAudio silent ping (`AudioContext` → `GainNode(gain=0)` → `OscillatorNode`, start+stop in the same tick).
+  - Expose `unlockAudio()` and call it only from: `requestNotificationPermission()` success path, `testNotificationSound()`, and the first real `triggerNotificationAlert()` (as a fallback, still gated on permission).
+- `src/components/notifications/NotificationBell.jsx`
+  - No behaviour change needed; the existing `handleEnableAlerts` already gates on permission and will call the new unlock.
+
+No changes to `forceRefresh`, the service worker, or the build-info banner — the refresh itself is not the cause.
+
+### Out of scope
+
+- Changing how the chime sounds or how loud it is.
+- Any change to push notifications, SW registration, or the build-refresh flow.
+
+Want me to verify on a phone first, or go straight to the fix?
