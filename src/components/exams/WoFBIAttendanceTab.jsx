@@ -518,13 +518,14 @@ export default function WoFBIAttendanceTab() {
                         )}
                       </TableCell>
                       <TableCell className="text-right space-x-2 whitespace-nowrap">
-                        <Button size="sm" variant="outline" onClick={() => setQrSession(s)} className="gap-1">
-                          <QrCode className="h-3.5 w-3.5" /> QR
-                        </Button>
                         <Button size="sm" variant="outline" onClick={() => setRosterSession(s)}>
                           Roster
                         </Button>
-                        {s.status === "closed" && (
+                        {s.status === "open" ? (
+                          <Button size="sm" variant="ghost" onClick={() => closeSession.mutate(s.id)}>
+                            Close
+                          </Button>
+                        ) : (
                           <Button size="sm" variant="ghost" onClick={() => reopenSession.mutate(s.id)}>
                             Reopen
                           </Button>
