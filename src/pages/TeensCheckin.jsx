@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, CheckCircle2, Clock, XCircle, LogOut, User, Mail, CheckCheck, UserCircle2, ShieldCheck } from "lucide-react";
+import { Loader2, CheckCircle2, Clock, XCircle, LogOut, User, Mail, CheckCheck, UserCircle2, ShieldCheck, ShieldAlert } from "lucide-react";
 
 function fmtDuration(mins) {
   if (mins == null) return "";
@@ -21,7 +21,7 @@ const ERROR_MESSAGES = {
   invalid_token: "This check-in link is invalid.",
   session_closed: "This session is closed.",
   invalid_teen: "That teen isn't registered here.",
-  no_consent: "A parent hasn't given attendance consent for this teen yet. Ask a parent to open My Family and tick the consent box.",
+  no_consent: "Parental consent required. A parent needs to open My Family → Teenagers, edit this teen, tick “I give parental consent”, and Save. Then try again.",
   not_authorised: "You aren't authorised to check this teen in. Ask a parent to sign in, or enter the teen's PIN.",
   not_enrolled: "You haven't set up self check-in yet. Tap 'I'm a teen' to enroll.",
   bad_pin: "That PIN doesn't match. Try again.",
@@ -231,7 +231,24 @@ export default function TeensCheckin() {
             );
           })()}
 
-          {!result && error && (
+          {!result && error && error === "no_consent" && (
+            <>
+              <ShieldAlert className="h-12 w-12 mx-auto text-amber-500" />
+              <p className="text-base font-semibold">Parental consent required</p>
+              <p className="text-sm text-muted-foreground">
+                A parent needs to open <span className="font-medium">My Family → Teenagers</span>, edit this teen, tick
+                {" "}<span className="font-medium">“I give parental consent”</span>, and Save. Then try again.
+              </p>
+              <div className="flex gap-2">
+                <Button variant="outline" className="flex-1" onClick={() => setError(null)}>Back</Button>
+                {user && (
+                  <Button className="flex-1" onClick={() => navigate("/my-family")}>Open My Family</Button>
+                )}
+              </div>
+            </>
+          )}
+
+          {!result && error && error !== "no_consent" && (
             <>
               <XCircle className="h-12 w-12 mx-auto text-red-500" />
               <p className="text-sm">{ERROR_MESSAGES[error] || error}</p>
@@ -336,7 +353,13 @@ export default function TeensCheckin() {
               <p className="text-sm text-center text-muted-foreground">Tap your name.</p>
               <div className="space-y-2 max-h-64 overflow-y-auto">
                 {publicTeens.length === 0 && (
-                  <p className="text-xs text-muted-foreground text-center">No teens available.</p>
+                  <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-left">
+                    <p className="text-xs font-semibold text-amber-900">No teens are eligible to check in yet.</p>
+                    <p className="text-[11px] text-amber-800 mt-1">
+                      Teens only appear here after a parent gives attendance consent in
+                      {" "}<span className="font-medium">My Family → Teenagers</span>.
+                    </p>
+                  </div>
                 )}
                 {publicTeens.map((t) => (
                   <button key={t.id} type="button"
@@ -426,6 +449,25 @@ export default function TeensCheckin() {
           {!result && !error && user && !pendingTeen && (
             <>
               <p className="text-sm text-muted-foreground">Tap the teen to check in / out.</p>
+              {teens.some((t) => !t.attendance_consent) && (
+                <div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-left space-y-2">
+                  <div className="flex items-start gap-2">
+                    <ShieldAlert className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
+                    <div>
+                      <p className="text-xs font-semibold text-amber-900">Parental consent needed</p>
+                      <p className="text-[11px] text-amber-800 mt-0.5">
+                        You haven't given attendance consent for
+                        {" "}<span className="font-medium">
+                          {teens.filter((t) => !t.attendance_consent).map((t) => `${t.first_name} ${t.last_name}`).join(", ")}
+                        </span>. They can't check in until consent is ticked.
+                      </p>
+                    </div>
+                  </div>
+                  <Button size="sm" className="w-full" onClick={() => navigate("/my-family")}>
+                    Manage consent
+                  </Button>
+                </div>
+              )}
               <div className="space-y-2">
                 {teens.length === 0 && (
                   <p className="text-xs text-muted-foreground">No registered teens found on your account.</p>
