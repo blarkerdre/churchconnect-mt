@@ -213,6 +213,15 @@ export default function TeensSection({ memberId }) {
                       <KeyRound className="h-3 w-3 mr-1" /> PIN set
                     </Badge>
                   )}
+                  {t.attendance_consent ? (
+                    <Badge variant="outline" className="text-[10px] border-emerald-300 text-emerald-700">
+                      <ShieldCheck className="h-3 w-3 mr-1" /> Consent given
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline" className="text-[10px] border-amber-300 text-amber-700">
+                      <ShieldAlert className="h-3 w-3 mr-1" /> Consent needed
+                    </Badge>
+                  )}
                 </div>
               </div>
               <div className="flex gap-1">
