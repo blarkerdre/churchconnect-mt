@@ -1,22 +1,33 @@
 ## Goal
-Children's Church and Teens Church notifications should be delivered **in-app only**. Remove SMS delivery entirely.
+Give Teens Church unit leaders (and admins) a **cumulative attendance report** across all teen attendance sessions, with filters — not just the per-session report that exists today.
 
 ## Findings
-- **Teens Church** (guardian check-in/out alerts) is handled by `supabase/functions/send-push/index.ts`. It already only writes an in-app `notifications` row plus a web-push message — no SMS. No change needed here.
-- **Children's Church pickup PIN** is handled by `supabase/functions/send-pickup-pin/index.ts`. It currently fans out over three channels: in-app notifications, email, **and** SMS via `send-sms`.
+- `src/pages/TeensAttendance.jsx` currently exposes a per-session `ReportDialog` (lines 243–328) reached from the "Report" button on each session row.
+- RLS on `teen_attendance_records` / `teen_attendance_sessions` already lets leaders read all rows in their tenant.
+- `useTeensUnitRole` already surfaces `isLeader`. Report actions are gated by `canManage = isAdmin || isLeader`.
 
 ## Change
-In `supabase/functions/send-pickup-pin/index.ts`:
-1. Remove the SMS block (lines ~218–245) that calls `send-sms` for each recipient's phone.
-2. Remove the `smsed` counter and drop it from the JSON response.
-3. Leave the in-app `notifications` insert untouched.
+Add a **Cumulative Report** entry point at the top of the Teens Attendance page (visible only when `canManage`) that opens a new dialog `CumulativeReportDialog`. Leave the existing per-session Report button in place.
 
-## Question on email
-The user said "Only in-app… No SMS." Email is currently also sent by this function. Two interpretations:
-- **A. Strict in-app only** — also remove the email block, so pickup PIN goes only to the in-app notification bell / push.
-- **B. Literal reading** — keep email as a fallback; only SMS is removed.
+### CumulativeReportDialog contents
+Query `teen_attendance_records` joined to `teen_attendance_sessions` and `teens` for the current tenant, then aggregate by teen.
 
-I'll go with **A (in-app only)** unless you say otherwise, since it matches the phrasing "only in-app notification". If you want email kept, tell me and I'll skip the email removal.
+Filter bar:
+- Date range (from / to) — defaults to last 90 days
+- Session type (dropdown of distinct session titles / service types)
+- Status (All / On time / Late / Missing check-out)
+- Search by teen name
+
+Two views inside the dialog:
+1. **Summary by teen** (default): Name, Sessions attended, On-time %, Late count, Total hours, Missing check-outs.
+2. **Detailed rows**: Date, Session, Teen, In, Out, Duration, Status, Source — respecting the same filters.
+
+Actions: Export CSV (current view), Print.
+
+### Files touched
+- `src/pages/TeensAttendance.jsx` — new `CumulativeReportDialog` component + a "Cumulative report" button in the header, wired behind `canManage`.
 
 ## Out of scope
-No DB migrations, no UI changes, no changes to teens flow (already in-app + push only).
+- No DB schema changes, no RLS changes, no edge functions.
+- No changes to the existing per-session report.
+- No push/email — this is a read-only in-app report.
