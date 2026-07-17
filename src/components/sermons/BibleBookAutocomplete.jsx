@@ -111,8 +111,9 @@ export default function BibleBookAutocomplete({ editor }) {
     const onDown = (e) => {
       const menu = menuRef.current;
       const edDom = editor?.view?.dom;
-      if (menu && menu.contains(e.target)) return;
-      if (edDom && edDom.contains(e.target)) return;
+      const path = typeof e.composedPath === "function" ? e.composedPath() : [e.target];
+      if (menu && path.includes(menu)) return;
+      if (edDom && path.includes(edDom)) return;
       close();
     };
     document.addEventListener("pointerdown", onDown, true);
