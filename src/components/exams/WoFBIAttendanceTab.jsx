@@ -209,11 +209,27 @@ export default function WoFBIAttendanceTab() {
     onError: (e) => toast({ title: "Delete failed", description: e.message, variant: "destructive" }),
   });
 
+  const closeSession = useMutation({
+    mutationFn: async (id) => {
+      const { error } = await supabase
+        .from("wofbi_attendance_sessions")
+        .update({ status: "closed" })
+        .eq("id", id)
+        .eq("tenant_id", tenantId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({ title: "Session closed" });
+      qc.invalidateQueries({ queryKey: ["wofbi-att-sessions"] });
+    },
+    onError: (e) => toast({ title: "Close failed", description: e.message, variant: "destructive" }),
+  });
+
   const reopenSession = useMutation({
     mutationFn: async (id) => {
       const { error } = await supabase
         .from("wofbi_attendance_sessions")
-        .update({ status: "open", qr_token: crypto.randomUUID() })
+        .update({ status: "open" })
         .eq("id", id)
         .eq("tenant_id", tenantId);
       if (error) throw error;
