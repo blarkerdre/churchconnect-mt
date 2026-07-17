@@ -65,7 +65,7 @@ export default function BibleBookAutocomplete({ editor }) {
   const insert = useCallback((name) => {
     const s = stateRef.current;
     if (!editor || !s.open) return;
-    editor.chain().focus().insertContentAt({ from: s.from, to: s.to }, `${name} `).run();
+    editor.commands.insertContentAt({ from: s.from, to: s.to }, `${name} `);
     close();
   }, [editor, close]);
 
@@ -111,8 +111,9 @@ export default function BibleBookAutocomplete({ editor }) {
     const onDown = (e) => {
       const menu = menuRef.current;
       const edDom = editor?.view?.dom;
-      if (menu && menu.contains(e.target)) return;
-      if (edDom && edDom.contains(e.target)) return;
+      const path = typeof e.composedPath === "function" ? e.composedPath() : [e.target];
+      if (menu && path.includes(menu)) return;
+      if (edDom && path.includes(edDom)) return;
       close();
     };
     document.addEventListener("pointerdown", onDown, true);
@@ -146,20 +147,22 @@ export default function BibleBookAutocomplete({ editor }) {
       role="listbox"
       className="fixed z-[9999] min-w-[180px] max-w-[260px] rounded-md border border-border bg-popover text-popover-foreground shadow-md py-1"
       style={{ left: state.x, top: state.y + 4 }}
-      onPointerDown={(e) => e.preventDefault()}
-      onMouseDown={(e) => e.preventDefault()}
     >
-      <div className="text-[10px] uppercase tracking-wide text-muted-foreground px-2 py-1">Bible books</div>
+      <div
+        className="text-[10px] uppercase tracking-wide text-muted-foreground px-2 py-1 select-none"
+        onPointerDown={(e) => e.preventDefault()}
+      >
+        Bible books
+      </div>
       {state.items.map((name, i) => (
         <button
           key={name}
           type="button"
           role="option"
           aria-selected={i === state.index}
-          className={`w-full text-left px-2 py-2 min-h-[36px] text-sm ${i === state.index ? "bg-accent text-accent-foreground" : "hover:bg-accent/60 active:bg-accent"}`}
-          onMouseEnter={() => setState((p) => ({ ...p, index: i }))}
-          onTouchStart={(e) => { e.preventDefault(); insert(name); }}
-          onClick={() => insert(name)}
+          className={`w-full text-left px-2 py-2 min-h-[36px] text-sm select-none touch-manipulation ${i === state.index ? "bg-accent text-accent-foreground" : "hover:bg-accent/60 active:bg-accent"}`}
+          onMouseMove={() => setState((p) => (p.index === i ? p : { ...p, index: i }))}
+          onPointerDown={(e) => { e.preventDefault(); insert(name); }}
         >
           {name}
         </button>
