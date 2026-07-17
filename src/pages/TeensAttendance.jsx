@@ -650,7 +650,7 @@ export default function TeensAttendance() {
   const canDelete = isAdmin || isLeader;
 
   const [formSession, setFormSession] = useState(null); // {} for new, session for edit
-  const [qrSession, setQrSession] = useState(null);
+  const [qrOpen, setQrOpen] = useState(false);
   const [rosterSession, setRosterSession] = useState(null);
   const [reportSession, setReportSession] = useState(null);
   const [deleteSession, setDeleteSession] = useState(null);
