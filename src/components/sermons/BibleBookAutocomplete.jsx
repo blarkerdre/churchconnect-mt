@@ -67,6 +67,15 @@ export default function BibleBookAutocomplete({ editor, containerRef }) {
     if (!editor || !s.open) return;
     editor.commands.insertContentAt({ from: s.from, to: s.to }, `${name} `);
     close();
+    // Swallow any ghost click dispatched by touch devices right after selection,
+    // so it doesn't land on nearby buttons (e.g. dialog Save) once the menu unmounts.
+    const swallow = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      document.removeEventListener("click", swallow, true);
+    };
+    document.addEventListener("click", swallow, true);
+    setTimeout(() => document.removeEventListener("click", swallow, true), 400);
   }, [editor, close]);
 
   useEffect(() => {
@@ -162,7 +171,8 @@ export default function BibleBookAutocomplete({ editor, containerRef }) {
           aria-selected={i === state.index}
           className={`w-full text-left px-2 py-2 min-h-[36px] text-sm select-none touch-manipulation pointer-events-auto ${i === state.index ? "bg-accent text-accent-foreground" : "hover:bg-accent/60 active:bg-accent"}`}
           onMouseMove={() => setState((p) => (p.index === i ? p : { ...p, index: i }))}
-          onPointerDown={(e) => { e.preventDefault(); insert(name); }}
+          onPointerDown={(e) => { e.preventDefault(); }}
+          onClick={(e) => { e.preventDefault(); e.stopPropagation(); insert(name); }}
         >
           {name}
         </button>
