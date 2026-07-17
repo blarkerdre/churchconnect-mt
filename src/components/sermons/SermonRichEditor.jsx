@@ -75,7 +75,6 @@ export default function SermonRichEditor({ content, onChange }) {
   const editor = useEditor({
     extensions: [
       StarterKit.configure({ heading: { levels: [2, 3] } }),
-      Underline,
       Placeholder.configure({ placeholder: "Write your sermon notes here..." }),
       TextStyle,
       Color,
