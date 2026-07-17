@@ -562,6 +562,11 @@ export default function TeensCheckin() {
                       className="w-full flex items-center gap-3 border rounded-lg p-3">
                       <User className="h-5 w-5 text-primary shrink-0" />
                       <span className="text-sm font-medium flex-1">{t.first_name} {t.last_name}</span>
+                      {t.attendance_consent && (
+                        <span aria-live="polite" className={`text-[10px] uppercase px-1.5 py-0.5 rounded ${out ? "bg-green-100 text-green-800" : "bg-slate-100 text-slate-600"}`}>
+                          {out ? "Checked in" : "Not checked in"}
+                        </span>
+                      )}
                       {!t.attendance_consent ? (
                         <span className="text-[10px] uppercase px-1.5 py-0.5 rounded bg-amber-100 text-amber-800">No consent</span>
                       ) : (
