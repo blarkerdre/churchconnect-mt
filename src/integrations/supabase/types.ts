@@ -6855,6 +6855,12 @@ export type Database = {
           title: string
         }[]
       }
+      get_teen_open_checkins: {
+        Args: { _qr_token: string }
+        Returns: {
+          teen_id: string
+        }[]
+      }
       get_teen_session_by_token: {
         Args: { _qr_token: string }
         Returns: {
