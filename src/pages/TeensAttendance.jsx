@@ -728,6 +728,11 @@ export default function TeensAttendance() {
           session={reportSession}
         />
       )}
+      {cumulativeOpen && (
+        <CumulativeReportDialog open={cumulativeOpen} onOpenChange={setCumulativeOpen} />
+      )}
+
+
 
       <AlertDialog open={!!deleteSession} onOpenChange={(o) => !o && setDeleteSession(null)}>
         <AlertDialogContent>
