@@ -72,11 +72,6 @@ export default function TeensCheckin() {
     setTimeout(() => setClosedMsg(true), 150);
   };
 
-  useEffect(() => {
-    if (!result) return;
-    const t = setTimeout(() => { handleClose(); }, 6000);
-    return () => clearTimeout(t);
-  }, [result]);
 
   // magic-link (guardian sign-in)
   const [magicEmail, setMagicEmail] = useState("");
