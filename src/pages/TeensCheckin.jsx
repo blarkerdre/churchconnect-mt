@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, CheckCircle2, Clock, XCircle, LogOut, User, Mail, CheckCheck } from "lucide-react";
+import { Loader2, CheckCircle2, Clock, XCircle, LogOut, User, Mail, CheckCheck, UserCircle2, ShieldCheck } from "lucide-react";
 
 function fmtDuration(mins) {
   if (mins == null) return "";
@@ -23,21 +23,30 @@ const ERROR_MESSAGES = {
   invalid_teen: "That teen isn't registered here.",
   no_consent: "A parent hasn't given attendance consent for this teen yet. Ask a parent to open My Family and tick the consent box.",
   not_authorised: "You aren't authorised to check this teen in. Ask a parent to sign in, or enter the teen's PIN.",
+  not_enrolled: "You haven't set up self check-in yet. Tap 'I'm a teen' to enroll.",
+  bad_pin: "That PIN doesn't match. Try again.",
+  rate_limited: "Too many requests. Try again later.",
+  expired: "This request expired. Please start again.",
+  not_approved: "A worker hasn't approved you yet.",
+  invalid_pin: "PIN must be 4-6 digits.",
 };
 
+// mode: 'choose' | 'parent' | 'parent-pin' | 'self-pick' | 'self-pin' | 'self-wait' | 'self-setpin'
 export default function TeensCheckin() {
   const { token } = useParams();
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
 
   const [session, setSession] = useState(null);
-  const [teens, setTeens] = useState([]);
+  const [teens, setTeens] = useState([]); // parent view (full)
+  const [publicTeens, setPublicTeens] = useState([]); // self view (id, name, has_self_pin)
   const [loading, setLoading] = useState(true);
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
   const [pendingTeen, setPendingTeen] = useState(null);
   const [pin, setPin] = useState("");
   const [busy, setBusy] = useState(false);
+  const [mode, setMode] = useState("choose");
 
   // magic-link (guardian sign-in)
   const [magicEmail, setMagicEmail] = useState("");
@@ -45,12 +54,19 @@ export default function TeensCheckin() {
   const [magicSent, setMagicSent] = useState(false);
   const [magicError, setMagicError] = useState(null);
 
+  // self-enrolment
+  const [selfTeen, setSelfTeen] = useState(null); // { id, first_name, last_name, has_self_pin }
+  const [enrolmentId, setEnrolmentId] = useState(null);
+  const [enrolStatus, setEnrolStatus] = useState(null); // pending / approved / rejected / expired / used
+  const [newPin, setNewPin] = useState("");
+  const [newPin2, setNewPin2] = useState("");
+  const pollRef = useRef(null);
+
   useEffect(() => {
     if (authLoading) return;
     let active = true;
     (async () => {
       setLoading(true);
-      // Look up session by qr_token via SECURITY DEFINER RPC (works pre-auth)
       const { data: sRows, error: sErr } = await supabase
         .rpc("get_teen_session_by_token", { _qr_token: token });
       if (!active) return;
@@ -67,7 +83,10 @@ export default function TeensCheckin() {
         return;
       }
 
-      // If signed in as a guardian, load their teens
+      // Fetch public teen list for self check-in
+      const { data: pt } = await supabase.rpc("list_consented_teens_for_session", { _qr_token: token });
+      if (active) setPublicTeens(pt || []);
+
       if (user) {
         const { data: teensData } = await supabase
           .from("teens")
@@ -81,6 +100,16 @@ export default function TeensCheckin() {
     })();
     return () => { active = false; };
   }, [token, user, authLoading]);
+
+  // Poll enrolment status
+  useEffect(() => {
+    if (!enrolmentId || enrolStatus === "approved" || enrolStatus === "used") return;
+    pollRef.current = setInterval(async () => {
+      const { data } = await supabase.rpc("teen_self_check_enrolment", { _enrolment_id: enrolmentId });
+      if (data?.ok) setEnrolStatus(data.status);
+    }, 3000);
+    return () => clearInterval(pollRef.current);
+  }, [enrolmentId, enrolStatus]);
 
   const doCheckin = async (teenId, withPin) => {
     setBusy(true);
@@ -96,22 +125,59 @@ export default function TeensCheckin() {
     else { setError(data?.error || "unknown"); }
   };
 
-  const handleSendMagicLink = async (e) => {
-    e?.preventDefault?.();
-    if (!magicEmail || !/^\S+@\S+\.\S+$/.test(magicEmail)) {
-      setMagicError("Please enter a valid email address.");
+  const doSelfCheckin = async (teenId, withPin) => {
+    setBusy(true);
+    setError(null);
+    const { data, error: rpcErr } = await supabase.rpc("teen_self_checkin", {
+      _qr_token: token,
+      _teen_id: teenId,
+      _pin: withPin,
+    });
+    setBusy(false);
+    if (rpcErr) { setError(rpcErr.message); return; }
+    if (data?.ok) { setResult(data); setPin(""); }
+    else { setError(data?.error || "unknown"); }
+  };
+
+  const requestEnrolment = async (teen) => {
+    setBusy(true);
+    setError(null);
+    const { data, error: rpcErr } = await supabase.rpc("teen_self_request_enrolment", {
+      _qr_token: token,
+      _teen_id: teen.id,
+    });
+    setBusy(false);
+    if (rpcErr) { setError(rpcErr.message); return; }
+    if (!data?.ok) { setError(data?.error || "unknown"); return; }
+    setSelfTeen(teen);
+    setEnrolmentId(data.enrolment_id);
+    setEnrolStatus("pending");
+    setMode("self-wait");
+  };
+
+  const submitNewPin = async () => {
+    if (newPin.length < 4 || newPin !== newPin2) {
+      setError("invalid_pin");
       return;
     }
-    setMagicSending(true);
-    setMagicError(null);
-    const redirectTo = `${window.location.origin}/teens/checkin/${token}`;
-    const { error: err } = await supabase.auth.signInWithOtp({
-      email: magicEmail.trim().toLowerCase(),
-      options: { emailRedirectTo: redirectTo, shouldCreateUser: false },
+    setBusy(true);
+    const { data, error: rpcErr } = await supabase.rpc("teen_self_set_pin", {
+      _enrolment_id: enrolmentId,
+      _pin: newPin,
     });
-    setMagicSending(false);
-    if (err) { setMagicError(err.message); return; }
-    setMagicSent(true);
+    if (rpcErr || !data?.ok) {
+      setBusy(false);
+      setError(rpcErr?.message || data?.error || "unknown");
+      return;
+    }
+    // Immediately check them in
+    await doSelfCheckin(selfTeen.id, newPin);
+    setBusy(false);
+  };
+
+  const resetSelfFlow = () => {
+    setSelfTeen(null); setEnrolmentId(null); setEnrolStatus(null);
+    setNewPin(""); setNewPin2(""); setPin("");
   };
 
   if (authLoading || loading) {
@@ -157,8 +223,8 @@ export default function TeensCheckin() {
                     <p className="mt-2 text-xs text-muted-foreground">Scan again when leaving to record time-out.</p>
                   )}
                 </div>
-                <Button variant="outline" className="w-full" onClick={() => { setResult(null); setPendingTeen(null); }}>
-                  Check in another teen
+                <Button variant="outline" className="w-full" onClick={() => { setResult(null); setPendingTeen(null); resetSelfFlow(); setMode("choose"); }}>
+                  Check in another
                 </Button>
                 <Button variant="ghost" className="w-full" onClick={() => navigate("/")}>Done</Button>
               </>
@@ -173,30 +239,51 @@ export default function TeensCheckin() {
             </>
           )}
 
-          {!result && !error && !user && !magicSent && (
-            <form onSubmit={handleSendMagicLink} className="space-y-3 text-left">
+          {/* Root chooser: not signed in and haven't chosen */}
+          {!result && !error && !user && !magicSent && mode === "choose" && (
+            <div className="space-y-3">
+              <UserCircle2 className="h-12 w-12 mx-auto text-primary" />
+              <p className="text-sm text-muted-foreground">Who's checking in?</p>
+              <Button className="w-full" onClick={() => setMode("self-pick")}>
+                I'm a teen (self check-in)
+              </Button>
+              <Button variant="outline" className="w-full" onClick={() => setMode("parent")}>
+                <Mail className="h-4 w-4 mr-1" /> Parent — email me a link
+              </Button>
+              <Button variant="ghost" className="w-full" onClick={() => setMode("parent-pin")}>
+                Use parent-set PIN
+              </Button>
+            </div>
+          )}
+
+          {/* Parent magic link */}
+          {!result && !error && !user && !magicSent && mode === "parent" && (
+            <form onSubmit={async (e) => {
+              e.preventDefault();
+              if (!magicEmail || !/^\S+@\S+\.\S+$/.test(magicEmail)) { setMagicError("Please enter a valid email address."); return; }
+              setMagicSending(true); setMagicError(null);
+              const redirectTo = `${window.location.origin}/teens/checkin/${token}`;
+              const { error: err } = await supabase.auth.signInWithOtp({
+                email: magicEmail.trim().toLowerCase(),
+                options: { emailRedirectTo: redirectTo, shouldCreateUser: false },
+              });
+              setMagicSending(false);
+              if (err) { setMagicError(err.message); return; }
+              setMagicSent(true);
+            }} className="space-y-3 text-left">
               <Mail className="h-12 w-12 mx-auto text-primary" />
-              <p className="text-sm text-center">
-                Parents: sign in to check your teen in. We'll email you a one-time link — no password.
-              </p>
+              <p className="text-sm text-center">Parents: we'll email a one-time sign-in link.</p>
               <div className="space-y-1.5">
                 <Label htmlFor="magic-email">Parent's email</Label>
-                <Input
-                  id="magic-email"
-                  type="email"
-                  autoComplete="email"
-                  inputMode="email"
-                  required
-                  value={magicEmail}
-                  onChange={(e) => setMagicEmail(e.target.value)}
-                  placeholder="you@example.com"
-                />
+                <Input id="magic-email" type="email" autoComplete="email" inputMode="email" required
+                  value={magicEmail} onChange={(e) => setMagicEmail(e.target.value)} placeholder="you@example.com" />
               </div>
               {magicError && <p className="text-xs text-red-600">{magicError}</p>}
               <Button type="submit" className="w-full" disabled={magicSending}>
                 {magicSending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
                 Email me a sign-in link
               </Button>
+              <Button type="button" variant="ghost" size="sm" className="w-full" onClick={() => setMode("choose")}>Back</Button>
             </form>
           )}
 
@@ -210,6 +297,132 @@ export default function TeensCheckin() {
             </>
           )}
 
+          {/* Parent-set PIN (existing flow, no sign-in) */}
+          {!result && !error && !user && mode === "parent-pin" && (
+            <div className="space-y-3 text-left">
+              <p className="text-sm text-center text-muted-foreground">Enter the teen's parent-set PIN.</p>
+              <div className="space-y-1.5">
+                <Label>Teen</Label>
+                <select className="w-full border rounded-md h-10 px-3 text-sm"
+                  value={pendingTeen?.id || ""}
+                  onChange={(e) => {
+                    const t = publicTeens.find((x) => x.id === e.target.value);
+                    setPendingTeen(t ? { id: t.id } : null);
+                  }}>
+                  <option value="">Select a teen…</option>
+                  {publicTeens.map((t) => (
+                    <option key={t.id} value={t.id}>{t.first_name} {t.last_name}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>PIN</Label>
+                <Input inputMode="numeric" pattern="[0-9]*" maxLength={6} value={pin}
+                  onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))} placeholder="••••" />
+              </div>
+              <div className="flex gap-2">
+                <Button variant="outline" className="flex-1" onClick={() => { setPendingTeen(null); setPin(""); setMode("choose"); }}>Back</Button>
+                <Button className="flex-1" disabled={busy || !pendingTeen?.id || pin.length < 4}
+                  onClick={() => doCheckin(pendingTeen.id, pin)}>
+                  {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : "Check in / out"}
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Self: pick teen */}
+          {!result && !error && mode === "self-pick" && (
+            <div className="space-y-3 text-left">
+              <p className="text-sm text-center text-muted-foreground">Tap your name.</p>
+              <div className="space-y-2 max-h-64 overflow-y-auto">
+                {publicTeens.length === 0 && (
+                  <p className="text-xs text-muted-foreground text-center">No teens available.</p>
+                )}
+                {publicTeens.map((t) => (
+                  <button key={t.id} type="button"
+                    className="w-full flex items-center gap-3 border rounded-lg p-3 hover:bg-muted text-left"
+                    onClick={() => {
+                      if (t.has_self_pin) { setSelfTeen(t); setMode("self-pin"); }
+                      else { requestEnrolment(t); }
+                    }}>
+                    <User className="h-5 w-5 text-primary shrink-0" />
+                    <span className="text-sm font-medium flex-1">{t.first_name} {t.last_name}</span>
+                    {!t.has_self_pin && <span className="text-[10px] uppercase px-1.5 py-0.5 rounded bg-blue-100 text-blue-800">First time</span>}
+                  </button>
+                ))}
+              </div>
+              <Button variant="ghost" size="sm" className="w-full" onClick={() => setMode("choose")}>Back</Button>
+            </div>
+          )}
+
+          {/* Self: PIN entry (already enrolled) */}
+          {!result && !error && mode === "self-pin" && selfTeen && (
+            <div className="space-y-3 text-left">
+              <p className="text-sm text-center">Hi {selfTeen.first_name}! Enter your PIN.</p>
+              <div className="space-y-1.5">
+                <Label>Your 4-digit PIN</Label>
+                <Input inputMode="numeric" pattern="[0-9]*" maxLength={6} value={pin}
+                  onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))} placeholder="••••" autoFocus />
+              </div>
+              <div className="flex gap-2">
+                <Button variant="outline" className="flex-1" onClick={() => { resetSelfFlow(); setMode("self-pick"); }}>Back</Button>
+                <Button className="flex-1" disabled={busy || pin.length < 4}
+                  onClick={() => doSelfCheckin(selfTeen.id, pin)}>
+                  {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : "Check in / out"}
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Self: waiting for worker approval */}
+          {!result && !error && mode === "self-wait" && selfTeen && (
+            <div className="space-y-3">
+              {enrolStatus === "approved" || enrolStatus === "used" ? (
+                <>
+                  <ShieldCheck className="h-12 w-12 mx-auto text-green-600" />
+                  <p className="text-sm font-semibold">Approved! Set your PIN</p>
+                  <p className="text-xs text-muted-foreground">Choose a 4-digit PIN. You'll use it next time to check in.</p>
+                  <div className="space-y-1.5 text-left">
+                    <Label>New 4-digit PIN</Label>
+                    <Input inputMode="numeric" pattern="[0-9]*" maxLength={6} value={newPin}
+                      onChange={(e) => setNewPin(e.target.value.replace(/\D/g, ""))} placeholder="••••" />
+                  </div>
+                  <div className="space-y-1.5 text-left">
+                    <Label>Confirm PIN</Label>
+                    <Input inputMode="numeric" pattern="[0-9]*" maxLength={6} value={newPin2}
+                      onChange={(e) => setNewPin2(e.target.value.replace(/\D/g, ""))} placeholder="••••" />
+                  </div>
+                  <Button className="w-full" disabled={busy || newPin.length < 4 || newPin !== newPin2} onClick={submitNewPin}>
+                    {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save PIN & check in"}
+                  </Button>
+                </>
+              ) : enrolStatus === "rejected" ? (
+                <>
+                  <XCircle className="h-12 w-12 mx-auto text-red-500" />
+                  <p className="text-sm">A worker declined your request.</p>
+                  <Button variant="outline" className="w-full" onClick={() => { resetSelfFlow(); setMode("self-pick"); }}>Back</Button>
+                </>
+              ) : enrolStatus === "expired" ? (
+                <>
+                  <Clock className="h-12 w-12 mx-auto text-amber-500" />
+                  <p className="text-sm">Your request expired.</p>
+                  <Button variant="outline" className="w-full" onClick={() => { resetSelfFlow(); setMode("self-pick"); }}>Try again</Button>
+                </>
+              ) : (
+                <>
+                  <Loader2 className="h-12 w-12 mx-auto text-primary animate-spin" />
+                  <p className="text-sm font-semibold">Ask a Teens Church worker</p>
+                  <p className="text-xs text-muted-foreground">
+                    Show this screen to a worker. They'll tap <span className="font-medium">Approve</span> on their device.
+                  </p>
+                  <p className="text-sm">{selfTeen.first_name} {selfTeen.last_name}</p>
+                  <Button variant="ghost" size="sm" className="w-full" onClick={() => { resetSelfFlow(); setMode("self-pick"); }}>Cancel</Button>
+                </>
+              )}
+            </div>
+          )}
+
+          {/* Signed-in guardian: existing flow */}
           {!result && !error && user && !pendingTeen && (
             <>
               <p className="text-sm text-muted-foreground">Tap the teen to check in / out.</p>
@@ -218,14 +431,11 @@ export default function TeensCheckin() {
                   <p className="text-xs text-muted-foreground">No registered teens found on your account.</p>
                 )}
                 {teens.map((t) => (
-                  <button
-                    key={t.id}
-                    type="button"
+                  <button key={t.id} type="button"
                     className="w-full flex items-center gap-3 border rounded-lg p-3 hover:bg-muted text-left disabled:opacity-60 disabled:cursor-not-allowed"
                     onClick={() => doCheckin(t.id)}
                     disabled={busy || !t.attendance_consent}
-                    title={!t.attendance_consent ? "Parent consent required" : undefined}
-                  >
+                    title={!t.attendance_consent ? "Parent consent required" : undefined}>
                     <User className="h-5 w-5 text-primary shrink-0" />
                     <span className="text-sm font-medium flex-1">{t.first_name} {t.last_name}</span>
                     {!t.attendance_consent && (
@@ -243,21 +453,19 @@ export default function TeensCheckin() {
             </>
           )}
 
-          {!result && !error && pendingTeen && (
+          {!result && !error && user && pendingTeen && (
             <div className="space-y-3 text-left">
               <p className="text-sm text-center text-muted-foreground">
-                Ask a parent for the teen's 4-digit PIN, then pick the teen.
+                Ask a parent for the teen's PIN, then pick the teen.
               </p>
               <div className="space-y-1.5">
                 <Label>Teen</Label>
-                <select
-                  className="w-full border rounded-md h-10 px-3 text-sm"
+                <select className="w-full border rounded-md h-10 px-3 text-sm"
                   value={pendingTeen.id}
                   onChange={(e) => {
                     const t = teens.find((x) => x.id === e.target.value);
                     setPendingTeen(t ? { id: t.id, first_name: t.first_name } : { id: "", first_name: "" });
-                  }}
-                >
+                  }}>
                   <option value="">Select a teen…</option>
                   {teens.filter((t) => !!t.access_pin_hash).map((t) => (
                     <option key={t.id} value={t.id}>{t.first_name} {t.last_name}</option>
@@ -266,24 +474,13 @@ export default function TeensCheckin() {
               </div>
               <div className="space-y-1.5">
                 <Label>4-digit PIN</Label>
-                <Input
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  maxLength={6}
-                  value={pin}
-                  onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))}
-                  placeholder="••••"
-                />
+                <Input inputMode="numeric" pattern="[0-9]*" maxLength={6} value={pin}
+                  onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))} placeholder="••••" />
               </div>
               <div className="flex gap-2">
-                <Button variant="outline" className="flex-1" onClick={() => { setPendingTeen(null); setPin(""); }}>
-                  Cancel
-                </Button>
-                <Button
-                  className="flex-1"
-                  disabled={busy || !pendingTeen.id || pin.length < 4}
-                  onClick={() => doCheckin(pendingTeen.id, pin)}
-                >
+                <Button variant="outline" className="flex-1" onClick={() => { setPendingTeen(null); setPin(""); }}>Cancel</Button>
+                <Button className="flex-1" disabled={busy || !pendingTeen.id || pin.length < 4}
+                  onClick={() => doCheckin(pendingTeen.id, pin)}>
                   {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : "Check in / out"}
                 </Button>
               </div>
