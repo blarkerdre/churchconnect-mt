@@ -1,25 +1,14 @@
-## Goal
-Make the “parental consent required” state on the Teens Check-in page obvious and actionable, so cases like Ade test1 (`attendance_consent = false`) don't look like a mysterious failure.
+## Fix: `crypt(text, text) does not exist` during teen self check-in
 
-## Changes (frontend-only, `src/pages/TeensCheckin.jsx`)
+### Root cause (verified)
+`public.teen_self_checkin` calls `crypt(_pin, v_teen.self_pin_hash)` unqualified, but its `SET search_path` is only `'public'`. `pgcrypto` lives in the `extensions` schema, so the call cannot resolve `crypt`. The sibling functions `crypt_pin` and `teen_self_set_pin` already use `search_path = public, extensions` plus `extensions.crypt(...)` — this one was missed.
 
-1. **Clearer inline error copy** (already mapped as `no_consent`). Reword to a two-line message with a next step:
-   > *Parental consent required.*
-   > A parent needs to open **My Family → Teenagers**, edit this teen, tick **“I give parental consent”**, and Save. Then try again.
+### Change
+One migration that recreates `public.teen_self_checkin` with:
+- `SET search_path = public, extensions`
+- The PIN comparison changed to `v_teen.self_pin_hash <> extensions.crypt(_pin, v_teen.self_pin_hash)`
 
-2. **Signed-in guardian list — consent banner**
-   When the guardian is signed in and one or more of their teens have `attendance_consent = false`, show a prominent amber banner above the teen list listing those names, with a **Manage consent** button that navigates to `/my-family`. The teen row keeps its “No consent” badge and stays disabled (existing behaviour).
+All other logic (session/consent/status/notification inserts) stays identical.
 
-3. **Self check-in picker — empty-state hint**
-   When `publicTeens` is empty in `self-pick` / `parent-pin` modes, replace the generic “No teens available” text with:
-   > *No teens are eligible to check in yet.* Teens only appear here after a parent gives attendance consent in **My Family → Teenagers**.
-
-4. **Result screen dedicated consent block**
-   When `error === "no_consent"`, render a dedicated card (amber shield icon + heading “Parental consent required”) with the copy from item 1 and two buttons: **Back** and (when signed in) **Open My Family** → `/my-family`.
-
-No RPC, schema, or business-logic changes — the check-in gate itself is unchanged; only the messaging around it improves.
-
-## Out of scope
-- Adding an admin/worker consent override.
-- Notifying the parent by email/push that consent is required.
-- Changes to `MyFamily` / `TeensSection`.
+### Verification
+After the migration runs, retry a teen self check-in from `TeensCheckin`; the RPC should return `ok:true` (or a domain error like `bad_pin`) instead of the `crypt` does-not-exist error.
