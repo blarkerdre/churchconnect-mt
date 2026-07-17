@@ -84,7 +84,7 @@ export const BOOKS = [
   ["2 John", 62, ["2john", "2jn", "2jo", "iijohn"]],
   ["3 John", 63, ["3john", "3jn", "3jo", "iiijohn"]],
   ["Jude", 64, ["jud", "jd", "jde"]],
-  ["Revelation", 65, ["rev", "re", "rv", "apoc", "apocalypse"]],
+  ["Revelation", 65, ["rev", "re", "rv", "apoc", "apocalypse", "revelations", "reveleation", "reveleations"]],
 ];
 
 const _bookMap = new Map();
