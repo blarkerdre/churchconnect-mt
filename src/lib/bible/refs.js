@@ -23,7 +23,7 @@ export const BOOKS = [
   ["Exodus", 1, ["ex", "exo", "exod"]],
   ["Leviticus", 2, ["lev", "lv"]],
   ["Numbers", 3, ["num", "nm", "nu"]],
-  ["Deuteronomy", 4, ["deut", "dt", "de"]],
+  ["Deuteronomy", 4, ["deut", "dt", "de", "deutronomy", "duet", "duetronomy"]],
   ["Joshua", 5, ["josh", "jos", "js"]],
   ["Judges", 6, ["judg", "jdg", "jud"]],
   ["Ruth", 7, ["ru", "rt"]],
