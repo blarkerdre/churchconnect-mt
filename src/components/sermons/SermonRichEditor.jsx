@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import HandwritingPad from "@/components/sermons/HandwritingPad";
 import BibleRef from "@/components/sermons/extensions/BibleRef";
 import BibleRefPopover from "@/components/sermons/BibleRefPopover";
+import BibleBookAutocomplete from "@/components/sermons/BibleBookAutocomplete";
 import InsertBibleRefDialog from "@/components/sermons/InsertBibleRefDialog";
 
 const MenuBar = ({ editor, onOpenPad, onOpenVerse }) => {
