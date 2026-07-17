@@ -223,12 +223,16 @@ export default function TeensCheckin() {
                   <button
                     key={t.id}
                     type="button"
-                    className="w-full flex items-center gap-3 border rounded-lg p-3 hover:bg-muted text-left"
+                    className="w-full flex items-center gap-3 border rounded-lg p-3 hover:bg-muted text-left disabled:opacity-60 disabled:cursor-not-allowed"
                     onClick={() => doCheckin(t.id)}
-                    disabled={busy}
+                    disabled={busy || !t.attendance_consent}
+                    title={!t.attendance_consent ? "Parent consent required" : undefined}
                   >
                     <User className="h-5 w-5 text-primary shrink-0" />
-                    <span className="text-sm font-medium">{t.first_name} {t.last_name}</span>
+                    <span className="text-sm font-medium flex-1">{t.first_name} {t.last_name}</span>
+                    {!t.attendance_consent && (
+                      <span className="text-[10px] uppercase px-1.5 py-0.5 rounded bg-amber-100 text-amber-800">No consent</span>
+                    )}
                   </button>
                 ))}
               </div>
