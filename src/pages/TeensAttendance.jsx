@@ -36,6 +36,70 @@ function fmtDuration(mins) {
   return `${m}m`;
 }
 
+function PendingSelfEnrolments({ tenantId }) {
+  const qc = useQueryClient();
+  const { data: rows = [], refetch } = useQuery({
+    queryKey: ["teen-self-enrolments", tenantId],
+    enabled: !!tenantId,
+    refetchInterval: 5000,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("teen_self_enrolments")
+        .select("id, teen_id, requested_at, expires_at, status, teens:teen_id(first_name, last_name, photo_url)")
+        .eq("tenant_id", tenantId)
+        .eq("status", "pending")
+        .order("requested_at", { ascending: false });
+      if (error) throw error;
+      return (data || []).filter((r) => new Date(r.expires_at) > new Date());
+    },
+  });
+
+  const act = useMutation({
+    mutationFn: async ({ id, approve }) => {
+      const rpc = approve ? "teen_self_approve" : "teen_self_reject";
+      const { data, error } = await supabase.rpc(rpc, { _enrolment_id: id });
+      if (error) throw error;
+      if (!data?.ok) throw new Error(data?.error || "failed");
+    },
+    onSuccess: (_r, v) => { toast.success(v.approve ? "Approved" : "Rejected"); refetch(); },
+    onError: (e) => toast.error(e.message),
+  });
+
+  if (!rows.length) return null;
+
+  return (
+    <Card className="border-amber-300 bg-amber-50/50">
+      <CardHeader className="pb-2">
+        <CardTitle className="text-base flex items-center gap-2">
+          <ShieldAlert className="h-4 w-4 text-amber-600" /> Pending self check-in approvals
+          <Badge variant="secondary">{rows.length}</Badge>
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-2">
+        {rows.map((r) => (
+          <div key={r.id} className="flex items-center gap-3 border rounded-md bg-white p-2">
+            <div className="h-9 w-9 rounded-full bg-muted flex items-center justify-center overflow-hidden shrink-0">
+              {r.teens?.photo_url ? (
+                <img src={r.teens.photo_url} alt="" className="h-full w-full object-cover" />
+              ) : (
+                <Users className="h-4 w-4 text-muted-foreground" />
+              )}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium truncate">{r.teens?.first_name} {r.teens?.last_name}</p>
+              <p className="text-[11px] text-muted-foreground">
+                Requested {format(new Date(r.requested_at), "HH:mm")} · expires {format(new Date(r.expires_at), "HH:mm")}
+              </p>
+            </div>
+            <Button size="sm" onClick={() => act.mutate({ id: r.id, approve: true })} disabled={act.isPending}>Approve</Button>
+            <Button size="sm" variant="outline" onClick={() => act.mutate({ id: r.id, approve: false })} disabled={act.isPending}>Reject</Button>
+          </div>
+        ))}
+      </CardContent>
+    </Card>
+  );
+}
+
 function SessionFormDialog({ open, onOpenChange, session, onSaved }) {
   const { user } = useAuth();
   const { tenantId, withTenant } = useTenantQuery();
@@ -645,6 +709,8 @@ export default function TeensAttendance() {
           Only Teens unit members and leaders can manage teens attendance sessions.
         </CardContent></Card>
       )}
+
+      {canWrite && <PendingSelfEnrolments tenantId={tenantId} />}
 
       <div className="space-y-3">
         {canWrite && sessions.length === 0 && (
