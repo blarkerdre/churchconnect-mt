@@ -11,51 +11,41 @@ function getAudio() {
   return audioElement;
 }
 
-// Unlock audio on first real user interaction. We play UNMUTED at very low
-// volume — some mobile browsers (notably iOS Safari) do not count a muted
-// play() as a valid autoplay unlock, so later unmuted play() calls from
-// realtime callbacks stay blocked.
-function unlockAudio() {
+// Unlock audio via a zero-gain WebAudio oscillator. Using a silent WebAudio
+// node (instead of playing the notification <audio> element) satisfies mobile
+// autoplay unlock requirements WITHOUT hijacking the phone's media volume
+// stream — so refreshing the page no longer flips the volume rocker from
+// Ring to Media on Android/iOS.
+export function unlockAudio() {
   if (audioUnlocked) return Promise.resolve(true);
   try {
-    const a = getAudio();
-    const prevVolume = a.volume;
-    a.volume = 0.01;
-    a.currentTime = 0;
-    const p = a.play();
-    if (p && p.then) {
-      return p.then(() => {
-        a.pause();
-        a.currentTime = 0;
-        a.volume = prevVolume;
-        audioUnlocked = true;
-        return true;
-      }).catch((err) => {
-        a.volume = prevVolume;
-        console.warn('[notification-alert] audio unlock blocked:', err?.name || err);
-        return false;
-      });
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) {
+      audioUnlocked = true;
+      return Promise.resolve(true);
     }
+    const ctx = new Ctx();
+    const gain = ctx.createGain();
+    gain.gain.value = 0;
+    const osc = ctx.createOscillator();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(0);
+    osc.stop(ctx.currentTime + 0.01);
+    const resume = ctx.resume ? ctx.resume() : Promise.resolve();
+    return Promise.resolve(resume).then(() => {
+      audioUnlocked = true;
+      // Close shortly after so we don't hold an active AudioContext.
+      setTimeout(() => { try { ctx.close(); } catch { /* ignore */ } }, 100);
+      return true;
+    }).catch(() => {
+      audioUnlocked = true;
+      return true;
+    });
   } catch (err) {
     console.warn('[notification-alert] audio unlock threw:', err);
   }
   return Promise.resolve(false);
-}
-
-function setupAudioUnlock() {
-  const handler = () => {
-    unlockAudio();
-    window.removeEventListener('touchstart', handler);
-    window.removeEventListener('click', handler);
-    window.removeEventListener('keydown', handler);
-  };
-  window.addEventListener('touchstart', handler, { once: true });
-  window.addEventListener('click', handler, { once: true });
-  window.addEventListener('keydown', handler, { once: true });
-}
-
-if (typeof window !== 'undefined') {
-  setupAudioUnlock();
 }
 
 export function playNotificationSound({ repeat = false } = {}) {
@@ -130,7 +120,9 @@ export async function requestNotificationPermission() {
   try {
     if (!('Notification' in window)) return 'unsupported';
     if (Notification.permission === 'default') {
-      return await Notification.requestPermission();
+      const result = await Notification.requestPermission();
+      if (result === 'granted') await unlockAudio();
+      return result;
     }
     return Notification.permission;
   } catch {
