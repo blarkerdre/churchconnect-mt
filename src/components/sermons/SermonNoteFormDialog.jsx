@@ -130,11 +130,11 @@ export default function SermonNoteFormDialog({ open, onOpenChange, note, folders
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="w-[calc(100vw-1rem)] max-w-2xl max-h-[92vh] p-4 sm:p-6 flex flex-col">
         <DialogHeader>
           <DialogTitle>{note ? "Edit Note" : "New Sermon Note"}</DialogTitle>
         </DialogHeader>
-        <div className="space-y-4 max-h-[60vh] overflow-y-auto">
+        <div className="space-y-4 flex-1 min-h-0 overflow-y-auto pr-1">
           <div>
             <Label htmlFor="sn-title">Sermon Title (optional)</Label>
             <Input id="sn-title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. The Power of Faith" maxLength={200} />
@@ -187,6 +187,7 @@ export default function SermonNoteFormDialog({ open, onOpenChange, note, folders
             )}
           </div>
           <div>
+            <Label htmlFor="sn-date">Service date</Label>
             <Input id="sn-date" type="date" value={serviceDate} onChange={(e) => setServiceDate(e.target.value)} />
           </div>
           <div>

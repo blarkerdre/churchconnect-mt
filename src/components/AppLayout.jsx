@@ -222,6 +222,21 @@ export default function Layout({ children }) {
     return () => clearTimeout(t);
   }, [user, tenantId, canPrompt, isIOSSafari, isInstalled]);
 
+  // Nudge users on stale builds to refresh (fixes "changes not showing in live").
+  useEffect(() => {
+    try {
+      const key = "lastSeenBuildId";
+      const last = localStorage.getItem(key);
+      if (last && last !== BUILD_ID) {
+        toast.message("New app version available", {
+          description: "Tap Refresh in the sidebar to load the latest updates.",
+          duration: 8000,
+        });
+      }
+      localStorage.setItem(key, BUILD_ID);
+    } catch { /* ignore */ }
+  }, []);
+
   // Payment gate: suspended tenants are blocked, but only tenant owners/admins
   // see the billing screen — regular members continue to use the app.
   if (subscriptionStatus === "suspended" && !isSuperAdmin && (isTenantAdmin || isTenantOwner)) {
