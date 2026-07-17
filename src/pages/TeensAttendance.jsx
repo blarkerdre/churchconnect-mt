@@ -320,8 +320,13 @@ function ReportDialog({ open, onOpenChange, session }) {
   });
 
   const downloadCsv = () => {
+    const lines = [];
+    if (session?.notes) {
+      lines.push(["Session note", JSON.stringify(session.notes)].join(","));
+      lines.push("");
+    }
     const header = ["Name", "Checked in", "Late", "Checked out", "Duration (min)", "Source"];
-    const lines = [header.join(",")];
+    lines.push(header.join(","));
     rows.forEach((r) => {
       const name = `${r.teens?.first_name || ""} ${r.teens?.last_name || ""}`.trim();
       lines.push([
