@@ -1,26 +1,25 @@
-# Make Bible Book Autocomplete Tap-Selectable on Screen
+# Fix Tap/Click Selection on Bible Book Autocomplete
 
-Currently the autocomplete suggestions can only be chosen with the keyboard. On mobile/touch (the primary viewport here is 384px), tapping a suggestion doesn't work reliably because:
+The listbox appears but taps don't insert the option. Three overlapping causes:
 
-1. `editor.on("blur", close)` fires the instant the user touches outside the editor, closing the menu before the click lands.
-2. Only `onMouseDown` is `preventDefault`ed — touch events (`touchstart`) still let the editor lose focus.
-3. Fixed positioning at the caret can push the menu off the right edge of a 384px screen.
+1. The container-level `onPointerDown={preventDefault}` on Chromium mobile can cancel the synthesized `click`, so `onClick` doesn't fire.
+2. Options have both `onTouchStart` (calls insert) and `onClick` (calls insert) — different paths win on different devices, and the touchstart path prevents default which can leave the click as a no-op or double-fire depending on browser.
+3. `insert()` calls `editor.chain().focus()...` — on mobile, calling focus during a touch handler opens the virtual keyboard and can cancel the touch sequence before the DOM update commits.
 
-## Changes to `src/components/sermons/BibleBookAutocomplete.jsx`
+## Change (single file)
 
-- Remove the `editor.on("blur", close)` handler. Close is already handled on Escape, selection change away from the token, and clicks outside.
-- Add an outside-click/tap listener on `document` (`pointerdown`) that closes the menu only if the target is not inside the popover and not inside the editor DOM.
-- On each option button, add `onTouchStart={(e) => { e.preventDefault(); insert(name); }}` in addition to the existing `onClick`, so a tap immediately selects without waiting for the synthesized click (which can be swallowed by the editor stealing focus).
-- Also add `onPointerDown={(e) => e.preventDefault()}` on the popover container so the underlying editor selection is preserved during the tap.
-- Clamp the popover position within the viewport: after measuring, if `x + width > innerWidth - 8`, shift left; if `y + height > innerHeight - 8`, flip above the caret. Use a ref + `useLayoutEffect` to measure and adjust.
-- Increase touch target: each option gets `py-2 min-h-[36px]` on small screens.
-- Add a subtle header row "Bible books" so users understand what the list is on mobile (optional, small `text-[10px] uppercase text-muted-foreground px-2 py-1`).
+`src/components/sermons/BibleBookAutocomplete.jsx`:
 
-No changes to `refs.js`, `SermonRichEditor.jsx`, or the extension — this is purely UX polish on the existing dropdown.
+- Replace each option's `onMouseEnter` + `onTouchStart` + `onClick` with a single `onPointerDown={(e) => { e.preventDefault(); insert(name); }}`. This fires synchronously for mouse, pen, and touch, before any focus/blur race, and preserves the editor selection because default is prevented.
+- Remove `onPointerDown={preventDefault}` and `onMouseDown={preventDefault}` from the popover container. Put `onPointerDown={(e) => e.preventDefault()}` on the "Bible books" header row only so tapping the header does nothing.
+- In `insert()`, drop `.focus()`: use `editor.commands.insertContentAt({from, to}, \`${name} \`)`. Focus is already retained via preventDefault on pointerdown, and skipping `.focus()` avoids re-triggering the mobile keyboard mid-touch.
+- Outside-tap listener: use `e.composedPath?.() ?? [e.target]` and check whether the menu ref is in the path, so taps that start on inner text nodes still resolve as "inside menu".
+- Add `select-none touch-manipulation` Tailwind classes to option buttons to disable double-tap zoom and remove the 300ms click delay.
+- Keep highlight-on-hover for desktop by adding a small `onMouseMove={() => setIndex(i)}` handler on each option (cheaper than mouseenter and doesn't interfere with pointer events).
 
 ## Verification
 
-- On a 384px viewport, type "mat" in a sermon note — the menu appears near the caret, fully within the screen.
-- Tap "Matthew" with a finger (or click in devtools touch emulation): the word is replaced with `Matthew ` and the menu closes; the editor stays focused so the user can keep typing `6:33`.
-- Type " " or move the caret elsewhere — the menu closes automatically.
-- Keyboard flow (↑/↓/Enter/Tab/Esc) continues to work unchanged.
+- 384px viewport: type "matt" → menu shows Matthew; tap "Matthew" → text becomes `Matthew ` and menu closes; continue typing `6:33` → hoverable reference forms.
+- Desktop click: same behavior.
+- Keyboard flow (↑/↓/Enter/Tab/Esc) unchanged.
+- Tapping outside closes the menu; tapping the "Bible books" header does not close it and does not insert.

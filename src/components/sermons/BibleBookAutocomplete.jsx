@@ -65,7 +65,7 @@ export default function BibleBookAutocomplete({ editor }) {
   const insert = useCallback((name) => {
     const s = stateRef.current;
     if (!editor || !s.open) return;
-    editor.chain().focus().insertContentAt({ from: s.from, to: s.to }, `${name} `).run();
+    editor.commands.insertContentAt({ from: s.from, to: s.to }, `${name} `);
     close();
   }, [editor, close]);
 
