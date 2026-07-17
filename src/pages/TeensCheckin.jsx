@@ -7,6 +7,17 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2, CheckCircle2, Clock, XCircle, LogOut, User, Mail, CheckCheck, UserCircle2, ShieldCheck, ShieldAlert } from "lucide-react";
+import welcome1 from "@/assets/teens-checkin/welcome-1.jpg";
+import welcome2 from "@/assets/teens-checkin/welcome-2.jpg";
+import welcome3 from "@/assets/teens-checkin/welcome-3.jpg";
+import welcome4 from "@/assets/teens-checkin/welcome-4.jpg";
+import farewell1 from "@/assets/teens-checkin/farewell-1.jpg";
+import farewell2 from "@/assets/teens-checkin/farewell-2.jpg";
+import farewell3 from "@/assets/teens-checkin/farewell-3.jpg";
+
+const WELCOME_IMAGES = [welcome1, welcome2, welcome3, welcome4];
+const FAREWELL_IMAGES = [farewell1, farewell2, farewell3];
+const pickRandom = (arr) => arr[Math.floor(Math.random() * arr.length)];
 
 function fmtDuration(mins) {
   if (mins == null) return "";
