@@ -5,7 +5,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
 import { useTenant } from "@/contexts/TenantContext";
 import { useNavigate } from "react-router-dom";
-import { Bell, Check, Trash2, Heart, Megaphone, CalendarDays, Info, ExternalLink, UserPlus } from "lucide-react";
+import { Bell, Check, Trash2, Heart, Megaphone, CalendarDays, Info, ExternalLink, UserPlus, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -21,10 +21,12 @@ const typeIcons = {
   announcement: Megaphone,
   event: CalendarDays,
   general: Info,
+  teen_checkin: Users,
 };
 
 const referenceTypeIcons = {
   unit_join_request: UserPlus,
+  teen_attendance: Users,
 };
 
 const typeLabels = {
@@ -36,6 +38,7 @@ const typeLabels = {
   transport: "Transport",
   meeting: "Meeting",
   unit_join_request: "Join Request",
+  teen_checkin: "Teens Attendance",
 };
 
 const referenceRoutes = {
@@ -45,6 +48,7 @@ const referenceRoutes = {
   pastoral_care: "/pastoral-care",
   transport: "/transportation",
   meeting: "/wsf",
+  teen_attendance: "/teens-attendance",
 };
 
 export default function NotificationBell() {
