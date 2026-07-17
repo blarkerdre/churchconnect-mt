@@ -4653,6 +4653,66 @@ export type Database = {
         }
         Relationships: []
       }
+      teen_self_enrolments: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string
+          expires_at: string
+          failed_attempts: number
+          id: string
+          requested_at: string
+          session_id: string | null
+          status: string
+          teen_id: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          expires_at?: string
+          failed_attempts?: number
+          id?: string
+          requested_at?: string
+          session_id?: string | null
+          status?: string
+          teen_id: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          expires_at?: string
+          failed_attempts?: number
+          id?: string
+          requested_at?: string
+          session_id?: string | null
+          status?: string
+          teen_id?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "teen_self_enrolments_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "teen_attendance_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "teen_self_enrolments_teen_id_fkey"
+            columns: ["teen_id"]
+            isOneToOne: false
+            referencedRelation: "teens"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       teens: {
         Row: {
           access_pin_hash: string | null
@@ -4669,6 +4729,8 @@ export type Database = {
           notes: string | null
           photo_url: string | null
           primary_guardian_member_id: string
+          self_pin_hash: string | null
+          self_pin_set_at: string | null
           tenant_id: string
           updated_at: string
         }
@@ -4687,6 +4749,8 @@ export type Database = {
           notes?: string | null
           photo_url?: string | null
           primary_guardian_member_id: string
+          self_pin_hash?: string | null
+          self_pin_set_at?: string | null
           tenant_id: string
           updated_at?: string
         }
@@ -4705,6 +4769,8 @@ export type Database = {
           notes?: string | null
           photo_url?: string | null
           primary_guardian_member_id?: string
+          self_pin_hash?: string | null
+          self_pin_set_at?: string | null
           tenant_id?: string
           updated_at?: string
         }
@@ -6963,6 +7029,15 @@ export type Database = {
           relationship: string
         }[]
       }
+      list_consented_teens_for_session: {
+        Args: { _qr_token: string }
+        Returns: {
+          first_name: string
+          has_self_pin: boolean
+          id: string
+          last_name: string
+        }[]
+      }
       member_eligible_for_session: {
         Args: { _member_id: string; _session_id: string }
         Returns: boolean
@@ -7092,6 +7167,24 @@ export type Database = {
       }
       teen_checkin: {
         Args: { _pin?: string; _qr_token: string; _teen_id: string }
+        Returns: Json
+      }
+      teen_self_approve: { Args: { _enrolment_id: string }; Returns: Json }
+      teen_self_check_enrolment: {
+        Args: { _enrolment_id: string }
+        Returns: Json
+      }
+      teen_self_checkin: {
+        Args: { _pin: string; _qr_token: string; _teen_id: string }
+        Returns: Json
+      }
+      teen_self_reject: { Args: { _enrolment_id: string }; Returns: Json }
+      teen_self_request_enrolment: {
+        Args: { _qr_token: string; _teen_id: string }
+        Returns: Json
+      }
+      teen_self_set_pin: {
+        Args: { _enrolment_id: string; _pin: string }
         Returns: Json
       }
       update_own_member_profile:
