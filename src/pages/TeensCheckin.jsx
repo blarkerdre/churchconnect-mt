@@ -102,6 +102,17 @@ export default function TeensCheckin() {
     return () => { active = false; };
   }, [token, user, authLoading]);
 
+  const refreshOpenIds = async () => {
+    const { data } = await supabase.rpc("get_teen_open_checkins", { _qr_token: token });
+    setOpenIds(new Set((data || []).map((r) => r.teen_id)));
+  };
+
+  useEffect(() => {
+    if (!session || session.status !== "open") return;
+    refreshOpenIds();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session?.id]);
+
   // Poll enrolment status
   useEffect(() => {
     if (!enrolmentId || enrolStatus === "approved" || enrolStatus === "used") return;
@@ -111,6 +122,8 @@ export default function TeensCheckin() {
     }, 3000);
     return () => clearInterval(pollRef.current);
   }, [enrolmentId, enrolStatus]);
+
+  const isCheckedIn = (id) => openIds.has(id);
 
   const doCheckin = async (teenId, withPin) => {
     setBusy(true);
@@ -122,7 +135,7 @@ export default function TeensCheckin() {
     });
     setBusy(false);
     if (rpcErr) { setError(rpcErr.message); return; }
-    if (data?.ok) { setResult(data); setPendingTeen(null); setPin(""); }
+    if (data?.ok) { setResult(data); setPendingTeen(null); setPin(""); refreshOpenIds(); }
     else { setError(data?.error || "unknown"); }
   };
 
@@ -136,7 +149,7 @@ export default function TeensCheckin() {
     });
     setBusy(false);
     if (rpcErr) { setError(rpcErr.message); return; }
-    if (data?.ok) { setResult(data); setPin(""); }
+    if (data?.ok) { setResult(data); setPin(""); refreshOpenIds(); }
     else { setError(data?.error || "unknown"); }
   };
 
