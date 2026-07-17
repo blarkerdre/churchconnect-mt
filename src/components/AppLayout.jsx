@@ -399,8 +399,26 @@ export default function Layout({ children }) {
             <ChevronLeft className={`h-4 w-4 transition-transform ${collapsed ? "rotate-180" : ""}`} />
             {!collapsed && "Collapse"}
           </button>
+          {!collapsed && (
+            <div className="flex items-center justify-between gap-2 pt-1 text-[10px] text-sidebar-foreground/40">
+              <span title={`Build ${BUILD_ID}`} className="truncate">Build {formatBuildStamp()}</span>
+              <button
+                type="button"
+                onClick={() => {
+                  if (window.confirm("Clear this device's cache and reload to get the latest version?")) {
+                    forceRefresh();
+                  }
+                }}
+                className="underline underline-offset-2 hover:text-sidebar-foreground/80 shrink-0"
+                title="Clear cache & reload"
+              >
+                Refresh
+              </button>
+            </div>
+          )}
         </div>
       </aside>
+
 
       {/* Main content */}
       <div className="flex-1 flex flex-col min-h-screen">
