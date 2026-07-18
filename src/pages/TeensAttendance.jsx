@@ -822,6 +822,7 @@ export default function TeensAttendance() {
   const [reportSession, setReportSession] = useState(null);
   const [deleteSession, setDeleteSession] = useState(null);
   const [cumulativeOpen, setCumulativeOpen] = useState(false);
+  const [registeredOpen, setRegisteredOpen] = useState(false);
 
   const { data: sessions = [], refetch } = useQuery({
     queryKey: ["teen-sessions", tenantId],
