@@ -867,6 +867,11 @@ export default function TeensAttendance() {
             </Button>
           )}
           {canManage && (
+            <Button variant="outline" onClick={() => setRegisteredOpen(true)}>
+              <UserRound className="h-4 w-4 mr-1" /> Registered teens
+            </Button>
+          )}
+          {canManage && (
             <Button variant="outline" onClick={() => setCumulativeOpen(true)}>
               <BarChart3 className="h-4 w-4 mr-1" /> Cumulative report
             </Button>
