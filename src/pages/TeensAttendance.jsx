@@ -644,6 +644,157 @@ function CumulativeReportDialog({ open, onOpenChange }) {
   );
 }
 
+function ageFrom(dob) {
+  if (!dob) return null;
+  const d = new Date(dob);
+  if (Number.isNaN(d.getTime())) return null;
+  const now = new Date();
+  let age = now.getFullYear() - d.getFullYear();
+  const m = now.getMonth() - d.getMonth();
+  if (m < 0 || (m === 0 && now.getDate() < d.getDate())) age--;
+  return age;
+}
+
+function RegisteredTeensDialog({ open, onOpenChange }) {
+  const { tenantId } = useTenantQuery();
+  const [search, setSearch] = useState("");
+  const [filter, setFilter] = useState("all"); // all | consent | no_consent | inactive
+
+  const { data: teens = [], isLoading } = useQuery({
+    queryKey: ["registered-teens", tenantId],
+    enabled: !!tenantId && open,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("teens")
+        .select("id, first_name, last_name, gender, date_of_birth, attendance_consent, is_active, access_pin_hash, notes, guardian:primary_guardian_member_id(first_name, last_name, phone, email)")
+        .eq("tenant_id", tenantId)
+        .order("first_name");
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return teens.filter((t) => {
+      if (filter === "consent" && !t.attendance_consent) return false;
+      if (filter === "no_consent" && t.attendance_consent) return false;
+      if (filter === "inactive" && t.is_active) return false;
+      if (filter === "all" && !t.is_active) return false;
+      if (!q) return true;
+      const teenName = `${t.first_name || ""} ${t.last_name || ""}`.toLowerCase();
+      const guardianName = `${t.guardian?.first_name || ""} ${t.guardian?.last_name || ""}`.toLowerCase();
+      return teenName.includes(q) || guardianName.includes(q);
+    });
+  }, [teens, search, filter]);
+
+  const exportCsv = () => {
+    const header = ["First name", "Last name", "Gender", "Date of birth", "Age", "Consent", "Active", "Guardian", "Guardian phone", "Guardian email"];
+    const rows = filtered.map((t) => [
+      t.first_name || "",
+      t.last_name || "",
+      t.gender || "",
+      t.date_of_birth || "",
+      ageFrom(t.date_of_birth) ?? "",
+      t.attendance_consent ? "Yes" : "No",
+      t.is_active ? "Yes" : "No",
+      `${t.guardian?.first_name || ""} ${t.guardian?.last_name || ""}`.trim(),
+      t.guardian?.phone || "",
+      t.guardian?.email || "",
+    ]);
+    const csv = [header, ...rows].map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `registered-teens-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl max-h-[90vh] w-[calc(100vw-1rem)] flex flex-col">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2"><UserRound className="h-5 w-5 text-primary" /> Registered Teens</DialogTitle>
+        </DialogHeader>
+
+        <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
+          <div className="relative flex-1">
+            <Search className="h-4 w-4 absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              className="pl-8"
+              placeholder="Search teen or guardian name…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+          <Select value={filter} onValueChange={setFilter}>
+            <SelectTrigger className="w-full sm:w-[190px]"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Active (all)</SelectItem>
+              <SelectItem value="consent">Consent given</SelectItem>
+              <SelectItem value="no_consent">Consent needed</SelectItem>
+              <SelectItem value="inactive">Inactive</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button variant="outline" size="sm" onClick={exportCsv} disabled={filtered.length === 0}>
+            <Download className="h-4 w-4 mr-1" /> CSV
+          </Button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto space-y-2 mt-1">
+          {isLoading && <p className="text-sm text-muted-foreground text-center py-4">Loading…</p>}
+          {!isLoading && filtered.length === 0 && (
+            <p className="text-sm text-muted-foreground text-center py-6">No teens match this filter.</p>
+          )}
+          {filtered.map((t) => {
+            const age = ageFrom(t.date_of_birth);
+            const g = t.guardian;
+            return (
+              <div key={t.id} className="border rounded-lg p-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="font-medium truncate">{t.first_name} {t.last_name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {[t.gender, age != null ? `${age} yrs` : null, t.date_of_birth ? format(new Date(t.date_of_birth), "d MMM yyyy") : null].filter(Boolean).join(" · ") || "—"}
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap gap-1 justify-end">
+                    {t.attendance_consent ? (
+                      <Badge variant="outline" className="text-[10px] border-emerald-300 text-emerald-700">
+                        <ShieldCheck className="h-3 w-3 mr-1" /> Consent
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="text-[10px] border-amber-300 text-amber-700">
+                        <ShieldAlert className="h-3 w-3 mr-1" /> No consent
+                      </Badge>
+                    )}
+                    {t.access_pin_hash && (
+                      <Badge variant="outline" className="text-[10px] border-slate-300">
+                        <KeyRound className="h-3 w-3 mr-1" /> PIN
+                      </Badge>
+                    )}
+                    {!t.is_active && <Badge variant="secondary" className="text-[10px]">Inactive</Badge>}
+                  </div>
+                </div>
+                <div className="mt-2 pt-2 border-t text-xs text-muted-foreground">
+                  <p><span className="font-medium text-foreground">Guardian:</span> {g ? `${g.first_name || ""} ${g.last_name || ""}`.trim() || "—" : "—"}</p>
+                  {(g?.phone || g?.email) && (
+                    <p className="truncate">{[g?.phone, g?.email].filter(Boolean).join(" · ")}</p>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        <p className="text-xs text-muted-foreground">{filtered.length} teen(s)</p>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export default function TeensAttendance() {
   const { tenantId } = useTenantQuery();
   const { user } = useAuth();
