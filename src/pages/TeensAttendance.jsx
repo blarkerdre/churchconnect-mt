@@ -965,6 +965,9 @@ export default function TeensAttendance() {
       {cumulativeOpen && (
         <CumulativeReportDialog open={cumulativeOpen} onOpenChange={setCumulativeOpen} />
       )}
+      {registeredOpen && (
+        <RegisteredTeensDialog open={registeredOpen} onOpenChange={setRegisteredOpen} />
+      )}
 
 
 
