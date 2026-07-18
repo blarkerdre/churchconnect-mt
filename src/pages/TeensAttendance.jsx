@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
-import { Plus, QrCode, Calendar, LogIn, LogOut, Users, Pencil, Trash2, FileText, Lock, ShieldAlert, BarChart3, Search } from "lucide-react";
+import { Plus, QrCode, Calendar, LogIn, LogOut, Users, Pencil, Trash2, FileText, Lock, ShieldAlert, ShieldCheck, KeyRound, BarChart3, Search, UserRound, Download } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import TeensPersistentQRDialog from "@/components/teens/TeensPersistentQRDialog";
