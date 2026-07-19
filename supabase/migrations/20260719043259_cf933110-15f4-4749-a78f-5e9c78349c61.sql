@@ -1,0 +1,1 @@
+ALTER FUNCTION public.teen_checkin(uuid, uuid, text) SET search_path TO 'public', 'extensions';
