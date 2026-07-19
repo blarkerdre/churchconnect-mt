@@ -318,12 +318,21 @@ Deno.serve(async (req) => {
         .replace(/[^A-Za-z]/g, "")
         .toUpperCase()
         .slice(0, 6);
-      const { count } = await supabase
+      // Use the max existing sequence + 1 instead of count(*), which is racy
+      // and collides after deletions or partial inserts.
+      const { data: latest } = await supabase
         .from("training_completions")
-        .select("*", { count: "exact", head: true })
-        .ilike("certificate_number", `CERT-${prefix}-${year}-%`);
-      const seq = String((count || 0) + 1).padStart(4, "0");
-      certificateNumber = `CERT-${prefix}-${year}-${seq}`;
+        .select("certificate_number")
+        .ilike("certificate_number", `CERT-${prefix}-${year}-%`)
+        .order("certificate_number", { ascending: false })
+        .limit(1);
+      let nextSeq = 1;
+      const lastNum = latest?.[0]?.certificate_number as string | undefined;
+      if (lastNum) {
+        const m = lastNum.match(/-(\d+)$/);
+        if (m) nextSeq = parseInt(m[1], 10) + 1;
+      }
+      certificateNumber = `CERT-${prefix}-${year}-${String(nextSeq).padStart(4, "0")}`;
     }
 
     if (isBibleSchool && isPreview) {
