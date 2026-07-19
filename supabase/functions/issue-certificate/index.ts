@@ -636,24 +636,39 @@ Deno.serve(async (req) => {
       completion = data;
       insertErr = error;
     } else {
-      const { data, error } = await supabase
-        .from("training_completions")
-        .insert({
-          member_id,
-          training_type,
-          completion_date: certDate,
-          certificate_number: certificateNumber,
-          certificate_url: filePath,
-          issued_by: userId,
-          notes: notes || null,
-          tenant_id,
-          ...(studentNumber ? { student_number: studentNumber } : {}),
-          ...(gradeClassification ? { grade_classification: gradeClassification } : {}),
-        })
-        .select()
-        .single();
-      completion = data;
-      insertErr = error;
+      // Retry on unique-violation of certificate_number by bumping the sequence.
+      const isCertSeqFormat = /^CERT-[A-Z]+-\d{4}-\d+$/.test(certificateNumber);
+      for (let attempt = 0; attempt < 5; attempt++) {
+        const { data, error } = await supabase
+          .from("training_completions")
+          .insert({
+            member_id,
+            training_type,
+            completion_date: certDate,
+            certificate_number: certificateNumber,
+            certificate_url: filePath,
+            issued_by: userId,
+            notes: notes || null,
+            tenant_id,
+            ...(studentNumber ? { student_number: studentNumber } : {}),
+            ...(gradeClassification ? { grade_classification: gradeClassification } : {}),
+          })
+          .select()
+          .single();
+        if (!error) {
+          completion = data;
+          insertErr = null;
+          break;
+        }
+        insertErr = error;
+        const code = (error as { code?: string })?.code;
+        if (code !== "23505" || !isCertSeqFormat) break;
+        // Bump the trailing sequence and retry
+        const m = certificateNumber.match(/^(CERT-[A-Z]+-\d{4}-)(\d+)$/);
+        if (!m) break;
+        const nextSeq = parseInt(m[2], 10) + 1;
+        certificateNumber = `${m[1]}${String(nextSeq).padStart(4, "0")}`;
+      }
     }
 
     if (insertErr) {
