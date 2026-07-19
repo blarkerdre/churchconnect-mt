@@ -379,7 +379,6 @@ function SettingsListSection({ settingsKey, title, icon: Icon, description, defa
   const [editingIdx, setEditingIdx] = useState(null);
   const [itemName, setItemName] = useState("");
   const [deleteIdx, setDeleteIdx] = useState(null);
-  const seededRef = useRef(false);
 
   const { data: queryResult, isLoading } = useQuery({
     queryKey: ["app-settings", settingsKey, tenantId],
@@ -398,8 +397,10 @@ function SettingsListSection({ settingsKey, title, icon: Icon, description, defa
     },
   });
 
-  const items = queryResult?.items ?? [];
   const rowExists = queryResult?.rowExists ?? false;
+  // Show defaults as a starting point when no row exists yet for this tenant.
+  // The first real edit will create the row via upsert.
+  const items = rowExists ? (queryResult?.items ?? []) : (defaults ?? []);
 
   const saveMutation = useMutation({
     mutationFn: async (newItems) => {
@@ -414,16 +415,6 @@ function SettingsListSection({ settingsKey, title, icon: Icon, description, defa
     onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
 
-  // Auto-seed defaults the first time a tenant admin opens a tab with no saved row
-  useEffect(() => {
-    if (seededRef.current) return;
-    if (isLoading) return;
-    if (!tenantId) return;
-    if (rowExists) return;
-    if (!defaults || defaults.length === 0) return;
-    seededRef.current = true;
-    saveMutation.mutate(defaults);
-  }, [isLoading, rowExists, tenantId, defaults]);
 
   const openCreate = () => { setEditingIdx(null); setItemName(""); setDialogOpen(true); };
   const openEdit = (idx) => { setEditingIdx(idx); setItemName(items[idx]); setDialogOpen(true); };
