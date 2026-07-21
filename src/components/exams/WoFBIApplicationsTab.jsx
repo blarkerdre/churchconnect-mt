@@ -825,30 +825,55 @@ export default function WoFBIApplicationsTab() {
                   </p>
                   {detail.phone && <p><span className="text-muted-foreground">Phone:</span> {detail.phone}</p>}
                 </div>
-              ) : (
-                <div className="border rounded-md divide-y">
-                  {(form?.fields || []).map((f) => {
-                    if (f.type === "section_heading") {
-                      return (
-                        <div key={f.id} className="p-2 bg-muted/50 text-xs font-semibold uppercase tracking-wide text-primary">
-                          {f.label}
-                        </div>
-                      );
-                    }
-                    const v = detail.answers?.[f.id];
-                    const display = v === true ? "Yes" : v === false ? "No" : (v ?? "—");
-                    return (
-                      <div key={f.id} className="p-2 grid grid-cols-3 gap-2 text-sm">
-                        <div className="text-muted-foreground col-span-1">{f.label}</div>
-                        <div className="col-span-2 whitespace-pre-wrap break-words">{display || "—"}</div>
+              ) : (() => {
+                const configuredFields = form?.fields || [];
+                const configuredIds = new Set(
+                  configuredFields.filter((f) => f.type !== "section_heading").map((f) => f.id)
+                );
+                const storedAnswers = detail.answers && typeof detail.answers === "object" ? detail.answers : {};
+                const humanise = (key) =>
+                  String(key)
+                    .replace(/[_-]+/g, " ")
+                    .replace(/\s+/g, " ")
+                    .trim()
+                    .replace(/\b\w/g, (c) => c.toUpperCase());
+                const extraKeys = Object.keys(storedAnswers).filter(
+                  (k) => !configuredIds.has(k) && storedAnswers[k] !== undefined && storedAnswers[k] !== null && storedAnswers[k] !== ""
+                );
+                const hasAnyContent = configuredFields.length > 0 || extraKeys.length > 0;
+                const renderRow = (id, label, v) => {
+                  const display = v === true ? "Yes" : v === false ? "No" : (v ?? "—");
+                  return (
+                    <div key={id} className="p-2 grid grid-cols-3 gap-2 text-sm">
+                      <div className="text-muted-foreground col-span-1">{label}</div>
+                      <div className="col-span-2 whitespace-pre-wrap break-words">{display || "—"}</div>
+                    </div>
+                  );
+                };
+                return (
+                  <div className="border rounded-md divide-y">
+                    {configuredFields.map((f) => {
+                      if (f.type === "section_heading") {
+                        return (
+                          <div key={f.id} className="p-2 bg-muted/50 text-xs font-semibold uppercase tracking-wide text-primary">
+                            {f.label}
+                          </div>
+                        );
+                      }
+                      return renderRow(f.id, f.label, storedAnswers[f.id]);
+                    })}
+                    {extraKeys.length > 0 && (
+                      <div className="p-2 bg-muted/50 text-xs font-semibold uppercase tracking-wide text-primary">
+                        Previously captured answers
                       </div>
-                    );
-                  })}
-                  {answerFields.length === 0 && (
-                    <div className="p-2 text-sm text-muted-foreground">No detailed answers captured.</div>
-                  )}
-                </div>
-              )}
+                    )}
+                    {extraKeys.map((k) => renderRow(`extra_${k}`, humanise(k), storedAnswers[k]))}
+                    {!hasAnyContent && (
+                      <div className="p-2 text-sm text-muted-foreground">No detailed answers captured.</div>
+                    )}
+                  </div>
+                );
+              })()}
             </div>
           )}
           <DialogFooter className="gap-2 flex-wrap">
