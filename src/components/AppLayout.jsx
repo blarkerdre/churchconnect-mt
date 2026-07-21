@@ -153,7 +153,7 @@ export default function Layout({ children }) {
     if (item.access === "training") return isAdmin || isSuperAdmin || isTrainingAccess || isReportsOfficer;
     if (item.access === "training_report") return isAdmin || isSuperAdmin || isUnitLeader || isTrainingRepMember || isReportsOfficer;
     if (item.access === "children_church") return isAdmin || isChildrenChurchMember || (isUnitLeader && (leaderUnits || []).some(u => /children/i.test(u))) || isReportsOfficer;
-    if (item.access === "teens") return isAdmin || (isUnitLeader && (leaderUnits || []).some(u => /teen|youth/i.test(u))) || isReportsOfficer;
+    if (item.access === "teens") return isAdmin || isTeensChurchMember || (isUnitLeader && (leaderUnits || []).some(u => /teen|youth/i.test(u))) || isReportsOfficer;
     if (item.access === "inventory") return isAdmin || isSuperAdmin || isChurchOfficeMember;
     return false;
   });
