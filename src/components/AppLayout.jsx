@@ -136,6 +136,7 @@ export default function Layout({ children }) {
   const { isMemberOfUnit: isFollowupMember } = useUnitMembership("Follow-up");
   const { isMemberOfUnit: isTrainingRepMember } = useUnitMembership("Training Rep");
   const { isMemberOfUnit: isChildrenChurchMember } = useUnitMembership("Children Church");
+  const { isMemberOfUnit: isTeensChurchMember } = useUnitMembership("Teens Church");
   const { isMemberOfUnit: isChurchOfficeMember } = useUnitMembership("Church Office");
 
   // Filter nav items based on role and disabled features
