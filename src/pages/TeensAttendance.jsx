@@ -763,7 +763,8 @@ function RegisteredTeensDialog({ open, onOpenChange }) {
                   <div className="flex flex-wrap gap-1 justify-end">
                     {t.attendance_consent ? (
                       <Badge variant="outline" className="text-[10px] border-emerald-300 text-emerald-700">
-                        <ShieldCheck className="h-3 w-3 mr-1" /> Consent
+                        <ShieldCheck className="h-3 w-3 mr-1" />
+                        Consent{t.attendance_consent_at ? ` · ${format(new Date(t.attendance_consent_at), "d MMM yyyy")}` : ""}
                       </Badge>
                     ) : (
                       <Badge variant="outline" className="text-[10px] border-amber-300 text-amber-700">
