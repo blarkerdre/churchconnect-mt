@@ -1,24 +1,33 @@
-## Fix: historic Bible School application answers show as empty
+## Goal
 
-### Root cause
-The Applications detail dialog (`src/components/exams/WoFBIApplicationsTab.jsx`, ~line 830) renders answers by iterating the **current** `wofbi_application_forms.fields` and looking up `detail.answers[f.id]`. When the form is toggled off, reset, or its fields are edited, that list no longer matches the field IDs stored in historic rows, so every value renders as `—` even though the data is intact in `wofbi_applications.answers`.
+1. Make parental consent **mandatory** in My Family for both children and teens (children already enforced; teens currently optional).
+2. Let Children's Church unit leaders see each **type** of consent per child, and Teens Church unit leaders see consent for each teen.
 
-### Change
-Make the detail dialog render answers from the stored row itself, falling back to the current form config for labels:
+## Changes
 
-1. Build the field list as a **union** of:
-   - The current `form.fields` (preferred — gives labels, ordering, and section headings), plus
-   - Any keys present in `detail.answers` that aren't in the current config, appended at the end with a humanised label derived from the key (e.g. `home_address` → "Home Address"). These render as plain rows (no section heading logic).
-2. Only skip a row if the value is `undefined`/`null`/empty string **and** the field isn't in the current config — so admins still see previously-captured data even after they toggle the form off or remove/rename fields.
-3. Keep the existing "direct source has no answers" branch unchanged.
-4. Leave the public registration submission behaviour untouched (short form still submits `answers: {}` when toggled off — that matches the current product intent).
+### 1. My Family — make teen consent mandatory
+`src/components/teens/TeensSection.jsx`
+- In the `save` mutation, throw `"Parental consent is required to save this teenager"` when `form.attendance_consent` is false (mirror the child rule in `MyFamily.jsx`).
+- Set the consent checkbox default to `true` for new teens (parents must actively untick to opt out, matching UX intent) and highlight the block in destructive tone when unchecked.
+- Disable the Save button while consent is false and show inline helper text.
 
-### Technical notes
-- Purely a frontend/presentation change in `WoFBIApplicationsTab.jsx`. No schema, RLS, or edge function changes.
-- The `answerFields` memo (line 298) used for column filters can stay as-is since it correctly represents "fields currently configured"; it doesn't drive the detail dialog.
-- Humanised label helper: split on `_`, title-case each word, keep it local to the file.
+`src/pages/MyFamily.jsx` — already enforces `parental_consent_given` for children; no change needed beyond a small copy tweak to state it is required.
 
-### Verification
-- Open an application row that was submitted before the form was toggled off/edited: the detail dialog now shows the stored answers with sensible labels.
-- Open a row submitted while toggled off (short form): dialog shows the "no detailed answers captured" state as today (answers object is `{}`).
-- Direct-source rows still show the existing "created directly as a course registration" message.
+### 2. Children's Church leader view — show consent types
+`src/pages/ChildrenChurch.jsx`
+- Extend the leader-visible `children` selects (three spots around lines 467/507/521) to also fetch `consent_photos, consent_pastoral_contact, consent_medical_emergency, consent_notes, parental_consent_at`.
+- In the family detail panel (around the child card at line 720), render a small "Consents" row of badges: Data (required), Photos, Pastoral contact, Medical emergency — green when granted, muted when not. Show the `consent_notes` under the badges when present, and the consent date if available.
+
+### 3. Teens Church leader view — show consent types
+`src/pages/TeensAttendance.jsx`
+- In the check-in panel teen list (around line 265) and the report table, add a consent badge next to each teen: green "Consent given · {date}" or amber "Consent needed" (data already loaded via `teens` query — extend the select to include `attendance_consent, attendance_consent_at`).
+- Add a lightweight "Registered Teens" dialog trigger for Teens Church leaders that lists all teens with columns: name, guardian, gender, DOB, consent status + date. Filter by consent (all / given / needed). No new tables — reuses existing `teens` rows via tenant-scoped select.
+
+### Access / RLS
+
+No schema changes. Existing RLS on `teens` and `children` already allows unit leaders to read their unit's records; only the selected columns change.
+
+## Technical notes
+
+- Consent enforcement is client-side (form validation) since the DB columns are nullable by design (parents can revoke). RLS already blocks teen check-in when `attendance_consent` is false via the `teen_checkin` RPC.
+- No migration required.

@@ -666,7 +666,7 @@ function RegisteredTeensDialog({ open, onOpenChange }) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("teens")
-        .select("id, first_name, last_name, gender, date_of_birth, attendance_consent, is_active, access_pin_hash, notes, guardian:primary_guardian_member_id(first_name, last_name, phone, email)")
+        .select("id, first_name, last_name, gender, date_of_birth, attendance_consent, attendance_consent_at, is_active, access_pin_hash, notes, guardian:primary_guardian_member_id(first_name, last_name, phone, email)")
         .eq("tenant_id", tenantId)
         .order("first_name");
       if (error) throw error;
@@ -689,7 +689,7 @@ function RegisteredTeensDialog({ open, onOpenChange }) {
   }, [teens, search, filter]);
 
   const exportCsv = () => {
-    const header = ["First name", "Last name", "Gender", "Date of birth", "Age", "Consent", "Active", "Guardian", "Guardian phone", "Guardian email"];
+    const header = ["First name", "Last name", "Gender", "Date of birth", "Age", "Consent", "Consent date", "Active", "Guardian", "Guardian phone", "Guardian email"];
     const rows = filtered.map((t) => [
       t.first_name || "",
       t.last_name || "",
@@ -697,6 +697,7 @@ function RegisteredTeensDialog({ open, onOpenChange }) {
       t.date_of_birth || "",
       ageFrom(t.date_of_birth) ?? "",
       t.attendance_consent ? "Yes" : "No",
+      t.attendance_consent_at ? format(new Date(t.attendance_consent_at), "yyyy-MM-dd") : "",
       t.is_active ? "Yes" : "No",
       `${t.guardian?.first_name || ""} ${t.guardian?.last_name || ""}`.trim(),
       t.guardian?.phone || "",
@@ -763,7 +764,8 @@ function RegisteredTeensDialog({ open, onOpenChange }) {
                   <div className="flex flex-wrap gap-1 justify-end">
                     {t.attendance_consent ? (
                       <Badge variant="outline" className="text-[10px] border-emerald-300 text-emerald-700">
-                        <ShieldCheck className="h-3 w-3 mr-1" /> Consent
+                        <ShieldCheck className="h-3 w-3 mr-1" />
+                        Consent{t.attendance_consent_at ? ` · ${format(new Date(t.attendance_consent_at), "d MMM yyyy")}` : ""}
                       </Badge>
                     ) : (
                       <Badge variant="outline" className="text-[10px] border-amber-300 text-amber-700">
