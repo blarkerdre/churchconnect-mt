@@ -689,7 +689,7 @@ function RegisteredTeensDialog({ open, onOpenChange }) {
   }, [teens, search, filter]);
 
   const exportCsv = () => {
-    const header = ["First name", "Last name", "Gender", "Date of birth", "Age", "Consent", "Active", "Guardian", "Guardian phone", "Guardian email"];
+    const header = ["First name", "Last name", "Gender", "Date of birth", "Age", "Consent", "Consent date", "Active", "Guardian", "Guardian phone", "Guardian email"];
     const rows = filtered.map((t) => [
       t.first_name || "",
       t.last_name || "",
@@ -697,6 +697,7 @@ function RegisteredTeensDialog({ open, onOpenChange }) {
       t.date_of_birth || "",
       ageFrom(t.date_of_birth) ?? "",
       t.attendance_consent ? "Yes" : "No",
+      t.attendance_consent_at ? format(new Date(t.attendance_consent_at), "yyyy-MM-dd") : "",
       t.is_active ? "Yes" : "No",
       `${t.guardian?.first_name || ""} ${t.guardian?.last_name || ""}`.trim(),
       t.guardian?.phone || "",
