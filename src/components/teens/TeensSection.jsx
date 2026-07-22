@@ -126,7 +126,7 @@ function TeenForm({ open, onOpenChange, teen, memberId, onSaved }) {
           </div>
           <div><Label>Notes</Label><Input value={form.notes || ""} onChange={(e) => setForm({ ...form, notes: e.target.value })} /></div>
 
-          <div className="rounded-md border border-primary/20 bg-primary/5 p-3 space-y-1.5">
+          <div className={`rounded-md border p-3 space-y-1.5 ${form.attendance_consent ? "border-primary/20 bg-primary/5" : "border-destructive/40 bg-destructive/5"}`}>
             <label className="flex items-start gap-2 text-sm cursor-pointer">
               <input
                 type="checkbox"
@@ -135,24 +135,24 @@ function TeenForm({ open, onOpenChange, teen, memberId, onSaved }) {
                 onChange={(e) => setForm({ ...form, attendance_consent: e.target.checked })}
               />
               <span>
-                <span className="font-medium">I give parental consent</span> for my teen to check in and out of on-premises Teens attendance sessions.
+                <span className="font-medium">I give parental consent</span> for my teen to check in and out of on-premises Teens attendance sessions. <span className="text-destructive">*</span>
               </span>
             </label>
             {teen?.attendance_consent && teen?.attendance_consent_at && (
               <p className="text-[11px] text-muted-foreground pl-6">
-                Consent given on {format(new Date(teen.attendance_consent_at), "d MMM yyyy")}. Untick to revoke.
+                Consent given on {format(new Date(teen.attendance_consent_at), "d MMM yyyy")}. Untick to revoke (you won't be able to save until you re-consent).
               </p>
             )}
             {!form.attendance_consent && (
-              <p className="text-[11px] text-amber-700 pl-6">
-                Without consent, your teen cannot be signed in at any session.
+              <p className="text-[11px] text-destructive pl-6 font-medium">
+                Parental consent is required to save this teenager.
               </p>
             )}
           </div>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={() => save.mutate()} disabled={save.isPending}>Save</Button>
+          <Button onClick={() => save.mutate()} disabled={save.isPending || !form.attendance_consent}>Save</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
