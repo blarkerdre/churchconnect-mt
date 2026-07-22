@@ -48,7 +48,7 @@ function TeenForm({ open, onOpenChange, teen, memberId, onSaved }) {
   const save = useMutation({
     mutationFn: async () => {
       if (!form.first_name || !form.last_name) throw new Error("Name required");
-      const payload = {
+      if (!form.attendance_consent) throw new Error("Parental consent is required to save this teenager");
         first_name: form.first_name.trim(),
         last_name: form.last_name.trim(),
         date_of_birth: form.date_of_birth || null,
