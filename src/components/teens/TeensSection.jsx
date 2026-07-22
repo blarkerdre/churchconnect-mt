@@ -29,7 +29,8 @@ function TeenForm({ open, onOpenChange, teen, memberId, onSaved }) {
     notes: teen?.notes || "",
     pin: "",
     clear_pin: false,
-    attendance_consent: !!teen?.attendance_consent,
+    // Default to true for new records so parents actively opt out; keep existing value on edit.
+    attendance_consent: teen?.id ? !!teen?.attendance_consent : true,
   }));
   React.useEffect(() => {
     setForm({
@@ -40,7 +41,7 @@ function TeenForm({ open, onOpenChange, teen, memberId, onSaved }) {
       notes: teen?.notes || "",
       pin: "",
       clear_pin: false,
-      attendance_consent: !!teen?.attendance_consent,
+      attendance_consent: teen?.id ? !!teen?.attendance_consent : true,
     });
   }, [teen, open]);
 
