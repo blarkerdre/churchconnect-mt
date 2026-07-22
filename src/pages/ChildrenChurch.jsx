@@ -80,6 +80,31 @@ function ChildProfileDialog({ open, onOpenChange, childId, tenantId }) {
               </div>
             )}
             <div>
+              <p className="text-xs font-semibold text-muted-foreground mb-1">Parental consent</p>
+              <div className="border rounded p-2 space-y-1.5">
+                <div className="flex flex-wrap gap-1">
+                  <Badge variant="outline" className={`text-[10px] ${child.parental_consent_given ? "border-emerald-300 text-emerald-700" : "border-destructive/40 text-destructive"}`}>
+                    {child.parental_consent_given ? "✓ Data processing" : "✗ Data processing"}
+                  </Badge>
+                  <Badge variant="outline" className={`text-[10px] ${child.consent_photos ? "border-emerald-300 text-emerald-700" : "text-muted-foreground"}`}>
+                    {child.consent_photos ? "✓ Photos & media" : "✗ Photos & media"}
+                  </Badge>
+                  <Badge variant="outline" className={`text-[10px] ${child.consent_pastoral_contact ? "border-emerald-300 text-emerald-700" : "text-muted-foreground"}`}>
+                    {child.consent_pastoral_contact ? "✓ Pastoral contact" : "✗ Pastoral contact"}
+                  </Badge>
+                  <Badge variant="outline" className={`text-[10px] ${child.consent_medical_emergency ? "border-emerald-300 text-emerald-700" : "text-muted-foreground"}`}>
+                    {child.consent_medical_emergency ? "✓ Medical emergency" : "✗ Medical emergency"}
+                  </Badge>
+                </div>
+                {child.parental_consent_at && (
+                  <p className="text-[11px] text-muted-foreground">Given on {format(new Date(child.parental_consent_at), "d MMM yyyy")}</p>
+                )}
+                {child.consent_notes && (
+                  <p className="text-xs italic border-l-2 border-muted-foreground/30 pl-2">"{child.consent_notes}"</p>
+                )}
+              </div>
+            </div>
+            <div>
               <p className="text-xs font-semibold text-muted-foreground mb-1">Primary guardian</p>
               {child.primary_guardian ? (
                 <div className="border rounded p-2">
