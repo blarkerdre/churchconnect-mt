@@ -4,11 +4,20 @@ import { jsPDF } from "jspdf";
  * Replace {{tokens}} inside an HTML/text template body with values.
  * Unknown tokens are left in place so authors notice.
  */
+function escapeHtml(v) {
+  return String(v)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 export function mergeSlaTokens(bodyHtml, tokens) {
   if (!bodyHtml) return "";
   return bodyHtml.replace(/\{\{\s*([\w.-]+)\s*\}\}/g, (m, key) => {
     const v = tokens?.[key];
-    return v === undefined || v === null || v === "" ? m : String(v);
+    return v === undefined || v === null || v === "" ? m : escapeHtml(v);
   });
 }
 
