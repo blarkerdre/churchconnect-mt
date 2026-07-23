@@ -183,7 +183,7 @@ export default function LeaderDashboard({ records, onEdit }) {
         <h3 className="text-sm font-semibold text-slate-700 mb-4 flex items-center gap-2">
           <TrendingUp className="h-4 w-4 text-[#1e3a5f]" /> Priority Breakdown
         </h3>
-        <div className="grid grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {["Urgent", "High", "Medium", "Low"].map((p) => {
             const count = records.filter((r) => r.priority === p && r.status !== "Resolved" && r.status !== "Closed").length;
             const colors = {
