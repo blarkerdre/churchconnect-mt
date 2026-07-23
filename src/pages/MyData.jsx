@@ -112,7 +112,7 @@ export default function MyData() {
       </div>
 
       <Tabs defaultValue="export">
-        <TabsList className="grid grid-cols-4 w-full">
+        <TabsList className="grid grid-cols-2 sm:grid-cols-4 w-full h-auto">
           <TabsTrigger value="export">Download</TabsTrigger>
           <TabsTrigger value="rectify">Rectify</TabsTrigger>
           <TabsTrigger value="erase">Erase</TabsTrigger>
