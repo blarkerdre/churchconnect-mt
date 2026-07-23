@@ -125,7 +125,7 @@ export default function TransportBookingDialog({ open, onOpenChange, booking, on
           </div>
           <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-            <Button type="submit" disabled={saving} className="bg-[#1e3a5f] hover:bg-[#152d4a]">
+            <Button type="submit" disabled={saving} className="bg-primary text-primary-foreground hover:bg-primary/90">
               {saving ? "Saving..." : booking ? "Update Booking" : "Create Booking"}
             </Button>
           </div>

@@ -140,7 +140,7 @@ export default function BulkAssignDialog({ open, onOpenChange, records, onAssign
               <span className="text-xs text-slate-500">Select all ({filtered.length})</span>
             </label>
             {selectedIds.size > 0 && (
-              <Badge className="bg-[#1e3a5f] text-white text-xs">{selectedIds.size} selected</Badge>
+              <Badge className="bg-primary text-primary-foreground text-xs">{selectedIds.size} selected</Badge>
             )}
           </div>
 
@@ -190,7 +190,7 @@ export default function BulkAssignDialog({ open, onOpenChange, records, onAssign
           <Button
             onClick={handleAssign}
             disabled={saving || selectedIds.size === 0 || !leaderName.trim()}
-            className="bg-[#1e3a5f] hover:bg-[#152d4a]"
+            className="bg-primary text-primary-foreground hover:bg-primary/90"
           >
             {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
             Assign {selectedIds.size > 0 ? `${selectedIds.size} Request${selectedIds.size > 1 ? "s" : ""}` : ""}

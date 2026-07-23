@@ -1,33 +1,58 @@
+# Responsive Audit + Fix Pass
+
 ## Goal
+Visit the app's key pages at 375, 414, 768, and 1280 CSS px, screenshot each, identify common responsive problems, and fix them in a single pass.
 
-1. Make parental consent **mandatory** in My Family for both children and teens (children already enforced; teens currently optional).
-2. Let Children's Church unit leaders see each **type** of consent per child, and Teens Church unit leaders see consent for each teen.
+## Approach
 
-## Changes
+### 1. Automated screenshot sweep (Playwright)
+Sign in as an admin via the injected session and capture every major route at all four viewports. Screenshots saved under `/tmp/browser/audit/<viewport>/<route>.png`, then reviewed with `code--view`.
 
-### 1. My Family — make teen consent mandatory
-`src/components/teens/TeensSection.jsx`
-- In the `save` mutation, throw `"Parental consent is required to save this teenager"` when `form.attendance_consent` is false (mirror the child rule in `MyFamily.jsx`).
-- Set the consent checkbox default to `true` for new teens (parents must actively untick to opt out, matching UX intent) and highlight the block in destructive tone when unchecked.
-- Disable the Save button while consent is false and show inline helper text.
+Routes covered (representative, not exhaustive):
+- Dashboard, Members, Member form, Bulk Import
+- Events + Event form + Registrations dialog
+- Pastoral Care + form + request dialog
+- Transportation + booking dialog + report
+- Communications (Announcement, Direct Send, History, Bulk)
+- Follow-ups + form + report + signpost
+- Bible School: Applications, Registrations, Attendance, QC dialog, Rate Lecturer, Take Exam
+- Teens: Attendance, Checkin landing, Registered Teens dialog, Cumulative Report
+- Children's Church
+- Church Attendance, Unit Tasks, Inventory, Sermon Notes, Testimony
+- Settings (all sections), User Management, Tenant Admin
+- Reports Hub, Analytics, Training Reports, Audit Log, System Logs
+- Auth, Public Registration, Public WoFBI Registration, Onboard, Landing
 
-`src/pages/MyFamily.jsx` — already enforces `parental_consent_given` for children; no change needed beyond a small copy tweak to state it is required.
+Open the top ~15 dialogs (member, event, WOFBI form, transport booking, WSF centre, QC check, rate lecturer, session, inspection, signpost, follow-up, invoice editor, bulk assign, MFA, sermon note) at 375px + 1280px specifically since those are the densest UI.
 
-### 2. Children's Church leader view — show consent types
-`src/pages/ChildrenChurch.jsx`
-- Extend the leader-visible `children` selects (three spots around lines 467/507/521) to also fetch `consent_photos, consent_pastoral_contact, consent_medical_emergency, consent_notes, parental_consent_at`.
-- In the family detail panel (around the child card at line 720), render a small "Consents" row of badges: Data (required), Photos, Pastoral contact, Medical emergency — green when granted, muted when not. Show the `consent_notes` under the badges when present, and the consent date if available.
+### 2. Common issues to fix as they appear
+- Horizontal overflow on mobile (fixed widths, `whitespace-nowrap` where wrapping is fine, long emails/URLs without `break-all`)
+- Dialogs missing `max-h-[90vh] overflow-y-auto` or with footer buttons hidden below fold
+- Grids that don't collapse (`grid-cols-3` without `sm:`/`md:` prefix at narrow widths)
+- Tables that need `overflow-x-auto` wrappers or a mobile card fallback
+- Buttons squishing / icon-only regressions on small screens (add `shrink-0`, wrap in flex-col at `sm:flex-row`)
+- Fixed `min-w-*` inputs blowing out cards on 360px
+- Bottom-nav overlap: pages missing `pb-20 lg:pb-0` above `MobileBottomNav`
+- Text truncation: long member/tenant names without `truncate` + tooltip
+- Tab strips overflowing — add `overflow-x-auto` scroll
+- Sticky headers overlapping content on small viewports
+- Hardcoded color classes (`text-white`, `bg-[#1e3a5f]`) replaced with semantic tokens when spotted (e.g. TransportBookingDialog, WSFCentreFormDialog buttons)
 
-### 3. Teens Church leader view — show consent types
-`src/pages/TeensAttendance.jsx`
-- In the check-in panel teen list (around line 265) and the report table, add a consent badge next to each teen: green "Consent given · {date}" or amber "Consent needed" (data already loaded via `teens` query — extend the select to include `attendance_consent, attendance_consent_at`).
-- Add a lightweight "Registered Teens" dialog trigger for Teens Church leaders that lists all teens with columns: name, guardian, gender, DOB, consent status + date. Filter by consent (all / given / needed). No new tables — reuses existing `teens` rows via tenant-scoped select.
+### 3. Out of scope for this pass
+- Redesigns, new features, or business-logic changes
+- Deep accessibility audit (contrast/ARIA) beyond obvious hit-target sizing
+- Print-layout tweaks
+- Rewriting tables into mobile-first cards where the existing pattern works
+- Dark-mode-only issues (unless spotted incidentally)
 
-### Access / RLS
-
-No schema changes. Existing RLS on `teens` and `children` already allows unit leaders to read their unit's records; only the selected columns change.
+### 4. Deliverable
+- Chat summary grouped by page/component listing what was broken and what changed
+- Before/after screenshot references for the most severe fixes
+- List of any issues intentionally deferred (with reason) so you can queue follow-ups
 
 ## Technical notes
-
-- Consent enforcement is client-side (form validation) since the DB columns are nullable by design (parents can revoke). RLS already blocks teen check-in when `attendance_consent` is false via the `teen_checkin` RPC.
-- No migration required.
+- Uses the pre-injected Supabase session (`LOVABLE_BROWSER_AUTH_STATUS=injected`) to reach authenticated routes
+- Viewport heights kept at 1800px so no `full_page` screenshots are needed
+- Each route capture is idempotent; the script can be re-run after fixes to verify
+- Fixes prefer Tailwind responsive prefixes over new CSS; touches only presentation files (`src/components/**`, `src/pages/**`, occasional `index.css`)
+- No DB migrations, no edge-function changes, no dependency installs
