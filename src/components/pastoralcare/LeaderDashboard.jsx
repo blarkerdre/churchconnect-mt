@@ -51,7 +51,7 @@ function LeaderWorkloadBar({ leaders, records }) {
               </div>
               <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
                 <div
-                  className="h-2 bg-[#1e3a5f] rounded-full transition-all"
+                  className="h-2 bg-primary rounded-full transition-all"
                   style={{ width: `${(l.count / max) * 100}%` }}
                 />
               </div>
