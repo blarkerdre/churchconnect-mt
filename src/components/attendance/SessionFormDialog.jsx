@@ -193,7 +193,7 @@ export default function SessionFormDialog({ open, onOpenChange, onSave, isAdmin 
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={handleSave} disabled={saving || !canSave} className="bg-[#1e3a5f] hover:bg-[#152d4a]">
+          <Button onClick={handleSave} disabled={saving || !canSave} className="bg-primary text-primary-foreground hover:bg-primary/90">
             {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />} Create Meeting
           </Button>
         </DialogFooter>
