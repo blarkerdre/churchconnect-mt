@@ -244,7 +244,7 @@ export default function MessageFilteredMembersDialog({
         </p>
 
         <Tabs value={channel} onValueChange={setChannel} className="mt-2">
-          <TabsList className="grid grid-cols-4 w-full">
+          <TabsList className="grid grid-cols-2 sm:grid-cols-4 w-full h-auto">
             <TabsTrigger value="email" className="text-xs"><Mail className="h-3.5 w-3.5 mr-1" />Email</TabsTrigger>
             <TabsTrigger value="sms" className="text-xs"><MessageSquare className="h-3.5 w-3.5 mr-1" />SMS</TabsTrigger>
             <TabsTrigger value="whatsapp" className="text-xs"><MessageCircle className="h-3.5 w-3.5 mr-1" />WhatsApp</TabsTrigger>

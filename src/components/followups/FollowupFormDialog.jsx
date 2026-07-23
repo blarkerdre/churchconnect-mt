@@ -174,7 +174,7 @@ export default function FollowupFormDialog({ open, onOpenChange, followup, onSav
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={handleSave} disabled={saving || !form.person_name || !form.assigned_to} className="bg-[#1e3a5f] hover:bg-[#152d4a]">
+          <Button onClick={handleSave} disabled={saving || !form.person_name || !form.assigned_to} className="bg-primary text-primary-foreground hover:bg-primary/90">
             {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
             {followup ? "Update" : "Create"}
           </Button>
