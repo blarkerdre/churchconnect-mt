@@ -194,12 +194,12 @@ function PlanEditorDialog({ plan, onClose, onSave, saving }) {
           <Separator />
           <div>
             <h4 className="font-semibold mb-2">Pricing</h4>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
               <div><Label>Monthly price</Label><Input type="number" step="0.01" value={form.base_price_monthly} onChange={(e) => num("base_price_monthly", e.target.value)} /></div>
               <div><Label>Annual price</Label><Input type="number" step="0.01" value={form.base_price_annual} onChange={(e) => num("base_price_annual", e.target.value)} /></div>
               <div><Label>Setup fee</Label><Input type="number" step="0.01" value={form.setup_fee} onChange={(e) => num("setup_fee", e.target.value)} /></div>
             </div>
-            <div className="grid grid-cols-3 gap-3 mt-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 mt-3">
               <div><Label>Stripe product ID</Label><Input value={form.stripe_product_id || ""} onChange={(e) => set("stripe_product_id", e.target.value)} /></div>
               <div><Label>Monthly price ID</Label><Input value={form.stripe_price_id_monthly || ""} onChange={(e) => set("stripe_price_id_monthly", e.target.value)} /></div>
               <div><Label>Annual price ID</Label><Input value={form.stripe_price_id_annual || ""} onChange={(e) => set("stripe_price_id_annual", e.target.value)} /></div>
@@ -209,7 +209,7 @@ function PlanEditorDialog({ plan, onClose, onSave, saving }) {
           <Separator />
           <div>
             <h4 className="font-semibold mb-2">Included quotas</h4>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
               <div><Label>Members</Label><Input type="number" value={form.included_members} onChange={(e) => num("included_members", e.target.value)} /></div>
               <div><Label>Storage (MB)</Label><Input type="number" value={form.included_storage_mb} onChange={(e) => num("included_storage_mb", e.target.value)} /></div>
               <div><Label>SMS</Label><Input type="number" value={form.included_sms} onChange={(e) => num("included_sms", e.target.value)} /></div>
@@ -222,7 +222,7 @@ function PlanEditorDialog({ plan, onClose, onSave, saving }) {
           <Separator />
           <div>
             <h4 className="font-semibold mb-2">Overage unit prices ({form.currency})</h4>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
               <div><Label>Per extra member</Label><Input type="number" step="0.0001" value={form.overage_price_member} onChange={(e) => num("overage_price_member", e.target.value)} /></div>
               <div><Label>Per extra GB</Label><Input type="number" step="0.0001" value={form.overage_price_storage_gb} onChange={(e) => num("overage_price_storage_gb", e.target.value)} /></div>
               <div><Label>Per extra SMS</Label><Input type="number" step="0.0001" value={form.overage_price_sms} onChange={(e) => num("overage_price_sms", e.target.value)} /></div>
@@ -230,7 +230,7 @@ function PlanEditorDialog({ plan, onClose, onSave, saving }) {
               <div><Label>Per extra Email</Label><Input type="number" step="0.0001" value={form.overage_price_email} onChange={(e) => num("overage_price_email", e.target.value)} /></div>
               <div><Label>Per extra AI call</Label><Input type="number" step="0.0001" value={form.overage_price_ai_call} onChange={(e) => num("overage_price_ai_call", e.target.value)} /></div>
             </div>
-            <div className="grid grid-cols-3 gap-3 mt-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 mt-3">
               <div className="flex items-center gap-2"><Switch checked={form.allow_overage_member} onCheckedChange={(v) => set("allow_overage_member", v)} /><Label>Allow extra members</Label></div>
               <div className="flex items-center gap-2"><Switch checked={form.allow_overage_storage} onCheckedChange={(v) => set("allow_overage_storage", v)} /><Label>Allow extra storage</Label></div>
               <div className="flex items-center gap-2"><Switch checked={form.allow_overage_sms} onCheckedChange={(v) => set("allow_overage_sms", v)} /><Label>Allow SMS overage</Label></div>
