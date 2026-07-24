@@ -438,10 +438,10 @@ export default function DirectSendPanel({ churchName, senderName }) {
   const { tenantId } = useTenantQuery();
   return (
     <Tabs defaultValue="individual" className="space-y-4">
-      <TabsList className="grid grid-cols-3">
-        <TabsTrigger value="individual" className="gap-1.5 text-xs"><User className="h-3.5 w-3.5" /> Individual</TabsTrigger>
-        <TabsTrigger value="bulk" className="gap-1.5 text-xs"><Users className="h-3.5 w-3.5" /> Bulk Non-Members</TabsTrigger>
-        <TabsTrigger value="manage" className="gap-1.5 text-xs"><UserPlus className="h-3.5 w-3.5" /> Manage Contacts</TabsTrigger>
+      <TabsList className="grid grid-cols-3 h-auto">
+        <TabsTrigger value="individual" className="gap-1 sm:gap-1.5 text-[11px] sm:text-xs whitespace-normal py-1.5 leading-tight"><User className="h-3.5 w-3.5 shrink-0" /> <span>Individual</span></TabsTrigger>
+        <TabsTrigger value="bulk" className="gap-1 sm:gap-1.5 text-[11px] sm:text-xs whitespace-normal py-1.5 leading-tight"><Users className="h-3.5 w-3.5 shrink-0" /> <span>Bulk Non-Members</span></TabsTrigger>
+        <TabsTrigger value="manage" className="gap-1 sm:gap-1.5 text-[11px] sm:text-xs whitespace-normal py-1.5 leading-tight"><UserPlus className="h-3.5 w-3.5 shrink-0" /> <span>Manage Contacts</span></TabsTrigger>
       </TabsList>
       <TabsContent value="individual"><IndividualSend tenantId={tenantId} churchName={churchName} senderName={senderName} /></TabsContent>
       <TabsContent value="bulk"><BulkNonMembers tenantId={tenantId} churchName={churchName} senderName={senderName} /></TabsContent>
