@@ -45,13 +45,14 @@ export default function BibleRefPopover({ containerRef }) {
     const rect = el.getBoundingClientRect();
     const isMobile = window.innerWidth < 480;
     if (isMobile) {
-      return { top: Math.max(8, window.innerHeight - 260), left: 8, mobile: true };
+      return { top: 0, left: 8, mobile: true };
     }
     const width = 320;
     const top = Math.min(window.innerHeight - 20, rect.bottom + 6);
     const left = Math.max(8, Math.min(window.innerWidth - width - 8, rect.left));
     return { top, left, mobile: false };
   }, []);
+
 
   useEffect(() => {
     const container = containerRef?.current;
@@ -158,18 +159,42 @@ export default function BibleRefPopover({ containerRef }) {
 
   const isMobile = pos.mobile;
   const style = isMobile
-    ? { position: "fixed", top: pos.top, left: pos.left, right: 8, maxWidth: "calc(100vw - 16px)", zIndex: 60 }
-    : { position: "fixed", top: pos.top, left: pos.left, width: 320, zIndex: 60 };
+    ? {
+        position: "fixed",
+        bottom: 8,
+        left: 8,
+        right: 8,
+        maxWidth: "calc(100vw - 16px)",
+        maxHeight: "min(60vh, 420px)",
+        display: "flex",
+        flexDirection: "column",
+        zIndex: 60,
+      }
+    : {
+        position: "fixed",
+        top: pos.top,
+        left: pos.left,
+        width: 320,
+        maxHeight: "min(70vh, 360px)",
+        display: "flex",
+        flexDirection: "column",
+        zIndex: 60,
+      };
+
+  const stop = (e) => e.stopPropagation();
 
   return createPortal(
     <div
       data-bible-popover
       onMouseEnter={onEnter}
       onMouseLeave={onLeave}
+      onClick={stop}
+      onTouchStart={stop}
+      onTouchMove={stop}
       style={style}
       className="rounded-lg border border-border bg-popover text-popover-foreground shadow-lg p-3"
     >
-      <div className="flex items-start justify-between gap-2 mb-1">
+      <div className="flex items-start justify-between gap-2 mb-1 shrink-0">
         <div className="text-xs font-semibold text-primary">
           {state.data?.ref
             ? `${state.data.ref.book} ${state.data.ref.chapter}${
@@ -211,7 +236,10 @@ export default function BibleRefPopover({ containerRef }) {
       ) : state.data?.notFound || !state.data?.verses?.length ? (
         <div className="text-xs text-muted-foreground">Verse not found.</div>
       ) : (
-        <div className="text-sm leading-relaxed max-h-[240px] overflow-y-auto">
+        <div
+          className="text-sm leading-relaxed flex-1 min-h-0 overflow-y-auto"
+          style={{ touchAction: "pan-y", overscrollBehavior: "contain", WebkitOverflowScrolling: "touch" }}
+        >
           {state.data.verses.map((v) => (
             <span key={v.n}>
               <sup className="text-[10px] text-muted-foreground mr-0.5">{v.n}</sup>
@@ -224,3 +252,4 @@ export default function BibleRefPopover({ containerRef }) {
     document.body
   );
 }
+
