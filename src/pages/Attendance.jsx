@@ -549,7 +549,16 @@ export default function Attendance() {
                   <Select value={form.unit} onValueChange={v => setForm(f => ({ ...f, unit: v }))}>
                     <SelectTrigger><SelectValue placeholder="Select unit" /></SelectTrigger>
                     <SelectContent>
-                      {churchUnits.map(u => <SelectItem key={u.id} value={u.name}>{u.name}</SelectItem>)}
+                      {churchUnits.map(u => (
+                        <SelectItem key={u.id} value={u.name}>
+                          <span className="inline-flex items-center gap-1.5">
+                            {u.name}
+                            {u.is_active === false && (
+                              <span className="text-[9px] uppercase px-1 rounded bg-muted text-muted-foreground">Hidden</span>
+                            )}
+                          </span>
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 )}
