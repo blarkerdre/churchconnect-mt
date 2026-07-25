@@ -305,6 +305,7 @@ function RosterDialog({ open, onOpenChange, session, canWrite }) {
 }
 
 function ReportDialog({ open, onOpenChange, session }) {
+  const { tenantId } = useTenantQuery();
   const { data: rows = [] } = useQuery({
     queryKey: ["teen-report", session?.id],
     enabled: !!session?.id && open,
@@ -319,13 +320,39 @@ function ReportDialog({ open, onOpenChange, session }) {
     },
   });
 
+  const workerIds = useMemo(() => {
+    const s = new Set();
+    rows.forEach((r) => { if (r.checked_in_by) s.add(r.checked_in_by); if (r.checked_out_by) s.add(r.checked_out_by); });
+    return Array.from(s);
+  }, [rows]);
+
+  const { data: workerMap = {} } = useQuery({
+    queryKey: ["teen-report-workers", tenantId, workerIds.sort().join(",")],
+    enabled: !!tenantId && workerIds.length > 0 && open,
+    queryFn: async () => {
+      const { data, error } = await supabase.from("members")
+        .select("user_id, first_name, last_name")
+        .eq("tenant_id", tenantId)
+        .in("user_id", workerIds);
+      if (error) throw error;
+      const map = {};
+      (data || []).forEach((m) => { map[m.user_id] = `${m.first_name || ""} ${m.last_name || ""}`.trim(); });
+      return map;
+    },
+  });
+
+  const workerName = (r, id) => {
+    if (!id) return r.source === "self" ? "Self" : "—";
+    return workerMap[id] || "Worker";
+  };
+
   const downloadCsv = () => {
     const lines = [];
     if (session?.notes) {
       lines.push(["Session note", JSON.stringify(session.notes)].join(","));
       lines.push("");
     }
-    const header = ["Name", "Checked in", "Late", "Checked out", "Duration (min)", "Source"];
+    const header = ["Name", "Checked in", "Late", "Checked out", "Duration (min)", "Source", "Signed in by", "Signed out by"];
     lines.push(header.join(","));
     rows.forEach((r) => {
       const name = `${r.teens?.first_name || ""} ${r.teens?.last_name || ""}`.trim();
@@ -336,6 +363,8 @@ function ReportDialog({ open, onOpenChange, session }) {
         r.checked_out_at ? format(new Date(r.checked_out_at), "yyyy-MM-dd HH:mm") : "",
         r.duration_minutes ?? "",
         r.source || "",
+        JSON.stringify(workerName(r, r.checked_in_by)),
+        JSON.stringify(r.checked_out_at ? workerName(r, r.checked_out_by) : ""),
       ].join(","));
     });
     const blob = new Blob([lines.join("\n")], { type: "text/csv" });
@@ -375,11 +404,13 @@ function ReportDialog({ open, onOpenChange, session }) {
                   <th className="p-2">Out</th>
                   <th className="p-2">Duration</th>
                   <th className="p-2">Source</th>
+                  <th className="p-2">Signed in by</th>
+                  <th className="p-2">Signed out by</th>
                 </tr>
               </thead>
               <tbody>
                 {rows.length === 0 && (
-                  <tr><td colSpan={5} className="p-4 text-center text-muted-foreground">No attendance records.</td></tr>
+                  <tr><td colSpan={7} className="p-4 text-center text-muted-foreground">No attendance records.</td></tr>
                 )}
                 {rows.map((r) => (
                   <tr key={r.id} className="border-t">
@@ -391,10 +422,13 @@ function ReportDialog({ open, onOpenChange, session }) {
                     <td className="p-2">{r.checked_out_at ? format(new Date(r.checked_out_at), "HH:mm") : "—"}</td>
                     <td className="p-2">{fmtDuration(r.duration_minutes) || "—"}</td>
                     <td className="p-2 capitalize">{r.source}</td>
+                    <td className="p-2">{workerName(r, r.checked_in_by)}</td>
+                    <td className="p-2">{r.checked_out_at ? workerName(r, r.checked_out_by) : "—"}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
+
           </div>
         </div>
       </DialogContent>
@@ -419,7 +453,7 @@ function CumulativeReportDialog({ open, onOpenChange }) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("teen_attendance_records")
-        .select("id, checked_in_at, checked_out_at, duration_minutes, status, source, teens:teen_id (first_name, last_name), session:session_id (id, title, session_type, session_date, notes)")
+        .select("id, checked_in_at, checked_out_at, checked_in_by, checked_out_by, duration_minutes, status, source, teens:teen_id (first_name, last_name), session:session_id (id, title, session_type, session_date, notes)")
         .eq("tenant_id", tenantId)
         .gte("checked_in_at", `${from}T00:00:00`)
         .lte("checked_in_at", `${to}T23:59:59`)
@@ -428,6 +462,32 @@ function CumulativeReportDialog({ open, onOpenChange }) {
       return data || [];
     },
   });
+
+  const workerIds = useMemo(() => {
+    const s = new Set();
+    rows.forEach((r) => { if (r.checked_in_by) s.add(r.checked_in_by); if (r.checked_out_by) s.add(r.checked_out_by); });
+    return Array.from(s);
+  }, [rows]);
+
+  const { data: workerMap = {} } = useQuery({
+    queryKey: ["teen-cumulative-workers", tenantId, workerIds.sort().join(",")],
+    enabled: !!tenantId && workerIds.length > 0 && open,
+    queryFn: async () => {
+      const { data, error } = await supabase.from("members")
+        .select("user_id, first_name, last_name")
+        .eq("tenant_id", tenantId)
+        .in("user_id", workerIds);
+      if (error) throw error;
+      const map = {};
+      (data || []).forEach((m) => { map[m.user_id] = `${m.first_name || ""} ${m.last_name || ""}`.trim(); });
+      return map;
+    },
+  });
+
+  const workerName = (r, id) => {
+    if (!id) return r.source === "self" ? "Self" : "—";
+    return workerMap[id] || "Worker";
+  };
 
   const sessionTypes = useMemo(() => {
     const set = new Set();
@@ -481,7 +541,7 @@ function CumulativeReportDialog({ open, onOpenChange }) {
         ].join(","));
       });
     } else {
-      header = ["Date", "Session", "Type", "Teen", "In", "Out", "Duration (min)", "Status", "Source", "Note"];
+      header = ["Date", "Session", "Type", "Teen", "In", "Out", "Duration (min)", "Status", "Source", "Signed in by", "Signed out by", "Note"];
       lines = [header.join(",")];
       filtered.forEach((r) => {
         const name = `${r.teens?.first_name || ""} ${r.teens?.last_name || ""}`.trim();
@@ -495,6 +555,8 @@ function CumulativeReportDialog({ open, onOpenChange }) {
           r.duration_minutes ?? "",
           r.status || "",
           r.source || "",
+          JSON.stringify(workerName(r, r.checked_in_by)),
+          JSON.stringify(r.checked_out_at ? workerName(r, r.checked_out_by) : ""),
           JSON.stringify(r.session?.notes || ""),
         ].join(","));
       });
@@ -610,12 +672,14 @@ function CumulativeReportDialog({ open, onOpenChange }) {
                   <th className="p-2">Duration</th>
                   <th className="p-2">Status</th>
                   <th className="p-2">Source</th>
+                  <th className="p-2">Signed in by</th>
+                  <th className="p-2">Signed out by</th>
                   <th className="p-2">Note</th>
                 </tr>
               </thead>
               <tbody>
                 {filtered.length === 0 && (
-                  <tr><td colSpan={9} className="p-4 text-center text-muted-foreground">No records for these filters.</td></tr>
+                  <tr><td colSpan={11} className="p-4 text-center text-muted-foreground">No records for these filters.</td></tr>
                 )}
                 {filtered.map((r) => (
                   <tr key={r.id} className="border-t">
@@ -629,6 +693,8 @@ function CumulativeReportDialog({ open, onOpenChange }) {
                       {r.status === "late" ? <Badge className="bg-amber-500 text-white">Late</Badge> : r.status === "on_time" ? <Badge variant="secondary">On time</Badge> : r.status || "—"}
                     </td>
                     <td className="p-2 capitalize">{r.source}</td>
+                    <td className="p-2">{workerName(r, r.checked_in_by)}</td>
+                    <td className="p-2">{r.checked_out_at ? workerName(r, r.checked_out_by) : "—"}</td>
                     <td className="p-2 max-w-[200px]" title={r.session?.notes || ""}>
                       <span className="line-clamp-2 text-xs text-muted-foreground">{r.session?.notes || "—"}</span>
                     </td>
@@ -638,6 +704,7 @@ function CumulativeReportDialog({ open, onOpenChange }) {
             </table>
           )}
         </div>
+
         <p className="text-xs text-muted-foreground">{view === "summary" ? summary.length : filtered.length} {view === "summary" ? "teen(s)" : "record(s)"} · {from} → {to}</p>
       </DialogContent>
     </Dialog>
