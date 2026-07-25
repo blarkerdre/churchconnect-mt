@@ -101,16 +101,16 @@ export default function SubjectManager({ course, onSelectSubject, selectedSubjec
               {subjects.map((s, idx) => (
                 <div
                   key={s.id}
-                  className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-colors ${
+                  className={`flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-3 rounded-lg border cursor-pointer transition-colors ${
                     selectedSubjectId === s.id
                       ? "bg-primary/5 border-primary/30"
                       : "bg-card border-border hover:bg-muted/50"
                   }`}
                   onClick={() => onSelectSubject(s)}
                 >
-                  <div className="flex items-center gap-2 min-w-0 flex-wrap">
+                  <div className="flex items-center gap-2 min-w-0 flex-wrap flex-1">
                     <span className="text-xs text-muted-foreground font-mono w-5">{idx + 1}.</span>
-                    <span className="text-sm font-medium text-foreground">{s.name}</span>
+                    <span className="text-sm font-medium text-foreground break-words">{s.name}</span>
                     {s.description && <span className="text-xs text-muted-foreground hidden sm:inline">— {s.description}</span>}
                     <Badge variant="outline" className="text-[9px] h-4">Pass: {s.pass_mark_percentage}%</Badge>
                     {s.time_limit_minutes && <Badge variant="outline" className="text-[9px] h-4">⏱ {s.time_limit_minutes}min</Badge>}
@@ -120,7 +120,7 @@ export default function SubjectManager({ course, onSelectSubject, selectedSubjec
                       : <Badge variant="secondary" className="text-[9px] h-4">Closed</Badge>}
                     {!s.is_active && <Badge variant="secondary" className="text-[9px] h-4">Inactive</Badge>}
                   </div>
-                  <div className="flex items-center gap-1 shrink-0">
+                  <div className="flex items-center gap-1 shrink-0 self-end sm:self-auto">
                     <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); setEditing(s); setForm({ name: s.name, description: s.description || "", pass_mark_percentage: s.pass_mark_percentage ?? 50, time_limit_minutes: s.time_limit_minutes ?? "", randomize_questions: s.randomize_questions ?? false, is_open: !!s.is_open, useCustomGrades: !!(s.grade_classifications && s.grade_classifications.length > 0), grade_classifications: s.grade_classifications || [] }); setDialogOpen(true); }}>
                       <Edit className="h-3.5 w-3.5" />
                     </Button>
