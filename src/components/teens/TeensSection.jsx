@@ -52,6 +52,7 @@ function TeenForm({ open, onOpenChange, teen, memberId, onSaved }) {
   const save = useMutation({
     mutationFn: async () => {
       if (!form.first_name || !form.last_name) throw new Error("Name required");
+      if (!form.data_processing_consent) throw new Error("Data-processing consent is required to save this teenager");
       if (!form.attendance_consent) throw new Error("Parental consent is required to save this teenager");
       const payload = {
         first_name: form.first_name.trim(),
@@ -67,6 +68,18 @@ function TeenForm({ open, onOpenChange, teen, memberId, onSaved }) {
         payload.attendance_consent_at = form.attendance_consent ? new Date().toISOString() : null;
         payload.attendance_consent_by = form.attendance_consent ? (user?.id || null) : null;
       }
+      const prevDp = !!teen?.data_processing_consent;
+      if (form.data_processing_consent !== prevDp) {
+        payload.data_processing_consent = form.data_processing_consent;
+        payload.data_processing_consent_at = form.data_processing_consent ? new Date().toISOString() : null;
+        payload.data_processing_consent_by = form.data_processing_consent ? (user?.id || null) : null;
+      } else if (!teen?.id) {
+        // New record: always stamp the initial consent metadata.
+        payload.data_processing_consent = true;
+        payload.data_processing_consent_at = new Date().toISOString();
+        payload.data_processing_consent_by = user?.id || null;
+      }
+
       if (form.clear_pin) payload.access_pin_hash = null;
       else if (form.pin) {
         if (!/^\d{4,6}$/.test(form.pin)) throw new Error("PIN must be 4-6 digits");
