@@ -44,7 +44,7 @@ const allNavItems = [
   { name: "My Data", icon: Users, path: "/my-data", access: null },
   { name: "Members", icon: Users, path: "/members", access: "leader" },
   { name: "Events", icon: CalendarDays, path: "/events", access: null },
-  { name: "Church Unit", icon: ClipboardList, path: "/church-unit", access: null },
+  { name: "Church Unit", icon: ClipboardList, path: "/church-unit", access: "unit" },
   { name: "Follow-ups", icon: HeartHandshake, path: "/followups", access: "followup_member" },
   { name: "Pastoral Care", icon: Heart, path: "/pastoral-care", access: null },
   { name: "Communications", icon: Megaphone, path: "/communications", access: null },
