@@ -52,16 +52,46 @@ Deno.serve(async (req) => {
 
     const admin = createClient(supabaseUrl, serviceRoleKey);
 
-    // Rate limit: 1/day per user
-    const ip = req.headers.get("x-forwarded-for")?.split(",")[0].trim() || user.id;
-    const ipHash = await hashIp(ip + user.id);
-    const { data: allowed } = await admin.rpc("check_and_bump_rate_limit", {
-      _ip_hash: ipHash, _endpoint: "export-member-data", _limit: 3, _window_minutes: 1440,
-    });
-    if (allowed === false) {
-      return new Response(JSON.stringify({ error: "Too many export requests. Try again tomorrow." }),
-        { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    // Require an approved, unexpired, single-use request
+    let requestId: string | null = null;
+    try {
+      const body = await req.json();
+      requestId = body?.request_id ?? null;
+    } catch { /* no body */ }
+
+    if (!requestId) {
+      return new Response(JSON.stringify({ error: "Missing request_id. Data downloads require admin approval." }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
+
+    const { data: reqRow, error: reqErr } = await admin
+      .from("data_export_requests")
+      .select("*")
+      .eq("id", requestId)
+      .maybeSingle();
+    if (reqErr || !reqRow) {
+      return new Response(JSON.stringify({ error: "Request not found" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+    if (reqRow.user_id !== user.id) {
+      return new Response(JSON.stringify({ error: "Forbidden" }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+    if (reqRow.status !== "approved") {
+      return new Response(JSON.stringify({ error: `Request is ${reqRow.status}; admin approval required.` }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+    if (reqRow.downloaded_at) {
+      return new Response(JSON.stringify({ error: "This approval has already been used. Please submit a new request." }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+    if (reqRow.expires_at && new Date(reqRow.expires_at).getTime() < Date.now()) {
+      await admin.from("data_export_requests")
+        .update({ status: "expired" }).eq("id", reqRow.id);
+      return new Response(JSON.stringify({ error: "Approval expired. Please submit a new request." }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
 
     const exportData: Record<string, unknown[]> = {};
     const errors: Record<string, string> = {};
@@ -100,15 +130,21 @@ Deno.serve(async (req) => {
       user_metadata: user.user_metadata,
     }];
 
+    // Mark request as single-use consumed
+    await admin.from("data_export_requests")
+      .update({ status: "downloaded", downloaded_at: new Date().toISOString() })
+      .eq("id", reqRow.id);
+
     // Audit + notice
     await writeAudit(admin, {
-      tenant_id: memberRows?.[0]?.tenant_id ?? null,
+      tenant_id: reqRow.tenant_id ?? memberRows?.[0]?.tenant_id ?? null,
       user_id: user.id,
       action: "dsr_export",
-      entity_type: "user",
-      entity_id: user.id,
+      entity_type: "data_export_request",
+      entity_id: reqRow.id,
       details: { tables: Object.keys(exportData).length },
     });
+
 
     return new Response(JSON.stringify({
       success: true,

@@ -22,6 +22,7 @@ export default function MyData() {
   const qc = useQueryClient();
   const [exporting, setExporting] = useState(false);
   const [reason, setReason] = useState("");
+  const [exportReason, setExportReason] = useState("");
 
   // Member record for consent toggles
   const { data: member } = useQuery({
@@ -45,10 +46,42 @@ export default function MyData() {
     },
   });
 
-  const exportData = async () => {
+  const { data: exportReq } = useQuery({
+    queryKey: ["my-export-request", user?.id, tenantId],
+    enabled: !!user?.id && !!tenantId,
+    queryFn: async () => {
+      const { data } = await supabase.from("data_export_requests").select("*")
+        .eq("user_id", user.id).eq("tenant_id", tenantId)
+        .order("created_at", { ascending: false }).limit(1).maybeSingle();
+      return data;
+    },
+  });
+
+  const requestExportMutation = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase.from("data_export_requests").insert({
+        tenant_id: tenantId,
+        user_id: user.id,
+        member_id: member?.id ?? null,
+        reason: exportReason || null,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["my-export-request"] });
+      setExportReason("");
+      toast({ title: "Request submitted", description: "Your church administrator will review it." });
+    },
+    onError: (e) => toast({ title: "Failed to submit", description: e.message, variant: "destructive" }),
+  });
+
+  const downloadApproved = async () => {
+    if (!exportReq?.id) return;
     setExporting(true);
     try {
-      const { data, error } = await supabase.functions.invoke("export-member-data", { body: {} });
+      const { data, error } = await supabase.functions.invoke("export-member-data", {
+        body: { request_id: exportReq.id },
+      });
       if (error) throw error;
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
       const url = URL.createObjectURL(blob);
@@ -57,11 +90,13 @@ export default function MyData() {
       a.download = `my-data-${new Date().toISOString().slice(0, 10)}.json`;
       a.click();
       URL.revokeObjectURL(url);
+      qc.invalidateQueries({ queryKey: ["my-export-request"] });
       toast({ title: "Your data has been downloaded" });
     } catch (e) {
-      toast({ title: "Export failed", description: e.message, variant: "destructive" });
+      toast({ title: "Download failed", description: e.message, variant: "destructive" });
     } finally { setExporting(false); }
   };
+
 
   const consentMutation = useMutation({
     mutationFn: async (updates) => {
@@ -124,14 +159,58 @@ export default function MyData() {
             <CardHeader><CardTitle>Download my data</CardTitle></CardHeader>
             <CardContent className="space-y-3 text-sm">
               <p>Under Article 15 you can request a copy of the personal data we hold about you. The export is a JSON file including your member profile, attendance, follow-ups, pastoral notes, sermon notes, testimonies and communications logs.</p>
-              <p className="text-muted-foreground text-xs">Limit: 3 exports per 24 hours.</p>
-              <Button onClick={exportData} disabled={exporting}>
-                {exporting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Download className="h-4 w-4 mr-2" />}
-                Download my data (JSON)
-              </Button>
+              <p className="text-muted-foreground text-xs">
+                Downloads require church administrator approval. Approval is valid for 7 days and can be used once.
+              </p>
+
+              {exportReq && ["pending","approved","rejected","downloaded","expired"].includes(exportReq.status) && (
+                <Alert>
+                  <AlertDescription>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span>Latest request ({new Date(exportReq.created_at).toLocaleDateString()}) —</span>
+                      <Badge variant={
+                        exportReq.status === "approved" ? "default" :
+                        exportReq.status === "downloaded" ? "secondary" :
+                        exportReq.status === "rejected" || exportReq.status === "expired" ? "outline" :
+                        "secondary"
+                      }>{exportReq.status}</Badge>
+                    </div>
+                    {exportReq.status === "approved" && exportReq.expires_at && (
+                      <div className="text-xs mt-1">Approval expires {new Date(exportReq.expires_at).toLocaleString()}.</div>
+                    )}
+                    {exportReq.review_note && (
+                      <div className="text-xs mt-1">Note: {exportReq.review_note}</div>
+                    )}
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              {(!exportReq || ["rejected","downloaded","expired"].includes(exportReq.status)) && (
+                <div className="space-y-2">
+                  <Label>Reason (optional)</Label>
+                  <Textarea rows={2} value={exportReason} onChange={(e) => setExportReason(e.target.value)}
+                    placeholder="Why are you requesting a copy of your data?" maxLength={500} />
+                  <Button onClick={() => requestExportMutation.mutate()} disabled={requestExportMutation.isPending}>
+                    {requestExportMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <ShieldCheck className="h-4 w-4 mr-2" />}
+                    Request data download
+                  </Button>
+                </div>
+              )}
+
+              {exportReq?.status === "pending" && (
+                <p className="text-muted-foreground text-xs">Awaiting administrator approval.</p>
+              )}
+
+              {exportReq?.status === "approved" && (
+                <Button onClick={downloadApproved} disabled={exporting}>
+                  {exporting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Download className="h-4 w-4 mr-2" />}
+                  Download my data (JSON)
+                </Button>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
+
 
         <TabsContent value="rectify">
           <Card>
