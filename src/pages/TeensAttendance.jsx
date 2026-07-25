@@ -305,6 +305,7 @@ function RosterDialog({ open, onOpenChange, session, canWrite }) {
 }
 
 function ReportDialog({ open, onOpenChange, session }) {
+  const { tenantId } = useTenantQuery();
   const { data: rows = [] } = useQuery({
     queryKey: ["teen-report", session?.id],
     enabled: !!session?.id && open,
@@ -319,13 +320,39 @@ function ReportDialog({ open, onOpenChange, session }) {
     },
   });
 
+  const workerIds = useMemo(() => {
+    const s = new Set();
+    rows.forEach((r) => { if (r.checked_in_by) s.add(r.checked_in_by); if (r.checked_out_by) s.add(r.checked_out_by); });
+    return Array.from(s);
+  }, [rows]);
+
+  const { data: workerMap = {} } = useQuery({
+    queryKey: ["teen-report-workers", tenantId, workerIds.sort().join(",")],
+    enabled: !!tenantId && workerIds.length > 0 && open,
+    queryFn: async () => {
+      const { data, error } = await supabase.from("members")
+        .select("user_id, first_name, last_name")
+        .eq("tenant_id", tenantId)
+        .in("user_id", workerIds);
+      if (error) throw error;
+      const map = {};
+      (data || []).forEach((m) => { map[m.user_id] = `${m.first_name || ""} ${m.last_name || ""}`.trim(); });
+      return map;
+    },
+  });
+
+  const workerName = (r, id) => {
+    if (!id) return r.source === "self" ? "Self" : "—";
+    return workerMap[id] || "Worker";
+  };
+
   const downloadCsv = () => {
     const lines = [];
     if (session?.notes) {
       lines.push(["Session note", JSON.stringify(session.notes)].join(","));
       lines.push("");
     }
-    const header = ["Name", "Checked in", "Late", "Checked out", "Duration (min)", "Source"];
+    const header = ["Name", "Checked in", "Late", "Checked out", "Duration (min)", "Source", "Signed in by", "Signed out by"];
     lines.push(header.join(","));
     rows.forEach((r) => {
       const name = `${r.teens?.first_name || ""} ${r.teens?.last_name || ""}`.trim();
@@ -336,6 +363,8 @@ function ReportDialog({ open, onOpenChange, session }) {
         r.checked_out_at ? format(new Date(r.checked_out_at), "yyyy-MM-dd HH:mm") : "",
         r.duration_minutes ?? "",
         r.source || "",
+        JSON.stringify(workerName(r, r.checked_in_by)),
+        JSON.stringify(r.checked_out_at ? workerName(r, r.checked_out_by) : ""),
       ].join(","));
     });
     const blob = new Blob([lines.join("\n")], { type: "text/csv" });
