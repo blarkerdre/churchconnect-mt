@@ -33,16 +33,19 @@ const assignStatusColor = {
 };
 
 export default function UnitTasks() {
-  const { user, isAdmin, isUnitLeader, leaderUnits, roles } = useAuth();
+  const { user, isAdmin, isUnitLeader, leaderUnits, myUnits = [], roles } = useAuth();
   const { tenantId } = useTenantQuery();
   const queryClient = useQueryClient();
   const isSuperAdmin = roles.includes("super_admin");
   const canLead = isAdmin || isUnitLeader || isSuperAdmin;
+  // Plain unit member (no leader role) still gets a read-only view of their unit's tasks
+  const isUnitMemberOnly = !canLead && (myUnits?.length || 0) > 0;
+  const canViewUnit = canLead || isUnitMemberOnly;
 
-  // Units the user can lead/manage
+  // Units available for filter/scoping. Leaders see their leaderUnits; plain members see their myUnits.
   const { data: allUnits = [] } = useQuery({
-    queryKey: ["active-units-for-tasks", tenantId, isAdmin],
-    enabled: !!tenantId && canLead,
+    queryKey: ["active-units-for-tasks", tenantId, isAdmin, (leaderUnits || []).join("|"), (myUnits || []).join("|")],
+    enabled: !!tenantId && canViewUnit,
     queryFn: async () => {
       if (isAdmin || isSuperAdmin) {
         let q = supabase
@@ -50,16 +53,22 @@ export default function UnitTasks() {
           .select("name, is_active")
           .eq("tenant_id", tenantId)
           .order("name");
-        // Admins see hidden units too; non-admin fallback below never reaches here
         const { data, error } = await q;
         if (error) return [];
         return (data || []).map((r) => r.name).filter(Boolean);
       }
-      return leaderUnits || [];
+      // Union of leader + member units (dedupe case-insensitive)
+      const seen = new Set();
+      const out = [];
+      [...(leaderUnits || []), ...(myUnits || [])].forEach((u) => {
+        const k = String(u || "").toLowerCase();
+        if (k && !seen.has(k)) { seen.add(k); out.push(u); }
+      });
+      return out;
     },
   });
 
-  const [activeTab, setActiveTab] = useState(canLead ? "leading" : "mine");
+  const [activeTab, setActiveTab] = useState(canViewUnit ? "leading" : "mine");
   const [unitFilter, setUnitFilter] = useState("All");
   const [statusFilter, setStatusFilter] = useState("Open");
   const [formOpen, setFormOpen] = useState(false);
@@ -71,12 +80,13 @@ export default function UnitTasks() {
   const didSetInitialLeaderTab = useRef(false);
 
   useEffect(() => {
-    if (canLead && !didSetInitialLeaderTab.current) {
+    if (canViewUnit && !didSetInitialLeaderTab.current) {
       setActiveTab("leading");
       didSetInitialLeaderTab.current = true;
     }
-    if (!canLead) didSetInitialLeaderTab.current = false;
-  }, [canLead, activeTab]);
+    if (!canViewUnit) didSetInitialLeaderTab.current = false;
+  }, [canViewUnit, activeTab]);
+
 
   // Tasks for "Leading" tab
   const { data: leadTasks = [], isLoading: leadLoading, isFetching: leadFetching, error: leadError, refetch: refetchLead } = useQuery({
