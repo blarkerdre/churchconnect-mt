@@ -143,6 +143,30 @@ function TeenForm({ open, onOpenChange, teen, memberId, onSaved }) {
           </div>
           <div><Label>Notes</Label><Input value={form.notes || ""} onChange={(e) => setForm({ ...form, notes: e.target.value })} /></div>
 
+          <div className={`rounded-md border p-3 space-y-1.5 ${form.data_processing_consent ? "border-primary/20 bg-primary/5" : "border-destructive/40 bg-destructive/5"}`}>
+            <label className="flex items-start gap-2 text-sm cursor-pointer">
+              <input
+                type="checkbox"
+                className="mt-0.5"
+                checked={form.data_processing_consent}
+                onChange={(e) => setForm({ ...form, data_processing_consent: e.target.checked })}
+              />
+              <span>
+                <span className="font-medium">I am the parent/legal guardian</span> and consent to my teenager's personal data being held and processed for church ministry purposes. <span className="text-destructive">*</span>
+              </span>
+            </label>
+            {teen?.data_processing_consent && teen?.data_processing_consent_at && (
+              <p className="text-[11px] text-muted-foreground pl-6">
+                Consent given on {format(new Date(teen.data_processing_consent_at), "d MMM yyyy")}. Untick to revoke (you won't be able to save until you re-consent).
+              </p>
+            )}
+            {!form.data_processing_consent && (
+              <p className="text-[11px] text-destructive pl-6 font-medium">
+                Data-processing consent is required to save this teenager.
+              </p>
+            )}
+          </div>
+
           <div className={`rounded-md border p-3 space-y-1.5 ${form.attendance_consent ? "border-primary/20 bg-primary/5" : "border-destructive/40 bg-destructive/5"}`}>
             <label className="flex items-start gap-2 text-sm cursor-pointer">
               <input
@@ -166,6 +190,7 @@ function TeenForm({ open, onOpenChange, teen, memberId, onSaved }) {
               </p>
             )}
           </div>
+
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
