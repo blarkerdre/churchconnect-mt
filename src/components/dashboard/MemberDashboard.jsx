@@ -34,6 +34,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
+import AppFeedbackSection from "@/components/feedback/AppFeedbackSection";
 
 const GROWTH_FIELDS = [
   { key: "water_baptism", label: "Water Baptism" },
@@ -52,6 +53,25 @@ export default function MemberDashboard({ currentUser, myMember }) {
   const roleLabel = tenantRole ? tenantRole.charAt(0).toUpperCase() + tenantRole.slice(1) : "";
   const userId = session?.user?.id;
   const showBirthdays = isUnitLeader && !isAdmin;
+
+  // Today's birthday celebrants (visible to all members)
+  const { data: todayBirthdays = [] } = useQuery({
+    queryKey: ["today-birthdays", tenantId],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("get_upcoming_birthdays", {
+        _tenant_id: tenantId,
+        _days_ahead: 0,
+      });
+      if (error) throw error;
+      const today = new Date();
+      return (data || []).filter(m => {
+        if (!m.date_of_birth) return false;
+        const dob = new Date(m.date_of_birth);
+        return dob.getMonth() === today.getMonth() && dob.getDate() === today.getDate();
+      });
+    },
+    enabled: !!tenantId,
+  });
 
   // Upcoming birthdays for unit leaders
   const { data: unitBirthdays = [] } = useQuery({
@@ -163,6 +183,23 @@ export default function MemberDashboard({ currentUser, myMember }) {
         <BirthdayBanner firstName={myMember.first_name} />
       )}
 
+      {/* Today's Birthday Celebrants (visible to all members) */}
+      {todayBirthdays.length > 0 && (
+        <Card className="border-0 shadow-sm">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-2">
+              <Cake className="h-4 w-4 text-accent" />
+              Today's Birthdays
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="px-5 pb-4">
+            {todayBirthdays.map(m => (
+              <UpcomingBirthdayItem key={m.id} member={m} />
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
       {/* Self Check-In */}
       <SelfCheckInWidget />
 
@@ -210,6 +247,9 @@ export default function MemberDashboard({ currentUser, myMember }) {
           </CardContent>
         </Card>
       )}
+
+      {/* App Feedback */}
+      <AppFeedbackSection />
     </div>
   );
 }
