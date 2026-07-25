@@ -165,7 +165,7 @@ export default function InvoiceEditorDialog({ open, onOpenChange, invoice, tenan
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl">
+      <DialogContent className="max-w-5xl w-[calc(100vw-1rem)] sm:w-auto max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
             {docLabel} {invoice.invoice_number}
