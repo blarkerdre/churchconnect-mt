@@ -458,14 +458,14 @@ export default function WoFBIAttendanceTab() {
   return (
     <div className="space-y-6">
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between gap-4 flex-wrap">
-          <div className="space-y-1">
+        <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div className="space-y-1 min-w-0">
             <CardTitle className="text-lg">Bible School Attendance</CardTitle>
             <p className="text-xs text-muted-foreground">Run on-premise QR check-in per course.</p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
             <Select value={selectedCourseId} onValueChange={setSelectedCourseId}>
-              <SelectTrigger className="w-[220px]">
+              <SelectTrigger className="w-full sm:w-[220px] [&>span]:truncate">
                 <SelectValue placeholder="Select course" />
               </SelectTrigger>
               <SelectContent>
@@ -476,10 +476,10 @@ export default function WoFBIAttendanceTab() {
                 ))}
               </SelectContent>
             </Select>
-            <Button variant="outline" onClick={() => setQrOpen(true)} className="gap-2">
+            <Button variant="outline" onClick={() => setQrOpen(true)} className="gap-2 flex-1 sm:flex-none">
               <QrCode className="h-4 w-4" /> Session QR
             </Button>
-            <Button onClick={() => setNewOpen(true)} disabled={!selectedCourseId} className="gap-2">
+            <Button onClick={() => setNewOpen(true)} disabled={!selectedCourseId} className="gap-2 flex-1 sm:flex-none">
               <Plus className="h-4 w-4" /> New session
             </Button>
           </div>
