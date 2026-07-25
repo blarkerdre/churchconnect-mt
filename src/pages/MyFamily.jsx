@@ -355,6 +355,7 @@ export default function MyFamily() {
   const [guardianFor, setGuardianFor] = useState(null);
   const [delegateFor, setDelegateFor] = useState(null);
   const [deleteChild, setDeleteChild] = useState(null);
+  const [promoteChild, setPromoteChild] = useState(null);
   const [showAll, setShowAll] = useState(false);
   const tour = useTour();
   const { completed: tourDone } = useTourCompletion("my-family-v1");
