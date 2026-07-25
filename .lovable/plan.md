@@ -1,37 +1,37 @@
-## Diagnosis
+## Goal
 
-Romoke Odunsi has `Children Church` in her `church_unit`, so `is_children_church_member` returns true and `checkin_child` would accept her. But she never gets that far: David Badero doesn't appear in her search on the Children Church page.
+Add a "Promote to teenager" action on each child card in My Family that copies the child into the `teens` table and then removes the child record.
 
-The reason is the RLS SELECT policy on `public.children`:
+## UX
 
-```
-is_admin OR is_reports_officer
-  OR is_child_primary_guardian OR is_child_co_parent
-  OR is_child_active_today
-```
+In `src/pages/MyFamily.jsx`, on each child card (next to Edit / Authorised adults / Delegate pickup / Delete) add a new button **"Promote to teenager"**. It opens a small confirmation dialog explaining:
 
-There is no clause for Children Church workers/leaders. So a worker can only see a child once that child is already checked in today. Before drop-off, the search query in `ChildrenChurch.jsx` (`supabase.from("children").select(...)`) returns zero rows for non-guardian workers, and David never shows up.
+- A matching teenager record will be created (parental consent carried over, PIN optional — can be set later in the Teenagers section).
+- The child record will then be removed.
+- If the child has Children Church check-in history, the child record will be kept but marked inactive so it stops showing under My Family, preserving report history. (Same rule the current delete uses.)
 
-Sibling tables have the same gap worth fixing in one pass:
-- `child_guardians` SELECT — workers also need to see authorised adults for the drop-off screen.
+Confirm button runs the mutation below; on success, refetch both `my-children` and `my-teens` queries and toast "Promoted to teenager".
 
-`checkin_child`, pickup, and delegation flows already gate on `is_children_church_member`/`is_admin` and don't need changes.
+## Mutation flow
 
-## Plan
+1. Insert into `public.teens` scoped to current `tenant_id` and `memberId = meMember.id`, copying:
+   - `first_name`, `last_name`, `date_of_birth`, `gender`, `notes`
+   - `attendance_consent = child.parental_consent_given`
+   - `attendance_consent_at = child.parental_consent_at ?? now()`
+2. Check `child_checkins` count for this child (same guard the current delete uses).
+   - If 0 → `delete from children where id = ...` (existing path).
+   - If > 0 → `update children set archived_at = now() where id = ...` so it disappears from My Family without breaking historical reports.
+3. Invalidate `["my-children"]` and `["my-teens"]` query keys.
 
-1. **Migration — add Children Church worker read access**
-   - Drop and recreate the `children` SELECT policy to add:
-     `OR public.is_children_church_member(auth.uid(), tenant_id)`
-     (keeps admin, reports officer, guardian, co-parent, active-today clauses).
-   - Drop and recreate the `child_guardians` SELECT policy the same way so the "Authorised adults" list on the drop-off panel loads for workers.
+## Schema change (small)
 
-2. **Verify**
-   - Re-run `SELECT policyname, qual FROM pg_policies` for both tables to confirm the new clause.
-   - Confirm Romoke (as an authenticated user with `Children Church` in `church_unit`) can now find "David Badero" via the search box and complete drop-off.
+Add `archived_at timestamptz null` to `public.children` and filter it out in the two My Family child queries (`primary` and the "all tenant" branch) with `.is("archived_at", null)`. Leave admin/reports pages unchanged so archived children still appear in historical Children Church reports.
 
-No frontend code changes required — the existing search query and check-in mutation will start returning rows once RLS allows it.
+No RLS changes needed — updates and deletes already run under the existing "guardian can manage own child" policies.
 
-## Technical notes
+## Files touched
 
-- Keep `WITH CHECK`/INSERT/UPDATE/DELETE policies untouched; this change only broadens SELECT.
-- `is_children_church_member` already covers both unit members and leaders (via `unit_leader_assignments`), matching the whitelist that includes `children church`, `childrens church`, `children's church`, and the ministry variants — so no whitelist edits are needed this time.
+- `supabase/migrations/*` — add `children.archived_at` column.
+- `src/pages/MyFamily.jsx` — add promote button, confirm dialog, mutation, and `archived_at` filter on the child queries.
+
+No changes to the Teens section, RLS policies, or Children Church pages.
