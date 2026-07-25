@@ -206,7 +206,7 @@ export default function UnitTasks() {
             {leadLoading ? (
               <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
             ) : leadTasks.length === 0 ? (
-              <Card><CardContent className="py-12 text-center text-muted-foreground">No tasks yet. Create one to get started.</CardContent></Card>
+              <Card><CardContent className="py-12 text-center text-muted-foreground">{canLead ? "No tasks yet. Create one to get started." : "No tasks for your unit yet."}</CardContent></Card>
             ) : (() => {
               // Split into ungrouped tasks and rosters keyed by group_id
               const ungrouped = [];
