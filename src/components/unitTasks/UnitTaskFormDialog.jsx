@@ -18,7 +18,8 @@ import { logAudit } from "@/lib/audit";
 
 const PRIORITIES = ["Low", "Medium", "High", "Urgent"];
 
-export default function UnitTaskFormDialog({ open, onOpenChange, unitOptions = [], defaultUnit = "", task = null, onSaved }) {
+export default function UnitTaskFormDialog({ open, onOpenChange, unitOptions = [], hiddenUnitNames, defaultUnit = "", task = null, onSaved }) {
+  const hiddenSet = hiddenUnitNames instanceof Set ? hiddenUnitNames : new Set(hiddenUnitNames || []);
   const { user } = useAuth();
   const { tenantId } = useTenantQuery();
   const [saving, setSaving] = useState(false);
