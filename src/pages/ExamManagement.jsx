@@ -408,7 +408,8 @@ export default function ExamManagement() {
       {selectedCourse && (
         <>
           {/* Toggle: Subjects vs Results */}
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
+
             <Button variant={!showResults && !showRegistrations ? "default" : "outline"} size="sm" onClick={() => { setShowResults(false); setShowRegistrations(false); }} className="gap-1.5">
               <Layers className="h-3.5 w-3.5" /> Subjects & Questions
             </Button>
