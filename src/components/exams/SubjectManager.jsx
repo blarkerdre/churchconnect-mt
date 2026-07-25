@@ -136,7 +136,7 @@ export default function SubjectManager({ course, onSelectSubject, selectedSubjec
       </Card>
 
       <Dialog open={dialogOpen} onOpenChange={(v) => !v && closeDialog()}>
-        <DialogContent className="max-w-sm">
+        <DialogContent className="max-w-sm w-[calc(100vw-1rem)] sm:w-auto">
           <TenantDialogHeader>{editing ? "Edit Subject" : "Add Subject"}</TenantDialogHeader>
           <form onSubmit={(e) => {
             e.preventDefault();

@@ -100,7 +100,7 @@ export default function WoFBIAttendanceQRDialog({ open, onOpenChange, session, o
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-md w-[calc(100vw-1rem)] sm:w-auto">
         <TenantDialogHeader>
           <QrCode className="h-5 w-5" /> Attendance Check-in
         </TenantDialogHeader>

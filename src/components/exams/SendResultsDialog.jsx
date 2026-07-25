@@ -244,7 +244,7 @@ export default function SendResultsDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={(v) => !sending && onOpenChange(v)}>
-        <DialogContent className="max-w-3xl">
+        <DialogContent className="max-w-3xl w-[calc(100vw-1rem)] sm:w-auto">
           <TenantDialogHeader>
             <Send className="h-4 w-4 text-primary" /> Preview & Send Results
           </TenantDialogHeader>
