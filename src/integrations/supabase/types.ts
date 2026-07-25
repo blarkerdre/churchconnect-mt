@@ -4723,6 +4723,9 @@ export type Database = {
           attendance_consent_at: string | null
           attendance_consent_by: string | null
           created_at: string
+          data_processing_consent: boolean
+          data_processing_consent_at: string | null
+          data_processing_consent_by: string | null
           date_of_birth: string | null
           first_name: string
           gender: string | null
@@ -4743,6 +4746,9 @@ export type Database = {
           attendance_consent_at?: string | null
           attendance_consent_by?: string | null
           created_at?: string
+          data_processing_consent?: boolean
+          data_processing_consent_at?: string | null
+          data_processing_consent_by?: string | null
           date_of_birth?: string | null
           first_name: string
           gender?: string | null
@@ -4763,6 +4769,9 @@ export type Database = {
           attendance_consent_at?: string | null
           attendance_consent_by?: string | null
           created_at?: string
+          data_processing_consent?: boolean
+          data_processing_consent_at?: string | null
+          data_processing_consent_by?: string | null
           date_of_birth?: string | null
           first_name?: string
           gender?: string | null
