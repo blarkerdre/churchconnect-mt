@@ -666,7 +666,7 @@ function RegisteredTeensDialog({ open, onOpenChange }) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("teens")
-        .select("id, first_name, last_name, gender, date_of_birth, attendance_consent, attendance_consent_at, is_active, access_pin_hash, notes, guardian:primary_guardian_member_id(first_name, last_name, phone, email)")
+        .select("id, first_name, last_name, gender, date_of_birth, attendance_consent, attendance_consent_at, data_processing_consent, data_processing_consent_at, is_active, access_pin_hash, notes, guardian:primary_guardian_member_id(first_name, last_name, phone, email)")
         .eq("tenant_id", tenantId)
         .order("first_name");
       if (error) throw error;
