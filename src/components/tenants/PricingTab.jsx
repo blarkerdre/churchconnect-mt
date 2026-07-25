@@ -181,7 +181,7 @@ function PlanEditorDialog({ plan, onClose, onSave, saving }) {
         </DialogHeader>
 
         <div className="space-y-5">
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div><Label>Name</Label><Input value={form.name} onChange={(e) => { set("name", e.target.value); if (!form.id) set("slug", slugFromName(e.target.value)); }} /></div>
             <div><Label>Slug</Label><Input value={form.slug} onChange={(e) => set("slug", e.target.value)} /></div>
             <div className="col-span-2"><Label>Description</Label><Textarea rows={2} value={form.description || ""} onChange={(e) => set("description", e.target.value)} /></div>
