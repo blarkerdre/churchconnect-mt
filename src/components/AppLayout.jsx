@@ -507,7 +507,7 @@ export default function Layout({ children }) {
         <main className="flex-1 p-3 lg:p-8 pb-20 lg:pb-8">
           {children}
         </main>
-        <MobileBottomNav />
+        {!sidebarOpen && <MobileBottomNav />}
       </div>
       <PlatformAlertOverlay />
       {/* Password confirmation dialog for tenant switching */}
