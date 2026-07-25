@@ -50,6 +50,18 @@ export default function Attendance() {
     },
   });
 
+  const { data: wsfCentres = [] } = useQuery({
+    queryKey: ["wsf-centres-for-attendance", tenantId, isAdmin],
+    enabled: !!tenantId,
+    queryFn: async () => {
+      let q = supabase.from("wsf_centres").select("id, name, is_active").eq("tenant_id", tenantId).order("name");
+      if (!isAdmin) q = q.eq("is_active", true);
+      const { data, error } = await q;
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
   const filteredSessions = useMemo(() => {
     return sessions.filter(s => {
       if (dateFrom && s.session_date < dateFrom) return false;
@@ -579,7 +591,21 @@ export default function Attendance() {
                     </Select>
                   )
                 ) : (
-                  <Input value={form.unit} onChange={e => setForm(f => ({ ...f, unit: e.target.value }))} placeholder="e.g. Cardiff Central" />
+                  <Select value={form.unit} onValueChange={v => setForm(f => ({ ...f, unit: v }))}>
+                    <SelectTrigger><SelectValue placeholder="Select a Home Cell centre" /></SelectTrigger>
+                    <SelectContent>
+                      {wsfCentres.map(c => (
+                        <SelectItem key={c.id} value={c.name}>
+                          <span className="inline-flex items-center gap-1.5">
+                            {c.name}
+                            {c.is_active === false && (
+                              <span className="text-[9px] uppercase px-1 rounded bg-muted text-muted-foreground">Hidden</span>
+                            )}
+                          </span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 )}
               </div>
             )}
