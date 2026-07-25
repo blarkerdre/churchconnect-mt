@@ -159,14 +159,58 @@ export default function MyData() {
             <CardHeader><CardTitle>Download my data</CardTitle></CardHeader>
             <CardContent className="space-y-3 text-sm">
               <p>Under Article 15 you can request a copy of the personal data we hold about you. The export is a JSON file including your member profile, attendance, follow-ups, pastoral notes, sermon notes, testimonies and communications logs.</p>
-              <p className="text-muted-foreground text-xs">Limit: 3 exports per 24 hours.</p>
-              <Button onClick={exportData} disabled={exporting}>
-                {exporting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Download className="h-4 w-4 mr-2" />}
-                Download my data (JSON)
-              </Button>
+              <p className="text-muted-foreground text-xs">
+                Downloads require church administrator approval. Approval is valid for 7 days and can be used once.
+              </p>
+
+              {exportReq && ["pending","approved","rejected","downloaded","expired"].includes(exportReq.status) && (
+                <Alert>
+                  <AlertDescription>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span>Latest request ({new Date(exportReq.created_at).toLocaleDateString()}) —</span>
+                      <Badge variant={
+                        exportReq.status === "approved" ? "default" :
+                        exportReq.status === "downloaded" ? "secondary" :
+                        exportReq.status === "rejected" || exportReq.status === "expired" ? "outline" :
+                        "secondary"
+                      }>{exportReq.status}</Badge>
+                    </div>
+                    {exportReq.status === "approved" && exportReq.expires_at && (
+                      <div className="text-xs mt-1">Approval expires {new Date(exportReq.expires_at).toLocaleString()}.</div>
+                    )}
+                    {exportReq.review_note && (
+                      <div className="text-xs mt-1">Note: {exportReq.review_note}</div>
+                    )}
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              {(!exportReq || ["rejected","downloaded","expired"].includes(exportReq.status)) && (
+                <div className="space-y-2">
+                  <Label>Reason (optional)</Label>
+                  <Textarea rows={2} value={exportReason} onChange={(e) => setExportReason(e.target.value)}
+                    placeholder="Why are you requesting a copy of your data?" maxLength={500} />
+                  <Button onClick={() => requestExportMutation.mutate()} disabled={requestExportMutation.isPending}>
+                    {requestExportMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <ShieldCheck className="h-4 w-4 mr-2" />}
+                    Request data download
+                  </Button>
+                </div>
+              )}
+
+              {exportReq?.status === "pending" && (
+                <p className="text-muted-foreground text-xs">Awaiting administrator approval.</p>
+              )}
+
+              {exportReq?.status === "approved" && (
+                <Button onClick={downloadApproved} disabled={exporting}>
+                  {exporting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Download className="h-4 w-4 mr-2" />}
+                  Download my data (JSON)
+                </Button>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
+
 
         <TabsContent value="rectify">
           <Card>
