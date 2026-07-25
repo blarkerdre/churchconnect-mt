@@ -243,8 +243,8 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
       toast({ title: "First name and last name are required", variant: "destructive" });
       return false;
     }
-    if (!member && !form.gdpr_consent) {
-      toast({ title: "GDPR consent is required", variant: "destructive" });
+    if (!form.gdpr_consent) {
+      toast({ title: "Data processing consent is required", variant: "destructive" });
       return false;
     }
     if (createAccount && !member) {
@@ -299,7 +299,7 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
         lcc_completed: form.lcc_completed,
         ldc_completed: form.ldc_completed,
         gdpr_consent: form.gdpr_consent,
-        gdpr_consent_date: !member && form.gdpr_consent ? new Date().toISOString() : (member?.gdpr_consent_date || null),
+        gdpr_consent_date: form.gdpr_consent ? (member?.gdpr_consent_date || new Date().toISOString()) : null,
         // Welcome question fields
         worshipped_before: isFirstTimerOrNewConvert ? form.worshipped_before : null,
         worshipped_when_where: isFirstTimerOrNewConvert ? (form.worshipped_when_where || null) : null,
@@ -888,7 +888,7 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={handleSubmit} disabled={saving || !form.first_name || !form.last_name || (!member && !form.gdpr_consent) || (createAccount && !member && (!form.email || password.length < 6))}>
+          <Button onClick={handleSubmit} disabled={saving || !form.first_name || !form.last_name || !form.gdpr_consent || (createAccount && !member && (!form.email || password.length < 6))}>
             {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
             {member ? "Update" : createAccount ? "Register & Create Account" : "Register"}
           </Button>
