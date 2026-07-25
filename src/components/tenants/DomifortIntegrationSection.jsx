@@ -211,11 +211,11 @@ await fetch('${INGEST_URL}', {
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="tokens">
-            <TabsList>
-              <TabsTrigger value="tokens">Tokens</TabsTrigger>
-              <TabsTrigger value="endpoint">Endpoint</TabsTrigger>
-              <TabsTrigger value="bookings">Recent bookings</TabsTrigger>
-              <TabsTrigger value="logs">Ingest log</TabsTrigger>
+            <TabsList className="w-full overflow-x-auto flex-nowrap justify-start whitespace-nowrap">
+              <TabsTrigger className="whitespace-nowrap" value="tokens">Tokens</TabsTrigger>
+              <TabsTrigger className="whitespace-nowrap" value="endpoint">Endpoint</TabsTrigger>
+              <TabsTrigger className="whitespace-nowrap" value="bookings">Recent bookings</TabsTrigger>
+              <TabsTrigger className="whitespace-nowrap" value="logs">Ingest log</TabsTrigger>
             </TabsList>
 
             <TabsContent value="tokens" className="mt-4">
