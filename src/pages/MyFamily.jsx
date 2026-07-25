@@ -593,6 +593,27 @@ export default function MyFamily() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <AlertDialog open={!!promoteChild} onOpenChange={(o) => !o && setPromoteChild(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Promote {promoteChild?.first_name} {promoteChild?.last_name} to teenager?</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-2 text-sm">
+                <p>A matching teenager record will be created under your family with parental consent carried over. You can set an optional check-in PIN afterwards in the Teenagers section.</p>
+                <p>The child record will then be removed. If this child has any Children Church check-in history, the record will be kept but hidden from My Family so historical reports stay intact.</p>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => { e.preventDefault(); promoteToTeen.mutate(promoteChild); }}
+              disabled={promoteToTeen.isPending}
+            >Promote</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
