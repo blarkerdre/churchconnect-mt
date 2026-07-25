@@ -413,10 +413,41 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
         if (data?.error) throw new Error(data.error);
         toast({ title: "Member registered with user account", description: `Account created for ${form.email}` });
       } else {
+        // Pre-check: a member with this email already exists in this tenant?
+        if (payload.email) {
+          const { data: existing } = await supabase
+            .from("members")
+            .select("id, first_name, last_name")
+            .eq("tenant_id", tenantId)
+            .ilike("email", payload.email)
+            .limit(1)
+            .maybeSingle();
+          if (existing) {
+            toast({
+              title: "Member already exists",
+              description: `${existing.first_name} ${existing.last_name} is already registered with this email. Open their profile to update instead.`,
+              variant: "destructive",
+            });
+            setLoading(false);
+            return;
+          }
+        }
         const { error } = await supabase.from("members").insert(withTenant(payload)).select().single();
-        if (error) throw error;
+        if (error) {
+          if (error.code === "23505" && /members_tenant_email_uidx/.test(error.message || "")) {
+            toast({
+              title: "Duplicate email",
+              description: "A member with this email is already registered in this church.",
+              variant: "destructive",
+            });
+            setLoading(false);
+            return;
+          }
+          throw error;
+        }
         toast({ title: "Member registered" });
       }
+
       // Apply staged role changes (admin-only, linked accounts only)
       if (member && memberUserId && isAdmin) {
         const savedRoles = memberRoles.map((r) => r.role);
