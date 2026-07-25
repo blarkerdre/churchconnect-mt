@@ -167,7 +167,7 @@ export default function TenantBillingTab({ tenant }) {
 
         {subForm && (
           <div className="space-y-3 p-3 border rounded-lg">
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1">
                 <Label className="text-xs">Billing Cycle</Label>
                 <Select value={subForm.billing_cycle} onValueChange={(v) => setSubForm({ ...subForm, billing_cycle: v })}>
@@ -191,7 +191,7 @@ export default function TenantBillingTab({ tenant }) {
                 </Select>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1">
                 <Label className="text-xs">Amount</Label>
                 <Input type="number" step="0.01" min="0" value={subForm.amount} onChange={(e) => setSubForm({ ...subForm, amount: e.target.value })} />
@@ -270,7 +270,7 @@ export default function TenantBillingTab({ tenant }) {
 
         {showPaymentForm && (
           <div className="space-y-3 p-3 border rounded-lg">
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1">
                 <Label className="text-xs">Amount</Label>
                 <Input type="number" step="0.01" value={paymentForm.amount} onChange={(e) => setPaymentForm({ ...paymentForm, amount: e.target.value })} />
@@ -280,7 +280,7 @@ export default function TenantBillingTab({ tenant }) {
                 <Input type="date" value={paymentForm.payment_date} onChange={(e) => setPaymentForm({ ...paymentForm, payment_date: e.target.value })} />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1">
                 <Label className="text-xs">Method</Label>
                 <Select value={paymentForm.payment_method} onValueChange={(v) => setPaymentForm({ ...paymentForm, payment_method: v })}>
