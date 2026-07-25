@@ -501,10 +501,10 @@ export default function PricingTab() {
       </CardHeader>
       <CardContent>
         <Tabs defaultValue="plans">
-          <TabsList>
-            <TabsTrigger value="plans"><Package className="h-3.5 w-3.5 mr-1" />Plans</TabsTrigger>
-            <TabsTrigger value="costs"><Calculator className="h-3.5 w-3.5 mr-1" />Costs</TabsTrigger>
-            <TabsTrigger value="usage"><BarChart3 className="h-3.5 w-3.5 mr-1" />Usage</TabsTrigger>
+          <TabsList className="w-full overflow-x-auto flex-nowrap justify-start whitespace-nowrap">
+            <TabsTrigger className="whitespace-nowrap" value="plans"><Package className="h-3.5 w-3.5 mr-1" />Plans</TabsTrigger>
+            <TabsTrigger className="whitespace-nowrap" value="costs"><Calculator className="h-3.5 w-3.5 mr-1" />Costs</TabsTrigger>
+            <TabsTrigger className="whitespace-nowrap" value="usage"><BarChart3 className="h-3.5 w-3.5 mr-1" />Usage</TabsTrigger>
           </TabsList>
           <TabsContent value="plans" className="mt-4"><PlansSubTab /></TabsContent>
           <TabsContent value="costs" className="mt-4"><CostsSubTab /></TabsContent>
