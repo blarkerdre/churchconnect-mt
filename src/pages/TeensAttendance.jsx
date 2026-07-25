@@ -768,13 +768,24 @@ function RegisteredTeensDialog({ open, onOpenChange }) {
                     {t.attendance_consent ? (
                       <Badge variant="outline" className="text-[10px] border-emerald-300 text-emerald-700">
                         <ShieldCheck className="h-3 w-3 mr-1" />
-                        Consent{t.attendance_consent_at ? ` · ${format(new Date(t.attendance_consent_at), "d MMM yyyy")}` : ""}
+                        Attendance{t.attendance_consent_at ? ` · ${format(new Date(t.attendance_consent_at), "d MMM yyyy")}` : ""}
                       </Badge>
                     ) : (
                       <Badge variant="outline" className="text-[10px] border-amber-300 text-amber-700">
-                        <ShieldAlert className="h-3 w-3 mr-1" /> No consent
+                        <ShieldAlert className="h-3 w-3 mr-1" /> No attendance consent
                       </Badge>
                     )}
+                    {t.data_processing_consent ? (
+                      <Badge variant="outline" className="text-[10px] border-emerald-300 text-emerald-700">
+                        <ShieldCheck className="h-3 w-3 mr-1" />
+                        Data processing{t.data_processing_consent_at ? ` · ${format(new Date(t.data_processing_consent_at), "d MMM yyyy")}` : ""}
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="text-[10px] border-amber-300 text-amber-700">
+                        <ShieldAlert className="h-3 w-3 mr-1" /> No data-processing consent
+                      </Badge>
+                    )}
+
                     {t.access_pin_hash && (
                       <Badge variant="outline" className="text-[10px] border-slate-300">
                         <KeyRound className="h-3 w-3 mr-1" /> PIN
