@@ -511,14 +511,14 @@ export default function WoFBIApplicationsTab() {
   const isRejectedStatus = (s) => s === "rejected";
 
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between gap-2 flex-wrap">
+    <Card className="min-w-0">
+      <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
         <CardTitle className="text-base">Bible School Applications ({applications.length})</CardTitle>
-        <div className="flex gap-2">
-          <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setShowReport((s) => !s)}>
+        <div className="flex flex-wrap gap-2">
+          <Button size="sm" variant="outline" className="gap-1.5 flex-1 sm:flex-none" onClick={() => setShowReport((s) => !s)}>
             <BarChart3 className="h-4 w-4" /> {showReport ? "Hide" : "Report"}
           </Button>
-          <Button size="sm" variant="outline" className="gap-1.5" onClick={exportCsv} disabled={filtered.length === 0}>
+          <Button size="sm" variant="outline" className="gap-1.5 flex-1 sm:flex-none" onClick={exportCsv} disabled={filtered.length === 0}>
             <Download className="h-4 w-4" /> Export CSV
           </Button>
         </div>
@@ -700,8 +700,8 @@ export default function WoFBIApplicationsTab() {
             {applications.length === 0 ? "No applications yet." : "No applications match the current filters."}
           </p>
         ) : (
-          <div className="overflow-x-auto">
-            <Table>
+          <div className="overflow-x-auto -mx-4 sm:mx-0">
+            <Table className="min-w-[720px]">
               <TableHeader>
                 <TableRow>
                   {canDelete && (
@@ -799,7 +799,7 @@ export default function WoFBIApplicationsTab() {
       </CardContent>
 
       <Dialog open={!!detail} onOpenChange={(v) => !v && setDetail(null)}>
-        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto w-[calc(100vw-1rem)] sm:w-auto">
           <DialogHeader>
             <DialogTitle>
               {detail?.source === "direct" ? "Direct enrolment" : "Application"} — {detail?.first_name} {detail?.last_name}

@@ -304,7 +304,7 @@ function LecturerFeedbackDialog({ lecturer, onClose, tenantId }) {
 
   return (
     <Dialog open={!!lecturer} onOpenChange={(v) => { if (!v) { setSubjectFilter("all"); onClose(); } }}>
-      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto w-[calc(100vw-1rem)] sm:w-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Star className="h-4 w-4 text-primary" />

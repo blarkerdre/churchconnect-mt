@@ -15,7 +15,7 @@ export default function WoFBIRegistrationQRCode({ open, onOpenChange }) {
   if (!tenantSlug) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-sm">
+        <DialogContent className="max-w-sm w-[calc(100vw-1rem)] sm:w-auto max-h-[90vh] overflow-y-auto">
           <TenantDialogHeader>
               <QrCode className="h-5 w-5" /> Bible School Registration QR Code
             </TenantDialogHeader>
@@ -69,7 +69,7 @@ export default function WoFBIRegistrationQRCode({ open, onOpenChange }) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-sm">
+      <DialogContent className="max-w-sm w-[calc(100vw-1rem)] sm:w-auto max-h-[90vh] overflow-y-auto">
         <TenantDialogHeader>
             <QrCode className="h-5 w-5" /> Bible School Registration QR Code
            </TenantDialogHeader>

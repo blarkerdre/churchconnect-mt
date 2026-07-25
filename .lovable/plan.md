@@ -1,51 +1,39 @@
+
 ## Goal
-Replace the instant "Download my data" flow with a request-approve-download workflow. Members submit a request; a tenant admin reviews and approves; the member then downloads their JSON export. Rejected requests block the download.
 
-## Data model (migration)
-Add a new tenant-scoped table `data_export_requests`:
-- `id uuid pk`, `tenant_id uuid not null`, `user_id uuid not null`, `member_id uuid null`
-- `reason text null`, `status text not null default 'pending'` — values: `pending`, `approved`, `rejected`, `downloaded`, `expired`
-- `review_note text null`, `reviewed_by uuid null`, `reviewed_at timestamptz null`
-- `approved_at timestamptz null`, `expires_at timestamptz null` (approval valid 7 days)
-- `downloaded_at timestamptz null`, `created_at timestamptz default now()`
+Make the Bible School (WOFBI) management area and all its dialogs/forms render cleanly from 320px phones up to desktop — no horizontal page scroll, no clipped controls, no cramped tables.
 
-GRANTs: `authenticated` (SELECT/INSERT), `service_role` ALL. Enable RLS:
-- Member can SELECT/INSERT own rows in their tenant.
-- Tenant admins can SELECT and UPDATE (approve/reject/note) rows in their tenant.
-- No DELETE from client.
-Add a `BEFORE INSERT` trigger to block a new request if one is already `pending` or unused `approved` for the same `(tenant_id, user_id)`.
+## Scope (frontend/presentation only)
 
-## Edge function
-Modify `supabase/functions/export-member-data/index.ts` to require an approved request:
-- Accept `request_id` in the body; validate JWT; load the row via service role.
-- Reject unless `status = 'approved'`, user matches, tenant matches, `expires_at > now()`.
-- On success, mark the request `downloaded` with `downloaded_at = now()` (single-use), then return the JSON payload as today.
+Files to audit and tighten:
 
-## UI
-`src/pages/MyData.jsx` – Download tab:
-- Replace the direct download button with:
-  - If no active request: show "Request data download" button (opens a small reason textarea, submits an insert into `data_export_requests`).
-  - If `pending`: show status pill "Awaiting admin approval" + submitted date. Disable new requests.
-  - If `rejected`: show note; allow a new request.
-  - If `approved` and not expired: show "Download my data (JSON)" button that invokes the edge function with `request_id`. After success, show "Downloaded on …".
-  - If `downloaded` or `expired`: show status and allow a new request.
-- Keep the "3 exports per 24h" limit copy replaced with: "Downloads require admin approval. Approval is valid for 7 days and can be used once."
+- `src/pages/ExamManagement.jsx` (main hub, ~1951 lines: tabs, filters, cards, tables, dialogs)
+- `src/components/exams/*`:
+  - `WoFBIApplicationsTab.jsx`, `WoFBIApplicationFormEditor.jsx`, `WoFBIDynamicForm.jsx`
+  - `WoFBIAttendanceTab.jsx`, `WoFBIAttendanceQRDialog.jsx`, `WoFBIPersistentQRDialog.jsx`, `WoFBIRegistrationQRCode.jsx`
+  - `SubjectManager.jsx`, `LecturerManager.jsx`, `LecturerFeedbackReport.jsx`
+  - `CourseResultsView.jsx`, `StatementOfResult.jsx`, `SendResultsDialog.jsx`
+  - `QcCheckDialog.jsx`, `QcReport.jsx`, `RateLecturerDialog.jsx`
+  - `TakeExamDialog.jsx`, `DangerConfirmDialog.jsx`
 
-`src/components/settings/DataRequestsSection.jsx`:
-- Add a second card "Data download requests" that lists `data_export_requests` with the same approve/reject dialog pattern used for erasure. No "execute" action — approval is enough; the member does the download.
-- Reuse `statusVariant` helper; add `downloaded`/`expired` styling.
+## Fixes to apply
 
-## Notifications (in-app only, matches project pattern)
-- On member submit: notify tenant admins ("New data download request").
-- On admin approve/reject: notify the member.
-Use the existing `notifications` insert pattern already used by erasure (mirror `auto_create_followup` / erasure notify path if present; otherwise a lightweight insert from the RLS-allowed client side is fine — implementation detail during build).
-
-## Out of scope
-- No changes to erasure flow.
-- No SMS/email — in-app notification only, per project convention for lightweight consent workflows.
-- No changes to the exported JSON payload structure.
+1. **Page container** — ensure `ExamManagement` root uses `min-w-0` and `px-3 sm:px-4 lg:px-6`; wrap any full-width row in `min-w-0` so flex children can shrink.
+2. **Tab bars** — Applications / Registrations / Attendance / Subjects / Lecturers / Results / QC tab strips become horizontally scrollable on mobile (`flex overflow-x-auto no-scrollbar`, `whitespace-nowrap` triggers, `w-max` list).
+3. **Filter rows** — status, search, cohort, date filters stack via `flex flex-col sm:flex-row flex-wrap gap-2`; inputs get `w-full sm:w-auto`, search grows with `flex-1 min-w-0`.
+4. **Data tables** — every table wrapped in `<div className="overflow-x-auto -mx-3 sm:mx-0"><table className="min-w-[640px] w-full">…`; long text cells use `truncate` with a `title` for tooltip; action button clusters wrap.
+5. **Card grids** — application/registration cards use `grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3`; internal two-column detail grids collapse to `grid-cols-1 sm:grid-cols-2`.
+6. **Dialogs** — every `DialogContent` gets `w-[calc(100vw-1rem)] sm:w-auto max-w-[…] max-h-[90vh] overflow-y-auto p-4 sm:p-6`; footers become `flex flex-col-reverse sm:flex-row sm:justify-end gap-2` so buttons stack full-width on mobile.
+7. **Form fields** — inside `WoFBIDynamicForm`, `WoFBIApplicationFormEditor`, `QcCheckDialog`, `RateLecturerDialog`, `SendResultsDialog`, `TakeExamDialog`: convert any hard `grid-cols-2/3` to responsive `grid-cols-1 sm:grid-cols-2`; long Selects get `w-full`; option chips wrap.
+8. **QR dialogs** — QR canvas centered, capped at `w-[min(80vw,320px)]`; instructions stack; copy/download buttons full-width on mobile.
+9. **Results / Statement of Result / QcReport** — printable views keep desktop layout but wrap runtime view in `overflow-x-auto`; headers/badges wrap with `flex-wrap gap-2`.
+10. **Editor list rows** (`WoFBIApplicationFormEditor`) — the field row (label + up/down/edit/delete) becomes `flex flex-wrap` so controls don't push off-screen on 384px viewport.
 
 ## Verification
-- Migration passes linter; RLS blocks cross-tenant reads.
-- Member cannot download until admin approves; edge function rejects `pending`/`rejected`/expired/already-downloaded requests.
-- Admin approve→member download→row flips to `downloaded`; second download attempt fails.
+
+- Use Playwright at viewports 360, 414, 768, 1280 to load `/t/<slug>/exam-management`, open each tab, open one dialog per module (Application form editor, QC check, Rate lecturer, Send results, Take exam, QR), and screenshot. Confirm no horizontal scroll on `<html>`, all buttons visible, tables scroll only inside their wrapper.
+- Spot-check the same on the running preview (currently 384×673).
+
+## Out of scope
+
+No changes to business logic, RLS, RPCs, edge functions, or data models. UI-only.

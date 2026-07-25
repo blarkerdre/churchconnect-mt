@@ -212,7 +212,7 @@ export default function TakeExamDialog({ open, onOpenChange, trainingType, membe
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto w-[calc(100vw-1rem)] sm:w-auto">
         <div className="flex items-center justify-between w-full">
           <TenantDialogHeader>{title}</TenantDialogHeader>
           {timeLeft !== null && !submitted && (

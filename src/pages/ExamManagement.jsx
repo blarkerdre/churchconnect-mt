@@ -308,7 +308,7 @@ export default function ExamManagement() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 min-w-0">
     <ModuleTour tourId="exam-management-v1" />
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
@@ -325,14 +325,14 @@ export default function ExamManagement() {
       </div>
       <WoFBIRegistrationQRCode open={qrOpen} onOpenChange={setQrOpen} />
 
-      <Tabs defaultValue="management" className="w-full">
-        <TabsList className="flex flex-nowrap h-auto gap-1 overflow-x-auto w-full justify-start">
-          <TabsTrigger value="management">Management</TabsTrigger>
-          <TabsTrigger value="applications">Applications</TabsTrigger>
-          <TabsTrigger value="attendance">Attendance</TabsTrigger>
-          <TabsTrigger value="app-form">Application Form</TabsTrigger>
-          <TabsTrigger value="lecturer">Lecturer Feedback</TabsTrigger>
-          <TabsTrigger value="qc">Quality Control</TabsTrigger>
+      <Tabs defaultValue="management" className="w-full min-w-0">
+        <TabsList className="flex flex-nowrap h-auto gap-1 overflow-x-auto w-full justify-start scrollbar-thin">
+          <TabsTrigger value="management" className="whitespace-nowrap">Management</TabsTrigger>
+          <TabsTrigger value="applications" className="whitespace-nowrap">Applications</TabsTrigger>
+          <TabsTrigger value="attendance" className="whitespace-nowrap">Attendance</TabsTrigger>
+          <TabsTrigger value="app-form" className="whitespace-nowrap">Application Form</TabsTrigger>
+          <TabsTrigger value="lecturer" className="whitespace-nowrap">Lecturer Feedback</TabsTrigger>
+          <TabsTrigger value="qc" className="whitespace-nowrap">Quality Control</TabsTrigger>
         </TabsList>
 
 
@@ -547,7 +547,7 @@ export default function ExamManagement() {
 
       {/* Course Dialog */}
       <Dialog open={titleDialogOpen} onOpenChange={setTitleDialogOpen}>
-        <DialogContent className="max-w-sm">
+        <DialogContent className="max-w-sm w-[calc(100vw-1rem)] sm:w-auto max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle>{editingTitle ? "Edit Course" : "Add Certificate Course"}</DialogTitle></DialogHeader>
           <form onSubmit={(e) => {
             e.preventDefault();
@@ -754,7 +754,7 @@ export default function ExamManagement() {
 
       {/* Question Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto w-[calc(100vw-1rem)] sm:w-auto max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle>{editingQuestion ? "Edit Question" : "Add Question"}</DialogTitle></DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
@@ -1179,8 +1179,8 @@ function CourseRegistrationsView({ course }) {
             <Users className="h-4 w-4 text-primary" /> Registrations — {course.name}
             <Badge variant="secondary" className="ml-2">{filteredRegistrations.length}</Badge>
           </CardTitle>
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="relative flex-1 min-w-[160px] sm:flex-none sm:w-[200px]">
+          <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+            <div className="relative flex-1 min-w-[160px] sm:w-[200px] sm:flex-none">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
               <Input
                 placeholder="Search name, email, phone…"
@@ -1190,7 +1190,7 @@ function CourseRegistrationsView({ course }) {
               />
             </div>
             <Select value={sourceFilter} onValueChange={setSourceFilter}>
-              <SelectTrigger className="w-[140px] h-8 text-xs shrink-0">
+              <SelectTrigger className="w-full sm:w-[140px] h-8 text-xs shrink-0 [&>span]:truncate">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -1201,7 +1201,7 @@ function CourseRegistrationsView({ course }) {
               </SelectContent>
             </Select>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[170px] h-8 text-xs shrink-0">
+              <SelectTrigger className="w-full sm:w-[170px] h-8 text-xs shrink-0 [&>span]:truncate">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -1217,7 +1217,7 @@ function CourseRegistrationsView({ course }) {
                 type="date"
                 value={dateFrom}
                 onChange={e => setDateFrom(e.target.value)}
-                className="h-8 w-[140px] text-xs"
+                className="h-8 w-[130px] sm:w-[140px] text-xs"
               />
             </div>
             <div className="flex items-center gap-1 shrink-0">
@@ -1226,9 +1226,10 @@ function CourseRegistrationsView({ course }) {
                 type="date"
                 value={dateTo}
                 onChange={e => setDateTo(e.target.value)}
-                className="h-8 w-[140px] text-xs"
+                className="h-8 w-[130px] sm:w-[140px] text-xs"
               />
             </div>
+
 
             {(dateFrom || dateTo) && (
               <Button
