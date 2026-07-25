@@ -997,12 +997,12 @@ export default function TenantAdmin() {
             <DialogDescription>Modify tenant settings, branding, plan, and features</DialogDescription>
           </DialogHeader>
           <Tabs defaultValue="general" className="w-full">
-            <TabsList className="w-full grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 h-auto">
-              <TabsTrigger value="general">General</TabsTrigger>
-              <TabsTrigger value="branding">Branding</TabsTrigger>
-              <TabsTrigger value="plan">Plan</TabsTrigger>
-              <TabsTrigger value="billing">Billing</TabsTrigger>
-              <TabsTrigger value="features">Features</TabsTrigger>
+            <TabsList className="w-full overflow-x-auto flex-nowrap justify-start whitespace-nowrap h-auto">
+              <TabsTrigger className="whitespace-nowrap" value="general">General</TabsTrigger>
+              <TabsTrigger className="whitespace-nowrap" value="branding">Branding</TabsTrigger>
+              <TabsTrigger className="whitespace-nowrap" value="plan">Plan</TabsTrigger>
+              <TabsTrigger className="whitespace-nowrap" value="billing">Billing</TabsTrigger>
+              <TabsTrigger className="whitespace-nowrap" value="features">Features</TabsTrigger>
             </TabsList>
 
             {/* General Tab */}
