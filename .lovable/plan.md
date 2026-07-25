@@ -1,36 +1,53 @@
-## Goal
-Let super admins moderate any tenant's members, remove the duplicate Akinmolayan row, and stop the public/first-timer flow from creating duplicate member rows for the same email in a tenant.
+## Diagnosis (verified against the database)
 
-## 1. Super-admin bypass on core member operations
+`teen_checkin` (the RPC used by the roster's manual sign-in) authorises a non-guardian caller only if `is_admin(...)` OR `is_teens_unit_member(auth.uid(), tenant_id)` returns true. Otherwise it returns `not_authorised` and the toast just says "Failed" / the RPC error.
 
-Add a `public.has_role(auth.uid(), 'super_admin')` clause to RLS policies on `members` so super admins can SELECT/UPDATE/DELETE across any tenant without being added as a tenant admin.
+Both `is_teens_unit_leader` and `is_teens_unit_member` (defined in `supabase/migrations/20260717105516_...sql`) compare the unit name against a fixed whitelist:
 
-- Migration: recreate the relevant `members` policies (delete, update, select as needed) with `USING (... OR public.has_role(auth.uid(), 'super_admin'))`.
-- Apply the same super-admin OR-clause to closely-coupled tables that block a member delete cascade or moderation view: `attendance_records`, `followups`, `pastoral_care`, `transportation`, `event_registrations`, `course_registrations`, `wofbi_applications`, `member_status_history`, `tenant_memberships` (delete only).
-- Keep existing tenant-scoped conditions intact — super_admin is purely additive.
-- No client changes required; the existing delete flow in `src/pages/Members.jsx` already unlinks WSF leadership and calls `admin-delete-user` — it will succeed once RLS permits.
+```
+('teens','teen','teenagers','youth','teens ministry','teen ministry')
+```
 
-## 2. Clean up the duplicate Akinmolayan record
+A live query against `members.church_unit` in this project returns the actual unit name that has been in use:
 
-One-off SQL in the same migration:
+```
+teens church
+```
 
-- Delete `members` row `bcd6c190…` (Visitor, no `user_id`, no dependent rows) in tenant WCI Cardiff.
-- Keep `7529f503…` (Active, linked user, has attendance).
-- Guarded by explicit `id =` + `tenant_id =` + `user_id IS NULL` so it can't hit the wrong row.
+`teens church` is not in the whitelist, so `is_teens_unit_member` returns false for every unit member (and `is_teens_unit_leader` returns false for anyone assigned to a `unit_leader_assignments` row named "Teens Church"). Result: they can open the page (nav gate is looser — regex `/teen|youth/i`) but the manual sign-in RPC rejects them.
 
-## 3. Prevent future duplicates from public / first-timer registration
+The same mismatch exists in `src/hooks/useTeensUnitRole.jsx` (`TEENS_UNIT_NAMES`) and in the church-unit filter inside `src/components/AppLayout.jsx` for the sidebar.
 
-Deduplicate on `(tenant_id, lower(email))` at the entry points instead of always inserting:
+## Fix
 
-- `supabase/functions/public-register/index.ts` and any first-timer/self-registration edge functions: before insert, `select id from members where tenant_id = $1 and lower(email) = lower($2) limit 1`. If found, `update` the existing row (fill blanks, refresh consent/status where appropriate) and return that id; otherwise insert.
-- Same guard in the in-app "Register Member" path in `MemberFormDialog` when creating (not editing) — surface a "A member with this email already exists — open their profile?" confirmation instead of silently inserting.
-- Add a partial unique index `create unique index members_tenant_email_uidx on public.members (tenant_id, lower(email)) where email is not null;` after the cleanup step, so the database enforces it going forward.
+Add `'teens church'` and `'teen church'` to every Teens-unit whitelist so all four surfaces agree.
 
-## Technical notes
-- All policy changes use `create policy` / `drop policy` in a single migration; GRANTs on `members` already exist and don't need to change.
-- The unique index must run AFTER the duplicate cleanup or it will fail. Before creating it, the migration also runs a safety query to detect any other tenant/email duplicates and abort with a clear error if found (so we don't silently drop data).
-- No UI redesign; Members page keeps its current delete confirmation dialog.
+### SQL migration
+Recreate both helpers with the expanded list (same signature, SECURITY DEFINER, `search_path = public`):
+
+```
+lower(btrim(x)) IN (
+  'teens','teen','teenagers','youth',
+  'teens ministry','teen ministry',
+  'teens church','teen church'
+)
+```
+
+- `public.is_teens_unit_leader(_user_id, _tenant_id)` — check against `unit_leader_assignments.unit_name`.
+- `public.is_teens_unit_member(_user_id, _tenant_id)` — leader OR any comma-separated value in `members.church_unit` matches.
+
+No policy or RPC body changes needed; every RLS policy and `teen_checkin` already delegate to these helpers.
+
+### Frontend
+- `src/hooks/useTeensUnitRole.jsx`: extend `TEENS_UNIT_NAMES` with `"teens church"` and `"teen church"` so the roster's "sign in" button and Teens Attendance page gates render for members.
+- `src/components/AppLayout.jsx`: any Teens Attendance sidebar gate that uses a name list gets the same additions (the existing `/teen|youth/i` regex already covers "teens church", but I'll double-check the exact filter and align it with the hook).
+
+## Verification
+
+1. After the migration, run `SELECT public.is_teens_unit_member('<user_id>','<tenant_id>')` for a "teens church" member — expect `true`.
+2. In the app, open a Teens session roster as that user and tap sign-in — expect a success toast and a new `teen_attendance_records` row with `source='worker'`.
+3. Tap sign-in again on the same teen — expect the checked-out branch to fire.
 
 ## Out of scope
-- Bulk merging of any other historical duplicates (only Akinmolayan's is addressed here).
-- Changing tenant-scoping semantics for non-member tables beyond the OR super_admin clause.
+
+No changes to consent flow, notifications, session lifecycle, or the self-checkin RPC.
