@@ -1,53 +1,37 @@
-## Diagnosis (verified against the database)
+## Diagnosis
 
-`teen_checkin` (the RPC used by the roster's manual sign-in) authorises a non-guardian caller only if `is_admin(...)` OR `is_teens_unit_member(auth.uid(), tenant_id)` returns true. Otherwise it returns `not_authorised` and the toast just says "Failed" / the RPC error.
+Romoke Odunsi has `Children Church` in her `church_unit`, so `is_children_church_member` returns true and `checkin_child` would accept her. But she never gets that far: David Badero doesn't appear in her search on the Children Church page.
 
-Both `is_teens_unit_leader` and `is_teens_unit_member` (defined in `supabase/migrations/20260717105516_...sql`) compare the unit name against a fixed whitelist:
-
-```
-('teens','teen','teenagers','youth','teens ministry','teen ministry')
-```
-
-A live query against `members.church_unit` in this project returns the actual unit name that has been in use:
+The reason is the RLS SELECT policy on `public.children`:
 
 ```
-teens church
+is_admin OR is_reports_officer
+  OR is_child_primary_guardian OR is_child_co_parent
+  OR is_child_active_today
 ```
 
-`teens church` is not in the whitelist, so `is_teens_unit_member` returns false for every unit member (and `is_teens_unit_leader` returns false for anyone assigned to a `unit_leader_assignments` row named "Teens Church"). Result: they can open the page (nav gate is looser — regex `/teen|youth/i`) but the manual sign-in RPC rejects them.
+There is no clause for Children Church workers/leaders. So a worker can only see a child once that child is already checked in today. Before drop-off, the search query in `ChildrenChurch.jsx` (`supabase.from("children").select(...)`) returns zero rows for non-guardian workers, and David never shows up.
 
-The same mismatch exists in `src/hooks/useTeensUnitRole.jsx` (`TEENS_UNIT_NAMES`) and in the church-unit filter inside `src/components/AppLayout.jsx` for the sidebar.
+Sibling tables have the same gap worth fixing in one pass:
+- `child_guardians` SELECT — workers also need to see authorised adults for the drop-off screen.
 
-## Fix
+`checkin_child`, pickup, and delegation flows already gate on `is_children_church_member`/`is_admin` and don't need changes.
 
-Add `'teens church'` and `'teen church'` to every Teens-unit whitelist so all four surfaces agree.
+## Plan
 
-### SQL migration
-Recreate both helpers with the expanded list (same signature, SECURITY DEFINER, `search_path = public`):
+1. **Migration — add Children Church worker read access**
+   - Drop and recreate the `children` SELECT policy to add:
+     `OR public.is_children_church_member(auth.uid(), tenant_id)`
+     (keeps admin, reports officer, guardian, co-parent, active-today clauses).
+   - Drop and recreate the `child_guardians` SELECT policy the same way so the "Authorised adults" list on the drop-off panel loads for workers.
 
-```
-lower(btrim(x)) IN (
-  'teens','teen','teenagers','youth',
-  'teens ministry','teen ministry',
-  'teens church','teen church'
-)
-```
+2. **Verify**
+   - Re-run `SELECT policyname, qual FROM pg_policies` for both tables to confirm the new clause.
+   - Confirm Romoke (as an authenticated user with `Children Church` in `church_unit`) can now find "David Badero" via the search box and complete drop-off.
 
-- `public.is_teens_unit_leader(_user_id, _tenant_id)` — check against `unit_leader_assignments.unit_name`.
-- `public.is_teens_unit_member(_user_id, _tenant_id)` — leader OR any comma-separated value in `members.church_unit` matches.
+No frontend code changes required — the existing search query and check-in mutation will start returning rows once RLS allows it.
 
-No policy or RPC body changes needed; every RLS policy and `teen_checkin` already delegate to these helpers.
+## Technical notes
 
-### Frontend
-- `src/hooks/useTeensUnitRole.jsx`: extend `TEENS_UNIT_NAMES` with `"teens church"` and `"teen church"` so the roster's "sign in" button and Teens Attendance page gates render for members.
-- `src/components/AppLayout.jsx`: any Teens Attendance sidebar gate that uses a name list gets the same additions (the existing `/teen|youth/i` regex already covers "teens church", but I'll double-check the exact filter and align it with the hook).
-
-## Verification
-
-1. After the migration, run `SELECT public.is_teens_unit_member('<user_id>','<tenant_id>')` for a "teens church" member — expect `true`.
-2. In the app, open a Teens session roster as that user and tap sign-in — expect a success toast and a new `teen_attendance_records` row with `source='worker'`.
-3. Tap sign-in again on the same teen — expect the checked-out branch to fire.
-
-## Out of scope
-
-No changes to consent flow, notifications, session lifecycle, or the self-checkin RPC.
+- Keep `WITH CHECK`/INSERT/UPDATE/DELETE policies untouched; this change only broadens SELECT.
+- `is_children_church_member` already covers both unit members and leaders (via `unit_leader_assignments`), matching the whitelist that includes `children church`, `childrens church`, `children's church`, and the ministry variants — so no whitelist edits are needed this time.
