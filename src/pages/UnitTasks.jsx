@@ -43,7 +43,7 @@ export default function UnitTasks() {
   const canViewUnit = canLead || isUnitMemberOnly;
 
   // Units available for filter/scoping. Leaders see their leaderUnits; plain members see their myUnits.
-  const { data: allUnits = [] } = useQuery({
+  const { data: unitRows = [] } = useQuery({
     queryKey: ["active-units-for-tasks", tenantId, isAdmin, (leaderUnits || []).join("|"), (myUnits || []).join("|")],
     enabled: !!tenantId && canViewUnit,
     queryFn: async () => {
@@ -55,18 +55,20 @@ export default function UnitTasks() {
           .order("name");
         const { data, error } = await q;
         if (error) return [];
-        return (data || []).map((r) => r.name).filter(Boolean);
+        return (data || []).filter((r) => r.name).map((r) => ({ name: r.name, is_active: r.is_active }));
       }
       // Union of leader + member units (dedupe case-insensitive)
       const seen = new Set();
       const out = [];
       [...(leaderUnits || []), ...(myUnits || [])].forEach((u) => {
         const k = String(u || "").toLowerCase();
-        if (k && !seen.has(k)) { seen.add(k); out.push(u); }
+        if (k && !seen.has(k)) { seen.add(k); out.push({ name: u, is_active: true }); }
       });
       return out;
     },
   });
+  const allUnits = useMemo(() => unitRows.map((r) => r.name), [unitRows]);
+  const hiddenUnitNames = useMemo(() => new Set(unitRows.filter((r) => r.is_active === false).map((r) => r.name)), [unitRows]);
 
   const [activeTab, setActiveTab] = useState(canViewUnit ? "leading" : "mine");
   const [unitFilter, setUnitFilter] = useState("All");
@@ -183,7 +185,16 @@ export default function UnitTasks() {
                 <SelectTrigger className="w-56"><SelectValue placeholder="Unit" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="All">All my units</SelectItem>
-                  {allUnits.map((u) => <SelectItem key={u} value={u}>{u}</SelectItem>)}
+                  {allUnits.map((u) => (
+                    <SelectItem key={u} value={u}>
+                      <span className="inline-flex items-center gap-1.5">
+                        {u}
+                        {hiddenUnitNames.has(u) && (
+                          <span className="text-[9px] uppercase px-1 rounded bg-muted text-muted-foreground">Hidden</span>
+                        )}
+                      </span>
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
               <Select value={statusFilter} onValueChange={setStatusFilter}>
@@ -337,11 +348,12 @@ export default function UnitTasks() {
         open={formOpen}
         onOpenChange={(v) => { setFormOpen(v); if (!v) setEditing(null); }}
         unitOptions={allUnits}
+        hiddenUnitNames={hiddenUnitNames}
         defaultUnit={unitFilter !== "All" ? unitFilter : ""}
         task={editing}
         onSaved={onChanged}
       />
-      <UnitTaskReportDialog open={reportOpen} onOpenChange={setReportOpen} unitOptions={allUnits} />
+      <UnitTaskReportDialog open={reportOpen} onOpenChange={setReportOpen} unitOptions={allUnits} hiddenUnitNames={hiddenUnitNames} />
       <ServiceRosterDialog
         open={rosterOpen}
         onOpenChange={setRosterOpen}
