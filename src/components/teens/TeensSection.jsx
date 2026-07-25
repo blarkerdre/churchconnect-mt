@@ -31,6 +31,8 @@ function TeenForm({ open, onOpenChange, teen, memberId, onSaved }) {
     clear_pin: false,
     // Default to true for new records so parents actively opt out; keep existing value on edit.
     attendance_consent: teen?.id ? !!teen?.attendance_consent : true,
+    // Data-processing consent must be explicitly ticked before saving.
+    data_processing_consent: teen?.id ? !!teen?.data_processing_consent : false,
   }));
   React.useEffect(() => {
     setForm({
@@ -42,8 +44,10 @@ function TeenForm({ open, onOpenChange, teen, memberId, onSaved }) {
       pin: "",
       clear_pin: false,
       attendance_consent: teen?.id ? !!teen?.attendance_consent : true,
+      data_processing_consent: teen?.id ? !!teen?.data_processing_consent : false,
     });
   }, [teen, open]);
+
 
   const save = useMutation({
     mutationFn: async () => {
