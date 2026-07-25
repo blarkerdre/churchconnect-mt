@@ -130,14 +130,16 @@ export default function Members() {
     onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
 
-  // For unit leaders (non-admin), filter to only members in their units
+  // For unit leaders and plain unit members (non-admin), filter to only members in their units
+  const scopingUnits = unitMemberOnly ? (myUnits || []) : (leaderUnits || []);
   const unitFilteredMembers = unitLeaderReadOnly
     ? members.filter(m => {
         if (!m.church_unit) return false;
         const memberUnits = m.church_unit.split(",").map(u => u.trim().toLowerCase());
-        return leaderUnits.some(lu => memberUnits.includes(lu.toLowerCase()));
+        return scopingUnits.some(lu => memberUnits.includes(lu.toLowerCase()));
       })
     : members;
+
 
   const filtered = unitFilteredMembers.filter((m) => {
     const matchSearch = `${m.first_name} ${m.last_name} ${m.email || ""} ${m.phone || ""}`.toLowerCase().includes(search.toLowerCase());
