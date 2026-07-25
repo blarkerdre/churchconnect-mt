@@ -547,7 +547,7 @@ export default function ExamManagement() {
 
       {/* Course Dialog */}
       <Dialog open={titleDialogOpen} onOpenChange={setTitleDialogOpen}>
-        <DialogContent className="max-w-sm w-[calc(100vw-1rem)] sm:w-auto">
+        <DialogContent className="max-w-sm w-[calc(100vw-1rem)] sm:w-auto max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle>{editingTitle ? "Edit Course" : "Add Certificate Course"}</DialogTitle></DialogHeader>
           <form onSubmit={(e) => {
             e.preventDefault();
@@ -754,7 +754,7 @@ export default function ExamManagement() {
 
       {/* Question Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto w-[calc(100vw-1rem)] sm:w-auto">
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto w-[calc(100vw-1rem)] sm:w-auto max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle>{editingQuestion ? "Edit Question" : "Add Question"}</DialogTitle></DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
