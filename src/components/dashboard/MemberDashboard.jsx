@@ -183,6 +183,23 @@ export default function MemberDashboard({ currentUser, myMember }) {
         <BirthdayBanner firstName={myMember.first_name} />
       )}
 
+      {/* Today's Birthday Celebrants (visible to all members) */}
+      {todayBirthdays.length > 0 && (
+        <Card className="border-0 shadow-sm">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-2">
+              <Cake className="h-4 w-4 text-accent" />
+              Today's Birthdays
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="px-5 pb-4">
+            {todayBirthdays.map(m => (
+              <UpcomingBirthdayItem key={m.id} member={m} />
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
       {/* Self Check-In */}
       <SelfCheckInWidget />
 
@@ -230,6 +247,9 @@ export default function MemberDashboard({ currentUser, myMember }) {
           </CardContent>
         </Card>
       )}
+
+      {/* App Feedback */}
+      <AppFeedbackSection />
     </div>
   );
 }
