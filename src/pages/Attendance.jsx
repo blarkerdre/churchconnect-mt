@@ -591,7 +591,21 @@ export default function Attendance() {
                     </Select>
                   )
                 ) : (
-                  <Input value={form.unit} onChange={e => setForm(f => ({ ...f, unit: e.target.value }))} placeholder="e.g. Cardiff Central" />
+                  <Select value={form.unit} onValueChange={v => setForm(f => ({ ...f, unit: v }))}>
+                    <SelectTrigger><SelectValue placeholder="Select a Home Cell centre" /></SelectTrigger>
+                    <SelectContent>
+                      {wsfCentres.map(c => (
+                        <SelectItem key={c.id} value={c.name}>
+                          <span className="inline-flex items-center gap-1.5">
+                            {c.name}
+                            {c.is_active === false && (
+                              <span className="text-[9px] uppercase px-1 rounded bg-muted text-muted-foreground">Hidden</span>
+                            )}
+                          </span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 )}
               </div>
             )}
