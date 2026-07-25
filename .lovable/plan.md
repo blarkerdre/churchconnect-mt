@@ -1,25 +1,24 @@
-## Root cause
+## Goal
+In `src/pages/Attendance.jsx`, when creating a "Home Cell Meeting", the Home Cell Centre field currently renders a free-text `Input` for admins/non-WSF-leaders. Replace it with a dropdown of Home Cell centres, mirroring how the Unit dropdown works for Unit Meetings.
 
-The New Meeting dialog in `src/pages/Attendance.jsx` calls `useChurchUnits()` with the default `activeOnly = true`, so any church unit marked hidden (`is_active = false`) is stripped out before the Unit dropdown is rendered — even for Admins. That's why "not all units" appear.
+## Changes (frontend only, `src/pages/Attendance.jsx`)
 
-Unit Tasks (`src/pages/UnitTasks.jsx`) already fetches every unit for Admins (no `is_active` filter), but the dropdown gives no visual clue when a unit is hidden.
+1. Add a query to fetch centres from `wsf_centres` scoped to the current `tenant_id`:
+   - For admins: fetch all centres (active + inactive), show a "Hidden" badge next to inactive ones (same pattern used for hidden units).
+   - For non-admins: fetch only `is_active = true` centres.
+   - Order by `name`.
 
-## Changes
+2. In the Home Cell Centre block (around lines 567–585), replace the `else` branch's `<Input>` with a `<Select>`:
+   - Options come from the centres query.
+   - Placeholder: "Select a Home Cell centre".
+   - Value bound to `form.unit`, same `onValueChange` handler.
+   - For admins, append a small "Hidden" badge in `SelectItem` when the centre is inactive.
 
-1. **`src/pages/Attendance.jsx`**
-   - Replace `useChurchUnits()` with `useChurchUnits(!isAdmin)` so Admins receive both active and hidden units (same pattern used by `SessionFormDialog.jsx`).
-   - In the Unit `<Select>` (line ~543) and the top-of-page unit filter (line ~252), render a small "Hidden" badge next to any unit where `is_active === false`, so Admins can tell them apart.
+3. Leave the WSF-leader branch (single centre auto-fill / limited leader-centres select) unchanged.
 
-2. **`src/pages/UnitTasks.jsx`**
-   - Fetch `is_active` alongside `name` in the `active-units-for-tasks` query for Admins and keep a set of hidden names.
-   - Pass the hidden-name set (or an array of `{name, is_active}`) into `UnitTaskFormDialog` and `UnitTaskReportDialog` so their Unit dropdown items can display the same "Hidden" badge for Admins. Non-admin leaders/members are unaffected.
+4. No DB, RLS, or edge function changes. No changes outside this file.
 
-3. **`src/components/unitTasks/UnitTaskFormDialog.jsx`** and **`src/components/unitTasks/UnitTaskReportDialog.jsx`**
-   - Accept the optional hidden-names set and, when present, render the "Hidden" badge inside each `<SelectItem>` (mirroring `SessionFormDialog.jsx`).
-
-No RLS, schema, or business-logic changes — purely a frontend fix so Admins see and can pick hidden units, with a clear visual marker.
-
-## Out of scope
-
-- Non-admin users continue to see active units only.
-- No change to how hidden units are toggled in Settings.
+## Verification
+- As admin: open "Create Meeting" → select "Home Cell Meeting" → see dropdown listing all centres, hidden ones badged.
+- As WSF leader: behavior unchanged.
+- As unit leader / member without WSF role: dropdown shows only active centres.
