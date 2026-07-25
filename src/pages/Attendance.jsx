@@ -50,6 +50,18 @@ export default function Attendance() {
     },
   });
 
+  const { data: wsfCentres = [] } = useQuery({
+    queryKey: ["wsf-centres-for-attendance", tenantId, isAdmin],
+    enabled: !!tenantId,
+    queryFn: async () => {
+      let q = supabase.from("wsf_centres").select("id, name, is_active").eq("tenant_id", tenantId).order("name");
+      if (!isAdmin) q = q.eq("is_active", true);
+      const { data, error } = await q;
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
   const filteredSessions = useMemo(() => {
     return sessions.filter(s => {
       if (dateFrom && s.session_date < dateFrom) return false;
