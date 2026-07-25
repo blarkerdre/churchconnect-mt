@@ -1,12 +1,28 @@
-The Bible verse popover currently renders through a portal to `document.body` while the sermon editor sits inside a modal dialog. That puts the popover outside the dialog’s scroll/interaction boundary, so on mobile especially the drag gesture is handled by the dialog/page instead of the verse panel. The popover also uses touch/wheel propagation handlers that are too fragile for nested mobile scrolling.
+# Restrict "Church Unit" sidebar to unit members
 
-Plan:
-1. Update the Bible verse popover so its scrollable verse area is a stable element with a real height constraint, not only `maxHeight`.
-2. Keep the popover interaction inside the sermon editor/dialog boundary where possible, or explicitly make the portal popover pointer/touch-scroll safe.
-3. Replace the fragile callback ref event listener with React-managed handlers that allow native scrolling inside the verse body while preventing the page/dialog behind it from moving.
-4. Verify on mobile width that a long passage scrolls inside the popover, the close button still works, and the sermon note dialog itself does not move while the verse is being scrolled.
+## Problem
+In `src/components/AppLayout.jsx` (line 47), the "Church Unit" nav item is defined with `access: null`, which makes it visible to every signed-in user. Members who don't belong to any church unit still see the link and can navigate to a page that isn't relevant to them.
 
-Technical details:
-- Main file: `src/components/sermons/BibleRefPopover.jsx`
-- Likely fix: add a dedicated scroll body with `overflow-y-auto`, `min-h-0`, `max-h`/height constraints, `touch-action: pan-y`, `overscroll-contain`, and safer touch/wheel handling.
-- If needed, adjust the portal target so the popover remains compatible with `DialogContent`.
+## Fix
+Gate the item behind a new `"unit"` access rule that returns true only for:
+- Admins / Super Admins
+- Unit Leaders (`leaderUnits.length > 0`)
+- Reports Officers (consistent with other module gates)
+- Members whose profile has a non-empty `church_unit` (i.e. they belong to at least one unit)
+
+### Changes in `src/components/AppLayout.jsx`
+1. Change the nav entry to `access: "unit"`.
+2. In the access switch (around lines 146–157), add:
+   ```js
+   if (item.access === "unit")
+     return isAdmin || isSuperAdmin || isReportsOfficer
+       || (leaderUnits?.length > 0)
+       || hasChurchUnit;
+   ```
+3. Derive `hasChurchUnit` from the current user's member record. `useAuth` already exposes the session; read `myMember?.church_unit` from the same source `MemberDashboard` uses, or add a small `useQuery` in `AppLayout` that selects `church_unit` from `members` for the current `user_id` + `tenant_id`, treating any non-empty, non-"None" value as `true`.
+
+No changes to the `/church-unit` route itself — this is purely a sidebar visibility fix, matching how other module links (Children Church, Teens, WSF) are already gated.
+
+## Out of scope
+- Page-level guard on `/church-unit` (existing tabs already enforce their own permissions).
+- Any DB/RLS changes.
