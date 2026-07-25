@@ -672,12 +672,14 @@ function CumulativeReportDialog({ open, onOpenChange }) {
                   <th className="p-2">Duration</th>
                   <th className="p-2">Status</th>
                   <th className="p-2">Source</th>
+                  <th className="p-2">Signed in by</th>
+                  <th className="p-2">Signed out by</th>
                   <th className="p-2">Note</th>
                 </tr>
               </thead>
               <tbody>
                 {filtered.length === 0 && (
-                  <tr><td colSpan={9} className="p-4 text-center text-muted-foreground">No records for these filters.</td></tr>
+                  <tr><td colSpan={11} className="p-4 text-center text-muted-foreground">No records for these filters.</td></tr>
                 )}
                 {filtered.map((r) => (
                   <tr key={r.id} className="border-t">
@@ -691,6 +693,8 @@ function CumulativeReportDialog({ open, onOpenChange }) {
                       {r.status === "late" ? <Badge className="bg-amber-500 text-white">Late</Badge> : r.status === "on_time" ? <Badge variant="secondary">On time</Badge> : r.status || "—"}
                     </td>
                     <td className="p-2 capitalize">{r.source}</td>
+                    <td className="p-2">{workerName(r, r.checked_in_by)}</td>
+                    <td className="p-2">{r.checked_out_at ? workerName(r, r.checked_out_by) : "—"}</td>
                     <td className="p-2 max-w-[200px]" title={r.session?.notes || ""}>
                       <span className="line-clamp-2 text-xs text-muted-foreground">{r.session?.notes || "—"}</span>
                     </td>
@@ -700,6 +704,7 @@ function CumulativeReportDialog({ open, onOpenChange }) {
             </table>
           )}
         </div>
+
         <p className="text-xs text-muted-foreground">{view === "summary" ? summary.length : filtered.length} {view === "summary" ? "teen(s)" : "record(s)"} · {from} → {to}</p>
       </DialogContent>
     </Dialog>
