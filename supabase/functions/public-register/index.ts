@@ -529,8 +529,9 @@ Deno.serve(async (req) => {
         let emailQuery = supabase
           .from("members")
           .select("id, user_id")
-          .eq("email", candidateEmail);
+          .ilike("email", candidateEmail);
         if (tenantId) emailQuery = emailQuery.eq("tenant_id", tenantId);
+
         const { data: emailMatches, error: emailMatchError } = await emailQuery
           .order("created_at", { ascending: false })
           .limit(2);
