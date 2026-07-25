@@ -475,7 +475,7 @@ export default function TenantAdmin() {
                   <DialogTrigger asChild>
                     <Button size="sm" variant="outline"><Share2 className="h-4 w-4 mr-1" /> Invite to Onboard</Button>
                   </DialogTrigger>
-                  <DialogContent>
+                  <DialogContent className="w-[calc(100vw-1rem)] sm:w-auto max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
                       <DialogTitle>Invite New Church to Onboard</DialogTitle>
                       <DialogDescription>Share this link with a new church admin to start their onboarding</DialogDescription>
@@ -524,7 +524,7 @@ export default function TenantAdmin() {
                   <DialogTrigger asChild>
                     <Button size="sm"><Plus className="h-4 w-4 mr-1" /> New Tenant</Button>
                   </DialogTrigger>
-                  <DialogContent>
+                  <DialogContent className="w-[calc(100vw-1rem)] sm:w-auto max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
                       <DialogTitle>Create New Tenant</DialogTitle>
                       <DialogDescription>Add a new church tenant to the platform</DialogDescription>
@@ -744,7 +744,7 @@ export default function TenantAdmin() {
 
       {/* ============ PERMANENT DELETE DIALOG (multi-step) ============ */}
       <Dialog open={!!deleteTenant} onOpenChange={(open) => { if (!open) resetDeleteState(); }}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md w-[calc(100vw-1rem)] sm:w-auto max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-destructive">
               <Skull className="h-5 w-5" />
@@ -866,7 +866,7 @@ export default function TenantAdmin() {
 
       {/* ============ ARCHIVE CONFIRMATION DIALOG ============ */}
       <Dialog open={!!archiveTenant} onOpenChange={(open) => { if (!open) { setArchiveTenant(null); setArchivePassword(""); } }}>
-        <DialogContent className="max-w-sm">
+        <DialogContent className="max-w-sm w-[calc(100vw-1rem)] sm:w-auto max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Archive className="h-5 w-5 text-amber-600" />
@@ -913,7 +913,7 @@ export default function TenantAdmin() {
 
       {/* ============ RESTORE CONFIRMATION DIALOG ============ */}
       <Dialog open={!!restoreTenant} onOpenChange={(open) => { if (!open) setRestoreTenant(null); }}>
-        <DialogContent className="max-w-sm">
+        <DialogContent className="max-w-sm w-[calc(100vw-1rem)] sm:w-auto max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <ArchiveRestore className="h-5 w-5 text-emerald-600" />
@@ -955,7 +955,7 @@ export default function TenantAdmin() {
 
       {/* ============ VIEW DATA DIALOG ============ */}
       <Dialog open={!!viewDataTenant} onOpenChange={(open) => { if (!open) setViewDataTenant(null); }}>
-        <DialogContent className="max-w-sm">
+        <DialogContent className="max-w-sm w-[calc(100vw-1rem)] sm:w-auto max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Eye className="h-5 w-5" />
@@ -991,7 +991,7 @@ export default function TenantAdmin() {
 
       {/* Edit Tenant Dialog */}
       <Dialog open={!!editTenant} onOpenChange={(open) => !open && setEditTenant(null)}>
-        <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+        <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto w-[calc(100vw-1rem)] sm:w-auto">
           <DialogHeader>
             <DialogTitle>Edit Tenant: {editTenant?.name}</DialogTitle>
             <DialogDescription>Modify tenant settings, branding, plan, and features</DialogDescription>
@@ -1222,7 +1222,7 @@ export default function TenantAdmin() {
 
       {/* Password confirmation dialog for tenant switching */}
       <Dialog open={!!switchTarget} onOpenChange={(open) => { if (!open) { setSwitchTarget(null); setSwitchPassword(""); } }}>
-        <DialogContent className="max-w-sm">
+        <DialogContent className="max-w-sm w-[calc(100vw-1rem)] sm:w-auto max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2"><Lock className="h-4 w-4" /> Confirm Tenant Switch</DialogTitle>
             <DialogDescription>

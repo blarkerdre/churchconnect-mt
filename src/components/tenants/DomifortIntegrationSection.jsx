@@ -393,7 +393,7 @@ await fetch('${INGEST_URL}', {
 
       {/* Create dialog */}
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-        <DialogContent>
+        <DialogContent className="w-[calc(100vw-1rem)] sm:w-auto max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Create DomiFort API token</DialogTitle>
             <DialogDescription>
@@ -424,7 +424,7 @@ await fetch('${INGEST_URL}', {
 
       {/* One-time reveal dialog */}
       <Dialog open={!!created} onOpenChange={(open) => !open && setCreated(null)}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-lg w-[calc(100vw-1rem)] sm:w-auto max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Token created</DialogTitle>
             <DialogDescription>

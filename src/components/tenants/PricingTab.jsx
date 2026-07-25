@@ -175,7 +175,7 @@ function PlanEditorDialog({ plan, onClose, onSave, saving }) {
 
   return (
     <Dialog open onOpenChange={onClose}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto w-[calc(100vw-1rem)] sm:w-auto">
         <DialogHeader>
           <DialogTitle>{form.id ? "Edit plan" : "New plan"}</DialogTitle>
         </DialogHeader>
