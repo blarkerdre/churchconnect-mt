@@ -14,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Baby, Plus, ShieldCheck, KeyRound, Trash2, UserPlus, Share2, Clock, AlertTriangle } from "lucide-react";
+import { Baby, Plus, ShieldCheck, KeyRound, Trash2, UserPlus, Share2, Clock, AlertTriangle, ArrowUpCircle } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -355,6 +355,7 @@ export default function MyFamily() {
   const [guardianFor, setGuardianFor] = useState(null);
   const [delegateFor, setDelegateFor] = useState(null);
   const [deleteChild, setDeleteChild] = useState(null);
+  const [promoteChild, setPromoteChild] = useState(null);
   const [showAll, setShowAll] = useState(false);
   const tour = useTour();
   const { completed: tourDone } = useTourCompletion("my-family-v1");
@@ -388,18 +389,63 @@ export default function MyFamily() {
     onError: (e) => toast.error(e.message),
   });
 
+  const promoteToTeen = useMutation({
+    mutationFn: async (child) => {
+      if (!meMember?.id) throw new Error("Member profile not linked");
+      // 1) Create matching teen record
+      const teenPayload = {
+        tenant_id: tenantId,
+        member_id: meMember.id,
+        first_name: child.first_name,
+        last_name: child.last_name,
+        date_of_birth: child.date_of_birth || null,
+        gender: child.gender || null,
+        notes: child.notes || null,
+        attendance_consent: !!child.parental_consent_given,
+        attendance_consent_at: child.parental_consent_given
+          ? (child.parental_consent_at || new Date().toISOString())
+          : null,
+      };
+      const { error: tErr } = await supabase.from("teens").insert(teenPayload);
+      if (tErr) throw tErr;
+
+      // 2) Delete child if no history, else archive
+      const { count, error: cErr } = await supabase.from("child_checkins")
+        .select("id", { count: "exact", head: true })
+        .eq("tenant_id", tenantId).eq("child_id", child.id);
+      if (cErr) throw cErr;
+      if ((count || 0) > 0) {
+        const { error } = await supabase.from("children")
+          .update({ archived_at: new Date().toISOString() })
+          .eq("id", child.id).eq("tenant_id", tenantId);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from("children").delete()
+          .eq("id", child.id).eq("tenant_id", tenantId);
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      toast.success("Promoted to teenager");
+      setPromoteChild(null);
+      qc.invalidateQueries({ queryKey: ["my-children"] });
+      qc.invalidateQueries({ queryKey: ["my-teens"] });
+    },
+    onError: (e) => toast.error(e.message),
+  });
+
   const { data: children = [], refetch, error: childrenError } = useQuery({
     queryKey: ["my-children", tenantId, meMember?.id, showAll && canSeeAll],
     enabled: !!tenantId && (!!meMember?.id || (canSeeAll && showAll)),
     queryFn: async () => {
       if (canSeeAll && showAll) {
         const { data, error } = await supabase.from("children").select("*")
-          .eq("tenant_id", tenantId).order("first_name");
+          .eq("tenant_id", tenantId).is("archived_at", null).order("first_name");
         if (error) { console.error("all-children load failed", error); toast.error(`Could not load records: ${error.message}`); throw error; }
         return data || [];
       }
       const { data: primary = [], error: pErr } = await supabase.from("children").select("*")
-        .eq("tenant_id", tenantId).eq("primary_guardian_member_id", meMember.id);
+        .eq("tenant_id", tenantId).is("archived_at", null).eq("primary_guardian_member_id", meMember.id);
       if (pErr) { console.error("primary children load failed", pErr); toast.error(`Could not load your children: ${pErr.message}`); throw pErr; }
       const { data: coLinks = [], error: cErr } = await supabase.from("child_guardians")
         .select("child_id")
@@ -409,7 +455,7 @@ export default function MyFamily() {
       let co = [];
       if (coIds.length) {
         const { data } = await supabase.from("children").select("*")
-          .eq("tenant_id", tenantId).in("id", coIds);
+          .eq("tenant_id", tenantId).is("archived_at", null).in("id", coIds);
         co = data || [];
       }
       const map = new Map();
@@ -502,6 +548,10 @@ export default function MyFamily() {
                     <Button size="sm" variant="outline" onClick={() => { setEditChild(c); setChildOpen(true); }}>Edit</Button>
                     <Button data-tour={idx === 0 ? "mf-authorised" : undefined} size="sm" variant="outline" onClick={() => setGuardianFor(c)}><ShieldCheck className="h-4 w-4 mr-1" /> Authorised adults</Button>
                     <Button data-tour={idx === 0 ? "mf-onetime" : undefined} size="sm" variant="outline" onClick={() => setDelegateFor(c)}><KeyRound className="h-4 w-4 mr-1" /> One-time code</Button>
+                    <Button size="sm" variant="outline" onClick={() => {
+                      if (active) { toast.error("Release child from care before promoting"); return; }
+                      setPromoteChild(c);
+                    }}><ArrowUpCircle className="h-4 w-4 mr-1" /> Promote to teenager</Button>
                     <Button size="sm" variant="destructive" onClick={() => {
                       if (active) { toast.error("Release child from care before deleting"); return; }
                       setDeleteChild(c);
@@ -540,6 +590,27 @@ export default function MyFamily() {
               onClick={(e) => { e.preventDefault(); removeChild.mutate(deleteChild); }}
               disabled={removeChild.isPending}
             >Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={!!promoteChild} onOpenChange={(o) => !o && setPromoteChild(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Promote {promoteChild?.first_name} {promoteChild?.last_name} to teenager?</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-2 text-sm">
+                <p>A matching teenager record will be created under your family with parental consent carried over. You can set an optional check-in PIN afterwards in the Teenagers section.</p>
+                <p>The child record will then be removed. If this child has any Children Church check-in history, the record will be kept but hidden from My Family so historical reports stay intact.</p>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => { e.preventDefault(); promoteToTeen.mutate(promoteChild); }}
+              disabled={promoteToTeen.isPending}
+            >Promote</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

@@ -861,6 +861,7 @@ export type Database = {
         Row: {
           age_group: string | null
           allergies: string | null
+          archived_at: string | null
           consent_medical_emergency: boolean
           consent_notes: string | null
           consent_pastoral_contact: boolean
@@ -888,6 +889,7 @@ export type Database = {
         Insert: {
           age_group?: string | null
           allergies?: string | null
+          archived_at?: string | null
           consent_medical_emergency?: boolean
           consent_notes?: string | null
           consent_pastoral_contact?: boolean
@@ -915,6 +917,7 @@ export type Database = {
         Update: {
           age_group?: string | null
           allergies?: string | null
+          archived_at?: string | null
           consent_medical_emergency?: boolean
           consent_notes?: string | null
           consent_pastoral_contact?: boolean
