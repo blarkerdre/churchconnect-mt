@@ -249,7 +249,16 @@ export default function Attendance() {
                 <SelectTrigger className="h-9 text-sm w-full sm:w-48"><SelectValue placeholder="All units" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All units</SelectItem>
-                  {churchUnits.map(u => <SelectItem key={u.id} value={u.name}>{u.name}</SelectItem>)}
+                  {churchUnits.map(u => (
+                    <SelectItem key={u.id} value={u.name}>
+                      <span className="inline-flex items-center gap-1.5">
+                        {u.name}
+                        {u.is_active === false && (
+                          <span className="text-[9px] uppercase px-1 rounded bg-muted text-muted-foreground">Hidden</span>
+                        )}
+                      </span>
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             )}
