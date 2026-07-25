@@ -308,7 +308,7 @@ export default function ExamManagement() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 min-w-0">
     <ModuleTour tourId="exam-management-v1" />
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
