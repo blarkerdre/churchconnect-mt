@@ -348,11 +348,12 @@ export default function UnitTasks() {
         open={formOpen}
         onOpenChange={(v) => { setFormOpen(v); if (!v) setEditing(null); }}
         unitOptions={allUnits}
+        hiddenUnitNames={hiddenUnitNames}
         defaultUnit={unitFilter !== "All" ? unitFilter : ""}
         task={editing}
         onSaved={onChanged}
       />
-      <UnitTaskReportDialog open={reportOpen} onOpenChange={setReportOpen} unitOptions={allUnits} />
+      <UnitTaskReportDialog open={reportOpen} onOpenChange={setReportOpen} unitOptions={allUnits} hiddenUnitNames={hiddenUnitNames} />
       <ServiceRosterDialog
         open={rosterOpen}
         onOpenChange={setRosterOpen}
