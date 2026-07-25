@@ -1,37 +1,54 @@
-## Full responsive sweep — approved scope A
+## Full responsive sweep — every tenant × every route
 
-### Phase 1 — Capture
-Playwright against local preview, authenticated via injected session. Screenshot every route below at three viewports (384×800 mobile, 768×1024 tablet, 1280×900 desktop). Save under `/tmp/browser/responsive/<route>/<viewport>.png`.
+### Phase 1 — Enumerate tenants
+Query `tenants` (non-archived) to get the full list of `{id, slug, name}`. Sweep uses the injected super-admin session, which has cross-tenant access, and drives navigation via the `/t/:tenantSlug/...` path — no per-tenant password required.
 
-Routes:
+### Phase 2 — Capture
+For each tenant slug, screenshot every route at 384×800, 768×1024, 1280×900. Save under `/tmp/browser/responsive/<tenant-slug>/<route>/<viewport>.png`.
+
+Route set (same as prior sweep):
 - Dashboard, Members, Communications, Events, Pastoral Care, Transportation
 - Attendance, Church Attendance, Teens Attendance, Children Church
-- Home Cell (WSF), Bible School (Exam Management), Follow-ups, Unit Tasks
+- Home Cell, Bible School, Follow-ups, Unit Tasks
 - Inventory, Sermon Notes, Testimony, Analytics, Reports
 - My Profile, My Family, My Data, Settings, User Management
 - Tenant Admin, Audit Log, System Logs
-- Public: `/`, `/auth`, public registration, teens check-in landing
 
-### Phase 2 — Dialog audit at 384px
-Open and screenshot the highest-risk dialogs:
-MemberFormDialog, EventFormDialog, TeensSection add/edit, WoFBI Application Form Editor, QcCheckDialog, RateLecturerDialog, TakeExamDialog, SessionFormDialog, TransportBookingDialog, PastoralCareFormDialog, FollowupFormDialog, SermonNoteFormDialog, CertificateTemplateSettings, BulkImportDialog, TenantUsersDialog, ReportDialog variants, CumulativeReportDialog.
+Public routes captured once (tenant-agnostic): `/`, `/auth`, teens check-in landing, public registration.
 
-### Phase 3 — Fix by category (not by page)
-Group findings and fix the pattern once across all offenders:
-- Horizontal overflow → `min-w-0`, `flex-wrap`, `overflow-x-auto`, responsive grid
-- Dialogs > viewport height → `max-h-[90vh] overflow-y-auto`, sticky header/footer
-- Wide tables → scroll container on mobile, stacked-card fallback where already patterned
-- Tab bars overflowing → `overflow-x-auto whitespace-nowrap`
-- Button/badge crowding → `shrink-0` + `truncate` on siblings
-- Mobile bottom-nav collision → `pb-20 lg:pb-6` on page shells missing it
-- Any hardcoded colors surfaced during sweep (`text-white`, `bg-black`, hex) → semantic tokens
+Automated overflow detector per screenshot: flag when `document.documentElement.scrollWidth > innerWidth` and log the offending element's selector + width.
 
-Frontend/presentation only. No schema, RLS, business logic, or redesigns.
+### Phase 3 — Diff for tenant-specific issues
+Group findings into:
+- **Global** (same overflow on every tenant) → fix once in the shared component
+- **Tenant-specific** (only fires on tenants with long names, custom logos, dense unit lists, custom nav links, or dynamic theming) → fix the responsible component to tolerate the widest real data
 
-### Phase 4 — Verify
-Re-screenshot each previously-broken screen at all three viewports. Report a per-file changelog and any residual issues that need product decisions.
+Likely tenant-specific offenders based on codebase memory:
+- Long tenant name in header (`AppLayout`, `TenantDialogHeader`)
+- Custom favicon/OG branding surfaces
+- External nav links (variable count) in sidebar
+- Church units / WSF centres tables (variable row count and label length)
 
-### Deliverable
-- List of files changed grouped by fix category
-- Before/after screenshots for the top offenders
-- Residual issues (if any) flagged for follow-up
+### Phase 4 — Fix by category
+Frontend/presentation only:
+- Horizontal overflow → `min-w-0`, `flex-wrap`, `overflow-x-auto`, `truncate`, `shrink-0`
+- Long tenant/unit names → `truncate` + `title` attribute, no fixed-width parents
+- Dialog > viewport height → `max-h-[90vh] overflow-y-auto` + sticky header/footer
+- Wide tables → mobile scroll container or stacked-card fallback
+- Tab bars → `overflow-x-auto whitespace-nowrap`
+- Bottom-nav collision → `pb-20 lg:pb-6` on page shells missing it
+- Any hardcoded color surfaced (`text-white`, `bg-black`, hex) → semantic tokens
+
+No schema, RLS, business logic, or redesign changes.
+
+### Phase 5 — Verify
+Re-screenshot every previously-broken tenant × route × viewport combination. Deliver:
+- Per-tenant summary (clean vs. residual issues)
+- Files changed grouped by fix category
+- Before/after screenshots for top offenders
+- Residual issues flagged for product decisions
+
+### Technical notes
+- Auth: reuse `LOVABLE_BROWSER_SUPABASE_*` env vars once; super-admin session grants tenant access via URL slug — no logout/login loop.
+- Concurrency: run tenants sequentially inside one Playwright process to keep the session hot; parallelise viewports per route with `page.setViewportSize`.
+- Cost control: sweep is O(tenants × routes × 3). If tenant count is large (>10), I'll show you the count after Phase 1 and confirm before running Phase 2 in full.
