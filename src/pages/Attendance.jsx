@@ -23,7 +23,7 @@ import ModuleTour from "@/components/tour/ModuleTour";
 export default function Attendance() {
   const { user, isAdmin, isUnitLeader, isWSFLeader, leaderUnits = [], leaderCentres = [], myUnits = [] } = useAuth();
   const { tenantId, scopeQuery, withTenant } = useTenantQuery();
-  const { data: churchUnits = [] } = useChurchUnits();
+  const { data: churchUnits = [] } = useChurchUnits(!isAdmin);
   const canManage = isAdmin || isUnitLeader || isWSFLeader;
   const isUnitLeaderOnly = isUnitLeader && !isAdmin;
   const isWSFLeaderOnly = isWSFLeader && !isAdmin && !isUnitLeader;
