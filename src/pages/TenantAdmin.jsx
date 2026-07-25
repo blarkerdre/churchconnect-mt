@@ -459,12 +459,12 @@ export default function TenantAdmin() {
 
         <TabsContent value="tenants">
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between flex-wrap gap-2">
-              <div>
+            <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+              <div className="min-w-0">
                 <CardTitle>All Tenants</CardTitle>
                 <CardDescription>Manage church tenants and their settings</CardDescription>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 {archivedTenants.length > 0 && (
                   <Button size="sm" variant="outline" onClick={() => setShowArchived(!showArchived)}>
                     <Archive className="h-3.5 w-3.5 mr-1" />
