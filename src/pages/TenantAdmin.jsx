@@ -365,7 +365,7 @@ export default function TenantAdmin() {
   const deleteConfirmPhrase = deleteTenant ? `PERMANENTLY DELETE ${deleteTenant.slug}` : "";
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 min-w-0">
     <ModuleTour tourId="tenant-admin-v1" />
       {/* Super Admin Banner */}
       <Alert className="border-amber-300 bg-amber-50 dark:bg-amber-950/20">
