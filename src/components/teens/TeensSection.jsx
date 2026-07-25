@@ -31,6 +31,8 @@ function TeenForm({ open, onOpenChange, teen, memberId, onSaved }) {
     clear_pin: false,
     // Default to true for new records so parents actively opt out; keep existing value on edit.
     attendance_consent: teen?.id ? !!teen?.attendance_consent : true,
+    // Data-processing consent must be explicitly ticked before saving.
+    data_processing_consent: teen?.id ? !!teen?.data_processing_consent : false,
   }));
   React.useEffect(() => {
     setForm({
@@ -42,12 +44,15 @@ function TeenForm({ open, onOpenChange, teen, memberId, onSaved }) {
       pin: "",
       clear_pin: false,
       attendance_consent: teen?.id ? !!teen?.attendance_consent : true,
+      data_processing_consent: teen?.id ? !!teen?.data_processing_consent : false,
     });
   }, [teen, open]);
+
 
   const save = useMutation({
     mutationFn: async () => {
       if (!form.first_name || !form.last_name) throw new Error("Name required");
+      if (!form.data_processing_consent) throw new Error("Data-processing consent is required to save this teenager");
       if (!form.attendance_consent) throw new Error("Parental consent is required to save this teenager");
       const payload = {
         first_name: form.first_name.trim(),
@@ -63,6 +68,18 @@ function TeenForm({ open, onOpenChange, teen, memberId, onSaved }) {
         payload.attendance_consent_at = form.attendance_consent ? new Date().toISOString() : null;
         payload.attendance_consent_by = form.attendance_consent ? (user?.id || null) : null;
       }
+      const prevDp = !!teen?.data_processing_consent;
+      if (form.data_processing_consent !== prevDp) {
+        payload.data_processing_consent = form.data_processing_consent;
+        payload.data_processing_consent_at = form.data_processing_consent ? new Date().toISOString() : null;
+        payload.data_processing_consent_by = form.data_processing_consent ? (user?.id || null) : null;
+      } else if (!teen?.id) {
+        // New record: always stamp the initial consent metadata.
+        payload.data_processing_consent = true;
+        payload.data_processing_consent_at = new Date().toISOString();
+        payload.data_processing_consent_by = user?.id || null;
+      }
+
       if (form.clear_pin) payload.access_pin_hash = null;
       else if (form.pin) {
         if (!/^\d{4,6}$/.test(form.pin)) throw new Error("PIN must be 4-6 digits");
@@ -126,6 +143,30 @@ function TeenForm({ open, onOpenChange, teen, memberId, onSaved }) {
           </div>
           <div><Label>Notes</Label><Input value={form.notes || ""} onChange={(e) => setForm({ ...form, notes: e.target.value })} /></div>
 
+          <div className={`rounded-md border p-3 space-y-1.5 ${form.data_processing_consent ? "border-primary/20 bg-primary/5" : "border-destructive/40 bg-destructive/5"}`}>
+            <label className="flex items-start gap-2 text-sm cursor-pointer">
+              <input
+                type="checkbox"
+                className="mt-0.5"
+                checked={form.data_processing_consent}
+                onChange={(e) => setForm({ ...form, data_processing_consent: e.target.checked })}
+              />
+              <span>
+                <span className="font-medium">I am the parent/legal guardian</span> and consent to my teenager's personal data being held and processed for church ministry purposes. <span className="text-destructive">*</span>
+              </span>
+            </label>
+            {teen?.data_processing_consent && teen?.data_processing_consent_at && (
+              <p className="text-[11px] text-muted-foreground pl-6">
+                Consent given on {format(new Date(teen.data_processing_consent_at), "d MMM yyyy")}. Untick to revoke (you won't be able to save until you re-consent).
+              </p>
+            )}
+            {!form.data_processing_consent && (
+              <p className="text-[11px] text-destructive pl-6 font-medium">
+                Data-processing consent is required to save this teenager.
+              </p>
+            )}
+          </div>
+
           <div className={`rounded-md border p-3 space-y-1.5 ${form.attendance_consent ? "border-primary/20 bg-primary/5" : "border-destructive/40 bg-destructive/5"}`}>
             <label className="flex items-start gap-2 text-sm cursor-pointer">
               <input
@@ -149,10 +190,11 @@ function TeenForm({ open, onOpenChange, teen, memberId, onSaved }) {
               </p>
             )}
           </div>
+
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={() => save.mutate()} disabled={save.isPending || !form.attendance_consent}>Save</Button>
+          <Button onClick={() => save.mutate()} disabled={save.isPending || !form.attendance_consent || !form.data_processing_consent}>Save</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

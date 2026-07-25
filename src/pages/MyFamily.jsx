@@ -122,8 +122,9 @@ function ChildForm({ open, onOpenChange, child, memberId, onSaved }) {
 
             <label className="flex items-start justify-between gap-3 cursor-pointer">
               <div className="text-sm">
-                <p className="font-medium">I am the parent/legal guardian and consent to my child's data being held and processed <span className="text-destructive">*</span></p>
-                <p className="text-xs text-muted-foreground">Required to register this child.</p>
+                <p className="font-medium">I am the parent/legal guardian and consent to my child's personal data being held and processed for church ministry purposes <span className="text-destructive">*</span></p>
+                <p className="text-xs text-muted-foreground">Required to register this child. You can revoke at any time.</p>
+
               </div>
               <Switch checked={!!form.parental_consent_given} onCheckedChange={v => setForm({ ...form, parental_consent_given: v })} />
             </label>
