@@ -1,45 +1,18 @@
-## Cross-tenant responsive & display audit
+## Problem
 
-### Phase 1 — Enumerate tenants
-Query non-archived `tenants` to get `{id, slug, name}`. Reuse injected super-admin session (cross-tenant via `/t/:tenantSlug/...`).
+In `src/components/sermons/BibleRefPopover.jsx`, tapping a Bible reference opens a fixed popover. On mobile, long passages (e.g. Psalm 119) don't scroll inside the tooltip because:
 
-### Phase 2 — Capture
-For each tenant × route × viewport (384×800, 768×1024, 1280×900), screenshot to `/tmp/browser/responsive/<tenant>/<route>/<viewport>.png`.
+1. The scrollable inner div uses a fixed `max-h-[240px]`, but the popover itself is positioned only ~260px from the viewport bottom, so part of the scroll region sits below the screen and the visible area can't be dragged.
+2. Touch scroll gestures inside the popover bubble up to the editor / page, and iOS Safari treats them as taps that trigger the outside-click handler, closing the popover mid-scroll.
+3. No `touch-action` / `overscroll-behavior` is set, so momentum scroll is inconsistent.
 
-Routes (authenticated):
-Dashboard, Members, Communications, Events, Pastoral Care, Transportation, Attendance, Church Attendance, Teens Attendance, Children Church, Home Cell, Bible School, Follow-ups, Unit Tasks, Inventory, Sermon Notes, Testimony, Analytics, Reports, My Profile, My Family, My Data, Settings, User Management, Tenant Admin, Audit Log, System Logs.
+## Fix (frontend only, `BibleRefPopover.jsx`)
 
-Public (once): `/`, `/auth`, teens check-in landing, public registration, WOFBI public registration.
+- Make the mobile popover a proper bottom sheet sized to the viewport:
+  - Position it with `bottom: 8px` (instead of computing `top` from `innerHeight - 260`) and cap overall height to `min(60vh, 420px)`.
+  - Give the outer popover `display:flex; flex-direction:column` so the header stays fixed and the verse area fills remaining height.
+- Replace the inner `max-h-[240px]` with `flex-1 min-h-0 overflow-y-auto` so the scroll region always fits inside the visible popover.
+- Add `touchAction: 'pan-y'` and `overscrollBehavior: 'contain'` to the scroll container, and stop `touchstart`/`touchmove`/`click` propagation on the popover root so scrolling doesn't trigger the document-level close handler.
+- Keep desktop behaviour unchanged (still 320px wide, anchored to the reference) but also apply `overscroll-contain` to its scroll region for consistency.
 
-Per screenshot: run overflow probe (`documentElement.scrollWidth > innerWidth`) and log offending selector + width. Also detect:
-- clipped text (elements whose `scrollWidth > clientWidth` without `overflow` handling)
-- dialogs taller than viewport without scroll container
-- bottom-nav collision (content under fixed nav on mobile)
-- hardcoded colors (`text-white`, `bg-black`, `bg-[#...]`) via source grep
-
-### Phase 3 — Classify findings
-- **Global** (same issue every tenant) → fix shared component
-- **Tenant-specific** (long names, custom logos, dense units, custom nav, dynamic theming) → harden responsible component to widest real data
-
-### Phase 4 — Fix (frontend/presentation only)
-- Overflow → `min-w-0`, `flex-wrap`, `overflow-x-auto`, `truncate`, `shrink-0`
-- Long labels → `truncate` + `title`
-- Tall dialogs → `max-h-[90vh] overflow-y-auto` + sticky header/footer
-- Wide tables → mobile scroll container or stacked-card fallback
-- Tab bars → `overflow-x-auto whitespace-nowrap`
-- Bottom-nav collision → `pb-20 lg:pb-6`
-- Hardcoded colors → semantic tokens
-
-No schema, RLS, or business-logic changes.
-
-### Phase 5 — Verify
-Re-screenshot every previously-flagged combo. Deliver:
-- Per-tenant summary (clean vs. residual)
-- Files changed grouped by fix category
-- Before/after screenshots for top offenders
-- Residual issues flagged for product decisions
-
-### Technical notes
-- Auth: reuse `LOVABLE_BROWSER_SUPABASE_*` once.
-- Concurrency: tenants sequential in one Playwright process; viewports per route via `setViewportSize`.
-- Cost: O(tenants × routes × 3). If tenants >6 I'll report the count after Phase 1 before running full Phase 2.
+No changes to Bible data, editor, or extension logic.
