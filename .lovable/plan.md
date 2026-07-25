@@ -1,37 +1,37 @@
-## Goal
-Require an explicit data-processing consent (GDPR-style) before a parent can save a child or teenager record in My Family — mirroring the mandatory `gdpr_consent` on members.
+## Full responsive sweep — approved scope A
 
-## Current state (verified)
-- **Children** (`MyFamily.jsx`): already requires `parental_consent_given` ("I am the parent/legal guardian and consent to my child's data being held and processed"). This IS the data-processing consent → no change needed beyond copy tightening.
-- **Teenagers** (`TeensSection.jsx`): only requires `attendance_consent` (scoped to on-premises check-in/out). There is **no** separate data-processing consent. The `teens` table has no data-processing column.
+### Phase 1 — Capture
+Playwright against local preview, authenticated via injected session. Screenshot every route below at three viewports (384×800 mobile, 768×1024 tablet, 1280×900 desktop). Save under `/tmp/browser/responsive/<route>/<viewport>.png`.
 
-## Changes
+Routes:
+- Dashboard, Members, Communications, Events, Pastoral Care, Transportation
+- Attendance, Church Attendance, Teens Attendance, Children Church
+- Home Cell (WSF), Bible School (Exam Management), Follow-ups, Unit Tasks
+- Inventory, Sermon Notes, Testimony, Analytics, Reports
+- My Profile, My Family, My Data, Settings, User Management
+- Tenant Admin, Audit Log, System Logs
+- Public: `/`, `/auth`, public registration, teens check-in landing
 
-### 1. Database (migration)
-Add data-processing consent columns to `public.teens`:
-- `data_processing_consent boolean NOT NULL DEFAULT false`
-- `data_processing_consent_at timestamptz`
-- `data_processing_consent_by uuid`
+### Phase 2 — Dialog audit at 384px
+Open and screenshot the highest-risk dialogs:
+MemberFormDialog, EventFormDialog, TeensSection add/edit, WoFBI Application Form Editor, QcCheckDialog, RateLecturerDialog, TakeExamDialog, SessionFormDialog, TransportBookingDialog, PastoralCareFormDialog, FollowupFormDialog, SermonNoteFormDialog, CertificateTemplateSettings, BulkImportDialog, TenantUsersDialog, ReportDialog variants, CumulativeReportDialog.
 
-Backfill existing rows so current teens aren't blocked: set `data_processing_consent = true`, `data_processing_consent_at = created_at`, `data_processing_consent_by = primary_guardian_member_id` for all pre-existing rows. (Going forward, new rows require the parent to tick the box.)
+### Phase 3 — Fix by category (not by page)
+Group findings and fix the pattern once across all offenders:
+- Horizontal overflow → `min-w-0`, `flex-wrap`, `overflow-x-auto`, responsive grid
+- Dialogs > viewport height → `max-h-[90vh] overflow-y-auto`, sticky header/footer
+- Wide tables → scroll container on mobile, stacked-card fallback where already patterned
+- Tab bars overflowing → `overflow-x-auto whitespace-nowrap`
+- Button/badge crowding → `shrink-0` + `truncate` on siblings
+- Mobile bottom-nav collision → `pb-20 lg:pb-6` on page shells missing it
+- Any hardcoded colors surfaced during sweep (`text-white`, `bg-black`, hex) → semantic tokens
 
-### 2. Teens form (`src/components/teens/TeensSection.jsx`)
-- Add a second required consent block above/next to attendance consent:
-  - "I am the parent/legal guardian and consent to my teenager's data being held and processed *"
-- Track `data_processing_consent` in form state; default `false` for new, current value for edits.
-- Block save (`throw` + disable Save button) when `data_processing_consent` is false — same pattern already used for `attendance_consent`.
-- On save, stamp `data_processing_consent_at` / `_by` when it flips from false→true; preserve existing timestamps on edit.
-- Show "Consent given on <date>" line when already granted, matching the attendance-consent UX.
+Frontend/presentation only. No schema, RLS, business logic, or redesigns.
 
-### 3. Children form (`src/pages/MyFamily.jsx`)
-- Keep the existing mandatory `parental_consent_given` switch (it already covers data processing).
-- Tighten the label copy to make the data-processing scope explicit: "I am the parent/legal guardian and consent to my child's personal data being held and processed for church ministry purposes *"
-- No schema or logic changes; enforcement already exists.
+### Phase 4 — Verify
+Re-screenshot each previously-broken screen at all three viewports. Report a per-file changelog and any residual issues that need product decisions.
 
-### 4. Leader visibility (optional, small)
-- Teens Attendance registered-teens directory (`TeensAttendance.jsx`) already shows an attendance-consent badge. Add a second small badge / column for "Data processing" consent date so the Teens Church leader can see both, matching the Children's Church "Parental consent" badge pattern.
-
-## Out of scope
-- No changes to member (`MemberFormDialog`) — already enforced last turn.
-- No changes to public forms, RLS, or consent revocation flows.
-- No SMS/email/notification changes.
+### Deliverable
+- List of files changed grouped by fix category
+- Before/after screenshots for the top offenders
+- Residual issues (if any) flagged for follow-up
