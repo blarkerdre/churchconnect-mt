@@ -228,16 +228,24 @@ export function AuthProvider({ children }) {
   // Reports Officer is read-only unless they ALSO hold a write-capable role
   const isReadOnly = isReportsOfficer && !isAdmin && !isUnitLeader && !isWSFLeader;
 
+  // Units the current user belongs to (from their member row), parsed from comma-separated church_unit
+  const myUnits = useMemo(() => {
+    const raw = myMember?.church_unit;
+    if (!raw || typeof raw !== "string") return [];
+    return raw.split(",").map((u) => u.trim()).filter((u) => u && u !== "None");
+  }, [myMember?.church_unit]);
+
   const value = useMemo(() => ({
-    user, profile, roles, loading, dataLoaded, leaderUnits, leaderCentres, myMember, tenantMemberships,
+    user, profile, roles, loading, dataLoaded, leaderUnits, leaderCentres, myUnits, myMember, tenantMemberships,
     signUp, signIn, signOut, resetPassword, updatePassword,
     isAdmin, isUnitLeader, isWSFLeader, isMember, isReportsOfficer, isReadOnly,
     isTenantOwner, isTenantAdmin,
     refreshUser,
     refetchMemberForTenant,
-  }), [user, profile, roles, loading, dataLoaded, leaderUnits, leaderCentres, myMember, tenantMemberships,
+  }), [user, profile, roles, loading, dataLoaded, leaderUnits, leaderCentres, myUnits, myMember, tenantMemberships,
        isAdmin, isUnitLeader, isWSFLeader, isMember, isReportsOfficer, isReadOnly, isTenantOwner, isTenantAdmin,
        refreshUser, refetchMemberForTenant]);
+
 
   return (
     <AuthContext.Provider value={value}>
