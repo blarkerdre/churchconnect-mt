@@ -541,7 +541,7 @@ function CumulativeReportDialog({ open, onOpenChange }) {
         ].join(","));
       });
     } else {
-      header = ["Date", "Session", "Type", "Teen", "In", "Out", "Duration (min)", "Status", "Source", "Note"];
+      header = ["Date", "Session", "Type", "Teen", "In", "Out", "Duration (min)", "Status", "Source", "Signed in by", "Signed out by", "Note"];
       lines = [header.join(",")];
       filtered.forEach((r) => {
         const name = `${r.teens?.first_name || ""} ${r.teens?.last_name || ""}`.trim();
@@ -555,6 +555,8 @@ function CumulativeReportDialog({ open, onOpenChange }) {
           r.duration_minutes ?? "",
           r.status || "",
           r.source || "",
+          JSON.stringify(workerName(r, r.checked_in_by)),
+          JSON.stringify(r.checked_out_at ? workerName(r, r.checked_out_by) : ""),
           JSON.stringify(r.session?.notes || ""),
         ].join(","));
       });
