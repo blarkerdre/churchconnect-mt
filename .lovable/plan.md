@@ -1,43 +1,63 @@
-## Goal
-Make every screen, tab, dialog, form, and table in Tenant Admin fit cleanly at 384px wide (mobile) up through desktop, with no horizontal page scroll and no cramped rows.
+# Duplicate Records Audit
 
-## Scope
-- `src/pages/TenantAdmin.jsx`
-- `src/components/tenants/*.jsx` (all files)
+Ran duplicate scans across all people-related tables (members by email / phone / name, children, teens, Bible School applications, course registrations, contacts). All checks were tenant-scoped.
 
-## Fixes to apply
+## Findings
 
-### 1. Main Tenant Admin page (`TenantAdmin.jsx`)
-- Wrap outer container with `min-w-0` so children can shrink.
-- Make the top `<TabsList>` (Overview / Analytics / Users / Billing / Pricing / Integrations / SLA) horizontally scrollable with `overflow-x-auto whitespace-nowrap` and `TabsTrigger` `whitespace-nowrap`.
-- Stat row `grid-cols-2 sm:grid-cols-4` — keep, but ensure each `StatCard` truncates long values.
-- Tenants list `CardHeader` (line 462): change `flex-row … flex-wrap` → `flex-col sm:flex-row sm:items-center sm:justify-between gap-2`; make action buttons `flex-1 sm:flex-none`.
-- Every `DialogContent` in this file (create-tenant, edit-tenant, restore, archive, delete, tenant-details, sub-dialogs — lines 478, 527, 747, 869, 916, 958, 994, 1225) gets `w-[calc(100vw-1rem)] sm:w-auto max-h-[90vh] overflow-y-auto` appended.
-- Tenant-details dialog inner `TabsList` (line 1000) — swap the fixed `grid-cols-2 sm:grid-cols-3 md:grid-cols-5` for a horizontally scrollable list so 5 tabs don't wrap into 3 rows at 384px.
-- Any `grid-cols-2` inside dialogs that show side-by-side labeled fields collapse to `grid-cols-1 sm:grid-cols-2`.
+### 1. Members — 2 real duplicates + 1 test row (tenant `95e53cc3…`, WCI Cardiff)
 
-### 2. Sub-components
-- **`TenantUsersDialog.jsx`**: `DialogContent max-w-2xl` → add mobile width class; keep table `overflow-x-auto` but add `min-w-[640px]` inside so columns don't crush.
-- **`PlatformUsersTab.jsx`**: table wrapper — add `min-w-[720px]` to `<Table>`.
-- **`PricingTab.jsx`**: `TabsList` (line 504) scrollable; edit dialog (`max-w-3xl`) gets mobile width; opening `grid-cols-2` → `grid-cols-1 sm:grid-cols-2`; each pricing table gets `min-w-[720px]`.
-- **`TenantBillingTab.jsx`**: all four `grid-cols-2` blocks → `grid-cols-1 sm:grid-cols-2`.
-- **`TenantAnalyticsTab.jsx`**: verify `grid-cols-2 sm:grid-cols-4` metric grids stay; add `min-w-0` and truncation to metric titles.
-- **`DomifortIntegrationSection.jsx`**: `TabsList` scrollable; both `DialogContent`s get mobile width + scroll cap; token/webhook code blocks get `break-all`.
-- **`SLASection.jsx` + `SLATemplateAdmin.jsx`**: `DialogContent max-w-2xl`/`max-w-md` get mobile width + `max-h-[90vh] overflow-y-auto`.
-- **`InvoiceEditorDialog.jsx`**: `DialogContent max-w-5xl` → add mobile width; inner `grid-cols-3` → `grid-cols-1 sm:grid-cols-3`; footer buttons stack on mobile.
-- **`InvoicesReceiptsList.jsx`**: wrap list rows so long invoice numbers/amounts wrap; action buttons `flex-wrap`.
-- **`PaymentRequiredScreen.jsx` / `PaymentWarningBanner.jsx`**: check CTA rows stack under 400px.
+**Bintou Jobe** — same person, two profiles (both linked to different auth users):
+| Keep? | id | Email | Created | user_id |
+|---|---|---|---|---|
+| ✅ Keep | `48762388…` | bintoujobe@hotmail.com | 2026-04-12 | c7ec48fc… |
+| ❌ Delete | `8507a46f…` | yabinjobe1@gmail.com | 2026-06-18 | c9eeb56e… |
 
-### 3. Shared patterns applied
-- Dialog width recipe: `max-w-* w-[calc(100vw-1rem)] sm:w-auto max-h-[90vh] overflow-y-auto`.
-- Tab list recipe: `overflow-x-auto whitespace-nowrap` + triggers `whitespace-nowrap` instead of fixed-grid.
-- Card headers with actions: `flex-col sm:flex-row sm:items-center sm:justify-between gap-2`.
-- Tables in cards: outer `overflow-x-auto -mx-4 sm:mx-0`, inner `<Table className="min-w-[…]">`.
-- Multi-column detail grids: `grid-cols-1 sm:grid-cols-2` (or `sm:grid-cols-3`).
+Both share phone `07380397050` and name. Older record is the primary claim; newer looks like a second self-signup with a different email.
 
-## Out of scope
-No behavioral, data, RLS, or copy changes — layout/classname edits only.
+**Phone collision `07761364815`** — NOT a duplicate person:
+- `fdbba1c4…` — "TEST MEMBER - Do Not Count" (seed/test row)
+- `78ecf909…` — Adeniyi Kugbiyi (real member, Bible School)
 
-## Verification
-- Read the edited files back to confirm the classes landed.
-- Playwright screenshots of `/tenant-admin` at 384px and 1280px: main tabs row, tenants list, tenant-details dialog with each inner tab, PricingTab edit dialog, InvoiceEditorDialog. Confirm no horizontal page scroll and all buttons remain reachable.
+Proposal: delete the TEST row; leave Adeniyi Kugbiyi. Clear/replace the placeholder phone if you want to keep the test row instead.
+
+### 2. Children — 2 duplicates (tenant WCI Cardiff)
+
+| Child | DOB | Keep (older) | Delete (newer) |
+|---|---|---|---|
+| Araoluwa Bamidele | 2014-08-29 | `6ddadd5d…` (10:24) | `e012d2ff…` (10:27) |
+| Ire Fafowora | 2012-08-18 | `68c3686f…` (Jul 15) | `8258d1e6…` (Jul 23) |
+
+Both duplicates have **no guardians linked and no check-in history**, so deletion is safe (no data merge needed).
+
+### 3. No duplicates found in
+- Members by email (case-insensitive)
+- Teens
+- Bible School applications
+- Course registrations
+- Contacts
+
+## Proposed cleanup plan
+
+Execute as a single data-cleanup (via insert tool, no schema change):
+
+**Members**
+1. Re-parent dependent rows from Bintou `8507a46f…` → `48762388…` across: `event_registrations`, `attendance_records`, `followups.member_id`, `followups.assigned_to`, `pastoral_care.member_id`, `pastoral_care.assigned_to`, `unit_leader_assignments`, `unit_task_assignments`, `child_guardians.member_id`, `sermon_notes`, `member_status_history`, `notifications`, `wofbi_applications.member_id`, `course_registrations`, `training_attendees`, `testimonies`, `announcement_reactions`, `event_reactions`, `messages`, `call_log`, `sms_log`, `email_send_log` (only tables where the FK exists).
+2. Detach then delete the stale `auth.users` row `c9eeb56e…` (optional — you may want to keep the login and just null the member link; confirm which).
+3. Delete member `8507a46f…`.
+4. Delete TEST member `fdbba1c4…`.
+
+**Children**
+5. Delete children `e012d2ff…` (Araoluwa) and `8258d1e6…` (Ire) — no dependents.
+
+**Safeguard (optional but recommended)**
+6. Add a case-insensitive unique index on `members(tenant_id, lower(email))` (already present per memory) — no change.
+7. Add a partial unique index on `children(tenant_id, lower(first_name), lower(last_name), date_of_birth) WHERE archived_at IS NULL` to prevent future duplicate child entries.
+
+## Decisions needed before I run cleanup
+
+1. Bintou Jobe: keep the **older** profile (`48762388…`, hotmail) and drop the newer? Or the reverse?
+2. For the dropped Bintou profile's auth user (`c9eeb56e…`): delete the auth account, or keep the login and just unlink?
+3. TEST MEMBER row: delete it, or keep and just free the phone number?
+4. Proceed with the child-duplicate uniqueness index (item 7)?
+
+Once you confirm, I'll switch to build mode and run the cleanup as one migration + one data change.
