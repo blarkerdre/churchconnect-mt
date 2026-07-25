@@ -165,7 +165,7 @@ export default function InvoiceEditorDialog({ open, onOpenChange, invoice, tenan
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl">
+      <DialogContent className="max-w-5xl w-[calc(100vw-1rem)] sm:w-auto max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
             {docLabel} {invoice.invoice_number}
@@ -225,7 +225,7 @@ export default function InvoiceEditorDialog({ open, onOpenChange, invoice, tenan
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
-                  <div className="grid grid-cols-3 gap-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                     <div>
                       <Label className="text-[10px]">Qty</Label>
                       <Input

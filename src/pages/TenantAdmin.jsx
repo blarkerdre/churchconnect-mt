@@ -365,7 +365,7 @@ export default function TenantAdmin() {
   const deleteConfirmPhrase = deleteTenant ? `PERMANENTLY DELETE ${deleteTenant.slug}` : "";
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 min-w-0">
     <ModuleTour tourId="tenant-admin-v1" />
       {/* Super Admin Banner */}
       <Alert className="border-amber-300 bg-amber-50 dark:bg-amber-950/20">
@@ -447,24 +447,24 @@ export default function TenantAdmin() {
 
       {/* Main Tabs */}
       <Tabs defaultValue="tenants">
-        <TabsList>
-         <TabsTrigger data-tour="ta-tenants" value="tenants">Tenants</TabsTrigger>
-         <TabsTrigger value="platform-users"><Users2 className="h-3.5 w-3.5 mr-1" />Platform Users</TabsTrigger>
-         <TabsTrigger data-tour="ta-billing" value="pricing"><BarChart3 className="h-3.5 w-3.5 mr-1" />Pricing</TabsTrigger>
-         <TabsTrigger value="analytics"><BarChart3 className="h-3.5 w-3.5 mr-1" />Analytics</TabsTrigger>
-         <TabsTrigger data-tour="ta-integrations" value="integrations"><Link className="h-3.5 w-3.5 mr-1" />Integrations</TabsTrigger>
-         <TabsTrigger value="sla"><FileSignature className="h-3.5 w-3.5 mr-1" />SLA</TabsTrigger>
-         <TabsTrigger value="broadcast"><Megaphone className="h-3.5 w-3.5 mr-1" />Broadcast</TabsTrigger>
+        <TabsList className="w-full overflow-x-auto flex-nowrap justify-start whitespace-nowrap">
+         <TabsTrigger className="whitespace-nowrap" data-tour="ta-tenants" value="tenants">Tenants</TabsTrigger>
+         <TabsTrigger className="whitespace-nowrap" value="platform-users"><Users2 className="h-3.5 w-3.5 mr-1" />Platform Users</TabsTrigger>
+         <TabsTrigger className="whitespace-nowrap" data-tour="ta-billing" value="pricing"><BarChart3 className="h-3.5 w-3.5 mr-1" />Pricing</TabsTrigger>
+         <TabsTrigger className="whitespace-nowrap" value="analytics"><BarChart3 className="h-3.5 w-3.5 mr-1" />Analytics</TabsTrigger>
+         <TabsTrigger className="whitespace-nowrap" data-tour="ta-integrations" value="integrations"><Link className="h-3.5 w-3.5 mr-1" />Integrations</TabsTrigger>
+         <TabsTrigger className="whitespace-nowrap" value="sla"><FileSignature className="h-3.5 w-3.5 mr-1" />SLA</TabsTrigger>
+         <TabsTrigger className="whitespace-nowrap" value="broadcast"><Megaphone className="h-3.5 w-3.5 mr-1" />Broadcast</TabsTrigger>
         </TabsList>
 
         <TabsContent value="tenants">
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between flex-wrap gap-2">
-              <div>
+            <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+              <div className="min-w-0">
                 <CardTitle>All Tenants</CardTitle>
                 <CardDescription>Manage church tenants and their settings</CardDescription>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 {archivedTenants.length > 0 && (
                   <Button size="sm" variant="outline" onClick={() => setShowArchived(!showArchived)}>
                     <Archive className="h-3.5 w-3.5 mr-1" />
@@ -475,7 +475,7 @@ export default function TenantAdmin() {
                   <DialogTrigger asChild>
                     <Button size="sm" variant="outline"><Share2 className="h-4 w-4 mr-1" /> Invite to Onboard</Button>
                   </DialogTrigger>
-                  <DialogContent>
+                  <DialogContent className="w-[calc(100vw-1rem)] sm:w-auto max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
                       <DialogTitle>Invite New Church to Onboard</DialogTitle>
                       <DialogDescription>Share this link with a new church admin to start their onboarding</DialogDescription>
@@ -524,7 +524,7 @@ export default function TenantAdmin() {
                   <DialogTrigger asChild>
                     <Button size="sm"><Plus className="h-4 w-4 mr-1" /> New Tenant</Button>
                   </DialogTrigger>
-                  <DialogContent>
+                  <DialogContent className="w-[calc(100vw-1rem)] sm:w-auto max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
                       <DialogTitle>Create New Tenant</DialogTitle>
                       <DialogDescription>Add a new church tenant to the platform</DialogDescription>
@@ -744,7 +744,7 @@ export default function TenantAdmin() {
 
       {/* ============ PERMANENT DELETE DIALOG (multi-step) ============ */}
       <Dialog open={!!deleteTenant} onOpenChange={(open) => { if (!open) resetDeleteState(); }}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md w-[calc(100vw-1rem)] sm:w-auto max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-destructive">
               <Skull className="h-5 w-5" />
@@ -866,7 +866,7 @@ export default function TenantAdmin() {
 
       {/* ============ ARCHIVE CONFIRMATION DIALOG ============ */}
       <Dialog open={!!archiveTenant} onOpenChange={(open) => { if (!open) { setArchiveTenant(null); setArchivePassword(""); } }}>
-        <DialogContent className="max-w-sm">
+        <DialogContent className="max-w-sm w-[calc(100vw-1rem)] sm:w-auto max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Archive className="h-5 w-5 text-amber-600" />
@@ -913,7 +913,7 @@ export default function TenantAdmin() {
 
       {/* ============ RESTORE CONFIRMATION DIALOG ============ */}
       <Dialog open={!!restoreTenant} onOpenChange={(open) => { if (!open) setRestoreTenant(null); }}>
-        <DialogContent className="max-w-sm">
+        <DialogContent className="max-w-sm w-[calc(100vw-1rem)] sm:w-auto max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <ArchiveRestore className="h-5 w-5 text-emerald-600" />
@@ -955,7 +955,7 @@ export default function TenantAdmin() {
 
       {/* ============ VIEW DATA DIALOG ============ */}
       <Dialog open={!!viewDataTenant} onOpenChange={(open) => { if (!open) setViewDataTenant(null); }}>
-        <DialogContent className="max-w-sm">
+        <DialogContent className="max-w-sm w-[calc(100vw-1rem)] sm:w-auto max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Eye className="h-5 w-5" />
@@ -991,18 +991,18 @@ export default function TenantAdmin() {
 
       {/* Edit Tenant Dialog */}
       <Dialog open={!!editTenant} onOpenChange={(open) => !open && setEditTenant(null)}>
-        <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+        <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto w-[calc(100vw-1rem)] sm:w-auto">
           <DialogHeader>
             <DialogTitle>Edit Tenant: {editTenant?.name}</DialogTitle>
             <DialogDescription>Modify tenant settings, branding, plan, and features</DialogDescription>
           </DialogHeader>
           <Tabs defaultValue="general" className="w-full">
-            <TabsList className="w-full grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 h-auto">
-              <TabsTrigger value="general">General</TabsTrigger>
-              <TabsTrigger value="branding">Branding</TabsTrigger>
-              <TabsTrigger value="plan">Plan</TabsTrigger>
-              <TabsTrigger value="billing">Billing</TabsTrigger>
-              <TabsTrigger value="features">Features</TabsTrigger>
+            <TabsList className="w-full overflow-x-auto flex-nowrap justify-start whitespace-nowrap h-auto">
+              <TabsTrigger className="whitespace-nowrap" value="general">General</TabsTrigger>
+              <TabsTrigger className="whitespace-nowrap" value="branding">Branding</TabsTrigger>
+              <TabsTrigger className="whitespace-nowrap" value="plan">Plan</TabsTrigger>
+              <TabsTrigger className="whitespace-nowrap" value="billing">Billing</TabsTrigger>
+              <TabsTrigger className="whitespace-nowrap" value="features">Features</TabsTrigger>
             </TabsList>
 
             {/* General Tab */}
@@ -1222,7 +1222,7 @@ export default function TenantAdmin() {
 
       {/* Password confirmation dialog for tenant switching */}
       <Dialog open={!!switchTarget} onOpenChange={(open) => { if (!open) { setSwitchTarget(null); setSwitchPassword(""); } }}>
-        <DialogContent className="max-w-sm">
+        <DialogContent className="max-w-sm w-[calc(100vw-1rem)] sm:w-auto max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2"><Lock className="h-4 w-4" /> Confirm Tenant Switch</DialogTitle>
             <DialogDescription>

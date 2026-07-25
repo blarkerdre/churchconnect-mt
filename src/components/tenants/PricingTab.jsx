@@ -175,13 +175,13 @@ function PlanEditorDialog({ plan, onClose, onSave, saving }) {
 
   return (
     <Dialog open onOpenChange={onClose}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto w-[calc(100vw-1rem)] sm:w-auto">
         <DialogHeader>
           <DialogTitle>{form.id ? "Edit plan" : "New plan"}</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-5">
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div><Label>Name</Label><Input value={form.name} onChange={(e) => { set("name", e.target.value); if (!form.id) set("slug", slugFromName(e.target.value)); }} /></div>
             <div><Label>Slug</Label><Input value={form.slug} onChange={(e) => set("slug", e.target.value)} /></div>
             <div className="col-span-2"><Label>Description</Label><Textarea rows={2} value={form.description || ""} onChange={(e) => set("description", e.target.value)} /></div>
@@ -501,10 +501,10 @@ export default function PricingTab() {
       </CardHeader>
       <CardContent>
         <Tabs defaultValue="plans">
-          <TabsList>
-            <TabsTrigger value="plans"><Package className="h-3.5 w-3.5 mr-1" />Plans</TabsTrigger>
-            <TabsTrigger value="costs"><Calculator className="h-3.5 w-3.5 mr-1" />Costs</TabsTrigger>
-            <TabsTrigger value="usage"><BarChart3 className="h-3.5 w-3.5 mr-1" />Usage</TabsTrigger>
+          <TabsList className="w-full overflow-x-auto flex-nowrap justify-start whitespace-nowrap">
+            <TabsTrigger className="whitespace-nowrap" value="plans"><Package className="h-3.5 w-3.5 mr-1" />Plans</TabsTrigger>
+            <TabsTrigger className="whitespace-nowrap" value="costs"><Calculator className="h-3.5 w-3.5 mr-1" />Costs</TabsTrigger>
+            <TabsTrigger className="whitespace-nowrap" value="usage"><BarChart3 className="h-3.5 w-3.5 mr-1" />Usage</TabsTrigger>
           </TabsList>
           <TabsContent value="plans" className="mt-4"><PlansSubTab /></TabsContent>
           <TabsContent value="costs" className="mt-4"><CostsSubTab /></TabsContent>

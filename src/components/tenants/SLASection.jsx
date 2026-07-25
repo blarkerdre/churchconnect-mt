@@ -231,7 +231,7 @@ export default function SLASection() {
 
       {/* Preview dialog */}
       <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl w-[calc(100vw-1rem)] sm:w-auto max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{template.title} · v{currentVersion}</DialogTitle>
           </DialogHeader>
@@ -263,7 +263,7 @@ export default function SLASection() {
           }
         }}
       >
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md w-[calc(100vw-1rem)] sm:w-auto max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <FileSignature className="h-5 w-5 text-accent" /> Sign SLA
