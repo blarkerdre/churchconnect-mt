@@ -1,27 +1,37 @@
-## Current state
+## Goal
+Require an explicit data-processing consent (GDPR-style) before a parent can save a child or teenager record in My Family — mirroring the mandatory `gdpr_consent` on members.
 
-Data processing consent (`gdpr_consent`) is already required on:
-- Public member registration (`PublicRegistration.jsx`)
-- Public Bible School registration (`PublicWoFBIRegistration.jsx`)
-- Member self-profile creation (`MyProfile.jsx`)
-- New-member creation via `MemberFormDialog.jsx` (guard: `!member && !form.gdpr_consent`)
+## Current state (verified)
+- **Children** (`MyFamily.jsx`): already requires `parental_consent_given` ("I am the parent/legal guardian and consent to my child's data being held and processed"). This IS the data-processing consent → no change needed beyond copy tightening.
+- **Teenagers** (`TeensSection.jsx`): only requires `attendance_consent` (scoped to on-premises check-in/out). There is **no** separate data-processing consent. The `teens` table has no data-processing column.
 
-Gap: when an admin/leader **edits** an existing member in `MemberFormDialog.jsx`, the consent checkbox is not enforced — historic records without consent can be saved indefinitely, and the checkbox can be unticked on edit without blocking save.
+## Changes
 
-## Plan
+### 1. Database (migration)
+Add data-processing consent columns to `public.teens`:
+- `data_processing_consent boolean NOT NULL DEFAULT false`
+- `data_processing_consent_at timestamptz`
+- `data_processing_consent_by uuid`
 
-Make `gdpr_consent` compulsory on every save path, including edits.
+Backfill existing rows so current teens aren't blocked: set `data_processing_consent = true`, `data_processing_consent_at = created_at`, `data_processing_consent_by = primary_guardian_member_id` for all pre-existing rows. (Going forward, new rows require the parent to tick the box.)
 
-1. `src/components/members/MemberFormDialog.jsx`
-   - Change the submit guard from `!member && !form.gdpr_consent` to just `!form.gdpr_consent` (toast: "Data processing consent is required").
-   - Update the Save button `disabled` prop the same way.
-   - When saving an edit that toggles consent from false→true, set `gdpr_consent_date = now()`; keep existing date when it was already true. When a member loads with existing `gdpr_consent = true`, keep the box ticked (current behaviour).
-   - Keep the red "Consent is required" hint visible whenever the box is unticked, on both create and edit.
+### 2. Teens form (`src/components/teens/TeensSection.jsx`)
+- Add a second required consent block above/next to attendance consent:
+  - "I am the parent/legal guardian and consent to my teenager's data being held and processed *"
+- Track `data_processing_consent` in form state; default `false` for new, current value for edits.
+- Block save (`throw` + disable Save button) when `data_processing_consent` is false — same pattern already used for `attendance_consent`.
+- On save, stamp `data_processing_consent_at` / `_by` when it flips from false→true; preserve existing timestamps on edit.
+- Show "Consent given on <date>" line when already granted, matching the attendance-consent UX.
 
-2. No schema change and no changes to public/self-registration flows — they already enforce it.
+### 3. Children form (`src/pages/MyFamily.jsx`)
+- Keep the existing mandatory `parental_consent_given` switch (it already covers data processing).
+- Tighten the label copy to make the data-processing scope explicit: "I am the parent/legal guardian and consent to my child's personal data being held and processed for church ministry purposes *"
+- No schema or logic changes; enforcement already exists.
 
-3. Verify by editing an existing member with the box unticked → save should be blocked with the toast; ticking it and saving should stamp `gdpr_consent_date`.
+### 4. Leader visibility (optional, small)
+- Teens Attendance registered-teens directory (`TeensAttendance.jsx`) already shows an attendance-consent badge. Add a second small badge / column for "Data processing" consent date so the Teens Church leader can see both, matching the Children's Church "Parental consent" badge pattern.
 
 ## Out of scope
-
-- Cookie banner, granular consent toggles (marketing/photos/pastoral), and children/teen parental consent are separate consents already handled elsewhere and stay as-is.
+- No changes to member (`MemberFormDialog`) — already enforced last turn.
+- No changes to public forms, RLS, or consent revocation flows.
+- No SMS/email/notification changes.
