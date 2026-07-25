@@ -440,12 +440,12 @@ export default function MyFamily() {
     queryFn: async () => {
       if (canSeeAll && showAll) {
         const { data, error } = await supabase.from("children").select("*")
-          .eq("tenant_id", tenantId).order("first_name");
+          .eq("tenant_id", tenantId).is("archived_at", null).order("first_name");
         if (error) { console.error("all-children load failed", error); toast.error(`Could not load records: ${error.message}`); throw error; }
         return data || [];
       }
       const { data: primary = [], error: pErr } = await supabase.from("children").select("*")
-        .eq("tenant_id", tenantId).eq("primary_guardian_member_id", meMember.id);
+        .eq("tenant_id", tenantId).is("archived_at", null).eq("primary_guardian_member_id", meMember.id);
       if (pErr) { console.error("primary children load failed", pErr); toast.error(`Could not load your children: ${pErr.message}`); throw pErr; }
       const { data: coLinks = [], error: cErr } = await supabase.from("child_guardians")
         .select("child_id")
@@ -455,7 +455,7 @@ export default function MyFamily() {
       let co = [];
       if (coIds.length) {
         const { data } = await supabase.from("children").select("*")
-          .eq("tenant_id", tenantId).in("id", coIds);
+          .eq("tenant_id", tenantId).is("archived_at", null).in("id", coIds);
         co = data || [];
       }
       const map = new Map();
