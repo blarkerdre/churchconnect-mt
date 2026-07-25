@@ -447,14 +447,14 @@ export default function TenantAdmin() {
 
       {/* Main Tabs */}
       <Tabs defaultValue="tenants">
-        <TabsList>
-         <TabsTrigger data-tour="ta-tenants" value="tenants">Tenants</TabsTrigger>
-         <TabsTrigger value="platform-users"><Users2 className="h-3.5 w-3.5 mr-1" />Platform Users</TabsTrigger>
-         <TabsTrigger data-tour="ta-billing" value="pricing"><BarChart3 className="h-3.5 w-3.5 mr-1" />Pricing</TabsTrigger>
-         <TabsTrigger value="analytics"><BarChart3 className="h-3.5 w-3.5 mr-1" />Analytics</TabsTrigger>
-         <TabsTrigger data-tour="ta-integrations" value="integrations"><Link className="h-3.5 w-3.5 mr-1" />Integrations</TabsTrigger>
-         <TabsTrigger value="sla"><FileSignature className="h-3.5 w-3.5 mr-1" />SLA</TabsTrigger>
-         <TabsTrigger value="broadcast"><Megaphone className="h-3.5 w-3.5 mr-1" />Broadcast</TabsTrigger>
+        <TabsList className="w-full overflow-x-auto flex-nowrap justify-start whitespace-nowrap">
+         <TabsTrigger className="whitespace-nowrap" data-tour="ta-tenants" value="tenants">Tenants</TabsTrigger>
+         <TabsTrigger className="whitespace-nowrap" value="platform-users"><Users2 className="h-3.5 w-3.5 mr-1" />Platform Users</TabsTrigger>
+         <TabsTrigger className="whitespace-nowrap" data-tour="ta-billing" value="pricing"><BarChart3 className="h-3.5 w-3.5 mr-1" />Pricing</TabsTrigger>
+         <TabsTrigger className="whitespace-nowrap" value="analytics"><BarChart3 className="h-3.5 w-3.5 mr-1" />Analytics</TabsTrigger>
+         <TabsTrigger className="whitespace-nowrap" data-tour="ta-integrations" value="integrations"><Link className="h-3.5 w-3.5 mr-1" />Integrations</TabsTrigger>
+         <TabsTrigger className="whitespace-nowrap" value="sla"><FileSignature className="h-3.5 w-3.5 mr-1" />SLA</TabsTrigger>
+         <TabsTrigger className="whitespace-nowrap" value="broadcast"><Megaphone className="h-3.5 w-3.5 mr-1" />Broadcast</TabsTrigger>
         </TabsList>
 
         <TabsContent value="tenants">
