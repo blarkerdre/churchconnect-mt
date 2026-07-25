@@ -689,7 +689,7 @@ function RegisteredTeensDialog({ open, onOpenChange }) {
   }, [teens, search, filter]);
 
   const exportCsv = () => {
-    const header = ["First name", "Last name", "Gender", "Date of birth", "Age", "Consent", "Consent date", "Active", "Guardian", "Guardian phone", "Guardian email"];
+    const header = ["First name", "Last name", "Gender", "Date of birth", "Age", "Attendance consent", "Attendance consent date", "Data-processing consent", "Data-processing consent date", "Active", "Guardian", "Guardian phone", "Guardian email"];
     const rows = filtered.map((t) => [
       t.first_name || "",
       t.last_name || "",
@@ -698,11 +698,14 @@ function RegisteredTeensDialog({ open, onOpenChange }) {
       ageFrom(t.date_of_birth) ?? "",
       t.attendance_consent ? "Yes" : "No",
       t.attendance_consent_at ? format(new Date(t.attendance_consent_at), "yyyy-MM-dd") : "",
+      t.data_processing_consent ? "Yes" : "No",
+      t.data_processing_consent_at ? format(new Date(t.data_processing_consent_at), "yyyy-MM-dd") : "",
       t.is_active ? "Yes" : "No",
       `${t.guardian?.first_name || ""} ${t.guardian?.last_name || ""}`.trim(),
       t.guardian?.phone || "",
       t.guardian?.email || "",
     ]);
+
     const csv = [header, ...rows].map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
