@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
 
-const TEENS_UNIT_NAMES = ["teens", "teen", "teenagers", "youth", "teens ministry", "teen ministry"];
+const TEENS_UNIT_NAMES = ["teens", "teen", "teenagers", "youth", "teens ministry", "teen ministry", "teens church", "teen church"];
 
 /**
  * Returns { isLeader, isMember, isLoading } for the Teens church unit.
