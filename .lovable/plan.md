@@ -1,37 +1,27 @@
-## Goal
+## Current state
 
-Add a "Promote to teenager" action on each child card in My Family that copies the child into the `teens` table and then removes the child record.
+Data processing consent (`gdpr_consent`) is already required on:
+- Public member registration (`PublicRegistration.jsx`)
+- Public Bible School registration (`PublicWoFBIRegistration.jsx`)
+- Member self-profile creation (`MyProfile.jsx`)
+- New-member creation via `MemberFormDialog.jsx` (guard: `!member && !form.gdpr_consent`)
 
-## UX
+Gap: when an admin/leader **edits** an existing member in `MemberFormDialog.jsx`, the consent checkbox is not enforced — historic records without consent can be saved indefinitely, and the checkbox can be unticked on edit without blocking save.
 
-In `src/pages/MyFamily.jsx`, on each child card (next to Edit / Authorised adults / Delegate pickup / Delete) add a new button **"Promote to teenager"**. It opens a small confirmation dialog explaining:
+## Plan
 
-- A matching teenager record will be created (parental consent carried over, PIN optional — can be set later in the Teenagers section).
-- The child record will then be removed.
-- If the child has Children Church check-in history, the child record will be kept but marked inactive so it stops showing under My Family, preserving report history. (Same rule the current delete uses.)
+Make `gdpr_consent` compulsory on every save path, including edits.
 
-Confirm button runs the mutation below; on success, refetch both `my-children` and `my-teens` queries and toast "Promoted to teenager".
+1. `src/components/members/MemberFormDialog.jsx`
+   - Change the submit guard from `!member && !form.gdpr_consent` to just `!form.gdpr_consent` (toast: "Data processing consent is required").
+   - Update the Save button `disabled` prop the same way.
+   - When saving an edit that toggles consent from false→true, set `gdpr_consent_date = now()`; keep existing date when it was already true. When a member loads with existing `gdpr_consent = true`, keep the box ticked (current behaviour).
+   - Keep the red "Consent is required" hint visible whenever the box is unticked, on both create and edit.
 
-## Mutation flow
+2. No schema change and no changes to public/self-registration flows — they already enforce it.
 
-1. Insert into `public.teens` scoped to current `tenant_id` and `memberId = meMember.id`, copying:
-   - `first_name`, `last_name`, `date_of_birth`, `gender`, `notes`
-   - `attendance_consent = child.parental_consent_given`
-   - `attendance_consent_at = child.parental_consent_at ?? now()`
-2. Check `child_checkins` count for this child (same guard the current delete uses).
-   - If 0 → `delete from children where id = ...` (existing path).
-   - If > 0 → `update children set archived_at = now() where id = ...` so it disappears from My Family without breaking historical reports.
-3. Invalidate `["my-children"]` and `["my-teens"]` query keys.
+3. Verify by editing an existing member with the box unticked → save should be blocked with the toast; ticking it and saving should stamp `gdpr_consent_date`.
 
-## Schema change (small)
+## Out of scope
 
-Add `archived_at timestamptz null` to `public.children` and filter it out in the two My Family child queries (`primary` and the "all tenant" branch) with `.is("archived_at", null)`. Leave admin/reports pages unchanged so archived children still appear in historical Children Church reports.
-
-No RLS changes needed — updates and deletes already run under the existing "guardian can manage own child" policies.
-
-## Files touched
-
-- `supabase/migrations/*` — add `children.archived_at` column.
-- `src/pages/MyFamily.jsx` — add promote button, confirm dialog, mutation, and `archived_at` filter on the child queries.
-
-No changes to the Teens section, RLS policies, or Children Church pages.
+- Cookie banner, granular consent toggles (marketing/photos/pastoral), and children/teen parental consent are separate consents already handled elsewhere and stay as-is.
