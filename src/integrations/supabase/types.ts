@@ -1256,6 +1256,57 @@ export type Database = {
           },
         ]
       }
+      data_export_requests: {
+        Row: {
+          approved_at: string | null
+          created_at: string
+          downloaded_at: string | null
+          expires_at: string | null
+          id: string
+          member_id: string | null
+          reason: string | null
+          review_note: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          tenant_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          approved_at?: string | null
+          created_at?: string
+          downloaded_at?: string | null
+          expires_at?: string | null
+          id?: string
+          member_id?: string | null
+          reason?: string | null
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          tenant_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          approved_at?: string | null
+          created_at?: string
+          downloaded_at?: string | null
+          expires_at?: string | null
+          id?: string
+          member_id?: string | null
+          reason?: string | null
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          tenant_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       documents: {
         Row: {
           created_at: string
