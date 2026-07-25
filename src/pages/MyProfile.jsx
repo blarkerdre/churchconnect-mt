@@ -1,6 +1,6 @@
 import React, { useState, useRef } from "react";
 import { useParams } from "react-router-dom";
-import AppFeedbackDialog from "@/components/feedback/AppFeedbackDialog";
+
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
