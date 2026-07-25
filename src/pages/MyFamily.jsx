@@ -548,6 +548,10 @@ export default function MyFamily() {
                     <Button size="sm" variant="outline" onClick={() => { setEditChild(c); setChildOpen(true); }}>Edit</Button>
                     <Button data-tour={idx === 0 ? "mf-authorised" : undefined} size="sm" variant="outline" onClick={() => setGuardianFor(c)}><ShieldCheck className="h-4 w-4 mr-1" /> Authorised adults</Button>
                     <Button data-tour={idx === 0 ? "mf-onetime" : undefined} size="sm" variant="outline" onClick={() => setDelegateFor(c)}><KeyRound className="h-4 w-4 mr-1" /> One-time code</Button>
+                    <Button size="sm" variant="outline" onClick={() => {
+                      if (active) { toast.error("Release child from care before promoting"); return; }
+                      setPromoteChild(c);
+                    }}><ArrowUpCircle className="h-4 w-4 mr-1" /> Promote to teenager</Button>
                     <Button size="sm" variant="destructive" onClick={() => {
                       if (active) { toast.error("Release child from care before deleting"); return; }
                       setDeleteChild(c);
