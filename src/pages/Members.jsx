@@ -204,21 +204,21 @@ export default function Members() {
               <Input placeholder="Search members..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-10" />
             </div>
           </div>
-          <div className="grid grid-cols-4 sm:flex sm:flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             {(isAdmin || (isUnitLeader && !unitLeaderReadOnly)) && (
               <>
                 {canQrCode && (
-                  <Button variant="outline" size="sm" onClick={() => setQrOpen(true)} className="gap-1.5">
+                  <Button variant="outline" size="sm" onClick={() => setQrOpen(true)} className="gap-1.5 shrink-0">
                     <QrCode className="h-4 w-4" /><span className="hidden sm:inline">QR Code</span>
                   </Button>
                 )}
                 {canCsvExport && (
-                  <Button variant="outline" size="sm" onClick={handleDownloadCSV} className="gap-1.5">
+                  <Button variant="outline" size="sm" onClick={handleDownloadCSV} className="gap-1.5 shrink-0">
                     <Download className="h-4 w-4" /><span className="hidden sm:inline">CSV</span>
                   </Button>
                 )}
                 {canBulkImport && (
-                  <Button data-tour="members-import" variant="outline" size="sm" onClick={() => setImportOpen(true)} className="gap-1.5">
+                  <Button data-tour="members-import" variant="outline" size="sm" onClick={() => setImportOpen(true)} className="gap-1.5 shrink-0">
                     <Upload className="h-4 w-4" /><span className="hidden sm:inline">Import CSV</span>
                   </Button>
                 )}
@@ -230,6 +230,7 @@ export default function Members() {
               </>
             )}
           </div>
+
         </div>
       )}
 
