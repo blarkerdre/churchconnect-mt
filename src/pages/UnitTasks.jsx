@@ -185,7 +185,16 @@ export default function UnitTasks() {
                 <SelectTrigger className="w-56"><SelectValue placeholder="Unit" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="All">All my units</SelectItem>
-                  {allUnits.map((u) => <SelectItem key={u} value={u}>{u}</SelectItem>)}
+                  {allUnits.map((u) => (
+                    <SelectItem key={u} value={u}>
+                      <span className="inline-flex items-center gap-1.5">
+                        {u}
+                        {hiddenUnitNames.has(u) && (
+                          <span className="text-[9px] uppercase px-1 rounded bg-muted text-muted-foreground">Hidden</span>
+                        )}
+                      </span>
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
               <Select value={statusFilter} onValueChange={setStatusFilter}>
