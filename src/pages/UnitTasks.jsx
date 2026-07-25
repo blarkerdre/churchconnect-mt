@@ -91,7 +91,7 @@ export default function UnitTasks() {
   // Tasks for "Leading" tab
   const { data: leadTasks = [], isLoading: leadLoading, isFetching: leadFetching, error: leadError, refetch: refetchLead } = useQuery({
     queryKey: ["leading-tasks", tenantId, unitFilter, statusFilter, allUnits.join("|")],
-    enabled: !!tenantId && canLead,
+    enabled: !!tenantId && canViewUnit,
     queryFn: async () => {
       let q = supabase
         .from("unit_tasks")
@@ -107,6 +107,7 @@ export default function UnitTasks() {
     },
     staleTime: 0,
   });
+
 
   // My assignments
   const { data: myAssignments = [], isLoading: mineLoading, refetch: refetchMine } = useQuery({
