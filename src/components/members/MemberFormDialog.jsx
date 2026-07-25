@@ -888,7 +888,7 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={handleSubmit} disabled={saving || !form.first_name || !form.last_name || (!member && !form.gdpr_consent) || (createAccount && !member && (!form.email || password.length < 6))}>
+          <Button onClick={handleSubmit} disabled={saving || !form.first_name || !form.last_name || !form.gdpr_consent || (createAccount && !member && (!form.email || password.length < 6))}>
             {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
             {member ? "Update" : createAccount ? "Register & Create Account" : "Register"}
           </Button>
