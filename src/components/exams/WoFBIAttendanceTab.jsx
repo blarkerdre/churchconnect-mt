@@ -682,7 +682,7 @@ export default function WoFBIAttendanceTab() {
 
       {/* New session dialog */}
       <Dialog open={newOpen} onOpenChange={setNewOpen}>
-        <DialogContent className="max-w-md w-[calc(100vw-1rem)] sm:w-auto">
+        <DialogContent className="max-w-md w-[calc(100vw-1rem)] sm:w-auto max-h-[90vh] overflow-y-auto">
           <TenantDialogHeader>New Attendance Session</TenantDialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-1.5">
@@ -736,7 +736,7 @@ export default function WoFBIAttendanceTab() {
 
       {/* Roster override dialog */}
       <Dialog open={!!rosterSession} onOpenChange={(v) => !v && setRosterSession(null)}>
-        <DialogContent className="max-w-3xl w-[calc(100vw-1rem)] sm:w-auto">
+        <DialogContent className="max-w-3xl w-[calc(100vw-1rem)] sm:w-auto max-h-[90vh] overflow-y-auto">
           <TenantDialogHeader>Roster · {rosterSession?.title}</TenantDialogHeader>
           <div className="max-h-[65vh] overflow-y-auto">
             <Table>
@@ -794,7 +794,7 @@ export default function WoFBIAttendanceTab() {
       </Dialog>
       {/* Edit record dialog */}
       <Dialog open={!!editRecord} onOpenChange={(v) => !v && setEditRecord(null)}>
-        <DialogContent className="max-w-md w-[calc(100vw-1rem)] sm:w-auto">
+        <DialogContent className="max-w-md w-[calc(100vw-1rem)] sm:w-auto max-h-[90vh] overflow-y-auto">
           <TenantDialogHeader>Edit attendance</TenantDialogHeader>
           {editRecord && (
             <div className="space-y-4 py-2">

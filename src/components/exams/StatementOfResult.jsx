@@ -459,7 +459,7 @@ export default function StatementOfResult({ open, onOpenChange, member, course, 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl w-[calc(100vw-1rem)] sm:w-auto">
+      <DialogContent className="max-w-2xl w-[calc(100vw-1rem)] sm:w-auto max-h-[90vh] overflow-y-auto">
         <TenantDialogHeader>
           <Award className="h-4 w-4 text-primary" /> Statement of Result
         </TenantDialogHeader>
