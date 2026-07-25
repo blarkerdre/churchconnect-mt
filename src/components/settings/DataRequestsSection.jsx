@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
-import { Loader2, ShieldAlert, Check, X, Trash2 } from "lucide-react";
+import { Loader2, ShieldAlert, Check, X, Trash2, Download } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenant } from "@/contexts/TenantContext";
 import { useAuth } from "@/hooks/useAuth";
@@ -15,7 +15,7 @@ export default function DataRequestsSection() {
   const { tenantId } = useTenant();
   const { user } = useAuth();
   const qc = useQueryClient();
-  const [dialog, setDialog] = useState(null); // { req, action }
+  const [dialog, setDialog] = useState(null); // { req, action, kind: 'erasure'|'export' }
   const [note, setNote] = useState("");
 
   const { data: requests = [], isLoading } = useQuery({
@@ -29,9 +29,21 @@ export default function DataRequestsSection() {
     },
   });
 
+  const { data: exportRequests = [], isLoading: exportsLoading } = useQuery({
+    queryKey: ["data-export-requests", tenantId],
+    enabled: !!tenantId,
+    queryFn: async () => {
+      const { data, error } = await supabase.from("data_export_requests")
+        .select("*").eq("tenant_id", tenantId).order("created_at", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+  });
+
   const updateMut = useMutation({
-    mutationFn: async ({ req, status, review_note }) => {
-      const { error } = await supabase.from("erasure_requests").update({
+    mutationFn: async ({ req, status, review_note, kind }) => {
+      const table = kind === "export" ? "data_export_requests" : "erasure_requests";
+      const { error } = await supabase.from(table).update({
         status,
         review_note: review_note || null,
         reviewed_by: user.id,
@@ -39,8 +51,8 @@ export default function DataRequestsSection() {
       }).eq("id", req.id).eq("tenant_id", tenantId);
       if (error) throw error;
     },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["erasure-requests"] });
+    onSuccess: (_d, vars) => {
+      qc.invalidateQueries({ queryKey: [vars.kind === "export" ? "data-export-requests" : "erasure-requests"] });
       setDialog(null); setNote("");
       toast({ title: "Request updated" });
     },
@@ -63,6 +75,7 @@ export default function DataRequestsSection() {
   const overdue = requests.filter(
     (r) => r.status === "pending" && Date.now() - new Date(r.created_at).getTime() > 30 * 86400_000,
   ).length;
+  const exportPendingCount = exportRequests.filter((r) => r.status === "pending").length;
 
   return (
     <div className="space-y-4">
@@ -103,10 +116,10 @@ export default function DataRequestsSection() {
                 <div className="flex gap-2 flex-wrap">
                   {r.status === "pending" && (
                     <>
-                      <Button size="sm" variant="outline" onClick={() => { setDialog({ req: r, action: "reject" }); setNote(""); }}>
+                      <Button size="sm" variant="outline" onClick={() => { setDialog({ req: r, action: "reject", kind: "erasure" }); setNote(""); }}>
                         <X className="h-3.5 w-3.5 mr-1" /> Reject
                       </Button>
-                      <Button size="sm" onClick={() => { setDialog({ req: r, action: "approve" }); setNote(""); }}>
+                      <Button size="sm" onClick={() => { setDialog({ req: r, action: "approve", kind: "erasure" }); setNote(""); }}>
                         <Check className="h-3.5 w-3.5 mr-1" /> Approve
                       </Button>
                     </>
@@ -125,16 +138,81 @@ export default function DataRequestsSection() {
         </CardContent>
       </Card>
 
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Download className="h-4 w-4 text-primary" /> Data Download Requests
+          </CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Members must have your approval before downloading their personal data (UK GDPR Article 15). Approval is valid for 7 days and can be used once.
+          </p>
+        </CardHeader>
+        <CardContent>
+          <div className="flex gap-4 mb-4 text-sm">
+            <div><Badge variant="secondary">{exportPendingCount}</Badge> pending</div>
+            <div className="text-muted-foreground">{exportRequests.length} total</div>
+          </div>
+
+          {exportsLoading && <Loader2 className="h-4 w-4 animate-spin" />}
+          {!exportsLoading && exportRequests.length === 0 && (
+            <p className="text-sm text-muted-foreground py-4">No requests yet.</p>
+          )}
+
+          <div className="space-y-2">
+            {exportRequests.map((r) => (
+              <div key={r.id} className="border rounded-lg p-3 flex flex-wrap items-start gap-3 justify-between">
+                <div className="text-sm min-w-0 flex-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Badge variant={statusVariant(r.status)}>{r.status}</Badge>
+                    <span className="text-muted-foreground text-xs">
+                      {new Date(r.created_at).toLocaleString()}
+                    </span>
+                    {r.status === "approved" && r.expires_at && (
+                      <span className="text-xs text-muted-foreground">
+                        expires {new Date(r.expires_at).toLocaleDateString()}
+                      </span>
+                    )}
+                    {r.status === "downloaded" && r.downloaded_at && (
+                      <span className="text-xs text-muted-foreground">
+                        downloaded {new Date(r.downloaded_at).toLocaleString()}
+                      </span>
+                    )}
+                  </div>
+                  {r.reason && <p className="text-xs mt-1 whitespace-pre-wrap">{r.reason}</p>}
+                  {r.review_note && <p className="text-xs mt-1 text-muted-foreground">Note: {r.review_note}</p>}
+                </div>
+                <div className="flex gap-2 flex-wrap">
+                  {r.status === "pending" && (
+                    <>
+                      <Button size="sm" variant="outline" onClick={() => { setDialog({ req: r, action: "reject", kind: "export" }); setNote(""); }}>
+                        <X className="h-3.5 w-3.5 mr-1" /> Reject
+                      </Button>
+                      <Button size="sm" onClick={() => { setDialog({ req: r, action: "approve", kind: "export" }); setNote(""); }}>
+                        <Check className="h-3.5 w-3.5 mr-1" /> Approve
+                      </Button>
+                    </>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
       <Dialog open={!!dialog} onOpenChange={(o) => { if (!o) { setDialog(null); setNote(""); } }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {dialog?.action === "approve" ? "Approve erasure request" : "Reject erasure request"}
+              {dialog?.action === "approve"
+                ? (dialog?.kind === "export" ? "Approve data download request" : "Approve erasure request")
+                : (dialog?.kind === "export" ? "Reject data download request" : "Reject erasure request")}
             </DialogTitle>
             <DialogDescription>
               {dialog?.action === "approve"
-                ? "Approving records your decision. Execute erasure separately to anonymise the record."
-                : "The member will see your note. Provide a clear reason if refusing on legal-obligation grounds."}
+                ? (dialog?.kind === "export"
+                    ? "Approving lets the member download their data once, within 7 days."
+                    : "Approving records your decision. Execute erasure separately to anonymise the record.")
+                : "The member will see your note. Provide a clear reason if refusing."}
             </DialogDescription>
           </DialogHeader>
           <Textarea rows={4} value={note} onChange={(e) => setNote(e.target.value)}
@@ -146,6 +224,7 @@ export default function DataRequestsSection() {
               disabled={updateMut.isPending || (dialog?.action === "reject" && !note.trim())}
               onClick={() => updateMut.mutate({
                 req: dialog.req,
+                kind: dialog.kind,
                 status: dialog.action === "approve" ? "approved" : "rejected",
                 review_note: note,
               })}
@@ -161,9 +240,10 @@ export default function DataRequestsSection() {
 }
 
 function statusVariant(s) {
-  if (s === "completed") return "default";
-  if (s === "rejected") return "outline";
+  if (s === "completed" || s === "downloaded") return "default";
+  if (s === "rejected" || s === "expired") return "outline";
   if (s === "approved") return "secondary";
   if (s === "legal_hold") return "destructive";
   return "secondary";
 }
+
