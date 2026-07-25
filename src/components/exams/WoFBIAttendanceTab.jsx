@@ -675,6 +675,7 @@ export default function WoFBIAttendanceTab() {
                 })}
               </TableBody>
             </Table>
+            </div>
           )}
         </CardContent>
       </Card>
