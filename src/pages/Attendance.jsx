@@ -23,7 +23,7 @@ import ModuleTour from "@/components/tour/ModuleTour";
 export default function Attendance() {
   const { user, isAdmin, isUnitLeader, isWSFLeader, leaderUnits = [], leaderCentres = [], myUnits = [] } = useAuth();
   const { tenantId, scopeQuery, withTenant } = useTenantQuery();
-  const { data: churchUnits = [] } = useChurchUnits();
+  const { data: churchUnits = [] } = useChurchUnits(!isAdmin);
   const canManage = isAdmin || isUnitLeader || isWSFLeader;
   const isUnitLeaderOnly = isUnitLeader && !isAdmin;
   const isWSFLeaderOnly = isWSFLeader && !isAdmin && !isUnitLeader;
@@ -249,7 +249,16 @@ export default function Attendance() {
                 <SelectTrigger className="h-9 text-sm w-full sm:w-48"><SelectValue placeholder="All units" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All units</SelectItem>
-                  {churchUnits.map(u => <SelectItem key={u.id} value={u.name}>{u.name}</SelectItem>)}
+                  {churchUnits.map(u => (
+                    <SelectItem key={u.id} value={u.name}>
+                      <span className="inline-flex items-center gap-1.5">
+                        {u.name}
+                        {u.is_active === false && (
+                          <span className="text-[9px] uppercase px-1 rounded bg-muted text-muted-foreground">Hidden</span>
+                        )}
+                      </span>
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             )}
@@ -540,7 +549,16 @@ export default function Attendance() {
                   <Select value={form.unit} onValueChange={v => setForm(f => ({ ...f, unit: v }))}>
                     <SelectTrigger><SelectValue placeholder="Select unit" /></SelectTrigger>
                     <SelectContent>
-                      {churchUnits.map(u => <SelectItem key={u.id} value={u.name}>{u.name}</SelectItem>)}
+                      {churchUnits.map(u => (
+                        <SelectItem key={u.id} value={u.name}>
+                          <span className="inline-flex items-center gap-1.5">
+                            {u.name}
+                            {u.is_active === false && (
+                              <span className="text-[9px] uppercase px-1 rounded bg-muted text-muted-foreground">Hidden</span>
+                            )}
+                          </span>
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 )}

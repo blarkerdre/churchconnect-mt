@@ -18,7 +18,8 @@ import { logAudit } from "@/lib/audit";
 
 const PRIORITIES = ["Low", "Medium", "High", "Urgent"];
 
-export default function UnitTaskFormDialog({ open, onOpenChange, unitOptions = [], defaultUnit = "", task = null, onSaved }) {
+export default function UnitTaskFormDialog({ open, onOpenChange, unitOptions = [], hiddenUnitNames, defaultUnit = "", task = null, onSaved }) {
+  const hiddenSet = hiddenUnitNames instanceof Set ? hiddenUnitNames : new Set(hiddenUnitNames || []);
   const { user } = useAuth();
   const { tenantId } = useTenantQuery();
   const [saving, setSaving] = useState(false);
@@ -169,7 +170,16 @@ export default function UnitTaskFormDialog({ open, onOpenChange, unitOptions = [
               >
                 <SelectTrigger><SelectValue placeholder="Select unit" /></SelectTrigger>
                 <SelectContent>
-                  {(isEdit ? [form.unit_name].filter(Boolean) : unitOptions).map((u) => <SelectItem key={u} value={u}>{u}</SelectItem>)}
+                  {(isEdit ? [form.unit_name].filter(Boolean) : unitOptions).map((u) => (
+                    <SelectItem key={u} value={u}>
+                      <span className="inline-flex items-center gap-1.5">
+                        {u}
+                        {hiddenSet.has(u) && (
+                          <span className="text-[9px] uppercase px-1 rounded bg-muted text-muted-foreground">Hidden</span>
+                        )}
+                      </span>
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
