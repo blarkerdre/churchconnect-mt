@@ -458,14 +458,14 @@ export default function WoFBIAttendanceTab() {
   return (
     <div className="space-y-6">
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between gap-4 flex-wrap">
-          <div className="space-y-1">
+        <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div className="space-y-1 min-w-0">
             <CardTitle className="text-lg">Bible School Attendance</CardTitle>
             <p className="text-xs text-muted-foreground">Run on-premise QR check-in per course.</p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
             <Select value={selectedCourseId} onValueChange={setSelectedCourseId}>
-              <SelectTrigger className="w-[220px]">
+              <SelectTrigger className="w-full sm:w-[220px] [&>span]:truncate">
                 <SelectValue placeholder="Select course" />
               </SelectTrigger>
               <SelectContent>
@@ -476,10 +476,10 @@ export default function WoFBIAttendanceTab() {
                 ))}
               </SelectContent>
             </Select>
-            <Button variant="outline" onClick={() => setQrOpen(true)} className="gap-2">
+            <Button variant="outline" onClick={() => setQrOpen(true)} className="gap-2 flex-1 sm:flex-none">
               <QrCode className="h-4 w-4" /> Session QR
             </Button>
-            <Button onClick={() => setNewOpen(true)} disabled={!selectedCourseId} className="gap-2">
+            <Button onClick={() => setNewOpen(true)} disabled={!selectedCourseId} className="gap-2 flex-1 sm:flex-none">
               <Plus className="h-4 w-4" /> New session
             </Button>
           </div>
@@ -490,7 +490,8 @@ export default function WoFBIAttendanceTab() {
           ) : sessions.length === 0 ? (
             <p className="text-sm text-muted-foreground py-6 text-center">No attendance sessions yet for this course.</p>
           ) : (
-            <Table>
+            <div className="overflow-x-auto -mx-3 sm:mx-0">
+            <Table className="min-w-[640px]">
               <TableHeader>
                 <TableRow>
                   <TableHead>Date</TableHead>
@@ -545,19 +546,20 @@ export default function WoFBIAttendanceTab() {
                 })}
               </TableBody>
             </Table>
+            </div>
           )}
         </CardContent>
       </Card>
 
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between gap-4 flex-wrap">
-          <div>
+        <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div className="min-w-0">
             <CardTitle className="text-lg">Attendance report</CardTitle>
             <p className="text-xs text-muted-foreground">
               {selectedCourse?.name || "Course"} · {sessions.length} session{sessions.length === 1 ? "" : "s"}
             </p>
           </div>
-          <Button variant="outline" onClick={exportCsv} disabled={!perStudent.length} className="gap-2">
+          <Button variant="outline" onClick={exportCsv} disabled={!perStudent.length} className="gap-2 w-full sm:w-auto">
             <Download className="h-4 w-4" /> Export CSV
           </Button>
         </CardHeader>
@@ -565,7 +567,8 @@ export default function WoFBIAttendanceTab() {
           {perStudent.length === 0 ? (
             <p className="text-sm text-muted-foreground py-6 text-center">No registered students on this course yet.</p>
           ) : (
-            <Table>
+            <div className="overflow-x-auto -mx-3 sm:mx-0">
+            <Table className="min-w-[720px]">
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-8"></TableHead>
@@ -672,13 +675,14 @@ export default function WoFBIAttendanceTab() {
                 })}
               </TableBody>
             </Table>
+            </div>
           )}
         </CardContent>
       </Card>
 
       {/* New session dialog */}
       <Dialog open={newOpen} onOpenChange={setNewOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md w-[calc(100vw-1rem)] sm:w-auto max-h-[90vh] overflow-y-auto">
           <TenantDialogHeader>New Attendance Session</TenantDialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-1.5">
@@ -732,7 +736,7 @@ export default function WoFBIAttendanceTab() {
 
       {/* Roster override dialog */}
       <Dialog open={!!rosterSession} onOpenChange={(v) => !v && setRosterSession(null)}>
-        <DialogContent className="max-w-3xl">
+        <DialogContent className="max-w-3xl w-[calc(100vw-1rem)] sm:w-auto max-h-[90vh] overflow-y-auto">
           <TenantDialogHeader>Roster · {rosterSession?.title}</TenantDialogHeader>
           <div className="max-h-[65vh] overflow-y-auto">
             <Table>
@@ -790,7 +794,7 @@ export default function WoFBIAttendanceTab() {
       </Dialog>
       {/* Edit record dialog */}
       <Dialog open={!!editRecord} onOpenChange={(v) => !v && setEditRecord(null)}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md w-[calc(100vw-1rem)] sm:w-auto max-h-[90vh] overflow-y-auto">
           <TenantDialogHeader>Edit attendance</TenantDialogHeader>
           {editRecord && (
             <div className="space-y-4 py-2">
