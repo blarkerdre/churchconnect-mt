@@ -21,12 +21,15 @@ import PasswordConfirmDialog from "@/components/shared/PasswordConfirmDialog";
 import ModuleTour from "@/components/tour/ModuleTour";
 
 export default function Attendance() {
-  const { user, isAdmin, isUnitLeader, isWSFLeader, leaderUnits = [], leaderCentres = [] } = useAuth();
+  const { user, isAdmin, isUnitLeader, isWSFLeader, leaderUnits = [], leaderCentres = [], myUnits = [] } = useAuth();
   const { tenantId, scopeQuery, withTenant } = useTenantQuery();
   const { data: churchUnits = [] } = useChurchUnits();
   const canManage = isAdmin || isUnitLeader || isWSFLeader;
   const isUnitLeaderOnly = isUnitLeader && !isAdmin;
   const isWSFLeaderOnly = isWSFLeader && !isAdmin && !isUnitLeader;
+  // Plain unit member: no leader roles, but belongs to at least one unit — read-only view of their unit meetings
+  const isUnitMemberOnly = !isAdmin && !isUnitLeader && !isWSFLeader && (myUnits?.length || 0) > 0;
+
   const queryClient = useQueryClient();
   const [selectedSessionId, setSelectedSessionId] = useState(null);
   const [dialogOpen, setDialogOpen] = useState(false);
