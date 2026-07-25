@@ -1179,8 +1179,8 @@ function CourseRegistrationsView({ course }) {
             <Users className="h-4 w-4 text-primary" /> Registrations — {course.name}
             <Badge variant="secondary" className="ml-2">{filteredRegistrations.length}</Badge>
           </CardTitle>
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="relative flex-1 min-w-[160px] sm:flex-none sm:w-[200px]">
+          <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+            <div className="relative flex-1 min-w-[160px] sm:w-[200px] sm:flex-none">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
               <Input
                 placeholder="Search name, email, phone…"
@@ -1190,7 +1190,7 @@ function CourseRegistrationsView({ course }) {
               />
             </div>
             <Select value={sourceFilter} onValueChange={setSourceFilter}>
-              <SelectTrigger className="w-[140px] h-8 text-xs shrink-0">
+              <SelectTrigger className="w-full sm:w-[140px] h-8 text-xs shrink-0 [&>span]:truncate">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -1201,7 +1201,7 @@ function CourseRegistrationsView({ course }) {
               </SelectContent>
             </Select>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[170px] h-8 text-xs shrink-0">
+              <SelectTrigger className="w-full sm:w-[170px] h-8 text-xs shrink-0 [&>span]:truncate">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -1217,7 +1217,7 @@ function CourseRegistrationsView({ course }) {
                 type="date"
                 value={dateFrom}
                 onChange={e => setDateFrom(e.target.value)}
-                className="h-8 w-[140px] text-xs"
+                className="h-8 w-[130px] sm:w-[140px] text-xs"
               />
             </div>
             <div className="flex items-center gap-1 shrink-0">
@@ -1226,9 +1226,10 @@ function CourseRegistrationsView({ course }) {
                 type="date"
                 value={dateTo}
                 onChange={e => setDateTo(e.target.value)}
-                className="h-8 w-[140px] text-xs"
+                className="h-8 w-[130px] sm:w-[140px] text-xs"
               />
             </div>
+
 
             {(dateFrom || dateTo) && (
               <Button
