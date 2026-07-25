@@ -299,7 +299,7 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
         lcc_completed: form.lcc_completed,
         ldc_completed: form.ldc_completed,
         gdpr_consent: form.gdpr_consent,
-        gdpr_consent_date: !member && form.gdpr_consent ? new Date().toISOString() : (member?.gdpr_consent_date || null),
+        gdpr_consent_date: form.gdpr_consent ? (member?.gdpr_consent_date || new Date().toISOString()) : null,
         // Welcome question fields
         worshipped_before: isFirstTimerOrNewConvert ? form.worshipped_before : null,
         worshipped_when_where: isFirstTimerOrNewConvert ? (form.worshipped_when_where || null) : null,
