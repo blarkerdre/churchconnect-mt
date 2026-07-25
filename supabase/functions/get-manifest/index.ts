@@ -106,7 +106,7 @@ Deno.serve(async (req) => {
       start_url: startUrl,
       scope: startUrl,
       display: "standalone",
-      orientation: "portrait",
+      orientation: "any",
       background_color: "#ffffff",
       theme_color: themeColor,
       icons,
