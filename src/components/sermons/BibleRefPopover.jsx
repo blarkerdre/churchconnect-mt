@@ -175,17 +175,10 @@ export default function BibleRefPopover({ containerRef }) {
         zIndex: 60,
       };
 
-  const scrollMaxHeight = isMobile ? "min(50vh, 340px)" : "min(60vh, 300px)";
+  const scrollHeight = isMobile ? "min(52vh, 360px)" : "min(60vh, 320px)";
 
   const stop = (e) => e.stopPropagation();
-
-  const scrollRef = (node) => {
-    if (!node) return;
-    // Native listener stops touchmove from bubbling to page/editor.
-    const handler = (e) => e.stopPropagation();
-    node.addEventListener("touchmove", handler, { passive: true });
-    node.addEventListener("wheel", handler, { passive: true });
-  };
+  const stopScrollPropagation = (e) => e.stopPropagation();
 
   return createPortal(
     <div
@@ -194,11 +187,10 @@ export default function BibleRefPopover({ containerRef }) {
       onMouseLeave={onLeave}
       onClick={stop}
       onTouchStart={stop}
-      onTouchMove={stop}
       style={style}
-      className="rounded-lg border border-border bg-popover text-popover-foreground shadow-lg p-3"
+      className="pointer-events-auto rounded-lg border border-border bg-popover text-popover-foreground shadow-lg p-3 flex max-h-[calc(100dvh-1rem)] min-h-0 flex-col"
     >
-      <div className="flex items-start justify-between gap-2 mb-1">
+      <div className="flex shrink-0 items-start justify-between gap-2 mb-1">
         <div className="text-xs font-semibold text-primary">
           {state.data?.ref
             ? `${state.data.ref.book} ${state.data.ref.chapter}${
@@ -241,10 +233,12 @@ export default function BibleRefPopover({ containerRef }) {
         <div className="text-xs text-muted-foreground">Verse not found.</div>
       ) : (
         <div
-          ref={scrollRef}
-          className="text-sm leading-relaxed overflow-y-auto"
+          className="min-h-0 overflow-y-auto overscroll-contain pr-1 text-sm leading-relaxed [scrollbar-gutter:stable]"
+          onWheel={stopScrollPropagation}
+          onTouchMove={stopScrollPropagation}
           style={{
-            maxHeight: scrollMaxHeight,
+            maxHeight: scrollHeight,
+            height: scrollHeight,
             touchAction: "pan-y",
             overscrollBehavior: "contain",
             WebkitOverflowScrolling: "touch",
