@@ -1,22 +1,14 @@
-# Profile cleanup + Dashboard birthdays
+## Problem
+On mobile, the fixed bottom tab bar (`MobileBottomNav`, `fixed bottom-0 z-50`) sits on top of the sidebar drawer (`fixed ... z-50`, full `h-screen`). Because the bottom nav renders later in the DOM, it paints above the sidebar and covers the bottom portion of its menu items when the sidebar is opened on mobile.
 
-## 1. `src/pages/MyProfile.jsx` — remove Bible School and App Feedback
+## Fix (frontend only, `src/components/AppLayout.jsx`)
 
-- Remove the `AppFeedbackDialog` import and the `<AppFeedbackSection />` render at line ~673.
-- Remove the `AppFeedbackSection` component definition (lines ~1161–1204).
-- Remove the Bible School card in the profile view (the `<Card>` starting at ~line 1062 with `<BookOpen /> Bible School` — including the whole `registeredCourses.map` block and its "Print Statement" logic). Keep the certificates and take-exam sections intact.
-- Keep "Bible School" as a membership status option and the Bible School toggles inside the edit form (BCC/LCC/LDC switches at ~540) — those are member data, not the read-only Bible School results panel the user wants removed.
+1. Hide `MobileBottomNav` while the mobile sidebar drawer is open, so it never overlaps the sidebar's menu items:
+   - Wrap the `<MobileBottomNav />` render so it only mounts when `!sidebarOpen` (or add a `hidden` class when open). Desktop (`lg:`) behavior is unchanged because the bottom nav is already `lg:hidden`.
 
-If removing the results panel leaves an unused component/helpers (e.g. `registeredCourses` query, print helpers, `BookOpen` import), drop those too so lint stays clean.
+2. As a safety net for tall menus, add `pb-20` (≈ bottom nav height + safe area) to the sidebar's scrollable nav container on mobile only (`lg:pb-0`), so if the bar is ever visible the last items still clear it.
 
-## 2. `src/components/dashboard/MemberDashboard.jsx` — add App Feedback + today's celebrants
+No changes to business logic, routing, or the bottom nav itself.
 
-- Add a new `AppFeedbackSection`-style card at the bottom of the dashboard (below Spiritual Development). Reuse the same UI/behaviour that lived in MyProfile: shows current rating or "Rate" CTA, opens `AppFeedbackDialog`. Simplest path: export `AppFeedbackSection` from a new file `src/components/feedback/AppFeedbackSection.jsx` (moved verbatim from MyProfile) and import it in both the dashboard and (as removal) drop it from MyProfile.
-- Add a "Today's Birthdays" card visible to **all** members (not gated by `showBirthdays`). Use existing `get_upcoming_birthdays` RPC with `_days_ahead: 0` (or filter client-side to entries whose month+day match today). Render each celebrant with `UpcomingBirthdayItem` (already shows `MemberAvatar` photo). Hide the card when the list is empty. Place it just below the Welcome banner / BirthdayBanner so it's prominent.
-- Keep the existing personal `BirthdayBanner` (shown when it's the signed-in member's birthday) and the unit-leader "Upcoming Birthdays" card unchanged.
-
-## Technical notes
-
-- `UpcomingBirthdayItem` already uses `MemberAvatar` → signed photo URLs work automatically, no extra work needed.
-- `get_upcoming_birthdays(_tenant_id, _days_ahead)` is already used elsewhere; passing `0` returns today's celebrants for the tenant. If the RPC returns a wider window, filter client-side by comparing `date_of_birth`'s month/day to today.
-- No DB migration, no RLS changes, no new tables.
+## Verification
+Reload on a 384px viewport, open the sidebar via the header trigger, confirm the bottom tab bar disappears and all sidebar items (including bottom-most Sign Out) are visible and tappable. Close the sidebar — bottom nav reappears. Desktop layout unchanged.
