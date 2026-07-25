@@ -404,11 +404,13 @@ function ReportDialog({ open, onOpenChange, session }) {
                   <th className="p-2">Out</th>
                   <th className="p-2">Duration</th>
                   <th className="p-2">Source</th>
+                  <th className="p-2">Signed in by</th>
+                  <th className="p-2">Signed out by</th>
                 </tr>
               </thead>
               <tbody>
                 {rows.length === 0 && (
-                  <tr><td colSpan={5} className="p-4 text-center text-muted-foreground">No attendance records.</td></tr>
+                  <tr><td colSpan={7} className="p-4 text-center text-muted-foreground">No attendance records.</td></tr>
                 )}
                 {rows.map((r) => (
                   <tr key={r.id} className="border-t">
@@ -420,10 +422,13 @@ function ReportDialog({ open, onOpenChange, session }) {
                     <td className="p-2">{r.checked_out_at ? format(new Date(r.checked_out_at), "HH:mm") : "—"}</td>
                     <td className="p-2">{fmtDuration(r.duration_minutes) || "—"}</td>
                     <td className="p-2 capitalize">{r.source}</td>
+                    <td className="p-2">{workerName(r, r.checked_in_by)}</td>
+                    <td className="p-2">{r.checked_out_at ? workerName(r, r.checked_out_by) : "—"}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
+
           </div>
         </div>
       </DialogContent>
