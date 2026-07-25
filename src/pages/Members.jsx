@@ -29,11 +29,13 @@ const statusColors = {
 };
 
 export default function Members() {
-  const { isAdmin, isUnitLeader, isWSFLeader, isReportsOfficer, user, loading: authLoading, myMember, leaderUnits } = useAuth();
+  const { isAdmin, isUnitLeader, isWSFLeader, isReportsOfficer, user, loading: authLoading, myMember, leaderUnits, myUnits } = useAuth();
   const { tenantId, scopeQuery } = useTenantQuery();
   const isLeader = isUnitLeader || isWSFLeader;
-  const viewOnly = (isLeader || isReportsOfficer) && !isAdmin;
-  const unitLeaderReadOnly = isUnitLeader && !isAdmin;
+  const unitMemberOnly = !isAdmin && !isUnitLeader && !isWSFLeader && !isReportsOfficer && (myUnits?.length || 0) > 0;
+  const viewOnly = (isLeader || isReportsOfficer || unitMemberOnly) && !isAdmin;
+  const unitLeaderReadOnly = (isUnitLeader || unitMemberOnly) && !isAdmin;
+
   const [search, setSearch] = useState("");
   const [filters, setFilters] = useState({ status: "all", unit: "all", dateFrom: null, dateTo: null, account: "all", wsfCentreId: "all" });
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -128,14 +130,16 @@ export default function Members() {
     onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
 
-  // For unit leaders (non-admin), filter to only members in their units
+  // For unit leaders and plain unit members (non-admin), filter to only members in their units
+  const scopingUnits = unitMemberOnly ? (myUnits || []) : (leaderUnits || []);
   const unitFilteredMembers = unitLeaderReadOnly
     ? members.filter(m => {
         if (!m.church_unit) return false;
         const memberUnits = m.church_unit.split(",").map(u => u.trim().toLowerCase());
-        return leaderUnits.some(lu => memberUnits.includes(lu.toLowerCase()));
+        return scopingUnits.some(lu => memberUnits.includes(lu.toLowerCase()));
       })
     : members;
+
 
   const filtered = unitFilteredMembers.filter((m) => {
     const matchSearch = `${m.first_name} ${m.last_name} ${m.email || ""} ${m.phone || ""}`.toLowerCase().includes(search.toLowerCase());

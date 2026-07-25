@@ -21,12 +21,15 @@ import PasswordConfirmDialog from "@/components/shared/PasswordConfirmDialog";
 import ModuleTour from "@/components/tour/ModuleTour";
 
 export default function Attendance() {
-  const { user, isAdmin, isUnitLeader, isWSFLeader, leaderUnits = [], leaderCentres = [] } = useAuth();
+  const { user, isAdmin, isUnitLeader, isWSFLeader, leaderUnits = [], leaderCentres = [], myUnits = [] } = useAuth();
   const { tenantId, scopeQuery, withTenant } = useTenantQuery();
   const { data: churchUnits = [] } = useChurchUnits();
   const canManage = isAdmin || isUnitLeader || isWSFLeader;
   const isUnitLeaderOnly = isUnitLeader && !isAdmin;
   const isWSFLeaderOnly = isWSFLeader && !isAdmin && !isUnitLeader;
+  // Plain unit member: no leader roles, but belongs to at least one unit — read-only view of their unit meetings
+  const isUnitMemberOnly = !isAdmin && !isUnitLeader && !isWSFLeader && (myUnits?.length || 0) > 0;
+
   const queryClient = useQueryClient();
   const [selectedSessionId, setSelectedSessionId] = useState(null);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -70,9 +73,15 @@ export default function Attendance() {
         const isMyCentre = s.session_type === "Home Cell Meeting" && leaderCentres.some(c => c.toLowerCase() === (s.unit || "").toLowerCase());
         if (!isMyUnit && !isMyCentre) return false;
       }
+      // Plain unit member: only see Unit Meeting sessions for their own units
+      if (isUnitMemberOnly) {
+        if (s.session_type !== "Unit Meeting") return false;
+        if (!myUnits.some(u => u.toLowerCase() === (s.unit || "").toLowerCase())) return false;
+      }
       return true;
     });
-  }, [sessions, dateFrom, dateTo, unitFilter, isUnitLeaderOnly, isWSFLeaderOnly, isUnitLeader, isWSFLeader, isAdmin, leaderUnits, leaderCentres]);
+  }, [sessions, dateFrom, dateTo, unitFilter, isUnitLeaderOnly, isWSFLeaderOnly, isUnitLeader, isWSFLeader, isAdmin, leaderUnits, leaderCentres, isUnitMemberOnly, myUnits]);
+
 
   const selectedSession = filteredSessions.find(s => s.id === selectedSessionId) || filteredSessions[0];
 
