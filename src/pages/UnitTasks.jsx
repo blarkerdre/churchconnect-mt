@@ -168,11 +168,14 @@ export default function UnitTasks() {
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
-          {canLead && <TabsTrigger value="leading">Leading</TabsTrigger>}
+          {canViewUnit && (
+            <TabsTrigger value="leading">{canLead ? "Leading" : "My Unit"}</TabsTrigger>
+          )}
           <TabsTrigger value="mine">My Tasks ({myAssignments.filter((a) => a.status !== "Completed").length})</TabsTrigger>
         </TabsList>
 
-        {canLead && (
+        {canViewUnit && (
+
           <TabsContent value="leading" className="space-y-4 mt-4">
             <div className="flex flex-wrap gap-3">
               <Select value={unitFilter} onValueChange={setUnitFilter}>
