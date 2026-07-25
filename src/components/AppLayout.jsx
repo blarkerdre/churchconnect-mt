@@ -309,7 +309,7 @@ export default function Layout({ children }) {
         </div>
 
         {/* Nav */}
-        <nav data-tour="sidebar-nav" className="flex-1 p-3 space-y-1 overflow-y-auto">
+        <nav data-tour="sidebar-nav" className="flex-1 p-3 space-y-1 overflow-y-auto pb-20 lg:pb-3">
           {navItems.map((item) => {
             const isActive = barePath === item.path;
             return (
