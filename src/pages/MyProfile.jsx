@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, User, Mail, Phone, MapPin, Calendar, CheckCircle2, XCircle, Church, Edit, Save, X, Shield, BookOpen, Camera, Star } from "lucide-react";
+import { Loader2, User, Mail, Phone, MapPin, Calendar, CheckCircle2, XCircle, Church, Edit, Save, X, Shield, BookOpen, Camera } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "@/components/ui/use-toast";
 import { suggestClosestWSFCentre } from "@/lib/wsf-suggest";
@@ -21,7 +21,7 @@ import { useChurchUnits } from "@/hooks/useChurchUnits";
 import MyCertificates from "@/components/certificates/MyCertificates";
 import { MemberAvatar } from "@/components/members/MemberAvatar";
 import MemberJourneyTimeline from "@/components/members/MemberJourneyTimeline";
-import TakeExamDialog from "@/components/exams/TakeExamDialog";
+
 
 import { useTenantQuery } from "@/hooks/useTenantQuery";
 import WelcomeQuestions from "@/components/members/WelcomeQuestions";
@@ -145,7 +145,7 @@ export default function MyProfile() {
   const queryClient = useQueryClient();
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({});
-  const [examSelection, setExamSelection] = useState(null);
+  
 
   const isSuperAdmin = roles.includes("super_admin");
   const getRoleTitle = () => {
@@ -669,21 +669,7 @@ export default function MyProfile() {
       {/* Certificates */}
       {!editing && <MyCertificates memberId={member.id} hiddenCourseNames={hiddenCourseNames} />}
 
-      {/* App Feedback */}
-      {!editing && <AppFeedbackSection />}
 
-
-      {/* Take Exams */}
-      {!editing && <DynamicExamButtons memberId={member.id} onSelect={setExamSelection} tenantId={tenantId} hiddenStatementCourseNames={hiddenStatementCourseNames} />}
-
-      <TakeExamDialog
-        open={!!examSelection}
-        onOpenChange={(v) => { if (!v) setExamSelection(null); }}
-        trainingType={examSelection?.type}
-        memberId={member.id}
-        subjectId={examSelection?.subjectId}
-        subjectName={examSelection?.subjectName}
-      />
 
       {/* Attendance History */}
       <Card className="border-0 shadow-sm">
