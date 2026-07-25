@@ -29,11 +29,13 @@ const statusColors = {
 };
 
 export default function Members() {
-  const { isAdmin, isUnitLeader, isWSFLeader, isReportsOfficer, user, loading: authLoading, myMember, leaderUnits } = useAuth();
+  const { isAdmin, isUnitLeader, isWSFLeader, isReportsOfficer, user, loading: authLoading, myMember, leaderUnits, myUnits } = useAuth();
   const { tenantId, scopeQuery } = useTenantQuery();
   const isLeader = isUnitLeader || isWSFLeader;
-  const viewOnly = (isLeader || isReportsOfficer) && !isAdmin;
-  const unitLeaderReadOnly = isUnitLeader && !isAdmin;
+  const unitMemberOnly = !isAdmin && !isUnitLeader && !isWSFLeader && !isReportsOfficer && (myUnits?.length || 0) > 0;
+  const viewOnly = (isLeader || isReportsOfficer || unitMemberOnly) && !isAdmin;
+  const unitLeaderReadOnly = (isUnitLeader || unitMemberOnly) && !isAdmin;
+
   const [search, setSearch] = useState("");
   const [filters, setFilters] = useState({ status: "all", unit: "all", dateFrom: null, dateTo: null, account: "all", wsfCentreId: "all" });
   const [dialogOpen, setDialogOpen] = useState(false);
