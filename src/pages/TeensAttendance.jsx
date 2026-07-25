@@ -666,7 +666,7 @@ function RegisteredTeensDialog({ open, onOpenChange }) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("teens")
-        .select("id, first_name, last_name, gender, date_of_birth, attendance_consent, attendance_consent_at, is_active, access_pin_hash, notes, guardian:primary_guardian_member_id(first_name, last_name, phone, email)")
+        .select("id, first_name, last_name, gender, date_of_birth, attendance_consent, attendance_consent_at, data_processing_consent, data_processing_consent_at, is_active, access_pin_hash, notes, guardian:primary_guardian_member_id(first_name, last_name, phone, email)")
         .eq("tenant_id", tenantId)
         .order("first_name");
       if (error) throw error;
@@ -689,7 +689,7 @@ function RegisteredTeensDialog({ open, onOpenChange }) {
   }, [teens, search, filter]);
 
   const exportCsv = () => {
-    const header = ["First name", "Last name", "Gender", "Date of birth", "Age", "Consent", "Consent date", "Active", "Guardian", "Guardian phone", "Guardian email"];
+    const header = ["First name", "Last name", "Gender", "Date of birth", "Age", "Attendance consent", "Attendance consent date", "Data-processing consent", "Data-processing consent date", "Active", "Guardian", "Guardian phone", "Guardian email"];
     const rows = filtered.map((t) => [
       t.first_name || "",
       t.last_name || "",
@@ -698,11 +698,14 @@ function RegisteredTeensDialog({ open, onOpenChange }) {
       ageFrom(t.date_of_birth) ?? "",
       t.attendance_consent ? "Yes" : "No",
       t.attendance_consent_at ? format(new Date(t.attendance_consent_at), "yyyy-MM-dd") : "",
+      t.data_processing_consent ? "Yes" : "No",
+      t.data_processing_consent_at ? format(new Date(t.data_processing_consent_at), "yyyy-MM-dd") : "",
       t.is_active ? "Yes" : "No",
       `${t.guardian?.first_name || ""} ${t.guardian?.last_name || ""}`.trim(),
       t.guardian?.phone || "",
       t.guardian?.email || "",
     ]);
+
     const csv = [header, ...rows].map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
@@ -765,13 +768,24 @@ function RegisteredTeensDialog({ open, onOpenChange }) {
                     {t.attendance_consent ? (
                       <Badge variant="outline" className="text-[10px] border-emerald-300 text-emerald-700">
                         <ShieldCheck className="h-3 w-3 mr-1" />
-                        Consent{t.attendance_consent_at ? ` · ${format(new Date(t.attendance_consent_at), "d MMM yyyy")}` : ""}
+                        Attendance{t.attendance_consent_at ? ` · ${format(new Date(t.attendance_consent_at), "d MMM yyyy")}` : ""}
                       </Badge>
                     ) : (
                       <Badge variant="outline" className="text-[10px] border-amber-300 text-amber-700">
-                        <ShieldAlert className="h-3 w-3 mr-1" /> No consent
+                        <ShieldAlert className="h-3 w-3 mr-1" /> No attendance consent
                       </Badge>
                     )}
+                    {t.data_processing_consent ? (
+                      <Badge variant="outline" className="text-[10px] border-emerald-300 text-emerald-700">
+                        <ShieldCheck className="h-3 w-3 mr-1" />
+                        Data processing{t.data_processing_consent_at ? ` · ${format(new Date(t.data_processing_consent_at), "d MMM yyyy")}` : ""}
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="text-[10px] border-amber-300 text-amber-700">
+                        <ShieldAlert className="h-3 w-3 mr-1" /> No data-processing consent
+                      </Badge>
+                    )}
+
                     {t.access_pin_hash && (
                       <Badge variant="outline" className="text-[10px] border-slate-300">
                         <KeyRound className="h-3 w-3 mr-1" /> PIN
