@@ -141,7 +141,7 @@ export default function PlatformUsersTab() {
         </div>
 
         <div className="rounded-md border overflow-x-auto">
-          <Table>
+          <Table className="min-w-[640px]">
             <TableHeader>
               <TableRow>
                 <TableHead>Name</TableHead>

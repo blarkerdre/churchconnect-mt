@@ -284,7 +284,7 @@ export default function TenantUsersDialog({ tenant, open, onOpenChange }) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto w-[calc(100vw-1rem)] sm:w-auto">
         <TooltipProvider>
         <TenantDialogHeader>
             Users — {tenant.name}
@@ -348,7 +348,7 @@ export default function TenantUsersDialog({ tenant, open, onOpenChange }) {
               <p className="text-sm text-muted-foreground py-4">No users match "{search}".</p>
             ) : (
               <div className="overflow-x-auto">
-                <Table>
+                <Table className="min-w-[640px]">
                   <TableHeader>
                     <TableRow>
                       <TableHead>User</TableHead>
@@ -493,7 +493,7 @@ export default function TenantUsersDialog({ tenant, open, onOpenChange }) {
               <p className="text-sm text-muted-foreground py-4">No invitations sent yet.</p>
             ) : (
               <div className="overflow-x-auto">
-                <Table>
+                <Table className="min-w-[640px]">
                   <TableHeader>
                     <TableRow>
                       <TableHead>Email</TableHead>

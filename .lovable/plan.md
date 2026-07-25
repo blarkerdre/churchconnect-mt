@@ -1,39 +1,43 @@
-
 ## Goal
+Make every screen, tab, dialog, form, and table in Tenant Admin fit cleanly at 384px wide (mobile) up through desktop, with no horizontal page scroll and no cramped rows.
 
-Make the Bible School (WOFBI) management area and all its dialogs/forms render cleanly from 320px phones up to desktop — no horizontal page scroll, no clipped controls, no cramped tables.
-
-## Scope (frontend/presentation only)
-
-Files to audit and tighten:
-
-- `src/pages/ExamManagement.jsx` (main hub, ~1951 lines: tabs, filters, cards, tables, dialogs)
-- `src/components/exams/*`:
-  - `WoFBIApplicationsTab.jsx`, `WoFBIApplicationFormEditor.jsx`, `WoFBIDynamicForm.jsx`
-  - `WoFBIAttendanceTab.jsx`, `WoFBIAttendanceQRDialog.jsx`, `WoFBIPersistentQRDialog.jsx`, `WoFBIRegistrationQRCode.jsx`
-  - `SubjectManager.jsx`, `LecturerManager.jsx`, `LecturerFeedbackReport.jsx`
-  - `CourseResultsView.jsx`, `StatementOfResult.jsx`, `SendResultsDialog.jsx`
-  - `QcCheckDialog.jsx`, `QcReport.jsx`, `RateLecturerDialog.jsx`
-  - `TakeExamDialog.jsx`, `DangerConfirmDialog.jsx`
+## Scope
+- `src/pages/TenantAdmin.jsx`
+- `src/components/tenants/*.jsx` (all files)
 
 ## Fixes to apply
 
-1. **Page container** — ensure `ExamManagement` root uses `min-w-0` and `px-3 sm:px-4 lg:px-6`; wrap any full-width row in `min-w-0` so flex children can shrink.
-2. **Tab bars** — Applications / Registrations / Attendance / Subjects / Lecturers / Results / QC tab strips become horizontally scrollable on mobile (`flex overflow-x-auto no-scrollbar`, `whitespace-nowrap` triggers, `w-max` list).
-3. **Filter rows** — status, search, cohort, date filters stack via `flex flex-col sm:flex-row flex-wrap gap-2`; inputs get `w-full sm:w-auto`, search grows with `flex-1 min-w-0`.
-4. **Data tables** — every table wrapped in `<div className="overflow-x-auto -mx-3 sm:mx-0"><table className="min-w-[640px] w-full">…`; long text cells use `truncate` with a `title` for tooltip; action button clusters wrap.
-5. **Card grids** — application/registration cards use `grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3`; internal two-column detail grids collapse to `grid-cols-1 sm:grid-cols-2`.
-6. **Dialogs** — every `DialogContent` gets `w-[calc(100vw-1rem)] sm:w-auto max-w-[…] max-h-[90vh] overflow-y-auto p-4 sm:p-6`; footers become `flex flex-col-reverse sm:flex-row sm:justify-end gap-2` so buttons stack full-width on mobile.
-7. **Form fields** — inside `WoFBIDynamicForm`, `WoFBIApplicationFormEditor`, `QcCheckDialog`, `RateLecturerDialog`, `SendResultsDialog`, `TakeExamDialog`: convert any hard `grid-cols-2/3` to responsive `grid-cols-1 sm:grid-cols-2`; long Selects get `w-full`; option chips wrap.
-8. **QR dialogs** — QR canvas centered, capped at `w-[min(80vw,320px)]`; instructions stack; copy/download buttons full-width on mobile.
-9. **Results / Statement of Result / QcReport** — printable views keep desktop layout but wrap runtime view in `overflow-x-auto`; headers/badges wrap with `flex-wrap gap-2`.
-10. **Editor list rows** (`WoFBIApplicationFormEditor`) — the field row (label + up/down/edit/delete) becomes `flex flex-wrap` so controls don't push off-screen on 384px viewport.
+### 1. Main Tenant Admin page (`TenantAdmin.jsx`)
+- Wrap outer container with `min-w-0` so children can shrink.
+- Make the top `<TabsList>` (Overview / Analytics / Users / Billing / Pricing / Integrations / SLA) horizontally scrollable with `overflow-x-auto whitespace-nowrap` and `TabsTrigger` `whitespace-nowrap`.
+- Stat row `grid-cols-2 sm:grid-cols-4` — keep, but ensure each `StatCard` truncates long values.
+- Tenants list `CardHeader` (line 462): change `flex-row … flex-wrap` → `flex-col sm:flex-row sm:items-center sm:justify-between gap-2`; make action buttons `flex-1 sm:flex-none`.
+- Every `DialogContent` in this file (create-tenant, edit-tenant, restore, archive, delete, tenant-details, sub-dialogs — lines 478, 527, 747, 869, 916, 958, 994, 1225) gets `w-[calc(100vw-1rem)] sm:w-auto max-h-[90vh] overflow-y-auto` appended.
+- Tenant-details dialog inner `TabsList` (line 1000) — swap the fixed `grid-cols-2 sm:grid-cols-3 md:grid-cols-5` for a horizontally scrollable list so 5 tabs don't wrap into 3 rows at 384px.
+- Any `grid-cols-2` inside dialogs that show side-by-side labeled fields collapse to `grid-cols-1 sm:grid-cols-2`.
 
-## Verification
+### 2. Sub-components
+- **`TenantUsersDialog.jsx`**: `DialogContent max-w-2xl` → add mobile width class; keep table `overflow-x-auto` but add `min-w-[640px]` inside so columns don't crush.
+- **`PlatformUsersTab.jsx`**: table wrapper — add `min-w-[720px]` to `<Table>`.
+- **`PricingTab.jsx`**: `TabsList` (line 504) scrollable; edit dialog (`max-w-3xl`) gets mobile width; opening `grid-cols-2` → `grid-cols-1 sm:grid-cols-2`; each pricing table gets `min-w-[720px]`.
+- **`TenantBillingTab.jsx`**: all four `grid-cols-2` blocks → `grid-cols-1 sm:grid-cols-2`.
+- **`TenantAnalyticsTab.jsx`**: verify `grid-cols-2 sm:grid-cols-4` metric grids stay; add `min-w-0` and truncation to metric titles.
+- **`DomifortIntegrationSection.jsx`**: `TabsList` scrollable; both `DialogContent`s get mobile width + scroll cap; token/webhook code blocks get `break-all`.
+- **`SLASection.jsx` + `SLATemplateAdmin.jsx`**: `DialogContent max-w-2xl`/`max-w-md` get mobile width + `max-h-[90vh] overflow-y-auto`.
+- **`InvoiceEditorDialog.jsx`**: `DialogContent max-w-5xl` → add mobile width; inner `grid-cols-3` → `grid-cols-1 sm:grid-cols-3`; footer buttons stack on mobile.
+- **`InvoicesReceiptsList.jsx`**: wrap list rows so long invoice numbers/amounts wrap; action buttons `flex-wrap`.
+- **`PaymentRequiredScreen.jsx` / `PaymentWarningBanner.jsx`**: check CTA rows stack under 400px.
 
-- Use Playwright at viewports 360, 414, 768, 1280 to load `/t/<slug>/exam-management`, open each tab, open one dialog per module (Application form editor, QC check, Rate lecturer, Send results, Take exam, QR), and screenshot. Confirm no horizontal scroll on `<html>`, all buttons visible, tables scroll only inside their wrapper.
-- Spot-check the same on the running preview (currently 384×673).
+### 3. Shared patterns applied
+- Dialog width recipe: `max-w-* w-[calc(100vw-1rem)] sm:w-auto max-h-[90vh] overflow-y-auto`.
+- Tab list recipe: `overflow-x-auto whitespace-nowrap` + triggers `whitespace-nowrap` instead of fixed-grid.
+- Card headers with actions: `flex-col sm:flex-row sm:items-center sm:justify-between gap-2`.
+- Tables in cards: outer `overflow-x-auto -mx-4 sm:mx-0`, inner `<Table className="min-w-[…]">`.
+- Multi-column detail grids: `grid-cols-1 sm:grid-cols-2` (or `sm:grid-cols-3`).
 
 ## Out of scope
+No behavioral, data, RLS, or copy changes — layout/classname edits only.
 
-No changes to business logic, RLS, RPCs, edge functions, or data models. UI-only.
+## Verification
+- Read the edited files back to confirm the classes landed.
+- Playwright screenshots of `/tenant-admin` at 384px and 1280px: main tabs row, tenants list, tenant-details dialog with each inner tab, PricingTab edit dialog, InvoiceEditorDialog. Confirm no horizontal page scroll and all buttons remain reachable.

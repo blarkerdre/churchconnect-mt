@@ -211,11 +211,11 @@ await fetch('${INGEST_URL}', {
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="tokens">
-            <TabsList>
-              <TabsTrigger value="tokens">Tokens</TabsTrigger>
-              <TabsTrigger value="endpoint">Endpoint</TabsTrigger>
-              <TabsTrigger value="bookings">Recent bookings</TabsTrigger>
-              <TabsTrigger value="logs">Ingest log</TabsTrigger>
+            <TabsList className="w-full overflow-x-auto flex-nowrap justify-start whitespace-nowrap">
+              <TabsTrigger className="whitespace-nowrap" value="tokens">Tokens</TabsTrigger>
+              <TabsTrigger className="whitespace-nowrap" value="endpoint">Endpoint</TabsTrigger>
+              <TabsTrigger className="whitespace-nowrap" value="bookings">Recent bookings</TabsTrigger>
+              <TabsTrigger className="whitespace-nowrap" value="logs">Ingest log</TabsTrigger>
             </TabsList>
 
             <TabsContent value="tokens" className="mt-4">
@@ -393,7 +393,7 @@ await fetch('${INGEST_URL}', {
 
       {/* Create dialog */}
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-        <DialogContent>
+        <DialogContent className="w-[calc(100vw-1rem)] sm:w-auto max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Create DomiFort API token</DialogTitle>
             <DialogDescription>
@@ -424,7 +424,7 @@ await fetch('${INGEST_URL}', {
 
       {/* One-time reveal dialog */}
       <Dialog open={!!created} onOpenChange={(open) => !open && setCreated(null)}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-lg w-[calc(100vw-1rem)] sm:w-auto max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Token created</DialogTitle>
             <DialogDescription>
