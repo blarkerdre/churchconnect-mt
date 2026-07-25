@@ -136,13 +136,14 @@ export default function UnitTasks() {
   }, [myAssignments]);
 
   const onChanged = () => {
-    if (canLead) setActiveTab("leading");
+    if (canViewUnit) setActiveTab("leading");
     setStatusFilter("Open");
     queryClient.invalidateQueries({ queryKey: ["leading-tasks"] });
     queryClient.invalidateQueries({ queryKey: ["my-assignments"] });
     refetchLead();
     refetchMine();
   };
+
 
   return (
     <div className="p-4 md:p-6 max-w-7xl mx-auto space-y-6">
