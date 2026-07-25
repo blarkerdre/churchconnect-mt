@@ -194,7 +194,7 @@ function TeenForm({ open, onOpenChange, teen, memberId, onSaved }) {
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={() => save.mutate()} disabled={save.isPending || !form.attendance_consent}>Save</Button>
+          <Button onClick={() => save.mutate()} disabled={save.isPending || !form.attendance_consent || !form.data_processing_consent}>Save</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
