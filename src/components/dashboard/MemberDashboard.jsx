@@ -248,8 +248,6 @@ export default function MemberDashboard({ currentUser, myMember }) {
         </Card>
       )}
 
-      {/* App Feedback */}
-      <AppFeedbackSection />
     </div>
   );
 }
