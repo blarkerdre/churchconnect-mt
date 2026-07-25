@@ -73,9 +73,15 @@ export default function Attendance() {
         const isMyCentre = s.session_type === "Home Cell Meeting" && leaderCentres.some(c => c.toLowerCase() === (s.unit || "").toLowerCase());
         if (!isMyUnit && !isMyCentre) return false;
       }
+      // Plain unit member: only see Unit Meeting sessions for their own units
+      if (isUnitMemberOnly) {
+        if (s.session_type !== "Unit Meeting") return false;
+        if (!myUnits.some(u => u.toLowerCase() === (s.unit || "").toLowerCase())) return false;
+      }
       return true;
     });
-  }, [sessions, dateFrom, dateTo, unitFilter, isUnitLeaderOnly, isWSFLeaderOnly, isUnitLeader, isWSFLeader, isAdmin, leaderUnits, leaderCentres]);
+  }, [sessions, dateFrom, dateTo, unitFilter, isUnitLeaderOnly, isWSFLeaderOnly, isUnitLeader, isWSFLeader, isAdmin, leaderUnits, leaderCentres, isUnitMemberOnly, myUnits]);
+
 
   const selectedSession = filteredSessions.find(s => s.id === selectedSessionId) || filteredSessions[0];
 
