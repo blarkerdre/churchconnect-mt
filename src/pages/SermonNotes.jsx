@@ -344,7 +344,7 @@ export default function SermonNotes() {
               <p>{search || categoryFilter !== "all" || selectedFolder !== "all" ? "No notes match your filters." : "No sermon notes yet. Tap 'New Note' to start."}</p>
             </div>
           ) : (
-            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 min-w-0">
               {processed.map((n) => {
                 const folder = n.folder_id ? folderMap[n.folder_id] : null;
                 const isSelected = selectedIds.has(n.id);
@@ -356,11 +356,12 @@ export default function SermonNotes() {
                   <Card
                     key={n.id}
                     className={cn(
-                      "cursor-pointer hover:shadow-md transition-shadow",
+                      "cursor-pointer hover:shadow-md transition-shadow min-w-0 overflow-hidden",
                       isSelected && "ring-2 ring-primary"
                     )}
                     onClick={handleCardClick}
                   >
+
                     <CardContent className="pt-4 space-y-1">
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex items-start gap-2 min-w-0 flex-1">
@@ -421,7 +422,7 @@ export default function SermonNotes() {
                         )}
                         {n.category && <Badge variant="secondary" className="text-xs">{n.category}</Badge>}
                       </div>
-                      <p className="text-sm text-muted-foreground max-h-[80px] overflow-y-auto">{n.content?.replace(/<[^>]*>/g, "") || ""}</p>
+                      <p className="text-sm text-muted-foreground max-h-[80px] overflow-y-auto break-words">{n.content?.replace(/<[^>]*>/g, "") || ""}</p>
                     </CardContent>
                   </Card>
                 );

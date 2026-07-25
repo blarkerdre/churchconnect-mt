@@ -1289,12 +1289,13 @@ export default function ChildrenChurch() {
         <HelpButton tourId="children-church-v1" ctx={{ isLeader, isAdmin }} dataTour="cc-help" />
       </div>
       <Tabs defaultValue="checkin">
-        <TabsList className={`grid w-full sm:w-auto`} style={{ gridTemplateColumns: `repeat(${tabCount}, minmax(0, 1fr))` }}>
-          <TabsTrigger value="checkin" data-tour="cc-tab-checkin">Check-in</TabsTrigger>
-          <TabsTrigger value="pickup" data-tour="cc-tab-pickup">Pickup</TabsTrigger>
-          {canSeeAll && <TabsTrigger value="all" data-tour="cc-tab-all">All children</TabsTrigger>}
-          {canSeeReport && <TabsTrigger value="report" data-tour="cc-tab-report">Report</TabsTrigger>}
+        <TabsList className="flex flex-nowrap h-auto gap-1 overflow-x-auto w-full sm:w-auto justify-start">
+          <TabsTrigger value="checkin" data-tour="cc-tab-checkin" className="shrink-0">Check-in</TabsTrigger>
+          <TabsTrigger value="pickup" data-tour="cc-tab-pickup" className="shrink-0">Pickup</TabsTrigger>
+          {canSeeAll && <TabsTrigger value="all" data-tour="cc-tab-all" className="shrink-0">All children</TabsTrigger>}
+          {canSeeReport && <TabsTrigger value="report" data-tour="cc-tab-report" className="shrink-0">Report</TabsTrigger>}
         </TabsList>
+
         <TabsContent value="checkin"><CheckInPanel tenantId={tenantId} tenantSlug={tenantSlug} /></TabsContent>
         <TabsContent value="pickup"><PickupPanel tenantId={tenantId} isLeader={isLeader || isAdmin} /></TabsContent>
         {canSeeAll && <TabsContent value="all"><AllChildrenPanel tenantId={tenantId} /></TabsContent>}
