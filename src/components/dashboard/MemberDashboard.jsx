@@ -54,6 +54,25 @@ export default function MemberDashboard({ currentUser, myMember }) {
   const userId = session?.user?.id;
   const showBirthdays = isUnitLeader && !isAdmin;
 
+  // Today's birthday celebrants (visible to all members)
+  const { data: todayBirthdays = [] } = useQuery({
+    queryKey: ["today-birthdays", tenantId],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("get_upcoming_birthdays", {
+        _tenant_id: tenantId,
+        _days_ahead: 0,
+      });
+      if (error) throw error;
+      const today = new Date();
+      return (data || []).filter(m => {
+        if (!m.date_of_birth) return false;
+        const dob = new Date(m.date_of_birth);
+        return dob.getMonth() === today.getMonth() && dob.getDate() === today.getDate();
+      });
+    },
+    enabled: !!tenantId,
+  });
+
   // Upcoming birthdays for unit leaders
   const { data: unitBirthdays = [] } = useQuery({
     queryKey: ["unit-leader-birthdays", tenantId, leaderUnits],
