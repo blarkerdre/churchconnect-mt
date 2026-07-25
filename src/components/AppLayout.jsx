@@ -139,6 +139,8 @@ export default function Layout({ children }) {
   const { isMemberOfUnit: isTeensChurchMember } = useUnitMembership("Teens Church");
   const { isMemberOfUnit: isChurchOfficeMember } = useUnitMembership("Church Office");
 
+  const hasChurchUnit = !!(myMember?.church_unit && String(myMember.church_unit).trim() && myMember.church_unit !== "None");
+
   // Filter nav items based on role and disabled features
   const navItems = allNavItems.filter(item => {
     // Super admins see all features; others don't see disabled ones
@@ -148,6 +150,7 @@ export default function Layout({ children }) {
     if (item.access === "admin") return isAdmin;
     if (item.access === "reports") return isAdmin || isReportsOfficer;
     if (item.access === "leader") return isAdmin || isUnitLeader || isReportsOfficer;
+    if (item.access === "unit") return isAdmin || isSuperAdmin || isReportsOfficer || (leaderUnits?.length > 0) || hasChurchUnit;
     if (item.access === "wsf") return isAdmin || isWSFLeader || isReportsOfficer || isHomeCellHost;
     if (item.access === "followup_member") return isAdmin || isFollowupUnit || isFollowupMember || isReportsOfficer;
     if (item.access === "training") return isAdmin || isSuperAdmin || isTrainingAccess || isReportsOfficer;
