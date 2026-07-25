@@ -799,7 +799,7 @@ export default function WoFBIApplicationsTab() {
       </CardContent>
 
       <Dialog open={!!detail} onOpenChange={(v) => !v && setDetail(null)}>
-        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto w-[calc(100vw-1rem)] sm:w-auto">
           <DialogHeader>
             <DialogTitle>
               {detail?.source === "direct" ? "Direct enrolment" : "Application"} — {detail?.first_name} {detail?.last_name}
