@@ -130,15 +130,21 @@ Deno.serve(async (req) => {
       user_metadata: user.user_metadata,
     }];
 
+    // Mark request as single-use consumed
+    await admin.from("data_export_requests")
+      .update({ status: "downloaded", downloaded_at: new Date().toISOString() })
+      .eq("id", reqRow.id);
+
     // Audit + notice
     await writeAudit(admin, {
-      tenant_id: memberRows?.[0]?.tenant_id ?? null,
+      tenant_id: reqRow.tenant_id ?? memberRows?.[0]?.tenant_id ?? null,
       user_id: user.id,
       action: "dsr_export",
-      entity_type: "user",
-      entity_id: user.id,
+      entity_type: "data_export_request",
+      entity_id: reqRow.id,
       details: { tables: Object.keys(exportData).length },
     });
+
 
     return new Response(JSON.stringify({
       success: true,
