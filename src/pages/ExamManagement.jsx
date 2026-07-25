@@ -325,14 +325,14 @@ export default function ExamManagement() {
       </div>
       <WoFBIRegistrationQRCode open={qrOpen} onOpenChange={setQrOpen} />
 
-      <Tabs defaultValue="management" className="w-full">
-        <TabsList className="flex flex-nowrap h-auto gap-1 overflow-x-auto w-full justify-start">
-          <TabsTrigger value="management">Management</TabsTrigger>
-          <TabsTrigger value="applications">Applications</TabsTrigger>
-          <TabsTrigger value="attendance">Attendance</TabsTrigger>
-          <TabsTrigger value="app-form">Application Form</TabsTrigger>
-          <TabsTrigger value="lecturer">Lecturer Feedback</TabsTrigger>
-          <TabsTrigger value="qc">Quality Control</TabsTrigger>
+      <Tabs defaultValue="management" className="w-full min-w-0">
+        <TabsList className="flex flex-nowrap h-auto gap-1 overflow-x-auto w-full justify-start scrollbar-thin">
+          <TabsTrigger value="management" className="whitespace-nowrap">Management</TabsTrigger>
+          <TabsTrigger value="applications" className="whitespace-nowrap">Applications</TabsTrigger>
+          <TabsTrigger value="attendance" className="whitespace-nowrap">Attendance</TabsTrigger>
+          <TabsTrigger value="app-form" className="whitespace-nowrap">Application Form</TabsTrigger>
+          <TabsTrigger value="lecturer" className="whitespace-nowrap">Lecturer Feedback</TabsTrigger>
+          <TabsTrigger value="qc" className="whitespace-nowrap">Quality Control</TabsTrigger>
         </TabsList>
 
 
