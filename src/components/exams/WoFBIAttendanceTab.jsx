@@ -490,7 +490,8 @@ export default function WoFBIAttendanceTab() {
           ) : sessions.length === 0 ? (
             <p className="text-sm text-muted-foreground py-6 text-center">No attendance sessions yet for this course.</p>
           ) : (
-            <Table>
+            <div className="overflow-x-auto -mx-3 sm:mx-0">
+            <Table className="min-w-[640px]">
               <TableHeader>
                 <TableRow>
                   <TableHead>Date</TableHead>
@@ -545,19 +546,20 @@ export default function WoFBIAttendanceTab() {
                 })}
               </TableBody>
             </Table>
+            </div>
           )}
         </CardContent>
       </Card>
 
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between gap-4 flex-wrap">
-          <div>
+        <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div className="min-w-0">
             <CardTitle className="text-lg">Attendance report</CardTitle>
             <p className="text-xs text-muted-foreground">
               {selectedCourse?.name || "Course"} · {sessions.length} session{sessions.length === 1 ? "" : "s"}
             </p>
           </div>
-          <Button variant="outline" onClick={exportCsv} disabled={!perStudent.length} className="gap-2">
+          <Button variant="outline" onClick={exportCsv} disabled={!perStudent.length} className="gap-2 w-full sm:w-auto">
             <Download className="h-4 w-4" /> Export CSV
           </Button>
         </CardHeader>
@@ -565,7 +567,8 @@ export default function WoFBIAttendanceTab() {
           {perStudent.length === 0 ? (
             <p className="text-sm text-muted-foreground py-6 text-center">No registered students on this course yet.</p>
           ) : (
-            <Table>
+            <div className="overflow-x-auto -mx-3 sm:mx-0">
+            <Table className="min-w-[720px]">
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-8"></TableHead>
