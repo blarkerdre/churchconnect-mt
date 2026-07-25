@@ -17,7 +17,8 @@ const STATUSES = ["Open", "Completed", "Cancelled"];
 const ASSIGN_STATUSES = ["Pending", "Acknowledged", "Completed"];
 const PRIORITIES = ["Low", "Medium", "High", "Urgent"];
 
-export default function UnitTaskReportDialog({ open, onOpenChange, unitOptions = [] }) {
+export default function UnitTaskReportDialog({ open, onOpenChange, unitOptions = [], hiddenUnitNames }) {
+  const hiddenSet = hiddenUnitNames instanceof Set ? hiddenUnitNames : new Set(hiddenUnitNames || []);
   const { tenantId } = useTenantQuery();
   const [unitFilter, setUnitFilter] = useState("All");
   const [statusFilter, setStatusFilter] = useState("All");
