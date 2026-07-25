@@ -243,8 +243,8 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
       toast({ title: "First name and last name are required", variant: "destructive" });
       return false;
     }
-    if (!member && !form.gdpr_consent) {
-      toast({ title: "GDPR consent is required", variant: "destructive" });
+    if (!form.gdpr_consent) {
+      toast({ title: "Data processing consent is required", variant: "destructive" });
       return false;
     }
     if (createAccount && !member) {
