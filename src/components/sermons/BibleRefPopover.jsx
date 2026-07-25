@@ -165,9 +165,6 @@ export default function BibleRefPopover({ containerRef }) {
         left: 8,
         right: 8,
         maxWidth: "calc(100vw - 16px)",
-        maxHeight: "min(60vh, 420px)",
-        display: "flex",
-        flexDirection: "column",
         zIndex: 60,
       }
     : {
@@ -175,13 +172,20 @@ export default function BibleRefPopover({ containerRef }) {
         top: pos.top,
         left: pos.left,
         width: 320,
-        maxHeight: "min(70vh, 360px)",
-        display: "flex",
-        flexDirection: "column",
         zIndex: 60,
       };
 
+  const scrollMaxHeight = isMobile ? "min(50vh, 340px)" : "min(60vh, 300px)";
+
   const stop = (e) => e.stopPropagation();
+
+  const scrollRef = (node) => {
+    if (!node) return;
+    // Native listener stops touchmove from bubbling to page/editor.
+    const handler = (e) => e.stopPropagation();
+    node.addEventListener("touchmove", handler, { passive: true });
+    node.addEventListener("wheel", handler, { passive: true });
+  };
 
   return createPortal(
     <div
@@ -194,7 +198,7 @@ export default function BibleRefPopover({ containerRef }) {
       style={style}
       className="rounded-lg border border-border bg-popover text-popover-foreground shadow-lg p-3"
     >
-      <div className="flex items-start justify-between gap-2 mb-1 shrink-0">
+      <div className="flex items-start justify-between gap-2 mb-1">
         <div className="text-xs font-semibold text-primary">
           {state.data?.ref
             ? `${state.data.ref.book} ${state.data.ref.chapter}${
@@ -237,8 +241,14 @@ export default function BibleRefPopover({ containerRef }) {
         <div className="text-xs text-muted-foreground">Verse not found.</div>
       ) : (
         <div
-          className="text-sm leading-relaxed flex-1 min-h-0 overflow-y-auto"
-          style={{ touchAction: "pan-y", overscrollBehavior: "contain", WebkitOverflowScrolling: "touch" }}
+          ref={scrollRef}
+          className="text-sm leading-relaxed overflow-y-auto"
+          style={{
+            maxHeight: scrollMaxHeight,
+            touchAction: "pan-y",
+            overscrollBehavior: "contain",
+            WebkitOverflowScrolling: "touch",
+          }}
         >
           {state.data.verses.map((v) => (
             <span key={v.n}>
@@ -252,4 +262,5 @@ export default function BibleRefPopover({ containerRef }) {
     document.body
   );
 }
+
 
