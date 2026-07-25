@@ -700,8 +700,8 @@ export default function WoFBIApplicationsTab() {
             {applications.length === 0 ? "No applications yet." : "No applications match the current filters."}
           </p>
         ) : (
-          <div className="overflow-x-auto">
-            <Table>
+          <div className="overflow-x-auto -mx-4 sm:mx-0">
+            <Table className="min-w-[720px]">
               <TableHeader>
                 <TableRow>
                   {canDelete && (
