@@ -45,13 +45,14 @@ export default function BibleRefPopover({ containerRef }) {
     const rect = el.getBoundingClientRect();
     const isMobile = window.innerWidth < 480;
     if (isMobile) {
-      return { top: Math.max(8, window.innerHeight - 260), left: 8, mobile: true };
+      return { top: 0, left: 8, mobile: true };
     }
     const width = 320;
     const top = Math.min(window.innerHeight - 20, rect.bottom + 6);
     const left = Math.max(8, Math.min(window.innerWidth - width - 8, rect.left));
     return { top, left, mobile: false };
   }, []);
+
 
   useEffect(() => {
     const container = containerRef?.current;
