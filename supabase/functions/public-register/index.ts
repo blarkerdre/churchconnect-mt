@@ -589,9 +589,10 @@ Deno.serve(async (req) => {
 
     // Check for existing member by email (prevents duplicates from double-submit)
     if (email) {
-      let dupeQuery = supabase.from("members").select("id").eq("email", email);
+      let dupeQuery = supabase.from("members").select("id").ilike("email", email);
       if (tenantId) dupeQuery = dupeQuery.eq("tenant_id", tenantId);
       const { data: existingByEmail } = await dupeQuery.limit(1).maybeSingle();
+
 
       if (existingByEmail) {
         // Update existing record instead of creating duplicate
