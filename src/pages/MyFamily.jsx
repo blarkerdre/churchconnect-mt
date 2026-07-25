@@ -389,6 +389,51 @@ export default function MyFamily() {
     onError: (e) => toast.error(e.message),
   });
 
+  const promoteToTeen = useMutation({
+    mutationFn: async (child) => {
+      if (!meMember?.id) throw new Error("Member profile not linked");
+      // 1) Create matching teen record
+      const teenPayload = {
+        tenant_id: tenantId,
+        member_id: meMember.id,
+        first_name: child.first_name,
+        last_name: child.last_name,
+        date_of_birth: child.date_of_birth || null,
+        gender: child.gender || null,
+        notes: child.notes || null,
+        attendance_consent: !!child.parental_consent_given,
+        attendance_consent_at: child.parental_consent_given
+          ? (child.parental_consent_at || new Date().toISOString())
+          : null,
+      };
+      const { error: tErr } = await supabase.from("teens").insert(teenPayload);
+      if (tErr) throw tErr;
+
+      // 2) Delete child if no history, else archive
+      const { count, error: cErr } = await supabase.from("child_checkins")
+        .select("id", { count: "exact", head: true })
+        .eq("tenant_id", tenantId).eq("child_id", child.id);
+      if (cErr) throw cErr;
+      if ((count || 0) > 0) {
+        const { error } = await supabase.from("children")
+          .update({ archived_at: new Date().toISOString() })
+          .eq("id", child.id).eq("tenant_id", tenantId);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from("children").delete()
+          .eq("id", child.id).eq("tenant_id", tenantId);
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      toast.success("Promoted to teenager");
+      setPromoteChild(null);
+      qc.invalidateQueries({ queryKey: ["my-children"] });
+      qc.invalidateQueries({ queryKey: ["my-teens"] });
+    },
+    onError: (e) => toast.error(e.message),
+  });
+
   const { data: children = [], refetch, error: childrenError } = useQuery({
     queryKey: ["my-children", tenantId, meMember?.id, showAll && canSeeAll],
     enabled: !!tenantId && (!!meMember?.id || (canSeeAll && showAll)),
