@@ -22,6 +22,7 @@ export default function MyData() {
   const qc = useQueryClient();
   const [exporting, setExporting] = useState(false);
   const [reason, setReason] = useState("");
+  const [exportReason, setExportReason] = useState("");
 
   // Member record for consent toggles
   const { data: member } = useQuery({
@@ -45,10 +46,42 @@ export default function MyData() {
     },
   });
 
-  const exportData = async () => {
+  const { data: exportReq } = useQuery({
+    queryKey: ["my-export-request", user?.id, tenantId],
+    enabled: !!user?.id && !!tenantId,
+    queryFn: async () => {
+      const { data } = await supabase.from("data_export_requests").select("*")
+        .eq("user_id", user.id).eq("tenant_id", tenantId)
+        .order("created_at", { ascending: false }).limit(1).maybeSingle();
+      return data;
+    },
+  });
+
+  const requestExportMutation = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase.from("data_export_requests").insert({
+        tenant_id: tenantId,
+        user_id: user.id,
+        member_id: member?.id ?? null,
+        reason: exportReason || null,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["my-export-request"] });
+      setExportReason("");
+      toast({ title: "Request submitted", description: "Your church administrator will review it." });
+    },
+    onError: (e) => toast({ title: "Failed to submit", description: e.message, variant: "destructive" }),
+  });
+
+  const downloadApproved = async () => {
+    if (!exportReq?.id) return;
     setExporting(true);
     try {
-      const { data, error } = await supabase.functions.invoke("export-member-data", { body: {} });
+      const { data, error } = await supabase.functions.invoke("export-member-data", {
+        body: { request_id: exportReq.id },
+      });
       if (error) throw error;
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
       const url = URL.createObjectURL(blob);
@@ -57,11 +90,13 @@ export default function MyData() {
       a.download = `my-data-${new Date().toISOString().slice(0, 10)}.json`;
       a.click();
       URL.revokeObjectURL(url);
+      qc.invalidateQueries({ queryKey: ["my-export-request"] });
       toast({ title: "Your data has been downloaded" });
     } catch (e) {
-      toast({ title: "Export failed", description: e.message, variant: "destructive" });
+      toast({ title: "Download failed", description: e.message, variant: "destructive" });
     } finally { setExporting(false); }
   };
+
 
   const consentMutation = useMutation({
     mutationFn: async (updates) => {
