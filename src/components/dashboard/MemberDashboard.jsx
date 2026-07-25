@@ -34,7 +34,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
-import AppFeedbackSection from "@/components/feedback/AppFeedbackSection";
+
 
 const GROWTH_FIELDS = [
   { key: "water_baptism", label: "Water Baptism" },
