@@ -326,7 +326,7 @@ export default function ExamManagement() {
       <WoFBIRegistrationQRCode open={qrOpen} onOpenChange={setQrOpen} />
 
       <Tabs defaultValue="management" className="w-full">
-        <TabsList>
+        <TabsList className="flex flex-nowrap h-auto gap-1 overflow-x-auto w-full justify-start">
           <TabsTrigger value="management">Management</TabsTrigger>
           <TabsTrigger value="applications">Applications</TabsTrigger>
           <TabsTrigger value="attendance">Attendance</TabsTrigger>
@@ -334,6 +334,7 @@ export default function ExamManagement() {
           <TabsTrigger value="lecturer">Lecturer Feedback</TabsTrigger>
           <TabsTrigger value="qc">Quality Control</TabsTrigger>
         </TabsList>
+
 
         <TabsContent value="management" className="space-y-6 mt-4">
 
@@ -407,7 +408,8 @@ export default function ExamManagement() {
       {selectedCourse && (
         <>
           {/* Toggle: Subjects vs Results */}
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
+
             <Button variant={!showResults && !showRegistrations ? "default" : "outline"} size="sm" onClick={() => { setShowResults(false); setShowRegistrations(false); }} className="gap-1.5">
               <Layers className="h-3.5 w-3.5" /> Subjects & Questions
             </Button>
@@ -1178,17 +1180,17 @@ function CourseRegistrationsView({ course }) {
             <Badge variant="secondary" className="ml-2">{filteredRegistrations.length}</Badge>
           </CardTitle>
           <div className="flex flex-wrap items-center gap-2">
-            <div className="relative">
+            <div className="relative flex-1 min-w-[160px] sm:flex-none sm:w-[200px]">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
               <Input
                 placeholder="Search name, email, phone…"
                 value={searchTerm}
                 onChange={e => setSearchTerm(e.target.value)}
-                className="h-8 w-[200px] pl-8 text-xs"
+                className="h-8 w-full pl-8 text-xs"
               />
             </div>
             <Select value={sourceFilter} onValueChange={setSourceFilter}>
-              <SelectTrigger className="w-[140px] h-8 text-xs">
+              <SelectTrigger className="w-[140px] h-8 text-xs shrink-0">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -1199,7 +1201,7 @@ function CourseRegistrationsView({ course }) {
               </SelectContent>
             </Select>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[170px] h-8 text-xs">
+              <SelectTrigger className="w-[170px] h-8 text-xs shrink-0">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -1209,7 +1211,7 @@ function CourseRegistrationsView({ course }) {
                 <SelectItem value="link_sent">Exam link sent</SelectItem>
               </SelectContent>
             </Select>
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1 shrink-0">
               <label className="text-[11px] text-muted-foreground">From</label>
               <Input
                 type="date"
@@ -1218,7 +1220,7 @@ function CourseRegistrationsView({ course }) {
                 className="h-8 w-[140px] text-xs"
               />
             </div>
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1 shrink-0">
               <label className="text-[11px] text-muted-foreground">To</label>
               <Input
                 type="date"
@@ -1227,6 +1229,7 @@ function CourseRegistrationsView({ course }) {
                 className="h-8 w-[140px] text-xs"
               />
             </div>
+
             {(dateFrom || dateTo) && (
               <Button
                 size="sm"
@@ -1403,7 +1406,7 @@ function CourseRegistrationsView({ course }) {
                                   <Input
                                     value={editingNumberValue}
                                     onChange={e => setEditingNumberValue(e.target.value)}
-                                    className="h-7 w-[220px] text-xs font-mono"
+                                    className="h-7 w-full sm:w-[220px] text-xs font-mono"
                                     placeholder="TENANT/COURSE/MONTH/YYYY/NNN"
                                   />
                                   <Button size="icon" variant="ghost" className="h-7 w-7"
