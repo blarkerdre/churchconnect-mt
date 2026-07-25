@@ -453,7 +453,7 @@ function CumulativeReportDialog({ open, onOpenChange }) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("teen_attendance_records")
-        .select("id, checked_in_at, checked_out_at, duration_minutes, status, source, teens:teen_id (first_name, last_name), session:session_id (id, title, session_type, session_date, notes)")
+        .select("id, checked_in_at, checked_out_at, checked_in_by, checked_out_by, duration_minutes, status, source, teens:teen_id (first_name, last_name), session:session_id (id, title, session_type, session_date, notes)")
         .eq("tenant_id", tenantId)
         .gte("checked_in_at", `${from}T00:00:00`)
         .lte("checked_in_at", `${to}T23:59:59`)
