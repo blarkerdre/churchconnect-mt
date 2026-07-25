@@ -463,6 +463,32 @@ function CumulativeReportDialog({ open, onOpenChange }) {
     },
   });
 
+  const workerIds = useMemo(() => {
+    const s = new Set();
+    rows.forEach((r) => { if (r.checked_in_by) s.add(r.checked_in_by); if (r.checked_out_by) s.add(r.checked_out_by); });
+    return Array.from(s);
+  }, [rows]);
+
+  const { data: workerMap = {} } = useQuery({
+    queryKey: ["teen-cumulative-workers", tenantId, workerIds.sort().join(",")],
+    enabled: !!tenantId && workerIds.length > 0 && open,
+    queryFn: async () => {
+      const { data, error } = await supabase.from("members")
+        .select("user_id, first_name, last_name")
+        .eq("tenant_id", tenantId)
+        .in("user_id", workerIds);
+      if (error) throw error;
+      const map = {};
+      (data || []).forEach((m) => { map[m.user_id] = `${m.first_name || ""} ${m.last_name || ""}`.trim(); });
+      return map;
+    },
+  });
+
+  const workerName = (r, id) => {
+    if (!id) return r.source === "self" ? "Self" : "—";
+    return workerMap[id] || "Worker";
+  };
+
   const sessionTypes = useMemo(() => {
     const set = new Set();
     rows.forEach((r) => { if (r.session?.session_type) set.add(r.session.session_type); });
