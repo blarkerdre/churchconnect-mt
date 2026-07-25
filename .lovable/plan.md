@@ -1,19 +1,12 @@
-## Root cause
+The Bible verse popover currently renders through a portal to `document.body` while the sermon editor sits inside a modal dialog. That puts the popover outside the dialog’s scroll/interaction boundary, so on mobile especially the drag gesture is handled by the dialog/page instead of the verse panel. The popover also uses touch/wheel propagation handlers that are too fragile for nested mobile scrolling.
 
-The popover is portaled to `document.body`, but on mobile the verse text still doesn't scroll — the page behind moves instead. Two issues in `src/components/sermons/BibleRefPopover.jsx`:
+Plan:
+1. Update the Bible verse popover so its scrollable verse area is a stable element with a real height constraint, not only `maxHeight`.
+2. Keep the popover interaction inside the sermon editor/dialog boundary where possible, or explicitly make the portal popover pointer/touch-scroll safe.
+3. Replace the fragile callback ref event listener with React-managed handlers that allow native scrolling inside the verse body while preventing the page/dialog behind it from moving.
+4. Verify on mobile width that a long passage scrolls inside the popover, the close button still works, and the sermon note dialog itself does not move while the verse is being scrolled.
 
-1. **Layout isn't giving the inner div a bounded height.** The outer popover uses `maxHeight: min(60vh, 420px)` + `display:flex` + child `flex-1 min-h-0`. Because the parent's height is `auto` (only capped by max), the flex child often collapses to content height on iOS Safari, so the inner div isn't actually a scroll container and touches scroll the body.
-2. **React `onTouchMove` stopPropagation doesn't stop native listeners.** The document-level and window-level scroll handlers (and the page body's scroll) receive the touchmove regardless. Need a native, non-passive `touchmove` listener attached to the popover element.
-
-## Fix (frontend only, `BibleRefPopover.jsx`)
-
-- Give the scroll region an **explicit bounded height** instead of relying on flex:
-  - Drop `flex-1 min-h-0` on the inner div and the flex wrapper on the outer div.
-  - Set the inner scroll div's `maxHeight` directly: `min(50vh, 340px)` on mobile, `min(60vh, 300px)` on desktop.
-  - Keep the outer popover sized to content so the header always shows above the scroll region.
-- Keep mobile bottom-sheet positioning (`bottom: 8px`, `left/right: 8px`).
-- Attach a **native** `touchmove` listener via `ref` + `useEffect` on the scroll div with `{ passive: true }` that calls `e.stopPropagation()`, so touchmove never reaches the page/editor.
-- Keep `overscrollBehavior: contain`, `touchAction: pan-y`, `WebkitOverflowScrolling: touch` on the scroll div.
-- Leave desktop hover behaviour, close button, retry, and popover open/close logic unchanged.
-
-No changes to Bible data, editor extension, or autocomplete.
+Technical details:
+- Main file: `src/components/sermons/BibleRefPopover.jsx`
+- Likely fix: add a dedicated scroll body with `overflow-y-auto`, `min-h-0`, `max-h`/height constraints, `touch-action: pan-y`, `overscroll-contain`, and safer touch/wheel handling.
+- If needed, adjust the portal target so the popover remains compatible with `DialogContent`.
