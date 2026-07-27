@@ -285,6 +285,7 @@ function GuardianManager({ open, onOpenChange, child }) {
   const qc = useQueryClient();
   const [search, setSearch] = useState("");
   const [relationship, setRelationship] = useState("Family");
+  const [pendingAdult, setPendingAdult] = useState(null); // { id, first_name, last_name }
 
   const { data: guardians = [] } = useQuery({
     queryKey: ["child-guardians", child?.id],
@@ -301,7 +302,7 @@ function GuardianManager({ open, onOpenChange, child }) {
 
   const { data: searchResults = [] } = useQuery({
     queryKey: ["member-search", tenantId, search],
-    enabled: !!tenantId && search.length >= 2,
+    enabled: !!tenantId && search.length >= 2 && !pendingAdult,
     queryFn: async () => {
       const { data, error } = await supabase.rpc("search_tenant_members_for_guardian", {
         _tenant_id: tenantId,
@@ -319,7 +320,13 @@ function GuardianManager({ open, onOpenChange, child }) {
       }));
       if (error) throw error;
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["child-guardians", child.id] }); setSearch(""); toast.success("Authorised adult added"); },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["child-guardians", child.id] });
+      setSearch("");
+      setPendingAdult(null);
+      setRelationship("Family");
+      toast.success("Authorised adult added");
+    },
     onError: (e) => toast.error(e.message),
   });
 
@@ -354,30 +361,47 @@ function GuardianManager({ open, onOpenChange, child }) {
           </div>
           <div className="border-t pt-3 space-y-2">
             <Label>Add an authorised adult</Label>
-            <div className="grid grid-cols-2 gap-2">
-              <Input placeholder="Search member by name" value={search} onChange={e => setSearch(e.target.value)} />
-              <Select value={relationship} onValueChange={setRelationship}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {["Parent","Grandparent","Aunt/Uncle","Sibling","Family","Family friend","Other"].map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1">
-              {searchResults.map(m => (
-                <button key={m.id} className="w-full text-left border rounded p-2 hover:bg-muted text-sm flex justify-between items-center"
-                  onClick={() => addGuardian.mutate(m.id)}>
-                  <span>{m.first_name} {m.last_name}</span>
-                  <UserPlus className="h-4 w-4 text-muted-foreground" />
-                </button>
-              ))}
-            </div>
+            {!pendingAdult ? (
+              <>
+                <Input placeholder="Search member by name" value={search} onChange={e => setSearch(e.target.value)} />
+                <div className="space-y-1 max-h-48 overflow-y-auto">
+                  {searchResults.map(m => (
+                    <button key={m.id} type="button" className="w-full text-left border rounded p-2 hover:bg-muted text-sm flex justify-between items-center"
+                      onClick={() => setPendingAdult(m)}>
+                      <span>{m.first_name} {m.last_name}</span>
+                      <UserPlus className="h-4 w-4 text-muted-foreground" />
+                    </button>
+                  ))}
+                  {search.length >= 2 && searchResults.length === 0 && (
+                    <p className="text-xs text-muted-foreground">No matches.</p>
+                  )}
+                </div>
+              </>
+            ) : (
+              <div className="space-y-2 border rounded p-2 bg-background">
+                <p className="text-sm font-medium">{pendingAdult.first_name} {pendingAdult.last_name}</p>
+                <div>
+                  <Label className="text-xs">Relationship</Label>
+                  <Select value={relationship} onValueChange={setRelationship}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {["Parent","Grandparent","Aunt/Uncle","Sibling","Family","Family friend","Other"].map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex gap-2">
+                  <Button size="sm" onClick={() => addGuardian.mutate(pendingAdult.id)} disabled={addGuardian.isPending}>Add adult</Button>
+                  <Button size="sm" variant="ghost" onClick={() => { setPendingAdult(null); setRelationship("Family"); }}>Cancel</Button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </DialogContent>
     </Dialog>
   );
 }
+
 
 function DelegationDialog({ open, onOpenChange, child }) {
   const { tenantId, withTenant } = useTenantQuery();
