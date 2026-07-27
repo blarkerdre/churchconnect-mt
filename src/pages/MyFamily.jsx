@@ -30,7 +30,8 @@ function ChildForm({ open, onOpenChange, child, memberId, onSaved }) {
   const { data: ageGroupsSetting } = useAppSetting("children_age_groups", DEFAULT_AGE_GROUPS);
   const AGE_GROUPS = Array.isArray(ageGroupsSetting) && ageGroupsSetting.length ? ageGroupsSetting : DEFAULT_AGE_GROUPS;
   const { tenantId, withTenant } = useTenantQuery();
-  const [form, setForm] = useState(() => child || {
+  const isNew = !child?.id;
+  const emptyForm = {
     first_name: "", last_name: "", date_of_birth: "", gender: "", age_group: "",
     allergies: "", medical_notes: "", notes: "",
     parental_consent_given: false,
@@ -38,23 +39,59 @@ function ChildForm({ open, onOpenChange, child, memberId, onSaved }) {
     consent_pastoral_contact: true,
     consent_medical_emergency: false,
     consent_notes: "",
-  });
+  };
+  const [form, setForm] = useState(() => child || emptyForm);
+  // New-child only: authorised adults collected inline before saving.
+  const [adults, setAdults] = useState([]); // { member_id, first_name, last_name, relationship }
+  const [adultSearch, setAdultSearch] = useState("");
+  const [pendingAdult, setPendingAdult] = useState(null); // { id, first_name, last_name }
+  const [pendingRel, setPendingRel] = useState("Family");
+
   React.useEffect(() => {
-    setForm(child || {
-      first_name: "", last_name: "", date_of_birth: "", gender: "", age_group: "",
-      allergies: "", medical_notes: "", notes: "",
-      parental_consent_given: false,
-      consent_photos: false,
-      consent_pastoral_contact: true,
-      consent_medical_emergency: false,
-      consent_notes: "",
-    });
+    setForm(child || emptyForm);
+    setAdults([]);
+    setAdultSearch("");
+    setPendingAdult(null);
+    setPendingRel("Family");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [child, open]);
+
+  const { data: adultResults = [] } = useQuery({
+    queryKey: ["child-form-adult-search", tenantId, adultSearch],
+    enabled: isNew && !!tenantId && adultSearch.length >= 2 && !pendingAdult,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("search_tenant_members_for_guardian", {
+        _tenant_id: tenantId,
+        _q: adultSearch,
+      });
+      if (error) { toast.error(error.message); return []; }
+      return data || [];
+    },
+  });
+
+  const confirmPending = () => {
+    if (!pendingAdult) return;
+    if (adults.some(a => a.member_id === pendingAdult.id)) {
+      toast.error("Already added");
+      setPendingAdult(null);
+      return;
+    }
+    setAdults([...adults, {
+      member_id: pendingAdult.id,
+      first_name: pendingAdult.first_name,
+      last_name: pendingAdult.last_name,
+      relationship: pendingRel || "Family",
+    }]);
+    setPendingAdult(null);
+    setPendingRel("Family");
+    setAdultSearch("");
+  };
 
   const save = useMutation({
     mutationFn: async () => {
       if (!form.first_name || !form.last_name) throw new Error("Name required");
       if (!form.parental_consent_given) throw new Error("Parental consent is required to save this child");
+      if (isNew && adults.length === 0) throw new Error("Add at least one authorised pickup adult");
       const wasConsented = !!child?.parental_consent_given;
       const payload = {
         ...form,
@@ -65,14 +102,23 @@ function ChildForm({ open, onOpenChange, child, memberId, onSaved }) {
         parental_consent_by: wasConsented ? (child.parental_consent_by || memberId) : memberId,
       };
       if (child?.id) {
-        // Preserve the original registering parent on edits by co-parents
         delete payload.primary_guardian_member_id;
         const { error } = await supabase.from("children").update(payload).eq("id", child.id).eq("tenant_id", tenantId);
         if (error) throw error;
       } else {
         payload.primary_guardian_member_id = memberId;
-        const { error } = await supabase.from("children").insert(withTenant(payload));
+        const { data: inserted, error } = await supabase.from("children").insert(withTenant(payload)).select("id").single();
         if (error) throw error;
+        if (inserted?.id && adults.length) {
+          const rows = adults.map(a => withTenant({
+            child_id: inserted.id,
+            member_id: a.member_id,
+            relationship: a.relationship || "Family",
+            can_pickup: true,
+          }));
+          const { error: gErr } = await supabase.from("child_guardians").insert(rows);
+          if (gErr) throw gErr;
+        }
       }
     },
     onSuccess: () => { toast.success("Saved"); onSaved?.(); onOpenChange(false); },
@@ -111,6 +157,71 @@ function ChildForm({ open, onOpenChange, child, memberId, onSaved }) {
           <div><Label>Allergies</Label><Input value={form.allergies || ""} onChange={e => setForm({ ...form, allergies: e.target.value })} placeholder="e.g. peanuts" /></div>
           <div><Label>Medical notes</Label><Textarea rows={2} value={form.medical_notes || ""} onChange={e => setForm({ ...form, medical_notes: e.target.value })} /></div>
           <div><Label>Notes for workers</Label><Textarea rows={2} value={form.notes || ""} onChange={e => setForm({ ...form, notes: e.target.value })} /></div>
+
+          {isNew && (
+            <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 space-y-3">
+              <div className="flex items-start gap-2">
+                <ShieldCheck className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+                <div className="text-xs text-muted-foreground">
+                  Authorised pickup adult (required). Add at least one adult who is allowed to pick up this child.
+                </div>
+              </div>
+              <div className="space-y-1">
+                {adults.map((a, idx) => (
+                  <div key={a.member_id} className="flex items-center justify-between border rounded p-2 bg-background">
+                    <div>
+                      <p className="text-sm font-medium">{a.first_name} {a.last_name}</p>
+                      <p className="text-xs text-muted-foreground">{a.relationship}</p>
+                    </div>
+                    <Button variant="ghost" size="sm" onClick={() => setAdults(adults.filter((_, i) => i !== idx))}>
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+                {adults.length === 0 && <p className="text-xs text-muted-foreground">No adults added yet.</p>}
+              </div>
+
+              {!pendingAdult ? (
+                <div className="space-y-2">
+                  <Label className="text-xs">Search member by name</Label>
+                  <Input value={adultSearch} onChange={e => setAdultSearch(e.target.value)} placeholder="Start typing…" />
+                  {adultSearch.length >= 2 && (
+                    <div className="space-y-1 max-h-40 overflow-y-auto">
+                      {adultResults.map(m => (
+                        <button
+                          key={m.id}
+                          type="button"
+                          className="w-full text-left border rounded p-2 hover:bg-muted text-sm flex justify-between items-center bg-background"
+                          onClick={() => setPendingAdult(m)}
+                        >
+                          <span>{m.first_name} {m.last_name}</span>
+                          <UserPlus className="h-4 w-4 text-muted-foreground" />
+                        </button>
+                      ))}
+                      {adultResults.length === 0 && <p className="text-xs text-muted-foreground">No matches.</p>}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-2 border rounded p-2 bg-background">
+                  <p className="text-sm font-medium">{pendingAdult.first_name} {pendingAdult.last_name}</p>
+                  <div>
+                    <Label className="text-xs">Relationship</Label>
+                    <Select value={pendingRel} onValueChange={setPendingRel}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {["Parent","Grandparent","Aunt/Uncle","Sibling","Family","Family friend","Other"].map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button size="sm" onClick={confirmPending}>Add adult</Button>
+                    <Button size="sm" variant="ghost" onClick={() => { setPendingAdult(null); setPendingRel("Family"); }}>Cancel</Button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 space-y-3">
             <div className="flex items-start gap-2">
@@ -168,11 +279,13 @@ function ChildForm({ open, onOpenChange, child, memberId, onSaved }) {
   );
 }
 
+
 function GuardianManager({ open, onOpenChange, child }) {
   const { tenantId, withTenant } = useTenantQuery();
   const qc = useQueryClient();
   const [search, setSearch] = useState("");
   const [relationship, setRelationship] = useState("Family");
+  const [pendingAdult, setPendingAdult] = useState(null); // { id, first_name, last_name }
 
   const { data: guardians = [] } = useQuery({
     queryKey: ["child-guardians", child?.id],
@@ -189,7 +302,7 @@ function GuardianManager({ open, onOpenChange, child }) {
 
   const { data: searchResults = [] } = useQuery({
     queryKey: ["member-search", tenantId, search],
-    enabled: !!tenantId && search.length >= 2,
+    enabled: !!tenantId && search.length >= 2 && !pendingAdult,
     queryFn: async () => {
       const { data, error } = await supabase.rpc("search_tenant_members_for_guardian", {
         _tenant_id: tenantId,
@@ -207,7 +320,13 @@ function GuardianManager({ open, onOpenChange, child }) {
       }));
       if (error) throw error;
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["child-guardians", child.id] }); setSearch(""); toast.success("Authorised adult added"); },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["child-guardians", child.id] });
+      setSearch("");
+      setPendingAdult(null);
+      setRelationship("Family");
+      toast.success("Authorised adult added");
+    },
     onError: (e) => toast.error(e.message),
   });
 
@@ -242,30 +361,47 @@ function GuardianManager({ open, onOpenChange, child }) {
           </div>
           <div className="border-t pt-3 space-y-2">
             <Label>Add an authorised adult</Label>
-            <div className="grid grid-cols-2 gap-2">
-              <Input placeholder="Search member by name" value={search} onChange={e => setSearch(e.target.value)} />
-              <Select value={relationship} onValueChange={setRelationship}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {["Parent","Grandparent","Aunt/Uncle","Sibling","Family","Family friend","Other"].map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1">
-              {searchResults.map(m => (
-                <button key={m.id} className="w-full text-left border rounded p-2 hover:bg-muted text-sm flex justify-between items-center"
-                  onClick={() => addGuardian.mutate(m.id)}>
-                  <span>{m.first_name} {m.last_name}</span>
-                  <UserPlus className="h-4 w-4 text-muted-foreground" />
-                </button>
-              ))}
-            </div>
+            {!pendingAdult ? (
+              <>
+                <Input placeholder="Search member by name" value={search} onChange={e => setSearch(e.target.value)} />
+                <div className="space-y-1 max-h-48 overflow-y-auto">
+                  {searchResults.map(m => (
+                    <button key={m.id} type="button" className="w-full text-left border rounded p-2 hover:bg-muted text-sm flex justify-between items-center"
+                      onClick={() => setPendingAdult(m)}>
+                      <span>{m.first_name} {m.last_name}</span>
+                      <UserPlus className="h-4 w-4 text-muted-foreground" />
+                    </button>
+                  ))}
+                  {search.length >= 2 && searchResults.length === 0 && (
+                    <p className="text-xs text-muted-foreground">No matches.</p>
+                  )}
+                </div>
+              </>
+            ) : (
+              <div className="space-y-2 border rounded p-2 bg-background">
+                <p className="text-sm font-medium">{pendingAdult.first_name} {pendingAdult.last_name}</p>
+                <div>
+                  <Label className="text-xs">Relationship</Label>
+                  <Select value={relationship} onValueChange={setRelationship}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {["Parent","Grandparent","Aunt/Uncle","Sibling","Family","Family friend","Other"].map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex gap-2">
+                  <Button size="sm" onClick={() => addGuardian.mutate(pendingAdult.id)} disabled={addGuardian.isPending}>Add adult</Button>
+                  <Button size="sm" variant="ghost" onClick={() => { setPendingAdult(null); setRelationship("Family"); }}>Cancel</Button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </DialogContent>
     </Dialog>
   );
 }
+
 
 function DelegationDialog({ open, onOpenChange, child }) {
   const { tenantId, withTenant } = useTenantQuery();
