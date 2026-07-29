@@ -1353,6 +1353,7 @@ export default function ChildrenChurch() {
 
         {canSeeChildren && (
           <TabsContent value="children">
+            <p className="text-xs text-muted-foreground mb-2">Early Years: ages 2-9 (2-4, 5-7 and 8-9 years old).</p>
             <Tabs value={activeSub} onValueChange={setActiveSub}>
               <TabsList className="flex flex-nowrap h-auto gap-1 overflow-x-auto w-full sm:w-auto justify-start">
                 <TabsTrigger value="checkin" data-tour="cc-tab-checkin" className="shrink-0">Check-in</TabsTrigger>
@@ -1370,11 +1371,13 @@ export default function ChildrenChurch() {
         )}
         {canSeePreteens && (
           <TabsContent value="preteens">
+            <p className="text-xs text-muted-foreground mb-2">Preteens: ages 10-12.</p>
             <Suspense fallback={<TabLoading />}><PreteensAttendance embedded /></Suspense>
           </TabsContent>
         )}
         {canSeeTeens && (
           <TabsContent value="teens">
+            <p className="text-xs text-muted-foreground mb-2">Teenagers: ages 13-17.</p>
             <Suspense fallback={<TabLoading />}><TeensAttendance embedded /></Suspense>
           </TabsContent>
         )}
