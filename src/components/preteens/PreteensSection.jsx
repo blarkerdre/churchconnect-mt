@@ -319,8 +319,9 @@ export default function PreteensSection({ memberId }) {
                   )}
                 </div>
               </div>
-              <div className="flex gap-1">
+              <div className="flex gap-1 flex-wrap justify-end">
                 <Button size="sm" variant="outline" onClick={() => { setEditPreteen(t); setOpen(true); }}>Edit</Button>
+                <Button size="sm" variant="outline" onClick={() => setPromotePreteen(t)}><ArrowUpCircle className="h-4 w-4 mr-1" /> Promote to teen</Button>
                 <Button size="sm" variant="destructive" onClick={() => setDeletePreteen(t)}><Trash2 className="h-4 w-4" /></Button>
               </div>
             </CardContent>
