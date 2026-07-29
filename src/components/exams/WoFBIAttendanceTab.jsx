@@ -520,7 +520,7 @@ export default function WoFBIAttendanceTab() {
   }, [roster, allRecords, sessions.length]);
 
   const exportCsv = () => {
-    const header = ["Student number", "Name", "Present", "Late", "Absent", "Total sessions", "Attendance %", "Total hours", "Missing check-outs"];
+    const header = ["Student number", "Name", "Present", "Late", "Absent", "Total sessions", "Attendance %", "Punctuality %", "Punctuality grade", "Punctuality rating", "Total hours", "Missing check-outs"];
     const rows = perStudent.map((s) => [
       s.registration.student_number || "",
       `${s.registration.members?.first_name || ""} ${s.registration.members?.last_name || ""}`.trim(),
@@ -529,6 +529,9 @@ export default function WoFBIAttendanceTab() {
       s.absent,
       s.totalSessions,
       s.percent,
+      s.punctualityScore,
+      punctualityGrade(s.punctualityScore).label,
+      s.manualRating != null ? `${s.manualRating}/5` : "",
       (s.totalMinutes / 60).toFixed(2),
       s.missingCheckouts,
     ]);
@@ -683,6 +686,7 @@ export default function WoFBIAttendanceTab() {
                   <TableHead>Total hours</TableHead>
                   <TableHead>Missing out</TableHead>
                   <TableHead>Attendance %</TableHead>
+                  <TableHead>Punctuality</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -715,10 +719,22 @@ export default function WoFBIAttendanceTab() {
                             {s.percent}%
                           </Badge>
                         </TableCell>
+                        <TableCell className="whitespace-nowrap">
+                          <div className="flex flex-col items-start gap-0.5">
+                            <Badge className={punctualityGrade(s.punctualityScore).cls}>
+                              {s.punctualityScore}% · {punctualityGrade(s.punctualityScore).label}
+                            </Badge>
+                            {s.manualRating != null && (
+                              <span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground">
+                                <Star className="h-3 w-3 fill-amber-400 text-amber-400" /> {s.manualRating}/5 rated
+                              </span>
+                            )}
+                          </div>
+                        </TableCell>
                       </TableRow>
                       {expanded && (
                         <TableRow className="bg-muted/30 hover:bg-muted/30">
-                          <TableCell colSpan={9} className="p-0">
+                          <TableCell colSpan={10} className="p-0">
                             <div className="p-3">
                               <Table>
                                 <TableHeader>
@@ -729,6 +745,7 @@ export default function WoFBIAttendanceTab() {
                                     <TableHead>Time in</TableHead>
                                     <TableHead>Time out</TableHead>
                                     <TableHead>Duration</TableHead>
+                                    <TableHead>Punctuality</TableHead>
                                     <TableHead className="text-right">Actions</TableHead>
                                   </TableRow>
                                 </TableHeader>
@@ -748,6 +765,13 @@ export default function WoFBIAttendanceTab() {
                                         <TableCell className="text-xs whitespace-nowrap">{fmtTime(rec?.checked_in_at)}</TableCell>
                                         <TableCell className="text-xs whitespace-nowrap">{fmtTime(rec?.checked_out_at)}</TableCell>
                                         <TableCell className="text-xs whitespace-nowrap">{fmtDuration(rec?.duration_minutes)}</TableCell>
+                                        <TableCell className="text-xs whitespace-nowrap">
+                                          {rec?.punctuality_rating ? (
+                                            <span className="inline-flex items-center gap-1" title={rec.punctuality_note || ""}>
+                                              <Star className="h-3 w-3 fill-amber-400 text-amber-400" /> {rec.punctuality_rating}/5
+                                            </span>
+                                          ) : "—"}
+                                        </TableCell>
                                         <TableCell className="text-right space-x-1 whitespace-nowrap">
                                           <Button size="sm" variant="outline" className="gap-1" onClick={() => openEdit(sess, s.registration, rec)}>
                                             <Pencil className="h-3 w-3" /> Edit
