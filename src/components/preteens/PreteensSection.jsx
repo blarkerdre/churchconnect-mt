@@ -286,7 +286,7 @@ export default function PreteensSection({ memberId }) {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-lg font-display font-semibold flex items-center gap-2"><User className="h-5 w-5 text-primary" /> Preteens</h2>
-          <p className="text-xs text-muted-foreground">Register your preteens so they can check in on premises.</p>
+          <p className="text-xs text-muted-foreground">Ages 10-12. Register your preteens so they can check in on premises.</p>
         </div>
         <Button size="sm" onClick={() => { setEditPreteen(null); setOpen(true); }}>
           <Plus className="h-4 w-4 mr-1" /> Add preteen
