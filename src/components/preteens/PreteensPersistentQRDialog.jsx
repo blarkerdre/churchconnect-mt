@@ -8,7 +8,7 @@ import { QrCode, Copy, Download } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import { useTenant } from "@/contexts/TenantContext";
 
-export default function PrepreteensPersistentQRDialog({ open, onOpenChange }) {
+export default function PreteensPersistentQRDialog({ open, onOpenChange }) {
   const { currentTenant, tenantSlug } = useTenant();
   const qrRef = useRef();
 
@@ -16,7 +16,7 @@ export default function PrepreteensPersistentQRDialog({ open, onOpenChange }) {
     ? `${window.location.origin}/t/${tenantSlug}/preteens/checkin`
     : "";
   const churchName = currentTenant?.name || "Church";
-  const label = `${churchName} — Prepreteens Attendance`;
+  const label = `${churchName} — Preteens Attendance`;
 
   const handleCopy = () => {
     navigator.clipboard.writeText(url);
@@ -54,7 +54,7 @@ export default function PrepreteensPersistentQRDialog({ open, onOpenChange }) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <TenantDialogHeader>
-          <QrCode className="h-5 w-5" /> Prepreteens Attendance QR
+          <QrCode className="h-5 w-5" /> Preteens Attendance QR
         </TenantDialogHeader>
         <div className="space-y-4 py-2">
           <p className="text-sm font-semibold text-center text-primary">{label}</p>

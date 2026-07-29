@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Loader2, Calendar, XCircle, ArrowRight } from "lucide-react";
 import { format } from "date-fns";
 
-export default function PrepreteensCheckinLanding() {
+export default function PreteensCheckinLanding() {
   const { tenantSlug } = useParams();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
@@ -46,7 +46,7 @@ export default function PrepreteensCheckinLanding() {
           <CardContent className="space-y-3 text-center">
             <XCircle className="h-12 w-12 mx-auto text-slate-400" />
             <p className="text-sm text-muted-foreground">
-              There's no open Prepreteens Church attendance session right now. Please wait for a leader
+              There's no open Preteens Church attendance session right now. Please wait for a leader
               to open one, then scan the code again.
             </p>
           </CardContent>

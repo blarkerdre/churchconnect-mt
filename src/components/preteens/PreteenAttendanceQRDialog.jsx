@@ -9,7 +9,7 @@ import { toast } from "@/components/ui/use-toast";
 import { useTenant } from "@/contexts/TenantContext";
 import { supabase } from "@/integrations/supabase/client";
 
-export default function PrepreteenAttendanceQRDialog({ open, onOpenChange, session, onClosed }) {
+export default function PreteenAttendanceQRDialog({ open, onOpenChange, session, onClosed }) {
   const { currentTenant, tenantSlug } = useTenant();
   const qrRef = useRef();
   const [count, setCount] = useState(0);
@@ -18,7 +18,7 @@ export default function PrepreteenAttendanceQRDialog({ open, onOpenChange, sessi
   const path = tenantSlug ? `/t/${tenantSlug}/preteens/checkin/${session?.qr_token}` : `/preteens/checkin/${session?.qr_token}`;
   const url = session ? `${window.location.origin}${path}` : "";
   const churchName = currentTenant?.name || "Church";
-  const label = `${churchName} — ${session?.title || "Prepreteens Attendance"}`;
+  const label = `${churchName} — ${session?.title || "Preteens Attendance"}`;
 
   useEffect(() => {
     if (!open || !session?.id) return;
@@ -89,7 +89,7 @@ export default function PrepreteenAttendanceQRDialog({ open, onOpenChange, sessi
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <TenantDialogHeader>
-          <QrCode className="h-5 w-5" /> Prepreteens Check-in
+          <QrCode className="h-5 w-5" /> Preteens Check-in
         </TenantDialogHeader>
         <div className="space-y-4 py-2">
           <p className="text-sm font-semibold text-center text-primary">{label}</p>
@@ -118,7 +118,7 @@ export default function PrepreteenAttendanceQRDialog({ open, onOpenChange, sessi
             )}
           </div>
           <p className="text-[11px] text-muted-foreground text-center">
-            Prepreteens scan to check in. Parents sign in, or a worker signs the preteen in manually.
+            Preteens scan to check in. Parents sign in, or a worker signs the preteen in manually.
           </p>
         </div>
       </DialogContent>
