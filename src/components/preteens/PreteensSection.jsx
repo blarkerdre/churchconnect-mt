@@ -347,6 +347,27 @@ export default function PreteensSection({ memberId }) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <AlertDialog open={!!promotePreteen} onOpenChange={(o) => !o && setPromotePreteen(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Promote {promotePreteen?.first_name} {promotePreteen?.last_name} to teen?</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-2 text-sm">
+                <p>Teenagers are 13-17 years old. A matching teenager record will be created under your family with consent carried over. You can set an optional check-in PIN afterwards in the Teenagers section.</p>
+                <p>The preteen record will then be removed. If they have any preteen attendance history, the record is kept but hidden from My Family so reports stay intact.</p>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => { e.preventDefault(); promoteToTeen.mutate(promotePreteen); }}
+              disabled={promoteToTeen.isPending}
+            >Promote</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
