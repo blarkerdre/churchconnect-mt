@@ -343,7 +343,7 @@ export default function QcCheckDialog({ open, onOpenChange, editRecord = null })
             </div>
             <div>
               <Label>Subject *</Label>
-              <Select value={form.exam_subject_id} onValueChange={(v) => set("exam_subject_id", v)} disabled={!form.exam_title_id}>
+              <Select value={form.exam_subject_id} onValueChange={selectSubject} disabled={!form.exam_title_id}>
                 <SelectTrigger><SelectValue placeholder={form.exam_title_id ? "Select a subject" : "Select a course first"} /></SelectTrigger>
                 <SelectContent>
                   {subjects.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
