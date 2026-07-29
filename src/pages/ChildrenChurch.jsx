@@ -27,6 +27,15 @@ import { useTourCompletion } from "@/hooks/useTourCompletion";
 
 const DEFAULT_AGE_GROUPS = ["Nursery", "Toddler", "Primary", "Pre-Teen"];
 
+const PreteensAttendance = lazy(() => import("@/pages/PreteensAttendance"));
+const TeensAttendance = lazy(() => import("@/pages/TeensAttendance"));
+
+function TabLoading() {
+  return <div className="py-10 text-center text-sm text-muted-foreground animate-pulse">Loading...</div>;
+}
+
+
+
 function ChildProfileDialog({ open, onOpenChange, childId, tenantId }) {
   const { data: profile, isLoading } = useQuery({
     queryKey: ["cc-child-profile", tenantId, childId],
