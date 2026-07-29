@@ -703,6 +703,12 @@ export default function MyFamily() {
 
       {meMember && !showAll && (
         <div className="pt-4 border-t">
+          <PreteensSection memberId={meMember.id} />
+        </div>
+      )}
+
+      {meMember && !showAll && (
+        <div className="pt-4 border-t">
           <TeensSection memberId={meMember.id} />
         </div>
       )}
