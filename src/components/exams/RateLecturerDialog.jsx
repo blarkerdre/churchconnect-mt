@@ -198,7 +198,7 @@ export default function RateLecturerDialog({ open, onOpenChange }) {
       };
       const { error } = await supabase
         .from("lecturer_ratings")
-        .upsert(payload, { onConflict: "tenant_id,lecturer_id,submitted_by,subject_id" });
+        .upsert(payload, { onConflict: "tenant_id,subject_id,submitted_by" });
       if (error) throw error;
     },
     onSuccess: () => {
@@ -221,7 +221,7 @@ export default function RateLecturerDialog({ open, onOpenChange }) {
             <Star className="h-5 w-5 text-primary" /> Rate the Lecturer
           </DialogTitle>
           <p className="text-xs text-muted-foreground pt-1">
-            We are continually committed to improving the standard of the institute — please share your feedback on how the lectures were delivered. You can rate the same lecturer once per subject.
+            We are continually committed to improving the standard of the institute — please share your feedback on how the lectures were delivered. You can rate each subject once.
           </p>
         </DialogHeader>
 
@@ -266,6 +266,12 @@ export default function RateLecturerDialog({ open, onOpenChange }) {
                 </Select>
               </div>
             </div>
+
+            {existingFound && (
+              <p className="text-xs text-primary">
+                You already rated this subject — submitting will update your feedback.
+              </p>
+            )}
 
             {QUESTIONS.map((q) => (
               <div key={q.key} className="space-y-2">
