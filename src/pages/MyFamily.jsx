@@ -25,7 +25,7 @@ import { useTourCompletion } from "@/hooks/useTourCompletion";
 import TeensSection from "@/components/teens/TeensSection";
 import PreteensSection from "@/components/preteens/PreteensSection";
 
-const DEFAULT_AGE_GROUPS = ["Nursery", "Toddler", "Primary", "Pre-Teen"];
+const DEFAULT_AGE_GROUPS = ["2-4 years old", "5-7 years old", "8-9 years old"];
 
 function ChildForm({ open, onOpenChange, child, memberId, onSaved }) {
   const { data: ageGroupsSetting } = useAppSetting("children_age_groups", DEFAULT_AGE_GROUPS);
@@ -154,6 +154,7 @@ function ChildForm({ open, onOpenChange, child, memberId, onSaved }) {
               <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
               <SelectContent>{AGE_GROUPS.map(a => <SelectItem key={a} value={a}>{a}</SelectItem>)}</SelectContent>
             </Select>
+            <p className="text-[11px] text-muted-foreground mt-1">Early Years covers ages 2-9 (2-4, 5-7 and 8-9 years old). Ages 10-12 belong in Preteens and 13-17 in Teenagers.</p>
           </div>
           <div><Label>Allergies</Label><Input value={form.allergies || ""} onChange={e => setForm({ ...form, allergies: e.target.value })} placeholder="e.g. peanuts" /></div>
           <div><Label>Medical notes</Label><Textarea rows={2} value={form.medical_notes || ""} onChange={e => setForm({ ...form, medical_notes: e.target.value })} /></div>
@@ -527,13 +528,13 @@ export default function MyFamily() {
     onError: (e) => toast.error(e.message),
   });
 
-  const promoteToTeen = useMutation({
+  const promoteToPreteen = useMutation({
     mutationFn: async (child) => {
       if (!meMember?.id) throw new Error("Member profile not linked");
-      // 1) Create matching teen record
-      const teenPayload = {
+      // 1) Create matching preteen record
+      const preteenPayload = {
         tenant_id: tenantId,
-        member_id: meMember.id,
+        primary_guardian_member_id: meMember.id,
         first_name: child.first_name,
         last_name: child.last_name,
         date_of_birth: child.date_of_birth || null,
@@ -543,8 +544,12 @@ export default function MyFamily() {
         attendance_consent_at: child.parental_consent_given
           ? (child.parental_consent_at || new Date().toISOString())
           : null,
+        data_processing_consent: !!child.parental_consent_given,
+        data_processing_consent_at: child.parental_consent_given
+          ? (child.parental_consent_at || new Date().toISOString())
+          : null,
       };
-      const { error: tErr } = await supabase.from("teens").insert(teenPayload);
+      const { error: tErr } = await supabase.from("preteens").insert(preteenPayload);
       if (tErr) throw tErr;
 
       // 2) Delete child if no history, else archive
@@ -564,10 +569,10 @@ export default function MyFamily() {
       }
     },
     onSuccess: () => {
-      toast.success("Promoted to teenager");
+      toast.success("Promoted to preteen");
       setPromoteChild(null);
       qc.invalidateQueries({ queryKey: ["my-children"] });
-      qc.invalidateQueries({ queryKey: ["my-teens"] });
+      qc.invalidateQueries({ queryKey: ["my-preteens"] });
     },
     onError: (e) => toast.error(e.message),
   });
@@ -651,7 +656,10 @@ export default function MyFamily() {
         <Card><CardContent className="p-4 text-sm text-destructive">Could not load records: {childrenError.message}</CardContent></Card>
       )}
 
-      <h2 className="text-lg font-display font-semibold flex items-center gap-2"><Baby className="h-5 w-5 text-primary" /> Early Years</h2>
+      <div>
+        <h2 className="text-lg font-display font-semibold flex items-center gap-2"><Baby className="h-5 w-5 text-primary" /> Early Years</h2>
+        <p className="text-xs text-muted-foreground">Ages 2-9: 2-4 years old, 5-7 years old and 8-9 years old.</p>
+      </div>
 
       {children.length === 0 ? (
         <Card><CardContent className="p-8 text-center text-sm text-muted-foreground">{showAll && canSeeAll ? "No Early Years children registered in this tenant yet." : "No Early Years children added yet."}</CardContent></Card>
@@ -691,7 +699,7 @@ export default function MyFamily() {
                     <Button size="sm" variant="outline" onClick={() => {
                       if (active) { toast.error("Release child from care before promoting"); return; }
                       setPromoteChild(c);
-                    }}><ArrowUpCircle className="h-4 w-4 mr-1" /> Promote to teenager</Button>
+                    }}><ArrowUpCircle className="h-4 w-4 mr-1" /> Promote to preteen</Button>
                     <Button size="sm" variant="destructive" onClick={() => {
                       if (active) { toast.error("Release child from care before deleting"); return; }
                       setDeleteChild(c);
@@ -743,10 +751,10 @@ export default function MyFamily() {
       <AlertDialog open={!!promoteChild} onOpenChange={(o) => !o && setPromoteChild(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Promote {promoteChild?.first_name} {promoteChild?.last_name} to teenager?</AlertDialogTitle>
+            <AlertDialogTitle>Promote {promoteChild?.first_name} {promoteChild?.last_name} to preteen?</AlertDialogTitle>
             <AlertDialogDescription asChild>
               <div className="space-y-2 text-sm">
-                <p>A matching teenager record will be created under your family with parental consent carried over. You can set an optional check-in PIN afterwards in the Teenagers section.</p>
+                <p>Preteens are 10-12 years old. A matching preteen record will be created under your family with parental consent carried over. You can set an optional check-in PIN afterwards in the Preteens section.</p>
                 <p>The child record will then be removed. If this child has any Children Church check-in history, the record will be kept but hidden from My Family so historical reports stay intact.</p>
               </div>
             </AlertDialogDescription>
@@ -754,8 +762,8 @@ export default function MyFamily() {
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              onClick={(e) => { e.preventDefault(); promoteToTeen.mutate(promoteChild); }}
-              disabled={promoteToTeen.isPending}
+              onClick={(e) => { e.preventDefault(); promoteToPreteen.mutate(promoteChild); }}
+              disabled={promoteToPreteen.isPending}
             >Promote</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
