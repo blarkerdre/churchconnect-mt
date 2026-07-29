@@ -1,18 +1,10 @@
-## Goal
-Unit members (assignees) should not be able to comment on a unit task that is no longer Open (status `Completed` or `Cancelled`). Admins, tenant owners/super admins and the unit leader keep the ability to comment for record-keeping.
+## Answer: no change needed
 
-## Changes
+The Danger Zone tab in Settings is intentionally restricted. In `src/pages/Settings.jsx`:
 
-### 1. Database rule (enforcement)
-Replace the `utc_insert` policy on `unit_task_comments` so the assignee branch also requires the parent task to be `Open`:
+- `canOwnerOnly = isSuperAdmin || isTenantOwner` (line 1609)
+- The Danger Zone tab and its content are rendered only when `canOwnerOnly` is true (line 1773+)
 
-- Assignee branch: assignment exists for `auth.uid()` **and** `unit_tasks.status = 'Open'`.
-- Super admin / tenant owner+admin / unit leader branches stay unchanged.
-- `author_id = auth.uid()` check retained.
+So a tenant **admin** does not see it — only the tenant **owner** or a **super admin**. This protects destructive actions (tenant data deletion, backup/recovery).
 
-### 2. UI (`src/components/unitTasks/UnitTaskDetailPanel.jsx`)
-- Compute `canComment = canManage || (myAssignment && task.status === "Open")`.
-- When the task is not Open and the user is only an assignee: hide the comment textarea and Post button, and show a short muted line such as "Commenting is closed for this task." Existing comments stay visible.
-
-## Notes
-Current data: 6 Open, 54 Completed, 6 Cancelled tasks — this only affects new comments; existing ones are untouched.
+You chose to leave the behaviour as-is, so no code changes will be made. If you need Danger Zone access on your current account later, the options are to sign in as the tenant owner/super admin, or transfer tenant ownership to your account.
