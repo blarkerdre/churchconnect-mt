@@ -46,7 +46,7 @@ export default function PreteensCheckinLanding() {
           <CardContent className="space-y-3 text-center">
             <XCircle className="h-12 w-12 mx-auto text-slate-400" />
             <p className="text-sm text-muted-foreground">
-              There's no open Preteens Church attendance session right now. Please wait for a leader
+              There's no open Children's Church attendance session right now. Please wait for a leader
               to open one, then scan the code again.
             </p>
           </CardContent>

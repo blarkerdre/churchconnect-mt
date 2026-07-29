@@ -7,13 +7,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2, CheckCircle2, Clock, XCircle, LogOut, User, Mail, CheckCheck, UserCircle2, ShieldCheck, ShieldAlert } from "lucide-react";
-import welcome1 from "@/assets/preteens-checkin/welcome-1.jpg";
-import welcome2 from "@/assets/preteens-checkin/welcome-2.jpg";
-import welcome3 from "@/assets/preteens-checkin/welcome-3.jpg";
-import welcome4 from "@/assets/preteens-checkin/welcome-4.jpg";
-import farewell1 from "@/assets/preteens-checkin/farewell-1.jpg";
-import farewell2 from "@/assets/preteens-checkin/farewell-2.jpg";
-import farewell3 from "@/assets/preteens-checkin/farewell-3.jpg";
+import welcome1 from "@/assets/teens-checkin/welcome-1.jpg";
+import welcome2 from "@/assets/teens-checkin/welcome-2.jpg";
+import welcome3 from "@/assets/teens-checkin/welcome-3.jpg";
+import welcome4 from "@/assets/teens-checkin/welcome-4.jpg";
+import farewell1 from "@/assets/teens-checkin/farewell-1.jpg";
+import farewell2 from "@/assets/teens-checkin/farewell-2.jpg";
+import farewell3 from "@/assets/teens-checkin/farewell-3.jpg";
 
 const WELCOME_IMAGES = [welcome1, welcome2, welcome3, welcome4];
 const FAREWELL_IMAGES = [farewell1, farewell2, farewell3];
@@ -524,7 +524,7 @@ export default function PreteensCheckin() {
               ) : (
                 <>
                   <Loader2 className="h-12 w-12 mx-auto text-primary animate-spin" />
-                  <p className="text-sm font-semibold">Ask a Preteens Church worker</p>
+                  <p className="text-sm font-semibold">Ask a Children's Church worker</p>
                   <p className="text-xs text-muted-foreground">
                     Show this screen to a worker. They'll tap <span className="font-medium">Approve</span> on their device.
                   </p>
