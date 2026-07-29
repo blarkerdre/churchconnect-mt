@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogFooter } from "@/components/ui/dialog";
 import TenantDialogHeader from "@/components/ui/TenantDialogHeader";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Plus, QrCode, Trash2, Download, CheckCircle2, XCircle, Clock, ChevronDown, ChevronRight, Pencil } from "lucide-react";
+import { Loader2, Plus, QrCode, Trash2, Download, CheckCircle2, XCircle, Clock, ChevronDown, ChevronRight, Pencil, Star } from "lucide-react";
 import WoFBIPersistentQRDialog from "./WoFBIPersistentQRDialog";
 
 function pct(num, den) {
@@ -48,6 +48,33 @@ function fmtLocal(iso) {
   }
 }
 
+// Punctuality: auto score from attendance mix (present=100, late=50, absent=0)
+function punctualityGrade(score) {
+  if (score >= 90) return { label: "Excellent", cls: "bg-green-100 text-green-800" };
+  if (score >= 70) return { label: "Good", cls: "bg-emerald-100 text-emerald-800" };
+  if (score >= 50) return { label: "Fair", cls: "bg-amber-100 text-amber-800" };
+  return { label: "Poor", cls: "bg-red-100 text-red-800" };
+}
+
+function StarRating({ value, onChange, disabled }) {
+  return (
+    <div className="inline-flex items-center gap-0.5">
+      {[1, 2, 3, 4, 5].map((n) => (
+        <button
+          key={n}
+          type="button"
+          disabled={disabled}
+          aria-label={`${n} star${n > 1 ? "s" : ""}`}
+          onClick={() => onChange(value === n ? null : n)}
+          className="p-0.5 disabled:opacity-50"
+        >
+          <Star className={`h-4 w-4 ${value >= n ? "fill-amber-400 text-amber-400" : "text-muted-foreground"}`} />
+        </button>
+      ))}
+    </div>
+  );
+}
+
 
 export default function WoFBIAttendanceTab() {
   const { user, isAdmin } = useAuth();
@@ -60,7 +87,7 @@ export default function WoFBIAttendanceTab() {
   const [rosterSession, setRosterSession] = useState(null);
   const [expandedStudents, setExpandedStudents] = useState({});
   const [editRecord, setEditRecord] = useState(null); // { record, session, registration }
-  const [editForm, setEditForm] = useState({ status: "present", checked_in_at: "", checked_out_at: "" });
+  const [editForm, setEditForm] = useState({ status: "present", checked_in_at: "", checked_out_at: "", punctuality_rating: null, punctuality_note: "" });
 
   const [form, setForm] = useState({
     title: "",
@@ -166,7 +193,7 @@ export default function WoFBIAttendanceTab() {
       const ids = sessions.map((s) => s.id);
       const { data, error } = await supabase
         .from("wofbi_attendance_records")
-        .select("id, session_id, registration_id, member_id, status, checked_in_at, checked_out_at, duration_minutes")
+        .select("id, session_id, registration_id, member_id, status, checked_in_at, checked_out_at, duration_minutes, punctuality_rating, punctuality_note")
         .in("session_id", ids);
       if (error) throw error;
       return data || [];
