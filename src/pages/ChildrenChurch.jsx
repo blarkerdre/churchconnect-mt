@@ -25,7 +25,7 @@ import HelpButton from "@/components/tour/HelpButton";
 import { useTour } from "@/components/tour/TourProvider";
 import { useTourCompletion } from "@/hooks/useTourCompletion";
 
-const DEFAULT_AGE_GROUPS = ["Nursery", "Toddler", "Primary", "Pre-Teen"];
+const DEFAULT_AGE_GROUPS = ["2-4 years old", "5-7 years old", "8-9 years old"];
 
 const PreteensAttendance = lazy(() => import("@/pages/PreteensAttendance"));
 const TeensAttendance = lazy(() => import("@/pages/TeensAttendance"));
