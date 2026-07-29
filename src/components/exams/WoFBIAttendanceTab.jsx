@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogFooter } from "@/components/ui/dialog";
 import TenantDialogHeader from "@/components/ui/TenantDialogHeader";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Plus, QrCode, Trash2, Download, CheckCircle2, XCircle, Clock, ChevronDown, ChevronRight, Pencil } from "lucide-react";
+import { Loader2, Plus, QrCode, Trash2, Download, CheckCircle2, XCircle, Clock, ChevronDown, ChevronRight, Pencil, Star } from "lucide-react";
 import WoFBIPersistentQRDialog from "./WoFBIPersistentQRDialog";
 
 function pct(num, den) {
@@ -48,6 +48,33 @@ function fmtLocal(iso) {
   }
 }
 
+// Punctuality: auto score from attendance mix (present=100, late=50, absent=0)
+function punctualityGrade(score) {
+  if (score >= 90) return { label: "Excellent", cls: "bg-green-100 text-green-800" };
+  if (score >= 70) return { label: "Good", cls: "bg-emerald-100 text-emerald-800" };
+  if (score >= 50) return { label: "Fair", cls: "bg-amber-100 text-amber-800" };
+  return { label: "Poor", cls: "bg-red-100 text-red-800" };
+}
+
+function StarRating({ value, onChange, disabled }) {
+  return (
+    <div className="inline-flex items-center gap-0.5">
+      {[1, 2, 3, 4, 5].map((n) => (
+        <button
+          key={n}
+          type="button"
+          disabled={disabled}
+          aria-label={`${n} star${n > 1 ? "s" : ""}`}
+          onClick={() => onChange(value === n ? null : n)}
+          className="p-0.5 disabled:opacity-50"
+        >
+          <Star className={`h-4 w-4 ${value >= n ? "fill-amber-400 text-amber-400" : "text-muted-foreground"}`} />
+        </button>
+      ))}
+    </div>
+  );
+}
+
 
 export default function WoFBIAttendanceTab() {
   const { user, isAdmin } = useAuth();
@@ -60,7 +87,7 @@ export default function WoFBIAttendanceTab() {
   const [rosterSession, setRosterSession] = useState(null);
   const [expandedStudents, setExpandedStudents] = useState({});
   const [editRecord, setEditRecord] = useState(null); // { record, session, registration }
-  const [editForm, setEditForm] = useState({ status: "present", checked_in_at: "", checked_out_at: "" });
+  const [editForm, setEditForm] = useState({ status: "present", checked_in_at: "", checked_out_at: "", punctuality_rating: null, punctuality_note: "" });
 
   const [form, setForm] = useState({
     title: "",
@@ -166,7 +193,7 @@ export default function WoFBIAttendanceTab() {
       const ids = sessions.map((s) => s.id);
       const { data, error } = await supabase
         .from("wofbi_attendance_records")
-        .select("id, session_id, registration_id, member_id, status, checked_in_at, checked_out_at, duration_minutes")
+        .select("id, session_id, registration_id, member_id, status, checked_in_at, checked_out_at, duration_minutes, punctuality_rating, punctuality_note")
         .in("session_id", ids);
       if (error) throw error;
       return data || [];
@@ -267,7 +294,7 @@ export default function WoFBIAttendanceTab() {
 
 
   const markStatus = useMutation({
-    mutationFn: async ({ registration, status, action }) => {
+    mutationFn: async ({ registration, status, action, rating }) => {
       if (!rosterSession) throw new Error("No session");
       const existing = rosterRecords.find((r) => r.registration_id === registration.id);
 
@@ -295,6 +322,32 @@ export default function WoFBIAttendanceTab() {
         if (error) throw error;
         return;
       }
+      if (action === "set_rating") {
+        if (existing) {
+          const { error } = await supabase
+            .from("wofbi_attendance_records")
+            .update({ punctuality_rating: rating })
+            .eq("id", existing.id)
+            .eq("tenant_id", tenantId);
+          if (error) throw error;
+        } else {
+          const { error } = await supabase.from("wofbi_attendance_records").insert(
+            withTenant({
+              session_id: rosterSession.id,
+              registration_id: registration.id,
+              member_id: registration.member_id,
+              status: "present",
+              checked_in_at: new Date().toISOString(),
+              punctuality_rating: rating,
+              source: "manual",
+            })
+          );
+          if (error) throw error;
+        }
+        return;
+      }
+
+
 
       if (status === "absent") {
         if (existing) {
@@ -364,6 +417,8 @@ export default function WoFBIAttendanceTab() {
             checked_in_at: inAt.toISOString(),
             checked_out_at: outAt ? outAt.toISOString() : null,
             duration_minutes: duration,
+            punctuality_rating: editForm.punctuality_rating || null,
+            punctuality_note: editForm.punctuality_note || null,
           })
           .eq("id", record.id)
           .eq("tenant_id", tenantId);
@@ -378,6 +433,8 @@ export default function WoFBIAttendanceTab() {
             checked_in_at: inAt.toISOString(),
             checked_out_at: outAt ? outAt.toISOString() : null,
             duration_minutes: duration,
+            punctuality_rating: editForm.punctuality_rating || null,
+            punctuality_note: editForm.punctuality_note || null,
             source: "manual",
           })
         );
@@ -424,6 +481,8 @@ export default function WoFBIAttendanceTab() {
       status: record?.status || "present",
       checked_in_at: toLocal(record?.checked_in_at) || `${session.session_date}T09:00`,
       checked_out_at: toLocal(record?.checked_out_at),
+      punctuality_rating: record?.punctuality_rating || null,
+      punctuality_note: record?.punctuality_note || "",
     });
   };
 
@@ -438,6 +497,13 @@ export default function WoFBIAttendanceTab() {
       const absent = Math.max(0, totalSessions - attended);
       const totalMinutes = recs.reduce((sum, x) => sum + (x.duration_minutes || 0), 0);
       const missingCheckouts = recs.filter((x) => x.checked_in_at && !x.checked_out_at).length;
+      const punctualityScore = totalSessions
+        ? Math.round((present * 100 + late * 50) / totalSessions)
+        : 0;
+      const rated = recs.filter((x) => x.punctuality_rating);
+      const manualRating = rated.length
+        ? Math.round((rated.reduce((sum, x) => sum + x.punctuality_rating, 0) / rated.length) * 10) / 10
+        : null;
       return {
         registration: r,
         present,
@@ -446,13 +512,15 @@ export default function WoFBIAttendanceTab() {
         totalSessions,
         totalMinutes,
         missingCheckouts,
+        punctualityScore,
+        manualRating,
         percent: totalSessions ? Math.round((attended / totalSessions) * 100) : 0,
       };
     });
   }, [roster, allRecords, sessions.length]);
 
   const exportCsv = () => {
-    const header = ["Student number", "Name", "Present", "Late", "Absent", "Total sessions", "Attendance %", "Total hours", "Missing check-outs"];
+    const header = ["Student number", "Name", "Present", "Late", "Absent", "Total sessions", "Attendance %", "Punctuality %", "Punctuality grade", "Punctuality rating", "Total hours", "Missing check-outs"];
     const rows = perStudent.map((s) => [
       s.registration.student_number || "",
       `${s.registration.members?.first_name || ""} ${s.registration.members?.last_name || ""}`.trim(),
@@ -461,6 +529,9 @@ export default function WoFBIAttendanceTab() {
       s.absent,
       s.totalSessions,
       s.percent,
+      s.punctualityScore,
+      punctualityGrade(s.punctualityScore).label,
+      s.manualRating != null ? `${s.manualRating}/5` : "",
       (s.totalMinutes / 60).toFixed(2),
       s.missingCheckouts,
     ]);
@@ -615,6 +686,7 @@ export default function WoFBIAttendanceTab() {
                   <TableHead>Total hours</TableHead>
                   <TableHead>Missing out</TableHead>
                   <TableHead>Attendance %</TableHead>
+                  <TableHead>Punctuality</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -647,10 +719,22 @@ export default function WoFBIAttendanceTab() {
                             {s.percent}%
                           </Badge>
                         </TableCell>
+                        <TableCell className="whitespace-nowrap">
+                          <div className="flex flex-col items-start gap-0.5">
+                            <Badge className={punctualityGrade(s.punctualityScore).cls}>
+                              {s.punctualityScore}% · {punctualityGrade(s.punctualityScore).label}
+                            </Badge>
+                            {s.manualRating != null && (
+                              <span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground">
+                                <Star className="h-3 w-3 fill-amber-400 text-amber-400" /> {s.manualRating}/5 rated
+                              </span>
+                            )}
+                          </div>
+                        </TableCell>
                       </TableRow>
                       {expanded && (
                         <TableRow className="bg-muted/30 hover:bg-muted/30">
-                          <TableCell colSpan={9} className="p-0">
+                          <TableCell colSpan={10} className="p-0">
                             <div className="p-3">
                               <Table>
                                 <TableHeader>
@@ -661,6 +745,7 @@ export default function WoFBIAttendanceTab() {
                                     <TableHead>Time in</TableHead>
                                     <TableHead>Time out</TableHead>
                                     <TableHead>Duration</TableHead>
+                                    <TableHead>Punctuality</TableHead>
                                     <TableHead className="text-right">Actions</TableHead>
                                   </TableRow>
                                 </TableHeader>
@@ -680,6 +765,13 @@ export default function WoFBIAttendanceTab() {
                                         <TableCell className="text-xs whitespace-nowrap">{fmtTime(rec?.checked_in_at)}</TableCell>
                                         <TableCell className="text-xs whitespace-nowrap">{fmtTime(rec?.checked_out_at)}</TableCell>
                                         <TableCell className="text-xs whitespace-nowrap">{fmtDuration(rec?.duration_minutes)}</TableCell>
+                                        <TableCell className="text-xs whitespace-nowrap">
+                                          {rec?.punctuality_rating ? (
+                                            <span className="inline-flex items-center gap-1" title={rec.punctuality_note || ""}>
+                                              <Star className="h-3 w-3 fill-amber-400 text-amber-400" /> {rec.punctuality_rating}/5
+                                            </span>
+                                          ) : "—"}
+                                        </TableCell>
                                         <TableCell className="text-right space-x-1 whitespace-nowrap">
                                           <Button size="sm" variant="outline" className="gap-1" onClick={() => openEdit(sess, s.registration, rec)}>
                                             <Pencil className="h-3 w-3" /> Edit
@@ -807,6 +899,7 @@ export default function WoFBIAttendanceTab() {
                   <TableHead>Time in</TableHead>
                   <TableHead>Time out</TableHead>
                   <TableHead>Duration</TableHead>
+                  <TableHead>Punctuality</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -830,6 +923,13 @@ export default function WoFBIAttendanceTab() {
                       <TableCell className="text-xs whitespace-nowrap">{fmtTime(rec?.checked_in_at)}</TableCell>
                       <TableCell className="text-xs whitespace-nowrap">{fmtTime(rec?.checked_out_at)}</TableCell>
                       <TableCell className="text-xs whitespace-nowrap">{fmtDuration(rec?.duration_minutes)}</TableCell>
+                      <TableCell>
+                        <StarRating
+                          value={rec?.punctuality_rating || 0}
+                          disabled={markStatus.isPending}
+                          onChange={(n) => markStatus.mutate({ registration: r, action: "set_rating", rating: n })}
+                        />
+                      </TableCell>
                       <TableCell className="text-right space-x-1 whitespace-nowrap">
                         <Button size="sm" variant={status === "present" ? "default" : "outline"} onClick={() => markStatus.mutate({ registration: r, status: "present" })}>Present</Button>
                         <Button size="sm" variant={status === "late" ? "default" : "outline"} onClick={() => markStatus.mutate({ registration: r, status: "late" })}>Late</Button>
@@ -845,7 +945,7 @@ export default function WoFBIAttendanceTab() {
                   );
                 })}
                 {roster.length === 0 && (
-                  <TableRow><TableCell colSpan={6} className="text-center text-sm text-muted-foreground py-6">No registered students.</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={7} className="text-center text-sm text-muted-foreground py-6">No registered students.</TableCell></TableRow>
                 )}
               </TableBody>
             </Table>
@@ -887,6 +987,25 @@ export default function WoFBIAttendanceTab() {
                     <Label>Time out</Label>
                     <Input type="datetime-local" value={editForm.checked_out_at} onChange={(e) => setEditForm((f) => ({ ...f, checked_out_at: e.target.value }))} />
                   </div>
+                </div>
+              )}
+              {editForm.status !== "absent" && (
+                <div className="space-y-1.5">
+                  <Label>Punctuality rating</Label>
+                  <div className="flex items-center gap-2">
+                    <StarRating
+                      value={editForm.punctuality_rating || 0}
+                      onChange={(n) => setEditForm((f) => ({ ...f, punctuality_rating: n }))}
+                    />
+                    <span className="text-xs text-muted-foreground">
+                      {editForm.punctuality_rating ? `${editForm.punctuality_rating}/5` : "Not rated (auto score used)"}
+                    </span>
+                  </div>
+                  <Input
+                    placeholder="Optional comment (e.g. arrived 10 mins late)"
+                    value={editForm.punctuality_note || ""}
+                    onChange={(e) => setEditForm((f) => ({ ...f, punctuality_note: e.target.value }))}
+                  />
                 </div>
               )}
             </div>
