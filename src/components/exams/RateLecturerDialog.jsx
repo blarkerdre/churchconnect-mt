@@ -351,7 +351,7 @@ export default function RateLecturerDialog({ open, onOpenChange }) {
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={() => submitMutation.mutate()} disabled={submitMutation.isPending || lecturers.length === 0}>
+          <Button onClick={() => submitMutation.mutate()} disabled={submitMutation.isPending || lecturers.length === 0 || notRegistered}>
             {submitMutation.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
             Submit Feedback
           </Button>
