@@ -93,20 +93,27 @@ export default function RateLecturerDialog({ open, onOpenChange }) {
     },
   });
 
-  const { data: courses = [] } = useQuery({
-    queryKey: ["rate-courses", tenantId],
-    enabled: !!tenantId && open,
+  // Only courses the student is completely registered in (approved + student number issued)
+  const { data: courses = [], isLoading: coursesLoading } = useQuery({
+    queryKey: ["rate-eligible-courses", tenantId, myMember?.id],
+    enabled: !!tenantId && !!myMember?.id && open,
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("exam_titles")
-        .select("id, name")
+        .from("course_registrations")
+        .select("course_id, exam_titles!inner(id, name)")
         .eq("tenant_id", tenantId)
-        .eq("is_active", true)
-        .order("name");
+        .eq("member_id", myMember.id)
+        .eq("status", "approved")
+        .not("student_number", "is", null);
       if (error) throw error;
-      return data || [];
+      const seen = new Set();
+      return (data || [])
+        .filter((r) => r.exam_titles && !seen.has(r.course_id) && seen.add(r.course_id))
+        .map((r) => ({ id: r.exam_titles.id, name: r.exam_titles.name }))
+        .sort((a, b) => a.name.localeCompare(b.name));
     },
   });
+
 
   const { data: subjects = [] } = useQuery({
     queryKey: ["rate-subjects", tenantId, form.course_id],
@@ -220,7 +227,8 @@ export default function RateLecturerDialog({ open, onOpenChange }) {
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
 
-  const isLoading = lecLoading;
+  const isLoading = lecLoading || coursesLoading;
+  const notRegistered = !isLoading && courses.length === 0;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -236,9 +244,14 @@ export default function RateLecturerDialog({ open, onOpenChange }) {
 
         {isLoading ? (
           <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
+        ) : notRegistered ? (
+          <p className="text-sm text-muted-foreground text-center py-6">
+            Lecturer feedback is only available to students with a completed Bible School registration.
+          </p>
         ) : lecturers.length === 0 ? (
           <p className="text-sm text-muted-foreground text-center py-6">No lecturers are available for rating yet.</p>
         ) : (
+
           <div className="space-y-5">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
@@ -338,7 +351,7 @@ export default function RateLecturerDialog({ open, onOpenChange }) {
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={() => submitMutation.mutate()} disabled={submitMutation.isPending || lecturers.length === 0}>
+          <Button onClick={() => submitMutation.mutate()} disabled={submitMutation.isPending || lecturers.length === 0 || notRegistered}>
             {submitMutation.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
             Submit Feedback
           </Button>
