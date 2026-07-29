@@ -989,6 +989,25 @@ export default function WoFBIAttendanceTab() {
                   </div>
                 </div>
               )}
+              {editForm.status !== "absent" && (
+                <div className="space-y-1.5">
+                  <Label>Punctuality rating</Label>
+                  <div className="flex items-center gap-2">
+                    <StarRating
+                      value={editForm.punctuality_rating || 0}
+                      onChange={(n) => setEditForm((f) => ({ ...f, punctuality_rating: n }))}
+                    />
+                    <span className="text-xs text-muted-foreground">
+                      {editForm.punctuality_rating ? `${editForm.punctuality_rating}/5` : "Not rated (auto score used)"}
+                    </span>
+                  </div>
+                  <Input
+                    placeholder="Optional comment (e.g. arrived 10 mins late)"
+                    value={editForm.punctuality_note || ""}
+                    onChange={(e) => setEditForm((f) => ({ ...f, punctuality_note: e.target.value }))}
+                  />
+                </div>
+              )}
             </div>
           )}
           <DialogFooter>
