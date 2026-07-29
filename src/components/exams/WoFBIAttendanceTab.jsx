@@ -512,12 +512,22 @@ export default function WoFBIAttendanceTab() {
                       <TableCell>{c.present}</TableCell>
                       <TableCell>{c.late}</TableCell>
                       <TableCell>
-                        {s.status === "open" ? (
-                          <Badge className="bg-green-100 text-green-800">Open</Badge>
-                        ) : (
-                          <Badge variant="secondary">Closed</Badge>
-                        )}
+                        <div className="flex flex-col items-start gap-1">
+                          {s.status === "open" ? (
+                            <Badge className="bg-green-100 text-green-800">Open</Badge>
+                          ) : (
+                            <Badge variant="secondary">Closed</Badge>
+                          )}
+                          {(s.scheduled_open_at || s.scheduled_close_at) && (
+                            <span className="text-[10px] text-muted-foreground whitespace-nowrap">
+                              {s.scheduled_open_at ? `Opens ${fmtLocal(s.scheduled_open_at)}` : ""}
+                              {s.scheduled_open_at && s.scheduled_close_at ? " · " : ""}
+                              {s.scheduled_close_at ? `Closes ${fmtLocal(s.scheduled_close_at)}` : ""}
+                            </span>
+                          )}
+                        </div>
                       </TableCell>
+
                       <TableCell className="text-right space-x-2 whitespace-nowrap">
                         <Button size="sm" variant="outline" onClick={() => setRosterSession(s)}>
                           Roster
@@ -713,10 +723,35 @@ export default function WoFBIAttendanceTab() {
                 </Select>
               </div>
             )}
+            <div className="rounded-md border border-border p-3 space-y-3">
+              <p className="text-xs font-medium text-muted-foreground">Auto open / close (optional)</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label>Auto-open at</Label>
+                  <Input
+                    type="datetime-local"
+                    value={form.scheduled_open_at}
+                    onChange={(e) => setForm({ ...form, scheduled_open_at: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Auto-close at</Label>
+                  <Input
+                    type="datetime-local"
+                    value={form.scheduled_close_at}
+                    onChange={(e) => setForm({ ...form, scheduled_close_at: e.target.value })}
+                  />
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Leave blank to open and close the session manually. The QR link becomes valid and invalid at these times.
+              </p>
+            </div>
             <div className="space-y-1.5">
               <Label>Notes</Label>
               <Input value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
             </div>
+
           </div>
           <DialogFooter>
             <Button variant="ghost" onClick={() => setNewOpen(false)}>Cancel</Button>
