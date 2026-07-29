@@ -1809,7 +1809,7 @@ function MemberExamsView({ memberId, memberRecord, courses, loading }) {
           </h1>
           <p className="text-sm text-muted-foreground mt-1">Register for courses and take your Bible School exams</p>
         </div>
-        {lecturerRatingEnabled && (
+        {lecturerRatingEnabled && canRateLecturer && (
           <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setRateOpen(true)}>
             <Star className="h-3.5 w-3.5" /> Rate a Lecturer
           </Button>
