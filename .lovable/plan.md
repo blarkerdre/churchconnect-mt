@@ -1,35 +1,36 @@
 ## Goal
+Make Children Church the single home for child check-in/pickup, Preteens attendance and Teens attendance, instead of three separate sidebar entries.
 
-Add a **Preteens** attendance feature that is a full clone of Teens attendance, with its own registration records, but managed by the **Children's Church** unit (leaders and workers), not a new unit.
+## What changes
 
-## Data model (new tables, mirroring the teens set)
+**One page, grouped tabs** (`/children-church`):
 
-- `preteens` — parent-registered preteen: primary guardian member, name, optional DOB (parent decides the age band — no enforced range), gender, photo, notes, `is_active`, access PIN hash, self PIN hash, `attendance_consent` (+ date/by), `data_processing_consent` (+ date/by, mandatory as with teens).
-- `preteen_attendance_sessions` — title (service-type dropdown from settings), session type, notes, date, start/end time, late-after, status, QR token, created_by.
-- `preteen_attendance_records` — session, preteen, status, checked in/out at + by, duration, source.
-- `preteen_self_enrolments` — self check-in requests awaiting worker approval, with expiry and failed-attempt counter.
+```text
+Children Church
+ ├── Children:  Check-in | Pickup | All children | Report
+ ├── Preteens:  (Preteens attendance screen)
+ └── Teens:     (Teens attendance screen)
+```
 
-All tables tenant-scoped with `tenant_id`, GRANTs, RLS, and `updated_at` triggers, following the teens policies exactly but swapping the role helpers to `is_children_church_leader` / `is_children_church_member` (admins and reports officers keep read access; parents see only their own preteens).
+- Add two new top-level tabs, `Preteens` and `Teens`, alongside the existing children tabs. Existing children tabs keep their current labels and behaviour.
+- The Preteens tab renders the current Preteens attendance screen; the Teens tab renders the current Teens attendance screen. No logic inside those screens changes.
 
-## Database functions (clones of the teens RPCs)
+**Access rules (unchanged, just applied per tab)**
+- Preteens tab shows only for Admins / Reports Officer / Children's Church leaders and members (same rule as today's Preteens page).
+- Teens tab shows only for Admins / Reports Officer / Teens Church leaders and members (same rule as today's Teens page). A Children's Church worker who isn't in Teens Church will not see the Teens tab.
+- Default tab is the first one the user is allowed to see, so a Teens-only worker landing on Children Church goes straight to Teens.
 
-`get_preteen_session_by_token`, `list_open_preteen_sessions`, `get_preteen_open_checkins`, `list_consented_preteens_for_session`, `preteen_checkin`, `preteen_self_request_enrolment`, `preteen_self_check_enrolment`, `preteen_self_set_pin`, `preteen_self_checkin`, `preteen_self_approve`, `preteen_self_reject`, plus the session-update restriction trigger. Check-in/out inserts the same **in-app notification** to the parent/guardian (no SMS/email).
+**Navigation**
+- Remove the "Teens Attendance" and "Preteens Attendance" sidebar items; keep a single "Children Church" item, visible to anyone with children's, preteens, or teens access.
+- Keep `/teens-attendance` and `/preteens-attendance` working as redirects to `/children-church?tab=teens` / `?tab=preteens` so existing links, QR landing redirects and bookmarks don't break.
+- Support a `?tab=` query parameter on the Children Church page for deep links.
 
-## Frontend
-
-- `src/pages/PreteensAttendance.jsx` — sessions list, create/edit/close/reopen (leaders full control; Children's Church workers can create and close), roster with manual sign-in/out, single-session report, cumulative report with filters + CSV, registered preteens directory, consent badges for leaders, worker names on records.
-- `src/pages/PreteensCheckin.jsx` and `PreteensCheckinLanding.jsx` — QR scan flow: consent-required messaging, separate Check in / Check out buttons based on current status, duplicate prevention, self check-in with one-time verification, random funny welcome / see-you-next-time image, manual Close button.
-- `src/components/preteens/PreteenAttendanceQRDialog.jsx` and `PreteensPersistentQRDialog.jsx` — per-session and single persistent QR (link live only while a session is open).
-- `src/components/preteens/PreteensSection.jsx` — registration inside **My Family**, with mandatory consents and the same authorised-adult rules.
-- `src/hooks/usePreteensUnitRole.jsx` — wraps the Children's Church leader/member checks for this module.
-
-## Routing & navigation
-
-- Routes: `/t/:tenantSlug/preteens-attendance`, `/t/:tenantSlug/preteens/checkin`, `/t/:tenantSlug/preteens/checkin/:token` (public check-in routes, same as teens).
-- Sidebar entry "Preteens Attendance" visible to admins, reports officers, and Children's Church leaders/members; My Family gains a Preteens section alongside Children and Teenagers.
+**Not changed**
+- Public QR check-in routes (`/t/:slug/teens/checkin`, `/t/:slug/preteens/checkin`) stay exactly as they are.
+- Database, RLS policies, reports and My Family registration sections are untouched.
 
 ## Technical notes
-
-- Delivered as one migration for tables/policies/functions, then the frontend files.
-- The "promote to teenager" path in My Family stays as-is; a child → preteen → teen progression is not added unless you want it.
-- All queries carry explicit `.eq("tenant_id", tenantId)` guards per project convention.
+- Extract the body of `TeensAttendance.jsx` and `PreteensAttendance.jsx` into embeddable components (or export the existing default and render it inside the tab) and mount them lazily so the Children Church bundle stays small.
+- Role gating uses the existing `useTeensUnitRole` / `usePreteensUnitRole` hooks plus `isAdmin` / `isReportsOfficer` from `useAuth`.
+- Tab state synced to the URL via `useSearchParams`.
+- `AppLayout.jsx` nav access for "Children Church" becomes the union of `children_church` and `teens` access checks.

@@ -878,7 +878,7 @@ function RegisteredTeensDialog({ open, onOpenChange }) {
   );
 }
 
-export default function TeensAttendance() {
+export default function TeensAttendance({ embedded = false }) {
   const { tenantId } = useTenantQuery();
   const { user } = useAuth();
   const qc = useQueryClient();
@@ -937,11 +937,17 @@ export default function TeensAttendance() {
   });
 
   return (
-    <div className="p-4 space-y-4 max-w-3xl mx-auto">
+    <div className={embedded ? "space-y-4" : "p-4 space-y-4 max-w-3xl mx-auto"}>
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <div>
-          <h1 className="text-2xl font-display font-bold flex items-center gap-2"><Users className="h-6 w-6 text-primary" /> Teens Attendance</h1>
-          <p className="text-sm text-muted-foreground">On-premise check-in / check-out for registered teens.</p>
+          {embedded ? (
+            <p className="text-sm text-muted-foreground">On-premise check-in / check-out for registered teens.</p>
+          ) : (
+            <>
+              <h1 className="text-2xl font-display font-bold flex items-center gap-2"><Users className="h-6 w-6 text-primary" /> Teens Attendance</h1>
+              <p className="text-sm text-muted-foreground">On-premise check-in / check-out for registered teens.</p>
+            </>
+          )}
         </div>
         <div className="flex gap-2 flex-wrap">
           {canWrite && (

@@ -1,4 +1,6 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, lazy, Suspense } from "react";
+import { useSearchParams } from "react-router-dom";
+import { useTeensUnitRole } from "@/hooks/useTeensUnitRole";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -24,6 +26,15 @@ import { useTour } from "@/components/tour/TourProvider";
 import { useTourCompletion } from "@/hooks/useTourCompletion";
 
 const DEFAULT_AGE_GROUPS = ["Nursery", "Toddler", "Primary", "Pre-Teen"];
+
+const PreteensAttendance = lazy(() => import("@/pages/PreteensAttendance"));
+const TeensAttendance = lazy(() => import("@/pages/TeensAttendance"));
+
+function TabLoading() {
+  return <div className="py-10 text-center text-sm text-muted-foreground animate-pulse">Loading...</div>;
+}
+
+
 
 function ChildProfileDialog({ open, onOpenChange, childId, tenantId }) {
   const { data: profile, isLoading } = useQuery({
@@ -1243,7 +1254,8 @@ function ReportPanel({ tenantId, isAdmin = false }) {
 
 export default function ChildrenChurch() {
   const { tenantId } = useTenantQuery();
-  const { user, isAdmin } = useAuth();
+  const { user, isAdmin, isReportsOfficer } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
   const tenantSlug = typeof window !== "undefined"
     ? (window.location.pathname.match(/^\/t\/([^/]+)/)?.[1] || null)
     : null;
@@ -1266,9 +1278,31 @@ export default function ChildrenChurch() {
     },
   });
 
+  const { isLeader: isTeensLeader, isMember: isTeensMember } = useTeensUnitRole();
+
   const canSeeAll = isLeader || isAdmin;
   const canSeeReport = isLeader || isAdmin;
-  const tabCount = 2 + (canSeeAll ? 1 : 0) + (canSeeReport ? 1 : 0);
+  const canSeeChildren = isAdmin || isReportsOfficer || isLeader || isUnitMember;
+  const canSeePreteens = canSeeChildren;
+  const canSeeTeens = isAdmin || isReportsOfficer || isTeensLeader || isTeensMember;
+
+  const allowedTabs = useMemo(() => {
+    const t = [];
+    if (canSeeChildren) { t.push("checkin", "pickup"); }
+    if (canSeeAll) t.push("all");
+    if (canSeeReport) t.push("report");
+    if (canSeePreteens) t.push("preteens");
+    if (canSeeTeens) t.push("teens");
+    return t;
+  }, [canSeeChildren, canSeeAll, canSeeReport, canSeePreteens, canSeeTeens]);
+
+  const requestedTab = searchParams.get("tab");
+  const activeTab = allowedTabs.includes(requestedTab) ? requestedTab : (allowedTabs[0] || "checkin");
+  const setActiveTab = (v) => {
+    const next = new URLSearchParams(searchParams);
+    next.set("tab", v);
+    setSearchParams(next, { replace: true });
+  };
 
   const tour = useTour();
   const { completed: tourDone } = useTourCompletion("children-church-v1");
@@ -1284,23 +1318,36 @@ export default function ChildrenChurch() {
       <div className="flex items-start justify-between gap-2 flex-wrap">
         <div>
           <h1 className="text-2xl font-display font-bold flex items-center gap-2"><Baby className="h-6 w-6 text-primary" /> Children Church</h1>
-          <p className="text-sm text-muted-foreground">Secure drop-off and pickup for children in care.</p>
+          <p className="text-sm text-muted-foreground">Check-in, pickup and attendance for children, preteens and teens.</p>
         </div>
         <HelpButton tourId="children-church-v1" ctx={{ isLeader, isAdmin }} dataTour="cc-help" />
       </div>
-      <Tabs defaultValue="checkin">
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="flex flex-nowrap h-auto gap-1 overflow-x-auto w-full sm:w-auto justify-start">
-          <TabsTrigger value="checkin" data-tour="cc-tab-checkin" className="shrink-0">Check-in</TabsTrigger>
-          <TabsTrigger value="pickup" data-tour="cc-tab-pickup" className="shrink-0">Pickup</TabsTrigger>
+          {canSeeChildren && <TabsTrigger value="checkin" data-tour="cc-tab-checkin" className="shrink-0">Check-in</TabsTrigger>}
+          {canSeeChildren && <TabsTrigger value="pickup" data-tour="cc-tab-pickup" className="shrink-0">Pickup</TabsTrigger>}
           {canSeeAll && <TabsTrigger value="all" data-tour="cc-tab-all" className="shrink-0">All children</TabsTrigger>}
           {canSeeReport && <TabsTrigger value="report" data-tour="cc-tab-report" className="shrink-0">Report</TabsTrigger>}
+          {canSeePreteens && <TabsTrigger value="preteens" className="shrink-0">Preteens</TabsTrigger>}
+          {canSeeTeens && <TabsTrigger value="teens" className="shrink-0">Teens</TabsTrigger>}
         </TabsList>
 
-        <TabsContent value="checkin"><CheckInPanel tenantId={tenantId} tenantSlug={tenantSlug} /></TabsContent>
-        <TabsContent value="pickup"><PickupPanel tenantId={tenantId} isLeader={isLeader || isAdmin} /></TabsContent>
+        {canSeeChildren && <TabsContent value="checkin"><CheckInPanel tenantId={tenantId} tenantSlug={tenantSlug} /></TabsContent>}
+        {canSeeChildren && <TabsContent value="pickup"><PickupPanel tenantId={tenantId} isLeader={isLeader || isAdmin} /></TabsContent>}
         {canSeeAll && <TabsContent value="all"><AllChildrenPanel tenantId={tenantId} /></TabsContent>}
         {canSeeReport && <TabsContent value="report"><ReportPanel tenantId={tenantId} isAdmin={isAdmin} /></TabsContent>}
+        {canSeePreteens && (
+          <TabsContent value="preteens">
+            <Suspense fallback={<TabLoading />}><PreteensAttendance embedded /></Suspense>
+          </TabsContent>
+        )}
+        {canSeeTeens && (
+          <TabsContent value="teens">
+            <Suspense fallback={<TabLoading />}><TeensAttendance embedded /></Suspense>
+          </TabsContent>
+        )}
       </Tabs>
+
 
     </div>
   );
