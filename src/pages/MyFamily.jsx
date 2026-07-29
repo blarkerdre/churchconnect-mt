@@ -25,7 +25,7 @@ import { useTourCompletion } from "@/hooks/useTourCompletion";
 import TeensSection from "@/components/teens/TeensSection";
 import PreteensSection from "@/components/preteens/PreteensSection";
 
-const DEFAULT_AGE_GROUPS = ["Nursery", "Toddler", "Primary", "Pre-Teen"];
+const DEFAULT_AGE_GROUPS = ["2-4 years old", "5-7 years old", "8-9 years old"];
 
 function ChildForm({ open, onOpenChange, child, memberId, onSaved }) {
   const { data: ageGroupsSetting } = useAppSetting("children_age_groups", DEFAULT_AGE_GROUPS);
