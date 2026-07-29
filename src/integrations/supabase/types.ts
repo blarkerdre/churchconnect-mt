@@ -6354,6 +6354,8 @@ export type Database = {
           duration_minutes: number | null
           id: string
           member_id: string
+          punctuality_note: string | null
+          punctuality_rating: number | null
           registration_id: string
           session_id: string
           source: string
@@ -6368,6 +6370,8 @@ export type Database = {
           duration_minutes?: number | null
           id?: string
           member_id: string
+          punctuality_note?: string | null
+          punctuality_rating?: number | null
           registration_id: string
           session_id: string
           source?: string
@@ -6382,6 +6386,8 @@ export type Database = {
           duration_minutes?: number | null
           id?: string
           member_id?: string
+          punctuality_note?: string | null
+          punctuality_rating?: number | null
           registration_id?: string
           session_id?: string
           source?: string
