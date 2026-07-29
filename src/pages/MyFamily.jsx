@@ -656,7 +656,10 @@ export default function MyFamily() {
         <Card><CardContent className="p-4 text-sm text-destructive">Could not load records: {childrenError.message}</CardContent></Card>
       )}
 
-      <h2 className="text-lg font-display font-semibold flex items-center gap-2"><Baby className="h-5 w-5 text-primary" /> Early Years</h2>
+      <div>
+        <h2 className="text-lg font-display font-semibold flex items-center gap-2"><Baby className="h-5 w-5 text-primary" /> Early Years</h2>
+        <p className="text-xs text-muted-foreground">Ages 2-9: 2-4 years old, 5-7 years old and 8-9 years old.</p>
+      </div>
 
       {children.length === 0 ? (
         <Card><CardContent className="p-8 text-center text-sm text-muted-foreground">{showAll && canSeeAll ? "No Early Years children registered in this tenant yet." : "No Early Years children added yet."}</CardContent></Card>
