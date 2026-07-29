@@ -114,7 +114,7 @@ export default function RateLecturerDialog({ open, onOpenChange }) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("exam_subjects")
-        .select("id, name")
+        .select("id, name, lecturer_id")
         .eq("tenant_id", tenantId)
         .eq("course_id", form.course_id)
         .eq("is_active", true)
@@ -123,6 +123,8 @@ export default function RateLecturerDialog({ open, onOpenChange }) {
       return data || [];
     },
   });
+
+  const mappedLecturerId = subjects.find((s) => s.id === form.subject_id)?.lecturer_id || "";
 
   useEffect(() => {
     if (!open) setForm(emptyForm);
