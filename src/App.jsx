@@ -297,6 +297,9 @@ function AppRoutes() {
         <Route path="/teens/checkin/:token" element={<TeensCheckin />} />
         <Route path="/t/:tenantSlug/teens/checkin/:token" element={<TeensCheckin />} />
         <Route path="/t/:tenantSlug/teens/checkin" element={<TeensCheckinLanding />} />
+        <Route path="/preteens/checkin/:token" element={<PreteensCheckin />} />
+        <Route path="/t/:tenantSlug/preteens/checkin/:token" element={<PreteensCheckin />} />
+        <Route path="/t/:tenantSlug/preteens/checkin" element={<PreteensCheckinLanding />} />
 
         {/* Public reset-password routes */}
         <Route path="/reset-password" element={<ResetPassword />} />
