@@ -174,6 +174,13 @@ export default function RateLecturerDialog({ open, onOpenChange }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form.subject_id]);
 
+  // Auto-fill the lecturer mapped to the selected subject
+  useEffect(() => {
+    if (mappedLecturerId) setForm((f) => ({ ...f, lecturer_id: mappedLecturerId }));
+  }, [mappedLecturerId]);
+
+
+
 
   const submitMutation = useMutation({
     mutationFn: async () => {
