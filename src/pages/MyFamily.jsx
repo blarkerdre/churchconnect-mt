@@ -130,7 +130,7 @@ function ChildForm({ open, onOpenChange, child, memberId, onSaved }) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] overflow-y-auto max-w-md">
         <DialogHeader>
-          <DialogTitle>{child?.id ? "Edit child" : "Add child"}</DialogTitle>
+          <DialogTitle>{child?.id ? "Edit Early Years child" : "Add Early Years child"}</DialogTitle>
           <DialogDescription>Child profile is private to you and Children Church workers.</DialogDescription>
         </DialogHeader>
         <div className="space-y-3">
@@ -631,7 +631,7 @@ export default function MyFamily() {
         <div>
           <h1 className="text-2xl font-display font-bold flex items-center gap-2"><Baby className="h-6 w-6 text-primary" /> My Family</h1>
           <p className="text-sm text-muted-foreground">
-            {showAll && canSeeAll ? "Browsing all children in this tenant." : "Manage your children and authorised pickup adults."}
+            {showAll && canSeeAll ? "Browsing all Early Years records in this tenant." : "Manage your Early Years children and authorised pickup adults."}
           </p>
         </div>
         <div className="flex gap-2 items-center">
@@ -642,7 +642,7 @@ export default function MyFamily() {
             </Button>
           )}
           {meMember && (
-            <Button data-tour="mf-add-child" onClick={() => { setEditChild(null); setChildOpen(true); }} size="sm"><Plus className="h-4 w-4 mr-1" /> Add child</Button>
+            <Button data-tour="mf-add-child" onClick={() => { setEditChild(null); setChildOpen(true); }} size="sm"><Plus className="h-4 w-4 mr-1" /> Add Early Years child</Button>
           )}
         </div>
       </div>
@@ -651,8 +651,10 @@ export default function MyFamily() {
         <Card><CardContent className="p-4 text-sm text-destructive">Could not load records: {childrenError.message}</CardContent></Card>
       )}
 
+      <h2 className="text-lg font-display font-semibold flex items-center gap-2"><Baby className="h-5 w-5 text-primary" /> Early Years</h2>
+
       {children.length === 0 ? (
-        <Card><CardContent className="p-8 text-center text-sm text-muted-foreground">{showAll && canSeeAll ? "No children registered in this tenant yet." : "No children added yet."}</CardContent></Card>
+        <Card><CardContent className="p-8 text-center text-sm text-muted-foreground">{showAll && canSeeAll ? "No Early Years children registered in this tenant yet." : "No Early Years children added yet."}</CardContent></Card>
       ) : (
         <div className="space-y-3">
           {children.map((c, idx) => {
