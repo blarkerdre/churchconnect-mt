@@ -93,20 +93,27 @@ export default function RateLecturerDialog({ open, onOpenChange }) {
     },
   });
 
-  const { data: courses = [] } = useQuery({
-    queryKey: ["rate-courses", tenantId],
-    enabled: !!tenantId && open,
+  // Only courses the student is completely registered in (approved + student number issued)
+  const { data: courses = [], isLoading: coursesLoading } = useQuery({
+    queryKey: ["rate-eligible-courses", tenantId, myMember?.id],
+    enabled: !!tenantId && !!myMember?.id && open,
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("exam_titles")
-        .select("id, name")
+        .from("course_registrations")
+        .select("course_id, exam_titles!inner(id, name)")
         .eq("tenant_id", tenantId)
-        .eq("is_active", true)
-        .order("name");
+        .eq("member_id", myMember.id)
+        .eq("status", "approved")
+        .not("student_number", "is", null);
       if (error) throw error;
-      return data || [];
+      const seen = new Set();
+      return (data || [])
+        .filter((r) => r.exam_titles && !seen.has(r.course_id) && seen.add(r.course_id))
+        .map((r) => ({ id: r.exam_titles.id, name: r.exam_titles.name }))
+        .sort((a, b) => a.name.localeCompare(b.name));
     },
   });
+
 
   const { data: subjects = [] } = useQuery({
     queryKey: ["rate-subjects", tenantId, form.course_id],
