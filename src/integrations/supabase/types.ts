@@ -6415,6 +6415,8 @@ export type Database = {
           late_after: string | null
           notes: string | null
           qr_token: string
+          scheduled_close_at: string | null
+          scheduled_open_at: string | null
           session_date: string
           status: string
           subject_id: string | null
@@ -6430,6 +6432,8 @@ export type Database = {
           late_after?: string | null
           notes?: string | null
           qr_token?: string
+          scheduled_close_at?: string | null
+          scheduled_open_at?: string | null
           session_date: string
           status?: string
           subject_id?: string | null
@@ -6445,6 +6449,8 @@ export type Database = {
           late_after?: string | null
           notes?: string | null
           qr_token?: string
+          scheduled_close_at?: string | null
+          scheduled_open_at?: string | null
           session_date?: string
           status?: string
           subject_id?: string | null
@@ -6750,6 +6756,7 @@ export type Database = {
             Args: { _email: string; _tenant_id?: string; _user_id: string }
             Returns: string
           }
+      auto_manage_wofbi_sessions: { Args: never; Returns: undefined }
       can_manage_unit_task: {
         Args: { _task_id: string; _tenant_id: string; _user_id: string }
         Returns: boolean
