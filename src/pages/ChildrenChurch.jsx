@@ -337,7 +337,10 @@ function WalkInRegisterDialog({ open, onOpenChange, tenantId, onRegistered }) {
 
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <p className="text-sm font-semibold">Early Years</p>
+              <div>
+                <p className="text-sm font-semibold">Early Years</p>
+                <p className="text-[11px] text-muted-foreground">Ages 2-9: 2-4, 5-7 and 8-9 years old. Ages 10-12 go under Preteens, 13-17 under Teens.</p>
+              </div>
               <Button type="button" size="sm" variant="ghost" onClick={addChild}><Plus className="h-3.5 w-3.5 mr-1" /> Add child</Button>
             </div>
             {children.map((c, i) => (
