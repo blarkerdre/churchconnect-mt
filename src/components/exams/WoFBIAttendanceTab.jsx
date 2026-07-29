@@ -39,6 +39,16 @@ function fmtTime(iso) {
   }
 }
 
+function fmtLocal(iso) {
+  if (!iso) return "";
+  try {
+    return new Date(iso).toLocaleString([], { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
+  } catch {
+    return "";
+  }
+}
+
+
 export default function WoFBIAttendanceTab() {
   const { user, isAdmin } = useAuth();
   const qc = useQueryClient();
@@ -58,7 +68,10 @@ export default function WoFBIAttendanceTab() {
     late_after: "",
     subject_id: "",
     notes: "",
+    scheduled_open_at: "",
+    scheduled_close_at: "",
   });
+
 
   const { data: courses = [] } = useQuery({
     queryKey: ["wofbi-att-courses", tenantId],
@@ -103,7 +116,9 @@ export default function WoFBIAttendanceTab() {
       if (error) throw error;
       return data || [];
     },
+    refetchInterval: 60000,
   });
+
 
   // Counts of records per session for the sessions list
   const { data: recordsBySession = {} } = useQuery({
@@ -174,6 +189,11 @@ export default function WoFBIAttendanceTab() {
 
   const createSession = useMutation({
     mutationFn: async (payload) => {
+      const openAt = payload.scheduled_open_at ? new Date(payload.scheduled_open_at).toISOString() : null;
+      const closeAt = payload.scheduled_close_at ? new Date(payload.scheduled_close_at).toISOString() : null;
+      if (openAt && closeAt && closeAt <= openAt) throw new Error("Auto-close time must be after the auto-open time");
+      // If it is scheduled to open later, start it closed
+      const startsClosed = !!openAt && new Date(openAt) > new Date();
       const { error } = await supabase.from("wofbi_attendance_sessions").insert(
         withTenant({
           course_id: selectedCourseId,
@@ -182,7 +202,9 @@ export default function WoFBIAttendanceTab() {
           session_date: payload.session_date,
           late_after: payload.late_after || null,
           notes: payload.notes || null,
-          status: "open",
+          status: startsClosed ? "closed" : "open",
+          scheduled_open_at: openAt,
+          scheduled_close_at: closeAt,
           created_by: user?.id || null,
         })
       );
@@ -192,7 +214,7 @@ export default function WoFBIAttendanceTab() {
       toast({ title: "Attendance session created" });
       qc.invalidateQueries({ queryKey: ["wofbi-att-sessions"] });
       setNewOpen(false);
-      setForm({ title: "", session_date: new Date().toISOString().slice(0, 10), late_after: "", subject_id: "", notes: "" });
+      setForm({ title: "", session_date: new Date().toISOString().slice(0, 10), late_after: "", subject_id: "", notes: "", scheduled_open_at: "", scheduled_close_at: "" });
     },
     onError: (e) => toast({ title: "Failed to create session", description: e.message, variant: "destructive" }),
   });
@@ -211,9 +233,10 @@ export default function WoFBIAttendanceTab() {
 
   const closeSession = useMutation({
     mutationFn: async (id) => {
+      // Manual close overrides any schedule
       const { error } = await supabase
         .from("wofbi_attendance_sessions")
-        .update({ status: "closed" })
+        .update({ status: "closed", scheduled_open_at: null, scheduled_close_at: null })
         .eq("id", id)
         .eq("tenant_id", tenantId);
       if (error) throw error;
@@ -227,9 +250,10 @@ export default function WoFBIAttendanceTab() {
 
   const reopenSession = useMutation({
     mutationFn: async (id) => {
+      // Manual reopen overrides any schedule
       const { error } = await supabase
         .from("wofbi_attendance_sessions")
-        .update({ status: "open" })
+        .update({ status: "open", scheduled_open_at: null, scheduled_close_at: null })
         .eq("id", id)
         .eq("tenant_id", tenantId);
       if (error) throw error;
@@ -240,6 +264,7 @@ export default function WoFBIAttendanceTab() {
     },
     onError: (e) => toast({ title: "Reopen failed", description: e.message, variant: "destructive" }),
   });
+
 
   const markStatus = useMutation({
     mutationFn: async ({ registration, status, action }) => {
@@ -512,12 +537,22 @@ export default function WoFBIAttendanceTab() {
                       <TableCell>{c.present}</TableCell>
                       <TableCell>{c.late}</TableCell>
                       <TableCell>
-                        {s.status === "open" ? (
-                          <Badge className="bg-green-100 text-green-800">Open</Badge>
-                        ) : (
-                          <Badge variant="secondary">Closed</Badge>
-                        )}
+                        <div className="flex flex-col items-start gap-1">
+                          {s.status === "open" ? (
+                            <Badge className="bg-green-100 text-green-800">Open</Badge>
+                          ) : (
+                            <Badge variant="secondary">Closed</Badge>
+                          )}
+                          {(s.scheduled_open_at || s.scheduled_close_at) && (
+                            <span className="text-[10px] text-muted-foreground whitespace-nowrap">
+                              {s.scheduled_open_at ? `Opens ${fmtLocal(s.scheduled_open_at)}` : ""}
+                              {s.scheduled_open_at && s.scheduled_close_at ? " · " : ""}
+                              {s.scheduled_close_at ? `Closes ${fmtLocal(s.scheduled_close_at)}` : ""}
+                            </span>
+                          )}
+                        </div>
                       </TableCell>
+
                       <TableCell className="text-right space-x-2 whitespace-nowrap">
                         <Button size="sm" variant="outline" onClick={() => setRosterSession(s)}>
                           Roster
@@ -713,10 +748,35 @@ export default function WoFBIAttendanceTab() {
                 </Select>
               </div>
             )}
+            <div className="rounded-md border border-border p-3 space-y-3">
+              <p className="text-xs font-medium text-muted-foreground">Auto open / close (optional)</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label>Auto-open at</Label>
+                  <Input
+                    type="datetime-local"
+                    value={form.scheduled_open_at}
+                    onChange={(e) => setForm({ ...form, scheduled_open_at: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Auto-close at</Label>
+                  <Input
+                    type="datetime-local"
+                    value={form.scheduled_close_at}
+                    onChange={(e) => setForm({ ...form, scheduled_close_at: e.target.value })}
+                  />
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Leave blank to open and close the session manually. The QR link becomes valid and invalid at these times.
+              </p>
+            </div>
             <div className="space-y-1.5">
               <Label>Notes</Label>
               <Input value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
             </div>
+
           </div>
           <DialogFooter>
             <Button variant="ghost" onClick={() => setNewOpen(false)}>Cancel</Button>
