@@ -58,6 +58,9 @@ const Privacy = lazy(() => import("@/pages/Privacy"));
 const TeensAttendance = lazy(() => import("@/pages/TeensAttendance"));
 const TeensCheckin = lazy(() => import("@/pages/TeensCheckin"));
 const TeensCheckinLanding = lazy(() => import("@/pages/TeensCheckinLanding"));
+const PreteensAttendance = lazy(() => import("@/pages/PreteensAttendance"));
+const PreteensCheckin = lazy(() => import("@/pages/PreteensCheckin"));
+const PreteensCheckinLanding = lazy(() => import("@/pages/PreteensCheckinLanding"));
 const WoFBICheckinLanding = lazy(() => import("@/pages/WoFBICheckinLanding"));
 import CookieConsentBanner from "@/components/gdpr/CookieConsentBanner";
 import MFASetupDialog from "@/components/gdpr/MFASetupDialog";
@@ -200,6 +203,7 @@ function AppPages() {
         <Route path="/children-church" element={<FeatureGate path="/children-church"><ProtectedRoute><ChildrenChurch /></ProtectedRoute></FeatureGate>} />
         <Route path="/my-family" element={<ProtectedRoute><MyFamily /></ProtectedRoute>} />
         <Route path="/teens-attendance" element={<ProtectedRoute><TeensAttendance /></ProtectedRoute>} />
+        <Route path="/preteens-attendance" element={<ProtectedRoute><PreteensAttendance /></ProtectedRoute>} />
         <Route path="/analytics" element={<FeatureGate path="/analytics"><ReportsRoute><Analytics /></ReportsRoute></FeatureGate>} />
         <Route path="/training-reports" element={<FeatureGate path="/training-reports"><TrainingReportRoute><TrainingReports /></TrainingReportRoute></FeatureGate>} />
         <Route path="/exam-management" element={<FeatureGate path="/exam-management"><ProtectedRoute><ExamManagement /></ProtectedRoute></FeatureGate>} />
@@ -297,6 +301,9 @@ function AppRoutes() {
         <Route path="/teens/checkin/:token" element={<TeensCheckin />} />
         <Route path="/t/:tenantSlug/teens/checkin/:token" element={<TeensCheckin />} />
         <Route path="/t/:tenantSlug/teens/checkin" element={<TeensCheckinLanding />} />
+        <Route path="/preteens/checkin/:token" element={<PreteensCheckin />} />
+        <Route path="/t/:tenantSlug/preteens/checkin/:token" element={<PreteensCheckin />} />
+        <Route path="/t/:tenantSlug/preteens/checkin" element={<PreteensCheckinLanding />} />
 
         {/* Public reset-password routes */}
         <Route path="/reset-password" element={<ResetPassword />} />

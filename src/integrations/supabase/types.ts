@@ -3961,6 +3961,252 @@ export type Database = {
           },
         ]
       }
+      preteen_attendance_records: {
+        Row: {
+          checked_in_at: string
+          checked_in_by: string | null
+          checked_out_at: string | null
+          checked_out_by: string | null
+          created_at: string
+          duration_minutes: number | null
+          id: string
+          preteen_id: string
+          session_id: string
+          source: string
+          status: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          checked_in_at?: string
+          checked_in_by?: string | null
+          checked_out_at?: string | null
+          checked_out_by?: string | null
+          created_at?: string
+          duration_minutes?: number | null
+          id?: string
+          preteen_id: string
+          session_id: string
+          source?: string
+          status?: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          checked_in_at?: string
+          checked_in_by?: string | null
+          checked_out_at?: string | null
+          checked_out_by?: string | null
+          created_at?: string
+          duration_minutes?: number | null
+          id?: string
+          preteen_id?: string
+          session_id?: string
+          source?: string
+          status?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "preteen_attendance_records_preteen_id_fkey"
+            columns: ["preteen_id"]
+            isOneToOne: false
+            referencedRelation: "preteens"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "preteen_attendance_records_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "preteen_attendance_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      preteen_attendance_sessions: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          end_time: string | null
+          id: string
+          late_after: string | null
+          notes: string | null
+          qr_token: string
+          session_date: string
+          session_type: string | null
+          start_time: string | null
+          status: string
+          tenant_id: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          end_time?: string | null
+          id?: string
+          late_after?: string | null
+          notes?: string | null
+          qr_token?: string
+          session_date: string
+          session_type?: string | null
+          start_time?: string | null
+          status?: string
+          tenant_id: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          end_time?: string | null
+          id?: string
+          late_after?: string | null
+          notes?: string | null
+          qr_token?: string
+          session_date?: string
+          session_type?: string | null
+          start_time?: string | null
+          status?: string
+          tenant_id?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      preteen_self_enrolments: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string
+          expires_at: string
+          failed_attempts: number
+          id: string
+          preteen_id: string
+          requested_at: string
+          session_id: string | null
+          status: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          expires_at?: string
+          failed_attempts?: number
+          id?: string
+          preteen_id: string
+          requested_at?: string
+          session_id?: string | null
+          status?: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          expires_at?: string
+          failed_attempts?: number
+          id?: string
+          preteen_id?: string
+          requested_at?: string
+          session_id?: string | null
+          status?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "preteen_self_enrolments_preteen_id_fkey"
+            columns: ["preteen_id"]
+            isOneToOne: false
+            referencedRelation: "preteens"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "preteen_self_enrolments_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "preteen_attendance_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      preteens: {
+        Row: {
+          access_pin_hash: string | null
+          attendance_consent: boolean
+          attendance_consent_at: string | null
+          attendance_consent_by: string | null
+          created_at: string
+          data_processing_consent: boolean
+          data_processing_consent_at: string | null
+          data_processing_consent_by: string | null
+          date_of_birth: string | null
+          first_name: string
+          gender: string | null
+          id: string
+          is_active: boolean
+          last_name: string
+          notes: string | null
+          photo_url: string | null
+          primary_guardian_member_id: string
+          self_pin_hash: string | null
+          self_pin_set_at: string | null
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          access_pin_hash?: string | null
+          attendance_consent?: boolean
+          attendance_consent_at?: string | null
+          attendance_consent_by?: string | null
+          created_at?: string
+          data_processing_consent?: boolean
+          data_processing_consent_at?: string | null
+          data_processing_consent_by?: string | null
+          date_of_birth?: string | null
+          first_name: string
+          gender?: string | null
+          id?: string
+          is_active?: boolean
+          last_name: string
+          notes?: string | null
+          photo_url?: string | null
+          primary_guardian_member_id: string
+          self_pin_hash?: string | null
+          self_pin_set_at?: string | null
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          access_pin_hash?: string | null
+          attendance_consent?: boolean
+          attendance_consent_at?: string | null
+          attendance_consent_by?: string | null
+          created_at?: string
+          data_processing_consent?: boolean
+          data_processing_consent_at?: string | null
+          data_processing_consent_by?: string | null
+          date_of_birth?: string | null
+          first_name?: string
+          gender?: string | null
+          id?: string
+          is_active?: boolean
+          last_name?: string
+          notes?: string | null
+          photo_url?: string | null
+          primary_guardian_member_id?: string
+          self_pin_hash?: string | null
+          self_pin_set_at?: string | null
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       pricing_cost_inputs: {
         Row: {
           created_at: string
@@ -6917,6 +7163,22 @@ export type Database = {
           tenant_slug: string
         }[]
       }
+      get_preteen_open_checkins: {
+        Args: { _qr_token: string }
+        Returns: {
+          preteen_id: string
+        }[]
+      }
+      get_preteen_session_by_token: {
+        Args: { _qr_token: string }
+        Returns: {
+          id: string
+          session_date: string
+          status: string
+          tenant_id: string
+          title: string
+        }[]
+      }
       get_public_consent_settings: {
         Args: { _tenant_id: string }
         Returns: {
@@ -7121,6 +7383,15 @@ export type Database = {
           relationship: string
         }[]
       }
+      list_consented_preteens_for_session: {
+        Args: { _qr_token: string }
+        Returns: {
+          first_name: string
+          has_self_pin: boolean
+          id: string
+          last_name: string
+        }[]
+      }
       list_consented_teens_for_session: {
         Args: { _qr_token: string }
         Returns: {
@@ -7128,6 +7399,16 @@ export type Database = {
           has_self_pin: boolean
           id: string
           last_name: string
+        }[]
+      }
+      list_open_preteen_sessions: {
+        Args: { _tenant_slug: string }
+        Returns: {
+          id: string
+          qr_token: string
+          session_date: string
+          start_time: string
+          title: string
         }[]
       }
       list_open_teen_sessions: {
@@ -7197,6 +7478,28 @@ export type Database = {
             }
             Returns: undefined
           }
+      preteen_checkin: {
+        Args: { _pin?: string; _preteen_id: string; _qr_token: string }
+        Returns: Json
+      }
+      preteen_self_approve: { Args: { _enrolment_id: string }; Returns: Json }
+      preteen_self_check_enrolment: {
+        Args: { _enrolment_id: string }
+        Returns: Json
+      }
+      preteen_self_checkin: {
+        Args: { _pin: string; _preteen_id: string; _qr_token: string }
+        Returns: Json
+      }
+      preteen_self_reject: { Args: { _enrolment_id: string }; Returns: Json }
+      preteen_self_request_enrolment: {
+        Args: { _preteen_id: string; _qr_token: string }
+        Returns: Json
+      }
+      preteen_self_set_pin: {
+        Args: { _enrolment_id: string; _pin: string }
+        Returns: Json
+      }
       read_email_batch: {
         Args: { batch_size: number; queue_name: string; vt: number }
         Returns: {
