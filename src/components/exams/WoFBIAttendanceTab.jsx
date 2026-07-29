@@ -177,6 +177,11 @@ export default function WoFBIAttendanceTab() {
 
   const createSession = useMutation({
     mutationFn: async (payload) => {
+      const openAt = payload.scheduled_open_at ? new Date(payload.scheduled_open_at).toISOString() : null;
+      const closeAt = payload.scheduled_close_at ? new Date(payload.scheduled_close_at).toISOString() : null;
+      if (openAt && closeAt && closeAt <= openAt) throw new Error("Auto-close time must be after the auto-open time");
+      // If it is scheduled to open later, start it closed
+      const startsClosed = !!openAt && new Date(openAt) > new Date();
       const { error } = await supabase.from("wofbi_attendance_sessions").insert(
         withTenant({
           course_id: selectedCourseId,
@@ -185,7 +190,9 @@ export default function WoFBIAttendanceTab() {
           session_date: payload.session_date,
           late_after: payload.late_after || null,
           notes: payload.notes || null,
-          status: "open",
+          status: startsClosed ? "closed" : "open",
+          scheduled_open_at: openAt,
+          scheduled_close_at: closeAt,
           created_by: user?.id || null,
         })
       );
@@ -195,7 +202,7 @@ export default function WoFBIAttendanceTab() {
       toast({ title: "Attendance session created" });
       qc.invalidateQueries({ queryKey: ["wofbi-att-sessions"] });
       setNewOpen(false);
-      setForm({ title: "", session_date: new Date().toISOString().slice(0, 10), late_after: "", subject_id: "", notes: "" });
+      setForm({ title: "", session_date: new Date().toISOString().slice(0, 10), late_after: "", subject_id: "", notes: "", scheduled_open_at: "", scheduled_close_at: "" });
     },
     onError: (e) => toast({ title: "Failed to create session", description: e.message, variant: "destructive" }),
   });
@@ -214,9 +221,10 @@ export default function WoFBIAttendanceTab() {
 
   const closeSession = useMutation({
     mutationFn: async (id) => {
+      // Manual close overrides any schedule
       const { error } = await supabase
         .from("wofbi_attendance_sessions")
-        .update({ status: "closed" })
+        .update({ status: "closed", scheduled_open_at: null, scheduled_close_at: null })
         .eq("id", id)
         .eq("tenant_id", tenantId);
       if (error) throw error;
@@ -230,9 +238,10 @@ export default function WoFBIAttendanceTab() {
 
   const reopenSession = useMutation({
     mutationFn: async (id) => {
+      // Manual reopen overrides any schedule
       const { error } = await supabase
         .from("wofbi_attendance_sessions")
-        .update({ status: "open" })
+        .update({ status: "open", scheduled_open_at: null, scheduled_close_at: null })
         .eq("id", id)
         .eq("tenant_id", tenantId);
       if (error) throw error;
@@ -243,6 +252,7 @@ export default function WoFBIAttendanceTab() {
     },
     onError: (e) => toast({ title: "Reopen failed", description: e.message, variant: "destructive" }),
   });
+
 
   const markStatus = useMutation({
     mutationFn: async ({ registration, status, action }) => {
