@@ -699,7 +699,7 @@ export default function MyFamily() {
                     <Button size="sm" variant="outline" onClick={() => {
                       if (active) { toast.error("Release child from care before promoting"); return; }
                       setPromoteChild(c);
-                    }}><ArrowUpCircle className="h-4 w-4 mr-1" /> Promote to teenager</Button>
+                    }}><ArrowUpCircle className="h-4 w-4 mr-1" /> Promote to preteen</Button>
                     <Button size="sm" variant="destructive" onClick={() => {
                       if (active) { toast.error("Release child from care before deleting"); return; }
                       setDeleteChild(c);
