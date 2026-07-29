@@ -1,30 +1,28 @@
 ## Goal
-Make Children Church use three top-level tabs — **Children | Preteens | Teens** — with the existing Check-in, Pickup, All children and Report screens nested inside the Children tab.
 
-```text
-Children Church
- ├── Children ▸ Check-in | Pickup | All children | Report
- ├── Preteens
- └── Teens
-```
+Only students who are fully registered in a Bible School course can submit lecturer feedback — and only for the courses they are registered in.
 
-## Changes (all in `src/pages/ChildrenChurch.jsx`)
+## Definition of "completely registered"
 
-**Top-level tabs**
-- Replace the current flat list with `Children`, `Preteens`, `Teens`.
-- `Children` shows if the user has children's-church access (same `canSeeChildren` rule as today); Preteens and Teens gating is unchanged.
-- Default tab is still the first one the user is allowed to see.
+A row in `course_registrations` for the signed-in member with:
+- `status = 'approved'`, and
+- a `student_number` assigned (registration confirmation completed).
 
-**Nested children tabs**
-- Inside the Children tab, a second `Tabs` row renders Check-in, Pickup, All children, Report with the exact same panels and the same per-tab permissions (`All children` and `Report` stay leader/admin only).
-- Default sub-tab is the first allowed one.
+## Changes
 
-**URL / deep links**
-- `?tab=` drives the top-level tab (`children`, `preteens`, `teens`), `?sub=` drives the children sub-tab.
-- Legacy values `?tab=checkin|pickup|all|report` are mapped to `?tab=children&sub=<value>` so existing links, QR redirects and bookmarks keep working.
+### 1. Rate Lecturer dialog (`src/components/exams/RateLecturerDialog.jsx`)
+- Replace the "all active courses" query with a query on the member's own `course_registrations` (tenant-scoped, approved, student_number not null), joined to `exam_titles` for names.
+- If the member has no qualifying registration: show a clear message ("Lecturer feedback is only available to students with a completed Bible School registration") and disable the Submit button.
+- Course dropdown lists only their registered courses; subject list stays scoped to the chosen course.
 
-**Tour**
-- Keep the `data-tour` attributes (`cc-tab-checkin`, `cc-tab-pickup`, `cc-tab-all`, `cc-tab-report`) on the nested triggers so the existing Children Church tour still finds its targets; add `data-tour="cc-tab-children"` on the new parent trigger.
+### 2. Entry point gating
+- Hide/disable the "Rate the Lecturer" button for members with no completed registration, so the dialog isn't a dead end.
 
-## Not changed
-- Panel logic, queries, RLS, reports, Preteens/Teens screens, public QR routes and sidebar navigation all stay as they are.
+### 3. Server-side enforcement (database)
+- Tighten the `Students can insert own rating` and `Students can update own rating` policies on `lecturer_ratings` so the check also requires an approved registration with a student number for the same tenant, member and `course_id`. This prevents bypassing the UI.
+
+## Technical notes
+
+- Registration lookup keys off `myMember.id` from `useAuth`; users without a linked member record are treated as not registered.
+- Existing one-rating-per-subject upsert behaviour (`tenant_id, subject_id, submitted_by`) is unchanged.
+- All queries keep the explicit `.eq("tenant_id", tenantId)` guard.
