@@ -528,13 +528,13 @@ export default function MyFamily() {
     onError: (e) => toast.error(e.message),
   });
 
-  const promoteToTeen = useMutation({
+  const promoteToPreteen = useMutation({
     mutationFn: async (child) => {
       if (!meMember?.id) throw new Error("Member profile not linked");
-      // 1) Create matching teen record
-      const teenPayload = {
+      // 1) Create matching preteen record
+      const preteenPayload = {
         tenant_id: tenantId,
-        member_id: meMember.id,
+        primary_guardian_member_id: meMember.id,
         first_name: child.first_name,
         last_name: child.last_name,
         date_of_birth: child.date_of_birth || null,
@@ -544,8 +544,12 @@ export default function MyFamily() {
         attendance_consent_at: child.parental_consent_given
           ? (child.parental_consent_at || new Date().toISOString())
           : null,
+        data_processing_consent: !!child.parental_consent_given,
+        data_processing_consent_at: child.parental_consent_given
+          ? (child.parental_consent_at || new Date().toISOString())
+          : null,
       };
-      const { error: tErr } = await supabase.from("teens").insert(teenPayload);
+      const { error: tErr } = await supabase.from("preteens").insert(preteenPayload);
       if (tErr) throw tErr;
 
       // 2) Delete child if no history, else archive
@@ -565,10 +569,10 @@ export default function MyFamily() {
       }
     },
     onSuccess: () => {
-      toast.success("Promoted to teenager");
+      toast.success("Promoted to preteen");
       setPromoteChild(null);
       qc.invalidateQueries({ queryKey: ["my-children"] });
-      qc.invalidateQueries({ queryKey: ["my-teens"] });
+      qc.invalidateQueries({ queryKey: ["my-preteens"] });
     },
     onError: (e) => toast.error(e.message),
   });
