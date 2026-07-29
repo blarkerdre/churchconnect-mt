@@ -23,6 +23,7 @@ import HelpButton from "@/components/tour/HelpButton";
 import { useTour } from "@/components/tour/TourProvider";
 import { useTourCompletion } from "@/hooks/useTourCompletion";
 import TeensSection from "@/components/teens/TeensSection";
+import PreteensSection from "@/components/preteens/PreteensSection";
 
 const DEFAULT_AGE_GROUPS = ["Nursery", "Toddler", "Primary", "Pre-Teen"];
 
