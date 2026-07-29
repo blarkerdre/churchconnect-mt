@@ -18,7 +18,7 @@ import { format } from "date-fns";
 
 
 
-function PrepreteenForm({ open, onOpenChange, preteen, memberId, onSaved }) {
+function PreteenForm({ open, onOpenChange, preteen, memberId, onSaved }) {
   const { tenantId, withTenant } = useTenantQuery();
   const { user } = useAuth();
   const [form, setForm] = useState(() => ({
@@ -105,7 +105,7 @@ function PrepreteenForm({ open, onOpenChange, preteen, memberId, onSaved }) {
       <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{preteen?.id ? "Edit preteen" : "Add preteen"}</DialogTitle>
-          <DialogDescription>Prepreteens can check in on premises by scanning the church QR.</DialogDescription>
+          <DialogDescription>Preteens can check in on premises by scanning the church QR.</DialogDescription>
         </DialogHeader>
         <div className="space-y-3">
           <div className="grid grid-cols-2 gap-2">
@@ -176,7 +176,7 @@ function PrepreteenForm({ open, onOpenChange, preteen, memberId, onSaved }) {
                 onChange={(e) => setForm({ ...form, attendance_consent: e.target.checked })}
               />
               <span>
-                <span className="font-medium">I give parental consent</span> for my preteen to check in and out of on-premises Prepreteens attendance sessions. <span className="text-destructive">*</span>
+                <span className="font-medium">I give parental consent</span> for my preteen to check in and out of on-premises Preteens attendance sessions. <span className="text-destructive">*</span>
               </span>
             </label>
             {preteen?.attendance_consent && preteen?.attendance_consent_at && (
@@ -201,12 +201,12 @@ function PrepreteenForm({ open, onOpenChange, preteen, memberId, onSaved }) {
   );
 }
 
-export default function PrepreteensSection({ memberId }) {
+export default function PreteensSection({ memberId }) {
   const { tenantId } = useTenantQuery();
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
-  const [editPrepreteen, setEditPrepreteen] = useState(null);
-  const [deletePrepreteen, setDeletePrepreteen] = useState(null);
+  const [editPreteen, setEditPreteen] = useState(null);
+  const [deletePreteen, setDeletePreteen] = useState(null);
 
   const { data: preteens = [], refetch } = useQuery({
     queryKey: ["my-preteens", tenantId, memberId],
@@ -221,12 +221,12 @@ export default function PrepreteensSection({ memberId }) {
     },
   });
 
-  const removePrepreteen = useMutation({
+  const removePreteen = useMutation({
     mutationFn: async (t) => {
       const { error } = await supabase.from("preteens").delete().eq("id", t.id).eq("tenant_id", tenantId);
       if (error) throw error;
     },
-    onSuccess: () => { toast.success("Prepreteen removed"); setDeletePrepreteen(null); qc.invalidateQueries({ queryKey: ["my-preteens"] }); },
+    onSuccess: () => { toast.success("Preteen removed"); setDeletePreteen(null); qc.invalidateQueries({ queryKey: ["my-preteens"] }); },
     onError: (e) => toast.error(e.message),
   });
 
@@ -234,10 +234,10 @@ export default function PrepreteensSection({ memberId }) {
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-display font-semibold flex items-center gap-2"><User className="h-5 w-5 text-primary" /> Prepreteenagers</h2>
+          <h2 className="text-lg font-display font-semibold flex items-center gap-2"><User className="h-5 w-5 text-primary" /> Preteenagers</h2>
           <p className="text-xs text-muted-foreground">Register your preteens so they can check in on premises.</p>
         </div>
-        <Button size="sm" onClick={() => { setEditPrepreteen(null); setOpen(true); }}>
+        <Button size="sm" onClick={() => { setEditPreteen(null); setOpen(true); }}>
           <Plus className="h-4 w-4 mr-1" /> Add preteen
         </Button>
       </div>
@@ -269,28 +269,28 @@ export default function PrepreteensSection({ memberId }) {
                 </div>
               </div>
               <div className="flex gap-1">
-                <Button size="sm" variant="outline" onClick={() => { setEditPrepreteen(t); setOpen(true); }}>Edit</Button>
-                <Button size="sm" variant="destructive" onClick={() => setDeletePrepreteen(t)}><Trash2 className="h-4 w-4" /></Button>
+                <Button size="sm" variant="outline" onClick={() => { setEditPreteen(t); setOpen(true); }}>Edit</Button>
+                <Button size="sm" variant="destructive" onClick={() => setDeletePreteen(t)}><Trash2 className="h-4 w-4" /></Button>
               </div>
             </CardContent>
           </Card>
         ))
       )}
 
-      {memberId && <PrepreteenForm open={open} onOpenChange={setOpen} preteen={editPrepreteen} memberId={memberId} onSaved={refetch} />}
+      {memberId && <PreteenForm open={open} onOpenChange={setOpen} preteen={editPreteen} memberId={memberId} onSaved={refetch} />}
 
-      <AlertDialog open={!!deletePrepreteen} onOpenChange={(o) => !o && setDeletePrepreteen(null)}>
+      <AlertDialog open={!!deletePreteen} onOpenChange={(o) => !o && setDeletePreteen(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete {deletePrepreteen?.first_name} {deletePrepreteen?.last_name}?</AlertDialogTitle>
+            <AlertDialogTitle>Delete {deletePreteen?.first_name} {deletePreteen?.last_name}?</AlertDialogTitle>
             <AlertDialogDescription>This also removes their attendance records.</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={(e) => { e.preventDefault(); removePrepreteen.mutate(deletePrepreteen); }}
-              disabled={removePrepreteen.isPending}
+              onClick={(e) => { e.preventDefault(); removePreteen.mutate(deletePreteen); }}
+              disabled={removePreteen.isPending}
             >Delete</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

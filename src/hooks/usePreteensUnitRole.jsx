@@ -6,11 +6,11 @@ import { useTenantQuery } from "@/hooks/useTenantQuery";
 const PRETEENS_UNIT_NAMES = ["preteens", "preteen", "preteenagers", "youth", "preteens ministry", "preteen ministry", "preteens church", "preteen church"];
 
 /**
- * Returns { isLeader, isMember, isLoading } for the Prepreteens church unit.
- * - isLeader: user is in unit_leader_assignments for a Prepreteens unit
- * - isMember: user's member row lists a Prepreteens unit in church_unit, OR they are a leader
+ * Returns { isLeader, isMember, isLoading } for the Preteens church unit.
+ * - isLeader: user is in unit_leader_assignments for a Preteens unit
+ * - isMember: user's member row lists a Preteens unit in church_unit, OR they are a leader
  */
-export function usePrepreteensUnitRole() {
+export function usePreteensUnitRole() {
   const { user } = useAuth();
   const { tenantId } = useTenantQuery();
 

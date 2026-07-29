@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
-import { usePrepreteensUnitRole } from "@/hooks/usePrepreteensUnitRole";
+import { usePreteensUnitRole } from "@/hooks/usePreteensUnitRole";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,7 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { Plus, QrCode, Calendar, LogIn, LogOut, Users, Pencil, Trash2, FileText, Lock, ShieldAlert, ShieldCheck, KeyRound, BarChart3, Search, UserRound, Download } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import PrepreteensPersistentQRDialog from "@/components/preteens/PrepreteensPersistentQRDialog";
+import PreteensPersistentQRDialog from "@/components/preteens/PreteensPersistentQRDialog";
 
 const SESSION_TYPES = [
   "Sunday Service",
@@ -129,7 +129,7 @@ function SessionFormDialog({ open, onOpenChange, session, onSaved }) {
   const save = useMutation({
     mutationFn: async () => {
       if (!form.session_type || !form.session_date) throw new Error("Type and date required");
-      const title = `${form.session_type} — Prepreteens · ${format(new Date(form.session_date), "d MMM yyyy")}`;
+      const title = `${form.session_type} — Preteens · ${format(new Date(form.session_date), "d MMM yyyy")}`;
       const payload = {
         title,
         session_type: form.session_type,
@@ -169,7 +169,7 @@ function SessionFormDialog({ open, onOpenChange, session, onSaved }) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>{isEdit ? "Edit Prepreteens Session" : "New Prepreteens Session"}</DialogTitle>
+          <DialogTitle>{isEdit ? "Edit Preteens Session" : "New Preteens Session"}</DialogTitle>
         </DialogHeader>
         <div className="space-y-3">
           <div>
@@ -541,7 +541,7 @@ function CumulativeReportDialog({ open, onOpenChange }) {
         ].join(","));
       });
     } else {
-      header = ["Date", "Session", "Type", "Prepreteen", "In", "Out", "Duration (min)", "Status", "Source", "Signed in by", "Signed out by", "Note"];
+      header = ["Date", "Session", "Type", "Preteen", "In", "Out", "Duration (min)", "Status", "Source", "Signed in by", "Signed out by", "Note"];
       lines = [header.join(",")];
       filtered.forEach((r) => {
         const name = `${r.preteens?.first_name || ""} ${r.preteens?.last_name || ""}`.trim();
@@ -573,7 +573,7 @@ function CumulativeReportDialog({ open, onOpenChange }) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2"><BarChart3 className="h-5 w-5 text-primary" /> Cumulative Prepreteens Attendance Report</DialogTitle>
+          <DialogTitle className="flex items-center gap-2"><BarChart3 className="h-5 w-5 text-primary" /> Cumulative Preteens Attendance Report</DialogTitle>
         </DialogHeader>
 
         <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
@@ -666,7 +666,7 @@ function CumulativeReportDialog({ open, onOpenChange }) {
                 <tr className="text-left">
                   <th className="p-2">Date</th>
                   <th className="p-2">Session</th>
-                  <th className="p-2">Prepreteen</th>
+                  <th className="p-2">Preteen</th>
                   <th className="p-2">In</th>
                   <th className="p-2">Out</th>
                   <th className="p-2">Duration</th>
@@ -722,7 +722,7 @@ function ageFrom(dob) {
   return age;
 }
 
-function RegisteredPrepreteensDialog({ open, onOpenChange }) {
+function RegisteredPreteensDialog({ open, onOpenChange }) {
   const { tenantId } = useTenantQuery();
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("all"); // all | consent | no_consent | inactive
@@ -787,7 +787,7 @@ function RegisteredPrepreteensDialog({ open, onOpenChange }) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] w-[calc(100vw-1rem)] flex flex-col">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2"><UserRound className="h-5 w-5 text-primary" /> Registered Prepreteens</DialogTitle>
+          <DialogTitle className="flex items-center gap-2"><UserRound className="h-5 w-5 text-primary" /> Registered Preteens</DialogTitle>
         </DialogHeader>
 
         <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
@@ -878,11 +878,11 @@ function RegisteredPrepreteensDialog({ open, onOpenChange }) {
   );
 }
 
-export default function PrepreteensAttendance() {
+export default function PreteensAttendance() {
   const { tenantId } = useTenantQuery();
   const { user } = useAuth();
   const qc = useQueryClient();
-  const { isLeader, isMember } = usePrepreteensUnitRole();
+  const { isLeader, isMember } = usePreteensUnitRole();
 
   // Admin fallback: check via app-level admin
   const { data: isAdminData } = useQuery({
@@ -940,7 +940,7 @@ export default function PrepreteensAttendance() {
     <div className="p-4 space-y-4 max-w-3xl mx-auto">
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <div>
-          <h1 className="text-2xl font-display font-bold flex items-center gap-2"><Users className="h-6 w-6 text-primary" /> Prepreteens Attendance</h1>
+          <h1 className="text-2xl font-display font-bold flex items-center gap-2"><Users className="h-6 w-6 text-primary" /> Preteens Attendance</h1>
           <p className="text-sm text-muted-foreground">On-premise check-in / check-out for registered preteens.</p>
         </div>
         <div className="flex gap-2 flex-wrap">
@@ -967,7 +967,7 @@ export default function PrepreteensAttendance() {
 
       {!canWrite && (
         <Card><CardContent className="p-6 text-sm text-muted-foreground text-center">
-          Only Prepreteens unit members and leaders can manage preteens attendance sessions.
+          Only Preteens unit members and leaders can manage preteens attendance sessions.
         </CardContent></Card>
       )}
 
@@ -1029,7 +1029,7 @@ export default function PrepreteensAttendance() {
           onSaved={() => { refetch(); qc.invalidateQueries({ queryKey: ["preteen-sessions"] }); setFormSession(null); }}
         />
       )}
-      <PrepreteensPersistentQRDialog open={qrOpen} onOpenChange={setQrOpen} />
+      <PreteensPersistentQRDialog open={qrOpen} onOpenChange={setQrOpen} />
       {rosterSession && (
         <RosterDialog
           open={!!rosterSession}
@@ -1049,7 +1049,7 @@ export default function PrepreteensAttendance() {
         <CumulativeReportDialog open={cumulativeOpen} onOpenChange={setCumulativeOpen} />
       )}
       {registeredOpen && (
-        <RegisteredPrepreteensDialog open={registeredOpen} onOpenChange={setRegisteredOpen} />
+        <RegisteredPreteensDialog open={registeredOpen} onOpenChange={setRegisteredOpen} />
       )}
 
 

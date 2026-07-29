@@ -32,7 +32,7 @@ const ERROR_MESSAGES = {
   invalid_token: "This check-in link is invalid.",
   session_closed: "This session is closed.",
   invalid_preteen: "That preteen isn't registered here.",
-  no_consent: "Parental consent required. A parent needs to open My Family → Prepreteenagers, edit this preteen, tick “I give parental consent”, and Save. Then try again.",
+  no_consent: "Parental consent required. A parent needs to open My Family → Preteenagers, edit this preteen, tick “I give parental consent”, and Save. Then try again.",
   not_authorised: "You aren't authorised to check this preteen in. Ask a parent to sign in, or enter the preteen's PIN.",
   not_enrolled: "You haven't set up self check-in yet. Tap 'I'm a preteen' to enroll.",
   bad_pin: "That PIN doesn't match. Try again.",
@@ -43,19 +43,19 @@ const ERROR_MESSAGES = {
 };
 
 // mode: 'choose' | 'parent' | 'parent-pin' | 'self-pick' | 'self-pin' | 'self-wait' | 'self-setpin'
-export default function PrepreteensCheckin() {
+export default function PreteensCheckin() {
   const { token } = useParams();
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
 
   const [session, setSession] = useState(null);
-  const [preteens, setPrepreteens] = useState([]); // parent view (full)
-  const [publicPrepreteens, setPublicPrepreteens] = useState([]); // self view (id, name, has_self_pin)
+  const [preteens, setPreteens] = useState([]); // parent view (full)
+  const [publicPreteens, setPublicPreteens] = useState([]); // self view (id, name, has_self_pin)
   const [openIds, setOpenIds] = useState(() => new Set());
   const [loading, setLoading] = useState(true);
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
-  const [pendingPrepreteen, setPendingPrepreteen] = useState(null);
+  const [pendingPreteen, setPendingPreteen] = useState(null);
   const [pin, setPin] = useState("");
   const [busy, setBusy] = useState(false);
   const [mode, setMode] = useState("choose");
@@ -80,7 +80,7 @@ export default function PrepreteensCheckin() {
   const [magicError, setMagicError] = useState(null);
 
   // self-enrolment
-  const [selfPrepreteen, setSelfPrepreteen] = useState(null); // { id, first_name, last_name, has_self_pin }
+  const [selfPreteen, setSelfPreteen] = useState(null); // { id, first_name, last_name, has_self_pin }
   const [enrolmentId, setEnrolmentId] = useState(null);
   const [enrolStatus, setEnrolStatus] = useState(null); // pending / approved / rejected / expired / used
   const [newPin, setNewPin] = useState("");
@@ -110,7 +110,7 @@ export default function PrepreteensCheckin() {
 
       // Fetch public preteen list for self check-in
       const { data: pt } = await supabase.rpc("list_consented_preteens_for_session", { _qr_token: token });
-      if (active) setPublicPrepreteens(pt || []);
+      if (active) setPublicPreteens(pt || []);
 
       if (user) {
         const { data: preteensData } = await supabase
@@ -119,7 +119,7 @@ export default function PrepreteensCheckin() {
           .eq("tenant_id", s.tenant_id)
           .eq("is_active", true)
           .order("first_name");
-        if (active) setPrepreteens(preteensData || []);
+        if (active) setPreteens(preteensData || []);
       }
       setLoading(false);
     })();
@@ -159,7 +159,7 @@ export default function PrepreteensCheckin() {
     });
     setBusy(false);
     if (rpcErr) { setError(rpcErr.message); return; }
-    if (data?.ok) { setResult(data); setPendingPrepreteen(null); setPin(""); refreshOpenIds(); }
+    if (data?.ok) { setResult(data); setPendingPreteen(null); setPin(""); refreshOpenIds(); }
     else { setError(data?.error || "unknown"); }
   };
 
@@ -187,7 +187,7 @@ export default function PrepreteensCheckin() {
     setBusy(false);
     if (rpcErr) { setError(rpcErr.message); return; }
     if (!data?.ok) { setError(data?.error || "unknown"); return; }
-    setSelfPrepreteen(preteen);
+    setSelfPreteen(preteen);
     setEnrolmentId(data.enrolment_id);
     setEnrolStatus("pending");
     setMode("self-wait");
@@ -209,12 +209,12 @@ export default function PrepreteensCheckin() {
       return;
     }
     // Immediately check them in
-    await doSelfCheckin(selfPrepreteen.id, newPin);
+    await doSelfCheckin(selfPreteen.id, newPin);
     setBusy(false);
   };
 
   const resetSelfFlow = () => {
-    setSelfPrepreteen(null); setEnrolmentId(null); setEnrolStatus(null);
+    setSelfPreteen(null); setEnrolmentId(null); setEnrolStatus(null);
     setNewPin(""); setNewPin2(""); setPin("");
   };
 
@@ -230,7 +230,7 @@ export default function PrepreteensCheckin() {
     <div className="min-h-screen flex items-center justify-center p-6 bg-slate-50">
       <Card className="w-full max-w-sm">
         <CardHeader>
-          <CardTitle className="text-center">Prepreteens Check-in</CardTitle>
+          <CardTitle className="text-center">Preteens Check-in</CardTitle>
           {session && (
             <p className="text-center text-xs text-muted-foreground">
               {session.title} · {session.session_date}
@@ -262,7 +262,7 @@ export default function PrepreteensCheckin() {
                     <p className="text-sm text-muted-foreground">{result.preteen_name}</p>
                     <p className="text-xs text-muted-foreground mt-1">{sub}</p>
                   </div>
-                  <Button variant="outline" className="w-full" onClick={() => { setResult(null); setPendingPrepreteen(null); resetSelfFlow(); setMode("choose"); }}>
+                  <Button variant="outline" className="w-full" onClick={() => { setResult(null); setPendingPreteen(null); resetSelfFlow(); setMode("choose"); }}>
                     Back
                   </Button>
                   <Button className="w-full" onClick={handleClose}>Close</Button>
@@ -293,7 +293,7 @@ export default function PrepreteensCheckin() {
                     <p className="mt-2 text-sm">Time on premises: <span className="font-semibold">{fmtDuration(result.duration_minutes)}</span></p>
                   )}
                 </div>
-                <Button variant="outline" className="w-full" onClick={() => { setResult(null); setPendingPrepreteen(null); resetSelfFlow(); setMode("choose"); }}>
+                <Button variant="outline" className="w-full" onClick={() => { setResult(null); setPendingPreteen(null); resetSelfFlow(); setMode("choose"); }}>
                   Check in another
                 </Button>
                 <Button className="w-full" onClick={handleClose}>Close</Button>
@@ -306,7 +306,7 @@ export default function PrepreteensCheckin() {
               <ShieldAlert className="h-12 w-12 mx-auto text-amber-500" />
               <p className="text-base font-semibold">Parental consent required</p>
               <p className="text-sm text-muted-foreground">
-                A parent needs to open <span className="font-medium">My Family → Prepreteenagers</span>, edit this preteen, tick
+                A parent needs to open <span className="font-medium">My Family → Preteenagers</span>, edit this preteen, tick
                 {" "}<span className="font-medium">“I give parental consent”</span>, and Save. Then try again.
               </p>
               <div className="flex gap-2">
@@ -389,22 +389,22 @@ export default function PrepreteensCheckin() {
             <div className="space-y-3 text-left">
               <p className="text-sm text-center text-muted-foreground">Enter the preteen's parent-set PIN.</p>
               <div className="space-y-1.5">
-                <Label>Prepreteen</Label>
+                <Label>Preteen</Label>
                 <select className="w-full border rounded-md h-10 px-3 text-sm"
-                  value={pendingPrepreteen?.id || ""}
+                  value={pendingPreteen?.id || ""}
                   onChange={(e) => {
-                    const t = publicPrepreteens.find((x) => x.id === e.target.value);
-                    setPendingPrepreteen(t ? { id: t.id } : null);
+                    const t = publicPreteens.find((x) => x.id === e.target.value);
+                    setPendingPreteen(t ? { id: t.id } : null);
                   }}>
                   <option value="">Select a preteen…</option>
-                  {publicPrepreteens.map((t) => (
+                  {publicPreteens.map((t) => (
                     <option key={t.id} value={t.id}>{t.first_name} {t.last_name}</option>
                   ))}
                 </select>
               </div>
-              {pendingPrepreteen?.id && (
-                <p aria-live="polite" className={`text-xs rounded-md px-2 py-1.5 ${isCheckedIn(pendingPrepreteen.id) ? "bg-green-50 text-green-800 border border-green-200" : "bg-slate-50 text-slate-700 border border-slate-200"}`}>
-                  {isCheckedIn(pendingPrepreteen.id)
+              {pendingPreteen?.id && (
+                <p aria-live="polite" className={`text-xs rounded-md px-2 py-1.5 ${isCheckedIn(pendingPreteen.id) ? "bg-green-50 text-green-800 border border-green-200" : "bg-slate-50 text-slate-700 border border-slate-200"}`}>
+                  {isCheckedIn(pendingPreteen.id)
                     ? "Currently checked in — entering PIN will check them out."
                     : "Not checked in yet — entering PIN will check them in."}
                 </p>
@@ -415,11 +415,11 @@ export default function PrepreteensCheckin() {
                   onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))} placeholder="••••" />
               </div>
               <div className="flex gap-2">
-                <Button variant="outline" className="flex-1" onClick={() => { setPendingPrepreteen(null); setPin(""); setMode("choose"); }}>Back</Button>
-                <Button className="flex-1" variant={isCheckedIn(pendingPrepreteen?.id) ? "destructive" : "default"}
-                  disabled={busy || !pendingPrepreteen?.id || pin.length < 4}
-                  onClick={() => doCheckin(pendingPrepreteen.id, pin)}>
-                  {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : (isCheckedIn(pendingPrepreteen?.id) ? "Check out" : "Check in")}
+                <Button variant="outline" className="flex-1" onClick={() => { setPendingPreteen(null); setPin(""); setMode("choose"); }}>Back</Button>
+                <Button className="flex-1" variant={isCheckedIn(pendingPreteen?.id) ? "destructive" : "default"}
+                  disabled={busy || !pendingPreteen?.id || pin.length < 4}
+                  onClick={() => doCheckin(pendingPreteen.id, pin)}>
+                  {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : (isCheckedIn(pendingPreteen?.id) ? "Check out" : "Check in")}
                 </Button>
               </div>
             </div>
@@ -430,22 +430,22 @@ export default function PrepreteensCheckin() {
             <div className="space-y-3 text-left">
               <p className="text-sm text-center text-muted-foreground">Tap your name.</p>
               <div className="space-y-2 max-h-64 overflow-y-auto">
-                {publicPrepreteens.length === 0 && (
+                {publicPreteens.length === 0 && (
                   <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-left">
                     <p className="text-xs font-semibold text-amber-900">No preteens are eligible to check in yet.</p>
                     <p className="text-[11px] text-amber-800 mt-1">
-                      Prepreteens only appear here after a parent gives attendance consent in
-                      {" "}<span className="font-medium">My Family → Prepreteenagers</span>.
+                      Preteens only appear here after a parent gives attendance consent in
+                      {" "}<span className="font-medium">My Family → Preteenagers</span>.
                     </p>
                   </div>
                 )}
-                {publicPrepreteens.map((t) => {
+                {publicPreteens.map((t) => {
                   const inNow = isCheckedIn(t.id);
                   return (
                     <button key={t.id} type="button"
                       className="w-full flex items-center gap-3 border rounded-lg p-3 hover:bg-muted text-left"
                       onClick={() => {
-                        if (t.has_self_pin) { setSelfPrepreteen(t); setMode("self-pin"); }
+                        if (t.has_self_pin) { setSelfPreteen(t); setMode("self-pin"); }
                         else { requestEnrolment(t); }
                       }}>
                       <User className="h-5 w-5 text-primary shrink-0" />
@@ -463,11 +463,11 @@ export default function PrepreteensCheckin() {
           )}
 
           {/* Self: PIN entry (already enrolled) */}
-          {!result && !error && mode === "self-pin" && selfPrepreteen && (
+          {!result && !error && mode === "self-pin" && selfPreteen && (
             <div className="space-y-3 text-left">
-              <p className="text-sm text-center">Hi {selfPrepreteen.first_name}! Enter your PIN.</p>
-              <p aria-live="polite" className={`text-xs rounded-md px-2 py-1.5 ${isCheckedIn(selfPrepreteen.id) ? "bg-green-50 text-green-800 border border-green-200" : "bg-slate-50 text-slate-700 border border-slate-200"}`}>
-                {isCheckedIn(selfPrepreteen.id)
+              <p className="text-sm text-center">Hi {selfPreteen.first_name}! Enter your PIN.</p>
+              <p aria-live="polite" className={`text-xs rounded-md px-2 py-1.5 ${isCheckedIn(selfPreteen.id) ? "bg-green-50 text-green-800 border border-green-200" : "bg-slate-50 text-slate-700 border border-slate-200"}`}>
+                {isCheckedIn(selfPreteen.id)
                   ? "You're currently checked in — entering your PIN will check you out."
                   : "You're not checked in yet — entering your PIN will check you in."}
               </p>
@@ -478,17 +478,17 @@ export default function PrepreteensCheckin() {
               </div>
               <div className="flex gap-2">
                 <Button variant="outline" className="flex-1" onClick={() => { resetSelfFlow(); setMode("self-pick"); }}>Back</Button>
-                <Button className="flex-1" variant={isCheckedIn(selfPrepreteen.id) ? "destructive" : "default"}
+                <Button className="flex-1" variant={isCheckedIn(selfPreteen.id) ? "destructive" : "default"}
                   disabled={busy || pin.length < 4}
-                  onClick={() => doSelfCheckin(selfPrepreteen.id, pin)}>
-                  {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : (isCheckedIn(selfPrepreteen.id) ? "Check out" : "Check in")}
+                  onClick={() => doSelfCheckin(selfPreteen.id, pin)}>
+                  {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : (isCheckedIn(selfPreteen.id) ? "Check out" : "Check in")}
                 </Button>
               </div>
             </div>
           )}
 
           {/* Self: waiting for worker approval */}
-          {!result && !error && mode === "self-wait" && selfPrepreteen && (
+          {!result && !error && mode === "self-wait" && selfPreteen && (
             <div className="space-y-3">
               {enrolStatus === "approved" || enrolStatus === "used" ? (
                 <>
@@ -524,11 +524,11 @@ export default function PrepreteensCheckin() {
               ) : (
                 <>
                   <Loader2 className="h-12 w-12 mx-auto text-primary animate-spin" />
-                  <p className="text-sm font-semibold">Ask a Prepreteens Church worker</p>
+                  <p className="text-sm font-semibold">Ask a Preteens Church worker</p>
                   <p className="text-xs text-muted-foreground">
                     Show this screen to a worker. They'll tap <span className="font-medium">Approve</span> on their device.
                   </p>
-                  <p className="text-sm">{selfPrepreteen.first_name} {selfPrepreteen.last_name}</p>
+                  <p className="text-sm">{selfPreteen.first_name} {selfPreteen.last_name}</p>
                   <Button variant="ghost" size="sm" className="w-full" onClick={() => { resetSelfFlow(); setMode("self-pick"); }}>Cancel</Button>
                 </>
               )}
@@ -536,7 +536,7 @@ export default function PrepreteensCheckin() {
           )}
 
           {/* Signed-in guardian: existing flow */}
-          {!result && !error && user && !pendingPrepreteen && (
+          {!result && !error && user && !pendingPreteen && (
             <>
               <p className="text-sm text-muted-foreground">Tap <span className="font-medium">Check in</span> to sign a preteen in, or <span className="font-medium">Check out</span> when they're leaving.</p>
               {preteens.some((t) => !t.attendance_consent) && (
@@ -593,24 +593,24 @@ export default function PrepreteensCheckin() {
               <p className="text-[11px] text-muted-foreground">
                 Not the parent? Ask them to sign in, or enter this preteen's PIN below.
               </p>
-              <Button variant="outline" size="sm" className="w-full" onClick={() => setPendingPrepreteen({ id: "", first_name: "" })}>
+              <Button variant="outline" size="sm" className="w-full" onClick={() => setPendingPreteen({ id: "", first_name: "" })}>
                 Use PIN instead
               </Button>
             </>
           )}
 
-          {!result && !error && user && pendingPrepreteen && (
+          {!result && !error && user && pendingPreteen && (
             <div className="space-y-3 text-left">
               <p className="text-sm text-center text-muted-foreground">
                 Ask a parent for the preteen's PIN, then pick the preteen.
               </p>
               <div className="space-y-1.5">
-                <Label>Prepreteen</Label>
+                <Label>Preteen</Label>
                 <select className="w-full border rounded-md h-10 px-3 text-sm"
-                  value={pendingPrepreteen.id}
+                  value={pendingPreteen.id}
                   onChange={(e) => {
                     const t = preteens.find((x) => x.id === e.target.value);
-                    setPendingPrepreteen(t ? { id: t.id, first_name: t.first_name } : { id: "", first_name: "" });
+                    setPendingPreteen(t ? { id: t.id, first_name: t.first_name } : { id: "", first_name: "" });
                   }}>
                   <option value="">Select a preteen…</option>
                   {preteens.filter((t) => !!t.access_pin_hash).map((t) => (
@@ -618,9 +618,9 @@ export default function PrepreteensCheckin() {
                   ))}
                 </select>
               </div>
-              {pendingPrepreteen.id && (
-                <p aria-live="polite" className={`text-xs rounded-md px-2 py-1.5 ${isCheckedIn(pendingPrepreteen.id) ? "bg-green-50 text-green-800 border border-green-200" : "bg-slate-50 text-slate-700 border border-slate-200"}`}>
-                  {isCheckedIn(pendingPrepreteen.id)
+              {pendingPreteen.id && (
+                <p aria-live="polite" className={`text-xs rounded-md px-2 py-1.5 ${isCheckedIn(pendingPreteen.id) ? "bg-green-50 text-green-800 border border-green-200" : "bg-slate-50 text-slate-700 border border-slate-200"}`}>
+                  {isCheckedIn(pendingPreteen.id)
                     ? "Currently checked in — entering PIN will check them out."
                     : "Not checked in yet — entering PIN will check them in."}
                 </p>
@@ -631,11 +631,11 @@ export default function PrepreteensCheckin() {
                   onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))} placeholder="••••" />
               </div>
               <div className="flex gap-2">
-                <Button variant="outline" className="flex-1" onClick={() => { setPendingPrepreteen(null); setPin(""); }}>Cancel</Button>
-                <Button className="flex-1" variant={isCheckedIn(pendingPrepreteen.id) ? "destructive" : "default"}
-                  disabled={busy || !pendingPrepreteen.id || pin.length < 4}
-                  onClick={() => doCheckin(pendingPrepreteen.id, pin)}>
-                  {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : (isCheckedIn(pendingPrepreteen.id) ? "Check out" : "Check in")}
+                <Button variant="outline" className="flex-1" onClick={() => { setPendingPreteen(null); setPin(""); }}>Cancel</Button>
+                <Button className="flex-1" variant={isCheckedIn(pendingPreteen.id) ? "destructive" : "default"}
+                  disabled={busy || !pendingPreteen.id || pin.length < 4}
+                  onClick={() => doCheckin(pendingPreteen.id, pin)}>
+                  {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : (isCheckedIn(pendingPreteen.id) ? "Check out" : "Check in")}
                 </Button>
               </div>
             </div>
