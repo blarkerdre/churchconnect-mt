@@ -227,7 +227,8 @@ export default function RateLecturerDialog({ open, onOpenChange }) {
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
 
-  const isLoading = lecLoading;
+  const isLoading = lecLoading || coursesLoading;
+  const notRegistered = !isLoading && courses.length === 0;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -243,9 +244,14 @@ export default function RateLecturerDialog({ open, onOpenChange }) {
 
         {isLoading ? (
           <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
+        ) : notRegistered ? (
+          <p className="text-sm text-muted-foreground text-center py-6">
+            Lecturer feedback is only available to students with a completed Bible School registration.
+          </p>
         ) : lecturers.length === 0 ? (
           <p className="text-sm text-muted-foreground text-center py-6">No lecturers are available for rating yet.</p>
         ) : (
+
           <div className="space-y-5">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
