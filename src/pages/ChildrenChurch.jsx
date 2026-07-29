@@ -25,7 +25,7 @@ import HelpButton from "@/components/tour/HelpButton";
 import { useTour } from "@/components/tour/TourProvider";
 import { useTourCompletion } from "@/hooks/useTourCompletion";
 
-const DEFAULT_AGE_GROUPS = ["Nursery", "Toddler", "Primary", "Pre-Teen"];
+const DEFAULT_AGE_GROUPS = ["2-4 years old", "5-7 years old", "8-9 years old"];
 
 const PreteensAttendance = lazy(() => import("@/pages/PreteensAttendance"));
 const TeensAttendance = lazy(() => import("@/pages/TeensAttendance"));
@@ -337,7 +337,10 @@ function WalkInRegisterDialog({ open, onOpenChange, tenantId, onRegistered }) {
 
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <p className="text-sm font-semibold">Early Years</p>
+              <div>
+                <p className="text-sm font-semibold">Early Years</p>
+                <p className="text-[11px] text-muted-foreground">Ages 2-9: 2-4, 5-7 and 8-9 years old. Ages 10-12 go under Preteens, 13-17 under Teens.</p>
+              </div>
               <Button type="button" size="sm" variant="ghost" onClick={addChild}><Plus className="h-3.5 w-3.5 mr-1" /> Add child</Button>
             </div>
             {children.map((c, i) => (
@@ -1350,6 +1353,7 @@ export default function ChildrenChurch() {
 
         {canSeeChildren && (
           <TabsContent value="children">
+            <p className="text-xs text-muted-foreground mb-2">Early Years: ages 2-9 (2-4, 5-7 and 8-9 years old).</p>
             <Tabs value={activeSub} onValueChange={setActiveSub}>
               <TabsList className="flex flex-nowrap h-auto gap-1 overflow-x-auto w-full sm:w-auto justify-start">
                 <TabsTrigger value="checkin" data-tour="cc-tab-checkin" className="shrink-0">Check-in</TabsTrigger>
@@ -1367,11 +1371,13 @@ export default function ChildrenChurch() {
         )}
         {canSeePreteens && (
           <TabsContent value="preteens">
+            <p className="text-xs text-muted-foreground mb-2">Preteens: ages 10-12.</p>
             <Suspense fallback={<TabLoading />}><PreteensAttendance embedded /></Suspense>
           </TabsContent>
         )}
         {canSeeTeens && (
           <TabsContent value="teens">
+            <p className="text-xs text-muted-foreground mb-2">Teenagers: ages 13-17.</p>
             <Suspense fallback={<TabLoading />}><TeensAttendance embedded /></Suspense>
           </TabsContent>
         )}

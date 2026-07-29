@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Trash2, User, KeyRound, ShieldCheck, ShieldAlert } from "lucide-react";
+import { Plus, Trash2, User, KeyRound, ShieldCheck, ShieldAlert, ArrowUpCircle } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { format } from "date-fns";
@@ -207,6 +207,7 @@ export default function PreteensSection({ memberId }) {
   const [open, setOpen] = useState(false);
   const [editPreteen, setEditPreteen] = useState(null);
   const [deletePreteen, setDeletePreteen] = useState(null);
+  const [promotePreteen, setPromotePreteen] = useState(null);
 
   const { data: preteens = [], refetch } = useQuery({
     queryKey: ["my-preteens", tenantId, memberId],
@@ -215,6 +216,7 @@ export default function PreteensSection({ memberId }) {
       const { data, error } = await supabase.from("preteens").select("*")
         .eq("tenant_id", tenantId)
         .eq("primary_guardian_member_id", memberId)
+        .neq("is_active", false)
         .order("first_name");
       if (error) throw error;
       return data || [];
@@ -230,12 +232,61 @@ export default function PreteensSection({ memberId }) {
     onError: (e) => toast.error(e.message),
   });
 
+  const promoteToTeen = useMutation({
+    mutationFn: async (p) => {
+      // Block promotion while the preteen is currently checked in.
+      const { count: openCount, error: oErr } = await supabase.from("preteen_attendance_records")
+        .select("id", { count: "exact", head: true })
+        .eq("tenant_id", tenantId).eq("preteen_id", p.id).eq("status", "checked_in");
+      if (oErr) throw oErr;
+      if ((openCount || 0) > 0) throw new Error("Check this preteen out before promoting");
+
+      const teenPayload = {
+        tenant_id: tenantId,
+        primary_guardian_member_id: p.primary_guardian_member_id || memberId,
+        first_name: p.first_name,
+        last_name: p.last_name,
+        date_of_birth: p.date_of_birth || null,
+        gender: p.gender || null,
+        notes: p.notes || null,
+        attendance_consent: !!p.attendance_consent,
+        attendance_consent_at: p.attendance_consent ? (p.attendance_consent_at || new Date().toISOString()) : null,
+        data_processing_consent: !!p.data_processing_consent,
+        data_processing_consent_at: p.data_processing_consent ? (p.data_processing_consent_at || new Date().toISOString()) : null,
+      };
+      const { error: tErr } = await supabase.from("teens").insert(teenPayload);
+      if (tErr) throw tErr;
+
+      // Keep attendance history: archive if records exist, otherwise delete.
+      const { count, error: cErr } = await supabase.from("preteen_attendance_records")
+        .select("id", { count: "exact", head: true })
+        .eq("tenant_id", tenantId).eq("preteen_id", p.id);
+      if (cErr) throw cErr;
+      if ((count || 0) > 0) {
+        const { error } = await supabase.from("preteens").update({ is_active: false })
+          .eq("id", p.id).eq("tenant_id", tenantId);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from("preteens").delete()
+          .eq("id", p.id).eq("tenant_id", tenantId);
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      toast.success("Promoted to teen");
+      setPromotePreteen(null);
+      qc.invalidateQueries({ queryKey: ["my-preteens"] });
+      qc.invalidateQueries({ queryKey: ["my-teens"] });
+    },
+    onError: (e) => toast.error(e.message),
+  });
+
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-lg font-display font-semibold flex items-center gap-2"><User className="h-5 w-5 text-primary" /> Preteens</h2>
-          <p className="text-xs text-muted-foreground">Register your preteens so they can check in on premises.</p>
+          <p className="text-xs text-muted-foreground">Ages 10-12. Register your preteens so they can check in on premises.</p>
         </div>
         <Button size="sm" onClick={() => { setEditPreteen(null); setOpen(true); }}>
           <Plus className="h-4 w-4 mr-1" /> Add preteen
@@ -268,8 +319,9 @@ export default function PreteensSection({ memberId }) {
                   )}
                 </div>
               </div>
-              <div className="flex gap-1">
+              <div className="flex gap-1 flex-wrap justify-end">
                 <Button size="sm" variant="outline" onClick={() => { setEditPreteen(t); setOpen(true); }}>Edit</Button>
+                <Button size="sm" variant="outline" onClick={() => setPromotePreteen(t)}><ArrowUpCircle className="h-4 w-4 mr-1" /> Promote to teen</Button>
                 <Button size="sm" variant="destructive" onClick={() => setDeletePreteen(t)}><Trash2 className="h-4 w-4" /></Button>
               </div>
             </CardContent>
@@ -292,6 +344,27 @@ export default function PreteensSection({ memberId }) {
               onClick={(e) => { e.preventDefault(); removePreteen.mutate(deletePreteen); }}
               disabled={removePreteen.isPending}
             >Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={!!promotePreteen} onOpenChange={(o) => !o && setPromotePreteen(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Promote {promotePreteen?.first_name} {promotePreteen?.last_name} to teen?</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-2 text-sm">
+                <p>Teenagers are 13-17 years old. A matching teenager record will be created under your family with consent carried over. You can set an optional check-in PIN afterwards in the Teenagers section.</p>
+                <p>The preteen record will then be removed. If they have any preteen attendance history, the record is kept but hidden from My Family so reports stay intact.</p>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => { e.preventDefault(); promoteToTeen.mutate(promotePreteen); }}
+              disabled={promoteToTeen.isPending}
+            >Promote</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
