@@ -52,8 +52,8 @@ function PreteenForm({ open, onOpenChange, preteen, memberId, onSaved }) {
   const save = useMutation({
     mutationFn: async () => {
       if (!form.first_name || !form.last_name) throw new Error("Name required");
-      if (!form.data_processing_consent) throw new Error("Data-processing consent is required to save this preteenager");
-      if (!form.attendance_consent) throw new Error("Parental consent is required to save this preteenager");
+      if (!form.data_processing_consent) throw new Error("Data-processing consent is required to save this preteen");
+      if (!form.attendance_consent) throw new Error("Parental consent is required to save this preteen");
       const payload = {
         first_name: form.first_name.trim(),
         last_name: form.last_name.trim(),
@@ -152,7 +152,7 @@ function PreteenForm({ open, onOpenChange, preteen, memberId, onSaved }) {
                 onChange={(e) => setForm({ ...form, data_processing_consent: e.target.checked })}
               />
               <span>
-                <span className="font-medium">I am the parent/legal guardian</span> and consent to my preteenager's personal data being held and processed for church ministry purposes. <span className="text-destructive">*</span>
+                <span className="font-medium">I am the parent/legal guardian</span> and consent to my preteen's personal data being held and processed for church ministry purposes. <span className="text-destructive">*</span>
               </span>
             </label>
             {preteen?.data_processing_consent && preteen?.data_processing_consent_at && (
@@ -162,7 +162,7 @@ function PreteenForm({ open, onOpenChange, preteen, memberId, onSaved }) {
             )}
             {!form.data_processing_consent && (
               <p className="text-[11px] text-destructive pl-6 font-medium">
-                Data-processing consent is required to save this preteenager.
+                Data-processing consent is required to save this preteen.
               </p>
             )}
           </div>
@@ -186,7 +186,7 @@ function PreteenForm({ open, onOpenChange, preteen, memberId, onSaved }) {
             )}
             {!form.attendance_consent && (
               <p className="text-[11px] text-destructive pl-6 font-medium">
-                Parental consent is required to save this preteenager.
+                Parental consent is required to save this preteen.
               </p>
             )}
           </div>
@@ -234,7 +234,7 @@ export default function PreteensSection({ memberId }) {
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-display font-semibold flex items-center gap-2"><User className="h-5 w-5 text-primary" /> Preteenagers</h2>
+          <h2 className="text-lg font-display font-semibold flex items-center gap-2"><User className="h-5 w-5 text-primary" /> Preteens</h2>
           <p className="text-xs text-muted-foreground">Register your preteens so they can check in on premises.</p>
         </div>
         <Button size="sm" onClick={() => { setEditPreteen(null); setOpen(true); }}>

@@ -32,7 +32,7 @@ const ERROR_MESSAGES = {
   invalid_token: "This check-in link is invalid.",
   session_closed: "This session is closed.",
   invalid_preteen: "That preteen isn't registered here.",
-  no_consent: "Parental consent required. A parent needs to open My Family → Preteenagers, edit this preteen, tick “I give parental consent”, and Save. Then try again.",
+  no_consent: "Parental consent required. A parent needs to open My Family → Preteens, edit this preteen, tick “I give parental consent”, and Save. Then try again.",
   not_authorised: "You aren't authorised to check this preteen in. Ask a parent to sign in, or enter the preteen's PIN.",
   not_enrolled: "You haven't set up self check-in yet. Tap 'I'm a preteen' to enroll.",
   bad_pin: "That PIN doesn't match. Try again.",
@@ -306,7 +306,7 @@ export default function PreteensCheckin() {
               <ShieldAlert className="h-12 w-12 mx-auto text-amber-500" />
               <p className="text-base font-semibold">Parental consent required</p>
               <p className="text-sm text-muted-foreground">
-                A parent needs to open <span className="font-medium">My Family → Preteenagers</span>, edit this preteen, tick
+                A parent needs to open <span className="font-medium">My Family → Preteens</span>, edit this preteen, tick
                 {" "}<span className="font-medium">“I give parental consent”</span>, and Save. Then try again.
               </p>
               <div className="flex gap-2">
@@ -435,7 +435,7 @@ export default function PreteensCheckin() {
                     <p className="text-xs font-semibold text-amber-900">No preteens are eligible to check in yet.</p>
                     <p className="text-[11px] text-amber-800 mt-1">
                       Preteens only appear here after a parent gives attendance consent in
-                      {" "}<span className="font-medium">My Family → Preteenagers</span>.
+                      {" "}<span className="font-medium">My Family → Preteens</span>.
                     </p>
                   </div>
                 )}
