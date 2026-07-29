@@ -1,18 +1,21 @@
-## Why Danger Zone is hidden
+## Goal
+A student may rate each Bible School subject only once. Since a subject has exactly one lecturer (while a lecturer may teach several subjects in a course), uniqueness must key on the subject + student, not lecturer + subject + student.
 
-In `src/pages/Settings.jsx` (line 1609), the Danger Zone tab (and its content) is gated by:
+## Current state
+The database index `lecturer_ratings_unique_per_subject` is on `(tenant_id, lecturer_id, submitted_by, subject_id)`. That lets the same student submit multiple ratings for one subject by picking a different lecturer. No existing rows violate the stricter rule, so the change is safe.
 
-```js
-const canOwnerOnly = isSuperAdmin || isTenantOwner;
-```
+## Changes
 
-Only Super Admins and the Tenant **Owner** see the tab. Tenant Admins, Unit Leaders, and Members do not — this is intentional to protect destructive actions (data wipes, tenant deletion, backups).
+1. Database
+   - Drop `lecturer_ratings_unique_per_subject`.
+   - Create a unique index on `(tenant_id, subject_id, submitted_by)`.
 
-## Decision
+2. Rate Lecturer form (`src/components/exams/RateLecturerDialog.jsx`)
+   - Change the upsert conflict target to `tenant_id,subject_id,submitted_by`.
+   - Look up any existing rating by subject + student only (drop the lecturer filter), so a previously submitted rating loads for editing as soon as the subject is chosen.
+   - When an existing rating loads, pre-select its lecturer.
+   - Show an inline note when the selected subject already has a rating ("You already rated this subject — submitting will update your feedback").
+   - Update the helper text at the top to "You can rate each subject once."
 
-Keep the current gating: **Owner + Super Admin only**. No code changes.
-
-## What to do to access it
-
-- Sign in as the Tenant Owner for this tenant, or as a Super Admin.
-- If you believe you are the Owner but still can't see the tab, the `tenant_users.role` for your user on this tenant is likely `admin` rather than `owner`. A Super Admin can update it in Tenant Admin → Users, or ask me to investigate and I'll check your role assignment.
+## Notes
+Existing feedback data is preserved; resubmitting for the same subject updates the earlier entry rather than creating a duplicate.
