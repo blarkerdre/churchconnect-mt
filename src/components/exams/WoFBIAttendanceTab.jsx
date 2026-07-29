@@ -294,7 +294,7 @@ export default function WoFBIAttendanceTab() {
 
 
   const markStatus = useMutation({
-    mutationFn: async ({ registration, status, action }) => {
+    mutationFn: async ({ registration, status, action, rating }) => {
       if (!rosterSession) throw new Error("No session");
       const existing = rosterRecords.find((r) => r.registration_id === registration.id);
 
@@ -322,6 +322,32 @@ export default function WoFBIAttendanceTab() {
         if (error) throw error;
         return;
       }
+      if (action === "set_rating") {
+        if (existing) {
+          const { error } = await supabase
+            .from("wofbi_attendance_records")
+            .update({ punctuality_rating: rating })
+            .eq("id", existing.id)
+            .eq("tenant_id", tenantId);
+          if (error) throw error;
+        } else {
+          const { error } = await supabase.from("wofbi_attendance_records").insert(
+            withTenant({
+              session_id: rosterSession.id,
+              registration_id: registration.id,
+              member_id: registration.member_id,
+              status: "present",
+              checked_in_at: new Date().toISOString(),
+              punctuality_rating: rating,
+              source: "manual",
+            })
+          );
+          if (error) throw error;
+        }
+        return;
+      }
+
+
 
       if (status === "absent") {
         if (existing) {
@@ -391,6 +417,8 @@ export default function WoFBIAttendanceTab() {
             checked_in_at: inAt.toISOString(),
             checked_out_at: outAt ? outAt.toISOString() : null,
             duration_minutes: duration,
+            punctuality_rating: editForm.punctuality_rating || null,
+            punctuality_note: editForm.punctuality_note || null,
           })
           .eq("id", record.id)
           .eq("tenant_id", tenantId);
@@ -405,6 +433,8 @@ export default function WoFBIAttendanceTab() {
             checked_in_at: inAt.toISOString(),
             checked_out_at: outAt ? outAt.toISOString() : null,
             duration_minutes: duration,
+            punctuality_rating: editForm.punctuality_rating || null,
+            punctuality_note: editForm.punctuality_note || null,
             source: "manual",
           })
         );
@@ -451,6 +481,8 @@ export default function WoFBIAttendanceTab() {
       status: record?.status || "present",
       checked_in_at: toLocal(record?.checked_in_at) || `${session.session_date}T09:00`,
       checked_out_at: toLocal(record?.checked_out_at),
+      punctuality_rating: record?.punctuality_rating || null,
+      punctuality_note: record?.punctuality_note || "",
     });
   };
 
@@ -465,6 +497,13 @@ export default function WoFBIAttendanceTab() {
       const absent = Math.max(0, totalSessions - attended);
       const totalMinutes = recs.reduce((sum, x) => sum + (x.duration_minutes || 0), 0);
       const missingCheckouts = recs.filter((x) => x.checked_in_at && !x.checked_out_at).length;
+      const punctualityScore = totalSessions
+        ? Math.round((present * 100 + late * 50) / totalSessions)
+        : 0;
+      const rated = recs.filter((x) => x.punctuality_rating);
+      const manualRating = rated.length
+        ? Math.round((rated.reduce((sum, x) => sum + x.punctuality_rating, 0) / rated.length) * 10) / 10
+        : null;
       return {
         registration: r,
         present,
@@ -473,6 +512,8 @@ export default function WoFBIAttendanceTab() {
         totalSessions,
         totalMinutes,
         missingCheckouts,
+        punctualityScore,
+        manualRating,
         percent: totalSessions ? Math.round((attended / totalSessions) * 100) : 0,
       };
     });
