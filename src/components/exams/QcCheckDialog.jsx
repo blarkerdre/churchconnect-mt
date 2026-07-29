@@ -228,21 +228,21 @@ export default function QcCheckDialog({ open, onOpenChange, editRecord = null })
       if (!form.exam_subject_id) throw new Error("Please select a subject");
       if (!form.qc_member_id) throw new Error("Please select a QC team member");
 
-      // Duplicate guard: only one QC per lecturer + subject per tenant
+      // Duplicate guard: only one QC per subject per tenant
       {
         let dupQ = supabase
           .from("lecturer_qc_checks")
           .select("id")
           .eq("tenant_id", tenantId)
-          .eq("lecturer_id", form.lecturer_id)
           .eq("exam_subject_id", form.exam_subject_id);
         if (editRecord?.id) dupQ = dupQ.neq("id", editRecord.id);
         const { data: dup, error: dupErr } = await dupQ.limit(1);
         if (dupErr) throw dupErr;
         if (dup && dup.length) {
-          throw new Error("A QC check already exists for this lecturer and subject.");
+          throw new Error("A QC check already exists for this subject.");
         }
       }
+
 
       // Snapshot student's avg rating for this lecturer (scoped to subject)
       let studentAvg = null;
