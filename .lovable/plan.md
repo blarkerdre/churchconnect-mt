@@ -1,15 +1,16 @@
 ## Goal
-In the Children Church hub, rename the display labels only:
-- Primary tab "Children" → "Early Years"
-- Sub-tab "All children" → "All Early Years"
+Mirror the Children Church rename in My Family: user-visible wording for the child group becomes "Early Years", matching the Preteens and Teens sections which already have their own headings.
 
-## Changes (src/pages/ChildrenChurch.jsx)
-- Line 1346: primary tab label "Children" → "Early Years"
-- Line 1357: sub-tab label "All children" → "All Early Years"
-- Line 1411: card title "All children in this tenant (n)" → "All Early Years in this tenant (n)"
-- Line 340: the "Children" section label → "Early Years"
-- Sweep the rest of the page for user-visible copy that names this group (empty states, dialog titles, toasts referring to "children" as the tab/group) and align wording, leaving generic/legal wording untouched.
+## Changes (src/pages/MyFamily.jsx)
+- Add an "Early Years" section heading above the child list, styled like the existing "Preteens" / "Teens" headings, so the three groups read consistently.
+- Header subtitle: "Manage your children and authorised pickup adults." → "Manage your Early Years children and authorised pickup adults."; the all-tenant variant "Browsing all children in this tenant." → "Browsing all Early Years records in this tenant."
+- Button "Add child" → "Add Early Years child".
+- Empty states: "No children added yet." → "No Early Years children added yet."; "No children registered in this tenant yet." → "No Early Years children registered in this tenant yet."
+- Dialog title "Add child" / "Edit child" → "Add Early Years child" / "Edit Early Years child".
+- Leave the "Promote to teenager", consent, allergy, guardian and one-time-code wording as-is (generic/legal copy).
+
+## Optional (tell me if you want it)
+- Tour copy in `src/components/tour/tours.js` (`my-family-v1`) still says "children" — I can align those step texts too.
 
 ## Not changing
-- URL params (`?tab=children`, `?sub=all`), route paths, database tables/columns, RLS, hooks, and permission logic all keep the `children` identifier — no data or access behaviour changes.
-- The "Children Church" module/sidebar name stays as-is (only the inner tab is renamed).
+- Table names, RPCs, query keys, URL params, RLS, `data-tour` attributes, permission logic — no data or behaviour changes.
