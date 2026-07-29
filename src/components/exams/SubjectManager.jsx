@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import TenantDialogHeader from "@/components/ui/TenantDialogHeader";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import DangerConfirmDialog from "@/components/exams/DangerConfirmDialog";
@@ -20,8 +21,24 @@ export default function SubjectManager({ course, onSelectSubject, selectedSubjec
   const { tenantId, withTenant, scopeQuery } = useTenantQuery();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState(null);
-  const [form, setForm] = useState({ name: "", description: "", pass_mark_percentage: 50, time_limit_minutes: "", randomize_questions: false, is_open: false, useCustomGrades: false, grade_classifications: [] });
+  const [form, setForm] = useState({ name: "", description: "", lecturer_id: "", pass_mark_percentage: 50, time_limit_minutes: "", randomize_questions: false, is_open: false, useCustomGrades: false, grade_classifications: [] });
   const [deleteTarget, setDeleteTarget] = useState(null);
+
+  const { data: lecturers = [] } = useQuery({
+    queryKey: ["lecturers-active", tenantId],
+    enabled: !!tenantId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("lecturers")
+        .select("id, name")
+        .eq("tenant_id", tenantId)
+        .eq("active", true)
+        .order("name");
+      if (error) throw error;
+      return data || [];
+    },
+  });
+  const lecturerName = (id) => lecturers.find((l) => l.id === id)?.name || null;
 
   const { data: subjects = [], isLoading } = useQuery({
     queryKey: ["exam-subjects", course.id, tenantId],
