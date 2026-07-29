@@ -122,7 +122,7 @@ export default function QcCheckDialog({ open, onOpenChange, editRecord = null })
     queryFn: async () => {
       const { data, error } = await supabase
         .from("exam_subjects")
-        .select("id, name")
+        .select("id, name, lecturer_id")
         .eq("tenant_id", tenantId)
         .eq("course_id", form.exam_title_id)
         .eq("is_active", true)
@@ -131,6 +131,13 @@ export default function QcCheckDialog({ open, onOpenChange, editRecord = null })
       return data || [];
     },
   });
+
+  // Auto-fill the lecturer mapped to the selected subject
+  const selectSubject = (subjectId) => {
+    const mapped = subjects.find((s) => s.id === subjectId)?.lecturer_id;
+    setForm((f) => ({ ...f, exam_subject_id: subjectId, lecturer_id: mapped || f.lecturer_id }));
+  };
+
 
   // Training Rep members for QC Team Member dropdown
   const { data: trainingReps = [] } = useQuery({
