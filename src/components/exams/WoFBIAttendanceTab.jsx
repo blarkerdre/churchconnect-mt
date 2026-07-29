@@ -899,6 +899,7 @@ export default function WoFBIAttendanceTab() {
                   <TableHead>Time in</TableHead>
                   <TableHead>Time out</TableHead>
                   <TableHead>Duration</TableHead>
+                  <TableHead>Punctuality</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -922,6 +923,13 @@ export default function WoFBIAttendanceTab() {
                       <TableCell className="text-xs whitespace-nowrap">{fmtTime(rec?.checked_in_at)}</TableCell>
                       <TableCell className="text-xs whitespace-nowrap">{fmtTime(rec?.checked_out_at)}</TableCell>
                       <TableCell className="text-xs whitespace-nowrap">{fmtDuration(rec?.duration_minutes)}</TableCell>
+                      <TableCell>
+                        <StarRating
+                          value={rec?.punctuality_rating || 0}
+                          disabled={markStatus.isPending}
+                          onChange={(n) => markStatus.mutate({ registration: r, action: "set_rating", rating: n })}
+                        />
+                      </TableCell>
                       <TableCell className="text-right space-x-1 whitespace-nowrap">
                         <Button size="sm" variant={status === "present" ? "default" : "outline"} onClick={() => markStatus.mutate({ registration: r, status: "present" })}>Present</Button>
                         <Button size="sm" variant={status === "late" ? "default" : "outline"} onClick={() => markStatus.mutate({ registration: r, status: "late" })}>Late</Button>
@@ -937,7 +945,7 @@ export default function WoFBIAttendanceTab() {
                   );
                 })}
                 {roster.length === 0 && (
-                  <TableRow><TableCell colSpan={6} className="text-center text-sm text-muted-foreground py-6">No registered students.</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={7} className="text-center text-sm text-muted-foreground py-6">No registered students.</TableCell></TableRow>
                 )}
               </TableBody>
             </Table>
