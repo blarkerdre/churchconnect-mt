@@ -1288,19 +1288,38 @@ export default function ChildrenChurch() {
 
   const allowedTabs = useMemo(() => {
     const t = [];
-    if (canSeeChildren) { t.push("checkin", "pickup"); }
-    if (canSeeAll) t.push("all");
-    if (canSeeReport) t.push("report");
+    if (canSeeChildren) t.push("children");
     if (canSeePreteens) t.push("preteens");
     if (canSeeTeens) t.push("teens");
     return t;
-  }, [canSeeChildren, canSeeAll, canSeeReport, canSeePreteens, canSeeTeens]);
+  }, [canSeeChildren, canSeePreteens, canSeeTeens]);
 
-  const requestedTab = searchParams.get("tab");
-  const activeTab = allowedTabs.includes(requestedTab) ? requestedTab : (allowedTabs[0] || "checkin");
+  const allowedSubTabs = useMemo(() => {
+    const t = [];
+    if (canSeeChildren) t.push("checkin", "pickup");
+    if (canSeeAll) t.push("all");
+    if (canSeeReport) t.push("report");
+    return t;
+  }, [canSeeChildren, canSeeAll, canSeeReport]);
+
+  const rawTab = searchParams.get("tab");
+  const legacySub = ["checkin", "pickup", "all", "report"].includes(rawTab) ? rawTab : null;
+  const requestedTab = legacySub ? "children" : rawTab;
+  const activeTab = allowedTabs.includes(requestedTab) ? requestedTab : (allowedTabs[0] || "children");
+
+  const requestedSub = legacySub || searchParams.get("sub");
+  const activeSub = allowedSubTabs.includes(requestedSub) ? requestedSub : (allowedSubTabs[0] || "checkin");
+
   const setActiveTab = (v) => {
     const next = new URLSearchParams(searchParams);
     next.set("tab", v);
+    if (v !== "children") next.delete("sub");
+    setSearchParams(next, { replace: true });
+  };
+  const setActiveSub = (v) => {
+    const next = new URLSearchParams(searchParams);
+    next.set("tab", "children");
+    next.set("sub", v);
     setSearchParams(next, { replace: true });
   };
 
@@ -1324,18 +1343,28 @@ export default function ChildrenChurch() {
       </div>
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="flex flex-nowrap h-auto gap-1 overflow-x-auto w-full sm:w-auto justify-start">
-          {canSeeChildren && <TabsTrigger value="checkin" data-tour="cc-tab-checkin" className="shrink-0">Check-in</TabsTrigger>}
-          {canSeeChildren && <TabsTrigger value="pickup" data-tour="cc-tab-pickup" className="shrink-0">Pickup</TabsTrigger>}
-          {canSeeAll && <TabsTrigger value="all" data-tour="cc-tab-all" className="shrink-0">All children</TabsTrigger>}
-          {canSeeReport && <TabsTrigger value="report" data-tour="cc-tab-report" className="shrink-0">Report</TabsTrigger>}
+          {canSeeChildren && <TabsTrigger value="children" data-tour="cc-tab-children" className="shrink-0">Children</TabsTrigger>}
           {canSeePreteens && <TabsTrigger value="preteens" className="shrink-0">Preteens</TabsTrigger>}
           {canSeeTeens && <TabsTrigger value="teens" className="shrink-0">Teens</TabsTrigger>}
         </TabsList>
 
-        {canSeeChildren && <TabsContent value="checkin"><CheckInPanel tenantId={tenantId} tenantSlug={tenantSlug} /></TabsContent>}
-        {canSeeChildren && <TabsContent value="pickup"><PickupPanel tenantId={tenantId} isLeader={isLeader || isAdmin} /></TabsContent>}
-        {canSeeAll && <TabsContent value="all"><AllChildrenPanel tenantId={tenantId} /></TabsContent>}
-        {canSeeReport && <TabsContent value="report"><ReportPanel tenantId={tenantId} isAdmin={isAdmin} /></TabsContent>}
+        {canSeeChildren && (
+          <TabsContent value="children">
+            <Tabs value={activeSub} onValueChange={setActiveSub}>
+              <TabsList className="flex flex-nowrap h-auto gap-1 overflow-x-auto w-full sm:w-auto justify-start">
+                <TabsTrigger value="checkin" data-tour="cc-tab-checkin" className="shrink-0">Check-in</TabsTrigger>
+                <TabsTrigger value="pickup" data-tour="cc-tab-pickup" className="shrink-0">Pickup</TabsTrigger>
+                {canSeeAll && <TabsTrigger value="all" data-tour="cc-tab-all" className="shrink-0">All children</TabsTrigger>}
+                {canSeeReport && <TabsTrigger value="report" data-tour="cc-tab-report" className="shrink-0">Report</TabsTrigger>}
+              </TabsList>
+
+              <TabsContent value="checkin"><CheckInPanel tenantId={tenantId} tenantSlug={tenantSlug} /></TabsContent>
+              <TabsContent value="pickup"><PickupPanel tenantId={tenantId} isLeader={isLeader || isAdmin} /></TabsContent>
+              {canSeeAll && <TabsContent value="all"><AllChildrenPanel tenantId={tenantId} /></TabsContent>}
+              {canSeeReport && <TabsContent value="report"><ReportPanel tenantId={tenantId} isAdmin={isAdmin} /></TabsContent>}
+            </Tabs>
+          </TabsContent>
+        )}
         {canSeePreteens && (
           <TabsContent value="preteens">
             <Suspense fallback={<TabLoading />}><PreteensAttendance embedded /></Suspense>
@@ -1347,6 +1376,7 @@ export default function ChildrenChurch() {
           </TabsContent>
         )}
       </Tabs>
+
 
 
     </div>
