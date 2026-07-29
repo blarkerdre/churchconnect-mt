@@ -128,22 +128,23 @@ export default function RateLecturerDialog({ open, onOpenChange }) {
     if (!open) setForm(emptyForm);
   }, [open]);
 
-  // Load existing rating for selected (lecturer, subject) to allow edit
+  // Load existing rating for selected subject to allow edit (one rating per subject per student)
+  const [existingFound, setExistingFound] = useState(false);
   useEffect(() => {
-    if (!form.lecturer_id || !form.subject_id || !user?.id || !tenantId) return;
+    if (!form.subject_id || !user?.id || !tenantId) { setExistingFound(false); return; }
     (async () => {
       const { data } = await supabase
         .from("lecturer_ratings")
         .select("*")
         .eq("tenant_id", tenantId)
-        .eq("lecturer_id", form.lecturer_id)
         .eq("subject_id", form.subject_id)
         .eq("submitted_by", user.id)
         .maybeSingle();
       if (data) {
+        setExistingFound(true);
         setForm((f) => ({
           ...f,
-          
+          lecturer_id: data.lecturer_id || f.lecturer_id,
           session_description: data.session_description || "",
           delivery: data.delivery || "",
           time_keeping: data.time_keeping || "",
@@ -154,6 +155,7 @@ export default function RateLecturerDialog({ open, onOpenChange }) {
           comments: data.comments || "",
         }));
       } else {
+        setExistingFound(false);
         setForm((f) => ({
           ...f,
           session_description: "",
@@ -168,7 +170,8 @@ export default function RateLecturerDialog({ open, onOpenChange }) {
       }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [form.lecturer_id, form.subject_id]);
+  }, [form.subject_id]);
+
 
   const submitMutation = useMutation({
     mutationFn: async () => {
@@ -195,7 +198,7 @@ export default function RateLecturerDialog({ open, onOpenChange }) {
       };
       const { error } = await supabase
         .from("lecturer_ratings")
-        .upsert(payload, { onConflict: "tenant_id,lecturer_id,submitted_by,subject_id" });
+        .upsert(payload, { onConflict: "tenant_id,subject_id,submitted_by" });
       if (error) throw error;
     },
     onSuccess: () => {
@@ -218,7 +221,7 @@ export default function RateLecturerDialog({ open, onOpenChange }) {
             <Star className="h-5 w-5 text-primary" /> Rate the Lecturer
           </DialogTitle>
           <p className="text-xs text-muted-foreground pt-1">
-            We are continually committed to improving the standard of the institute — please share your feedback on how the lectures were delivered. You can rate the same lecturer once per subject.
+            We are continually committed to improving the standard of the institute — please share your feedback on how the lectures were delivered. You can rate each subject once.
           </p>
         </DialogHeader>
 
@@ -263,6 +266,12 @@ export default function RateLecturerDialog({ open, onOpenChange }) {
                 </Select>
               </div>
             </div>
+
+            {existingFound && (
+              <p className="text-xs text-primary">
+                You already rated this subject — submitting will update your feedback.
+              </p>
+            )}
 
             {QUESTIONS.map((q) => (
               <div key={q.key} className="space-y-2">
