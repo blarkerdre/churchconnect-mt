@@ -39,6 +39,16 @@ function fmtTime(iso) {
   }
 }
 
+function fmtLocal(iso) {
+  if (!iso) return "";
+  try {
+    return new Date(iso).toLocaleString([], { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
+  } catch {
+    return "";
+  }
+}
+
+
 export default function WoFBIAttendanceTab() {
   const { user, isAdmin } = useAuth();
   const qc = useQueryClient();
@@ -106,7 +116,9 @@ export default function WoFBIAttendanceTab() {
       if (error) throw error;
       return data || [];
     },
+    refetchInterval: 60000,
   });
+
 
   // Counts of records per session for the sessions list
   const { data: recordsBySession = {} } = useQuery({
