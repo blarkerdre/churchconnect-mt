@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import TenantDialogHeader from "@/components/ui/TenantDialogHeader";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import DangerConfirmDialog from "@/components/exams/DangerConfirmDialog";
@@ -20,8 +21,24 @@ export default function SubjectManager({ course, onSelectSubject, selectedSubjec
   const { tenantId, withTenant, scopeQuery } = useTenantQuery();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState(null);
-  const [form, setForm] = useState({ name: "", description: "", pass_mark_percentage: 50, time_limit_minutes: "", randomize_questions: false, is_open: false, useCustomGrades: false, grade_classifications: [] });
+  const [form, setForm] = useState({ name: "", description: "", lecturer_id: "", pass_mark_percentage: 50, time_limit_minutes: "", randomize_questions: false, is_open: false, useCustomGrades: false, grade_classifications: [] });
   const [deleteTarget, setDeleteTarget] = useState(null);
+
+  const { data: lecturers = [] } = useQuery({
+    queryKey: ["lecturers-active", tenantId],
+    enabled: !!tenantId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("lecturers")
+        .select("id, name")
+        .eq("tenant_id", tenantId)
+        .eq("active", true)
+        .order("name");
+      if (error) throw error;
+      return data || [];
+    },
+  });
+  const lecturerName = (id) => lecturers.find((l) => l.id === id)?.name || null;
 
   const { data: subjects = [], isLoading } = useQuery({
     queryKey: ["exam-subjects", course.id, tenantId],
@@ -75,7 +92,7 @@ export default function SubjectManager({ course, onSelectSubject, selectedSubjec
   const closeDialog = () => {
     setDialogOpen(false);
     setEditing(null);
-    setForm({ name: "", description: "", pass_mark_percentage: 50, time_limit_minutes: "", randomize_questions: false, is_open: false, useCustomGrades: false, grade_classifications: [] });
+    setForm({ name: "", description: "", lecturer_id: "", pass_mark_percentage: 50, time_limit_minutes: "", randomize_questions: false, is_open: false, useCustomGrades: false, grade_classifications: [] });
   };
 
   return (
@@ -86,7 +103,7 @@ export default function SubjectManager({ course, onSelectSubject, selectedSubjec
             <CardTitle className="text-base font-display flex items-center gap-2">
               <Layers className="h-4 w-4 text-primary" /> {course.name} — Subjects
             </CardTitle>
-            <Button size="sm" variant="outline" className="gap-1.5" onClick={() => { setEditing(null); setForm({ name: "", description: "", pass_mark_percentage: 50, time_limit_minutes: "", randomize_questions: false, is_open: false, useCustomGrades: false, grade_classifications: [] }); setDialogOpen(true); }}>
+            <Button size="sm" variant="outline" className="gap-1.5" onClick={() => { setEditing(null); setForm({ name: "", description: "", lecturer_id: "", pass_mark_percentage: 50, time_limit_minutes: "", randomize_questions: false, is_open: false, useCustomGrades: false, grade_classifications: [] }); setDialogOpen(true); }}>
               <Plus className="h-3.5 w-3.5" /> Add Subject
             </Button>
           </div>
@@ -119,9 +136,14 @@ export default function SubjectManager({ course, onSelectSubject, selectedSubjec
                       ? <Badge variant="outline" className="text-[9px] h-4 border-primary/40 text-primary">Open</Badge>
                       : <Badge variant="secondary" className="text-[9px] h-4">Closed</Badge>}
                     {!s.is_active && <Badge variant="secondary" className="text-[9px] h-4">Inactive</Badge>}
+                    <span className="text-[11px] text-muted-foreground w-full sm:w-auto">
+                      {s.lecturer_id && lecturerName(s.lecturer_id)
+                        ? `Lecturer: ${lecturerName(s.lecturer_id)}`
+                        : "No lecturer assigned"}
+                    </span>
                   </div>
                   <div className="flex items-center gap-1 shrink-0 self-end sm:self-auto">
-                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); setEditing(s); setForm({ name: s.name, description: s.description || "", pass_mark_percentage: s.pass_mark_percentage ?? 50, time_limit_minutes: s.time_limit_minutes ?? "", randomize_questions: s.randomize_questions ?? false, is_open: !!s.is_open, useCustomGrades: !!(s.grade_classifications && s.grade_classifications.length > 0), grade_classifications: s.grade_classifications || [] }); setDialogOpen(true); }}>
+                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); setEditing(s); setForm({ name: s.name, description: s.description || "", lecturer_id: s.lecturer_id || "", pass_mark_percentage: s.pass_mark_percentage ?? 50, time_limit_minutes: s.time_limit_minutes ?? "", randomize_questions: s.randomize_questions ?? false, is_open: !!s.is_open, useCustomGrades: !!(s.grade_classifications && s.grade_classifications.length > 0), grade_classifications: s.grade_classifications || [] }); setDialogOpen(true); }}>
                       <Edit className="h-3.5 w-3.5" />
                     </Button>
                     <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={(e) => { e.stopPropagation(); setDeleteTarget(s); }}>
@@ -144,6 +166,7 @@ export default function SubjectManager({ course, onSelectSubject, selectedSubjec
             saveMutation.mutate({
               name: form.name.trim(),
               description: form.description.trim() || null,
+              lecturer_id: form.lecturer_id || null,
               pass_mark_percentage: Number(form.pass_mark_percentage) || 50,
               time_limit_minutes: form.time_limit_minutes ? Number(form.time_limit_minutes) : null,
               randomize_questions: !!form.randomize_questions,
@@ -158,6 +181,17 @@ export default function SubjectManager({ course, onSelectSubject, selectedSubjec
             <div className="space-y-1.5">
               <Label>Description</Label>
               <Input value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} placeholder="Optional" />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Lecturer</Label>
+              <Select value={form.lecturer_id || "none"} onValueChange={v => setForm(f => ({ ...f, lecturer_id: v === "none" ? "" : v }))}>
+                <SelectTrigger><SelectValue placeholder="No lecturer assigned" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">No lecturer assigned</SelectItem>
+                  {lecturers.map(l => <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">Auto-fills the lecturer in feedback and QC forms.</p>
             </div>
             <div className="space-y-1.5">
               <Label>Pass Mark (%)</Label>

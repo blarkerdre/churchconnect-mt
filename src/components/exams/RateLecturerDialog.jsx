@@ -114,7 +114,7 @@ export default function RateLecturerDialog({ open, onOpenChange }) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("exam_subjects")
-        .select("id, name")
+        .select("id, name, lecturer_id")
         .eq("tenant_id", tenantId)
         .eq("course_id", form.course_id)
         .eq("is_active", true)
@@ -123,6 +123,8 @@ export default function RateLecturerDialog({ open, onOpenChange }) {
       return data || [];
     },
   });
+
+  const mappedLecturerId = subjects.find((s) => s.id === form.subject_id)?.lecturer_id || "";
 
   useEffect(() => {
     if (!open) setForm(emptyForm);
@@ -171,6 +173,13 @@ export default function RateLecturerDialog({ open, onOpenChange }) {
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form.subject_id]);
+
+  // Auto-fill the lecturer mapped to the selected subject
+  useEffect(() => {
+    if (mappedLecturerId) setForm((f) => ({ ...f, lecturer_id: mappedLecturerId }));
+  }, [mappedLecturerId]);
+
+
 
 
   const submitMutation = useMutation({
@@ -256,14 +265,23 @@ export default function RateLecturerDialog({ open, onOpenChange }) {
               </div>
               <div>
                 <Label>Lecturer's Name *</Label>
-                <Select value={form.lecturer_id} onValueChange={(v) => set("lecturer_id", v)}>
-                  <SelectTrigger><SelectValue placeholder="Select a lecturer" /></SelectTrigger>
-                  <SelectContent>
-                    {lecturers.map((l) => (
-                      <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                {mappedLecturerId ? (
+                  <>
+                    <div className="h-10 flex items-center rounded-md border border-input bg-muted/50 px-3 text-sm">
+                      {lecturers.find((l) => l.id === mappedLecturerId)?.name || "Assigned lecturer"}
+                    </div>
+                    <p className="text-[11px] text-muted-foreground pt-1">Set by the subject's lecturer assignment.</p>
+                  </>
+                ) : (
+                  <Select value={form.lecturer_id} onValueChange={(v) => set("lecturer_id", v)}>
+                    <SelectTrigger><SelectValue placeholder="Select a lecturer" /></SelectTrigger>
+                    <SelectContent>
+                      {lecturers.map((l) => (
+                        <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
               </div>
             </div>
 
