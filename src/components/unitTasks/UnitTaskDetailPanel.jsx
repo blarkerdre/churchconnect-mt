@@ -104,6 +104,7 @@ export default function UnitTaskDetailPanel({ open, onOpenChange, task, canManag
   }, [open]);
 
   const myAssignment = assignments.find((a) => a.user_id === user?.id);
+  const canComment = canManage || (!!myAssignment && task?.status === "Open");
 
   const updateMyStatus = async (status) => {
     if (!myAssignment) return;
