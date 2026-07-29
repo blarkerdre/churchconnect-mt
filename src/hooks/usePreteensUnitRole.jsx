@@ -3,12 +3,19 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
 
-const PRETEENS_UNIT_NAMES = ["preteens", "preteen", "preteenagers", "youth", "preteens ministry", "preteen ministry", "preteens church", "preteen church"];
+const CHILDREN_UNIT_NAMES = [
+  "children church",
+  "childrens church",
+  "children's church",
+  "children",
+  "children ministry",
+  "childrens ministry",
+  "children's ministry",
+];
 
 /**
- * Returns { isLeader, isMember, isLoading } for the Preteens church unit.
- * - isLeader: user is in unit_leader_assignments for a Preteens unit
- * - isMember: user's member row lists a Preteens unit in church_unit, OR they are a leader
+ * Preteens attendance is governed by the Children's Church unit.
+ * Returns { isLeader, isMember, isLoading }.
  */
 export function usePreteensUnitRole() {
   const { user } = useAuth();
@@ -32,13 +39,13 @@ export function usePreteensUnitRole() {
       ]);
 
       const isLeader = (leaderRows || []).some((r) =>
-        PRETEENS_UNIT_NAMES.includes(String(r.unit_name || "").trim().toLowerCase())
+        CHILDREN_UNIT_NAMES.includes(String(r.unit_name || "").trim().toLowerCase())
       );
       const memberUnits = (memberRows?.[0]?.church_unit || "")
         .split(",")
         .map((u) => u.trim().toLowerCase());
       const isMember =
-        isLeader || memberUnits.some((u) => PRETEENS_UNIT_NAMES.includes(u));
+        isLeader || memberUnits.some((u) => CHILDREN_UNIT_NAMES.includes(u));
 
       return { isLeader, isMember };
     },
