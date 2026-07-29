@@ -337,7 +337,7 @@ function WalkInRegisterDialog({ open, onOpenChange, tenantId, onRegistered }) {
 
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <p className="text-sm font-semibold">Children</p>
+              <p className="text-sm font-semibold">Early Years</p>
               <Button type="button" size="sm" variant="ghost" onClick={addChild}><Plus className="h-3.5 w-3.5 mr-1" /> Add child</Button>
             </div>
             {children.map((c, i) => (
@@ -1343,7 +1343,7 @@ export default function ChildrenChurch() {
       </div>
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="flex flex-nowrap h-auto gap-1 overflow-x-auto w-full sm:w-auto justify-start">
-          {canSeeChildren && <TabsTrigger value="children" data-tour="cc-tab-children" className="shrink-0">Children</TabsTrigger>}
+          {canSeeChildren && <TabsTrigger value="children" data-tour="cc-tab-children" className="shrink-0">Early Years</TabsTrigger>}
           {canSeePreteens && <TabsTrigger value="preteens" className="shrink-0">Preteens</TabsTrigger>}
           {canSeeTeens && <TabsTrigger value="teens" className="shrink-0">Teens</TabsTrigger>}
         </TabsList>
@@ -1354,7 +1354,7 @@ export default function ChildrenChurch() {
               <TabsList className="flex flex-nowrap h-auto gap-1 overflow-x-auto w-full sm:w-auto justify-start">
                 <TabsTrigger value="checkin" data-tour="cc-tab-checkin" className="shrink-0">Check-in</TabsTrigger>
                 <TabsTrigger value="pickup" data-tour="cc-tab-pickup" className="shrink-0">Pickup</TabsTrigger>
-                {canSeeAll && <TabsTrigger value="all" data-tour="cc-tab-all" className="shrink-0">All children</TabsTrigger>}
+                {canSeeAll && <TabsTrigger value="all" data-tour="cc-tab-all" className="shrink-0">All Early Years</TabsTrigger>}
                 {canSeeReport && <TabsTrigger value="report" data-tour="cc-tab-report" className="shrink-0">Report</TabsTrigger>}
               </TabsList>
 
@@ -1408,7 +1408,7 @@ function AllChildrenPanel({ tenantId }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">All children in this tenant ({rows.length})</CardTitle>
+        <CardTitle className="text-base">All Early Years in this tenant ({rows.length})</CardTitle>
         <CardDescription>Every registered child — tap a row to view the full profile.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-2">
