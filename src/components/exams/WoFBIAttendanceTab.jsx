@@ -58,7 +58,10 @@ export default function WoFBIAttendanceTab() {
     late_after: "",
     subject_id: "",
     notes: "",
+    scheduled_open_at: "",
+    scheduled_close_at: "",
   });
+
 
   const { data: courses = [] } = useQuery({
     queryKey: ["wofbi-att-courses", tenantId],
