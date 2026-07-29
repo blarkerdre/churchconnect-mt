@@ -104,6 +104,7 @@ export default function UnitTaskDetailPanel({ open, onOpenChange, task, canManag
   }, [open]);
 
   const myAssignment = assignments.find((a) => a.user_id === user?.id);
+  const canComment = canManage || (!!myAssignment && task?.status === "Open");
 
   const updateMyStatus = async (status) => {
     if (!myAssignment) return;
@@ -329,12 +330,16 @@ export default function UnitTaskDetailPanel({ open, onOpenChange, task, canManag
                 </div>
               ))}
             </div>
-            <div className="flex gap-2">
-              <Textarea rows={2} placeholder="Write a comment…" value={comment} onChange={(e) => setComment(e.target.value)} />
-              <Button onClick={postComment} disabled={posting || !comment.trim()}>
-                {posting && <Loader2 className="h-4 w-4 mr-1 animate-spin" />} Post
-              </Button>
-            </div>
+            {canComment ? (
+              <div className="flex gap-2">
+                <Textarea rows={2} placeholder="Write a comment…" value={comment} onChange={(e) => setComment(e.target.value)} />
+                <Button onClick={postComment} disabled={posting || !comment.trim()}>
+                  {posting && <Loader2 className="h-4 w-4 mr-1 animate-spin" />} Post
+                </Button>
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground">Commenting is closed for this task.</p>
+            )}
           </div>
         </div>
         <DialogFooter className="gap-2 flex-wrap">

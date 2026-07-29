@@ -1,28 +1,18 @@
 ## Goal
-
-Only students who are fully registered in a Bible School course can submit lecturer feedback — and only for the courses they are registered in.
-
-## Definition of "completely registered"
-
-A row in `course_registrations` for the signed-in member with:
-- `status = 'approved'`, and
-- a `student_number` assigned (registration confirmation completed).
+Unit members (assignees) should not be able to comment on a unit task that is no longer Open (status `Completed` or `Cancelled`). Admins, tenant owners/super admins and the unit leader keep the ability to comment for record-keeping.
 
 ## Changes
 
-### 1. Rate Lecturer dialog (`src/components/exams/RateLecturerDialog.jsx`)
-- Replace the "all active courses" query with a query on the member's own `course_registrations` (tenant-scoped, approved, student_number not null), joined to `exam_titles` for names.
-- If the member has no qualifying registration: show a clear message ("Lecturer feedback is only available to students with a completed Bible School registration") and disable the Submit button.
-- Course dropdown lists only their registered courses; subject list stays scoped to the chosen course.
+### 1. Database rule (enforcement)
+Replace the `utc_insert` policy on `unit_task_comments` so the assignee branch also requires the parent task to be `Open`:
 
-### 2. Entry point gating
-- Hide/disable the "Rate the Lecturer" button for members with no completed registration, so the dialog isn't a dead end.
+- Assignee branch: assignment exists for `auth.uid()` **and** `unit_tasks.status = 'Open'`.
+- Super admin / tenant owner+admin / unit leader branches stay unchanged.
+- `author_id = auth.uid()` check retained.
 
-### 3. Server-side enforcement (database)
-- Tighten the `Students can insert own rating` and `Students can update own rating` policies on `lecturer_ratings` so the check also requires an approved registration with a student number for the same tenant, member and `course_id`. This prevents bypassing the UI.
+### 2. UI (`src/components/unitTasks/UnitTaskDetailPanel.jsx`)
+- Compute `canComment = canManage || (myAssignment && task.status === "Open")`.
+- When the task is not Open and the user is only an assignee: hide the comment textarea and Post button, and show a short muted line such as "Commenting is closed for this task." Existing comments stay visible.
 
-## Technical notes
-
-- Registration lookup keys off `myMember.id` from `useAuth`; users without a linked member record are treated as not registered.
-- Existing one-rating-per-subject upsert behaviour (`tenant_id, subject_id, submitted_by`) is unchanged.
-- All queries keep the explicit `.eq("tenant_id", tenantId)` guard.
+## Notes
+Current data: 6 Open, 54 Completed, 6 Cancelled tasks — this only affects new comments; existing ones are untouched.
