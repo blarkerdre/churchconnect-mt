@@ -265,14 +265,23 @@ export default function RateLecturerDialog({ open, onOpenChange }) {
               </div>
               <div>
                 <Label>Lecturer's Name *</Label>
-                <Select value={form.lecturer_id} onValueChange={(v) => set("lecturer_id", v)}>
-                  <SelectTrigger><SelectValue placeholder="Select a lecturer" /></SelectTrigger>
-                  <SelectContent>
-                    {lecturers.map((l) => (
-                      <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                {mappedLecturerId ? (
+                  <>
+                    <div className="h-10 flex items-center rounded-md border border-input bg-muted/50 px-3 text-sm">
+                      {lecturers.find((l) => l.id === mappedLecturerId)?.name || "Assigned lecturer"}
+                    </div>
+                    <p className="text-[11px] text-muted-foreground pt-1">Set by the subject's lecturer assignment.</p>
+                  </>
+                ) : (
+                  <Select value={form.lecturer_id} onValueChange={(v) => set("lecturer_id", v)}>
+                    <SelectTrigger><SelectValue placeholder="Select a lecturer" /></SelectTrigger>
+                    <SelectContent>
+                      {lecturers.map((l) => (
+                        <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
               </div>
             </div>
 
