@@ -2285,6 +2285,7 @@ export type Database = {
           id: string
           is_active: boolean
           is_open: boolean
+          lecturer_id: string | null
           name: string
           pass_mark_percentage: number
           randomize_questions: boolean
@@ -2300,6 +2301,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           is_open?: boolean
+          lecturer_id?: string | null
           name: string
           pass_mark_percentage?: number
           randomize_questions?: boolean
@@ -2315,6 +2317,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           is_open?: boolean
+          lecturer_id?: string | null
           name?: string
           pass_mark_percentage?: number
           randomize_questions?: boolean
@@ -2328,6 +2331,13 @@ export type Database = {
             columns: ["course_id"]
             isOneToOne: false
             referencedRelation: "exam_titles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "exam_subjects_lecturer_id_fkey"
+            columns: ["lecturer_id"]
+            isOneToOne: false
+            referencedRelation: "lecturers"
             referencedColumns: ["id"]
           },
           {
