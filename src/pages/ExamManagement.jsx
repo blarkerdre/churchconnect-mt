@@ -1672,6 +1672,26 @@ function MemberExamsView({ memberId, memberRecord, courses, loading }) {
     enabled: !!memberId,
   });
 
+  // Only students with a completed registration (approved + student number) may rate lecturers
+  const { data: canRateLecturer = false } = useQuery({
+    queryKey: ["my-completed-registrations", memberId, tenantId],
+    queryFn: async () => {
+      let query = supabase
+        .from("course_registrations")
+        .select("id")
+        .eq("member_id", memberId)
+        .eq("status", "approved")
+        .not("student_number", "is", null)
+        .limit(1);
+      if (tenantId) query = query.eq("tenant_id", tenantId);
+      const { data, error } = await query;
+      if (error) throw error;
+      return (data || []).length > 0;
+    },
+    enabled: !!memberId,
+  });
+
+
   const { data: pendingApplications = [] } = useQuery({
     queryKey: ["my-wofbi-applications", memberId, tenantId],
     queryFn: async () => {
