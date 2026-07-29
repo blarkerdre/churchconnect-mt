@@ -1672,6 +1672,26 @@ function MemberExamsView({ memberId, memberRecord, courses, loading }) {
     enabled: !!memberId,
   });
 
+  // Only students with a completed registration (approved + student number) may rate lecturers
+  const { data: canRateLecturer = false } = useQuery({
+    queryKey: ["my-completed-registrations", memberId, tenantId],
+    queryFn: async () => {
+      let query = supabase
+        .from("course_registrations")
+        .select("id")
+        .eq("member_id", memberId)
+        .eq("status", "approved")
+        .not("student_number", "is", null)
+        .limit(1);
+      if (tenantId) query = query.eq("tenant_id", tenantId);
+      const { data, error } = await query;
+      if (error) throw error;
+      return (data || []).length > 0;
+    },
+    enabled: !!memberId,
+  });
+
+
   const { data: pendingApplications = [] } = useQuery({
     queryKey: ["my-wofbi-applications", memberId, tenantId],
     queryFn: async () => {
@@ -1789,7 +1809,7 @@ function MemberExamsView({ memberId, memberRecord, courses, loading }) {
           </h1>
           <p className="text-sm text-muted-foreground mt-1">Register for courses and take your Bible School exams</p>
         </div>
-        {lecturerRatingEnabled && (
+        {lecturerRatingEnabled && canRateLecturer && (
           <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setRateOpen(true)}>
             <Star className="h-3.5 w-3.5" /> Rate a Lecturer
           </Button>
