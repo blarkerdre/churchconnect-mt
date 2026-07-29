@@ -1,30 +1,38 @@
-## Goal
-Rate each student's punctuality in Bible School attendance: an automatically calculated score from their attendance history, plus an optional manual rating/comment per session.
+## Why she sees nothing
 
-## What gets built
+Tayo (tjrotibi@yahoo.com) **is** a Children's Church unit leader (assignment added today), so the Report tab shows — but it's empty.
 
-**1. Auto-calculated punctuality score**
-For each student, across all sessions of the selected filter (course/subject/date range):
-- Score = (Present × 100 + Late × 50 + Absent × 0) / total sessions
-- Grade bands: Excellent (90–100), Good (70–89), Fair (50–69), Poor (below 50)
-- Requires no data entry — computed from existing Present/Late/Absent records.
+The cause is the row-level security rule on check-in records. Non-admin Children's Church workers can only read rows where `service_date = CURRENT_DATE`. The tenant's 64 check-in records run 14 Jun – 26 Jul 2026, and there are none for today, so the report returns zero rows. This restriction came from an earlier security hardening pass that intentionally narrowed worker reads to the current day; leaders were never carved out.
 
-**2. Manual override per session**
-- On the attendance session marking list, each student gets a small 1–5 star punctuality control plus an optional short comment.
-- Stored on the attendance record; leaving it blank keeps the auto value.
-- Editable from the existing edit-record dialog too.
+## Fix
 
-**3. Attendance session view**
-- Star rating control next to each student row (alongside the Present/Late/Absent buttons), with the auto grade shown as a subtle hint badge.
-- Works on mobile: stars stack under the status buttons at narrow widths.
+Update the SELECT policy on child check-ins so it reads:
 
-**4. Cumulative attendance report**
-- New "Punctuality" column showing the auto score % + grade badge, and the average manual star rating where present.
-- Included in the CSV export as two columns: `Punctuality %` and `Punctuality Rating`.
-- Sortable/filterable alongside existing report filters.
+- admin / reports officer → all rows (unchanged)
+- parent / co-parent of the child → their own child's rows (unchanged)
+- **Children's Church unit leader → all rows for their tenant (new)**
+- other Children's Church members (workers) → today only (unchanged)
 
-## Technical details
-- Migration on `wofbi_attendance_records`: add `punctuality_rating smallint` (1–5, nullable, validated via trigger or check on the range) and `punctuality_note text` (nullable). Existing RLS policies already cover these columns; no new policies or grants needed since no new table is created.
-- `src/components/exams/WoFBIAttendanceTab.jsx`: extend `markStatus` and the edit-record mutation to write the new fields; add the star control to the roster rows and edit dialog; compute the auto score in a memo from the fetched records.
-- Cumulative report component in the same file: add the punctuality column, badge, and CSV columns.
-- All queries keep the existing `.eq("tenant_id", tenantId)` guards.
+This uses the existing `is_children_church_leader(auth.uid(), tenant_id)` helper, so no new functions are needed.
+
+## Technical detail
+
+Single migration replacing the `Child checkins select` policy:
+
+```sql
+DROP POLICY "Child checkins select" ON public.child_checkins;
+CREATE POLICY "Child checkins select" ON public.child_checkins
+FOR SELECT TO authenticated
+USING (
+  is_admin(auth.uid(), tenant_id)
+  OR is_reports_officer(auth.uid(), tenant_id)
+  OR is_children_church_leader(auth.uid(), tenant_id)
+  OR is_child_primary_guardian(auth.uid(), child_id, tenant_id)
+  OR is_child_co_parent(auth.uid(), child_id, tenant_id)
+  OR (is_children_church_member(auth.uid(), tenant_id) AND service_date = CURRENT_DATE)
+);
+```
+
+No frontend changes: the Report tab is already gated on leader-or-admin, and its query is tenant-scoped.
+
+Note: for parity, the Teens Church report path can be checked the same way if you want it verified in this pass.
