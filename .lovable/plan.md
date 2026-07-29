@@ -1,27 +1,26 @@
-## Goal
-Let admins assign a lecturer to each Bible School subject, so the Lecturer's Name field auto-fills when a subject is picked in Rate Lecturer and the Quality Control Checklist.
+## 1. Quality Control: one check per subject
 
-## Current state
-`exam_subjects` has no lecturer column (verified: id, course_id, name, description, sort_order, is_active, pass_mark_percentage, time_limit_minutes, randomize_questions, tenant_id, grade_classifications, is_open). Both `RateLecturerDialog.jsx` and `QcCheckDialog.jsx` load all active lecturers into an independent dropdown with no link to the chosen subject.
+Today the rule is one QC per **lecturer + subject** (unique index `lecturer_qc_checks_lecturer_subject_uniq` on `tenant_id, lecturer_id, exam_subject_id`). Since a subject belongs to one course and one lecturer, the rule becomes one QC per **subject**.
 
-## Changes
+- Database: drop the old unique index, add `lecturer_qc_checks_subject_uniq` on `(tenant_id, exam_subject_id)`. If any duplicate subjects already exist, keep the most recent and remove the older rows first (I'll check counts before running).
+- `src/components/exams/QcCheckDialog.jsx`: change the duplicate pre-check to look up by subject only (drop the `lecturer_id` filter), and update the warning text to "A QC check already exists for this subject."
 
-1. Database
-   - Add nullable `lecturer_id uuid` to `public.exam_subjects`, referencing `public.lecturers(id)` with `ON DELETE SET NULL`, plus a supporting index.
-   - Existing subjects stay unmapped until an admin assigns a lecturer.
+## 2. Auto start / close for Bible School attendance sessions
 
-2. Subject setup (`src/components/exams/SubjectManager.jsx`)
-   - Add a "Lecturer" dropdown to the add/edit subject dialog, listing active lecturers for the tenant, with a "None" option.
-   - Save `lecturer_id` on create and update; show the mapped lecturer's name as a small line under each subject in the list, or "No lecturer assigned".
+Add a scheduled window to each attendance session so it opens and closes itself.
 
-3. Rate Lecturer (`src/components/exams/RateLecturerDialog.jsx`)
-   - Include `lecturer_id` in the subjects query.
-   - On subject selection, auto-fill the lecturer from the mapping. If the subject has no mapping, leave the dropdown for manual selection.
-   - When a mapping exists, lock the Lecturer select (read-only display) so students can't mismatch it; an existing saved rating still loads normally.
+- Database: add `scheduled_open_at` and `scheduled_close_at` (timestamptz, nullable) to `wofbi_attendance_sessions`.
+- New security-definer function `auto_manage_wofbi_sessions()`:
+  - sets `status = 'open'` where `scheduled_open_at <= now()` and (no close time or `scheduled_close_at > now()`) and status is not already closed manually;
+  - sets `status = 'closed'` where `scheduled_close_at <= now()` and status = 'open'.
+- Schedule it with pg_cron every minute.
+- Also apply the window live inside `list_open_wofbi_sessions` and the QR-token lookup, so the persistent QR link is valid/invalid immediately at the boundary, without waiting for the cron tick.
 
-4. Quality Control Checklist (`src/components/exams/QcCheckDialog.jsx`)
-   - Same subject query change and auto-fill on subject selection.
-   - Keep the Lecturer field editable here (QC team can correct it), but pre-set it from the mapping. The existing one-QC-per-lecturer-and-subject duplicate guard is unchanged.
+### UI (`src/components/exams/WoFBIAttendanceTab.jsx`)
+- In the create-session dialog add optional "Auto-open at" and "Auto-close at" date/time inputs, with a hint that leaving them blank keeps the session fully manual.
+- Session list rows show a "Scheduled" badge with the open/close times when set.
+- Manual Open/Close buttons stay and override the schedule for that session.
 
-## Notes
-The mapping is optional, so nothing breaks for subjects that aren't mapped yet — both forms fall back to today's manual selection.
+### Notes
+- Times are entered in local (UK) time and stored as timestamptz.
+- Existing sessions are unaffected (both new columns null = manual behaviour as today).
