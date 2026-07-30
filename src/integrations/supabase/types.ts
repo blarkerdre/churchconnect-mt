@@ -4205,7 +4205,15 @@ export type Database = {
           tenant_id?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "preteens_primary_guardian_member_id_fkey"
+            columns: ["primary_guardian_member_id"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       pricing_cost_inputs: {
         Row: {
