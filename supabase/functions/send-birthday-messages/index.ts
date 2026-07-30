@@ -22,6 +22,49 @@ function applyVars(text: string, m: Record<string, string>): string {
   );
 }
 
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+// POSTs to an internal edge function, retrying only transient failures
+// (network errors and 5xx/gateway responses). Validation errors (4xx) are
+// returned immediately so we don't hammer the endpoint.
+async function postWithRetry(
+  url: string,
+  serviceKey: string,
+  payload: unknown,
+): Promise<{ ok: boolean; status?: number; error?: string }> {
+  const delays = [1000, 3000];
+  for (let attempt = 0; attempt <= delays.length; attempt++) {
+    try {
+      const res = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${serviceKey}`,
+        },
+        body: JSON.stringify(payload),
+      });
+      if (res.ok) {
+        await res.text().catch(() => "");
+        return { ok: true, status: res.status };
+      }
+      const j = await res.json().catch(() => ({} as Record<string, unknown>));
+      const error = (j as any)?.error as string | undefined;
+      if (res.status < 500 || attempt === delays.length) {
+        return { ok: false, status: res.status, error };
+      }
+      console.warn(`[send-birthday-messages] transient ${res.status} from ${url}, retrying`);
+    } catch (e) {
+      if (attempt === delays.length) {
+        return { ok: false, error: (e as Error).message };
+      }
+      console.warn(`[send-birthday-messages] network error calling ${url}, retrying`, (e as Error).message);
+    }
+    await sleep(delays[attempt]);
+  }
+  return { ok: false, error: "Send failed after retries" };
+}
+
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -172,7 +215,8 @@ Deno.serve(async (req) => {
       };
 
       for (const channel of channels) {
-        // Idempotency: insert log row first; on conflict skip.
+        // Idempotency: insert log row first; on conflict skip (unless the
+        // existing row is a failure — those are retried later the same day).
         // Skip log insert for manual test sends so they aren't blocked by
         // the unique constraint and don't pollute real birthday history.
         if (!isManual) {
@@ -187,11 +231,28 @@ Deno.serve(async (req) => {
             });
           if (logInsErr) {
             if ((logInsErr as any).code === "23505") {
-              // Already sent today
+              // A row already exists for today — only retry if it failed.
+              const { data: existing } = await svc
+                .from("birthday_message_log")
+                .select("status")
+                .eq("tenant_id", t.tenant_id)
+                .eq("member_id", member.id)
+                .eq("channel", channel)
+                .eq("sent_on", todayDate)
+                .maybeSingle();
+              if (!existing || existing.status !== "failed") continue;
+              // Reset to "sent" optimistically; set back to failed below if it fails again.
+              await svc
+                .from("birthday_message_log")
+                .update({ status: "sent", error: null })
+                .eq("tenant_id", t.tenant_id)
+                .eq("member_id", member.id)
+                .eq("channel", channel)
+                .eq("sent_on", todayDate);
+            } else {
+              console.error("Log insert failed", logInsErr.message);
               continue;
             }
-            console.error("Log insert failed", logInsErr.message);
-            continue;
           }
         }
 
@@ -220,34 +281,27 @@ Deno.serve(async (req) => {
             if (!member.email) {
               errMsg = "Member has no email address";
             } else {
-              const res = await fetch(
+              const r = await postWithRetry(
                 `${supabaseUrl}/functions/v1/send-transactional-email`,
+                serviceKey,
                 {
-                  method: "POST",
-                  headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${serviceKey}`,
+                  templateName: "birthday-greeting",
+                  recipientEmail: member.email,
+                  tenant_id: t.tenant_id,
+                  idempotencyKey: isManual
+                    ? `birthday-test-${member.id}-${Date.now()}`
+                    : `birthday-${member.id}-${todayDate}`,
+                  templateData: {
+                    firstName: member.first_name,
+                    lastName: member.last_name,
+                    churchName,
+                    subject: t.email_subject,
+                    body: t.email_body,
                   },
-                  body: JSON.stringify({
-                    templateName: "birthday-greeting",
-                    recipientEmail: member.email,
-                    tenant_id: t.tenant_id,
-                    idempotencyKey: isManual
-                      ? `birthday-test-${member.id}-${Date.now()}`
-                      : `birthday-${member.id}-${todayDate}`,
-                    templateData: {
-                      firstName: member.first_name,
-                      lastName: member.last_name,
-                      churchName,
-                      subject: t.email_subject,
-                      body: t.email_body,
-                    },
-                  }),
                 },
               );
-              const j = await res.json().catch(() => ({}));
-              if (!res.ok) errMsg = j.error || `Email send failed (${res.status})`;
-              else ok = true;
+              if (r.ok) ok = true;
+              else errMsg = r.error || `Email send failed (${r.status ?? "network"})`;
             }
           } else if (channel === "sms" || channel === "whatsapp") {
             if (!member.phone) {
@@ -255,29 +309,46 @@ Deno.serve(async (req) => {
             } else {
               const tmpl = channel === "sms" ? t.sms_template : t.whatsapp_template;
               const text = applyVars(tmpl, ctx);
-              const res = await fetch(`${supabaseUrl}/functions/v1/send-sms`, {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                  Authorization: `Bearer ${serviceKey}`,
-                },
-                body: JSON.stringify({
+              const r = await postWithRetry(
+                `${supabaseUrl}/functions/v1/send-sms`,
+                serviceKey,
+                {
                   recipients: [{ phone: member.phone, member_id: member.id }],
                   message: text,
                   sms_type: "birthday",
                   reference_id: member.id,
                   channel,
                   tenant_id: t.tenant_id,
-                }),
-              });
-              const j = await res.json().catch(() => ({}));
-              if (!res.ok) errMsg = j.error || `${channel} send failed (${res.status})`;
-              else ok = true;
+                },
+              );
+              if (r.ok) {
+                ok = true;
+              } else {
+                errMsg = r.error || `${channel} send failed (${r.status ?? "network"})`;
+                // The messaging function never ran far enough to log this attempt,
+                // so record it ourselves — otherwise the failure is invisible in
+                // System Logs.
+                const { error: smsLogErr } = await svc.from("sms_log").insert({
+                  tenant_id: t.tenant_id,
+                  recipient_phone: member.phone,
+                  recipient_member_id: member.id,
+                  message: text,
+                  sms_type: "birthday",
+                  reference_id: member.id,
+                  channel,
+                  status: "failed",
+                  error_message: errMsg,
+                });
+                if (smsLogErr) {
+                  console.error("sms_log failure insert failed", smsLogErr.message);
+                }
+              }
             }
           }
         } catch (e) {
           errMsg = (e as Error).message;
         }
+
 
         if (ok) {
           sent++;
