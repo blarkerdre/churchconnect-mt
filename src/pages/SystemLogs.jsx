@@ -494,21 +494,145 @@ function CallLogsPanel() {
 }
 
 /* ── Audit Logs Tab ── */
-const actionIcons = { role_change: UserCog, member_delete: Trash2, member_create: Plus, member_update: Edit };
-const actionColors = { role_change: "bg-primary/10 text-primary", member_delete: "bg-destructive/10 text-destructive", member_create: "bg-chart-3/10 text-chart-3", member_update: "bg-accent/10 text-accent" };
+const actionIcons = {
+  role_change: UserCog, role_add: UserCog, role_remove: UserCog, user_delete: Trash2,
+  member_delete: Trash2, member_create: Plus, member_update: Edit,
+  notification_sent: Mail, sms_sent: MessageSquare,
+};
+const actionColors = {
+  role_change: "bg-primary/10 text-primary", role_add: "bg-primary/10 text-primary",
+  role_remove: "bg-destructive/10 text-destructive", user_delete: "bg-destructive/10 text-destructive",
+  member_delete: "bg-destructive/10 text-destructive", member_create: "bg-chart-3/10 text-chart-3",
+  member_update: "bg-accent/10 text-accent",
+};
+
+// Plain-English verbs for known actions. Anything unmapped falls back to a
+// de-underscored version of the raw action, so new actions still read fine.
+const ACTION_LABELS = {
+  member_create: "created member",
+  member_update: "updated member",
+  member_delete: "deleted member",
+  role_add: "assigned role",
+  role_remove: "removed role",
+  role_change: "changed role",
+  user_delete: "deleted user",
+  child_dropoff: "dropped off child",
+  child_pickup: "picked up child",
+  join_request_approve: "approved join request",
+  join_request_decline: "declined join request",
+  "unit_task.created": "created unit task",
+  "unit_task.updated": "updated unit task",
+  "unit_task.deleted": "deleted unit task",
+  certificate_issued: "issued certificate",
+  notification_sent: "sent notification",
+  sms_sent: "sent SMS",
+  tenant_settings_update: "updated church settings",
+  transport_status_change: "changed transport status",
+};
+
+const humanAction = (a) => ACTION_LABELS[a] || String(a || "").replace(/[._]/g, " ");
+const humanEntity = (e) => String(e || "").replace(/[._]/g, " ");
+
+const TARGET_KEYS = ["member_name", "target_name", "child_name", "title", "tenant_name", "certificate_number", "email", "target"];
+function targetName(log) {
+  const d = log.details || {};
+  for (const k of TARGET_KEYS) {
+    if (d[k]) return String(d[k]).trim();
+  }
+  return log.entity_id ? String(log.entity_id).slice(0, 8) : "";
+}
+
+const isSystemActor = (log) => !log.user_id || !!(log.details || {}).source;
+
+// Compact "field: old → new" list from before/after payloads.
+function diffFields(details) {
+  const before = details?.before;
+  const after = details?.after;
+  if (!before || !after || typeof before !== "object" || typeof after !== "object") return [];
+  const keys = [...new Set([...Object.keys(before), ...Object.keys(after)])];
+  const fmt = (v) => {
+    if (v === null || v === undefined || v === "") return "—";
+    if (typeof v === "object") return JSON.stringify(v);
+    return String(v);
+  };
+  return keys
+    .filter((k) => JSON.stringify(before[k]) !== JSON.stringify(after[k]))
+    .map((k) => ({ field: k.replace(/_/g, " "), from: fmt(before[k]), to: fmt(after[k]) }));
+}
 
 const AUDIT_CSV_HEADERS = [
-  { label: "Actor", fn: r => r._actorName || r.user_id },
-  { label: "Action", fn: r => r.action },
-  { label: "Entity Type", fn: r => r.entity_type },
-  { label: "Details", fn: r => JSON.stringify(r.details || {}) },
   { label: "Time", fn: r => format(new Date(r.created_at), "yyyy-MM-dd HH:mm:ss") },
+  { label: "Actor", fn: r => r._actorName || (isSystemActor(r) ? "System" : r.user_id) },
+  { label: "Action", fn: r => humanAction(r.action) },
+  { label: "Entity Type", fn: r => humanEntity(r.entity_type) },
+  { label: "Target", fn: r => targetName(r) },
+  { label: "Entity ID", fn: r => r.entity_id || "" },
+  { label: "Details", fn: r => JSON.stringify(r.details || {}) },
 ];
+
+function AuditEntry({ log, actor }) {
+  const [open, setOpen] = useState(false);
+  const Icon = actionIcons[log.action] || Shield;
+  const colorClass = actionColors[log.action] || "bg-muted text-muted-foreground";
+  const details = log.details || {};
+  const changes = diffFields(details);
+  const target = targetName(log);
+  const when = new Date(log.created_at);
+
+  return (
+    <Card className="border-0 shadow-sm p-4">
+      <div className="flex items-start gap-3">
+        <div className={`h-9 w-9 rounded-lg flex items-center justify-center shrink-0 ${colorClass}`}><Icon className="h-4 w-4" /></div>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm text-foreground">
+            <span className="font-medium">{actor.name}</span>{" "}
+            <span>{humanAction(log.action)}</span>{" "}
+            {target && <span className="font-medium break-words">{target}</span>}
+          </p>
+          <div className="flex items-center gap-2 flex-wrap mt-1">
+            <Badge variant="outline" className="text-xs">{humanEntity(log.entity_type)}</Badge>
+            {actor.email && <span className="text-xs text-muted-foreground truncate">{actor.email}</span>}
+          </div>
+
+          {changes.length > 0 && (
+            <ul className="mt-2 space-y-0.5">
+              {changes.slice(0, open ? changes.length : 4).map((c) => (
+                <li key={c.field} className="text-xs text-muted-foreground break-words">
+                  <span className="capitalize text-foreground">{c.field}</span>: {c.from} → {c.to}
+                </li>
+              ))}
+            </ul>
+          )}
+
+          {open && (
+            <pre className="mt-2 max-h-64 overflow-auto rounded-md bg-muted p-2 text-[11px] text-muted-foreground whitespace-pre-wrap break-words">
+              {JSON.stringify({ entity_id: log.entity_id, ...details }, null, 2)}
+            </pre>
+          )}
+
+          <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground flex-wrap">
+            <span className="flex items-center gap-1">
+              <Clock className="h-3 w-3" />
+              {format(when, "dd MMM yyyy, HH:mm:ss")}
+            </span>
+            <span>({formatDistanceToNow(when, { addSuffix: true })})</span>
+            {(Object.keys(details).length > 0 || log.entity_id) && (
+              <button type="button" onClick={() => setOpen(o => !o)} className="underline underline-offset-2 hover:text-foreground">
+                {open ? "Hide details" : "View details"}
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    </Card>
+  );
+}
 
 function AuditLogsPanel() {
   const [search, setSearch] = useState("");
   const [actionFilter, setActionFilter] = useState("all");
-  const [fromDate, setFromDate] = useState(() => subDays(new Date(), 7));
+  const [entityFilter, setEntityFilter] = useState("all");
+  const [fromDate, setFromDate] = useState(() => subDays(new Date(), 30));
   const [toDate, setToDate] = useState(() => new Date());
   const { tenantId, scopeQuery } = useTenantQuery();
 
@@ -533,20 +657,31 @@ function AuditLogsPanel() {
     },
   });
 
-  const getActorName = (userId) => {
-    const p = profiles.find(pr => pr.user_id === userId);
-    return p?.full_name || p?.email || userId?.slice(0, 8);
+  const getActor = (log) => {
+    if (isSystemActor(log) && !log.user_id) return { name: "System", email: "" };
+    const p = profiles.find(pr => pr.user_id === log.user_id);
+    return {
+      name: p?.full_name || p?.email || (log.user_id ? log.user_id.slice(0, 8) : "System"),
+      email: p?.full_name ? (p.email || "") : "",
+    };
   };
 
   const filtered = logs.filter(log => {
-    const matchesSearch = search === "" || log.action.toLowerCase().includes(search.toLowerCase()) || log.entity_type.toLowerCase().includes(search.toLowerCase()) || JSON.stringify(log.details || {}).toLowerCase().includes(search.toLowerCase());
+    const actor = getActor(log);
+    const haystack = [
+      actor.name, actor.email, log.action, humanAction(log.action), log.entity_type,
+      targetName(log), JSON.stringify(log.details || {}),
+    ].join(" ").toLowerCase();
+    const matchesSearch = search === "" || haystack.includes(search.toLowerCase());
     const matchesAction = actionFilter === "all" || log.action === actionFilter;
-    return matchesSearch && matchesAction;
+    const matchesEntity = entityFilter === "all" || log.entity_type === entityFilter;
+    return matchesSearch && matchesAction && matchesEntity;
   });
 
-  const uniqueActions = [...new Set(logs.map(l => l.action))];
+  const uniqueActions = [...new Set(logs.map(l => l.action))].sort();
+  const uniqueEntities = [...new Set(logs.map(l => l.entity_type))].sort();
 
-  const csvRows = filtered.map(r => ({ ...r, _actorName: getActorName(r.user_id) }));
+  const csvRows = filtered.map(r => ({ ...r, _actorName: getActor(r).name }));
 
   return (
     <div className="space-y-4">
@@ -554,13 +689,20 @@ function AuditLogsPanel() {
         <DateRangePicker from={fromDate} to={toDate} onFromChange={setFromDate} onToChange={setToDate} />
         <div className="relative flex-1 min-w-[180px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input placeholder="Search logs..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9" />
+          <Input placeholder="Search who, what or record..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9" />
         </div>
         <Select value={actionFilter} onValueChange={setActionFilter}>
           <SelectTrigger className="w-44"><SelectValue placeholder="All actions" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All actions</SelectItem>
-            {uniqueActions.map(a => <SelectItem key={a} value={a}>{a.replace(/_/g, " ")}</SelectItem>)}
+            {uniqueActions.map(a => <SelectItem key={a} value={a} className="capitalize">{humanAction(a)}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        <Select value={entityFilter} onValueChange={setEntityFilter}>
+          <SelectTrigger className="w-44"><SelectValue placeholder="All records" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All records</SelectItem>
+            {uniqueEntities.map(e => <SelectItem key={e} value={e} className="capitalize">{humanEntity(e)}</SelectItem>)}
           </SelectContent>
         </Select>
         <Button size="sm" variant="outline" onClick={() => downloadCSV(csvRows, AUDIT_CSV_HEADERS, `audit-logs-${format(new Date(), "yyyy-MM-dd")}.csv`)} disabled={filtered.length === 0}>
@@ -573,36 +715,7 @@ function AuditLogsPanel() {
         <Card className="border-0 shadow-sm"><div className="p-8 text-center text-muted-foreground">No audit logs found</div></Card>
       ) : (
         <div className="space-y-2">
-          {filtered.map(log => {
-            const Icon = actionIcons[log.action] || Shield;
-            const colorClass = actionColors[log.action] || "bg-muted text-muted-foreground";
-            const details = log.details || {};
-            return (
-              <Card key={log.id} className="border-0 shadow-sm p-4">
-                <div className="flex items-start gap-3">
-                  <div className={`h-9 w-9 rounded-lg flex items-center justify-center shrink-0 ${colorClass}`}><Icon className="h-4 w-4" /></div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-medium text-sm text-foreground">{getActorName(log.user_id)}</span>
-                      <Badge variant="outline" className="text-xs">{log.action.replace(/_/g, " ")}</Badge>
-                      <span className="text-xs text-muted-foreground">on {log.entity_type.replace(/_/g, " ")}</span>
-                    </div>
-                    {Object.keys(details).length > 0 && (
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {details.target_name && <span>Target: <strong>{details.target_name}</strong>. </span>}
-                        {details.old_role && details.new_role && <span>Role: {details.old_role} → {details.new_role}. </span>}
-                        {details.member_name && <span>Member: {details.member_name}. </span>}
-                      </p>
-                    )}
-                    <div className="flex items-center gap-1 mt-1 text-xs text-muted-foreground">
-                      <Clock className="h-3 w-3" />
-                      {format(new Date(log.created_at), "dd MMM yyyy, HH:mm")}
-                    </div>
-                  </div>
-                </div>
-              </Card>
-            );
-          })}
+          {filtered.map(log => <AuditEntry key={log.id} log={log} actor={getActor(log)} />)}
         </div>
       )}
     </div>
