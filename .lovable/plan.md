@@ -1,30 +1,28 @@
-## What I found
+## Goal
 
-- Birthday email and in-app messages are sending fine (last sends recorded today, 30 Jul).
-- Birthday SMS has worked on most birthdays (22, 19, 16, 14, 13 Jul all delivered, visible in System Logs → SMS).
-- Today's birthday SMS to Providence Adesanya failed: the messaging function returned a gateway error (502) before writing anything, so **no row exists in the SMS log** and nothing shows in System Logs. The failure is only recorded in the internal birthday log, which System Logs does not display.
-- There is no birthday voice-call channel, so the Calls log is expected to be empty for birthdays (out of scope per your choice).
+Make the Audit tab in System Logs read as a plain-English trail: **who** did **what**, on **which record**, and **exactly when**.
 
-## Plan
+## What exists today
 
-1. **Never lose a failure again**
-   - In the birthday sender, when the SMS/WhatsApp call fails (non-2xx, timeout, or gateway error), write a `failed` row into `sms_log` with tenant, member, phone, channel, `sms_type = 'birthday'`, and the error text — so it appears in System Logs → SMS/WhatsApp alongside successful sends.
+System Logs already has an admin-only **Audit** tab reading `audit_log` (actor, action, entity_type, entity_id, details JSON, timestamp). The current card shows actor name, a raw action badge like `member_update`, the entity type, and only a few hand-picked detail fields — so most entries read as jargon and the affected record is often not shown. Timestamps show to the minute only.
 
-2. **Retry transient failures**
-   - Retry the send up to 3 times with short backoff (1s, 3s) for gateway/5xx/network errors only. Do not retry validation errors (no phone, quota exceeded, invalid number).
-   - Only mark the birthday log row `failed` after the retries are exhausted; mark it `sent` if a retry succeeds.
+## Changes (all in `src/pages/SystemLogs.jsx`)
 
-3. **Same treatment for email**
-   - Apply the same retry-on-5xx logic to the birthday email call so a transient blip doesn't silently skip a member.
+1. **Plain-English sentence per entry**
+   Render each row as: `Ada Obi updated member Test TEST — 31 Jul 2026, 09:41:22`.
+   - Map actions to readable verbs (`member_update` → "updated member", `role_add` → "assigned role", `child_dropoff` → "dropped off", `join_request_approve` → "approved join request", `unit_task.created` → "created unit task", `certificate_issued` → "issued certificate", etc.), with a sensible fallback that de-underscores anything unmapped.
+   - Derive the target name from whichever detail key is present (`member_name`, `target_name`, `child_name`, `title`, `tenant_name`, `certificate_number`, `email`), falling back to a short `entity_id`.
 
-4. **Make failures re-runnable**
-   - Because a failed row is recorded, a later run today would be skipped by the once-per-day rule. Change the idempotency check so rows still marked `failed` are retried on the next hourly run of the same day, while `sent` rows stay skipped.
+2. **Who** — keep the resolved actor name, add the actor's email as secondary text, and label system-generated rows (no `user_id`, or `details.source` set by an edge function) as "System".
 
-5. **Re-send today's missed message**
-   - After the fix, trigger the sender for that member so today's birthday SMS actually goes out, then confirm a row appears in System Logs → SMS.
+3. **What changed** — for entries carrying `before`/`after` (member updates, tenant settings, transport status), show a compact "Field: old → new" list of only the keys that actually differ, expandable via a "View details" toggle that reveals the full JSON for anything not covered.
+
+4. **Timestamp** — show date + time to the second, plus a relative hint ("2 hours ago"); CSV export already carries `yyyy-MM-dd HH:mm:ss`, extended with entity id and target name columns.
+
+5. **Filtering** — action dropdown shows the friendly labels, add an entity-type filter and keep search working across actor name, target name and details. Widen the default date range from 7 to 30 days so the trail isn't empty on open.
 
 ## Technical notes
 
-- Files: `supabase/functions/send-birthday-messages/index.ts` (retry helper, sms_log failure write, idempotency change).
-- No schema changes needed; `sms_log` already has `status`, `error_message`, `sms_type`, `channel`, `tenant_id`, `member_id`.
-- The failure row is inserted with the service-role client, bypassing RLS, matching how `send-sms` writes its own rows.
+- Presentation-only: no schema change, no new audit writes, no RLS change. `audit_log` already stores everything needed (`user_id`, `action`, `entity_type`, `entity_id`, `details`, `created_at`).
+- Action-label and target-name resolution go in small helper maps at the top of the file, so new action types degrade gracefully rather than breaking.
+- Tab stays admin-only, as it is now.
