@@ -220,11 +220,11 @@ function RosterDialog({ open, onOpenChange, session, canWrite }) {
   });
 
   const { data: records = [] } = useQuery({
-    queryKey: ["preteen-records", session?.id],
-    enabled: !!session?.id && open,
+    queryKey: ["preteen-records", session?.id, tenantId],
+    enabled: !!session?.id && !!tenantId && open,
     refetchInterval: 10000,
     queryFn: async () => {
-      const { data, error } = await supabase.from("preteen_attendance_records").select("*").eq("session_id", session.id);
+      const { data, error } = await supabase.from("preteen_attendance_records").select("*").eq("session_id", session.id).eq("tenant_id", tenantId);
       if (error) throw error;
       return data || [];
     },
