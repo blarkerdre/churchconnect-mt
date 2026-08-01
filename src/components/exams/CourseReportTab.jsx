@@ -108,19 +108,44 @@ export default function CourseReportTab() {
     },
   });
 
-  const { data: sessions = [] } = useQuery({
-    queryKey: ["exam-sessions-report", tenantId],
-    enabled: !!tenantId,
+  const selectedCourse = courses.find((c) => c.id === courseId);
+
+  // Only sessions that actually include the selected course (linked by course name).
+  const { data: sessions = [], isFetching: loadingSessions } = useQuery({
+    queryKey: ["exam-sessions-report", tenantId, selectedCourse?.name],
+    enabled: !!tenantId && !!selectedCourse?.name,
     queryFn: async () => {
+      const { data: links, error: linkErr } = await supabase
+        .from("exam_session_courses")
+        .select("session_id")
+        .eq("tenant_id", tenantId)
+        .eq("exam_title", selectedCourse.name);
+      if (linkErr) throw linkErr;
+      const ids = [...new Set((links || []).map((l) => l.session_id).filter(Boolean))];
+      if (!ids.length) return [];
       const { data, error } = await supabase.from("exam_sessions")
         .select("id, name, starts_on, ends_on, status").eq("tenant_id", tenantId)
+        .in("id", ids)
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data || [];
     },
   });
 
-  const selectedCourse = courses.find((c) => c.id === courseId);
+  // Which sessions already have a saved report for this course.
+  const { data: existingReports = [] } = useQuery({
+    queryKey: ["wofbi-course-reports-index", tenantId, courseId],
+    enabled: !!tenantId && !!courseId,
+    queryFn: async () => {
+      const { data, error } = await supabase.from("wofbi_course_reports")
+        .select("session_id, status").eq("tenant_id", tenantId).eq("course_id", courseId);
+      if (error) throw error;
+      return data || [];
+    },
+  });
+  const reportStatusFor = (sid) =>
+    existingReports.find((r) => (sid === NO_SESSION ? r.session_id === null : r.session_id === sid))?.status;
+
 
   // Same logo resolution as the Statement of Result, resolved live.
   const { data: liveTemplate } = useQuery({
