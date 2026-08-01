@@ -14,7 +14,7 @@ import { useTenant } from "@/contexts/TenantContext";
 import { toast } from "@/components/ui/use-toast";
 import { Loader2, Save, RefreshCw, Printer, FileDown, Plus, Trash2, FileText, Eye } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { emptyReport, mergeReport, FINDING_FIELDS, buildIntroduction, DEFAULT_TESTIMONY_HEADING } from "@/lib/wofbi-report-defaults";
+import { emptyReport, mergeReport, FINDING_FIELDS, QC_CHECKLIST_FIELDS, buildIntroduction, DEFAULT_TESTIMONY_HEADING } from "@/lib/wofbi-report-defaults";
 import { printReport, downloadReportDoc, buildReportHtml } from "@/lib/wofbi-report-export";
 
 const NO_SESSION = "__none__";
