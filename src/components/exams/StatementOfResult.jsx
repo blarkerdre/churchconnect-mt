@@ -7,6 +7,7 @@ import { getGradeClassification, getLetterGrade, LETTER_GRADE_BANDS, resolveLett
 import { useTenant } from "@/contexts/TenantContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useResolvedBrandingUrl } from "@/lib/branding-url";
 
 function escHtml(str) {
   return String(str ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
