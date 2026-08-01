@@ -889,6 +889,11 @@ export default function ExamManagement() {
           <WoFBIApplicationFormEditor />
         </TabsContent>
 
+        <TabsContent value="feedback-form" className="space-y-4 mt-4">
+          <WoFBIFeedbackFormEditor />
+        </TabsContent>
+
+
         <TabsContent value="attendance" className="space-y-4 mt-4">
           <WoFBIAttendanceTab />
         </TabsContent>
