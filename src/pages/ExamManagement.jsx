@@ -639,10 +639,26 @@ export default function ExamManagement() {
                 The minimum overall percentage a student needs across all subjects to pass the entire course and receive a certificate. This is separate from each subject's own pass mark.
               </p>
             </div>
-            <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50 border border-border">
-              <Label htmlFor="reg-open" className="cursor-pointer">Registration Open</Label>
-              <Switch id="reg-open" checked={titleForm.registration_open} onCheckedChange={v => setTitleForm(f => ({ ...f, registration_open: v }))} />
+            <div className="p-3 rounded-lg bg-muted/50 border border-border">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="reg-open" className="cursor-pointer">Registration Open</Label>
+                <Switch id="reg-open" checked={titleForm.registration_open} onCheckedChange={v => setTitleForm(f => ({ ...f, registration_open: v }))} />
+              </div>
+              {(() => {
+                const ctrl = sessionControl[editingTitle?.name || titleForm.name];
+                if (!ctrl?.sessions?.length) return null;
+                return (
+                  <p className="text-[11px] text-muted-foreground mt-2">
+                    Controlled by session{ctrl.sessions.length > 1 ? "s" : ""}: {ctrl.sessions.map(s => s.name).join(", ")}.
+                    {ctrl.active
+                      ? ` “${ctrl.active.name}” is open, so applications and registrations are accepted.`
+                      : " No session is open, so applications and registrations are closed."}
+                    {" "}Starting or closing a session will reset this switch.
+                  </p>
+                );
+              })()}
             </div>
+
             <div className="p-3 rounded-lg bg-muted/50 border border-border">
               <div className="flex items-center justify-between">
                 <Label htmlFor="exams-open" className="cursor-pointer">Exams Open</Label>
