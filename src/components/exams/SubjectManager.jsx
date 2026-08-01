@@ -21,7 +21,7 @@ export default function SubjectManager({ course, onSelectSubject, selectedSubjec
   const { tenantId, withTenant, scopeQuery } = useTenantQuery();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState(null);
-  const [form, setForm] = useState({ name: "", description: "", lecturer_id: "", pass_mark_percentage: 50, time_limit_minutes: "", randomize_questions: false, is_open: false, useCustomGrades: false, grade_classifications: [] });
+  const [form, setForm] = useState({ name: "", code: "", description: "", lecturer_id: "", pass_mark_percentage: 50, time_limit_minutes: "", randomize_questions: false, is_open: false, useCustomGrades: false, grade_classifications: [] });
   const [deleteTarget, setDeleteTarget] = useState(null);
 
   const { data: lecturers = [] } = useQuery({
@@ -92,7 +92,7 @@ export default function SubjectManager({ course, onSelectSubject, selectedSubjec
   const closeDialog = () => {
     setDialogOpen(false);
     setEditing(null);
-    setForm({ name: "", description: "", lecturer_id: "", pass_mark_percentage: 50, time_limit_minutes: "", randomize_questions: false, is_open: false, useCustomGrades: false, grade_classifications: [] });
+    setForm({ name: "", code: "", description: "", lecturer_id: "", pass_mark_percentage: 50, time_limit_minutes: "", randomize_questions: false, is_open: false, useCustomGrades: false, grade_classifications: [] });
   };
 
   return (
@@ -103,7 +103,7 @@ export default function SubjectManager({ course, onSelectSubject, selectedSubjec
             <CardTitle className="text-base font-display flex items-center gap-2">
               <Layers className="h-4 w-4 text-primary" /> {course.name} — Subjects
             </CardTitle>
-            <Button size="sm" variant="outline" className="gap-1.5" onClick={() => { setEditing(null); setForm({ name: "", description: "", lecturer_id: "", pass_mark_percentage: 50, time_limit_minutes: "", randomize_questions: false, is_open: false, useCustomGrades: false, grade_classifications: [] }); setDialogOpen(true); }}>
+            <Button size="sm" variant="outline" className="gap-1.5" onClick={() => { setEditing(null); setForm({ name: "", code: "", description: "", lecturer_id: "", pass_mark_percentage: 50, time_limit_minutes: "", randomize_questions: false, is_open: false, useCustomGrades: false, grade_classifications: [] }); setDialogOpen(true); }}>
               <Plus className="h-3.5 w-3.5" /> Add Subject
             </Button>
           </div>
@@ -127,6 +127,7 @@ export default function SubjectManager({ course, onSelectSubject, selectedSubjec
                 >
                   <div className="flex items-center gap-2 min-w-0 flex-wrap flex-1">
                     <span className="text-xs text-muted-foreground font-mono w-5">{idx + 1}.</span>
+                    {s.code && <Badge variant="outline" className="text-[9px] h-4 font-mono">{s.code}</Badge>}
                     <span className="text-sm font-medium text-foreground break-words">{s.name}</span>
                     {s.description && <span className="text-xs text-muted-foreground hidden sm:inline">— {s.description}</span>}
                     <Badge variant="outline" className="text-[9px] h-4">Pass: {s.pass_mark_percentage}%</Badge>
@@ -143,7 +144,7 @@ export default function SubjectManager({ course, onSelectSubject, selectedSubjec
                     </span>
                   </div>
                   <div className="flex items-center gap-1 shrink-0 self-end sm:self-auto">
-                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); setEditing(s); setForm({ name: s.name, description: s.description || "", lecturer_id: s.lecturer_id || "", pass_mark_percentage: s.pass_mark_percentage ?? 50, time_limit_minutes: s.time_limit_minutes ?? "", randomize_questions: s.randomize_questions ?? false, is_open: !!s.is_open, useCustomGrades: !!(s.grade_classifications && s.grade_classifications.length > 0), grade_classifications: s.grade_classifications || [] }); setDialogOpen(true); }}>
+                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); setEditing(s); setForm({ name: s.name, code: s.code || "", description: s.description || "", lecturer_id: s.lecturer_id || "", pass_mark_percentage: s.pass_mark_percentage ?? 50, time_limit_minutes: s.time_limit_minutes ?? "", randomize_questions: s.randomize_questions ?? false, is_open: !!s.is_open, useCustomGrades: !!(s.grade_classifications && s.grade_classifications.length > 0), grade_classifications: s.grade_classifications || [] }); setDialogOpen(true); }}>
                       <Edit className="h-3.5 w-3.5" />
                     </Button>
                     <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={(e) => { e.stopPropagation(); setDeleteTarget(s); }}>
@@ -165,6 +166,7 @@ export default function SubjectManager({ course, onSelectSubject, selectedSubjec
             if (!form.name.trim()) { toast({ title: "Subject name is required", variant: "destructive" }); return; }
             saveMutation.mutate({
               name: form.name.trim(),
+              code: form.code.trim().toUpperCase() || null,
               description: form.description.trim() || null,
               lecturer_id: form.lecturer_id || null,
               pass_mark_percentage: Number(form.pass_mark_percentage) || 50,
@@ -177,6 +179,11 @@ export default function SubjectManager({ course, onSelectSubject, selectedSubjec
             <div className="space-y-1.5">
               <Label>Subject Name *</Label>
               <Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="e.g. Church History" />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Subject Code</Label>
+              <Input value={form.code} maxLength={20} onChange={e => setForm(f => ({ ...f, code: e.target.value.toUpperCase() }))} placeholder="e.g. CH101" className="w-40 font-mono uppercase" />
+              <p className="text-xs text-muted-foreground">Optional short code shown beside the subject name.</p>
             </div>
             <div className="space-y-1.5">
               <Label>Description</Label>
