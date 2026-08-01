@@ -1910,6 +1910,18 @@ function MemberExamsView({ memberId, memberRecord, courses, loading }) {
                           <FileText className="h-3 w-3" /> Statement
                         </Button>
                       )}
+                      {allDone && feedbackEnabled && isRegistered && (
+                        <Button
+                          variant={submittedFeedbackIds.includes(regIdByCourse[course.id]) ? "outline" : "default"}
+                          size="sm"
+                          className="gap-1 text-xs h-7"
+                          onClick={() => setFeedbackCourse(course)}
+                        >
+                          <MessageSquare className="h-3 w-3" />
+                          {submittedFeedbackIds.includes(regIdByCourse[course.id]) ? "Feedback submitted" : "Course feedback"}
+                        </Button>
+                      )}
+
                     </div>
                   </div>
 
