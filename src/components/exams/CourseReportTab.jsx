@@ -197,8 +197,9 @@ export default function CourseReportTab() {
   };
 
   const handleWordDownload = () => {
-    const result = downloadReportDoc(reportForExport);
-    if (result === "opened") {
+  const handleWordDownload = async () => {
+    const result = await downloadReportDoc(reportForExport);
+
       toast({
         title: "Opened in a new tab",
         description: "Your browser blocked the download — use Share / Save from the new tab to keep the Word file.",
