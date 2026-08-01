@@ -6741,6 +6741,67 @@ export type Database = {
           },
         ]
       }
+      wofbi_course_reports: {
+        Row: {
+          content: Json
+          course_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          session_id: string | null
+          status: string
+          tenant_id: string
+          title: string | null
+          updated_at: string
+        }
+        Insert: {
+          content?: Json
+          course_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          session_id?: string | null
+          status?: string
+          tenant_id: string
+          title?: string | null
+          updated_at?: string
+        }
+        Update: {
+          content?: Json
+          course_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          session_id?: string | null
+          status?: string
+          tenant_id?: string
+          title?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wofbi_course_reports_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "exam_titles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wofbi_course_reports_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "exam_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wofbi_course_reports_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       wofbi_feedback_forms: {
         Row: {
           created_at: string
