@@ -196,9 +196,11 @@ export default function CourseReportTab() {
     cover: { ...report.cover, logo_url: report.cover?.logo_url || liveLogoUrl },
   };
 
-  const handleWordDownload = () => {
-    const result = downloadReportDoc(reportForExport);
+  const handleWordDownload = async () => {
+    const result = await downloadReportDoc(reportForExport);
     if (result === "opened") {
+
+
       toast({
         title: "Opened in a new tab",
         description: "Your browser blocked the download — use Share / Save from the new tab to keep the Word file.",
@@ -594,7 +596,7 @@ export default function CourseReportTab() {
                 <Printer className="h-3.5 w-3.5 mr-1" /> Print / PDF
               </Button>
               <Button size="sm" variant="outline" onClick={handleWordDownload}>
-                <FileDown className="h-3.5 w-3.5 mr-1" /> Word
+                <FileDown className="h-3.5 w-3.5 mr-1" /> Word (.docx)
               </Button>
             </div>
           )}
@@ -616,7 +618,7 @@ export default function CourseReportTab() {
               <Printer className="h-3.5 w-3.5 mr-1" /> Print / PDF
             </Button>
             <Button size="sm" variant="outline" onClick={handleWordDownload}>
-              <FileDown className="h-3.5 w-3.5 mr-1" /> Word
+              <FileDown className="h-3.5 w-3.5 mr-1" /> Word (.docx)
             </Button>
           </div>
         </DialogContent>
