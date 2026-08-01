@@ -2002,6 +2002,15 @@ function MemberExamsView({ memberId, memberRecord, courses, loading }) {
       />
 
       <RateLecturerDialog open={rateOpen} onOpenChange={setRateOpen} />
+      <WoFBIFeedbackDialog
+        open={!!feedbackCourse}
+        onOpenChange={(v) => !v && setFeedbackCourse(null)}
+        course={feedbackCourse}
+        memberId={memberId}
+        memberRecord={memberRecord}
+        registrationId={feedbackCourse ? regIdByCourse[feedbackCourse.id] : null}
+      />
+
 
 
       {statementCourse && (() => {
