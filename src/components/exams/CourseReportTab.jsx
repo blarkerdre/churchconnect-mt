@@ -117,6 +117,31 @@ export default function CourseReportTab() {
     },
   });
 
+  const selectedCourse = courses.find((c) => c.id === courseId);
+
+  // Same logo resolution as the Statement of Result, resolved live.
+  const { data: liveTemplate } = useQuery({
+    queryKey: ["wofbi-report-template", tenantId, selectedCourse?.name],
+    enabled: !!tenantId && !!selectedCourse?.name,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("certificate_templates")
+        .select("church_name, centre_name, logo_url, wofbi_logo_url, crest_image_url")
+        .eq("tenant_id", tenantId)
+        .eq("training_type", selectedCourse.name)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const liveLogoUrl =
+    liveTemplate?.wofbi_logo_url ||
+    liveTemplate?.crest_image_url ||
+    liveTemplate?.logo_url ||
+    currentTenant?.logo_url ||
+    "";
+
   const { data: existing, isFetching: loadingReport } = useQuery({
     queryKey: ["wofbi-course-report", tenantId, courseId, sessionId],
     enabled: !!tenantId && !!courseId,
@@ -132,10 +157,30 @@ export default function CourseReportTab() {
 
   useEffect(() => {
     if (!courseId) return;
-    setReport(mergeReport(existing?.content));
+    const next = mergeReport(existing?.content);
+    if (!existing) {
+      // brand-new report: seed the template wording with what we know
+      const sessionRow = sessions.find((s) => s.id === sessionId);
+      next.cover = {
+        ...next.cover,
+        church_name: next.cover.church_name || currentTenant?.name || "",
+        course_title: selectedCourse?.name || next.cover.course_title,
+        course_code: selectedCourse?.course_code || next.cover.course_code,
+        edition: sessionRow?.name || next.cover.edition,
+      };
+      next.introduction = buildIntroduction({
+        course: selectedCourse?.name || "",
+        edition: sessionRow?.name || "",
+        centre: next.cover.centre_name,
+        church: next.cover.church_name,
+      });
+    }
+    setReport(next);
     setStatus(existing?.status || "draft");
     setDirty(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [existing, courseId, sessionId]);
+
 
   const set = (path, value) => {
     setDirty(true);
