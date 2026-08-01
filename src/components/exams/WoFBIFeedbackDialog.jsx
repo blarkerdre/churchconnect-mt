@@ -6,7 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/use-toast";
 import { Loader2, Send } from "lucide-react";
-import { FEEDBACK_CONFIDENTIALITY_NOTE } from "@/lib/wofbi-feedback-defaults";
+import { FEEDBACK_CONFIDENTIALITY_NOTE, mergeFeedbackDefaults } from "@/lib/wofbi-feedback-defaults";
 import WoFBIDynamicForm from "./WoFBIDynamicForm";
 
 /**
