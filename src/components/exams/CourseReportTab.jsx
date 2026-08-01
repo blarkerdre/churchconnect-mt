@@ -599,14 +599,47 @@ export default function CourseReportTab() {
             </div>
             <div className="space-y-1 min-w-0">
               <Label className="text-xs">Session / edition</Label>
-              <Select value={sessionId} onValueChange={setSessionId}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+              <Select value={sessionId} onValueChange={setSessionId} disabled={!courseId}>
+                <SelectTrigger>
+                  <SelectValue placeholder={courseId ? "Select session" : "Select a course first"}>
+                    {sessionId === NO_SESSION
+                      ? "All sessions"
+                      : [selectedSession?.name, fmtRange(selectedSession)].filter(Boolean).join(" · ")}
+                  </SelectValue>
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value={NO_SESSION}>All sessions</SelectItem>
-                  {sessions.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                  {sessions.map((s) => {
+                    const rs = reportStatusFor(s.id);
+                    return (
+                      <SelectItem key={s.id} value={s.id}>
+                        <span className="flex items-center gap-2">
+                          <span>{s.name}</span>
+                          {fmtRange(s) && <span className="text-[11px] text-muted-foreground">{fmtRange(s)}</span>}
+                          <Badge variant="outline" className="text-[9px] px-1 py-0">{sessionState(s)}</Badge>
+                          {rs && (
+                            <Badge variant={rs === "final" ? "default" : "secondary"} className="text-[9px] px-1 py-0">
+                              {rs === "final" ? "Final" : "Draft"}
+                            </Badge>
+                          )}
+                        </span>
+                      </SelectItem>
+                    );
+                  })}
                 </SelectContent>
               </Select>
+              {courseId && !loadingSessions && sessions.length === 0 && (
+                <p className="text-[11px] text-muted-foreground">
+                  No exam sessions include this course yet — the report will cover all data for the course.
+                </p>
+              )}
+              <p className="text-[11px] text-muted-foreground">
+                {sessionId === NO_SESSION
+                  ? "One combined report across every intake of this course. Edition and dates are left blank for you to fill in."
+                  : "Report covers only this intake — edition, dates, registrations, attendance and results are scoped to it."}
+              </p>
             </div>
+
           </div>
 
           {courseId && (
