@@ -1,29 +1,32 @@
-## Cause
+## Goal
+Make it self-evident which session/edition to pick when generating a Bible School Course Final Report.
 
-The "Word Export" button doesn't produce a Word file — it writes an HTML document with a `.doc` extension and a `application/vnd.ms-word` MIME type (`downloadReportDoc` in `src/lib/wofbi-report-export.js` reuses `buildReportHtml`). Since Microsoft's Office security update, Word blocks HTML-content files with Word extensions and shows "the file is corrupt and cannot be opened". Mobile Word and Google Docs reject them too. Nothing about the report content is wrong — the container format is.
+## Current behaviour
+- The "Session / edition" dropdown lists **every** exam session for the tenant, ordered newest-first, showing only the session name.
+- It is **not** filtered by the selected course, so sessions that never ran that course still appear.
+- "All sessions" writes a report covering the whole course history (no edition, no date range). Picking a named session sets the report's Edition to the session name and the cover date range to its start/end dates, and scopes registrations/attendance/results to that session.
 
-## Fix: emit a genuine .docx
+## Changes (UI only)
 
-Build a real OOXML package client-side using `jszip` (already a project dependency, no new packages).
+1. **Filter the list to the selected course**
+   Use the existing `exam_session_courses` link table to only offer sessions that actually include the chosen course. Show a "No sessions found for this course" empty state instead of an unfiltered list.
 
-New file `src/lib/wofbi-report-docx.js`:
-- Small OOXML helpers: `para(text, opts)` (bold / underline / heading / centred), `numberedList(items)`, `docxTable(headers, rows, widths)` with the navy header shading, borders and cell padding used in the print layout.
-- `buildReportDocx(report)` walks the exact same report model as `buildReportHtml` and produces the same sections in the same order: cover block, 1 Introduction, 2 Faculty, 3 Induction, 4 Class attendance, 5a/5b statistics, 6 Nations, 7 Courses & lecturers, 8 Findings + overall performance + next session, 9 Testimonies, 10 Feedback intro + table, 11 QC table (with the 10-point checklist cell), 13 Honorarium + sub-heading + matrix, REMARK, sign-off.
-- Package `[Content_Types].xml`, `_rels/.rels`, `word/document.xml`, `word/_rels/document.xml.rels`, `word/styles.xml` into a zip and return a `Blob` with the correct `.docx` MIME type.
-- Cover logo: fetch the logo URL as bytes and embed it in `word/media/` with a relationship and a `w:drawing` inline image; if the fetch fails, skip the image and keep the rest of the document.
-- Page size A4 with ~18mm margins, matching the print stylesheet.
+2. **Richer option labels**
+   Each item shows: session name · date range (`12 Jan – 30 Mar 2026`) · a status chip (Open / Closed / Upcoming). Trigger shows name + dates so the current choice is readable at a glance.
 
-`src/lib/wofbi-report-export.js`:
-- Make `downloadReportDoc` async: build the blob via `buildReportDocx`, save as `<course>_report.docx`, keep the existing `"downloaded" | "opened" | "failed"` return contract and the popup/new-tab fallbacks for PWAs that block downloads.
-- Keep `buildReportHtml` and `printReport` untouched — the on-screen Preview dialog and Print path continue to use the HTML renderer.
+3. **Explain the two modes**
+   Helper text under the dropdown that changes with the selection:
+   - *All sessions*: "One combined report across every intake of this course. Edition and dates are left blank for you to fill in."
+   - *A named session*: "Report covers only this intake — edition, dates, registrations, attendance and results are scoped to it."
 
-`src/components/exams/CourseReportTab.jsx`:
-- `await` the now-async download call and keep the existing toast handling; relabel the button to "Download Word (.docx)".
+4. **Sensible default**
+   When a course is selected and it has sessions, default to the most recent completed/closed session rather than "All sessions" (the usual case for an end-of-course report). Existing saved reports still load by their stored `session_id`.
+
+5. **Show whether a report already exists**
+   Mark options that already have a saved report with a small "Draft" / "Final" badge, so you don't accidentally start a second report for the same edition.
 
 ## Technical notes
-
-No schema or data changes. Text is XML-escaped and newlines split into separate paragraphs (Word rejects raw `\n` in a run), tables carry both `tblGrid` widths and per-cell widths so they render correctly in Word and Google Docs.
-
-## Verification
-
-Generate a .docx from a sample report in a headless browser run, unzip it, validate the XML, convert to PDF with LibreOffice and inspect every page image for broken tables, clipped text or missing sections before reporting done.
+- All work is in `src/components/exams/CourseReportTab.jsx`.
+- New query joins `exam_session_courses` to `exam_sessions`, filtered by `tenant_id` and `course_id`.
+- A lightweight query on `wofbi_course_reports` (tenant + course) supplies the Draft/Final badges.
+- No schema or export-format changes.
