@@ -2218,6 +2218,7 @@ export type Database = {
         Row: {
           allow_reregistration: boolean
           auto_open_exams: boolean
+          auto_schedule: boolean
           created_at: string
           created_by: string | null
           description: string | null
@@ -2235,6 +2236,7 @@ export type Database = {
         Insert: {
           allow_reregistration?: boolean
           auto_open_exams?: boolean
+          auto_schedule?: boolean
           created_at?: string
           created_by?: string | null
           description?: string | null
@@ -2252,6 +2254,7 @@ export type Database = {
         Update: {
           allow_reregistration?: boolean
           auto_open_exams?: boolean
+          auto_schedule?: boolean
           created_at?: string
           created_by?: string | null
           description?: string | null
@@ -7188,6 +7191,7 @@ export type Database = {
             Args: { _email: string; _tenant_id?: string; _user_id: string }
             Returns: string
           }
+      auto_manage_exam_sessions: { Args: never; Returns: undefined }
       auto_manage_wofbi_sessions: { Args: never; Returns: undefined }
       can_manage_unit_task: {
         Args: { _task_id: string; _tenant_id: string; _user_id: string }
