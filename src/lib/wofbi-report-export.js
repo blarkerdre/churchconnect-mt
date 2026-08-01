@@ -171,9 +171,11 @@ export function buildReportHtml(report) {
   `;
 
   return `<!DOCTYPE html>
-<html><head><meta charset="utf-8" /><title>${escHtml(title)}</title>
+<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">
+<head><meta charset="utf-8" /><title>${escHtml(title)}</title>
 <style>
-  body { font-family: Arial, sans-serif; font-size: 12px; color: #111; margin: 28px; }
+  @page { size: A4; margin: 18mm; }
+  body { font-family: Arial, sans-serif; font-size: 12px; color: #111; margin: 28px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .cover { text-align: center; margin-bottom: 28px; }
   .cover .logo { max-height: 120px; margin-bottom: 8px; }
   h1 { font-size: 20px; color: #1e3a5f; margin: 4px 0; text-transform: uppercase; }
@@ -185,33 +187,157 @@ export function buildReportHtml(report) {
   p, li { line-height: 1.5; }
   p.finding { font-weight: bold; text-decoration: underline; margin-bottom: 2px; }
   .muted { color: #666; font-style: italic; }
-  table { width: 100%; border-collapse: collapse; margin: 6px 0 12px; table-layout: fixed; }
-  th, td { border: 1px solid #999; padding: 6px 8px; vertical-align: top; word-wrap: break-word; white-space: pre-line; }
+  table { width: 100%; border-collapse: collapse; margin: 6px 0 12px; table-layout: fixed; page-break-inside: auto; }
+  th, td { border: 1px solid #999; padding: 6px 8px; vertical-align: top; word-wrap: break-word; overflow-wrap: break-word; white-space: pre-line; }
   th { background: #1e3a5f; color: #fff; text-align: left; font-size: 11px; text-transform: uppercase; }
-  @media print { body { margin: 0; } h2 { page-break-after: avoid; } table, tr { page-break-inside: avoid; } }
+  thead { display: table-header-group; }
+  tr { page-break-inside: avoid; }
+  @media print {
+    body { margin: 0; }
+    h2 { page-break-after: avoid; }
+    table { page-break-inside: auto; }
+    th { background: #1e3a5f !important; color: #fff !important; }
+  }
 </style></head><body>${body}</body></html>`;
 }
 
-export function printReport(report) {
-  const html = buildReportHtml(report);
-  const win = window.open("", "_blank", "width=1000,height=800");
-  if (!win) return;
-  win.document.write(html);
-  win.document.close();
-  win.focus();
-  win.print();
+function reportFileName(report, ext) {
+  const base = (report.cover?.course_title || "course").replace(/[^A-Za-z0-9]+/g, "_");
+  return `${base}_report.${ext}`;
 }
 
+/**
+ * Print via a hidden same-document iframe (no pop-up blocker), waiting for
+ * images to load so tables and the logo are laid out before printing.
+ * Falls back to a pop-up window if the iframe route fails.
+ */
+export function printReport(report) {
+  const html = buildReportHtml(report);
+
+  const iframe = document.createElement("iframe");
+  iframe.setAttribute("aria-hidden", "true");
+  iframe.style.position = "fixed";
+  iframe.style.right = "0";
+  iframe.style.bottom = "0";
+  iframe.style.width = "0";
+  iframe.style.height = "0";
+  iframe.style.border = "0";
+  iframe.style.opacity = "0";
+  document.body.appendChild(iframe);
+
+  const cleanup = () => {
+    setTimeout(() => {
+      if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
+    }, 1000);
+  };
+
+  const openInWindow = () => {
+    const win = window.open("", "_blank");
+    if (!win) return false;
+    win.document.open();
+    win.document.write(html);
+    win.document.close();
+    win.focus();
+    setTimeout(() => {
+      try {
+        win.print();
+      } catch {
+        /* user can print manually */
+      }
+    }, 400);
+    return true;
+  };
+
+  try {
+    const doc = iframe.contentWindow?.document;
+    if (!doc) throw new Error("no iframe document");
+    doc.open();
+    doc.write(html);
+    doc.close();
+
+    const run = () => {
+      const win = iframe.contentWindow;
+      const imgs = Array.from(doc.images || []);
+      const pending = imgs.filter((i) => !i.complete);
+      const go = () => {
+        try {
+          win.focus();
+          win.print();
+        } catch {
+          openInWindow();
+        }
+        cleanup();
+      };
+      if (!pending.length) return setTimeout(go, 150);
+      let left = pending.length;
+      const done = () => {
+        left -= 1;
+        if (left <= 0) setTimeout(go, 150);
+      };
+      pending.forEach((img) => {
+        img.addEventListener("load", done, { once: true });
+        img.addEventListener("error", done, { once: true });
+      });
+      // safety net if an image never settles
+      setTimeout(() => {
+        if (left > 0) {
+          left = 0;
+          go();
+        }
+      }, 4000);
+    };
+
+    if (doc.readyState === "complete") run();
+    else iframe.addEventListener("load", run, { once: true });
+  } catch {
+    cleanup();
+    openInWindow();
+  }
+}
+
+/**
+ * Word (.doc) export. Returns "downloaded" | "opened" | "failed" so the caller
+ * can tell the user what happened when the browser blocks file downloads
+ * (common in mobile Safari / installed PWAs).
+ */
 export function downloadReportDoc(report) {
   const html = buildReportHtml(report);
-  const blob = new Blob(["\ufeff", html], { type: "application/msword" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  const name = `${(report.cover?.course_title || "course").replace(/[^A-Za-z0-9]+/g, "_")}_report.doc`;
-  a.href = url;
-  a.download = name;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  const name = reportFileName(report, "doc");
+  const blob = new Blob(["\ufeff", html], {
+    type: "application/vnd.ms-word;charset=utf-8",
+  });
+
+  try {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = name;
+    a.rel = "noopener";
+    a.style.display = "none";
+    document.body.appendChild(a);
+
+    const supportsDownload = "download" in a;
+    if (supportsDownload) {
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 10000);
+      return "downloaded";
+    }
+
+    document.body.removeChild(a);
+    const win = window.open(url, "_blank");
+    setTimeout(() => URL.revokeObjectURL(url), 30000);
+    if (win) return "opened";
+  } catch {
+    /* fall through */
+  }
+
+  // Last resort: render into a new tab so the user can save or share it.
+  const win = window.open("", "_blank");
+  if (!win) return "failed";
+  win.document.open();
+  win.document.write(html);
+  win.document.close();
+  return "opened";
 }
+
