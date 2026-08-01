@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -178,7 +178,7 @@ export default function CourseReportTab() {
     setReport(next);
     setStatus(existing?.status || "draft");
     setDirty(false);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [existing, courseId, sessionId]);
 
   const reportForExport = {
