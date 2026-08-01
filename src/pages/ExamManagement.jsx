@@ -35,6 +35,7 @@ import QcReport from "@/components/exams/QcReport";
 import WoFBIApplicationsTab from "@/components/exams/WoFBIApplicationsTab";
 import WoFBIApplicationFormEditor from "@/components/exams/WoFBIApplicationFormEditor";
 import WoFBIFeedbackFormEditor from "@/components/exams/WoFBIFeedbackFormEditor";
+import CourseReportTab from "@/components/exams/CourseReportTab";
 import WoFBIFeedbackDialog from "@/components/exams/WoFBIFeedbackDialog";
 
 import WoFBIAttendanceTab from "@/components/exams/WoFBIAttendanceTab";
