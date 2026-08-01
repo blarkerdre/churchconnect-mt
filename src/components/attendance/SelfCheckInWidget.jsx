@@ -41,13 +41,14 @@ export default function SelfCheckInWidget() {
   });
 
   const { data: myCentre } = useQuery({
-    queryKey: ["my-centre", myMember?.wsf_centre_id],
-    enabled: !!myMember?.wsf_centre_id,
+    queryKey: ["my-centre", myMember?.wsf_centre_id, tenantId],
+    enabled: !!myMember?.wsf_centre_id && !!tenantId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("wsf_centres")
         .select("id, name")
         .eq("id", myMember.wsf_centre_id)
+        .eq("tenant_id", tenantId)
         .maybeSingle();
       if (error) throw error;
       return data;
@@ -100,18 +101,19 @@ export default function SelfCheckInWidget() {
 
   const sessionIds = visibleSessions.map((s) => s.id);
   const { data: myRecords = [] } = useQuery({
-    queryKey: ["my-checkins", sessionIds],
+    queryKey: ["my-checkins", sessionIds, tenantId],
     queryFn: async () => {
       if (!myMember?.id || sessionIds.length === 0) return [];
       const { data, error } = await supabase
         .from("attendance_records")
         .select("id, session_id, checked_in_at")
         .eq("member_id", myMember.id)
+        .eq("tenant_id", tenantId)
         .in("session_id", sessionIds);
       if (error) throw error;
       return data;
     },
-    enabled: !!myMember?.id && sessionIds.length > 0,
+    enabled: !!myMember?.id && sessionIds.length > 0 && !!tenantId,
   });
 
   const checkedSessionIds = new Set(myRecords.map((r) => r.session_id));

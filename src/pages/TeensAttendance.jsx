@@ -144,6 +144,7 @@ function SessionFormDialog({ open, onOpenChange, session, onSaved }) {
           .from("teen_attendance_sessions")
           .update(payload)
           .eq("id", session.id)
+          .eq("tenant_id", tenantId)
           .select()
           .single();
         if (error) throw error;
@@ -224,7 +225,7 @@ function RosterDialog({ open, onOpenChange, session, canWrite }) {
     enabled: !!session?.id && open,
     refetchInterval: 10000,
     queryFn: async () => {
-      const { data, error } = await supabase.from("teen_attendance_records").select("*").eq("session_id", session.id);
+      const { data, error } = await supabase.from("teen_attendance_records").select("*").eq("session_id", session.id).eq("tenant_id", tenantId);
       if (error) throw error;
       return data || [];
     },
@@ -314,6 +315,7 @@ function ReportDialog({ open, onOpenChange, session }) {
         .from("teen_attendance_records")
         .select("*, teens:teen_id (first_name, last_name)")
         .eq("session_id", session.id)
+        .eq("tenant_id", tenantId)
         .order("checked_in_at");
       if (error) throw error;
       return data || [];
@@ -920,7 +922,7 @@ export default function TeensAttendance({ embedded = false }) {
 
   const closeSession = useMutation({
     mutationFn: async (s) => {
-      const { error } = await supabase.from("teen_attendance_sessions").update({ status: "closed" }).eq("id", s.id);
+      const { error } = await supabase.from("teen_attendance_sessions").update({ status: "closed" }).eq("id", s.id).eq("tenant_id", tenantId);
       if (error) throw error;
     },
     onSuccess: () => { toast.success("Session closed"); refetch(); },
@@ -929,7 +931,7 @@ export default function TeensAttendance({ embedded = false }) {
 
   const removeSession = useMutation({
     mutationFn: async (s) => {
-      const { error } = await supabase.from("teen_attendance_sessions").delete().eq("id", s.id);
+      const { error } = await supabase.from("teen_attendance_sessions").delete().eq("id", s.id).eq("tenant_id", tenantId);
       if (error) throw error;
     },
     onSuccess: () => { toast.success("Session deleted"); setDeleteSession(null); refetch(); },

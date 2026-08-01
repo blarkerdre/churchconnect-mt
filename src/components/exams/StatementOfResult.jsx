@@ -80,6 +80,7 @@ function useStatementData({ enabled, member, course, subjects }) {
           .from("exam_sessions")
           .select("id, name, starts_at, starts_on, ended_at, created_at")
           .eq("id", reg.session_id)
+          .eq("tenant_id", currentTenant.id)
           .maybeSingle();
         sess = data;
       }
@@ -90,6 +91,7 @@ function useStatementData({ enabled, member, course, subjects }) {
             .from("exam_attempts")
             .select("session_id, submitted_at, created_at")
             .eq("member_id", member.id)
+            .eq("tenant_id", currentTenant.id)
             .in("subject_id", subjectIds)
             .not("session_id", "is", null)
             .order("submitted_at", { ascending: false, nullsFirst: false });
@@ -99,6 +101,7 @@ function useStatementData({ enabled, member, course, subjects }) {
               .from("exam_sessions")
               .select("id, name, starts_at, starts_on, ended_at, created_at")
               .eq("id", sid)
+              .eq("tenant_id", currentTenant.id)
               .maybeSingle();
             sess = data;
           }
