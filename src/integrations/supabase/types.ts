@@ -6741,6 +6741,105 @@ export type Database = {
           },
         ]
       }
+      wofbi_feedback_forms: {
+        Row: {
+          created_at: string
+          enabled: boolean
+          fields: Json
+          id: string
+          intro_text: string | null
+          tenant_id: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          enabled?: boolean
+          fields?: Json
+          id?: string
+          intro_text?: string | null
+          tenant_id: string
+          title?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          enabled?: boolean
+          fields?: Json
+          id?: string
+          intro_text?: string | null
+          tenant_id?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wofbi_feedback_forms_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      wofbi_feedback_responses: {
+        Row: {
+          answers: Json
+          course_id: string | null
+          created_at: string
+          id: string
+          member_id: string | null
+          registration_id: string | null
+          submitted_at: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          answers?: Json
+          course_id?: string | null
+          created_at?: string
+          id?: string
+          member_id?: string | null
+          registration_id?: string | null
+          submitted_at?: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          answers?: Json
+          course_id?: string | null
+          created_at?: string
+          id?: string
+          member_id?: string | null
+          registration_id?: string | null
+          submitted_at?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wofbi_feedback_responses_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wofbi_feedback_responses_registration_id_fkey"
+            columns: ["registration_id"]
+            isOneToOne: true
+            referencedRelation: "course_registrations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wofbi_feedback_responses_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       wsf_attendance: {
         Row: {
           centre_id: string
