@@ -37,6 +37,62 @@ export default function WoFBIDynamicForm({ fields = [], values = {}, onChange, d
           <p className="text-xs text-muted-foreground">{f.help_text}</p>
         ) : null;
 
+        if (f.type === "rating_grid") {
+          const rows = f.rows || [];
+          const scale = f.scale || [];
+          const gridVal = (val && typeof val === "object") ? val : {};
+          const setRow = (row, choice) => set(f.id, { ...gridVal, [row]: choice });
+          return (
+            <div key={f.id} className="space-y-2">
+              {labelEl}
+              {/* Desktop table */}
+              <div className="hidden sm:block overflow-x-auto border rounded-md">
+                <table className="w-full text-xs">
+                  <thead className="bg-muted/50">
+                    <tr>
+                      <th className="text-left p-2 font-medium">Item</th>
+                      {scale.map((c) => <th key={c} className="p-2 font-medium text-center whitespace-nowrap">{c}</th>)}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rows.map((r) => (
+                      <tr key={r} className="border-t">
+                        <td className="p-2">{r}</td>
+                        {scale.map((c) => (
+                          <td key={c} className="p-2 text-center">
+                            <input type="radio" className="accent-primary h-4 w-4"
+                              name={`${f.id}-${r}`} disabled={disabled}
+                              checked={gridVal[r] === c}
+                              onChange={() => setRow(r, c)} />
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              {/* Mobile stacked */}
+              <div className="sm:hidden space-y-3">
+                {rows.map((r) => (
+                  <div key={r} className="border rounded-md p-3 space-y-2">
+                    <p className="text-sm font-medium">{r}</p>
+                    <RadioGroup value={gridVal[r] || ""} onValueChange={(v) => setRow(r, v)} disabled={disabled} className="space-y-1">
+                      {scale.map((c) => (
+                        <div key={c} className="flex items-center gap-2">
+                          <RadioGroupItem value={c} id={`${f.id}-${r}-${c}`} />
+                          <Label htmlFor={`${f.id}-${r}-${c}`} className="text-sm font-normal cursor-pointer">{c}</Label>
+                        </div>
+                      ))}
+                    </RadioGroup>
+                  </div>
+                ))}
+              </div>
+              {help}
+            </div>
+          );
+        }
+
+
         if (f.type === "textarea") {
           return (
             <div key={f.id} className="space-y-1">
