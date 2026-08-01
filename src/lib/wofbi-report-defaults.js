@@ -125,10 +125,14 @@ export function emptyReport() {
     findings: { ...DEFAULT_FINDINGS },
     overall_performance: DEFAULT_OVERALL_PERFORMANCE,
     testimonies: [],
+    feedback_intro: DEFAULT_FEEDBACK_INTRO,
     student_feedback: [],
     qc: [],
+    honorarium_heading: "",
     honorarium: [],
     honorarium_matrix: { rate: 50, rows: [] },
+    closing_remark: DEFAULT_CLOSING_REMARK,
+    signoff: { name: "", title: "" },
     next_session: DEFAULT_NEXT_SESSION,
   };
 }
@@ -145,9 +149,11 @@ export function mergeReport(saved) {
     stats_a: { ...base.stats_a, ...(saved.stats_a || {}) },
     stats_b: { ...base.stats_b, ...(saved.stats_b || {}) },
     findings: { ...base.findings, ...(saved.findings || {}) },
+    signoff: { ...base.signoff, ...(saved.signoff || {}) },
     honorarium_matrix: {
       ...base.honorarium_matrix,
       ...(saved.honorarium_matrix || {}),
     },
   };
+
 }
