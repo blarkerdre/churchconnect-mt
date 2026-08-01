@@ -1,6 +1,7 @@
 // Print / Word export for the Bible School course final report.
 // Layout mirrors the Cardiff WOFBI report template (headings + tables).
 import { FINDING_FIELDS, QC_CHECKLIST_FIELDS } from "@/lib/wofbi-report-defaults";
+import { buildReportDocx } from "@/lib/wofbi-report-docx";
 
 export function escHtml(str) {
   return String(str ?? "")
@@ -336,16 +337,19 @@ export function printReport(report) {
 }
 
 /**
- * Word (.doc) export. Returns "downloaded" | "opened" | "failed" so the caller
- * can tell the user what happened when the browser blocks file downloads
- * (common in mobile Safari / installed PWAs).
+ * Word (.docx) export — a real OOXML package (Word rejects HTML renamed to .doc).
+ * Returns "downloaded" | "opened" | "failed" so the caller can tell the user what
+ * happened when the browser blocks file downloads (mobile Safari / installed PWAs).
  */
-export function downloadReportDoc(report) {
-  const html = buildReportHtml(report);
-  const name = reportFileName(report, "doc");
-  const blob = new Blob(["\ufeff", html], {
-    type: "application/vnd.ms-word;charset=utf-8",
-  });
+export async function downloadReportDoc(report) {
+  const name = reportFileName(report, "docx");
+  let blob;
+  try {
+    blob = await buildReportDocx(report);
+  } catch (err) {
+    console.error("docx build failed", err);
+    return "failed";
+  }
 
   try {
     const url = URL.createObjectURL(blob);
@@ -372,12 +376,7 @@ export function downloadReportDoc(report) {
     /* fall through */
   }
 
-  // Last resort: render into a new tab so the user can save or share it.
-  const win = window.open("", "_blank");
-  if (!win) return "failed";
-  win.document.open();
-  win.document.write(html);
-  win.document.close();
-  return "opened";
+  return "failed";
 }
+
 
