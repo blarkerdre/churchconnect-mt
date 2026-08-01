@@ -903,6 +903,10 @@ export default function ExamManagement() {
         <TabsContent value="attendance" className="space-y-4 mt-4">
           <WoFBIAttendanceTab />
         </TabsContent>
+
+        <TabsContent value="course-report" className="space-y-4 mt-4">
+          <CourseReportTab />
+        </TabsContent>
       </Tabs>
     </div>
   );
