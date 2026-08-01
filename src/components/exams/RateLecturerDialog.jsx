@@ -290,7 +290,7 @@ export default function RateLecturerDialog({ open, onOpenChange }) {
                     <SelectTrigger><SelectValue placeholder="Select a lecturer" /></SelectTrigger>
                     <SelectContent>
                       {lecturers.map((l) => (
-                        <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>
+                        <SelectItem key={l.id} value={l.id}>{l.name}{l.lecturer_type === "external" ? " (External)" : ""}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
