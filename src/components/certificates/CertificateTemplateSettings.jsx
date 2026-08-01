@@ -144,15 +144,18 @@ export default function CertificateTemplateSettings() {
     setUploading(true);
     try {
       await assertStorageAvailable(tenantId, file.size);
-      const ext = file.name.split(".").pop();
+      const ext = (file.name.split(".").pop() || "png").toLowerCase();
+      // Must live in a PUBLIC bucket — the logo is rendered in printed
+      // statements and fetched by the Word export.
       const path = `${tenantId}/wofbi-logo/${Date.now()}.${ext}`;
       const { error } = await supabase.storage
-        .from("church-documents")
+        .from("tenant-branding")
         .upload(path, file, { contentType: file.type, upsert: true });
       if (error) throw error;
-      const { data: pub } = supabase.storage.from("church-documents").getPublicUrl(path);
-      set("wofbi_logo_url", pub?.publicUrl || "");
-      toast({ title: "WoFBI logo uploaded" });
+      const { data: pub } = supabase.storage.from("tenant-branding").getPublicUrl(path);
+      if (!pub?.publicUrl) throw new Error("Could not resolve the uploaded logo URL");
+      set("wofbi_logo_url", pub.publicUrl);
+      toast({ title: "WoFBI logo uploaded", description: "Remember to press Save to apply it." });
     } catch (err) {
       toast({ title: "Upload failed", description: err.message, variant: "destructive" });
     } finally {
