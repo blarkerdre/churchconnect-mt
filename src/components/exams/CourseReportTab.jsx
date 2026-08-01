@@ -727,7 +727,19 @@ export default function CourseReportTab() {
               <TextField label="Course code" value={report.cover.course_code} onChange={(v) => set("cover.course_code", v)} />
               <TextField label="Edition" value={report.cover.edition} onChange={(v) => set("cover.edition", v)} />
               <TextField label="Date range" value={report.cover.date_range} onChange={(v) => set("cover.date_range", v)} />
-              <TextField label="Logo URL" value={report.cover.logo_url} onChange={(v) => set("cover.logo_url", v)} />
+              <div className="space-y-1">
+                <TextField
+                  label="Logo URL"
+                  value={report.cover.logo_url}
+                  onChange={(v) => {
+                    set("cover.logo_url", v);
+                    set("cover.logo_url_custom", !!v);
+                  }}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Leave blank to always use the current Bible School logo from the certificate template.
+                </p>
+              </div>
             </AccordionContent>
           </AccordionItem>
 
