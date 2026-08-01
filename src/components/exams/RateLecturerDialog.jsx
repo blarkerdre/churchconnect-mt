@@ -84,7 +84,7 @@ export default function RateLecturerDialog({ open, onOpenChange }) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("lecturers")
-        .select("id, name, level")
+        .select("id, name, level, lecturer_type")
         .eq("tenant_id", tenantId)
         .eq("active", true)
         .order("name");
@@ -121,7 +121,7 @@ export default function RateLecturerDialog({ open, onOpenChange }) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("exam_subjects")
-        .select("id, name, lecturer_id")
+        .select("id, name, code, lecturer_id")
         .eq("tenant_id", tenantId)
         .eq("course_id", form.course_id)
         .eq("is_active", true)
@@ -271,7 +271,7 @@ export default function RateLecturerDialog({ open, onOpenChange }) {
                   <SelectTrigger><SelectValue placeholder={form.course_id ? "Select a subject" : "Select a course first"} /></SelectTrigger>
                   <SelectContent>
                     {subjects.map((s) => (
-                      <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                      <SelectItem key={s.id} value={s.id}>{s.code ? `${s.code} — ${s.name}` : s.name}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -290,7 +290,7 @@ export default function RateLecturerDialog({ open, onOpenChange }) {
                     <SelectTrigger><SelectValue placeholder="Select a lecturer" /></SelectTrigger>
                     <SelectContent>
                       {lecturers.map((l) => (
-                        <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>
+                        <SelectItem key={l.id} value={l.id}>{l.name}{l.lecturer_type === "external" ? " (External)" : ""}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
