@@ -378,13 +378,23 @@ export default function CourseReportTab() {
         }));
 
       // honorarium
-      const honorarium = subjectList.map((s) => ({
-        course: s.name,
-        code: "",
-        lecturer: lecById[s.lecturer_id] || "",
-        type: "",
-        remarks: "",
-      }));
+      const honorarium = subjectList.map((s) => {
+        const q = qcBySubject[s.id];
+        const agg = ratingAgg[s.id];
+        const avg = agg && agg.n ? agg.sum / agg.n : null;
+        let remarks;
+        if (!q) remarks = "Pending quality control review";
+        else if ((avg != null && avg >= 3) || Number(q.total_score) >= 50)
+          remarks = "Recommended for honorarium";
+        else remarks = "Recommended subject to review";
+        return {
+          course: s.name,
+          code: s.code || "",
+          lecturer: lecById[s.lecturer_id] || "",
+          type: lecTypeById[s.lecturer_id] || "",
+          remarks,
+        };
+      });
       const perLecturer = {};
       subjectList.forEach((s) => {
         const name = lecById[s.lecturer_id];
