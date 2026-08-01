@@ -196,6 +196,23 @@ export default function CourseReportTab() {
     cover: { ...report.cover, logo_url: report.cover?.logo_url || liveLogoUrl },
   };
 
+  const handleWordDownload = () => {
+    const result = downloadReportDoc(reportForExport);
+    if (result === "opened") {
+      toast({
+        title: "Opened in a new tab",
+        description: "Your browser blocked the download — use Share / Save from the new tab to keep the Word file.",
+      });
+    } else if (result === "failed") {
+      toast({
+        title: "Download blocked",
+        description: "Allow pop-ups or downloads for this site, then try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+
   const set = (path, value) => {
     setDirty(true);
     setReport((prev) => {
