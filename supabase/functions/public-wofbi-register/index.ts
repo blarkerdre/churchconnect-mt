@@ -193,6 +193,30 @@ Deno.serve(async (req) => {
       });
     }
 
+    // If the course belongs to one or more sessions (editions), at least one of
+    // them must be open for applications/registrations to be accepted.
+    const { data: sessionLinks, error: sessionLinkError } = await supabase
+      .from("exam_session_courses")
+      .select("session_id, exam_sessions!inner(id, status)")
+      .eq("tenant_id", tenantId)
+      .eq("exam_title", course.name);
+
+    if (sessionLinkError) throw sessionLinkError;
+
+    if (Array.isArray(sessionLinks) && sessionLinks.length > 0) {
+      const hasOpenSession = sessionLinks.some(
+        (l: { exam_sessions?: { status?: string | null } }) =>
+          (l.exam_sessions?.status || "").toLowerCase() === "active"
+      );
+      if (!hasOpenSession) {
+        return new Response(JSON.stringify({ error: "Registration for this course is not currently open." }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
+
+
     let memberId: string | null = null;
     let isNewMember = false;
 
