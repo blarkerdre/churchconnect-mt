@@ -1,32 +1,22 @@
-## Goal
-Make a Bible School session (edition) the thing that opens and closes applications and registrations for its attached courses, instead of the manual "Registration open" switch being the only control.
+## What's wrong
 
-## How it will work
+Two confirmed problems:
 
-### 1. Session start opens registration
-When a session moves to **Open** — manually via the Start button, or by the auto-schedule job on its start date — every course attached to that session (`exam_session_courses`) gets `registration_open = true`.
+1. **The uploaded logo URL doesn't work.** The Bible School logo is uploaded to the `church-documents` storage bucket, which is **private**, but the code builds a *public* URL for it. That URL is rejected, so the image shows broken/blank in the settings preview, on the Statement of Result, and in the Course Final Report (preview, print and Word).
+2. **No logo is actually stored.** Every certificate template row currently has `wofbi_logo_url`, `logo_url` and `crest_image_url` empty, so all surfaces silently fall back to the church's general logo. That is consistent with uploads appearing to fail and never being saved.
 
-### 2. Session close shuts registration
-When a session moves to **Closed** — manual Close, or the auto job passing the end date — the attached courses get `registration_open = false`, so the public link/QR and member self-registration both stop accepting entries.
+A third, smaller issue: once a Course Final Report has been saved, its cover keeps the logo it was created with, so a later logo change won't show on that saved report until it's refreshed.
 
-A course attached to *no* session is untouched and keeps behaving exactly as today (pure manual switch).
+## Fix
 
-### 3. Exams follow the same rule, but only if asked
-The session already has an **"Open exams automatically"** switch that is stored but never read. It will now do what it says: when the session opens, attached courses get `exams_open = true`; when it closes, `exams_open = false`. Left off, exams stay entirely manual.
-
-### 4. Registration blocked outside an open session
-The public registration edge function currently only checks the course's `registration_open` flag. It will additionally reject when the course belongs to at least one session and none of those sessions is currently open — with a clear message ("Registration for this course is not currently open"). Courses with no sessions keep the current check.
-
-### 5. Making it visible in the UI
-- **Courses tab**: when a course is governed by a session, the "Registration open" switch shows a note — "Controlled by session: {name}" — and reads as derived rather than something you flip blind. Admins can still override manually; the next session start/close will reassert.
-- **Sessions tab**: the Start and Close confirmations spell out which courses will have registration (and exams, if enabled) opened or closed.
+1. **Store Bible School logos in a bucket that can be served.** Move the WoFBI logo upload (and the crest/logo uploads used by certificate templates) to the existing public `tenant-branding` bucket, under a tenant-scoped path (`{tenantId}/wofbi-logo/...`), so the public URL genuinely resolves. Keep the timestamped filename so there is no browser caching of an old image.
+2. **Show a working preview immediately** in Certificate Template settings after upload, and surface a clear error if the save fails.
+3. **Backfill safety:** if any older logo URLs point at `church-documents`, resolve them through a signed URL instead of a public one so existing rows don't break.
+4. **Keep report covers current:** on the Course Final Report, always resolve the logo live from the certificate template (falling back to the church logo) instead of using the stale value stored on a saved report, and keep the manual "Logo URL" override working if someone has typed one in.
 
 ## Technical notes
-- A database trigger on `exam_sessions` status change applies the flag updates to `exam_titles` rows joined through `exam_session_courses`, tenant-scoped. This covers both manual and cron-driven transitions in one place, so `auto_manage_exam_sessions()` needs no change.
-- Edge function `public-wofbi-register` gains the "is any attached session open" check alongside the existing `registration_open` / `is_active` guard.
-- Frontend touches: `src/components/exams/SessionManager.jsx` (confirm copy) and the Courses tab in `src/pages/ExamManagement.jsx` (session-controlled hint).
 
-## Not included
-- No change to how student numbers, confirmation emails, or exam links are sent.
-- No change to attendance sessions (`wofbi_attendance_sessions`) — separate concept, unchanged.
-- Existing registrations and applications are not retroactively altered.
+- `src/components/certificates/CertificateTemplateSettings.jsx` — change upload target bucket for `wofbi_logo_url` (and related image uploads), preview via public URL from `tenant-branding`.
+- `src/components/exams/StatementOfResult.jsx` and `src/components/exams/CourseReportTab.jsx` — logo resolution order stays `wofbi_logo_url → crest_image_url → logo_url → tenant logo`, but the report export uses the live value rather than the persisted `cover.logo_url`.
+- `src/lib/wofbi-report-docx.js` fetches the logo for the Word export; a public URL is required there, which the bucket change provides.
+- No database migration is needed; only storage location and URL resolution change.
