@@ -1,49 +1,41 @@
 ## Goal
 
-Make the Bible School **Course Final Report** open pre-filled with the wording from the Cardiff WOFBI BCC template, pull striking testimonies from the course Feedback Form, use the same logo as the Statement of Result, and lay the report out with the same tables as the template.
+Make the Bible School **Course Final Report** print with its tables intact, make the Word download actually save a file (including on mobile), and pre-fill the editable statistics from Bible School applications and registrations.
 
-## 1. Prefilled editable text from the template
+## 1. Diagnose the export failure first
 
-Extend `src/lib/wofbi-report-defaults.js` so a brand-new report already contains the template's standard prose (all still editable):
+The current export opens a pop-up window (`window.open("", "_blank", "width=1000,height=800")`) and immediately calls `print()`, and the Word file is a `<a download>` blob. Both of these are commonly blocked in mobile browsers and installed PWA windows (the current session is a 384px viewport), which matches "nothing downloads" and a partially-rendered print. That cause is **not yet confirmed** — the first step is to reproduce the print and Word actions in the preview and read the console/network output, then apply the fixes below.
 
-- Cover defaults: "WORD OF FAITH BIBLE INSTITUTE", centre name, course title/code, edition, date range.
-- Introduction: the three-paragraph template introduction, with course/edition placeholders filled from the selected course and session.
-- Faculty: placeholder coordinating-team and volunteer lines to edit.
-- Induction / class attendance / statistics sentences in the template's phrasing.
-- General findings: the nine template paragraphs (attendance, registration, class breaks, mobile phones, post-induction reminders, marking & grading, class coordinator, graduation, summary) — already present, refined to match the template wording, plus the "overall performance" line.
-- Next session note.
+## 2. Rework print / PDF
 
-Existing saved reports are untouched; defaults only apply where a field is empty.
+In `src/lib/wofbi-report-export.js`:
 
-## 2. Striking testimonies from course feedback
+- Render the report into a hidden same-document `<iframe>` and print from it instead of a pop-up, so no pop-up blocker is involved.
+- Wait for the document (and the logo image) to finish loading before calling `print()`, so tables and the logo are laid out before the print snapshot.
+- Keep a pop-up window path as a fallback if the iframe print isn't supported.
+- Print CSS fixes so tables survive PDF output: `table { page-break-inside: auto }` with `tr { page-break-inside: avoid }`, repeated `<thead>` on page breaks, explicit borders under `-webkit-print-color-adjust: exact` (header fill currently disappears when browsers drop background colours in PDF).
 
-Replace the current source (`testimonies` table) with the Bible School feedback form:
+## 3. Rework the Word download
 
-- Read `wofbi_feedback_responses` for the selected course (and session where available), take the `testimony` answer.
-- Student name from the response's `first_name` / `surname` answers, falling back to the linked member's name.
-- Heading defaults to "Testimony at Bible School" and stays editable, as in the template (each testimony has a bold heading, body, and student name).
-- Only responses with non-empty testimony text are included; "Refresh from data" repopulates without wiping manual edits already made.
-- Statistic 5a "Testimonies Recorded" counts these feedback testimonies instead of the global testimonies table.
+- Emit a proper Word-openable HTML document (Word namespace header + `Content-Type: application/vnd.ms-word`), filename `.doc`.
+- Use the anchor-download path, and when the browser blocks it (mobile Safari / standalone PWA) fall back to opening the document in a new tab so the user can save/share it, with a toast telling them what happened.
+- Same table markup as the print output so both match the template.
 
-## 3. Logo
+## 4. On-screen preview
 
-Use the exact same resolution chain and timing as the Statement of Result: `certificate_templates.wofbi_logo_url` → `crest_image_url` → `logo_url` → tenant logo, looked up live by course name whenever the report is opened, previewed, printed or exported — not only when "Refresh from data" is pressed. The Logo URL field stays as a manual override; when it is blank the live value is used.
+Add a "Preview" button next to Print/Word that shows the fully rendered report (same HTML, tables and all) in a scrollable dialog. This gives an immediate way to confirm the tables are being produced, independent of the browser's print pipeline.
 
-## 4. Tables as in the template
+## 5. Editable statistics from applications & registrations
 
-Rework the print/Word output in `src/lib/wofbi-report-export.js` so each section renders as the template's table rather than lists where a table is used:
+Extend "Refresh from data" in `src/components/exams/CourseReportTab.jsx` so the statistics block is filled from real records (all values stay editable):
 
-- Section 7 — Courses & lecturers: S/N | COURSE | CODE | LECTURERS
-- Section 10 — Student feedback: LECTURER | COURSE | QC PERSONNEL | RATINGS (quality control rating and student average rating in one cell, numbered as in the template)
-- Section 11 — Quality control: LECTURER | COURSE | QC PERSONNEL | GENERAL OBSERVATIONS
-- Section 13 — Honorarium recommendation: S/N | COURSE | CODE | LECTURERS | TYPE | REMARKS
-- Honorarium matrix: S/N | APPROVED LECTURERS | NO. OF COURSES | RECOMMENDED HONORARIUM (£rate PER COURSE) | SIGNED CONTRACT OF SERVICE (COS)/PAYROLL
-- Statistics 5a/5b keep the template's lettered/plain line format.
-
-Header styling, uppercase headings and numbering follow the template. Tables avoid breaking across pages when printed, and the on-screen editor keeps its mobile-friendly stacked rows down to 384px.
+- **5b Registration statistics** — forms received from `wofbi_applications` for the course, registered & confirmed from approved `course_registrations`, completed from exam attempts across all subjects, absentees computed as registered minus attended rather than defaulting to 0.
+- **5a Statistics** — water baptised and Holy Ghost baptised counted from the registered students' member records (`members.water_baptism`, `members.holy_spirit_baptism`), new birth counted from students whose membership status is New Convert, testimonies from the course feedback responses (already in place).
+- **Nations** — keep the current nationality tally, but fall back to the nationality answer captured on the application when the member record has none.
+- Statistics also seed automatically the first time a brand-new report is opened for a course, so the report isn't empty before the user presses Refresh.
 
 ## Technical notes
 
-- Files touched: `src/lib/wofbi-report-defaults.js` (template defaults + testimony helper), `src/lib/wofbi-report-export.js` (table rendering, logo), `src/components/exams/CourseReportTab.jsx` (feedback-based testimonies, live logo lookup, defaults on new report).
-- No database changes needed: `wofbi_feedback_responses` and `certificate_templates` already hold everything required, and all queries stay tenant-scoped with explicit `tenant_id` filters.
-- All dynamic text continues to pass through the existing `escHtml` escaping in the export.
+- Files touched: `src/lib/wofbi-report-export.js` (iframe print, Word document generation, print CSS), `src/components/exams/CourseReportTab.jsx` (preview dialog, expanded autofill, seed on first open).
+- No database changes: `wofbi_applications.answers`, `course_registrations`, and the `members` baptism/status columns already hold everything needed; all queries keep their explicit `tenant_id` filters.
+- All dynamic text keeps passing through the existing `escHtml` escaping.
