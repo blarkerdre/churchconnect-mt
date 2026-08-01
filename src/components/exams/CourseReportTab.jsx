@@ -477,8 +477,22 @@ export default function CourseReportTab() {
         courses: courseRows.length ? courseRows : prev.courses,
         student_feedback: studentFeedback.length ? studentFeedback : prev.student_feedback,
         qc: qcRows.length ? qcRows : prev.qc,
+        honorarium_heading:
+          prev.honorarium_heading ||
+          [
+            course?.name ? `${course.name} COURSE`.toUpperCase() : "",
+            (template?.centre_name || prev.cover.centre_name || "").toUpperCase(),
+          ]
+            .filter(Boolean)
+            .join(" – "),
         honorarium: honorarium.length ? honorarium : prev.honorarium,
         honorarium_matrix: { rate, rows: matrixRows.length ? matrixRows : prev.honorarium_matrix.rows },
+        signoff: {
+          name: prev.signoff?.name || "",
+          title:
+            prev.signoff?.title ||
+            `RP, ${template?.church_name || currentTenant?.name || ""}`.trim(),
+        },
         testimonies: feedbackTestimonies.length ? feedbackTestimonies : prev.testimonies,
       }));
       setDirty(true);
