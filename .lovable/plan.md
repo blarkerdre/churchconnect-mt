@@ -1,33 +1,55 @@
 ## Goal
 
-Add the WOFBI Feedback Form to Bible School: admins can edit its questions (like the existing Application Form editor), and students are prompted to complete it once they've finished their course exams. Admins can view and export responses.
+Add a **Course Report** feature in Bible School that generates an editable final report matching the uploaded Cardiff WOFBI BCC template, pre-filled from live data, saved per course/session, and exportable.
 
-## The form (from your PDF, used as the default template)
+## Where it lives
 
-- Your details (optional): Date, First name, Surname, Telephone, Email — auto-filled from the student's profile
-- Satisfaction rating grid (Very satisfied → Very dissatisfied) for: Spiritual Impartation, Practical Application, Course Content, General Atmosphere
-- "Is there any way we can improve your experience?" (long text)
-- "Would you return for the next level (BCC/LCC)?" Yes/No
-- "Would you recommend WOFBI to friends and family?" Yes/No
-- "What did you like best?" (text)
-- "Your Testimony" (long text)
-- "I'd like to be on the mailing list for future events" Yes/No
-- Confidentiality note shown at the foot of the form
+New tab **"Course Report"** in Bible School (`src/pages/ExamManagement.jsx`), admin / reports-officer only, alongside the existing Application Form, Feedback Form, Lecturer Feedback and Quality Control tabs.
 
-## What gets built
+## Report structure (mirrors the template)
 
-**1. Admin editor — Bible School → new "Feedback Form" tab**
-Mirrors the existing Application Form editor: enable/disable toggle, title, intro text, add/edit/reorder/delete fields, preview, and "Reset to default" which restores the fields above. Adds a new `rating_grid` field type (rows + scale columns) so the satisfaction table is editable — you can add or rename rows and change the scale labels.
+1. Cover — logo, centre name, course title + code, edition/session name, date range
+2. Introduction (rich text, editable)
+3. WOFBI Faculty — coordinating team + volunteers (editable lists)
+4. Induction — date + student count
+5. Class attendance figure
+6. Statistics (5a) — water baptised, Holy Ghost baptised, new birth, testimonies recorded
+7. Statistics (5b) — forms received, registered/confirmed, completed courses + test, at graduation, absentees
+8. Nations representation — country + count list
+9. Courses & lecturers table — S/N, course, code, lecturer (+centre)
+10. General findings — attendance, registration, breaks, mobile phones, post-induction reminders, marking & grading, class coordinator, graduation, summary (each editable text)
+11. Striking testimonies — heading + body + student name (repeatable)
+12. Student feedback on lecturers — lecturer, course, QC person, QC rating + student average rating
+13. Quality control observations — lecturer, course, QC personnel, general observations
+14. Honorarium recommendation — course table with internal/external + remarks
+15. Honorarium matrix — lecturer, no. of courses, recommended honorarium (£ per course, rate editable), signed COS/payroll
+16. Next session note
 
-**2. Student side**
-Once a student has completed the exams for a course (all their subject attempts submitted), a "Course feedback" prompt appears on their Bible School view with a Complete feedback button. The form renders from the admin-configured schema, pre-fills their name/email/phone/date, and can be submitted once per course registration (re-openable in read-only after submission). Nothing appears if the form is disabled.
+## Auto-fill from existing data
 
-**3. Admin responses view**
-A Responses sub-section inside the Feedback Form tab: list of submissions with student name, course, date; click to view full answers; CSV export; simple summary of the satisfaction grid averages and Yes/No counts.
+Pre-filled on generate, every value still editable afterwards:
+- Subjects/codes/lecturers from `exam_subjects` + `lecturers` (existing lecturer↔subject mapping)
+- Registration counts and completion from `wofbi_applications` / `course_registrations` / `exam_attempts`
+- Attendance figure from `wofbi_attendance_records` / sessions
+- Nations from member `nationality` (recently added field)
+- Testimonies from `testimonies` and from Feedback Form responses
+- Student average ratings from `lecturer_ratings`; QC ratings and observations from `lecturer_qc_checks`
+- Honorarium matrix computed from course counts per lecturer × editable rate
+
+## Editing & saving
+
+- Autosaved draft per (tenant, course, session) so it can be revisited and refined
+- Section-by-section accordion editor with a "Refresh from data" button per section (never silently overwrites edits)
+- Status: Draft / Final
+
+## Export
+
+- Print / PDF via a print-styled report view (same pattern as existing print reports)
+- Word (.docx) download so the church can keep editing offline
+- Fully responsive down to 384px (stacked tables on mobile)
 
 ## Technical notes
 
-- New tables: `wofbi_feedback_forms` (tenant-scoped config, one per tenant, same shape as `wofbi_application_forms`: enabled/title/intro_text/fields JSONB) and `wofbi_feedback_responses` (tenant_id, course_id, registration_id, member_id, answers JSONB, submitted_at) with GRANTs + RLS: students insert/read their own; admins and Bible School managers read all for their tenant; unique on (registration_id).
-- Reuse and extend `WoFBIDynamicForm.jsx` with the `rating_grid` type so both the editor preview and the student form share one renderer.
-- Defaults live in a new `src/lib/wofbi-feedback-defaults.js`, alongside the existing `wofbi-form-defaults.js`.
-- Gated by the existing `exam-management` module toggle; no changes to exam grading or the application form flow.
+- New table `wofbi_course_reports` (tenant_id, course_id, session_id, status, `content` JSONB holding all sections, timestamps) with tenant-scoped RLS: admins/reports officers read+write, GRANTs for `authenticated` and `service_role`
+- New components: `src/components/exams/CourseReportTab.jsx`, `CourseReportEditor.jsx`, `CourseReportPreview.jsx`, plus a `src/lib/wofbi-report-defaults.js` schema of the template sections
+- Docx generation client-side; all dynamic text escaped in the print HTML (existing `escHtml` pattern)

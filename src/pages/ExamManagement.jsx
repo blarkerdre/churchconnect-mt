@@ -35,6 +35,7 @@ import QcReport from "@/components/exams/QcReport";
 import WoFBIApplicationsTab from "@/components/exams/WoFBIApplicationsTab";
 import WoFBIApplicationFormEditor from "@/components/exams/WoFBIApplicationFormEditor";
 import WoFBIFeedbackFormEditor from "@/components/exams/WoFBIFeedbackFormEditor";
+import CourseReportTab from "@/components/exams/CourseReportTab";
 import WoFBIFeedbackDialog from "@/components/exams/WoFBIFeedbackDialog";
 
 import WoFBIAttendanceTab from "@/components/exams/WoFBIAttendanceTab";
@@ -338,6 +339,7 @@ export default function ExamManagement() {
 
           <TabsTrigger value="lecturer" className="whitespace-nowrap">Lecturer Feedback</TabsTrigger>
           <TabsTrigger value="qc" className="whitespace-nowrap">Quality Control</TabsTrigger>
+          <TabsTrigger value="course-report" className="whitespace-nowrap">Course Report</TabsTrigger>
         </TabsList>
 
 
@@ -901,6 +903,10 @@ export default function ExamManagement() {
 
         <TabsContent value="attendance" className="space-y-4 mt-4">
           <WoFBIAttendanceTab />
+        </TabsContent>
+
+        <TabsContent value="course-report" className="space-y-4 mt-4">
+          <CourseReportTab />
         </TabsContent>
       </Tabs>
     </div>
