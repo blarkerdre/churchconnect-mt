@@ -1651,6 +1651,8 @@ function MemberExamsView({ memberId, memberRecord, courses, loading }) {
   const [examSelection, setExamSelection] = useState(null);
   const [statementCourse, setStatementCourse] = useState(null);
   const [rateOpen, setRateOpen] = useState(false);
+  const [feedbackCourse, setFeedbackCourse] = useState(null);
+
   const lecturerRatingEnabled = !!currentTenant?.settings?.wofbi_lecturer_rating_enabled;
 
   // Detect if the tenant has enabled the extended application form
