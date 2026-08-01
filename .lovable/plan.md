@@ -1,32 +1,42 @@
 ## Goal
-Make it self-evident which session/edition to pick when generating a Bible School Course Final Report.
+Give Bible School a real "Sessions / editions" lifecycle: create a session, attach courses to it, open it, close it — so registrations, exams and the Course Final Report can be scoped to an intake.
 
-## Current behaviour
-- The "Session / edition" dropdown lists **every** exam session for the tenant, ordered newest-first, showing only the session name.
-- It is **not** filtered by the selected course, so sessions that never ran that course still appear.
-- "All sessions" writes a report covering the whole course history (no edition, no date range). Picking a named session sets the report's Edition to the session name and the cover date range to its start/end dates, and scopes registrations/attendance/results to that session.
+## Why
+`exam_sessions` already exists and is read by the Statement of Result and the Course Final Report picker, but nothing in the app writes to it. The only row present was seeded by a migration and is closed, and no course registration carries a `session_id`. Sessions therefore never "start" — there is no screen for it.
 
-## Changes (UI only)
+## What to build
 
-1. **Filter the list to the selected course**
-   Use the existing `exam_session_courses` link table to only offer sessions that actually include the chosen course. Show a "No sessions found for this course" empty state instead of an unfiltered list.
+### 1. New "Sessions" tab in Bible School Management
+Admin-only tab listing sessions newest-first with: name, date range, status chip (Upcoming / Open / Closed), attached courses, and counts of registrations and exam attempts.
 
-2. **Richer option labels**
-   Each item shows: session name · date range (`12 Jan – 30 Mar 2026`) · a status chip (Open / Closed / Upcoming). Trigger shows name + dates so the current choice is readable at a glance.
+### 2. Create / edit session dialog
+Fields:
+- Name / edition label (e.g. "Q1 2026 Edition")
+- Description
+- Start date, end date
+- Pass mark %
+- Attached courses — multi-select of Bible School courses, written to `exam_session_courses`
+- Toggles already on the table: `auto_open_exams`, `allow_reregistration`
 
-3. **Explain the two modes**
-   Helper text under the dropdown that changes with the selection:
-   - *All sessions*: "One combined report across every intake of this course. Edition and dates are left blank for you to fill in."
-   - *A named session*: "Report covers only this intake — edition, dates, registrations, attendance and results are scoped to it."
+### 3. Start / close controls
+- **Start session** — sets `status = 'active'` and stamps `started_at`. Guarded so only one session per course is active at a time (warn and offer to close the other).
+- **Close session** — sets `status = 'closed'`, stamps `ended_at`, and blocks new registrations and exam attempts against it.
+- **Reopen** — admin-only, returns a closed session to active.
+- Optional scheduled start/close using the existing dates, following the same pattern already used for Bible School attendance sessions (a scheduled job flips status when `starts_on` / `ends_on` is reached). Off by default via a per-session checkbox.
 
-4. **Sensible default**
-   When a course is selected and it has sessions, default to the most recent completed/closed session rather than "All sessions" (the usual case for an end-of-course report). Existing saved reports still load by their stored `session_id`.
+### 4. Wire registrations to the active session
+When a student registers for a course (member self-register, public form, or QR), stamp `course_registrations.session_id` with the currently active session for that course. Existing behaviour is unchanged when no session is active.
 
-5. **Show whether a report already exists**
-   Mark options that already have a saved report with a small "Draft" / "Final" badge, so you don't accidentally start a second report for the same edition.
+### 5. Report picker follows on
+With sessions and `exam_session_courses` populated, the Course Final Report picker built earlier starts showing real editions with dates, status and Draft/Final badges — no further change needed there.
 
 ## Technical notes
-- All work is in `src/components/exams/CourseReportTab.jsx`.
-- New query joins `exam_session_courses` to `exam_sessions`, filtered by `tenant_id` and `course_id`.
-- A lightweight query on `wofbi_course_reports` (tenant + course) supplies the Draft/Final badges.
-- No schema or export-format changes.
+- New component `src/components/exams/SessionManager.jsx`, mounted as a tab in `src/pages/ExamManagement.jsx`.
+- Writes to `exam_sessions` and `exam_session_courses` (linked by `exam_title` text, matching the existing schema).
+- Requires RLS insert/update/delete policies for admins on both tables — will verify what exists and add only what's missing, with GRANTs.
+- Registration stamping touches the `public-wofbi-register` edge function and the member self-registration path, which already share one flow.
+- Scheduled open/close reuses the existing `pg_cron` job pattern from Bible School attendance sessions.
+
+## Not included
+- No change to exam taking, grading, or the report layout.
+- Existing seeded test session is left alone; it can be renamed or deleted from the new tab.
