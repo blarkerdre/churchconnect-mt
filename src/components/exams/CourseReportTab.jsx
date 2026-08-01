@@ -93,6 +93,8 @@ export default function CourseReportTab() {
   const [filling, setFilling] = useState(false);
   const [status, setStatus] = useState("draft");
   const [dirty, setDirty] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const seededRef = useRef(null);
 
   const { data: courses = [] } = useQuery({
     queryKey: ["exam-titles-report", tenantId],
