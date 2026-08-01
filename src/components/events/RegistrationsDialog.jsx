@@ -26,11 +26,12 @@ export default function RegistrationsDialog({ open, onOpenChange, event }) {
         .from("event_registrations")
         .select("*")
         .eq("event_id", event.id)
+        .eq("tenant_id", tenantId)
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data;
     },
-    enabled: !!event?.id && open,
+    enabled: !!event?.id && !!tenantId && open,
   });
 
   const addMutation = useMutation({

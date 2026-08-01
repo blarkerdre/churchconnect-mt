@@ -27,6 +27,7 @@ export default function WoFBIAttendanceQRDialog({ open, onOpenChange, session, o
       const { count: c } = await supabase
         .from("wofbi_attendance_records")
         .select("id", { count: "exact", head: true })
+        .eq("tenant_id", currentTenant?.id)
         .eq("session_id", session.id);
       if (active) setCount(c || 0);
     };
@@ -85,7 +86,8 @@ export default function WoFBIAttendanceQRDialog({ open, onOpenChange, session, o
     const { error } = await supabase
       .from("wofbi_attendance_sessions")
       .update({ status: "closed" })
-      .eq("id", session.id);
+      .eq("id", session.id)
+      .eq("tenant_id", currentTenant?.id);
     setClosing(false);
     if (error) {
       toast({ title: "Failed to close session", description: error.message, variant: "destructive" });

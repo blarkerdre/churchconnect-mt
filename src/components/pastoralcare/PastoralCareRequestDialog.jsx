@@ -151,7 +151,7 @@ export default function PastoralCareRequestDialog({ open, onOpenChange, currentU
         if (pcLeaders && pcLeaders.length > 0) {
           const leaderIds = pcLeaders.map(l => l.user_id);
           const { data: counts } = await supabase.from("pastoral_care")
-            .select("assigned_to").in("status", ["Open", "In Progress"]).in("assigned_to", leaderIds);
+            .select("assigned_to").eq("tenant_id", tenantId).in("status", ["Open", "In Progress"]).in("assigned_to", leaderIds);
           const countMap = {};
           leaderIds.forEach(id => { countMap[id] = 0; });
           (counts || []).forEach(c => { if (c.assigned_to) countMap[c.assigned_to] = (countMap[c.assigned_to] || 0) + 1; });

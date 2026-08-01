@@ -33,13 +33,14 @@ export default function UnitTaskDetailPanel({ open, onOpenChange, task, canManag
   const taskId = task?.id;
 
   const { data: assignments = [], refetch: refetchA } = useQuery({
-    queryKey: ["task-assignments", taskId],
-    enabled: !!taskId && open,
+    queryKey: ["task-assignments", taskId, tenantId],
+    enabled: !!taskId && open && !!tenantId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("unit_task_assignments")
         .select("*, members(first_name, last_name)")
         .eq("task_id", taskId)
+        .eq("tenant_id", tenantId)
         .order("created_at");
       if (error) throw error;
       return data || [];
@@ -47,13 +48,14 @@ export default function UnitTaskDetailPanel({ open, onOpenChange, task, canManag
   });
 
   const { data: comments = [], refetch: refetchC } = useQuery({
-    queryKey: ["task-comments", taskId],
-    enabled: !!taskId && open,
+    queryKey: ["task-comments", taskId, tenantId],
+    enabled: !!taskId && open && !!tenantId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("unit_task_comments")
         .select("*")
         .eq("task_id", taskId)
+        .eq("tenant_id", tenantId)
         .order("created_at");
       if (error) throw error;
       return data || [];

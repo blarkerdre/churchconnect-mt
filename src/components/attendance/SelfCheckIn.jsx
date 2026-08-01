@@ -8,20 +8,21 @@ import { CheckCircle2, X, CalendarCheck } from "lucide-react";
 
 export default function SelfCheckIn({ session, member, onClose }) {
   const queryClient = useQueryClient();
-  const { withTenant } = useTenantQuery();
+  const { withTenant, tenantId } = useTenantQuery();
 
   const { data: records = [] } = useQuery({
-    queryKey: ["self-checkin-records", session.id, member?.id],
+    queryKey: ["self-checkin-records", session.id, member?.id, tenantId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("attendance_records")
         .select("*")
         .eq("session_id", session.id)
-        .eq("member_id", member.id);
+        .eq("member_id", member.id)
+        .eq("tenant_id", tenantId);
       if (error) throw error;
       return data;
     },
-    enabled: !!member?.id,
+    enabled: !!member?.id && !!tenantId,
   });
 
   const myRecord = records[0] || null;

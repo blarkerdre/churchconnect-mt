@@ -27,7 +27,8 @@ export default function PreteenAttendanceQRDialog({ open, onOpenChange, session,
       const { count: c } = await supabase
         .from("preteen_attendance_records")
         .select("id", { count: "exact", head: true })
-        .eq("session_id", session.id);
+        .eq("session_id", session.id)
+        .eq("tenant_id", currentTenant?.id);
       if (active) setCount(c || 0);
     };
     load();
@@ -75,7 +76,7 @@ export default function PreteenAttendanceQRDialog({ open, onOpenChange, session,
   const handleClose = async () => {
     if (!session) return;
     setClosing(true);
-    const { error } = await supabase.from("preteen_attendance_sessions").update({ status: "closed" }).eq("id", session.id);
+    const { error } = await supabase.from("preteen_attendance_sessions").update({ status: "closed" }).eq("id", session.id).eq("tenant_id", currentTenant?.id);
     setClosing(false);
     if (error) { toast({ title: "Failed to close session", description: error.message, variant: "destructive" }); return; }
     toast({ title: "Session closed" });

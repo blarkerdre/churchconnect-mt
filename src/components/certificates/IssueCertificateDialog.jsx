@@ -35,17 +35,18 @@ export default function IssueCertificateDialog({ open, onOpenChange, member }) {
 
   // Fetch existing completions for this member
   const { data: completions = [] } = useQuery({
-    queryKey: ["training-completions", member?.id],
+    queryKey: ["training-completions", member?.id, tenantId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("training_completions")
         .select("*")
         .eq("member_id", member.id)
+        .eq("tenant_id", tenantId)
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data;
     },
-    enabled: !!member?.id && open,
+    enabled: !!member?.id && !!tenantId && open,
   });
 
   // Fetch custom training types from app_settings

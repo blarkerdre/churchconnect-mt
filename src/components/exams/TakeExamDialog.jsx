@@ -37,30 +37,32 @@ export default function TakeExamDialog({ open, onOpenChange, trainingType, membe
 
   // Get subject details for pass mark, time limit, randomize
   const { data: subjectData } = useQuery({
-    queryKey: ["exam-subject-detail", subjectId],
+    queryKey: ["exam-subject-detail", subjectId, tenantId],
     queryFn: async () => {
       const { data } = await supabase
         .from("exam_subjects")
         .select("pass_mark_percentage, time_limit_minutes, randomize_questions")
         .eq("id", subjectId)
+        .eq("tenant_id", tenantId)
         .maybeSingle();
       return data;
     },
-    enabled: open && !!subjectId,
+    enabled: open && !!subjectId && !!tenantId,
   });
 
   // Get course pass mark from exam_titles (fallback for legacy)
   const { data: courseData } = useQuery({
-    queryKey: ["exam-title-detail", trainingType],
+    queryKey: ["exam-title-detail", trainingType, tenantId],
     queryFn: async () => {
       const { data } = await supabase
         .from("exam_titles")
         .select("pass_mark_percentage")
         .eq("name", trainingType)
+        .eq("tenant_id", tenantId)
         .maybeSingle();
       return data;
     },
-    enabled: open && !!trainingType && !subjectId,
+    enabled: open && !!trainingType && !subjectId && !!tenantId,
   });
 
   const passThreshold = subjectId
