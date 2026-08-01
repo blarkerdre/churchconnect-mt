@@ -336,6 +336,20 @@ export default function CourseReportTab() {
         ? `${sessionRow.starts_on}${sessionRow.ends_on ? ` to ${sessionRow.ends_on}` : ""}`
         : report.cover?.date_range || "";
 
+      // Striking testimonies come from the course feedback form responses
+      const feedbackTestimonies = (testimonies || [])
+        .map((r) => {
+          const a = r.answers || {};
+          const body = String(a.testimony || "").trim();
+          if (!body) return null;
+          const name =
+            [a.first_name, a.surname].filter(Boolean).join(" ").trim() ||
+            [r.members?.first_name, r.members?.last_name].filter(Boolean).join(" ").trim();
+          return { heading: DEFAULT_TESTIMONY_HEADING, body, name };
+        })
+        .filter(Boolean);
+
+
       setReport((prev) => ({
         ...prev,
         cover: {
