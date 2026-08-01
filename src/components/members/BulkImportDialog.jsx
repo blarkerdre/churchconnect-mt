@@ -11,7 +11,7 @@ import { useTenantQuery } from "@/hooks/useTenantQuery";
 
 const EXPECTED_COLUMNS = [
   "first_name", "last_name", "email", "phone", "gender",
-  "membership_status", "church_unit", "address", "city", "postcode",
+  "membership_status", "church_unit", "address", "city", "postcode", "occupation", "nationality",
   "date_of_birth", "emergency_contact_name", "emergency_contact_phone",
 ];
 
@@ -65,6 +65,8 @@ function buildMemberData(row) {
   if (row.address) data.address = row.address;
   if (row.city) data.city = row.city;
   if (row.postcode) data.postcode = row.postcode;
+  if (row.occupation) data.occupation = row.occupation;
+  if (row.nationality) data.nationality = row.nationality;
   if (row.date_of_birth) data.date_of_birth = row.date_of_birth;
   if (row.emergency_contact_name) data.emergency_contact_name = row.emergency_contact_name;
   if (row.emergency_contact_phone) data.emergency_contact_phone = row.emergency_contact_phone;
