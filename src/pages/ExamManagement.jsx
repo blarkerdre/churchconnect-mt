@@ -34,6 +34,9 @@ import RateLecturerDialog from "@/components/exams/RateLecturerDialog";
 import QcReport from "@/components/exams/QcReport";
 import WoFBIApplicationsTab from "@/components/exams/WoFBIApplicationsTab";
 import WoFBIApplicationFormEditor from "@/components/exams/WoFBIApplicationFormEditor";
+import WoFBIFeedbackFormEditor from "@/components/exams/WoFBIFeedbackFormEditor";
+import WoFBIFeedbackDialog from "@/components/exams/WoFBIFeedbackDialog";
+
 import WoFBIAttendanceTab from "@/components/exams/WoFBIAttendanceTab";
 import ModuleTour from "@/components/tour/ModuleTour";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
