@@ -1,55 +1,49 @@
 ## Goal
 
-Add a **Course Report** feature in Bible School that generates an editable final report matching the uploaded Cardiff WOFBI BCC template, pre-filled from live data, saved per course/session, and exportable.
+Make the Bible School **Course Final Report** open pre-filled with the wording from the Cardiff WOFBI BCC template, pull striking testimonies from the course Feedback Form, use the same logo as the Statement of Result, and lay the report out with the same tables as the template.
 
-## Where it lives
+## 1. Prefilled editable text from the template
 
-New tab **"Course Report"** in Bible School (`src/pages/ExamManagement.jsx`), admin / reports-officer only, alongside the existing Application Form, Feedback Form, Lecturer Feedback and Quality Control tabs.
+Extend `src/lib/wofbi-report-defaults.js` so a brand-new report already contains the template's standard prose (all still editable):
 
-## Report structure (mirrors the template)
+- Cover defaults: "WORD OF FAITH BIBLE INSTITUTE", centre name, course title/code, edition, date range.
+- Introduction: the three-paragraph template introduction, with course/edition placeholders filled from the selected course and session.
+- Faculty: placeholder coordinating-team and volunteer lines to edit.
+- Induction / class attendance / statistics sentences in the template's phrasing.
+- General findings: the nine template paragraphs (attendance, registration, class breaks, mobile phones, post-induction reminders, marking & grading, class coordinator, graduation, summary) — already present, refined to match the template wording, plus the "overall performance" line.
+- Next session note.
 
-1. Cover — logo, centre name, course title + code, edition/session name, date range
-2. Introduction (rich text, editable)
-3. WOFBI Faculty — coordinating team + volunteers (editable lists)
-4. Induction — date + student count
-5. Class attendance figure
-6. Statistics (5a) — water baptised, Holy Ghost baptised, new birth, testimonies recorded
-7. Statistics (5b) — forms received, registered/confirmed, completed courses + test, at graduation, absentees
-8. Nations representation — country + count list
-9. Courses & lecturers table — S/N, course, code, lecturer (+centre)
-10. General findings — attendance, registration, breaks, mobile phones, post-induction reminders, marking & grading, class coordinator, graduation, summary (each editable text)
-11. Striking testimonies — heading + body + student name (repeatable)
-12. Student feedback on lecturers — lecturer, course, QC person, QC rating + student average rating
-13. Quality control observations — lecturer, course, QC personnel, general observations
-14. Honorarium recommendation — course table with internal/external + remarks
-15. Honorarium matrix — lecturer, no. of courses, recommended honorarium (£ per course, rate editable), signed COS/payroll
-16. Next session note
+Existing saved reports are untouched; defaults only apply where a field is empty.
 
-## Auto-fill from existing data
+## 2. Striking testimonies from course feedback
 
-Pre-filled on generate, every value still editable afterwards:
-- Subjects/codes/lecturers from `exam_subjects` + `lecturers` (existing lecturer↔subject mapping)
-- Registration counts and completion from `wofbi_applications` / `course_registrations` / `exam_attempts`
-- Attendance figure from `wofbi_attendance_records` / sessions
-- Nations from member `nationality` (recently added field)
-- Testimonies from `testimonies` and from Feedback Form responses
-- Student average ratings from `lecturer_ratings`; QC ratings and observations from `lecturer_qc_checks`
-- Honorarium matrix computed from course counts per lecturer × editable rate
+Replace the current source (`testimonies` table) with the Bible School feedback form:
 
-## Editing & saving
+- Read `wofbi_feedback_responses` for the selected course (and session where available), take the `testimony` answer.
+- Student name from the response's `first_name` / `surname` answers, falling back to the linked member's name.
+- Heading defaults to "Testimony at Bible School" and stays editable, as in the template (each testimony has a bold heading, body, and student name).
+- Only responses with non-empty testimony text are included; "Refresh from data" repopulates without wiping manual edits already made.
+- Statistic 5a "Testimonies Recorded" counts these feedback testimonies instead of the global testimonies table.
 
-- Autosaved draft per (tenant, course, session) so it can be revisited and refined
-- Section-by-section accordion editor with a "Refresh from data" button per section (never silently overwrites edits)
-- Status: Draft / Final
+## 3. Logo
 
-## Export
+Use the exact same resolution chain and timing as the Statement of Result: `certificate_templates.wofbi_logo_url` → `crest_image_url` → `logo_url` → tenant logo, looked up live by course name whenever the report is opened, previewed, printed or exported — not only when "Refresh from data" is pressed. The Logo URL field stays as a manual override; when it is blank the live value is used.
 
-- Print / PDF via a print-styled report view (same pattern as existing print reports)
-- Word (.docx) download so the church can keep editing offline
-- Fully responsive down to 384px (stacked tables on mobile)
+## 4. Tables as in the template
+
+Rework the print/Word output in `src/lib/wofbi-report-export.js` so each section renders as the template's table rather than lists where a table is used:
+
+- Section 7 — Courses & lecturers: S/N | COURSE | CODE | LECTURERS
+- Section 10 — Student feedback: LECTURER | COURSE | QC PERSONNEL | RATINGS (quality control rating and student average rating in one cell, numbered as in the template)
+- Section 11 — Quality control: LECTURER | COURSE | QC PERSONNEL | GENERAL OBSERVATIONS
+- Section 13 — Honorarium recommendation: S/N | COURSE | CODE | LECTURERS | TYPE | REMARKS
+- Honorarium matrix: S/N | APPROVED LECTURERS | NO. OF COURSES | RECOMMENDED HONORARIUM (£rate PER COURSE) | SIGNED CONTRACT OF SERVICE (COS)/PAYROLL
+- Statistics 5a/5b keep the template's lettered/plain line format.
+
+Header styling, uppercase headings and numbering follow the template. Tables avoid breaking across pages when printed, and the on-screen editor keeps its mobile-friendly stacked rows down to 384px.
 
 ## Technical notes
 
-- New table `wofbi_course_reports` (tenant_id, course_id, session_id, status, `content` JSONB holding all sections, timestamps) with tenant-scoped RLS: admins/reports officers read+write, GRANTs for `authenticated` and `service_role`
-- New components: `src/components/exams/CourseReportTab.jsx`, `CourseReportEditor.jsx`, `CourseReportPreview.jsx`, plus a `src/lib/wofbi-report-defaults.js` schema of the template sections
-- Docx generation client-side; all dynamic text escaped in the print HTML (existing `escHtml` pattern)
+- Files touched: `src/lib/wofbi-report-defaults.js` (template defaults + testimony helper), `src/lib/wofbi-report-export.js` (table rendering, logo), `src/components/exams/CourseReportTab.jsx` (feedback-based testimonies, live logo lookup, defaults on new report).
+- No database changes needed: `wofbi_feedback_responses` and `certificate_templates` already hold everything required, and all queries stay tenant-scoped with explicit `tenant_id` filters.
+- All dynamic text continues to pass through the existing `escHtml` escaping in the export.
