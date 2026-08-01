@@ -122,7 +122,7 @@ export default function QcCheckDialog({ open, onOpenChange, editRecord = null })
     queryFn: async () => {
       const { data, error } = await supabase
         .from("exam_subjects")
-        .select("id, name, lecturer_id")
+        .select("id, name, code, lecturer_id")
         .eq("tenant_id", tenantId)
         .eq("course_id", form.exam_title_id)
         .eq("is_active", true)
@@ -346,7 +346,7 @@ export default function QcCheckDialog({ open, onOpenChange, editRecord = null })
               <Select value={form.exam_subject_id} onValueChange={selectSubject} disabled={!form.exam_title_id}>
                 <SelectTrigger><SelectValue placeholder={form.exam_title_id ? "Select a subject" : "Select a course first"} /></SelectTrigger>
                 <SelectContent>
-                  {subjects.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                  {subjects.map((s) => <SelectItem key={s.id} value={s.id}>{s.code ? `${s.code} — ${s.name}` : s.name}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
