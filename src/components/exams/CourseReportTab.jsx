@@ -249,7 +249,25 @@ export default function CourseReportTab() {
         ]);
 
       const regList = regs || [];
+      const appList = applications || [];
+      const appCount = appList.length;
       const approved = regList.filter((r) => (r.status || "").toLowerCase() === "approved");
+
+      // application answers keyed by member, used as a fallback for missing member data
+      const appByMember = {};
+      appList.forEach((a) => {
+        if (a.member_id && !appByMember[a.member_id]) appByMember[a.member_id] = a.answers || {};
+      });
+      const answerOf = (memberId, keys) => {
+        const ans = appByMember[memberId] || {};
+        for (const k of keys) {
+          const v = ans[k];
+          if (v !== undefined && v !== null && String(v).trim() !== "") return v;
+        }
+        return "";
+      };
+      const isYes = (v) =>
+        v === true || ["yes", "true", "y", "1"].includes(String(v).trim().toLowerCase());
 
       // completed = members with an attempt in every subject
       const bySubj = {};
@@ -259,10 +277,25 @@ export default function CourseReportTab() {
       });
       const completed = Object.values(bySubj).filter((s) => subjectIds.length > 0 && s.size >= subjectIds.length).length;
 
+      // spiritual statistics from student member records, falling back to application answers
+      const statBase = approved.length ? approved : regList;
+      let waterBaptised = 0;
+      let holyGhost = 0;
+      let newBirth = 0;
+      statBase.forEach((r) => {
+        const m = r.members || {};
+        if (m.water_baptism || isYes(answerOf(r.member_id, ["water_baptism", "water_baptised", "baptised"])))
+          waterBaptised += 1;
+        if (m.holy_spirit_baptism || isYes(answerOf(r.member_id, ["holy_spirit_baptism", "holy_ghost_baptism", "holy_ghost"])))
+          holyGhost += 1;
+        if ((m.membership_status || "").toLowerCase() === "new convert" || isYes(answerOf(r.member_id, ["new_birth", "born_again"])))
+          newBirth += 1;
+      });
+
       // nations
       const nationCount = {};
-      regList.forEach((r) => {
-        const n = r.members?.nationality;
+      statBase.forEach((r) => {
+        const n = r.members?.nationality || answerOf(r.member_id, ["nationality", "country"]);
         if (n) nationCount[n] = (nationCount[n] || 0) + 1;
       });
       const nations = Object.entries(nationCount)
