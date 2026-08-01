@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import DangerConfirmDialog from "@/components/exams/DangerConfirmDialog";
 import { toast } from "@/components/ui/use-toast";
@@ -17,7 +18,7 @@ import { Loader2, Plus, Edit, Trash2, GraduationCap, Eye, Star } from "lucide-re
 import { logAudit } from "@/lib/audit";
 import { OPTION_LABELS } from "@/lib/lecturer-feedback-options";
 
-const emptyForm = { name: "", level: "", active: true };
+const emptyForm = { name: "", level: "", lecturer_type: "", active: true };
 
 export default function LecturerManager() {
   const qc = useQueryClient();
@@ -76,7 +77,7 @@ export default function LecturerManager() {
       if (editing) {
         const { error } = await supabase
           .from("lecturers")
-          .update({ name: form.name.trim(), level: form.level.trim() || null, active: form.active })
+          .update({ name: form.name.trim(), level: form.level.trim() || null, lecturer_type: form.lecturer_type || null, active: form.active })
           .eq("id", editing.id)
           .eq("tenant_id", tenantId);
         if (error) throw error;
@@ -84,7 +85,7 @@ export default function LecturerManager() {
       } else {
         const { data, error } = await supabase
           .from("lecturers")
-          .insert({ tenant_id: tenantId, name: form.name.trim(), level: form.level.trim() || null, active: form.active })
+          .insert({ tenant_id: tenantId, name: form.name.trim(), level: form.level.trim() || null, lecturer_type: form.lecturer_type || null, active: form.active })
           .select()
           .single();
         if (error) throw error;
@@ -178,6 +179,7 @@ export default function LecturerManager() {
                 <TableRow>
                   <TableHead>Name</TableHead>
                   <TableHead>Level</TableHead>
+                  <TableHead>Type</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
@@ -187,6 +189,13 @@ export default function LecturerManager() {
                   <TableRow key={l.id}>
                     <TableCell className="font-medium">{l.name}</TableCell>
                     <TableCell className="text-sm text-muted-foreground">{l.level || "—"}</TableCell>
+                    <TableCell>
+                      {l.lecturer_type ? (
+                        <Badge variant="outline" className="text-[10px] capitalize">{l.lecturer_type}</Badge>
+                      ) : (
+                        <span className="text-sm text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
                     <TableCell>
                       {l.active ? (
                         <Badge variant="outline" className="text-[10px] border-chart-3/40 text-chart-3">Active</Badge>
@@ -201,7 +210,7 @@ export default function LecturerManager() {
                         </Button>
                         <Button size="icon" variant="ghost" className="h-8 w-8" title="Edit" onClick={() => {
                           setEditing(l);
-                          setForm({ name: l.name, level: l.level || "", active: l.active });
+                          setForm({ name: l.name, level: l.level || "", lecturer_type: l.lecturer_type || "", active: l.active });
                           setDialogOpen(true);
                         }}>
                           <Edit className="h-4 w-4" />
@@ -231,6 +240,17 @@ export default function LecturerManager() {
               <div>
                 <Label htmlFor="lect-level">Level (optional)</Label>
                 <Input id="lect-level" placeholder="e.g. BFC / BCC / LCC / LDC" value={form.level} maxLength={100} onChange={(e) => setForm((f) => ({ ...f, level: e.target.value }))} />
+              </div>
+              <div>
+                <Label htmlFor="lect-type">Lecturer Type</Label>
+                <Select value={form.lecturer_type || "unset"} onValueChange={(v) => setForm((f) => ({ ...f, lecturer_type: v === "unset" ? "" : v }))}>
+                  <SelectTrigger id="lect-type"><SelectValue placeholder="Not specified" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="unset">Not specified</SelectItem>
+                    <SelectItem value="internal">Internal</SelectItem>
+                    <SelectItem value="external">External</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               <div className="flex items-center justify-between">
                 <Label htmlFor="lect-active">Active</Label>
