@@ -331,6 +331,8 @@ export default function ExamManagement() {
           <TabsTrigger value="applications" className="whitespace-nowrap">Applications</TabsTrigger>
           <TabsTrigger value="attendance" className="whitespace-nowrap">Attendance</TabsTrigger>
           <TabsTrigger value="app-form" className="whitespace-nowrap">Application Form</TabsTrigger>
+          <TabsTrigger value="feedback-form" className="whitespace-nowrap">Feedback Form</TabsTrigger>
+
           <TabsTrigger value="lecturer" className="whitespace-nowrap">Lecturer Feedback</TabsTrigger>
           <TabsTrigger value="qc" className="whitespace-nowrap">Quality Control</TabsTrigger>
         </TabsList>
