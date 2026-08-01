@@ -16,6 +16,7 @@ import { Loader2, Save, RefreshCw, Printer, FileDown, Plus, Trash2, FileText, Ey
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { emptyReport, mergeReport, FINDING_FIELDS, QC_CHECKLIST_FIELDS, buildIntroduction, DEFAULT_TESTIMONY_HEADING } from "@/lib/wofbi-report-defaults";
 import { printReport, downloadReportDoc, buildReportHtml } from "@/lib/wofbi-report-export";
+import { useResolvedBrandingUrl } from "@/lib/branding-url";
 
 const NO_SESSION = "__none__";
 
