@@ -181,6 +181,10 @@ export default function CourseReportTab() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [existing, courseId, sessionId]);
 
+  const reportForExport = {
+    ...report,
+    cover: { ...report.cover, logo_url: report.cover?.logo_url || liveLogoUrl },
+  };
 
   const set = (path, value) => {
     setDirty(true);
