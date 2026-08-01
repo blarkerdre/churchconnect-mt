@@ -28,7 +28,12 @@ function table(headers, rows, widths) {
     ${cols}
     <thead><tr>${headers.map((h) => `<th>${escHtml(h)}</th>`).join("")}</tr></thead>
     <tbody>${rows
-      .map((r) => `<tr>${r.map((c) => `<td>${escHtml(c)}</td>`).join("")}</tr>`)
+      .map(
+        (r) =>
+          `<tr>${r
+            .map((c) => `<td>${String(c ?? "").trim() ? escHtml(c) : "&mdash;"}</td>`)
+            .join("")}</tr>`,
+      )
       .join("")}</tbody>
   </table>`;
 }
