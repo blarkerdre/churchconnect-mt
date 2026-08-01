@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Cookie } from "lucide-react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useTenant } from "@/contexts/TenantContext";
 
 const STORAGE_KEY = "cc_consent_v1";
 
@@ -26,12 +27,13 @@ export function hasConsent(category) {
   return !!c[category];
 }
 
-async function logConsent(prefs) {
+async function logConsent(prefs, tenantId) {
   try {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
     for (const [key, val] of Object.entries(prefs)) {
       await supabase.from("consent_events").insert({
+        tenant_id: tenantId || null,
         user_id: user.id,
         consent_type: `cookies.${key}`,
         granted: !!val,
@@ -42,6 +44,7 @@ async function logConsent(prefs) {
 }
 
 export default function CookieConsentBanner() {
+  const { tenantId } = useTenant();
   const [open, setOpen] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [prefs, setPrefs] = useState(DEFAULT);
@@ -55,7 +58,7 @@ export default function CookieConsentBanner() {
 
   const save = (p) => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...p, ts: Date.now() }));
-    logConsent(p);
+    logConsent(p, tenantId);
     setOpen(false);
     setExpanded(false);
     window.dispatchEvent(new CustomEvent("cookie-consent-changed", { detail: p }));

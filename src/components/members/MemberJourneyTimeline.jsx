@@ -23,11 +23,12 @@ export default function MemberJourneyTimeline({ memberId }) {
         .from("member_status_history")
         .select("*")
         .eq("member_id", memberId)
+        .eq("tenant_id", tenantId)
         .order("changed_at", { ascending: true });
       if (error) throw error;
       return data;
     },
-    enabled: !!memberId,
+    enabled: !!memberId && !!tenantId,
   });
 
   if (isLoading || history.length === 0) return null;
