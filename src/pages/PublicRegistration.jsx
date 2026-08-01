@@ -17,6 +17,7 @@ import { suggestClosestWSFCentre } from "@/lib/wsf-suggest";
 import { normalizePhone } from "@/lib/phone-utils";
 import { usePublicConsentText, renderConsentText } from "@/hooks/useConsentText";
 import WelcomeQuestions from "@/components/members/WelcomeQuestions";
+import NationalitySelect from "@/components/shared/NationalitySelect";
 const STATUSES = ["First Timer", "New Convert", "Visitor", "Active"];
 const GENDERS = ["Male", "Female"];
 
@@ -235,7 +236,7 @@ export default function PublicRegistration() {
                 <div className="space-y-1.5"><Label>City</Label><Input value={form.city} onChange={e => { set("city", e.target.value); if (form.winners_satellite) { const best = suggestClosestWSFCentre(wsfCentres, { ...form, city: e.target.value }); if (best) set("wsf_centre_id", best.id); } }} maxLength={100} /></div>
                 <div className="space-y-1.5"><Label>Post Code</Label><Input value={form.postcode} onChange={e => { set("postcode", e.target.value); if (form.winners_satellite) { const best = suggestClosestWSFCentre(wsfCentres, { ...form, postcode: e.target.value }); if (best) set("wsf_centre_id", best.id); } }} maxLength={20} /></div>
                 <div className="space-y-1.5"><Label>Occupation</Label><Input value={form.occupation} onChange={e => set("occupation", e.target.value)} maxLength={100} /></div>
-                <div className="space-y-1.5"><Label>Nationality</Label><Input value={form.nationality} onChange={e => set("nationality", e.target.value)} maxLength={100} /></div>
+                <div className="space-y-1.5"><Label>Nationality</Label><NationalitySelect value={form.nationality} onChange={v => set("nationality", v)} /></div>
                 <div className="space-y-1.5"><Label>Date of Birth</Label><Input type="date" value={form.date_of_birth} onChange={e => set("date_of_birth", e.target.value)} /></div>
                 <div className="space-y-1.5">
                   <Label>Gender</Label>
