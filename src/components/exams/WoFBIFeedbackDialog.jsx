@@ -47,7 +47,7 @@ export default function WoFBIFeedbackDialog({ open, onOpenChange, course, member
     },
   });
 
-  const fields = useMemo(() => form?.fields || [], [form]);
+  const fields = useMemo(() => mergeFeedbackDefaults(form?.fields || []), [form]);
   const submitted = !!existing;
 
   useEffect(() => {
