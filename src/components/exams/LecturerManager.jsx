@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import DangerConfirmDialog from "@/components/exams/DangerConfirmDialog";
 import { toast } from "@/components/ui/use-toast";
@@ -209,7 +210,7 @@ export default function LecturerManager() {
                         </Button>
                         <Button size="icon" variant="ghost" className="h-8 w-8" title="Edit" onClick={() => {
                           setEditing(l);
-                          setForm({ name: l.name, level: l.level || "", active: l.active });
+                          setForm({ name: l.name, level: l.level || "", lecturer_type: l.lecturer_type || "", active: l.active });
                           setDialogOpen(true);
                         }}>
                           <Edit className="h-4 w-4" />
@@ -239,6 +240,17 @@ export default function LecturerManager() {
               <div>
                 <Label htmlFor="lect-level">Level (optional)</Label>
                 <Input id="lect-level" placeholder="e.g. BFC / BCC / LCC / LDC" value={form.level} maxLength={100} onChange={(e) => setForm((f) => ({ ...f, level: e.target.value }))} />
+              </div>
+              <div>
+                <Label htmlFor="lect-type">Lecturer Type</Label>
+                <Select value={form.lecturer_type || "unset"} onValueChange={(v) => setForm((f) => ({ ...f, lecturer_type: v === "unset" ? "" : v }))}>
+                  <SelectTrigger id="lect-type"><SelectValue placeholder="Not specified" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="unset">Not specified</SelectItem>
+                    <SelectItem value="internal">Internal</SelectItem>
+                    <SelectItem value="external">External</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               <div className="flex items-center justify-between">
                 <Label htmlFor="lect-active">Active</Label>
