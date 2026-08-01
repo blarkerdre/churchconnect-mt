@@ -14,7 +14,7 @@ import { useTenant } from "@/contexts/TenantContext";
 import { toast } from "@/components/ui/use-toast";
 import { Loader2, Save, RefreshCw, Printer, FileDown, Plus, Trash2, FileText, Eye } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { emptyReport, mergeReport, FINDING_FIELDS, buildIntroduction, DEFAULT_TESTIMONY_HEADING } from "@/lib/wofbi-report-defaults";
+import { emptyReport, mergeReport, FINDING_FIELDS, QC_CHECKLIST_FIELDS, buildIntroduction, DEFAULT_TESTIMONY_HEADING } from "@/lib/wofbi-report-defaults";
 import { printReport, downloadReportDoc, buildReportHtml } from "@/lib/wofbi-report-export";
 
 const NO_SESSION = "__none__";
@@ -271,7 +271,7 @@ export default function CourseReportTab() {
           supabase.from("lecturer_ratings").select("lecturer_id, subject_id, overall_rating")
             .eq("tenant_id", tenantId).eq("course_id", courseId),
           supabase.from("lecturer_qc_checks")
-            .select("lecturer_id, exam_subject_id, qc_member_name, total_score, general_observations")
+            .select("lecturer_id, exam_subject_id, qc_member_name, total_score, general_observations, started_on_time, finished_on_time, introduced_self, orderliness_note, orderliness_score, content_focus_note, content_focus_score, conducted_test, qa_observations, class_recorded, recording_submitted")
             .eq("tenant_id", tenantId).eq("exam_title_id", courseId),
           supabase.from("wofbi_feedback_responses")
             .select("answers, submitted_at, members(first_name, last_name)")
@@ -368,14 +368,28 @@ export default function CourseReportTab() {
         };
       });
 
+      const yesNo = (v) => (v === true ? "Yes" : v === false ? "No" : "");
+      const scoreText = (v) => (v === null || v === undefined || v === "" ? "" : String(v));
       const qcRows = subjectList
         .filter((s) => qcBySubject[s.id])
-        .map((s) => ({
-          lecturer: lecById[s.lecturer_id] || "",
-          course: s.name,
-          qc_person: qcBySubject[s.id]?.qc_member_name || "",
-          observations: qcBySubject[s.id]?.general_observations || "",
-        }));
+        .map((s) => {
+          const q = qcBySubject[s.id];
+          return {
+            lecturer: lecById[s.lecturer_id] || "",
+            course: s.name,
+            qc_person: q.qc_member_name || "",
+            started_on_time: scoreText(q.started_on_time),
+            finished_on_time: scoreText(q.finished_on_time),
+            introduced_self: yesNo(q.introduced_self),
+            orderliness: q.orderliness_note || scoreText(q.orderliness_score),
+            content_focus: q.content_focus_note || scoreText(q.content_focus_score),
+            submitted_test: yesNo(q.conducted_test),
+            qa: q.qa_observations || "",
+            observations: q.general_observations || "",
+            class_recorded: yesNo(q.class_recorded),
+            recording_submitted: yesNo(q.recording_submitted),
+          };
+        });
 
       // honorarium
       const honorarium = subjectList.map((s) => {
@@ -463,8 +477,22 @@ export default function CourseReportTab() {
         courses: courseRows.length ? courseRows : prev.courses,
         student_feedback: studentFeedback.length ? studentFeedback : prev.student_feedback,
         qc: qcRows.length ? qcRows : prev.qc,
+        honorarium_heading:
+          prev.honorarium_heading ||
+          [
+            course?.name ? `${course.name} COURSE`.toUpperCase() : "",
+            (template?.centre_name || prev.cover.centre_name || "").toUpperCase(),
+          ]
+            .filter(Boolean)
+            .join(" – "),
         honorarium: honorarium.length ? honorarium : prev.honorarium,
         honorarium_matrix: { rate, rows: matrixRows.length ? matrixRows : prev.honorarium_matrix.rows },
+        signoff: {
+          name: prev.signoff?.name || "",
+          title:
+            prev.signoff?.title ||
+            `RP, ${template?.church_name || currentTenant?.name || ""}`.trim(),
+        },
         testimonies: feedbackTestimonies.length ? feedbackTestimonies : prev.testimonies,
       }));
       setDirty(true);
@@ -695,7 +723,9 @@ export default function CourseReportTab() {
 
           <AccordionItem value="feedback" className="border rounded-md px-3">
             <AccordionTrigger className="text-sm">10. Student feedback on lecturers</AccordionTrigger>
-            <AccordionContent className="pb-4">
+            <AccordionContent className="space-y-3 pb-4">
+              <AreaField label="Feedback summary (shown above the table)" rows={7}
+                value={report.feedback_intro} onChange={(v) => set("feedback_intro", v)} />
               <RowEditor rows={report.student_feedback} onChange={(v) => set("student_feedback", v)} addLabel="Add lecturer"
                 columns={[
                   { key: "lecturer", label: "Lecturer" }, { key: "course", label: "Course" },
@@ -711,14 +741,21 @@ export default function CourseReportTab() {
               <RowEditor rows={report.qc} onChange={(v) => set("qc", v)} addLabel="Add QC entry"
                 columns={[
                   { key: "lecturer", label: "Lecturer" }, { key: "course", label: "Course" },
-                  { key: "qc_person", label: "QC personnel" }, { key: "observations", label: "General observations", area: true },
+                  { key: "qc_person", label: "QC personnel" },
+                  ...QC_CHECKLIST_FIELDS.map((f) => ({
+                    key: f.key,
+                    label: f.label,
+                    area: f.key === "observations",
+                  })),
                 ]} />
             </AccordionContent>
           </AccordionItem>
 
           <AccordionItem value="honorarium" className="border rounded-md px-3">
-            <AccordionTrigger className="text-sm">12. Honorarium recommendation</AccordionTrigger>
+            <AccordionTrigger className="text-sm">13. Honorarium recommendation</AccordionTrigger>
             <AccordionContent className="space-y-4 pb-4">
+              <TextField label="Honorarium heading (e.g. BCC COURSE – CARDIFF LEARNING CENTRE)"
+                value={report.honorarium_heading} onChange={(v) => set("honorarium_heading", v)} />
               <RowEditor rows={report.honorarium} onChange={(v) => set("honorarium", v)} addLabel="Add course"
                 columns={[
                   { key: "course", label: "Course" }, { key: "code", label: "Code" },
@@ -738,11 +775,18 @@ export default function CourseReportTab() {
           </AccordionItem>
 
           <AccordionItem value="next" className="border rounded-md px-3">
-            <AccordionTrigger className="text-sm">13. Next session</AccordionTrigger>
-            <AccordionContent className="pb-4">
-              <AreaField label="Next session note" rows={3} value={report.next_session} onChange={(v) => set("next_session", v)} />
+            <AccordionTrigger className="text-sm">Next session &amp; closing remark</AccordionTrigger>
+            <AccordionContent className="space-y-3 pb-4">
+              <AreaField label="Next session note (printed at the end of section 8)" rows={3}
+                value={report.next_session} onChange={(v) => set("next_session", v)} />
+              <AreaField label="Closing remark" rows={6} value={report.closing_remark} onChange={(v) => set("closing_remark", v)} />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <TextField label="Sign-off name" value={report.signoff?.name} onChange={(v) => set("signoff.name", v)} />
+                <TextField label="Sign-off title" value={report.signoff?.title} onChange={(v) => set("signoff.title", v)} />
+              </div>
             </AccordionContent>
           </AccordionItem>
+
         </Accordion>
       )}
     </div>
