@@ -197,7 +197,6 @@ export default function CourseReportTab() {
     });
   };
 
-  const selectedCourse = courses.find((c) => c.id === courseId);
 
   async function autofill() {
     if (!courseId || !tenantId) return;
