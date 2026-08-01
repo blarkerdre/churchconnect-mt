@@ -368,14 +368,28 @@ export default function CourseReportTab() {
         };
       });
 
+      const yesNo = (v) => (v === true ? "Yes" : v === false ? "No" : "");
+      const scoreText = (v) => (v === null || v === undefined || v === "" ? "" : String(v));
       const qcRows = subjectList
         .filter((s) => qcBySubject[s.id])
-        .map((s) => ({
-          lecturer: lecById[s.lecturer_id] || "",
-          course: s.name,
-          qc_person: qcBySubject[s.id]?.qc_member_name || "",
-          observations: qcBySubject[s.id]?.general_observations || "",
-        }));
+        .map((s) => {
+          const q = qcBySubject[s.id];
+          return {
+            lecturer: lecById[s.lecturer_id] || "",
+            course: s.name,
+            qc_person: q.qc_member_name || "",
+            started_on_time: scoreText(q.started_on_time),
+            finished_on_time: scoreText(q.finished_on_time),
+            introduced_self: yesNo(q.introduced_self),
+            orderliness: q.orderliness_note || scoreText(q.orderliness_score),
+            content_focus: q.content_focus_note || scoreText(q.content_focus_score),
+            submitted_test: yesNo(q.conducted_test),
+            qa: q.qa_observations || "",
+            observations: q.general_observations || "",
+            class_recorded: yesNo(q.class_recorded),
+            recording_submitted: yesNo(q.recording_submitted),
+          };
+        });
 
       // honorarium
       const honorarium = subjectList.map((s) => {
