@@ -182,7 +182,8 @@ export default function SignPostDetailPanel({ open, onClose, referralId, onCreat
       const { error: updErr } = await supabase
         .from("members")
         .update(payload)
-        .eq("id", member.id);
+        .eq("id", member.id)
+        .eq("tenant_id", tenantId);
       if (updErr) throw updErr;
       await postUpdate(updateMsg, "joined");
       toast({ title: "Member added", description: updateMsg });

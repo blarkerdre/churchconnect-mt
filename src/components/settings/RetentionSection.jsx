@@ -38,7 +38,7 @@ export default function RetentionSection() {
 
   const updateMut = useMutation({
     mutationFn: async ({ id, patch }) => {
-      const { error } = await supabase.from("retention_policies").update(patch).eq("id", id);
+      const { error } = await supabase.from("retention_policies").update(patch).eq("id", id).eq("tenant_id", tenantId);
       if (error) throw error;
     },
     onSuccess: () => {

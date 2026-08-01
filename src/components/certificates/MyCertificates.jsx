@@ -18,11 +18,12 @@ export default function MyCertificates({ memberId, hiddenCourseNames = [] }) {
         .from("training_completions")
         .select("*")
         .eq("member_id", memberId)
+        .eq("tenant_id", tenantId)
         .order("completion_date", { ascending: false });
       if (error) throw error;
       return data;
     },
-    enabled: !!memberId,
+    enabled: !!memberId && !!tenantId,
   });
 
   const handleDownload = async (completion) => {

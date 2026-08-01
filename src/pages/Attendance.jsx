@@ -98,13 +98,14 @@ export default function Attendance() {
   const selectedSession = filteredSessions.find(s => s.id === selectedSessionId) || filteredSessions[0];
 
   const { data: records = [] } = useQuery({
-    queryKey: ["attendance-records", selectedSession?.id],
-    enabled: !!selectedSession?.id,
+    queryKey: ["attendance-records", selectedSession?.id, tenantId],
+    enabled: !!selectedSession?.id && !!tenantId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("attendance_records")
         .select("*, members(first_name, last_name)")
         .eq("session_id", selectedSession.id)
+        .eq("tenant_id", tenantId)
         .order("checked_in_at", { ascending: false });
       if (error) throw error;
       return data;

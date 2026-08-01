@@ -106,17 +106,18 @@ function EventItem({ event, member, onRead, onOpen, user, tenantId, withTenant }
   const [expanded, setExpanded] = useState(false);
 
   const { data: registration } = useQuery({
-    queryKey: ["event-reg", event.id, user?.id],
+    queryKey: ["event-reg", event.id, user?.id, tenantId],
+    enabled: !!user?.id && !!event.requires_registration && !!tenantId,
     queryFn: async () => {
       const { data } = await supabase
         .from("event_registrations")
         .select("id")
         .eq("event_id", event.id)
         .eq("user_id", user.id)
+        .eq("tenant_id", tenantId)
         .maybeSingle();
       return data;
     },
-    enabled: !!user?.id && !!event.requires_registration,
   });
 
   const { data: reactions = [] } = useQuery({

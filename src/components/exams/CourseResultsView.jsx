@@ -50,6 +50,7 @@ export default function CourseResultsView({ course }) {
         .from("exam_subjects")
         .select("*")
         .eq("course_id", course.id)
+        .eq("tenant_id", course.tenant_id)
         .eq("is_active", true)
         .order("sort_order");
       if (error) throw error;
@@ -67,6 +68,7 @@ export default function CourseResultsView({ course }) {
       const { data, error } = await supabase
         .from("exam_attempts")
         .select("*, members(first_name, last_name)")
+        .eq("tenant_id", course.tenant_id)
         .in("subject_id", subjectIds)
         .order("created_at", { ascending: false });
       if (error) throw error;
