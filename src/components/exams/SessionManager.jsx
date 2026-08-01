@@ -271,8 +271,9 @@ export default function SessionManager() {
       setConflict({ session, clash });
       return;
     }
-    statusMutation.mutate({ session, status: "active" });
+    setConfirmStart(session);
   };
+
 
   const toggleCourse = (name) => {
     setForm((f) => ({
