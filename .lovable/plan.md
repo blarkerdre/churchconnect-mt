@@ -1,14 +1,13 @@
-## Goal
-Let students give their testimony a title in the Bible School course feedback form, and use that title as the heading in the Course Final Report.
+## Why it's missing
 
-## Changes
+The Bible School feedback form is stored per tenant in the `wofbi_feedback_forms` table as a JSON list of fields. Your tenant already has a saved form (16 fields) created before the "Testimony Title" field existed. The default field list in code is only used when a form is created or reset, so saved forms never gained the new field.
 
-1. `src/lib/wofbi-feedback-defaults.js`
-   - Add a `testimony_title` short-text field in the "Your Testimony" section, placed just before the existing `testimony` long-text field (label: "Testimony Title", placeholder e.g. "Give your testimony a title").
+## Fix
 
-2. `src/components/exams/CourseReportTab.jsx` (autofill, ~line 496-507)
-   - When collecting striking testimonies from feedback responses, use `answers.testimony_title` as the `heading` when present, falling back to the current `DEFAULT_TESTIMONY_HEADING`.
+1. **Data migration** — update existing `wofbi_feedback_forms` rows: if the fields JSON has no field with id `testimony_title`, insert one (`type: text`, label "Testimony Title", placeholder "Give your testimony a title") immediately before the `testimony` field. If there is no `testimony` field, append it after the "Your Testimony" section heading, otherwise at the end. Runs once, idempotent, tenant-safe (applies per row).
+
+2. **Safety net in the app** — when the feedback form loads (student dialog and admin editor), merge in any missing default fields that are marked as "core defaults" so future added defaults don't silently skip existing tenants.
 
 ## Notes
-- Existing tenants with a saved custom feedback form keep their current fields; they can add the new field via the feedback form editor (the field is only a default for new/reset forms). If you'd like existing saved forms auto-upgraded with the title field, say so and I'll include a migration/merge step.
-- No database schema change needed — answers are stored as JSON.
+- Already-submitted feedback responses are unaffected; the Course Final Report already prefers `answers.testimony_title` when present and falls back to the standard heading.
+- No schema change — answers and fields are JSON.
