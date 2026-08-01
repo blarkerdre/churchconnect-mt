@@ -271,7 +271,7 @@ export default function CourseReportTab() {
           supabase.from("lecturer_ratings").select("lecturer_id, subject_id, overall_rating")
             .eq("tenant_id", tenantId).eq("course_id", courseId),
           supabase.from("lecturer_qc_checks")
-            .select("lecturer_id, exam_subject_id, qc_member_name, total_score, general_observations")
+            .select("lecturer_id, exam_subject_id, qc_member_name, total_score, general_observations, started_on_time, finished_on_time, introduced_self, orderliness_note, orderliness_score, content_focus_note, content_focus_score, conducted_test, qa_observations, class_recorded, recording_submitted")
             .eq("tenant_id", tenantId).eq("exam_title_id", courseId),
           supabase.from("wofbi_feedback_responses")
             .select("answers, submitted_at, members(first_name, last_name)")
