@@ -58,6 +58,7 @@ export default function SessionManager() {
   const [form, setForm] = useState(emptyForm);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [confirmClose, setConfirmClose] = useState(null);
+  const [confirmStart, setConfirmStart] = useState(null);
   const [conflict, setConflict] = useState(null);
 
   const { data: courses = [] } = useQuery({
@@ -238,6 +239,8 @@ export default function SessionManager() {
       });
       qc.invalidateQueries({ queryKey: ["exam-sessions-manage", tenantId] });
       qc.invalidateQueries({ queryKey: ["exam-sessions-report"] });
+      qc.invalidateQueries({ queryKey: ["exam-titles", tenantId] });
+      qc.invalidateQueries({ queryKey: ["exam-session-course-control", tenantId] });
     },
     onError: (e) => toast({ title: "Could not update session", description: e.message, variant: "destructive" }),
   });
@@ -269,8 +272,9 @@ export default function SessionManager() {
       setConflict({ session, clash });
       return;
     }
-    statusMutation.mutate({ session, status: "active" });
+    setConfirmStart(session);
   };
+
 
   const toggleCourse = (name) => {
     setForm((f) => ({
@@ -298,8 +302,9 @@ export default function SessionManager() {
               <CalendarClock className="h-5 w-5" /> Sessions / editions
             </CardTitle>
             <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-              A session is one intake of a course. Start it so new registrations are tied to it, then close it when the intake ends.
+              A session is one intake of a course. Starting it opens applications and registration for the attached courses (and exams, if “Open exams automatically” is on); closing it shuts them again.
             </p>
+
           </div>
           <Button size="sm" onClick={openCreate} className="shrink-0">
             <Plus className="h-4 w-4 mr-1" /> New
@@ -443,11 +448,38 @@ export default function SessionManager() {
         </DialogContent>
       </Dialog>
 
+      <AlertDialog open={!!confirmStart} onOpenChange={(o) => !o && setConfirmStart(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Start “{confirmStart?.name}”?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {(coursesFor[confirmStart?.id] || []).length
+                ? <>Applications and registration will be opened for: {(coursesFor[confirmStart?.id] || []).join(", ")}.{confirmStart?.auto_open_exams ? " Exams will be opened for these courses too." : ""} New registrations will be linked to this session.</>
+                : <>No courses are attached yet, so nothing will be opened. Attach courses first if you want this session to control registration.</>}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                statusMutation.mutate({ session: confirmStart, status: "active" });
+                setConfirmStart(null);
+              }}
+            >
+              Start session
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <AlertDialog open={!!confirmClose} onOpenChange={(o) => !o && setConfirmClose(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Close this session?</AlertDialogTitle>
             <AlertDialogDescription>
+              {(coursesFor[confirmClose?.id] || []).length
+                ? <>Applications and registration will be closed for: {(coursesFor[confirmClose?.id] || []).join(", ")}.{confirmClose?.auto_open_exams ? " Exams will be closed for these courses too." : ""} </>
+                : null}
               New registrations will no longer be linked to “{confirmClose?.name}”. You can reopen it later.
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -464,6 +496,7 @@ export default function SessionManager() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
 
       <AlertDialog open={!!conflict} onOpenChange={(o) => !o && setConflict(null)}>
         <AlertDialogContent>
