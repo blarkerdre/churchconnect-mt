@@ -300,8 +300,9 @@ export default function SessionManager() {
               <CalendarClock className="h-5 w-5" /> Sessions / editions
             </CardTitle>
             <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-              A session is one intake of a course. Start it so new registrations are tied to it, then close it when the intake ends.
+              A session is one intake of a course. Starting it opens applications and registration for the attached courses (and exams, if “Open exams automatically” is on); closing it shuts them again.
             </p>
+
           </div>
           <Button size="sm" onClick={openCreate} className="shrink-0">
             <Plus className="h-4 w-4 mr-1" /> New
