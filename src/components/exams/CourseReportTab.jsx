@@ -178,12 +178,13 @@ export default function CourseReportTab() {
     },
   });
 
-  const liveLogoUrl =
+  const liveLogoUrl = useResolvedBrandingUrl(
     liveTemplate?.wofbi_logo_url ||
-    liveTemplate?.crest_image_url ||
-    liveTemplate?.logo_url ||
-    currentTenant?.logo_url ||
-    "";
+      liveTemplate?.crest_image_url ||
+      liveTemplate?.logo_url ||
+      currentTenant?.logo_url ||
+      ""
+  );
 
   const { data: existing, isFetching: loadingReport } = useQuery({
     queryKey: ["wofbi-course-report", tenantId, courseId, sessionId],
