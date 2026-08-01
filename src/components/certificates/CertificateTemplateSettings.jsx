@@ -457,7 +457,7 @@ export default function CertificateTemplateSettings() {
                 )}
               </div>
               {form.wofbi_logo_url && (
-                <img src={form.wofbi_logo_url} alt="WoFBI logo" className="mt-2 h-16 object-contain rounded border bg-white p-1" />
+                <img src={wofbiLogoPreview} alt="WoFBI logo" className="mt-2 h-16 object-contain rounded border bg-white p-1" />
               )}
             </div>
             <div className="grid grid-cols-2 gap-3">
