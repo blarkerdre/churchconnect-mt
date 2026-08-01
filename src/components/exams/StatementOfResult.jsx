@@ -7,7 +7,6 @@ import { getGradeClassification, getLetterGrade, LETTER_GRADE_BANDS, resolveLett
 import { useTenant } from "@/contexts/TenantContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { useResolvedBrandingUrl } from "@/lib/branding-url";
 
 function escHtml(str) {
   return String(str ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
@@ -192,13 +191,12 @@ export function StatementPreview({ member, course, subjects, memberSubjects, ena
     (currentTenant?.name && template?.church_name && template.church_name !== currentTenant.name
       ? currentTenant.name
       : "");
-  const logoUrl = useResolvedBrandingUrl(
+  const logoUrl =
     template?.wofbi_logo_url ||
-      template?.crest_image_url ||
-      template?.logo_url ||
-      currentTenant?.logo_url ||
-      ""
-  );
+    template?.crest_image_url ||
+    template?.logo_url ||
+    currentTenant?.logo_url ||
+    "";
 
   return (
     <div className="space-y-4">
@@ -293,13 +291,12 @@ export default function StatementOfResult({ open, onOpenChange, member, course, 
     (currentTenant?.name && template?.church_name && template.church_name !== currentTenant.name
       ? currentTenant.name
       : "");
-  const logoUrl = useResolvedBrandingUrl(
+  const logoUrl =
     template?.wofbi_logo_url ||
-      template?.crest_image_url ||
-      template?.logo_url ||
-      currentTenant?.logo_url ||
-      ""
-  );
+    template?.crest_image_url ||
+    template?.logo_url ||
+    currentTenant?.logo_url ||
+    "";
   const signatoryName = template?.signatory_name || "";
   const signatoryTitle = template?.signatory_title || "";
   const signatureUrl = template?.dean_signature_url || "";
