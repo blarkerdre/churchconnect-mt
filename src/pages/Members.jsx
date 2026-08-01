@@ -183,8 +183,8 @@ export default function Members() {
   };
 
   const handleDownloadCSV = () => {
-    const headers = ["First Name", "Last Name", "Email", "Phone", "Status", "Gender", "Church Unit", "Membership Date"];
-    const rows = filtered.map(m => [m.first_name, m.last_name, m.email, m.phone, m.membership_status, m.gender, m.church_unit, m.membership_date]);
+    const headers = ["First Name", "Last Name", "Email", "Phone", "Status", "Gender", "Occupation", "Nationality", "Church Unit", "Membership Date"];
+    const rows = filtered.map(m => [m.first_name, m.last_name, m.email, m.phone, m.membership_status, m.gender, m.occupation, m.nationality, m.church_unit, m.membership_date]);
     const csv = [headers, ...rows].map(r => r.map(v => `"${String(v || "").replace(/"/g, '""')}"`).join(",")).join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
     const a = document.createElement("a");

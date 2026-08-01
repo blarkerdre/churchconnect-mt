@@ -3575,7 +3575,9 @@ export type Database = {
           live_work_in_city: boolean | null
           membership_date: string | null
           membership_status: Database["public"]["Enums"]["membership_status"]
+          nationality: string | null
           notes: string | null
+          occupation: string | null
           phone: string | null
           photo_url: string | null
           postcode: string | null
@@ -3626,7 +3628,9 @@ export type Database = {
           live_work_in_city?: boolean | null
           membership_date?: string | null
           membership_status?: Database["public"]["Enums"]["membership_status"]
+          nationality?: string | null
           notes?: string | null
+          occupation?: string | null
           phone?: string | null
           photo_url?: string | null
           postcode?: string | null
@@ -3677,7 +3681,9 @@ export type Database = {
           live_work_in_city?: boolean | null
           membership_date?: string | null
           membership_status?: Database["public"]["Enums"]["membership_status"]
+          nationality?: string | null
           notes?: string | null
+          occupation?: string | null
           phone?: string | null
           photo_url?: string | null
           postcode?: string | null
@@ -7657,7 +7663,9 @@ export type Database = {
               _live_work_in_city?: boolean
               _member_id: string
               _membership_status?: string
+              _nationality?: string
               _notes?: string
+              _occupation?: string
               _phone?: string
               _photo_url?: string
               _postcode?: string
@@ -7697,7 +7705,9 @@ export type Database = {
           p_ldc_completed?: boolean
           p_live_work_in_city?: boolean
           p_membership_status?: string
+          p_nationality?: string
           p_notes?: string
+          p_occupation?: string
           p_phone?: string
           p_postcode?: string
           p_preferred_contact_modes?: string
