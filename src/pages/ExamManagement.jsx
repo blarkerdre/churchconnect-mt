@@ -338,6 +338,7 @@ export default function ExamManagement() {
 
           <TabsTrigger value="lecturer" className="whitespace-nowrap">Lecturer Feedback</TabsTrigger>
           <TabsTrigger value="qc" className="whitespace-nowrap">Quality Control</TabsTrigger>
+          <TabsTrigger value="course-report" className="whitespace-nowrap">Course Report</TabsTrigger>
         </TabsList>
 
 
