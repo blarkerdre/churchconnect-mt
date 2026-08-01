@@ -196,9 +196,10 @@ export default function CourseReportTab() {
     cover: { ...report.cover, logo_url: report.cover?.logo_url || liveLogoUrl },
   };
 
-  const handleWordDownload = () => {
   const handleWordDownload = async () => {
     const result = await downloadReportDoc(reportForExport);
+    if (result === "opened") {
+
 
       toast({
         title: "Opened in a new tab",
