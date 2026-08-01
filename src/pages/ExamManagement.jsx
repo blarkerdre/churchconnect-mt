@@ -100,6 +100,34 @@ export default function ExamManagement() {
     },
   });
 
+  // Which courses are governed by a session (edition)? Sessions open/close
+  // registration (and optionally exams) for the courses attached to them.
+  const { data: sessionControl = {} } = useQuery({
+    queryKey: ["exam-session-course-control", tenantId],
+    enabled: !!tenantId,
+    queryFn: async () => {
+      const [{ data: links, error: le }, { data: sess, error: se }] = await Promise.all([
+        supabase.from("exam_session_courses").select("session_id, exam_title").eq("tenant_id", tenantId),
+        supabase.from("exam_sessions").select("id, name, status").eq("tenant_id", tenantId),
+      ]);
+      if (le) throw le;
+      if (se) throw se;
+      const byId = Object.fromEntries((sess || []).map((s) => [s.id, s]));
+      const map = {};
+      for (const l of links || []) {
+        const s = byId[l.session_id];
+        if (!s) continue;
+        const entry = map[l.exam_title] || { sessions: [], active: null };
+        entry.sessions.push(s);
+        if ((s.status || "").toLowerCase() === "active") entry.active = s;
+        map[l.exam_title] = entry;
+      }
+      return map;
+    },
+  });
+
+
+
   // Reset course/subject/view selection when the active tenant changes so
   // stale cross-tenant course objects don't leak into the new tenant's view.
   React.useEffect(() => {
