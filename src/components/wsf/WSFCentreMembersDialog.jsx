@@ -61,7 +61,8 @@ export default function WSFCentreMembersDialog({ open, onOpenChange, centre, isR
       const { error } = await supabase
         .from("members")
         .update({ wsf_centre_id: centre.id })
-        .eq("id", memberId);
+        .eq("id", memberId)
+        .eq("tenant_id", tenantId);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -78,7 +79,8 @@ export default function WSFCentreMembersDialog({ open, onOpenChange, centre, isR
       const { error } = await supabase
         .from("members")
         .update({ wsf_centre_id: null })
-        .eq("id", memberId);
+        .eq("id", memberId)
+        .eq("tenant_id", tenantId);
       if (error) throw error;
     },
     onSuccess: () => {

@@ -133,6 +133,7 @@ export default function CertificatesReport() {
       const { data, error } = await supabase
         .from("members")
         .select("id, first_name, last_name, email")
+        .eq("tenant_id", tenantId)
         .in("id", orphanMemberIds);
       if (error) throw error;
       return data || [];
