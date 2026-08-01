@@ -1,42 +1,32 @@
 ## Goal
-Give Bible School a real "Sessions / editions" lifecycle: create a session, attach courses to it, open it, close it — so registrations, exams and the Course Final Report can be scoped to an intake.
+Make a Bible School session (edition) the thing that opens and closes applications and registrations for its attached courses, instead of the manual "Registration open" switch being the only control.
 
-## Why
-`exam_sessions` already exists and is read by the Statement of Result and the Course Final Report picker, but nothing in the app writes to it. The only row present was seeded by a migration and is closed, and no course registration carries a `session_id`. Sessions therefore never "start" — there is no screen for it.
+## How it will work
 
-## What to build
+### 1. Session start opens registration
+When a session moves to **Open** — manually via the Start button, or by the auto-schedule job on its start date — every course attached to that session (`exam_session_courses`) gets `registration_open = true`.
 
-### 1. New "Sessions" tab in Bible School Management
-Admin-only tab listing sessions newest-first with: name, date range, status chip (Upcoming / Open / Closed), attached courses, and counts of registrations and exam attempts.
+### 2. Session close shuts registration
+When a session moves to **Closed** — manual Close, or the auto job passing the end date — the attached courses get `registration_open = false`, so the public link/QR and member self-registration both stop accepting entries.
 
-### 2. Create / edit session dialog
-Fields:
-- Name / edition label (e.g. "Q1 2026 Edition")
-- Description
-- Start date, end date
-- Pass mark %
-- Attached courses — multi-select of Bible School courses, written to `exam_session_courses`
-- Toggles already on the table: `auto_open_exams`, `allow_reregistration`
+A course attached to *no* session is untouched and keeps behaving exactly as today (pure manual switch).
 
-### 3. Start / close controls
-- **Start session** — sets `status = 'active'` and stamps `started_at`. Guarded so only one session per course is active at a time (warn and offer to close the other).
-- **Close session** — sets `status = 'closed'`, stamps `ended_at`, and blocks new registrations and exam attempts against it.
-- **Reopen** — admin-only, returns a closed session to active.
-- Optional scheduled start/close using the existing dates, following the same pattern already used for Bible School attendance sessions (a scheduled job flips status when `starts_on` / `ends_on` is reached). Off by default via a per-session checkbox.
+### 3. Exams follow the same rule, but only if asked
+The session already has an **"Open exams automatically"** switch that is stored but never read. It will now do what it says: when the session opens, attached courses get `exams_open = true`; when it closes, `exams_open = false`. Left off, exams stay entirely manual.
 
-### 4. Wire registrations to the active session
-When a student registers for a course (member self-register, public form, or QR), stamp `course_registrations.session_id` with the currently active session for that course. Existing behaviour is unchanged when no session is active.
+### 4. Registration blocked outside an open session
+The public registration edge function currently only checks the course's `registration_open` flag. It will additionally reject when the course belongs to at least one session and none of those sessions is currently open — with a clear message ("Registration for this course is not currently open"). Courses with no sessions keep the current check.
 
-### 5. Report picker follows on
-With sessions and `exam_session_courses` populated, the Course Final Report picker built earlier starts showing real editions with dates, status and Draft/Final badges — no further change needed there.
+### 5. Making it visible in the UI
+- **Courses tab**: when a course is governed by a session, the "Registration open" switch shows a note — "Controlled by session: {name}" — and reads as derived rather than something you flip blind. Admins can still override manually; the next session start/close will reassert.
+- **Sessions tab**: the Start and Close confirmations spell out which courses will have registration (and exams, if enabled) opened or closed.
 
 ## Technical notes
-- New component `src/components/exams/SessionManager.jsx`, mounted as a tab in `src/pages/ExamManagement.jsx`.
-- Writes to `exam_sessions` and `exam_session_courses` (linked by `exam_title` text, matching the existing schema).
-- Requires RLS insert/update/delete policies for admins on both tables — will verify what exists and add only what's missing, with GRANTs.
-- Registration stamping touches the `public-wofbi-register` edge function and the member self-registration path, which already share one flow.
-- Scheduled open/close reuses the existing `pg_cron` job pattern from Bible School attendance sessions.
+- A database trigger on `exam_sessions` status change applies the flag updates to `exam_titles` rows joined through `exam_session_courses`, tenant-scoped. This covers both manual and cron-driven transitions in one place, so `auto_manage_exam_sessions()` needs no change.
+- Edge function `public-wofbi-register` gains the "is any attached session open" check alongside the existing `registration_open` / `is_active` guard.
+- Frontend touches: `src/components/exams/SessionManager.jsx` (confirm copy) and the Courses tab in `src/pages/ExamManagement.jsx` (session-controlled hint).
 
 ## Not included
-- No change to exam taking, grading, or the report layout.
-- Existing seeded test session is left alone; it can be renamed or deleted from the new tab.
+- No change to how student numbers, confirmation emails, or exam links are sent.
+- No change to attendance sessions (`wofbi_attendance_sessions`) — separate concept, unchanged.
+- Existing registrations and applications are not retroactively altered.
