@@ -19,6 +19,7 @@ import {
   WOFBI_FEEDBACK_FIELD_TYPES,
   DEFAULT_SATISFACTION_SCALE,
   FEEDBACK_CONFIDENTIALITY_NOTE,
+  mergeFeedbackDefaults,
 } from "@/lib/wofbi-feedback-defaults";
 import WoFBIDynamicForm from "./WoFBIDynamicForm";
 
