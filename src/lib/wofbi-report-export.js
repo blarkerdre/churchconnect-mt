@@ -224,6 +224,8 @@ export function buildReportHtml(report) {
   h4 { font-size: 12px; margin: 12px 0 3px; text-decoration: underline; }
   p, li { line-height: 1.5; }
   p.finding { font-weight: bold; text-decoration: underline; margin-bottom: 2px; }
+  p.signoff { margin-top: 18px; margin-bottom: 0; }
+
   .muted { color: #666; font-style: italic; }
   table { width: 100%; border-collapse: collapse; margin: 6px 0 12px; table-layout: fixed; page-break-inside: auto; }
   th, td { border: 1px solid #999; padding: 6px 8px; vertical-align: top; word-wrap: break-word; overflow-wrap: break-word; white-space: pre-line; }
