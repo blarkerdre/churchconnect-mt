@@ -1670,17 +1670,49 @@ function MemberExamsView({ memberId, memberRecord, courses, loading }) {
   const tenantSlug = currentTenant?.slug;
   const wofbiRegisterPath = tenantSlug ? `/t/${tenantSlug}/bible-school-register` : null;
 
-  const { data: registrations = [], isLoading: regLoading } = useQuery({
+  const { data: regRows = [], isLoading: regLoading } = useQuery({
     queryKey: ["my-course-registrations", memberId, tenantId],
     queryFn: async () => {
-      let query = supabase.from("course_registrations").select("course_id").eq("member_id", memberId);
+      let query = supabase.from("course_registrations").select("id, course_id").eq("member_id", memberId);
       if (tenantId) query = query.eq("tenant_id", tenantId);
       const { data, error } = await query;
       if (error) throw error;
-      return data.map(r => r.course_id);
+      return data || [];
     },
     enabled: !!memberId,
   });
+  const registrations = regRows.map(r => r.course_id);
+  const regIdByCourse = Object.fromEntries(regRows.map(r => [r.course_id, r.id]));
+
+  // Course feedback form (enabled + already-submitted registrations)
+  const { data: feedbackForm } = useQuery({
+    queryKey: ["wofbi-feedback-form-enabled", tenantId],
+    enabled: !!tenantId,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("wofbi_feedback_forms")
+        .select("enabled")
+        .eq("tenant_id", tenantId)
+        .maybeSingle();
+      return data;
+    },
+  });
+  const feedbackEnabled = !!feedbackForm?.enabled;
+
+  const { data: submittedFeedbackIds = [] } = useQuery({
+    queryKey: ["my-wofbi-feedback-ids", memberId, tenantId],
+    enabled: !!memberId && !!tenantId && feedbackEnabled,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("wofbi_feedback_responses")
+        .select("registration_id")
+        .eq("member_id", memberId)
+        .eq("tenant_id", tenantId);
+      if (error) throw error;
+      return (data || []).map(r => r.registration_id);
+    },
+  });
+
 
   // Only students with a completed registration (approved + student number) may rate lecturers
   const { data: canRateLecturer = false } = useQuery({
