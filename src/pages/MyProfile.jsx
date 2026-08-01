@@ -25,6 +25,7 @@ import MemberJourneyTimeline from "@/components/members/MemberJourneyTimeline";
 
 import { useTenantQuery } from "@/hooks/useTenantQuery";
 import WelcomeQuestions from "@/components/members/WelcomeQuestions";
+import NationalitySelect from "@/components/shared/NationalitySelect";
 import { useTenant, DEFAULT_TENANT_ID } from "@/contexts/TenantContext";
 import { useConsentText, renderConsentText } from "@/hooks/useConsentText";
 import { diffUnitMembership, submitJoinRequests } from "@/hooks/usePendingJoinRequests";
@@ -454,7 +455,7 @@ export default function MyProfile() {
                         <div className="space-y-1"><Label>City</Label><Input value={form.city} onChange={e => handleAddressChange("city", e.target.value)} /></div>
                         <div className="space-y-1"><Label>Postcode</Label><Input value={form.postcode} onChange={e => handleAddressChange("postcode", e.target.value)} /></div>
                         <div className="space-y-1"><Label>Occupation</Label><Input value={form.occupation} onChange={e => set("occupation", e.target.value)} maxLength={100} /></div>
-                        <div className="space-y-1"><Label>Nationality</Label><Input value={form.nationality} onChange={e => set("nationality", e.target.value)} maxLength={100} /></div>
+                        <div className="space-y-1"><Label>Nationality</Label><NationalitySelect value={form.nationality} onChange={v => set("nationality", v)} /></div>
                         <div className="space-y-1"><Label>Date of Birth</Label><Input type="date" value={form.date_of_birth} onChange={e => set("date_of_birth", e.target.value)} /></div>
                         <div className="space-y-1">
                           <Label>Gender</Label>
@@ -834,7 +835,7 @@ function CreateMemberProfile({ user, onCreated, wsfCentres, churchUnits }) {
             <div className="space-y-1"><Label>City</Label><Input value={form.city} onChange={e => set("city", e.target.value)} /></div>
             <div className="space-y-1"><Label>Postcode</Label><Input value={form.postcode} onChange={e => set("postcode", e.target.value)} /></div>
             <div className="space-y-1"><Label>Occupation</Label><Input value={form.occupation} onChange={e => set("occupation", e.target.value)} maxLength={100} /></div>
-            <div className="space-y-1"><Label>Nationality</Label><Input value={form.nationality} onChange={e => set("nationality", e.target.value)} maxLength={100} /></div>
+            <div className="space-y-1"><Label>Nationality</Label><NationalitySelect value={form.nationality} onChange={v => set("nationality", v)} /></div>
             <div className="space-y-1"><Label>Date of Birth</Label><Input type="date" value={form.date_of_birth} onChange={e => set("date_of_birth", e.target.value)} /></div>
              <div className="space-y-1">
               <Label>Gender</Label>
