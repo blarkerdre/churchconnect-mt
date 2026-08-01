@@ -84,7 +84,7 @@ export default function RateLecturerDialog({ open, onOpenChange }) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("lecturers")
-        .select("id, name, level")
+        .select("id, name, level, lecturer_type")
         .eq("tenant_id", tenantId)
         .eq("active", true)
         .order("name");

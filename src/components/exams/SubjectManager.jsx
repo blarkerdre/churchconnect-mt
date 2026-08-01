@@ -30,7 +30,7 @@ export default function SubjectManager({ course, onSelectSubject, selectedSubjec
     queryFn: async () => {
       const { data, error } = await supabase
         .from("lecturers")
-        .select("id, name")
+        .select("id, name, lecturer_type")
         .eq("tenant_id", tenantId)
         .eq("active", true)
         .order("name");

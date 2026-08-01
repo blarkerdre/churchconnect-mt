@@ -92,7 +92,7 @@ export default function QcCheckDialog({ open, onOpenChange, editRecord = null })
     queryFn: async () => {
       const { data, error } = await supabase
         .from("lecturers")
-        .select("id, name, level")
+        .select("id, name, level, lecturer_type")
         .eq("tenant_id", tenantId)
         .eq("active", true)
         .order("name");
@@ -324,7 +324,7 @@ export default function QcCheckDialog({ open, onOpenChange, editRecord = null })
               <Select value={form.lecturer_id} onValueChange={(v) => set("lecturer_id", v)}>
                 <SelectTrigger><SelectValue placeholder="Select a lecturer" /></SelectTrigger>
                 <SelectContent>
-                  {lecturers.map((l) => <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>)}
+                  {lecturers.map((l) => <SelectItem key={l.id} value={l.id}>{l.name}{l.lecturer_type === "external" ? " (External)" : ""}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
