@@ -178,6 +178,13 @@ export default function CourseReportTab() {
     setReport(next);
     setStatus(existing?.status || "draft");
     setDirty(false);
+
+    // brand-new report: pull live figures once so it isn't empty before "Refresh from data"
+    const seedKey = `${courseId}:${sessionId}`;
+    if (!existing && seededRef.current !== seedKey) {
+      seededRef.current = seedKey;
+      setTimeout(() => autofill(), 0);
+    }
      
   }, [existing, courseId, sessionId]);
 
