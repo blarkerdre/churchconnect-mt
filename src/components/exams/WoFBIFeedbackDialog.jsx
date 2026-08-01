@@ -40,6 +40,7 @@ export default function WoFBIFeedbackDialog({ open, onOpenChange, course, member
         .from("wofbi_feedback_responses")
         .select("*")
         .eq("registration_id", registrationId)
+        .eq("tenant_id", tenantId)
         .maybeSingle();
       if (error) throw error;
       return data;

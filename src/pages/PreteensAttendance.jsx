@@ -307,13 +307,14 @@ function RosterDialog({ open, onOpenChange, session, canWrite }) {
 function ReportDialog({ open, onOpenChange, session }) {
   const { tenantId } = useTenantQuery();
   const { data: rows = [] } = useQuery({
-    queryKey: ["preteen-report", session?.id],
-    enabled: !!session?.id && open,
+    queryKey: ["preteen-report", session?.id, tenantId],
+    enabled: !!session?.id && !!tenantId && open,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("preteen_attendance_records")
         .select("*, preteens:preteen_id (first_name, last_name)")
         .eq("session_id", session.id)
+        .eq("tenant_id", tenantId)
         .order("checked_in_at");
       if (error) throw error;
       return data || [];
@@ -920,7 +921,7 @@ export default function PreteensAttendance({ embedded = false }) {
 
   const closeSession = useMutation({
     mutationFn: async (s) => {
-      const { error } = await supabase.from("preteen_attendance_sessions").update({ status: "closed" }).eq("id", s.id);
+      const { error } = await supabase.from("preteen_attendance_sessions").update({ status: "closed" }).eq("id", s.id).eq("tenant_id", tenantId);
       if (error) throw error;
     },
     onSuccess: () => { toast.success("Session closed"); refetch(); },
@@ -929,7 +930,7 @@ export default function PreteensAttendance({ embedded = false }) {
 
   const removeSession = useMutation({
     mutationFn: async (s) => {
-      const { error } = await supabase.from("preteen_attendance_sessions").delete().eq("id", s.id);
+      const { error } = await supabase.from("preteen_attendance_sessions").delete().eq("id", s.id).eq("tenant_id", tenantId);
       if (error) throw error;
     },
     onSuccess: () => { toast.success("Session deleted"); setDeleteSession(null); refetch(); },

@@ -77,7 +77,8 @@ export default function CertificateTemplateSettings() {
         const { error } = await supabase
           .from("certificate_templates")
           .update(values)
-          .eq("id", editing.id);
+          .eq("id", editing.id)
+          .eq("tenant_id", tenantId);
         if (error) throw error;
       } else {
         const { error } = await supabase

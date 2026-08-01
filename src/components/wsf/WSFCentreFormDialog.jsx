@@ -10,6 +10,7 @@ import { Switch } from "@/components/ui/switch";
 import { Loader2 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useTenantQuery } from "@/hooks/useTenantQuery";
 
 const DAYS = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"];
 
@@ -19,14 +20,17 @@ const empty = {
 };
 
 export default function WSFCentreFormDialog({ open, onOpenChange, centre, onSave }) {
+  const { tenantId } = useTenantQuery();
   const [form, setForm] = useState(empty);
   const [saving, setSaving] = useState(false);
 
   const { data: allMembers = [] } = useQuery({
-    queryKey: ["all-members-for-host"],
+    queryKey: ["all-members-for-host", tenantId],
+    enabled: !!tenantId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("members").select("id, first_name, last_name, address, postcode, city")
+        .eq("tenant_id", tenantId)
         .order("first_name");
       if (error) throw error;
       return data;
