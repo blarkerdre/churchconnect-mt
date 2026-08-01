@@ -474,10 +474,9 @@ export default function CourseReportTab() {
                 {status === "final" ? "Reopen as draft" : "Mark final"}
               </Button>
               <Button size="sm" variant="outline" onClick={() => printReport(reportForExport)}>
-
                 <Printer className="h-3.5 w-3.5 mr-1" /> Print / PDF
               </Button>
-              <Button size="sm" variant="outline" onClick={() => downloadReportDoc(report)}>
+              <Button size="sm" variant="outline" onClick={() => downloadReportDoc(reportForExport)}>
                 <FileDown className="h-3.5 w-3.5 mr-1" /> Word
               </Button>
             </div>
