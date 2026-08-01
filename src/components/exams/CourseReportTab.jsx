@@ -222,14 +222,14 @@ export default function CourseReportTab() {
       const subjectIds = subjectList.map((s) => s.id);
 
       let regQ = supabase.from("course_registrations")
-        .select("id, member_id, status, members(first_name, last_name, nationality)")
+        .select("id, member_id, status, members(first_name, last_name, nationality, water_baptism, holy_spirit_baptism, membership_status)")
         .eq("tenant_id", tenantId).eq("course_id", courseId);
       if (sid) regQ = regQ.eq("session_id", sid);
 
-      const [{ data: regs }, { count: appCount }, { data: attempts }, { data: ratings }, { data: qcChecks }, { data: testimonies }, { data: attendance }] =
+      const [{ data: regs }, { data: applications }, { data: attempts }, { data: ratings }, { data: qcChecks }, { data: testimonies }, { data: attendance }] =
         await Promise.all([
           regQ,
-          supabase.from("wofbi_applications").select("id", { count: "exact", head: true })
+          supabase.from("wofbi_applications").select("id, member_id, answers, status")
             .eq("tenant_id", tenantId).eq("course_id", courseId),
           subjectIds.length
             ? supabase.from("exam_attempts").select("member_id, subject_id")
