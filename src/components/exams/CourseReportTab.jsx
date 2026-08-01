@@ -364,7 +364,7 @@ export default function CourseReportTab() {
         },
         induction: { ...prev.induction, students: String(approved.length || regList.length) },
         class_attendance: String(attendees.size || prev.class_attendance || ""),
-        stats_a: { ...prev.stats_a, testimonies: String((testimonies || []).length) },
+        stats_a: { ...prev.stats_a, testimonies: String(feedbackTestimonies.length) },
         stats_b: {
           ...prev.stats_b,
           forms_received: String(appCount ?? 0),
@@ -379,13 +379,7 @@ export default function CourseReportTab() {
         qc: qcRows.length ? qcRows : prev.qc,
         honorarium: honorarium.length ? honorarium : prev.honorarium,
         honorarium_matrix: { rate, rows: matrixRows.length ? matrixRows : prev.honorarium_matrix.rows },
-        testimonies: prev.testimonies?.length
-          ? prev.testimonies
-          : (testimonies || []).slice(0, 3).map((t) => ({
-              heading: t.title || "Testimony",
-              body: [t.situation, t.action, t.god_did].filter(Boolean).join("\n"),
-              name: t.member_name || "",
-            })),
+        testimonies: feedbackTestimonies.length ? feedbackTestimonies : prev.testimonies,
       }));
       setDirty(true);
       toast({ title: "Report refreshed from live data", description: "Review and edit before saving." });
