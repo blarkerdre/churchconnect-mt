@@ -238,6 +238,8 @@ export default function SessionManager() {
       });
       qc.invalidateQueries({ queryKey: ["exam-sessions-manage", tenantId] });
       qc.invalidateQueries({ queryKey: ["exam-sessions-report"] });
+      qc.invalidateQueries({ queryKey: ["exam-titles", tenantId] });
+      qc.invalidateQueries({ queryKey: ["exam-session-course-control", tenantId] });
     },
     onError: (e) => toast({ title: "Could not update session", description: e.message, variant: "destructive" }),
   });
