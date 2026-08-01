@@ -526,16 +526,41 @@ export default function CourseReportTab() {
               <Button size="sm" variant="outline" onClick={() => save(status === "final" ? "draft" : "final")} disabled={saving}>
                 {status === "final" ? "Reopen as draft" : "Mark final"}
               </Button>
+              <Button size="sm" variant="outline" onClick={() => setPreviewOpen(true)}>
+                <Eye className="h-3.5 w-3.5 mr-1" /> Preview
+              </Button>
               <Button size="sm" variant="outline" onClick={() => printReport(reportForExport)}>
                 <Printer className="h-3.5 w-3.5 mr-1" /> Print / PDF
               </Button>
-              <Button size="sm" variant="outline" onClick={() => downloadReportDoc(reportForExport)}>
+              <Button size="sm" variant="outline" onClick={handleWordDownload}>
                 <FileDown className="h-3.5 w-3.5 mr-1" /> Word
               </Button>
             </div>
           )}
         </CardContent>
       </Card>
+
+      <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
+        <DialogContent className="max-w-4xl w-[95vw] p-0 gap-0">
+          <DialogHeader className="px-4 py-3 border-b">
+            <DialogTitle className="text-base">Report preview</DialogTitle>
+          </DialogHeader>
+          <iframe
+            title="Course report preview"
+            srcDoc={buildReportHtml(reportForExport)}
+            className="w-full h-[75vh] border-0 bg-white"
+          />
+          <div className="flex flex-wrap gap-2 justify-end px-4 py-3 border-t">
+            <Button size="sm" variant="outline" onClick={() => printReport(reportForExport)}>
+              <Printer className="h-3.5 w-3.5 mr-1" /> Print / PDF
+            </Button>
+            <Button size="sm" variant="outline" onClick={handleWordDownload}>
+              <FileDown className="h-3.5 w-3.5 mr-1" /> Word
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
 
       {!courseId ? (
         <p className="text-sm text-muted-foreground">Select a course to build its report.</p>
