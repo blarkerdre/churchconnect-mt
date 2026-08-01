@@ -58,6 +58,7 @@ export default function SessionManager() {
   const [form, setForm] = useState(emptyForm);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [confirmClose, setConfirmClose] = useState(null);
+  const [confirmStart, setConfirmStart] = useState(null);
   const [conflict, setConflict] = useState(null);
 
   const { data: courses = [] } = useQuery({
