@@ -77,23 +77,25 @@ export default function Events() {
 
   // Get WSF centre names for WSF leader scoping
   const { data: myWsfCentres = [] } = useQuery({
-    queryKey: ["my-wsf-centres", user?.id],
+    queryKey: ["my-wsf-centres", user?.id, tenantId],
     queryFn: async () => {
       const { data: memberData } = await supabase
         .from("members")
         .select("id")
         .eq("user_id", user.id)
+        .eq("tenant_id", tenantId)
         .maybeSingle();
       if (!memberData) return [];
       const { data, error } = await supabase
         .from("wsf_centres")
         .select("id, name")
         .eq("leader_id", memberData.id)
-        .eq("is_active", true);
+        .eq("is_active", true)
+        .eq("tenant_id", tenantId);
       if (error) throw error;
       return data || [];
     },
-    enabled: !!user?.id && isWSFLeader,
+    enabled: !!user?.id && isWSFLeader && !!tenantId,
   });
 
   // Build AUDIENCES list
