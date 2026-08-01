@@ -231,6 +231,8 @@ export default function CertificateTemplateSettings() {
       .then(({ data }) => setPreviewUrl(data?.signedUrl || null));
   }, [form.background_image_url]);
 
+  const wofbiLogoPreview = useResolvedBrandingUrl(form.wofbi_logo_url);
+
   const handleSave = () => {
     if (!form.training_type.trim()) {
       toast({ title: "Training type is required", variant: "destructive" });
