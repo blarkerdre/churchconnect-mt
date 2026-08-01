@@ -54,6 +54,8 @@ const buildOwnMemberProfilePayload = (memberId, updates = {}) => ({
   _address: updates.address ?? null,
   _city: updates.city ?? null,
   _postcode: updates.postcode ?? null,
+  _occupation: updates.occupation ?? null,
+  _nationality: updates.nationality ?? null,
   _date_of_birth: updates.date_of_birth ?? null,
   _gender: updates.gender ?? null,
   _emergency_contact_name: updates.emergency_contact_name ?? null,
@@ -244,6 +246,8 @@ export default function MyProfile() {
       address: member.address || "",
       city: member.city || "",
       postcode: member.postcode || "",
+      occupation: member.occupation || "",
+      nationality: member.nationality || "",
       date_of_birth: member.date_of_birth || "",
       gender: member.gender || "",
       membership_status: member.membership_status || "Active",
@@ -320,6 +324,8 @@ export default function MyProfile() {
       address: form.address || null,
       city: form.city || null,
       postcode: form.postcode || null,
+      occupation: form.occupation || null,
+      nationality: form.nationality || null,
       date_of_birth: form.date_of_birth || null,
       gender: form.gender || null,
       membership_status: form.membership_status || null,
@@ -447,6 +453,8 @@ export default function MyProfile() {
                         <div className="space-y-1 sm:col-span-2"><Label>Street Address</Label><Input value={form.address} onChange={e => handleAddressChange("address", e.target.value)} /></div>
                         <div className="space-y-1"><Label>City</Label><Input value={form.city} onChange={e => handleAddressChange("city", e.target.value)} /></div>
                         <div className="space-y-1"><Label>Postcode</Label><Input value={form.postcode} onChange={e => handleAddressChange("postcode", e.target.value)} /></div>
+                        <div className="space-y-1"><Label>Occupation</Label><Input value={form.occupation} onChange={e => set("occupation", e.target.value)} maxLength={100} /></div>
+                        <div className="space-y-1"><Label>Nationality</Label><Input value={form.nationality} onChange={e => set("nationality", e.target.value)} maxLength={100} /></div>
                         <div className="space-y-1"><Label>Date of Birth</Label><Input type="date" value={form.date_of_birth} onChange={e => set("date_of_birth", e.target.value)} /></div>
                         <div className="space-y-1">
                           <Label>Gender</Label>
@@ -711,7 +719,7 @@ function CreateMemberProfile({ user, onCreated, wsfCentres, churchUnits }) {
 
   const [form, setForm] = useState({
     first_name: defaultFirst, last_name: defaultLast, email: user?.email || "", phone: "", address: "",
-    city: "Cardiff", postcode: "", date_of_birth: "", gender: "",
+    city: "Cardiff", postcode: "", occupation: "", nationality: "", date_of_birth: "", gender: "",
     membership_status: "First Timer",
     emergency_contact_name: "", emergency_contact_phone: "",
     church_unit: "", notes: "",
@@ -756,6 +764,8 @@ function CreateMemberProfile({ user, onCreated, wsfCentres, churchUnits }) {
         p_address: form.address || null,
         p_city: form.city || null,
         p_postcode: form.postcode || null,
+        p_occupation: form.occupation || null,
+        p_nationality: form.nationality || null,
         p_date_of_birth: form.date_of_birth || null,
         p_gender: form.gender || null,
         p_membership_status: form.membership_status || "First Timer",
@@ -820,6 +830,8 @@ function CreateMemberProfile({ user, onCreated, wsfCentres, churchUnits }) {
             <div className="space-y-1 sm:col-span-2"><Label>Street Address</Label><Input value={form.address} onChange={e => set("address", e.target.value)} /></div>
             <div className="space-y-1"><Label>City</Label><Input value={form.city} onChange={e => set("city", e.target.value)} /></div>
             <div className="space-y-1"><Label>Postcode</Label><Input value={form.postcode} onChange={e => set("postcode", e.target.value)} /></div>
+            <div className="space-y-1"><Label>Occupation</Label><Input value={form.occupation} onChange={e => set("occupation", e.target.value)} maxLength={100} /></div>
+            <div className="space-y-1"><Label>Nationality</Label><Input value={form.nationality} onChange={e => set("nationality", e.target.value)} maxLength={100} /></div>
             <div className="space-y-1"><Label>Date of Birth</Label><Input type="date" value={form.date_of_birth} onChange={e => set("date_of_birth", e.target.value)} /></div>
              <div className="space-y-1">
               <Label>Gender</Label>
