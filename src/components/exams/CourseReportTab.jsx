@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,9 +12,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
 import { useTenant } from "@/contexts/TenantContext";
 import { toast } from "@/components/ui/use-toast";
-import { Loader2, Save, RefreshCw, Printer, FileDown, Plus, Trash2, FileText } from "lucide-react";
+import { Loader2, Save, RefreshCw, Printer, FileDown, Plus, Trash2, FileText, Eye } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { emptyReport, mergeReport, FINDING_FIELDS, buildIntroduction, DEFAULT_TESTIMONY_HEADING } from "@/lib/wofbi-report-defaults";
-import { printReport, downloadReportDoc } from "@/lib/wofbi-report-export";
+import { printReport, downloadReportDoc, buildReportHtml } from "@/lib/wofbi-report-export";
 
 const NO_SESSION = "__none__";
 
@@ -93,6 +94,8 @@ export default function CourseReportTab() {
   const [filling, setFilling] = useState(false);
   const [status, setStatus] = useState("draft");
   const [dirty, setDirty] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const seededRef = useRef(null);
 
   const { data: courses = [] } = useQuery({
     queryKey: ["exam-titles-report", tenantId],
@@ -178,6 +181,13 @@ export default function CourseReportTab() {
     setReport(next);
     setStatus(existing?.status || "draft");
     setDirty(false);
+
+    // brand-new report: pull live figures once so it isn't empty before "Refresh from data"
+    const seedKey = `${courseId}:${sessionId}`;
+    if (!existing && seededRef.current !== seedKey) {
+      seededRef.current = seedKey;
+      setTimeout(() => autofill(), 0);
+    }
      
   }, [existing, courseId, sessionId]);
 
@@ -185,6 +195,23 @@ export default function CourseReportTab() {
     ...report,
     cover: { ...report.cover, logo_url: report.cover?.logo_url || liveLogoUrl },
   };
+
+  const handleWordDownload = () => {
+    const result = downloadReportDoc(reportForExport);
+    if (result === "opened") {
+      toast({
+        title: "Opened in a new tab",
+        description: "Your browser blocked the download — use Share / Save from the new tab to keep the Word file.",
+      });
+    } else if (result === "failed") {
+      toast({
+        title: "Download blocked",
+        description: "Allow pop-ups or downloads for this site, then try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
 
   const set = (path, value) => {
     setDirty(true);
@@ -222,14 +249,14 @@ export default function CourseReportTab() {
       const subjectIds = subjectList.map((s) => s.id);
 
       let regQ = supabase.from("course_registrations")
-        .select("id, member_id, status, members(first_name, last_name, nationality)")
+        .select("id, member_id, status, members(first_name, last_name, nationality, water_baptism, holy_spirit_baptism, membership_status)")
         .eq("tenant_id", tenantId).eq("course_id", courseId);
       if (sid) regQ = regQ.eq("session_id", sid);
 
-      const [{ data: regs }, { count: appCount }, { data: attempts }, { data: ratings }, { data: qcChecks }, { data: testimonies }, { data: attendance }] =
+      const [{ data: regs }, { data: applications }, { data: attempts }, { data: ratings }, { data: qcChecks }, { data: testimonies }, { data: attendance }] =
         await Promise.all([
           regQ,
-          supabase.from("wofbi_applications").select("id", { count: "exact", head: true })
+          supabase.from("wofbi_applications").select("id, member_id, answers, status")
             .eq("tenant_id", tenantId).eq("course_id", courseId),
           subjectIds.length
             ? supabase.from("exam_attempts").select("member_id, subject_id")
@@ -249,7 +276,25 @@ export default function CourseReportTab() {
         ]);
 
       const regList = regs || [];
+      const appList = applications || [];
+      const appCount = appList.length;
       const approved = regList.filter((r) => (r.status || "").toLowerCase() === "approved");
+
+      // application answers keyed by member, used as a fallback for missing member data
+      const appByMember = {};
+      appList.forEach((a) => {
+        if (a.member_id && !appByMember[a.member_id]) appByMember[a.member_id] = a.answers || {};
+      });
+      const answerOf = (memberId, keys) => {
+        const ans = appByMember[memberId] || {};
+        for (const k of keys) {
+          const v = ans[k];
+          if (v !== undefined && v !== null && String(v).trim() !== "") return v;
+        }
+        return "";
+      };
+      const isYes = (v) =>
+        v === true || ["yes", "true", "y", "1"].includes(String(v).trim().toLowerCase());
 
       // completed = members with an attempt in every subject
       const bySubj = {};
@@ -259,10 +304,25 @@ export default function CourseReportTab() {
       });
       const completed = Object.values(bySubj).filter((s) => subjectIds.length > 0 && s.size >= subjectIds.length).length;
 
+      // spiritual statistics from student member records, falling back to application answers
+      const statBase = approved.length ? approved : regList;
+      let waterBaptised = 0;
+      let holyGhost = 0;
+      let newBirth = 0;
+      statBase.forEach((r) => {
+        const m = r.members || {};
+        if (m.water_baptism || isYes(answerOf(r.member_id, ["water_baptism", "water_baptised", "baptised"])))
+          waterBaptised += 1;
+        if (m.holy_spirit_baptism || isYes(answerOf(r.member_id, ["holy_spirit_baptism", "holy_ghost_baptism", "holy_ghost"])))
+          holyGhost += 1;
+        if ((m.membership_status || "").toLowerCase() === "new convert" || isYes(answerOf(r.member_id, ["new_birth", "born_again"])))
+          newBirth += 1;
+      });
+
       // nations
       const nationCount = {};
-      regList.forEach((r) => {
-        const n = r.members?.nationality;
+      statBase.forEach((r) => {
+        const n = r.members?.nationality || answerOf(r.member_id, ["nationality", "country"]);
         if (n) nationCount[n] = (nationCount[n] || 0) + 1;
       });
       const nations = Object.entries(nationCount)
@@ -368,14 +428,20 @@ export default function CourseReportTab() {
         },
         induction: { ...prev.induction, students: String(approved.length || regList.length) },
         class_attendance: String(attendees.size || prev.class_attendance || ""),
-        stats_a: { ...prev.stats_a, testimonies: String(feedbackTestimonies.length) },
+        stats_a: {
+          ...prev.stats_a,
+          water_baptised: String(waterBaptised),
+          holy_ghost: String(holyGhost),
+          new_birth: String(newBirth),
+          testimonies: String(feedbackTestimonies.length),
+        },
         stats_b: {
           ...prev.stats_b,
-          forms_received: String(appCount ?? 0),
+          forms_received: String(appCount || regList.length || 0),
           registered_confirmed: String(approved.length),
           completed: String(completed),
           at_graduation: prev.stats_b.at_graduation || String(completed),
-          absentees: prev.stats_b.absentees || "0",
+          absentees: String(Math.max(0, (approved.length || regList.length) - (attendees.size || 0))),
         },
         nations: nations.length ? nations : prev.nations,
         courses: courseRows.length ? courseRows : prev.courses,
@@ -477,16 +543,41 @@ export default function CourseReportTab() {
               <Button size="sm" variant="outline" onClick={() => save(status === "final" ? "draft" : "final")} disabled={saving}>
                 {status === "final" ? "Reopen as draft" : "Mark final"}
               </Button>
+              <Button size="sm" variant="outline" onClick={() => setPreviewOpen(true)}>
+                <Eye className="h-3.5 w-3.5 mr-1" /> Preview
+              </Button>
               <Button size="sm" variant="outline" onClick={() => printReport(reportForExport)}>
                 <Printer className="h-3.5 w-3.5 mr-1" /> Print / PDF
               </Button>
-              <Button size="sm" variant="outline" onClick={() => downloadReportDoc(reportForExport)}>
+              <Button size="sm" variant="outline" onClick={handleWordDownload}>
                 <FileDown className="h-3.5 w-3.5 mr-1" /> Word
               </Button>
             </div>
           )}
         </CardContent>
       </Card>
+
+      <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
+        <DialogContent className="max-w-4xl w-[95vw] p-0 gap-0">
+          <DialogHeader className="px-4 py-3 border-b">
+            <DialogTitle className="text-base">Report preview</DialogTitle>
+          </DialogHeader>
+          <iframe
+            title="Course report preview"
+            srcDoc={buildReportHtml(reportForExport)}
+            className="w-full h-[75vh] border-0 bg-white"
+          />
+          <div className="flex flex-wrap gap-2 justify-end px-4 py-3 border-t">
+            <Button size="sm" variant="outline" onClick={() => printReport(reportForExport)}>
+              <Printer className="h-3.5 w-3.5 mr-1" /> Print / PDF
+            </Button>
+            <Button size="sm" variant="outline" onClick={handleWordDownload}>
+              <FileDown className="h-3.5 w-3.5 mr-1" /> Word
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
 
       {!courseId ? (
         <p className="text-sm text-muted-foreground">Select a course to build its report.</p>
