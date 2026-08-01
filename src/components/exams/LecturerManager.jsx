@@ -17,7 +17,7 @@ import { Loader2, Plus, Edit, Trash2, GraduationCap, Eye, Star } from "lucide-re
 import { logAudit } from "@/lib/audit";
 import { OPTION_LABELS } from "@/lib/lecturer-feedback-options";
 
-const emptyForm = { name: "", level: "", active: true };
+const emptyForm = { name: "", level: "", lecturer_type: "", active: true };
 
 export default function LecturerManager() {
   const qc = useQueryClient();
@@ -76,7 +76,7 @@ export default function LecturerManager() {
       if (editing) {
         const { error } = await supabase
           .from("lecturers")
-          .update({ name: form.name.trim(), level: form.level.trim() || null, active: form.active })
+          .update({ name: form.name.trim(), level: form.level.trim() || null, lecturer_type: form.lecturer_type || null, active: form.active })
           .eq("id", editing.id)
           .eq("tenant_id", tenantId);
         if (error) throw error;
@@ -84,7 +84,7 @@ export default function LecturerManager() {
       } else {
         const { data, error } = await supabase
           .from("lecturers")
-          .insert({ tenant_id: tenantId, name: form.name.trim(), level: form.level.trim() || null, active: form.active })
+          .insert({ tenant_id: tenantId, name: form.name.trim(), level: form.level.trim() || null, lecturer_type: form.lecturer_type || null, active: form.active })
           .select()
           .single();
         if (error) throw error;
@@ -178,6 +178,7 @@ export default function LecturerManager() {
                 <TableRow>
                   <TableHead>Name</TableHead>
                   <TableHead>Level</TableHead>
+                  <TableHead>Type</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
@@ -187,6 +188,13 @@ export default function LecturerManager() {
                   <TableRow key={l.id}>
                     <TableCell className="font-medium">{l.name}</TableCell>
                     <TableCell className="text-sm text-muted-foreground">{l.level || "—"}</TableCell>
+                    <TableCell>
+                      {l.lecturer_type ? (
+                        <Badge variant="outline" className="text-[10px] capitalize">{l.lecturer_type}</Badge>
+                      ) : (
+                        <span className="text-sm text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
                     <TableCell>
                       {l.active ? (
                         <Badge variant="outline" className="text-[10px] border-chart-3/40 text-chart-3">Active</Badge>
