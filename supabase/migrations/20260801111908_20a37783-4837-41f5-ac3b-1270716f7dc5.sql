@@ -1,0 +1,1 @@
+ALTER TABLE public.members ADD COLUMN IF NOT EXISTS occupation text, ADD COLUMN IF NOT EXISTS nationality text;

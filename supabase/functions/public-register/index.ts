@@ -371,6 +371,8 @@ Deno.serve(async (req) => {
     const address = sanitize(body.address, 300);
     const city = sanitize(body.city, 100);
     const postcode = sanitize(body.postcode, 20);
+    const occupation = sanitize(body.occupation, 100);
+    const nationality = sanitize(body.nationality, 100);
     const dateOfBirth = sanitize(body.date_of_birth, 10);
     const churchUnit = sanitize(body.church_unit, 500);
     const notes = sanitize(body.notes, 2000);
@@ -424,6 +426,8 @@ Deno.serve(async (req) => {
       address,
       city,
       postcode,
+      occupation,
+      nationality,
       date_of_birth: dateOfBirth || null,
       gender,
       membership_status: membershipStatus,
