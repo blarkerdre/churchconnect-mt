@@ -26,6 +26,7 @@ const emptyForm = {
   church_unit: "", notes: "",
   emergency_contact_name: "", emergency_contact_phone: "",
   city: "Cardiff", postcode: "",
+  occupation: "", nationality: "",
   water_baptism: false, holy_spirit_baptism: false,
   winners_satellite: false, wsf_centre_id: "",
   bfc_completed: false, bcc_completed: false, lcc_completed: false, ldc_completed: false,
@@ -118,6 +119,8 @@ export default function PublicRegistration() {
           address: form.address || null,
           city: form.city || null,
           postcode: form.postcode || null,
+          occupation: form.occupation || null,
+          nationality: form.nationality || null,
           date_of_birth: form.date_of_birth || null,
           gender: form.gender || null,
           membership_status: form.membership_status,
@@ -231,6 +234,8 @@ export default function PublicRegistration() {
                 <div className="space-y-1.5 md:col-span-2"><Label>Street Address</Label><Input value={form.address} onChange={e => { set("address", e.target.value); if (form.winners_satellite) { const best = suggestClosestWSFCentre(wsfCentres, { ...form, address: e.target.value }); if (best) set("wsf_centre_id", best.id); } }} maxLength={300} /></div>
                 <div className="space-y-1.5"><Label>City</Label><Input value={form.city} onChange={e => { set("city", e.target.value); if (form.winners_satellite) { const best = suggestClosestWSFCentre(wsfCentres, { ...form, city: e.target.value }); if (best) set("wsf_centre_id", best.id); } }} maxLength={100} /></div>
                 <div className="space-y-1.5"><Label>Post Code</Label><Input value={form.postcode} onChange={e => { set("postcode", e.target.value); if (form.winners_satellite) { const best = suggestClosestWSFCentre(wsfCentres, { ...form, postcode: e.target.value }); if (best) set("wsf_centre_id", best.id); } }} maxLength={20} /></div>
+                <div className="space-y-1.5"><Label>Occupation</Label><Input value={form.occupation} onChange={e => set("occupation", e.target.value)} maxLength={100} /></div>
+                <div className="space-y-1.5"><Label>Nationality</Label><Input value={form.nationality} onChange={e => set("nationality", e.target.value)} maxLength={100} /></div>
                 <div className="space-y-1.5"><Label>Date of Birth</Label><Input type="date" value={form.date_of_birth} onChange={e => set("date_of_birth", e.target.value)} /></div>
                 <div className="space-y-1.5">
                   <Label>Gender</Label>
