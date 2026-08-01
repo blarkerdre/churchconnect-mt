@@ -43,6 +43,21 @@ function list(items) {
   return `<ol>${items.map((i) => `<li>${escHtml(i)}</li>`).join("")}</ol>`;
 }
 
+/**
+ * Section 11 observation cell: the template's 10-point checklist when any
+ * structured value is present, otherwise the free-text observations.
+ */
+function qcObservationCell(row) {
+  const hasStructured = QC_CHECKLIST_FIELDS.some(
+    (f) => f.key !== "observations" && String(row?.[f.key] ?? "").trim(),
+  );
+  if (!hasStructured) return String(row?.observations || "");
+  return QC_CHECKLIST_FIELDS.map(
+    (f, i) => `${i + 1}. ${f.label}: ${String(row?.[f.key] ?? "").trim() || "—"}`,
+  ).join("\n");
+}
+
+
 export function buildReportHtml(report) {
   const c = report.cover || {};
   const edition = c.edition ? `${c.edition} ` : "";
