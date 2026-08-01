@@ -156,6 +156,7 @@ export default function WoFBIAttendanceTab() {
       const { data, error } = await supabase
         .from("wofbi_attendance_records")
         .select("session_id, status")
+        .eq("tenant_id", tenantId)
         .in("session_id", ids);
       if (error) throw error;
       const map = {};
@@ -194,6 +195,7 @@ export default function WoFBIAttendanceTab() {
       const { data, error } = await supabase
         .from("wofbi_attendance_records")
         .select("id, session_id, registration_id, member_id, status, checked_in_at, checked_out_at, duration_minutes, punctuality_rating, punctuality_note")
+        .eq("tenant_id", tenantId)
         .in("session_id", ids);
       if (error) throw error;
       return data || [];
@@ -202,13 +204,14 @@ export default function WoFBIAttendanceTab() {
 
   // Records for currently open roster panel
   const { data: rosterRecords = [] } = useQuery({
-    queryKey: ["wofbi-att-roster-records", rosterSession?.id],
-    enabled: !!rosterSession?.id,
+    queryKey: ["wofbi-att-roster-records", rosterSession?.id, tenantId],
+    enabled: !!rosterSession?.id && !!tenantId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("wofbi_attendance_records")
         .select("*")
-        .eq("session_id", rosterSession.id);
+        .eq("session_id", rosterSession.id)
+        .eq("tenant_id", tenantId);
       if (error) throw error;
       return data || [];
     },
