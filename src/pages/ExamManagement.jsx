@@ -334,6 +334,7 @@ export default function ExamManagement() {
         <TabsList className="flex flex-nowrap h-auto gap-1 overflow-x-auto w-full justify-start scrollbar-thin">
           <TabsTrigger value="management" className="whitespace-nowrap">Management</TabsTrigger>
           <TabsTrigger value="applications" className="whitespace-nowrap">Applications</TabsTrigger>
+          <TabsTrigger value="sessions" className="whitespace-nowrap">Sessions</TabsTrigger>
           <TabsTrigger value="attendance" className="whitespace-nowrap">Attendance</TabsTrigger>
           <TabsTrigger value="app-form" className="whitespace-nowrap">Application Form</TabsTrigger>
           <TabsTrigger value="feedback-form" className="whitespace-nowrap">Feedback Form</TabsTrigger>
