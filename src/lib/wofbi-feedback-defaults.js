@@ -53,6 +53,7 @@ export const DEFAULT_WOFBI_FEEDBACK_FIELDS = [
   { id: "liked_best", type: "textarea", label: "What did you like best?" },
 
   { id: "testimony_section", type: "section_heading", label: "Your Testimony" },
+  { id: "testimony_title", type: "text", label: "Testimony Title", placeholder: "Give your testimony a title" },
   { id: "testimony", type: "textarea", label: "Share your testimony" },
 
   { id: "mailing_list", type: "yes_no", label: "I would like to be on the mailing list for future events" },

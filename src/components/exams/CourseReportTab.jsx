@@ -502,7 +502,8 @@ export default function CourseReportTab() {
           const name =
             [a.first_name, a.surname].filter(Boolean).join(" ").trim() ||
             [r.members?.first_name, r.members?.last_name].filter(Boolean).join(" ").trim();
-          return { heading: DEFAULT_TESTIMONY_HEADING, body, name };
+          const heading = String(a.testimony_title || "").trim() || DEFAULT_TESTIMONY_HEADING;
+          return { heading, body, name };
         })
         .filter(Boolean);
 
