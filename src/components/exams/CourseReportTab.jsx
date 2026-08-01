@@ -216,6 +216,19 @@ export default function CourseReportTab() {
      
   }, [existing, courseId, sessionId]);
 
+  // When the course changes, default to the most recent finished session for that course.
+  const courseRef = useRef("");
+  useEffect(() => {
+    if (!courseId || loadingSessions) return;
+    if (courseRef.current === courseId) return;
+    courseRef.current = courseId;
+    const closed = sessions.find((s) => (s.status || "").toLowerCase() !== "active" && (s.status || "").toLowerCase() !== "open");
+    setSessionId(closed?.id || sessions[0]?.id || NO_SESSION);
+  }, [courseId, sessions, loadingSessions]);
+
+  const selectedSession = sessions.find((s) => s.id === sessionId);
+
+
   const reportForExport = {
     ...report,
     cover: { ...report.cover, logo_url: report.cover?.logo_url || liveLogoUrl },
