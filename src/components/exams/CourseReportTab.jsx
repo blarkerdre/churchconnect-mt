@@ -82,6 +82,21 @@ function LinesEditor({ value, onChange, placeholder }) {
   );
 }
 
+function fmtRange(s) {
+  if (!s?.starts_on && !s?.ends_on) return "";
+  const f = (d) =>
+    d ? new Date(d).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "";
+  return [f(s.starts_on), f(s.ends_on)].filter(Boolean).join(" – ");
+}
+
+function sessionState(s) {
+  const st = (s?.status || "").toLowerCase();
+  if (st === "active" || st === "open") return "Open";
+  const today = new Date().toISOString().slice(0, 10);
+  if (s?.starts_on && s.starts_on > today) return "Upcoming";
+  return "Closed";
+}
+
 export default function CourseReportTab() {
   const { tenantId } = useTenantQuery();
   const { currentTenant } = useTenant();
