@@ -57,7 +57,7 @@ export default function WoFBIFeedbackFormEditor() {
   });
 
   useEffect(() => {
-    if (data) setLocal(data);
+    if (data) setLocal({ ...data, fields: mergeFeedbackDefaults(data.fields || []) });
     else if (data === null && tenantId) {
       setLocal({
         tenant_id: tenantId,
