@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,7 +13,7 @@ import { useTenantQuery } from "@/hooks/useTenantQuery";
 import { useTenant } from "@/contexts/TenantContext";
 import { toast } from "@/components/ui/use-toast";
 import { Loader2, Save, RefreshCw, Printer, FileDown, Plus, Trash2, FileText } from "lucide-react";
-import { emptyReport, mergeReport, FINDING_FIELDS } from "@/lib/wofbi-report-defaults";
+import { emptyReport, mergeReport, FINDING_FIELDS, buildIntroduction, DEFAULT_TESTIMONY_HEADING } from "@/lib/wofbi-report-defaults";
 import { printReport, downloadReportDoc } from "@/lib/wofbi-report-export";
 
 const NO_SESSION = "__none__";
@@ -117,6 +117,31 @@ export default function CourseReportTab() {
     },
   });
 
+  const selectedCourse = courses.find((c) => c.id === courseId);
+
+  // Same logo resolution as the Statement of Result, resolved live.
+  const { data: liveTemplate } = useQuery({
+    queryKey: ["wofbi-report-template", tenantId, selectedCourse?.name],
+    enabled: !!tenantId && !!selectedCourse?.name,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("certificate_templates")
+        .select("church_name, centre_name, logo_url, wofbi_logo_url, crest_image_url")
+        .eq("tenant_id", tenantId)
+        .eq("training_type", selectedCourse.name)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const liveLogoUrl =
+    liveTemplate?.wofbi_logo_url ||
+    liveTemplate?.crest_image_url ||
+    liveTemplate?.logo_url ||
+    currentTenant?.logo_url ||
+    "";
+
   const { data: existing, isFetching: loadingReport } = useQuery({
     queryKey: ["wofbi-course-report", tenantId, courseId, sessionId],
     enabled: !!tenantId && !!courseId,
@@ -132,10 +157,34 @@ export default function CourseReportTab() {
 
   useEffect(() => {
     if (!courseId) return;
-    setReport(mergeReport(existing?.content));
+    const next = mergeReport(existing?.content);
+    if (!existing) {
+      // brand-new report: seed the template wording with what we know
+      const sessionRow = sessions.find((s) => s.id === sessionId);
+      next.cover = {
+        ...next.cover,
+        church_name: next.cover.church_name || currentTenant?.name || "",
+        course_title: selectedCourse?.name || next.cover.course_title,
+        course_code: selectedCourse?.course_code || next.cover.course_code,
+        edition: sessionRow?.name || next.cover.edition,
+      };
+      next.introduction = buildIntroduction({
+        course: selectedCourse?.name || "",
+        edition: sessionRow?.name || "",
+        centre: next.cover.centre_name,
+        church: next.cover.church_name,
+      });
+    }
+    setReport(next);
     setStatus(existing?.status || "draft");
     setDirty(false);
+     
   }, [existing, courseId, sessionId]);
+
+  const reportForExport = {
+    ...report,
+    cover: { ...report.cover, logo_url: report.cover?.logo_url || liveLogoUrl },
+  };
 
   const set = (path, value) => {
     setDirty(true);
@@ -152,7 +201,6 @@ export default function CourseReportTab() {
     });
   };
 
-  const selectedCourse = courses.find((c) => c.id === courseId);
 
   async function autofill() {
     if (!courseId || !tenantId) return;
@@ -192,8 +240,10 @@ export default function CourseReportTab() {
           supabase.from("lecturer_qc_checks")
             .select("lecturer_id, exam_subject_id, qc_member_name, total_score, general_observations")
             .eq("tenant_id", tenantId).eq("exam_title_id", courseId),
-          supabase.from("testimonies").select("title, member_name, situation, action, god_did, created_at")
-            .eq("tenant_id", tenantId).order("created_at", { ascending: false }).limit(10),
+          supabase.from("wofbi_feedback_responses")
+            .select("answers, submitted_at, members(first_name, last_name)")
+            .eq("tenant_id", tenantId).eq("course_id", courseId)
+            .order("submitted_at", { ascending: false }),
           supabase.from("wofbi_attendance_records").select("member_id, session_id, wofbi_attendance_sessions!inner(course_id)")
             .eq("tenant_id", tenantId).eq("wofbi_attendance_sessions.course_id", courseId),
         ]);
@@ -290,6 +340,20 @@ export default function CourseReportTab() {
         ? `${sessionRow.starts_on}${sessionRow.ends_on ? ` to ${sessionRow.ends_on}` : ""}`
         : report.cover?.date_range || "";
 
+      // Striking testimonies come from the course feedback form responses
+      const feedbackTestimonies = (testimonies || [])
+        .map((r) => {
+          const a = r.answers || {};
+          const body = String(a.testimony || "").trim();
+          if (!body) return null;
+          const name =
+            [a.first_name, a.surname].filter(Boolean).join(" ").trim() ||
+            [r.members?.first_name, r.members?.last_name].filter(Boolean).join(" ").trim();
+          return { heading: DEFAULT_TESTIMONY_HEADING, body, name };
+        })
+        .filter(Boolean);
+
+
       setReport((prev) => ({
         ...prev,
         cover: {
@@ -304,7 +368,7 @@ export default function CourseReportTab() {
         },
         induction: { ...prev.induction, students: String(approved.length || regList.length) },
         class_attendance: String(attendees.size || prev.class_attendance || ""),
-        stats_a: { ...prev.stats_a, testimonies: String((testimonies || []).length) },
+        stats_a: { ...prev.stats_a, testimonies: String(feedbackTestimonies.length) },
         stats_b: {
           ...prev.stats_b,
           forms_received: String(appCount ?? 0),
@@ -319,13 +383,7 @@ export default function CourseReportTab() {
         qc: qcRows.length ? qcRows : prev.qc,
         honorarium: honorarium.length ? honorarium : prev.honorarium,
         honorarium_matrix: { rate, rows: matrixRows.length ? matrixRows : prev.honorarium_matrix.rows },
-        testimonies: prev.testimonies?.length
-          ? prev.testimonies
-          : (testimonies || []).slice(0, 3).map((t) => ({
-              heading: t.title || "Testimony",
-              body: [t.situation, t.action, t.god_did].filter(Boolean).join("\n"),
-              name: t.member_name || "",
-            })),
+        testimonies: feedbackTestimonies.length ? feedbackTestimonies : prev.testimonies,
       }));
       setDirty(true);
       toast({ title: "Report refreshed from live data", description: "Review and edit before saving." });
@@ -419,10 +477,10 @@ export default function CourseReportTab() {
               <Button size="sm" variant="outline" onClick={() => save(status === "final" ? "draft" : "final")} disabled={saving}>
                 {status === "final" ? "Reopen as draft" : "Mark final"}
               </Button>
-              <Button size="sm" variant="outline" onClick={() => printReport(report)}>
+              <Button size="sm" variant="outline" onClick={() => printReport(reportForExport)}>
                 <Printer className="h-3.5 w-3.5 mr-1" /> Print / PDF
               </Button>
-              <Button size="sm" variant="outline" onClick={() => downloadReportDoc(report)}>
+              <Button size="sm" variant="outline" onClick={() => downloadReportDoc(reportForExport)}>
                 <FileDown className="h-3.5 w-3.5 mr-1" /> Word
               </Button>
             </div>
