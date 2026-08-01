@@ -119,6 +119,7 @@ export function buildReportHtml(report) {
         `<p class="finding">${escHtml(f.label.toUpperCase())}</p>${paras(report.findings?.[f.key])}`,
     ).join("")}
     ${report.overall_performance ? paras(report.overall_performance) : ""}
+    ${report.next_session ? paras(report.next_session) : ""}
 
     <h2>9. STRIKING TESTIMONIES</h2>
     ${
@@ -135,8 +136,9 @@ export function buildReportHtml(report) {
     }
 
     <h2>10. STUDENT FEEDBACK ON LECTURERS</h2>
+    ${report.feedback_intro ? paras(report.feedback_intro) : ""}
     ${table(
-      ["LECTURER", "COURSE", "QC PERSONNEL", "RATINGS"],
+      ["LECTURER", "COURSE", "QC PERSONNEL", "STUDENT RATINGS"],
       (report.student_feedback || []).map((r) => [
         r.lecturer,
         r.course,
@@ -149,11 +151,16 @@ export function buildReportHtml(report) {
     <h2>11. QUALITY CONTROL – FEEDBACK ON LECTURERS</h2>
     ${table(
       ["LECTURER", "COURSE", "QC PERSONNEL", "GENERAL OBSERVATIONS"],
-      (report.qc || []).map((r) => [r.lecturer, r.course, r.qc_person, r.observations]),
+      (report.qc || []).map((r) => [r.lecturer, r.course, r.qc_person, qcObservationCell(r)]),
       ["22%", "24%", "18%", "36%"],
     )}
 
-    <h2>12. HONORARIUM RECOMMENDATION</h2>
+    <h2>13. HONORARIUM RECOMMENDATION</h2>
+    ${
+      report.honorarium_heading
+        ? `<h3 class="section">${escHtml(report.honorarium_heading)}</h3>`
+        : ""
+    }
     ${table(
       ["S/N", "COURSE", "CODE", "LECTURERS", "TYPE", "REMARKS"],
       (report.honorarium || []).map((r, i) => [
@@ -186,9 +193,20 @@ export function buildReportHtml(report) {
       ["6%", "30%", "14%", "26%", "24%"],
     )}
 
-    <h2>13. NEXT SESSION</h2>
-    ${paras(report.next_session)}
+    ${
+      report.closing_remark
+        ? `<h3 class="section">REMARK</h3>${paras(report.closing_remark)}`
+        : ""
+    }
+    ${
+      report.signoff?.name || report.signoff?.title
+        ? `<p class="signoff"><strong>${escHtml(report.signoff?.name || "")}</strong></p><p>${escHtml(
+            report.signoff?.title || "",
+          )}</p>`
+        : ""
+    }
   `;
+
 
   return `<!DOCTYPE html>
 <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">
