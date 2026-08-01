@@ -723,7 +723,9 @@ export default function CourseReportTab() {
 
           <AccordionItem value="feedback" className="border rounded-md px-3">
             <AccordionTrigger className="text-sm">10. Student feedback on lecturers</AccordionTrigger>
-            <AccordionContent className="pb-4">
+            <AccordionContent className="space-y-3 pb-4">
+              <AreaField label="Feedback summary (shown above the table)" rows={7}
+                value={report.feedback_intro} onChange={(v) => set("feedback_intro", v)} />
               <RowEditor rows={report.student_feedback} onChange={(v) => set("student_feedback", v)} addLabel="Add lecturer"
                 columns={[
                   { key: "lecturer", label: "Lecturer" }, { key: "course", label: "Course" },
@@ -739,14 +741,21 @@ export default function CourseReportTab() {
               <RowEditor rows={report.qc} onChange={(v) => set("qc", v)} addLabel="Add QC entry"
                 columns={[
                   { key: "lecturer", label: "Lecturer" }, { key: "course", label: "Course" },
-                  { key: "qc_person", label: "QC personnel" }, { key: "observations", label: "General observations", area: true },
+                  { key: "qc_person", label: "QC personnel" },
+                  ...QC_CHECKLIST_FIELDS.map((f) => ({
+                    key: f.key,
+                    label: f.label,
+                    area: f.key === "observations",
+                  })),
                 ]} />
             </AccordionContent>
           </AccordionItem>
 
           <AccordionItem value="honorarium" className="border rounded-md px-3">
-            <AccordionTrigger className="text-sm">12. Honorarium recommendation</AccordionTrigger>
+            <AccordionTrigger className="text-sm">13. Honorarium recommendation</AccordionTrigger>
             <AccordionContent className="space-y-4 pb-4">
+              <TextField label="Honorarium heading (e.g. BCC COURSE – CARDIFF LEARNING CENTRE)"
+                value={report.honorarium_heading} onChange={(v) => set("honorarium_heading", v)} />
               <RowEditor rows={report.honorarium} onChange={(v) => set("honorarium", v)} addLabel="Add course"
                 columns={[
                   { key: "course", label: "Course" }, { key: "code", label: "Code" },
@@ -766,11 +775,18 @@ export default function CourseReportTab() {
           </AccordionItem>
 
           <AccordionItem value="next" className="border rounded-md px-3">
-            <AccordionTrigger className="text-sm">13. Next session</AccordionTrigger>
-            <AccordionContent className="pb-4">
-              <AreaField label="Next session note" rows={3} value={report.next_session} onChange={(v) => set("next_session", v)} />
+            <AccordionTrigger className="text-sm">Next session &amp; closing remark</AccordionTrigger>
+            <AccordionContent className="space-y-3 pb-4">
+              <AreaField label="Next session note (printed at the end of section 8)" rows={3}
+                value={report.next_session} onChange={(v) => set("next_session", v)} />
+              <AreaField label="Closing remark" rows={6} value={report.closing_remark} onChange={(v) => set("closing_remark", v)} />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <TextField label="Sign-off name" value={report.signoff?.name} onChange={(v) => set("signoff.name", v)} />
+                <TextField label="Sign-off title" value={report.signoff?.title} onChange={(v) => set("signoff.title", v)} />
+              </div>
             </AccordionContent>
           </AccordionItem>
+
         </Accordion>
       )}
     </div>
