@@ -236,8 +236,10 @@ export default function CourseReportTab() {
           supabase.from("lecturer_qc_checks")
             .select("lecturer_id, exam_subject_id, qc_member_name, total_score, general_observations")
             .eq("tenant_id", tenantId).eq("exam_title_id", courseId),
-          supabase.from("testimonies").select("title, member_name, situation, action, god_did, created_at")
-            .eq("tenant_id", tenantId).order("created_at", { ascending: false }).limit(10),
+          supabase.from("wofbi_feedback_responses")
+            .select("answers, submitted_at, members(first_name, last_name)")
+            .eq("tenant_id", tenantId).eq("course_id", courseId)
+            .order("submitted_at", { ascending: false }),
           supabase.from("wofbi_attendance_records").select("member_id, session_id, wofbi_attendance_sessions!inner(course_id)")
             .eq("tenant_id", tenantId).eq("wofbi_attendance_sessions.course_id", courseId),
         ]);
