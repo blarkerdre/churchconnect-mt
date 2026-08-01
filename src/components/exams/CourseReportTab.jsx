@@ -245,9 +245,15 @@ export default function CourseReportTab() {
   const selectedSession = sessions.find((s) => s.id === sessionId);
 
 
+  // Always use the live template logo unless someone typed a custom URL,
+  // so a saved report never keeps an out-of-date logo.
+  const exportLogoUrl = report.cover?.logo_url_custom
+    ? report.cover?.logo_url || liveLogoUrl
+    : liveLogoUrl || report.cover?.logo_url || "";
+
   const reportForExport = {
     ...report,
-    cover: { ...report.cover, logo_url: report.cover?.logo_url || liveLogoUrl },
+    cover: { ...report.cover, logo_url: exportLogoUrl },
   };
 
   const handleWordDownload = async () => {
