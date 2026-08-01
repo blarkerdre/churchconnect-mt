@@ -907,6 +907,11 @@ export default function ExamManagement() {
           <WoFBIAttendanceTab />
         </TabsContent>
 
+        <TabsContent value="sessions" className="space-y-4 mt-4">
+          <SessionManager />
+        </TabsContent>
+
+
         <TabsContent value="course-report" className="space-y-4 mt-4">
           <CourseReportTab />
         </TabsContent>
