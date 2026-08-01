@@ -19,6 +19,7 @@ import {
   WOFBI_FEEDBACK_FIELD_TYPES,
   DEFAULT_SATISFACTION_SCALE,
   FEEDBACK_CONFIDENTIALITY_NOTE,
+  mergeFeedbackDefaults,
 } from "@/lib/wofbi-feedback-defaults";
 import WoFBIDynamicForm from "./WoFBIDynamicForm";
 
@@ -56,7 +57,7 @@ export default function WoFBIFeedbackFormEditor() {
   });
 
   useEffect(() => {
-    if (data) setLocal(data);
+    if (data) setLocal({ ...data, fields: mergeFeedbackDefaults(data.fields || []) });
     else if (data === null && tenantId) {
       setLocal({
         tenant_id: tenantId,

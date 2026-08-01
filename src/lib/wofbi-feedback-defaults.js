@@ -61,3 +61,26 @@ export const DEFAULT_WOFBI_FEEDBACK_FIELDS = [
 
 export const FEEDBACK_CONFIDENTIALITY_NOTE =
   "All information will be treated confidentially in line with data protection law.";
+
+// Fields that must always exist on a saved form, with the field id they should sit before.
+const REQUIRED_DEFAULT_FIELDS = [
+  { before: "testimony", field: DEFAULT_WOFBI_FEEDBACK_FIELDS.find((f) => f.id === "testimony_title") },
+];
+
+/**
+ * Merges in any core default fields missing from a tenant's saved feedback form,
+ * so newly added defaults are not silently skipped for existing forms.
+ */
+export function mergeFeedbackDefaults(fields) {
+  const list = Array.isArray(fields) ? [...fields] : [];
+  if (!list.length) return list;
+  REQUIRED_DEFAULT_FIELDS.forEach(({ before, field }) => {
+    if (!field) return;
+    if (list.some((f) => f?.id === field.id)) return;
+    const idx = list.findIndex((f) => f?.id === before);
+    if (idx >= 0) list.splice(idx, 0, field);
+    else list.push(field);
+  });
+  return list;
+}
+
