@@ -16,6 +16,7 @@ import { useAppSetting } from "@/hooks/useAppSetting";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
 import sampleBgUrl from "@/assets/certificate-sample-bg.jpg";
 import PasswordConfirmDialog from "@/components/shared/PasswordConfirmDialog";
+import { useResolvedBrandingUrl } from "@/lib/branding-url";
 
 const emptyTemplate = {
   training_type: "",
