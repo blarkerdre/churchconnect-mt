@@ -191,12 +191,13 @@ export function StatementPreview({ member, course, subjects, memberSubjects, ena
     (currentTenant?.name && template?.church_name && template.church_name !== currentTenant.name
       ? currentTenant.name
       : "");
-  const logoUrl =
+  const logoUrl = useResolvedBrandingUrl(
     template?.wofbi_logo_url ||
-    template?.crest_image_url ||
-    template?.logo_url ||
-    currentTenant?.logo_url ||
-    "";
+      template?.crest_image_url ||
+      template?.logo_url ||
+      currentTenant?.logo_url ||
+      ""
+  );
 
   return (
     <div className="space-y-4">
