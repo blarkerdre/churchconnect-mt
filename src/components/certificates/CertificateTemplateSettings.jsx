@@ -16,6 +16,7 @@ import { useAppSetting } from "@/hooks/useAppSetting";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
 import sampleBgUrl from "@/assets/certificate-sample-bg.jpg";
 import PasswordConfirmDialog from "@/components/shared/PasswordConfirmDialog";
+import { useResolvedBrandingUrl } from "@/lib/branding-url";
 
 const emptyTemplate = {
   training_type: "",
@@ -144,15 +145,18 @@ export default function CertificateTemplateSettings() {
     setUploading(true);
     try {
       await assertStorageAvailable(tenantId, file.size);
-      const ext = file.name.split(".").pop();
+      const ext = (file.name.split(".").pop() || "png").toLowerCase();
+      // Must live in a PUBLIC bucket — the logo is rendered in printed
+      // statements and fetched by the Word export.
       const path = `${tenantId}/wofbi-logo/${Date.now()}.${ext}`;
       const { error } = await supabase.storage
-        .from("church-documents")
+        .from("tenant-branding")
         .upload(path, file, { contentType: file.type, upsert: true });
       if (error) throw error;
-      const { data: pub } = supabase.storage.from("church-documents").getPublicUrl(path);
-      set("wofbi_logo_url", pub?.publicUrl || "");
-      toast({ title: "WoFBI logo uploaded" });
+      const { data: pub } = supabase.storage.from("tenant-branding").getPublicUrl(path);
+      if (!pub?.publicUrl) throw new Error("Could not resolve the uploaded logo URL");
+      set("wofbi_logo_url", pub.publicUrl);
+      toast({ title: "WoFBI logo uploaded", description: "Remember to press Save to apply it." });
     } catch (err) {
       toast({ title: "Upload failed", description: err.message, variant: "destructive" });
     } finally {
@@ -226,6 +230,8 @@ export default function CertificateTemplateSettings() {
       .createSignedUrl(form.background_image_url, 300)
       .then(({ data }) => setPreviewUrl(data?.signedUrl || null));
   }, [form.background_image_url]);
+
+  const wofbiLogoPreview = useResolvedBrandingUrl(form.wofbi_logo_url);
 
   const handleSave = () => {
     if (!form.training_type.trim()) {
@@ -451,7 +457,7 @@ export default function CertificateTemplateSettings() {
                 )}
               </div>
               {form.wofbi_logo_url && (
-                <img src={form.wofbi_logo_url} alt="WoFBI logo" className="mt-2 h-16 object-contain rounded border bg-white p-1" />
+                <img src={wofbiLogoPreview} alt="WoFBI logo" className="mt-2 h-16 object-contain rounded border bg-white p-1" />
               )}
             </div>
             <div className="grid grid-cols-2 gap-3">

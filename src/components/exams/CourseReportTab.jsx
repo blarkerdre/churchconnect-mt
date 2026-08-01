@@ -16,6 +16,7 @@ import { Loader2, Save, RefreshCw, Printer, FileDown, Plus, Trash2, FileText, Ey
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { emptyReport, mergeReport, FINDING_FIELDS, QC_CHECKLIST_FIELDS, buildIntroduction, DEFAULT_TESTIMONY_HEADING } from "@/lib/wofbi-report-defaults";
 import { printReport, downloadReportDoc, buildReportHtml } from "@/lib/wofbi-report-export";
+import { useResolvedBrandingUrl } from "@/lib/branding-url";
 
 const NO_SESSION = "__none__";
 
@@ -178,12 +179,13 @@ export default function CourseReportTab() {
     },
   });
 
-  const liveLogoUrl =
+  const liveLogoUrl = useResolvedBrandingUrl(
     liveTemplate?.wofbi_logo_url ||
-    liveTemplate?.crest_image_url ||
-    liveTemplate?.logo_url ||
-    currentTenant?.logo_url ||
-    "";
+      liveTemplate?.crest_image_url ||
+      liveTemplate?.logo_url ||
+      currentTenant?.logo_url ||
+      ""
+  );
 
   const { data: existing, isFetching: loadingReport } = useQuery({
     queryKey: ["wofbi-course-report", tenantId, courseId, sessionId],
@@ -244,9 +246,15 @@ export default function CourseReportTab() {
   const selectedSession = sessions.find((s) => s.id === sessionId);
 
 
+  // Always use the live template logo unless someone typed a custom URL,
+  // so a saved report never keeps an out-of-date logo.
+  const exportLogoUrl = report.cover?.logo_url_custom
+    ? report.cover?.logo_url || liveLogoUrl
+    : liveLogoUrl || report.cover?.logo_url || "";
+
   const reportForExport = {
     ...report,
-    cover: { ...report.cover, logo_url: report.cover?.logo_url || liveLogoUrl },
+    cover: { ...report.cover, logo_url: exportLogoUrl },
   };
 
   const handleWordDownload = async () => {
@@ -727,7 +735,19 @@ export default function CourseReportTab() {
               <TextField label="Course code" value={report.cover.course_code} onChange={(v) => set("cover.course_code", v)} />
               <TextField label="Edition" value={report.cover.edition} onChange={(v) => set("cover.edition", v)} />
               <TextField label="Date range" value={report.cover.date_range} onChange={(v) => set("cover.date_range", v)} />
-              <TextField label="Logo URL" value={report.cover.logo_url} onChange={(v) => set("cover.logo_url", v)} />
+              <div className="space-y-1">
+                <TextField
+                  label="Logo URL"
+                  value={report.cover.logo_url}
+                  onChange={(v) => {
+                    set("cover.logo_url", v);
+                    set("cover.logo_url_custom", !!v);
+                  }}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Leave blank to always use the current Bible School logo from the certificate template.
+                </p>
+              </div>
             </AccordionContent>
           </AccordionItem>
 
