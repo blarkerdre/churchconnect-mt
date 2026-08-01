@@ -600,6 +600,9 @@ export default function MyProfile() {
                       {(member.address || member.city) && (
                         <div className="flex items-center gap-2"><MapPin className="h-4 w-4" />{[member.address, member.city, member.postcode].filter(Boolean).join(", ")}</div>
                       )}
+                      {(member.occupation || member.nationality) && (
+                        <div className="flex items-center gap-2"><Briefcase className="h-4 w-4" />{[member.occupation, member.nationality].filter(Boolean).join(" · ")}</div>
+                      )}
                       {member.date_of_birth && (
                         <div className="flex items-center gap-2"><Calendar className="h-4 w-4" />DOB: {format(new Date(member.date_of_birth), "dd MMM yyyy")}</div>
                       )}
