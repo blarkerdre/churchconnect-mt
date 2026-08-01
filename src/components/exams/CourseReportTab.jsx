@@ -473,7 +473,8 @@ export default function CourseReportTab() {
               <Button size="sm" variant="outline" onClick={() => save(status === "final" ? "draft" : "final")} disabled={saving}>
                 {status === "final" ? "Reopen as draft" : "Mark final"}
               </Button>
-              <Button size="sm" variant="outline" onClick={() => printReport(report)}>
+              <Button size="sm" variant="outline" onClick={() => printReport(reportForExport)}>
+
                 <Printer className="h-3.5 w-3.5 mr-1" /> Print / PDF
               </Button>
               <Button size="sm" variant="outline" onClick={() => downloadReportDoc(report)}>
