@@ -16,6 +16,7 @@ import { Loader2, Save, RefreshCw, Printer, FileDown, Plus, Trash2, FileText, Ey
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { emptyReport, mergeReport, FINDING_FIELDS, QC_CHECKLIST_FIELDS, buildIntroduction, DEFAULT_TESTIMONY_HEADING } from "@/lib/wofbi-report-defaults";
 import { printReport, downloadReportDoc, buildReportHtml } from "@/lib/wofbi-report-export";
+import { toImageDataUrl } from "@/lib/logo-data-url";
 import { useResolvedBrandingUrl } from "@/lib/branding-url";
 import { fetchCourseTemplate, templateLogoUrl } from "@/lib/certificate-template-lookup";
 
@@ -695,7 +696,7 @@ export default function CourseReportTab() {
               <Button size="sm" variant="outline" onClick={() => setPreviewOpen(true)}>
                 <Eye className="h-3.5 w-3.5 mr-1" /> Preview
               </Button>
-              <Button size="sm" variant="outline" onClick={() => printReport(reportForExport)}>
+              <Button size="sm" variant="outline" onClick={handlePrintReport}>
                 <Printer className="h-3.5 w-3.5 mr-1" /> Print / PDF
               </Button>
               <Button size="sm" variant="outline" onClick={handleWordDownload}>
@@ -717,7 +718,7 @@ export default function CourseReportTab() {
             className="w-full h-[75vh] border-0 bg-white"
           />
           <div className="flex flex-wrap gap-2 justify-end px-4 py-3 border-t">
-            <Button size="sm" variant="outline" onClick={() => printReport(reportForExport)}>
+            <Button size="sm" variant="outline" onClick={handlePrintReport}>
               <Printer className="h-3.5 w-3.5 mr-1" /> Print / PDF
             </Button>
             <Button size="sm" variant="outline" onClick={handleWordDownload}>
