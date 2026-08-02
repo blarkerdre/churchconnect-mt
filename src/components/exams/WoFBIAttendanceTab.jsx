@@ -868,10 +868,15 @@ export default function WoFBIAttendanceTab() {
         </CardContent>
       </Card>
 
-      {/* New session dialog */}
-      <Dialog open={newOpen} onOpenChange={setNewOpen}>
+      {/* New / edit session dialog */}
+      <Dialog
+        open={newOpen || !!editSession}
+        onOpenChange={(v) => {
+          if (!v) { setNewOpen(false); setEditSession(null); }
+        }}
+      >
         <DialogContent className="max-w-md w-[calc(100vw-1rem)] sm:w-auto max-h-[90vh] overflow-y-auto">
-          <TenantDialogHeader>New Attendance Session</TenantDialogHeader>
+          <TenantDialogHeader>{editSession ? "Edit Attendance Session" : "New Attendance Session"}</TenantDialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-1.5">
               <Label>Title *</Label>
