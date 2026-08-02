@@ -17,6 +17,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { emptyReport, mergeReport, FINDING_FIELDS, QC_CHECKLIST_FIELDS, buildIntroduction, DEFAULT_TESTIMONY_HEADING } from "@/lib/wofbi-report-defaults";
 import { printReport, downloadReportDoc, buildReportHtml } from "@/lib/wofbi-report-export";
 import { useResolvedBrandingUrl } from "@/lib/branding-url";
+import { fetchCourseTemplate, templateLogoUrl } from "@/lib/certificate-template-lookup";
 
 const NO_SESSION = "__none__";
 
