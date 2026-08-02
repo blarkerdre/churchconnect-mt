@@ -17,6 +17,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { emptyReport, mergeReport, FINDING_FIELDS, QC_CHECKLIST_FIELDS, buildIntroduction, DEFAULT_TESTIMONY_HEADING } from "@/lib/wofbi-report-defaults";
 import { printReport, downloadReportDoc, buildReportHtml } from "@/lib/wofbi-report-export";
 import { useResolvedBrandingUrl } from "@/lib/branding-url";
+import { fetchCourseTemplate, templateLogoUrl } from "@/lib/certificate-template-lookup";
 
 const NO_SESSION = "__none__";
 
@@ -167,24 +168,14 @@ export default function CourseReportTab() {
   const { data: liveTemplate } = useQuery({
     queryKey: ["wofbi-report-template", tenantId, selectedCourse?.name],
     enabled: !!tenantId && !!selectedCourse?.name,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("certificate_templates")
-        .select("church_name, centre_name, logo_url, wofbi_logo_url, crest_image_url")
-        .eq("tenant_id", tenantId)
-        .eq("training_type", selectedCourse.name)
-        .maybeSingle();
-      if (error) throw error;
-      return data;
-    },
+    queryFn: () => fetchCourseTemplate({ tenantId, course: selectedCourse }),
   });
 
-  const liveLogoUrl = useResolvedBrandingUrl(
+  const liveLogoUrl = useResolvedBrandingUrl(templateLogoUrl(liveTemplate, currentTenant));
+  const hasTemplateLogo = !!(
     liveTemplate?.wofbi_logo_url ||
-      liveTemplate?.crest_image_url ||
-      liveTemplate?.logo_url ||
-      currentTenant?.logo_url ||
-      ""
+    liveTemplate?.crest_image_url ||
+    liveTemplate?.logo_url
   );
 
   const { data: existing, isFetching: loadingReport } = useQuery({
@@ -299,13 +290,11 @@ export default function CourseReportTab() {
       const sid = sessionId === NO_SESSION ? null : sessionId;
       const course = selectedCourse;
 
-      const [{ data: subjects }, { data: lecturers }, { data: template }] = await Promise.all([
+      const [{ data: subjects }, { data: lecturers }, template] = await Promise.all([
         supabase.from("exam_subjects").select("id, name, code, lecturer_id, sort_order")
           .eq("tenant_id", tenantId).eq("course_id", courseId).order("sort_order"),
         supabase.from("lecturers").select("id, name, lecturer_type").eq("tenant_id", tenantId),
-        supabase.from("certificate_templates")
-          .select("church_name, centre_name, logo_url, wofbi_logo_url, crest_image_url")
-          .eq("tenant_id", tenantId).eq("training_type", course?.name || "").maybeSingle(),
+        fetchCourseTemplate({ tenantId, course }),
       ]);
       const lecById = Object.fromEntries((lecturers || []).map((l) => [l.id, l.name]));
       const lecTypeById = Object.fromEntries(
@@ -748,6 +737,12 @@ export default function CourseReportTab() {
                 <p className="text-xs text-muted-foreground">
                   Leave blank to always use the current Bible School logo from the certificate template.
                 </p>
+                {!hasTemplateLogo && !report.cover.logo_url_custom && (
+                  <p className="text-xs text-amber-600">
+                    No Bible School logo saved for this course — using the church logo. Upload one in
+                    Settings → Certificate Templates.
+                  </p>
+                )}
               </div>
             </AccordionContent>
           </AccordionItem>
