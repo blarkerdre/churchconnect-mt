@@ -319,8 +319,8 @@ export default function StatementOfResult({ open, onOpenChange, member, course, 
       (b) => `<tr><td>${escHtml(b.label)}</td><td>${escHtml(b.letter)}&nbsp;&nbsp;${b.min}-${b.max}</td></tr>`
     ).join("");
 
-    const logoHtml = logoUrl
-      ? `<img src="${escHtml(logoUrl)}" alt="Logo" style="height:130px;margin:0 auto 6px;display:block;" />`
+    const logoHtml = logoImg
+      ? `<img src="${logoImg.dataUrl}" alt="Logo" style="${aspectStyle(logoImg, 130, 360)}margin:0 auto 6px;display:block;object-fit:contain;" />`
       : "";
 
     const centreLine = centreName
