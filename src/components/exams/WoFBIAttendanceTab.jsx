@@ -248,9 +248,60 @@ export default function WoFBIAttendanceTab() {
       toast({ title: "Attendance session created" });
       qc.invalidateQueries({ queryKey: ["wofbi-att-sessions"] });
       setNewOpen(false);
-      setForm({ title: "", session_date: new Date().toISOString().slice(0, 10), late_after: "", subject_id: "", notes: "", scheduled_open_at: "", scheduled_close_at: "" });
+      setForm(emptySessionForm());
     },
     onError: (e) => toast({ title: "Failed to create session", description: e.message, variant: "destructive" }),
+  });
+
+  const openSessionEdit = (s) => {
+    const toLocal = (iso) => {
+      if (!iso) return "";
+      const d = new Date(iso);
+      return new Date(d - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+    };
+    setForm({
+      title: s.title || "",
+      session_date: s.session_date || new Date().toISOString().slice(0, 10),
+      late_after: s.late_after ? String(s.late_after).slice(0, 5) : "",
+      subject_id: s.subject_id || "",
+      notes: s.notes || "",
+      scheduled_open_at: toLocal(s.scheduled_open_at),
+      scheduled_close_at: toLocal(s.scheduled_close_at),
+      status: s.status || "open",
+    });
+    setEditSession(s);
+  };
+
+  const updateSession = useMutation({
+    mutationFn: async (payload) => {
+      const openAt = payload.scheduled_open_at ? new Date(payload.scheduled_open_at).toISOString() : null;
+      const closeAt = payload.scheduled_close_at ? new Date(payload.scheduled_close_at).toISOString() : null;
+      if (openAt && closeAt && closeAt <= openAt) throw new Error("Auto-close time must be after the auto-open time");
+      const isClosed = payload.status === "closed";
+      const { error } = await supabase
+        .from("wofbi_attendance_sessions")
+        .update({
+          subject_id: payload.subject_id || null,
+          title: payload.title,
+          session_date: payload.session_date,
+          late_after: payload.late_after || null,
+          notes: payload.notes || null,
+          status: isClosed ? "closed" : "open",
+          scheduled_open_at: isClosed ? null : openAt,
+          scheduled_close_at: isClosed ? null : closeAt,
+        })
+        .eq("id", editSession.id)
+        .eq("tenant_id", tenantId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({ title: "Session updated" });
+      qc.invalidateQueries({ queryKey: ["wofbi-att-sessions"] });
+      qc.invalidateQueries({ queryKey: ["wofbi-att-record-counts"] });
+      setEditSession(null);
+      setForm(emptySessionForm());
+    },
+    onError: (e) => toast({ title: "Update failed", description: e.message, variant: "destructive" }),
   });
 
   const deleteSession = useMutation({
