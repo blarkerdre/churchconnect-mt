@@ -1,4 +1,5 @@
 import { buildStatementPdf, deriveStudentNumber } from "./statement-pdf.ts";
+import { fetchCourseTemplate, resolveTemplateImages, signIfPrivate } from "./certificate-template.ts";
 
 const BUCKET = "exam-statements";
 const SIGNED_URL_EXPIRES_IN = 60 * 60 * 24 * 30; // 30 days
@@ -102,18 +103,15 @@ export async function generateAndUploadStatement(
     if (idx >= 0) seq = idx + 1;
   }
 
-  const { data: template } = await admin
-    .from("certificate_templates")
-    .select("signatory_name, signatory_title, dean_signature_url, logo_url, crest_image_url, church_name, wofbi_logo_url, centre_name")
-    .eq("tenant_id", tenantId)
-    .eq("training_type", course.name)
-    .maybeSingle();
+  const rawTemplate = await fetchCourseTemplate(admin, tenantId, course);
+  const template = await resolveTemplateImages(admin, rawTemplate);
 
   const { data: tenant } = await admin
     .from("tenants")
     .select("id, name, slug, logo_url")
     .eq("id", tenantId)
     .maybeSingle();
+  const tenantLogo = await signIfPrivate(admin, tenant?.logo_url);
 
   const memberName = `${member.first_name || ""} ${member.last_name || ""}`.trim() || "Student";
 
@@ -133,7 +131,7 @@ export async function generateAndUploadStatement(
     session,
     studentNumber,
     template,
-    tenant: tenant || {},
+    tenant: { ...(tenant || {}), logo_url: tenantLogo },
   });
 
   const now = new Date();
