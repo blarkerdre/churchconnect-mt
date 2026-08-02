@@ -167,24 +167,14 @@ export default function CourseReportTab() {
   const { data: liveTemplate } = useQuery({
     queryKey: ["wofbi-report-template", tenantId, selectedCourse?.name],
     enabled: !!tenantId && !!selectedCourse?.name,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("certificate_templates")
-        .select("church_name, centre_name, logo_url, wofbi_logo_url, crest_image_url")
-        .eq("tenant_id", tenantId)
-        .eq("training_type", selectedCourse.name)
-        .maybeSingle();
-      if (error) throw error;
-      return data;
-    },
+    queryFn: () => fetchCourseTemplate({ tenantId, course: selectedCourse }),
   });
 
-  const liveLogoUrl = useResolvedBrandingUrl(
+  const liveLogoUrl = useResolvedBrandingUrl(templateLogoUrl(liveTemplate, currentTenant));
+  const hasTemplateLogo = !!(
     liveTemplate?.wofbi_logo_url ||
-      liveTemplate?.crest_image_url ||
-      liveTemplate?.logo_url ||
-      currentTenant?.logo_url ||
-      ""
+    liveTemplate?.crest_image_url ||
+    liveTemplate?.logo_url
   );
 
   const { data: existing, isFetching: loadingReport } = useQuery({
