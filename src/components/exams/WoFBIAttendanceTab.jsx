@@ -451,8 +451,13 @@ export default function WoFBIAttendanceTab() {
     mutationFn: async () => {
       if (!editRecord) throw new Error("No record");
       const { session, registration, record } = editRecord;
-      const inAt = editForm.checked_in_at ? new Date(editForm.checked_in_at) : null;
-      const outAt = editForm.checked_out_at ? new Date(editForm.checked_out_at) : null;
+      const parse = (v) => {
+        if (!v) return null;
+        const d = new Date(v);
+        return isNaN(d.getTime()) ? undefined : d;
+      };
+      const inAt = parse(editForm.checked_in_at);
+      const outAt = parse(editForm.checked_out_at);
       if (editForm.status === "absent") {
         if (record?.id) {
           const { error } = await supabase
@@ -464,6 +469,8 @@ export default function WoFBIAttendanceTab() {
         }
         return;
       }
+      if (inAt === undefined) throw new Error("Time in is not a valid date and time");
+      if (outAt === undefined) throw new Error("Time out is not a valid date and time");
       if (!inAt) throw new Error("Time in is required");
       if (outAt && outAt < inAt) throw new Error("Time out must be after time in");
       const duration = outAt ? Math.max(0, Math.round((outAt - inAt) / 60000)) : null;
