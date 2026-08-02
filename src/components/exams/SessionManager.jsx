@@ -106,22 +106,23 @@ export default function SessionManager() {
     queryKey: ["exam-session-counts", tenantId],
     enabled: !!tenantId,
     queryFn: async () => {
-      const [regs, attempts] = await Promise.all([
+      const [regs, attempts, reports] = await Promise.all([
         supabase.from("course_registrations").select("session_id").eq("tenant_id", tenantId).not("session_id", "is", null),
         supabase.from("exam_attempts").select("session_id").eq("tenant_id", tenantId).not("session_id", "is", null),
+        supabase.from("wofbi_course_reports").select("session_id").eq("tenant_id", tenantId).not("session_id", "is", null),
       ]);
       const out = {};
-      for (const r of regs.data || []) {
-        out[r.session_id] = out[r.session_id] || { regs: 0, attempts: 0 };
-        out[r.session_id].regs += 1;
-      }
-      for (const a of attempts.data || []) {
-        out[a.session_id] = out[a.session_id] || { regs: 0, attempts: 0 };
-        out[a.session_id].attempts += 1;
-      }
+      const bump = (id, key) => {
+        out[id] = out[id] || { regs: 0, attempts: 0, reports: 0 };
+        out[id][key] += 1;
+      };
+      for (const r of regs.data || []) bump(r.session_id, "regs");
+      for (const a of attempts.data || []) bump(a.session_id, "attempts");
+      for (const r of reports.data || []) bump(r.session_id, "reports");
       return out;
     },
   });
+
 
   const coursesFor = useMemo(() => {
     const map = {};
@@ -259,7 +260,16 @@ export default function SessionManager() {
       qc.invalidateQueries({ queryKey: ["exam-sessions-manage", tenantId] });
       qc.invalidateQueries({ queryKey: ["exam-session-courses", tenantId] });
     },
-    onError: (e) => toast({ title: "Could not delete session", description: e.message, variant: "destructive" }),
+    onError: (e) =>
+      toast({
+        title: "Could not delete session",
+        description:
+          e?.code === "23503" || /foreign key/i.test(e?.message || "")
+            ? "This session still has exam attempts linked to it, so it cannot be deleted. Close it instead."
+            : e?.message || "Unknown error",
+        variant: "destructive",
+      }),
+
   });
 
   const handleStart = (session) => {
@@ -320,7 +330,7 @@ export default function SessionManager() {
           ) : (
             sessions.map((s) => {
               const meta = statusMeta(s);
-              const c = counts[s.id] || { regs: 0, attempts: 0 };
+              const c = counts[s.id] || { regs: 0, attempts: 0, reports: 0 };
               const linked = coursesFor[s.id] || [];
               const status = (s.status || "draft").toLowerCase();
               return (
@@ -331,7 +341,7 @@ export default function SessionManager() {
                     {s.auto_schedule && <Badge variant="outline" className="text-[10px]">Auto schedule</Badge>}
                   </div>
                   <div className="text-xs text-muted-foreground">
-                    {fmt(s.starts_on)} – {fmt(s.ends_on)} · {c.regs} registration{c.regs === 1 ? "" : "s"} · {c.attempts} exam attempt{c.attempts === 1 ? "" : "s"}
+                    {fmt(s.starts_on)} – {fmt(s.ends_on)} · {c.regs} registration{c.regs === 1 ? "" : "s"} · {c.attempts} exam attempt{c.attempts === 1 ? "" : "s"} · {c.reports} final report{c.reports === 1 ? "" : "s"}
                   </div>
                   <div className="flex flex-wrap gap-1">
                     {linked.length ? linked.map((n) => (
@@ -353,10 +363,23 @@ export default function SessionManager() {
                     <Button size="sm" variant="ghost" onClick={() => openEdit(s)}>
                       <Edit className="h-4 w-4 mr-1" /> Edit
                     </Button>
-                    <Button size="sm" variant="ghost" className="text-destructive" onClick={() => setDeleteTarget(s)}>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="text-destructive"
+                      disabled={c.attempts > 0}
+                      title={c.attempts > 0 ? "Sessions with exam attempts cannot be deleted" : undefined}
+                      onClick={() => setDeleteTarget(s)}
+                    >
                       <Trash2 className="h-4 w-4 mr-1" /> Delete
                     </Button>
                   </div>
+                  {c.attempts > 0 && (
+                    <p className="text-[11px] text-muted-foreground">
+                      This session has exam attempts, so it can’t be deleted — close it instead.
+                    </p>
+                  )}
+
                 </div>
               );
             })
@@ -526,9 +549,20 @@ export default function SessionManager() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete this session?</AlertDialogTitle>
-            <AlertDialogDescription>
-              “{deleteTarget?.name}” will be removed. Registrations and reports linked to it keep their data but lose the edition label.
+            <AlertDialogDescription asChild>
+              <div className="space-y-2">
+                <p>“{deleteTarget?.name}” will be removed.</p>
+                <ul className="list-disc pl-4 space-y-1">
+                  <li>
+                    {(counts[deleteTarget?.id]?.regs || 0)} registration{(counts[deleteTarget?.id]?.regs || 0) === 1 ? "" : "s"} keep their data but lose the edition label.
+                  </li>
+                  <li>
+                    {(counts[deleteTarget?.id]?.reports || 0)} course final report{(counts[deleteTarget?.id]?.reports || 0) === 1 ? "" : "s"} for this edition will be deleted permanently.
+                  </li>
+                </ul>
+              </div>
             </AlertDialogDescription>
+
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
