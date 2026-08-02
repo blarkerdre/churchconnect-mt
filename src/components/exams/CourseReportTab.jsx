@@ -737,6 +737,12 @@ export default function CourseReportTab() {
                 <p className="text-xs text-muted-foreground">
                   Leave blank to always use the current Bible School logo from the certificate template.
                 </p>
+                {!hasTemplateLogo && !report.cover.logo_url_custom && (
+                  <p className="text-xs text-amber-600">
+                    No Bible School logo saved for this course — using the church logo. Upload one in
+                    Settings → Certificate Templates.
+                  </p>
+                )}
               </div>
             </AccordionContent>
           </AccordionItem>
