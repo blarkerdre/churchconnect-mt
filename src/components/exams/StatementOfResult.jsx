@@ -413,10 +413,43 @@ export default function StatementOfResult({ open, onOpenChange, member, course, 
     </body></html>`;
 
     const win = window.open("", "_blank", "width=900,height=1100");
+    if (!win) {
+      toast.error("Pop-up blocked — allow pop-ups to print.");
+      return;
+    }
     win.document.write(html);
     win.document.close();
     win.focus();
-    setTimeout(() => win.print(), 300);
+
+    const doc = win.document;
+    const pending = Array.from(doc.images || []).filter((i) => !i.complete);
+    const go = () => {
+      try {
+        win.focus();
+        win.print();
+      } catch {
+        /* user can print manually */
+      }
+    };
+    if (!pending.length) {
+      setTimeout(go, 150);
+    } else {
+      let left = pending.length;
+      const done = () => {
+        left -= 1;
+        if (left <= 0) setTimeout(go, 150);
+      };
+      pending.forEach((img) => {
+        img.addEventListener("load", done, { once: true });
+        img.addEventListener("error", done, { once: true });
+      });
+      setTimeout(() => {
+        if (left > 0) {
+          left = 0;
+          go();
+        }
+      }, 4000);
+    }
   };
 
   const handleDownloadCSV = () => {
