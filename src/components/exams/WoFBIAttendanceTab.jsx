@@ -83,13 +83,14 @@ export default function WoFBIAttendanceTab() {
 
   const [selectedCourseId, setSelectedCourseId] = useState("");
   const [newOpen, setNewOpen] = useState(false);
+  const [editSession, setEditSession] = useState(null); // session being edited
   const [qrOpen, setQrOpen] = useState(false);
   const [rosterSession, setRosterSession] = useState(null);
   const [expandedStudents, setExpandedStudents] = useState({});
   const [editRecord, setEditRecord] = useState(null); // { record, session, registration }
   const [editForm, setEditForm] = useState({ status: "present", checked_in_at: "", checked_out_at: "", punctuality_rating: null, punctuality_note: "" });
 
-  const [form, setForm] = useState({
+  const emptySessionForm = () => ({
     title: "",
     session_date: new Date().toISOString().slice(0, 10),
     late_after: "",
@@ -97,7 +98,10 @@ export default function WoFBIAttendanceTab() {
     notes: "",
     scheduled_open_at: "",
     scheduled_close_at: "",
+    status: "open",
   });
+
+  const [form, setForm] = useState(emptySessionForm);
 
 
   const { data: courses = [] } = useQuery({
