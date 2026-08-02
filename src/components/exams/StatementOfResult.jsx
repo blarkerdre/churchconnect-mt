@@ -187,17 +187,18 @@ export function StatementPreview({ member, course, subjects, memberSubjects, ena
     (currentTenant?.name && template?.church_name && template.church_name !== currentTenant.name
       ? currentTenant.name
       : "");
-  const logoUrl =
+  const rawLogoUrl =
     template?.wofbi_logo_url ||
     template?.crest_image_url ||
     template?.logo_url ||
     currentTenant?.logo_url ||
     "";
+  const logoUrl = useResolvedBrandingUrl(rawLogoUrl);
 
   return (
     <div className="space-y-4">
       <div className="text-center space-y-1 border-b pb-3">
-        {logoUrl ? <img src={logoUrl} alt="Logo" className="h-24 mx-auto mb-1" /> : null}
+        {logoUrl ? <img src={logoUrl} alt="Logo" className="h-24 w-auto max-w-[280px] object-contain mx-auto mb-1" /> : null}
         <p className="text-2xl font-black tracking-wide">{(churchName || "").toUpperCase()}</p>
         {centreName ? <p className="text-sm font-bold uppercase tracking-wide">{centreName.toUpperCase()}</p> : null}
         <p className="text-sm font-bold">STATEMENT OF RESULT</p>
