@@ -297,7 +297,14 @@ export default function StatementOfResult({ open, onOpenChange, member, course, 
   const signatoryTitle = template?.signatory_title || "";
   const signatureUrl = template?.dean_signature_url || "";
 
-  const handlePrint = () => {
+  const handlePrint = async () => {
+    const [logoImg, signatureImg] = await Promise.all([
+      toImageDataUrl(logoUrl),
+      toImageDataUrl(signatureUrl),
+    ]);
+    if (logoUrl && !logoImg) {
+      toast.warning("Logo could not be loaded — printing without it.");
+    }
     const subjectRows = rows
       .map(
         (r) => `
