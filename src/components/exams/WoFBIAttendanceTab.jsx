@@ -513,7 +513,12 @@ export default function WoFBIAttendanceTab() {
       qc.invalidateQueries({ queryKey: ["wofbi-att-roster-records"] });
       qc.invalidateQueries({ queryKey: ["wofbi-att-record-counts"] });
     },
-    onError: (e) => toast({ title: "Save failed", description: e.message, variant: "destructive" }),
+    onError: (e) =>
+      toast({
+        title: "Save failed",
+        description: e?.message || e?.details || e?.hint || "Something stopped this attendance record from saving.",
+        variant: "destructive",
+      }),
   });
 
   const deleteRecord = useMutation({
