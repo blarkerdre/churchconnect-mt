@@ -549,9 +549,20 @@ export default function SessionManager() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete this session?</AlertDialogTitle>
-            <AlertDialogDescription>
-              “{deleteTarget?.name}” will be removed. Registrations and reports linked to it keep their data but lose the edition label.
+            <AlertDialogDescription asChild>
+              <div className="space-y-2">
+                <p>“{deleteTarget?.name}” will be removed.</p>
+                <ul className="list-disc pl-4 space-y-1">
+                  <li>
+                    {(counts[deleteTarget?.id]?.regs || 0)} registration{(counts[deleteTarget?.id]?.regs || 0) === 1 ? "" : "s"} keep their data but lose the edition label.
+                  </li>
+                  <li>
+                    {(counts[deleteTarget?.id]?.reports || 0)} course final report{(counts[deleteTarget?.id]?.reports || 0) === 1 ? "" : "s"} for this edition will be deleted permanently.
+                  </li>
+                </ul>
+              </div>
             </AlertDialogDescription>
+
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
