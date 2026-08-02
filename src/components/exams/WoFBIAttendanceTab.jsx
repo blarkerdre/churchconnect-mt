@@ -83,13 +83,14 @@ export default function WoFBIAttendanceTab() {
 
   const [selectedCourseId, setSelectedCourseId] = useState("");
   const [newOpen, setNewOpen] = useState(false);
+  const [editSession, setEditSession] = useState(null); // session being edited
   const [qrOpen, setQrOpen] = useState(false);
   const [rosterSession, setRosterSession] = useState(null);
   const [expandedStudents, setExpandedStudents] = useState({});
   const [editRecord, setEditRecord] = useState(null); // { record, session, registration }
   const [editForm, setEditForm] = useState({ status: "present", checked_in_at: "", checked_out_at: "", punctuality_rating: null, punctuality_note: "" });
 
-  const [form, setForm] = useState({
+  const emptySessionForm = () => ({
     title: "",
     session_date: new Date().toISOString().slice(0, 10),
     late_after: "",
@@ -97,7 +98,10 @@ export default function WoFBIAttendanceTab() {
     notes: "",
     scheduled_open_at: "",
     scheduled_close_at: "",
+    status: "open",
   });
+
+  const [form, setForm] = useState(emptySessionForm);
 
 
   const { data: courses = [] } = useQuery({
@@ -244,9 +248,60 @@ export default function WoFBIAttendanceTab() {
       toast({ title: "Attendance session created" });
       qc.invalidateQueries({ queryKey: ["wofbi-att-sessions"] });
       setNewOpen(false);
-      setForm({ title: "", session_date: new Date().toISOString().slice(0, 10), late_after: "", subject_id: "", notes: "", scheduled_open_at: "", scheduled_close_at: "" });
+      setForm(emptySessionForm());
     },
     onError: (e) => toast({ title: "Failed to create session", description: e.message, variant: "destructive" }),
+  });
+
+  const openSessionEdit = (s) => {
+    const toLocal = (iso) => {
+      if (!iso) return "";
+      const d = new Date(iso);
+      return new Date(d - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+    };
+    setForm({
+      title: s.title || "",
+      session_date: s.session_date || new Date().toISOString().slice(0, 10),
+      late_after: s.late_after ? String(s.late_after).slice(0, 5) : "",
+      subject_id: s.subject_id || "",
+      notes: s.notes || "",
+      scheduled_open_at: toLocal(s.scheduled_open_at),
+      scheduled_close_at: toLocal(s.scheduled_close_at),
+      status: s.status || "open",
+    });
+    setEditSession(s);
+  };
+
+  const updateSession = useMutation({
+    mutationFn: async (payload) => {
+      const openAt = payload.scheduled_open_at ? new Date(payload.scheduled_open_at).toISOString() : null;
+      const closeAt = payload.scheduled_close_at ? new Date(payload.scheduled_close_at).toISOString() : null;
+      if (openAt && closeAt && closeAt <= openAt) throw new Error("Auto-close time must be after the auto-open time");
+      const isClosed = payload.status === "closed";
+      const { error } = await supabase
+        .from("wofbi_attendance_sessions")
+        .update({
+          subject_id: payload.subject_id || null,
+          title: payload.title,
+          session_date: payload.session_date,
+          late_after: payload.late_after || null,
+          notes: payload.notes || null,
+          status: isClosed ? "closed" : "open",
+          scheduled_open_at: isClosed ? null : openAt,
+          scheduled_close_at: isClosed ? null : closeAt,
+        })
+        .eq("id", editSession.id)
+        .eq("tenant_id", tenantId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({ title: "Session updated" });
+      qc.invalidateQueries({ queryKey: ["wofbi-att-sessions"] });
+      qc.invalidateQueries({ queryKey: ["wofbi-att-record-counts"] });
+      setEditSession(null);
+      setForm(emptySessionForm());
+    },
+    onError: (e) => toast({ title: "Update failed", description: e.message, variant: "destructive" }),
   });
 
   const deleteSession = useMutation({
@@ -578,7 +633,7 @@ export default function WoFBIAttendanceTab() {
             <Button variant="outline" onClick={() => setQrOpen(true)} className="gap-2 flex-1 sm:flex-none">
               <QrCode className="h-4 w-4" /> Session QR
             </Button>
-            <Button onClick={() => setNewOpen(true)} disabled={!selectedCourseId} className="gap-2 flex-1 sm:flex-none">
+            <Button onClick={() => { setForm(emptySessionForm()); setNewOpen(true); }} disabled={!selectedCourseId} className="gap-2 flex-1 sm:flex-none">
               <Plus className="h-4 w-4" /> New session
             </Button>
           </div>
@@ -630,6 +685,9 @@ export default function WoFBIAttendanceTab() {
                       <TableCell className="text-right space-x-2 whitespace-nowrap">
                         <Button size="sm" variant="outline" onClick={() => setRosterSession(s)}>
                           Roster
+                        </Button>
+                        <Button size="sm" variant="ghost" onClick={() => openSessionEdit(s)} aria-label="Edit session">
+                          <Pencil className="h-3.5 w-3.5" />
                         </Button>
                         {s.status === "open" ? (
                           <Button size="sm" variant="ghost" onClick={() => closeSession.mutate(s.id)}>
@@ -810,10 +868,15 @@ export default function WoFBIAttendanceTab() {
         </CardContent>
       </Card>
 
-      {/* New session dialog */}
-      <Dialog open={newOpen} onOpenChange={setNewOpen}>
+      {/* New / edit session dialog */}
+      <Dialog
+        open={newOpen || !!editSession}
+        onOpenChange={(v) => {
+          if (!v) { setNewOpen(false); setEditSession(null); }
+        }}
+      >
         <DialogContent className="max-w-md w-[calc(100vw-1rem)] sm:w-auto max-h-[90vh] overflow-y-auto">
-          <TenantDialogHeader>New Attendance Session</TenantDialogHeader>
+          <TenantDialogHeader>{editSession ? "Edit Attendance Session" : "New Attendance Session"}</TenantDialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-1.5">
               <Label>Title *</Label>
@@ -872,16 +935,39 @@ export default function WoFBIAttendanceTab() {
               <Input value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
             </div>
 
+            {editSession && (
+              <div className="space-y-1.5">
+                <Label>Status</Label>
+                <Select value={form.status} onValueChange={(v) => setForm({ ...form, status: v })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="open">Open</SelectItem>
+                    <SelectItem value="closed">Closed</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">Closing a session clears any auto open/close schedule.</p>
+              </div>
+            )}
           </div>
           <DialogFooter>
-            <Button variant="ghost" onClick={() => setNewOpen(false)}>Cancel</Button>
-            <Button
-              onClick={() => createSession.mutate(form)}
-              disabled={!form.title || !form.session_date || createSession.isPending}
-            >
-              {createSession.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-              Create session
-            </Button>
+            <Button variant="ghost" onClick={() => { setNewOpen(false); setEditSession(null); }}>Cancel</Button>
+            {editSession ? (
+              <Button
+                onClick={() => updateSession.mutate(form)}
+                disabled={!form.title || !form.session_date || updateSession.isPending}
+              >
+                {updateSession.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+                Save changes
+              </Button>
+            ) : (
+              <Button
+                onClick={() => createSession.mutate(form)}
+                disabled={!form.title || !form.session_date || createSession.isPending}
+              >
+                {createSession.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+                Create session
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
