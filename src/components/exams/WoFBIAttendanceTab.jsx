@@ -935,16 +935,39 @@ export default function WoFBIAttendanceTab() {
               <Input value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
             </div>
 
+            {editSession && (
+              <div className="space-y-1.5">
+                <Label>Status</Label>
+                <Select value={form.status} onValueChange={(v) => setForm({ ...form, status: v })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="open">Open</SelectItem>
+                    <SelectItem value="closed">Closed</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">Closing a session clears any auto open/close schedule.</p>
+              </div>
+            )}
           </div>
           <DialogFooter>
-            <Button variant="ghost" onClick={() => setNewOpen(false)}>Cancel</Button>
-            <Button
-              onClick={() => createSession.mutate(form)}
-              disabled={!form.title || !form.session_date || createSession.isPending}
-            >
-              {createSession.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-              Create session
-            </Button>
+            <Button variant="ghost" onClick={() => { setNewOpen(false); setEditSession(null); }}>Cancel</Button>
+            {editSession ? (
+              <Button
+                onClick={() => updateSession.mutate(form)}
+                disabled={!form.title || !form.session_date || updateSession.isPending}
+              >
+                {updateSession.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+                Save changes
+              </Button>
+            ) : (
+              <Button
+                onClick={() => createSession.mutate(form)}
+                disabled={!form.title || !form.session_date || createSession.isPending}
+              >
+                {createSession.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+                Create session
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
