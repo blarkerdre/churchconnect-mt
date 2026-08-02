@@ -358,7 +358,15 @@ export async function buildStatementPdf(input: BuildStatementPdfInput): Promise<
   const sig = await fetchImageAsDataUrl(signatureUrl);
   if (sig) {
     try {
-      doc.addImage(sig.dataUrl, sig.format, marginX, rowY - 10, 40, 14);
+      const sp = doc.getImageProperties(sig.dataUrl);
+      const sRatio = sp?.width && sp?.height ? sp.width / sp.height : 40 / 14;
+      let sH = 14;
+      let sW = sH * sRatio;
+      if (sW > 50) {
+        sW = 50;
+        sH = sW / sRatio;
+      }
+      doc.addImage(sig.dataUrl, sig.format, marginX, rowY - 10, sW, sH);
     } catch {
       // ignore
     }
