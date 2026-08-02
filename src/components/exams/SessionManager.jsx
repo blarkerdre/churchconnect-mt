@@ -330,7 +330,7 @@ export default function SessionManager() {
           ) : (
             sessions.map((s) => {
               const meta = statusMeta(s);
-              const c = counts[s.id] || { regs: 0, attempts: 0 };
+              const c = counts[s.id] || { regs: 0, attempts: 0, reports: 0 };
               const linked = coursesFor[s.id] || [];
               const status = (s.status || "draft").toLowerCase();
               return (
@@ -341,7 +341,7 @@ export default function SessionManager() {
                     {s.auto_schedule && <Badge variant="outline" className="text-[10px]">Auto schedule</Badge>}
                   </div>
                   <div className="text-xs text-muted-foreground">
-                    {fmt(s.starts_on)} – {fmt(s.ends_on)} · {c.regs} registration{c.regs === 1 ? "" : "s"} · {c.attempts} exam attempt{c.attempts === 1 ? "" : "s"}
+                    {fmt(s.starts_on)} – {fmt(s.ends_on)} · {c.regs} registration{c.regs === 1 ? "" : "s"} · {c.attempts} exam attempt{c.attempts === 1 ? "" : "s"} · {c.reports} final report{c.reports === 1 ? "" : "s"}
                   </div>
                   <div className="flex flex-wrap gap-1">
                     {linked.length ? linked.map((n) => (
@@ -363,10 +363,23 @@ export default function SessionManager() {
                     <Button size="sm" variant="ghost" onClick={() => openEdit(s)}>
                       <Edit className="h-4 w-4 mr-1" /> Edit
                     </Button>
-                    <Button size="sm" variant="ghost" className="text-destructive" onClick={() => setDeleteTarget(s)}>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="text-destructive"
+                      disabled={c.attempts > 0}
+                      title={c.attempts > 0 ? "Sessions with exam attempts cannot be deleted" : undefined}
+                      onClick={() => setDeleteTarget(s)}
+                    >
                       <Trash2 className="h-4 w-4 mr-1" /> Delete
                     </Button>
                   </div>
+                  {c.attempts > 0 && (
+                    <p className="text-[11px] text-muted-foreground">
+                      This session has exam attempts, so it can’t be deleted — close it instead.
+                    </p>
+                  )}
+
                 </div>
               );
             })
