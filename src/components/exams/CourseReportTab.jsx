@@ -299,13 +299,11 @@ export default function CourseReportTab() {
       const sid = sessionId === NO_SESSION ? null : sessionId;
       const course = selectedCourse;
 
-      const [{ data: subjects }, { data: lecturers }, { data: template }] = await Promise.all([
+      const [{ data: subjects }, { data: lecturers }, template] = await Promise.all([
         supabase.from("exam_subjects").select("id, name, code, lecturer_id, sort_order")
           .eq("tenant_id", tenantId).eq("course_id", courseId).order("sort_order"),
         supabase.from("lecturers").select("id, name, lecturer_type").eq("tenant_id", tenantId),
-        supabase.from("certificate_templates")
-          .select("church_name, centre_name, logo_url, wofbi_logo_url, crest_image_url")
-          .eq("tenant_id", tenantId).eq("training_type", course?.name || "").maybeSingle(),
+        fetchCourseTemplate({ tenantId, course }),
       ]);
       const lecById = Object.fromEntries((lecturers || []).map((l) => [l.id, l.name]));
       const lecTypeById = Object.fromEntries(
