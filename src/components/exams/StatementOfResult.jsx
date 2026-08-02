@@ -331,8 +331,8 @@ export default function StatementOfResult({ open, onOpenChange, member, course, 
       ? `<div class="watermark">WOFBI</div>`
       : "";
 
-    const signatureHtml = signatureUrl
-      ? `<img src="${escHtml(signatureUrl)}" alt="Signature" style="height:60px;" />`
+    const signatureHtml = signatureImg
+      ? `<img src="${signatureImg.dataUrl}" alt="Signature" style="${aspectStyle(signatureImg, 60, 220)}object-fit:contain;" />`
       : `<div style="border-bottom:1px solid #333;width:180px;height:40px;"></div>`;
 
     const html = `<!DOCTYPE html><html><head><title>Statement of Result — ${escHtml(member.name)}</title>
