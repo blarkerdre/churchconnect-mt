@@ -106,22 +106,23 @@ export default function SessionManager() {
     queryKey: ["exam-session-counts", tenantId],
     enabled: !!tenantId,
     queryFn: async () => {
-      const [regs, attempts] = await Promise.all([
+      const [regs, attempts, reports] = await Promise.all([
         supabase.from("course_registrations").select("session_id").eq("tenant_id", tenantId).not("session_id", "is", null),
         supabase.from("exam_attempts").select("session_id").eq("tenant_id", tenantId).not("session_id", "is", null),
+        supabase.from("wofbi_course_reports").select("session_id").eq("tenant_id", tenantId).not("session_id", "is", null),
       ]);
       const out = {};
-      for (const r of regs.data || []) {
-        out[r.session_id] = out[r.session_id] || { regs: 0, attempts: 0 };
-        out[r.session_id].regs += 1;
-      }
-      for (const a of attempts.data || []) {
-        out[a.session_id] = out[a.session_id] || { regs: 0, attempts: 0 };
-        out[a.session_id].attempts += 1;
-      }
+      const bump = (id, key) => {
+        out[id] = out[id] || { regs: 0, attempts: 0, reports: 0 };
+        out[id][key] += 1;
+      };
+      for (const r of regs.data || []) bump(r.session_id, "regs");
+      for (const a of attempts.data || []) bump(a.session_id, "attempts");
+      for (const r of reports.data || []) bump(r.session_id, "reports");
       return out;
     },
   });
+
 
   const coursesFor = useMemo(() => {
     const map = {};
@@ -259,7 +260,16 @@ export default function SessionManager() {
       qc.invalidateQueries({ queryKey: ["exam-sessions-manage", tenantId] });
       qc.invalidateQueries({ queryKey: ["exam-session-courses", tenantId] });
     },
-    onError: (e) => toast({ title: "Could not delete session", description: e.message, variant: "destructive" }),
+    onError: (e) =>
+      toast({
+        title: "Could not delete session",
+        description:
+          e?.code === "23503" || /foreign key/i.test(e?.message || "")
+            ? "This session still has exam attempts linked to it, so it cannot be deleted. Close it instead."
+            : e?.message || "Unknown error",
+        variant: "destructive",
+      }),
+
   });
 
   const handleStart = (session) => {
