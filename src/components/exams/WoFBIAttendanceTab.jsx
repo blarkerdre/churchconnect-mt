@@ -686,6 +686,9 @@ export default function WoFBIAttendanceTab() {
                         <Button size="sm" variant="outline" onClick={() => setRosterSession(s)}>
                           Roster
                         </Button>
+                        <Button size="sm" variant="ghost" onClick={() => openSessionEdit(s)} aria-label="Edit session">
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
                         {s.status === "open" ? (
                           <Button size="sm" variant="ghost" onClick={() => closeSession.mutate(s.id)}>
                             Close
