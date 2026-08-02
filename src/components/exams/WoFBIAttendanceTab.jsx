@@ -691,6 +691,9 @@ export default function WoFBIAttendanceTab() {
                               {s.scheduled_close_at ? `Closes ${fmtLocal(s.scheduled_close_at)}` : ""}
                             </span>
                           )}
+                          {!s.scheduled_open_at && !s.scheduled_close_at && (
+                            <span className="text-[10px] text-muted-foreground whitespace-nowrap">No auto open/close schedule</span>
+                          )}
                         </div>
                       </TableCell>
 
