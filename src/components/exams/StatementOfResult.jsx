@@ -8,6 +8,8 @@ import { useTenant } from "@/contexts/TenantContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { fetchCourseTemplate } from "@/lib/certificate-template-lookup";
+import { toImageDataUrl, aspectStyle } from "@/lib/logo-data-url";
+import { useResolvedBrandingUrl } from "@/lib/branding-url";
 
 function escHtml(str) {
   return String(str ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
@@ -187,17 +189,18 @@ export function StatementPreview({ member, course, subjects, memberSubjects, ena
     (currentTenant?.name && template?.church_name && template.church_name !== currentTenant.name
       ? currentTenant.name
       : "");
-  const logoUrl =
+  const rawLogoUrl =
     template?.wofbi_logo_url ||
     template?.crest_image_url ||
     template?.logo_url ||
     currentTenant?.logo_url ||
     "";
+  const logoUrl = useResolvedBrandingUrl(rawLogoUrl);
 
   return (
     <div className="space-y-4">
       <div className="text-center space-y-1 border-b pb-3">
-        {logoUrl ? <img src={logoUrl} alt="Logo" className="h-24 mx-auto mb-1" /> : null}
+        {logoUrl ? <img src={logoUrl} alt="Logo" className="h-24 w-auto max-w-[280px] object-contain mx-auto mb-1" /> : null}
         <p className="text-2xl font-black tracking-wide">{(churchName || "").toUpperCase()}</p>
         {centreName ? <p className="text-sm font-bold uppercase tracking-wide">{centreName.toUpperCase()}</p> : null}
         <p className="text-sm font-bold">STATEMENT OF RESULT</p>
@@ -297,7 +300,14 @@ export default function StatementOfResult({ open, onOpenChange, member, course, 
   const signatoryTitle = template?.signatory_title || "";
   const signatureUrl = template?.dean_signature_url || "";
 
-  const handlePrint = () => {
+  const handlePrint = async () => {
+    const [logoImg, signatureImg] = await Promise.all([
+      toImageDataUrl(logoUrl),
+      toImageDataUrl(signatureUrl),
+    ]);
+    if (logoUrl && !logoImg) {
+      toast.warning("Logo could not be loaded — printing without it.");
+    }
     const subjectRows = rows
       .map(
         (r) => `
@@ -312,8 +322,8 @@ export default function StatementOfResult({ open, onOpenChange, member, course, 
       (b) => `<tr><td>${escHtml(b.label)}</td><td>${escHtml(b.letter)}&nbsp;&nbsp;${b.min}-${b.max}</td></tr>`
     ).join("");
 
-    const logoHtml = logoUrl
-      ? `<img src="${escHtml(logoUrl)}" alt="Logo" style="height:130px;margin:0 auto 6px;display:block;" />`
+    const logoHtml = logoImg
+      ? `<img src="${logoImg.dataUrl}" alt="Logo" style="${aspectStyle(logoImg, 130, 360)}margin:0 auto 6px;display:block;object-fit:contain;" />`
       : "";
 
     const centreLine = centreName
@@ -324,8 +334,8 @@ export default function StatementOfResult({ open, onOpenChange, member, course, 
       ? `<div class="watermark">WOFBI</div>`
       : "";
 
-    const signatureHtml = signatureUrl
-      ? `<img src="${escHtml(signatureUrl)}" alt="Signature" style="height:60px;" />`
+    const signatureHtml = signatureImg
+      ? `<img src="${signatureImg.dataUrl}" alt="Signature" style="${aspectStyle(signatureImg, 60, 220)}object-fit:contain;" />`
       : `<div style="border-bottom:1px solid #333;width:180px;height:40px;"></div>`;
 
     const html = `<!DOCTYPE html><html><head><title>Statement of Result — ${escHtml(member.name)}</title>
@@ -406,10 +416,43 @@ export default function StatementOfResult({ open, onOpenChange, member, course, 
     </body></html>`;
 
     const win = window.open("", "_blank", "width=900,height=1100");
+    if (!win) {
+      toast.error("Pop-up blocked — allow pop-ups to print.");
+      return;
+    }
     win.document.write(html);
     win.document.close();
     win.focus();
-    setTimeout(() => win.print(), 300);
+
+    const doc = win.document;
+    const pending = Array.from(doc.images || []).filter((i) => !i.complete);
+    const go = () => {
+      try {
+        win.focus();
+        win.print();
+      } catch {
+        /* user can print manually */
+      }
+    };
+    if (!pending.length) {
+      setTimeout(go, 150);
+    } else {
+      let left = pending.length;
+      const done = () => {
+        left -= 1;
+        if (left <= 0) setTimeout(go, 150);
+      };
+      pending.forEach((img) => {
+        img.addEventListener("load", done, { once: true });
+        img.addEventListener("error", done, { once: true });
+      });
+      setTimeout(() => {
+        if (left > 0) {
+          left = 0;
+          go();
+        }
+      }, 4000);
+    }
   };
 
   const handleDownloadCSV = () => {

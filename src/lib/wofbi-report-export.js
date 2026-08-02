@@ -216,7 +216,7 @@ export function buildReportHtml(report) {
   @page { size: A4; margin: 18mm; }
   body { font-family: Arial, sans-serif; font-size: 12px; color: #111; margin: 28px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .cover { text-align: center; margin-bottom: 28px; }
-  .cover .logo { max-height: 120px; margin-bottom: 8px; }
+  .cover .logo { max-height: 120px; max-width: 320px; width: auto; height: auto; object-fit: contain; margin-bottom: 8px; }
   h1 { font-size: 20px; color: #1e3a5f; margin: 4px 0; text-transform: uppercase; }
   h2 { font-size: 15px; color: #1e3a5f; margin: 18px 0 6px; text-transform: uppercase; }
   h2.plain { text-transform: none; }
