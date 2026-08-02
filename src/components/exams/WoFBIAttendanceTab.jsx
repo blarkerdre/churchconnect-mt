@@ -1055,10 +1055,12 @@ export default function WoFBIAttendanceTab() {
       </Dialog>
       {/* Edit record dialog */}
       <Dialog open={!!editRecord} onOpenChange={(v) => !v && setEditRecord(null)}>
-        <DialogContent className="max-w-md w-[calc(100vw-1rem)] sm:w-auto max-h-[90vh] overflow-y-auto">
-          <TenantDialogHeader>Edit attendance</TenantDialogHeader>
+        <DialogContent className="max-w-md w-[calc(100vw-1rem)] sm:w-auto max-h-[85vh] flex flex-col gap-0 p-0 overflow-hidden">
+          <div className="px-6 pt-6">
+            <TenantDialogHeader>Edit attendance</TenantDialogHeader>
+          </div>
           {editRecord && (
-            <div className="space-y-4 py-2">
+            <div className="space-y-4 py-2 px-6 overflow-y-auto flex-1">
               <div className="text-sm">
                 <div className="font-medium">
                   {`${editRecord.registration.members?.first_name || ""} ${editRecord.registration.members?.last_name || ""}`.trim()}
@@ -1067,6 +1069,11 @@ export default function WoFBIAttendanceTab() {
                   {editRecord.session.session_date} · {editRecord.session.title}
                 </div>
               </div>
+              {editRecord.session.status === "closed" && (
+                <p className="text-xs rounded-md bg-muted px-3 py-2 text-muted-foreground">
+                  This session is closed. As an admin you can still record or change attendance here.
+                </p>
+              )}
               <div className="space-y-1.5">
                 <Label>Status</Label>
                 <Select value={editForm.status} onValueChange={(v) => setEditForm((f) => ({ ...f, status: v }))}>
@@ -1079,14 +1086,14 @@ export default function WoFBIAttendanceTab() {
                 </Select>
               </div>
               {editForm.status !== "absent" && (
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-1.5">
                     <Label>Time in *</Label>
-                    <Input type="datetime-local" value={editForm.checked_in_at} onChange={(e) => setEditForm((f) => ({ ...f, checked_in_at: e.target.value }))} />
+                    <Input type="datetime-local" className="w-full" value={editForm.checked_in_at} onChange={(e) => setEditForm((f) => ({ ...f, checked_in_at: e.target.value }))} />
                   </div>
                   <div className="space-y-1.5">
                     <Label>Time out</Label>
-                    <Input type="datetime-local" value={editForm.checked_out_at} onChange={(e) => setEditForm((f) => ({ ...f, checked_out_at: e.target.value }))} />
+                    <Input type="datetime-local" className="w-full" value={editForm.checked_out_at} onChange={(e) => setEditForm((f) => ({ ...f, checked_out_at: e.target.value }))} />
                   </div>
                 </div>
               )}
@@ -1111,7 +1118,7 @@ export default function WoFBIAttendanceTab() {
               )}
             </div>
           )}
-          <DialogFooter>
+          <DialogFooter className="shrink-0 border-t bg-background px-6 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] gap-2">
             <Button variant="ghost" onClick={() => setEditRecord(null)}>Cancel</Button>
             <Button onClick={() => saveEdit.mutate()} disabled={saveEdit.isPending}>
               {saveEdit.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
