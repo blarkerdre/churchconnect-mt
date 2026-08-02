@@ -1,34 +1,35 @@
-## Goal
+## What I verified
 
-Make the Bible School (WOFBI) logo appear reliably — and undistorted — in the Statement of Result print/PDF and the Course Final Report print/Word download.
+- The course **Basic Certificate Course (BCC) – August Edition 2026** has **29 approved registrations**, and **all six sessions (Day 1–Day 6) have zero attendance records** — so this is not unique to Day 2, nothing has ever saved for this edition.
+- Day 2 (2026-08-04) is `closed` and, unlike Days 1 and 3–6, has **no auto-open/auto-close times**. The other days are also `closed` because their scheduled windows have already passed.
+- The database write rules allow admins to insert/update attendance regardless of whether a session is open or closed, and the Edit dialog itself has no "session closed" block — so a closed session is not, by itself, what blocks the save.
+- No database errors appear in recent logs from these attempts, and you report **no toast at all** when pressing Save. That points to the Save action never reaching the database rather than being rejected by it — the most likely cause on a 384px-wide phone is the dialog footer/date fields being overlapped by the fixed mobile bottom navigation, so the tap lands on the nav instead of the button.
 
-## What I confirmed in the code
+Because the exact failure point can't be confirmed from data alone, step 1 of the plan is to confirm it on the live page before changing behaviour.
 
-- `src/components/exams/StatementOfResult.jsx` builds print HTML with a raw remote `<img src>` and calls `win.print()` after a fixed 300 ms timer — the image usually has not loaded yet, so the logo prints blank. It also uses the raw `wofbi_logo_url` without `resolveBrandingUrl`, so legacy `church-documents` (private bucket) URLs never resolve.
-- `src/lib/wofbi-report-docx.js` `fetchLogo()` silently returns `null` on any CORS/404 failure, so the Word file ships with no logo and no warning.
-- `src/lib/wofbi-report-export.js` already waits for images before printing (good), but it prints whatever URL is stored, including expired signed URLs saved into `report.cover.logo_url`.
-- `supabase/functions/_shared/generate-statement.ts` looks up `certificate_templates` with an exact `training_type = course.name` match only (the client uses the tolerant `fetchCourseTemplate` matcher), so the server PDF frequently finds no template and no Bible School logo. `statement-pdf.ts` also draws the logo into a fixed 28×28 mm square, distorting non-square logos.
+## Plan
 
-## Changes
+### 1. Reproduce and confirm (no behaviour change)
+Open Bible School → Attendance at phone width, expand a student, tap Edit on Day 2, and capture what happens when tapping the date fields and Save. This confirms whether the tap is being intercepted, the form is silently invalid, or a request is actually being sent and rejected.
 
-### 1. Shared logo-to-data-URL helper (frontend)
-Add a small helper (e.g. `src/lib/logo-data-url.js`) that: resolves legacy private URLs via `resolveBrandingUrl`, fetches the image, and returns a base64 data URL plus its natural width/height. Data URLs remove all load-timing, CORS and expiry problems in printed documents.
+### 2. Make the Edit attendance dialog usable on mobile
+- Ensure the dialog content sits above the mobile bottom navigation (bottom padding / safe-area allowance) so the Save and Cancel buttons are reachable and not overlapped.
+- Make the footer stick to the bottom of the scrollable dialog body so Save is always visible on small screens.
+- Stack the "Time in / Time out" fields in a single column on narrow screens so the native date-time pickers get enough width.
 
-### 2. Statement of Result print
-- Resolve the logo through the new helper before opening the print window.
-- Embed the data URL in the HTML, size it by aspect ratio (fixed height, auto width) instead of a bare height.
-- Replace the 300 ms timer with a wait for the print document's images (same pattern already used in `wofbi-report-export.js`), with a safety timeout.
-- Do the same for the dean signature image, which has the identical problem.
+### 3. Never fail silently
+- Show an explicit warning toast when Save is blocked by validation ("Time in is required", "Time out must be after time in") instead of the mutation throwing with no visible feedback.
+- Surface the underlying error text on any rejected write so the reason is visible instead of nothing happening.
 
-### 3. Course Final Report print + Word
-- Convert `report.cover.logo_url` to a data URL at export time (both print and `.docx`) so Word embeds real bytes and print never races the network.
-- If the logo can't be fetched, show a toast telling the user the logo was skipped rather than failing silently.
+### 4. Clarify session state in the UI
+- Show a small "Session closed — you can still edit as an admin" note in the Edit dialog when the session is closed, so it's clear the closed badge isn't what's blocking the save.
+- On the Day 2 session row, show that it has no auto-open/auto-close schedule (the only day missing one), so scheduling gaps are visible at a glance.
 
-### 4. Server-side statement PDF
-- Port the tolerant template matching from `src/lib/certificate-template-lookup.js` into the edge function so `certificate_templates` is found despite naming drift between `exam_titles.name` and `training_type`.
-- Sign private `church-documents` URLs with the service-role client before fetching the image.
-- Preserve the logo aspect ratio in `buildStatementPdf` (read intrinsic dimensions, fit inside a max box) instead of forcing 28×28 mm.
+### 5. Re-verify
+Repeat step 1 after the fixes and confirm a Day 2 record is actually written for a test student, then remove that test record.
 
-## Verification
+## Technical notes
 
-Print a Statement of Result and the Course Final Report, and download the report as Word, for a course whose certificate template has a WOFBI logo — confirm the logo appears with correct proportions in all three, plus in the emailed/stored server-generated statement PDF.
+- All work is in `src/components/exams/WoFBIAttendanceTab.jsx` — the `saveEdit` mutation (validation/toasts) and the Edit-attendance `Dialog` markup (footer, layout, bottom-nav clearance).
+- No database, policy, or edge-function changes are proposed; existing admin write policies on `wofbi_attendance_records` already permit these saves.
+- No change to how attendance is counted or reported.
