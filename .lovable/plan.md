@@ -1,30 +1,34 @@
 ## Goal
-Let admins edit an existing Bible School attendance session instead of only creating, closing/reopening, or deleting it.
 
-## Where
-`src/components/exams/WoFBIAttendanceTab.jsx` — the Bible School → Attendance tab. It is already gated to admins only (non-admins get an access message), and the `wofbi_attendance_sessions` table already has an admin-only write policy, so no database or policy changes are needed.
+Make the Bible School (WOFBI) logo appear reliably — and undistorted — in the Statement of Result print/PDF and the Course Final Report print/Word download.
 
-## What changes
+## What I confirmed in the code
 
-1. **Edit button per session row**
-   Add a pencil "Edit" action in the Actions column of the sessions table, next to Roster / Close-Reopen / Delete.
+- `src/components/exams/StatementOfResult.jsx` builds print HTML with a raw remote `<img src>` and calls `win.print()` after a fixed 300 ms timer — the image usually has not loaded yet, so the logo prints blank. It also uses the raw `wofbi_logo_url` without `resolveBrandingUrl`, so legacy `church-documents` (private bucket) URLs never resolve.
+- `src/lib/wofbi-report-docx.js` `fetchLogo()` silently returns `null` on any CORS/404 failure, so the Word file ships with no logo and no warning.
+- `src/lib/wofbi-report-export.js` already waits for images before printing (good), but it prints whatever URL is stored, including expired signed URLs saved into `report.cover.logo_url`.
+- `supabase/functions/_shared/generate-statement.ts` looks up `certificate_templates` with an exact `training_type = course.name` match only (the client uses the tolerant `fetchCourseTemplate` matcher), so the server PDF frequently finds no template and no Bible School logo. `statement-pdf.ts` also draws the logo into a fixed 28×28 mm square, distorting non-square logos.
 
-2. **Reuse the session dialog for edit mode**
-   Turn the existing "New Attendance Session" dialog into a shared create/edit dialog:
-   - Header becomes "Edit Attendance Session" and the primary button becomes "Save changes" when editing.
-   - Fields pre-fill from the selected session.
-   - Same validation: Title and Date required.
+## Changes
 
-3. **Editable fields**
-   - Title
-   - Date
-   - Notes
-   - Status (Open / Closed) — added as a select in the dialog, so status can also be changed from the edit form as well as the existing quick Close/Reopen buttons.
-   - Late-after time, subject, and auto-open/auto-close remain visible and editable too, since they are already part of the same form and are session metadata rather than audience scoping. (Say the word if you want those locked after creation.)
+### 1. Shared logo-to-data-URL helper (frontend)
+Add a small helper (e.g. `src/lib/logo-data-url.js`) that: resolves legacy private URLs via `resolveBrandingUrl`, fetches the image, and returns a base64 data URL plus its natural width/height. Data URLs remove all load-timing, CORS and expiry problems in printed documents.
 
-4. **Save behaviour**
-   New `updateSession` mutation issuing an update on `wofbi_attendance_sessions` filtered by both `id` and `tenant_id`, then invalidating the session and record-count queries and showing a success toast. Switching status to Closed clears any scheduled open/close timestamps, matching what the existing Close action does.
+### 2. Statement of Result print
+- Resolve the logo through the new helper before opening the print window.
+- Embed the data URL in the HTML, size it by aspect ratio (fixed height, auto width) instead of a bare height.
+- Replace the 300 ms timer with a wait for the print document's images (same pattern already used in `wofbi-report-export.js`), with a safety timeout.
+- Do the same for the dean signature image, which has the identical problem.
 
-## Notes
-- Existing check-in records are untouched by an edit; changing the date only changes the session label/date shown in reports and CSV exports.
-- No migration required.
+### 3. Course Final Report print + Word
+- Convert `report.cover.logo_url` to a data URL at export time (both print and `.docx`) so Word embeds real bytes and print never races the network.
+- If the logo can't be fetched, show a toast telling the user the logo was skipped rather than failing silently.
+
+### 4. Server-side statement PDF
+- Port the tolerant template matching from `src/lib/certificate-template-lookup.js` into the edge function so `certificate_templates` is found despite naming drift between `exam_titles.name` and `training_type`.
+- Sign private `church-documents` URLs with the service-role client before fetching the image.
+- Preserve the logo aspect ratio in `buildStatementPdf` (read intrinsic dimensions, fit inside a max box) instead of forcing 28×28 mm.
+
+## Verification
+
+Print a Statement of Result and the Course Final Report, and download the report as Word, for a course whose certificate template has a WOFBI logo — confirm the logo appears with correct proportions in all three, plus in the emailed/stored server-generated statement PDF.

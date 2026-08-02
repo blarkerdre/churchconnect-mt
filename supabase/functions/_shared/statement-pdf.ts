@@ -219,12 +219,20 @@ export async function buildStatementPdf(input: BuildStatementPdfInput): Promise<
 
   let y = 18;
 
-  // Logo
+  // Logo — fit inside a 60 x 28 mm box, preserving aspect ratio
   const logo = await fetchImageAsDataUrl(logoUrl);
   if (logo) {
     try {
-      const logoH = 28;
-      const logoW = 28;
+      const props = doc.getImageProperties(logo.dataUrl);
+      const maxW = 60;
+      const maxH = 28;
+      const ratio = props?.width && props?.height ? props.width / props.height : 1;
+      let logoH = maxH;
+      let logoW = logoH * ratio;
+      if (logoW > maxW) {
+        logoW = maxW;
+        logoH = logoW / ratio;
+      }
       doc.addImage(logo.dataUrl, logo.format, pageWidth / 2 - logoW / 2, y, logoW, logoH);
       y += logoH + 4;
     } catch {
@@ -350,7 +358,15 @@ export async function buildStatementPdf(input: BuildStatementPdfInput): Promise<
   const sig = await fetchImageAsDataUrl(signatureUrl);
   if (sig) {
     try {
-      doc.addImage(sig.dataUrl, sig.format, marginX, rowY - 10, 40, 14);
+      const sp = doc.getImageProperties(sig.dataUrl);
+      const sRatio = sp?.width && sp?.height ? sp.width / sp.height : 40 / 14;
+      let sH = 14;
+      let sW = sH * sRatio;
+      if (sW > 50) {
+        sW = 50;
+        sH = sW / sRatio;
+      }
+      doc.addImage(sig.dataUrl, sig.format, marginX, rowY - 10, sW, sH);
     } catch {
       // ignore
     }

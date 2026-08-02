@@ -125,6 +125,27 @@ function imageParagraph(relId, widthEmu, heightEmu) {
   return `<w:p><w:pPr><w:jc w:val="center"/><w:spacing w:after="120"/></w:pPr><w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0"><wp:extent cx="${widthEmu}" cy="${heightEmu}"/><wp:docPr id="1" name="Logo" descr="Logo"/><a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:nvPicPr><pic:cNvPr id="1" name="Logo"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="${relId}"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${widthEmu}" cy="${heightEmu}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p>`;
 }
 
+/** Natural pixel size of an image buffer (0x0 when it can't be decoded). */
+function measureImage(buf, mime) {
+  return new Promise((resolve) => {
+    try {
+      const url = URL.createObjectURL(new Blob([buf], { type: mime }));
+      const img = new Image();
+      img.onload = () => {
+        URL.revokeObjectURL(url);
+        resolve({ width: img.naturalWidth || 0, height: img.naturalHeight || 0 });
+      };
+      img.onerror = () => {
+        URL.revokeObjectURL(url);
+        resolve({ width: 0, height: 0 });
+      };
+      img.src = url;
+    } catch {
+      resolve({ width: 0, height: 0 });
+    }
+  });
+}
+
 async function fetchLogo(url) {
   if (!url) return null;
   try {
@@ -138,7 +159,8 @@ async function fetchLogo(url) {
     else if (type.includes("gif")) ext = "gif";
     else if (/\.jpe?g(\?|$)/i.test(url)) ext = "jpeg";
     if (type.includes("svg") || /\.svg(\?|$)/i.test(url)) return null; // Word can't inline SVG reliably
-    return { data: buf, ext };
+    const dims = await measureImage(buf, type || `image/${ext}`);
+    return { data: buf, ext, ...dims };
   } catch {
     return null;
   }
@@ -156,12 +178,30 @@ const RELS_XML = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>`;
 
 /** Builds the report body XML (everything inside <w:body> except sectPr). */
-function buildBody(report, logoRelId) {
+/** Fit the logo inside a max box (EMU) keeping its aspect ratio. */
+function logoExtent(logo) {
+  const MAX_W = 1600200; // ~1.75"
+  const MAX_H = 1097280; // ~1.2"
+  if (!logo?.width || !logo?.height) return [MAX_W, Math.round(MAX_W * 0.6)];
+  const ratio = logo.width / logo.height;
+  let h = MAX_H;
+  let w = h * ratio;
+  if (w > MAX_W) {
+    w = MAX_W;
+    h = w / ratio;
+  }
+  return [Math.round(w), Math.round(h)];
+}
+
+function buildBody(report, logoRelId, logo) {
   const c = report.cover || {};
   const edition = c.edition ? `${c.edition} ` : "";
   const out = [];
 
-  if (logoRelId) out.push(imageParagraph(logoRelId, 1600200, 1600200 * 0.6));
+  if (logoRelId) {
+    const [lw, lh] = logoExtent(logo);
+    out.push(imageParagraph(logoRelId, lw, lh));
+  }
   out.push(heading(c.institute_name || "", 1));
   out.push(para(c.centre_name || c.church_name || "", { bold: true, size: 28, align: "center" }));
   out.push(
@@ -343,7 +383,7 @@ export async function buildReportDocx(report) {
   zip.folder("_rels").file(".rels", RELS_XML);
   const word = zip.folder("word");
   word.file("styles.xml", STYLES_XML);
-  word.file("document.xml", documentXml(buildBody(report, logoRelId)));
+  word.file("document.xml", documentXml(buildBody(report, logoRelId, logo)));
 
   const rels = [
     '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>',
