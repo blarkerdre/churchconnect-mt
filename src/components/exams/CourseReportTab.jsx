@@ -248,8 +248,27 @@ export default function CourseReportTab() {
     cover: { ...report.cover, logo_url: exportLogoUrl },
   };
 
+  // Inline the logo as a data URL so print never races the network and Word
+  // embeds real bytes (remote/expiring URLs silently drop out otherwise).
+  const withInlineLogo = async () => {
+    if (!exportLogoUrl) return reportForExport;
+    const img = await toImageDataUrl(exportLogoUrl);
+    if (!img) {
+      toast({
+        title: "Logo could not be loaded",
+        description: "The document was produced without the Bible School logo.",
+      });
+      return reportForExport;
+    }
+    return { ...reportForExport, cover: { ...reportForExport.cover, logo_url: img.dataUrl } };
+  };
+
+  const handlePrintReport = async () => {
+    printReport(await withInlineLogo());
+  };
+
   const handleWordDownload = async () => {
-    const result = await downloadReportDoc(reportForExport);
+    const result = await downloadReportDoc(await withInlineLogo());
     if (result === "opened") {
 
 
