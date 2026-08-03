@@ -14,7 +14,6 @@ import { Plus, Trash2, User, KeyRound, ShieldCheck, ShieldAlert, ArrowUpCircle }
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { format } from "date-fns";
-import { useConfirmDelete } from "@/components/shared/DeleteConfirmProvider";
 
 
 
@@ -207,7 +206,7 @@ export default function PreteensSection({ memberId }) {
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
   const [editPreteen, setEditPreteen] = useState(null);
-  const confirmDelete = useConfirmDelete();
+  const [deletePreteen, setDeletePreteen] = useState(null);
   const [promotePreteen, setPromotePreteen] = useState(null);
 
   const { data: preteens = [], refetch } = useQuery({
@@ -229,7 +228,7 @@ export default function PreteensSection({ memberId }) {
       const { error } = await supabase.from("preteens").delete().eq("id", t.id).eq("tenant_id", tenantId);
       if (error) throw error;
     },
-    onSuccess: () => { toast.success("Preteen removed"); qc.invalidateQueries({ queryKey: ["my-preteens"] }); },
+    onSuccess: () => { toast.success("Preteen removed"); setDeletePreteen(null); qc.invalidateQueries({ queryKey: ["my-preteens"] }); },
     onError: (e) => toast.error(e.message),
   });
 
@@ -323,12 +322,7 @@ export default function PreteensSection({ memberId }) {
               <div className="flex gap-1 flex-wrap justify-end">
                 <Button size="sm" variant="outline" onClick={() => { setEditPreteen(t); setOpen(true); }}>Edit</Button>
                 <Button size="sm" variant="outline" onClick={() => setPromotePreteen(t)}><ArrowUpCircle className="h-4 w-4 mr-1" /> Promote to teen</Button>
-                <Button size="sm" variant="destructive" onClick={() => confirmDelete({
-                  title: "Delete preteen",
-                  description: <>Permanently delete <strong>{t.first_name} {t.last_name}</strong>? This also removes their attendance records. This cannot be undone.</>,
-                  confirmLabel: "Delete preteen",
-                  onConfirm: () => removePreteen.mutateAsync(t),
-                })}><Trash2 className="h-4 w-4" /></Button>
+                <Button size="sm" variant="destructive" onClick={() => setDeletePreteen(t)}><Trash2 className="h-4 w-4" /></Button>
               </div>
             </CardContent>
           </Card>
@@ -336,6 +330,23 @@ export default function PreteensSection({ memberId }) {
       )}
 
       {memberId && <PreteenForm open={open} onOpenChange={setOpen} preteen={editPreteen} memberId={memberId} onSaved={refetch} />}
+
+      <AlertDialog open={!!deletePreteen} onOpenChange={(o) => !o && setDeletePreteen(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete {deletePreteen?.first_name} {deletePreteen?.last_name}?</AlertDialogTitle>
+            <AlertDialogDescription>This also removes their attendance records.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={(e) => { e.preventDefault(); removePreteen.mutate(deletePreteen); }}
+              disabled={removePreteen.isPending}
+            >Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <AlertDialog open={!!promotePreteen} onOpenChange={(o) => !o && setPromotePreteen(null)}>
         <AlertDialogContent>

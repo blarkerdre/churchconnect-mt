@@ -13,7 +13,6 @@ import { useAuth } from "@/hooks/useAuth";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
 import { toast } from "sonner";
 import { logAudit } from "@/lib/audit";
-import { useConfirmDelete } from "@/components/shared/DeleteConfirmProvider";
 
 const statusBadge = {
   Pending: "bg-accent/10 text-accent",
@@ -25,7 +24,6 @@ export default function UnitTaskDetailPanel({ open, onOpenChange, task, canManag
   const { user } = useAuth();
   const { tenantId } = useTenantQuery();
   const qc = useQueryClient();
-  const confirmDelete = useConfirmDelete();
   const [comment, setComment] = useState("");
   const [posting, setPosting] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
@@ -153,20 +151,13 @@ export default function UnitTaskDetailPanel({ open, onOpenChange, task, canManag
     onOpenChange(false);
   };
 
-  const doDeleteTask = async () => {
+  const deleteTask = async () => {
+    if (!confirm("Delete this task and all its assignments? This cannot be undone.")) return;
     const { error } = await supabase.from("unit_tasks").delete().eq("id", taskId).eq("tenant_id", tenantId);
     if (error) return toast.error(error.message);
     toast.success("Task deleted");
     onChanged?.();
     onOpenChange(false);
-  };
-
-  const deleteTask = () => {
-    confirmDelete({
-      title: "Delete task",
-      description: `Permanently delete "${task?.title || "this task"}" and all its assignments? This cannot be undone.`,
-      onConfirm: doDeleteTask,
-    });
   };
 
   const togglePick = (id) => {
@@ -214,7 +205,8 @@ export default function UnitTaskDetailPanel({ open, onOpenChange, task, canManag
     }
   };
 
-  const doRemoveAssignee = async (a) => {
+  const removeAssignee = async (a) => {
+    if (a.status !== "Pending" && !confirm(`Remove ${a.members ? `${a.members.first_name} ${a.members.last_name}` : "this assignee"}? Their progress will be lost.`)) return;
     const { error } = await supabase
       .from("unit_task_assignments")
       .delete()
@@ -225,17 +217,6 @@ export default function UnitTaskDetailPanel({ open, onOpenChange, task, canManag
     toast.success("Assignee removed");
     refetchA();
     qc.invalidateQueries({ queryKey: ["leading-tasks"] });
-  };
-
-  const removeAssignee = (a) => {
-    const name = a.members ? `${a.members.first_name} ${a.members.last_name}` : "this assignee";
-    confirmDelete({
-      title: "Remove assignee",
-      description: a.status !== "Pending"
-        ? `Remove ${name}? Their progress will be lost.`
-        : `Remove ${name} from this task?`,
-      onConfirm: () => doRemoveAssignee(a),
-    });
   };
 
   if (!task) return null;
