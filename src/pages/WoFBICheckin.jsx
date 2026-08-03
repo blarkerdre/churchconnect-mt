@@ -30,6 +30,8 @@ export default function WoFBICheckin() {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
   const [state, setState] = useState({ loading: true, result: null, error: null });
+  const [confirm, setConfirm] = useState(null);
+  const [confirming, setConfirming] = useState(false);
 
   useEffect(() => {
     if (authLoading) return;
@@ -46,6 +48,11 @@ export default function WoFBICheckin() {
         return;
       }
       if (data?.ok) {
+        if (data.action === "confirm_checkout") {
+          setConfirm(data);
+          setState({ loading: false, result: null, error: null });
+          return;
+        }
         setState({ loading: false, result: data, error: null });
       } else {
         setState({ loading: false, result: null, error: data?.error || "unknown" });
@@ -53,6 +60,28 @@ export default function WoFBICheckin() {
     })();
     return () => { active = false; };
   }, [token, user, authLoading]);
+
+  const handleConfirmCheckout = async () => {
+    setConfirming(true);
+    const { data, error } = await supabase.rpc("wofbi_checkin", {
+      _qr_token: token,
+      _confirm_checkout: true,
+    });
+    setConfirming(false);
+    if (error) {
+      setState({ loading: false, result: null, error: error.message });
+      setConfirm(null);
+      return;
+    }
+    if (data?.ok) {
+      setConfirm(null);
+      setState({ loading: false, result: data, error: null });
+    } else {
+      setConfirm(null);
+      setState({ loading: false, result: null, error: data?.error || "unknown" });
+    }
+  };
+
 
   const [magicEmail, setMagicEmail] = useState("");
   const [magicSending, setMagicSending] = useState(false);
