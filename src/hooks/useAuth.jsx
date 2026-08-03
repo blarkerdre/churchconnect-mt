@@ -1,5 +1,7 @@
 import { createContext, useContext, useEffect, useState, useCallback, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { isMfaChallengeRequired, clearMfaPassed } from "@/hooks/useMfa";
+
 
 const noop = async () => ({ data: null, error: new Error("Auth not initialized") });
 const SESSION_RESTORE_TIMEOUT_MS = 6000;
@@ -21,6 +23,8 @@ const AuthContext = createContext({
   isTenantOwner: false, isTenantAdmin: false,
   refreshUser: () => {},
   refetchMemberForTenant: async () => {},
+  mfaRequired: false,
+  refreshMfaStatus: async () => {},
 });
 
 export function AuthProvider({ children }) {
@@ -33,6 +37,13 @@ export function AuthProvider({ children }) {
   const [tenantMemberships, setTenantMemberships] = useState([]);
   const [loading, setLoading] = useState(true);
   const [dataLoaded, setDataLoaded] = useState(false);
+  const [mfaRequired, setMfaRequired] = useState(false);
+
+  const refreshMfaStatus = useCallback(async () => {
+    const required = await isMfaChallengeRequired();
+    setMfaRequired(required);
+    return required;
+  }, []);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -42,6 +53,7 @@ export function AuthProvider({ children }) {
           setLoading(false);
           setDataLoaded(false);
           setTimeout(() => fetchUserData(session.user.id, session.user.email), 0);
+          setTimeout(() => { refreshMfaStatus(); }, 0);
         } else {
           setProfile(null);
           setRoles([]);
@@ -51,9 +63,11 @@ export function AuthProvider({ children }) {
           setTenantMemberships([]);
           setLoading(false);
           setDataLoaded(true);
+          setMfaRequired(false);
         }
       }
     );
+
 
     withTimeout(
       supabase.auth.getSession(),
@@ -66,9 +80,11 @@ export function AuthProvider({ children }) {
         if (session?.user) {
           setDataLoaded(false);
           fetchUserData(session.user.id, session.user.email);
+          refreshMfaStatus();
         } else {
           setDataLoaded(true);
         }
+
       })
       .catch((err) => {
         console.warn("Unable to restore auth session:", err?.message || err);
@@ -191,6 +207,7 @@ export function AuthProvider({ children }) {
 
   const signOut = async () => {
     await supabase.auth.signOut();
+    clearMfaPassed();
     setUser(null);
     setProfile(null);
     setRoles([]);
@@ -198,7 +215,9 @@ export function AuthProvider({ children }) {
      setMyMember(null);
      setLeaderCentres([]);
      setTenantMemberships([]);
+     setMfaRequired(false);
   };
+
 
   const resetPassword = async (email, tenantSlug) => {
     const redirectTo = tenantSlug
@@ -242,9 +261,11 @@ export function AuthProvider({ children }) {
     isTenantOwner, isTenantAdmin,
     refreshUser,
     refetchMemberForTenant,
+    mfaRequired, refreshMfaStatus,
   }), [user, profile, roles, loading, dataLoaded, leaderUnits, leaderCentres, myUnits, myMember, tenantMemberships,
        isAdmin, isUnitLeader, isWSFLeader, isMember, isReportsOfficer, isReadOnly, isTenantOwner, isTenantAdmin,
-       refreshUser, refetchMemberForTenant]);
+       refreshUser, refetchMemberForTenant, mfaRequired, refreshMfaStatus]);
+
 
 
   return (

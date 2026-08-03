@@ -7,13 +7,14 @@ import { ShieldCheck, KeyRound, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { listTotpFactors, startTotpEnrolment, verifyTotp, cleanupUnverifiedFactors } from "@/hooks/useMfa";
 
 const SNOOZE_DAYS = 7;
 
 export default function MFASetupDialog() {
-  const { user } = useAuth();
+  const { user, mfaRequired } = useAuth();
   const [open, setOpen] = useState(false);
-  const [step, setStep] = useState("intro"); // intro | enrolling | verify | done
+  const [step, setStep] = useState("intro"); // intro | verify | done
   const [factorId, setFactorId] = useState(null);
   const [qr, setQr] = useState(null);
   const [secret, setSecret] = useState(null);
@@ -21,13 +22,12 @@ export default function MFASetupDialog() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user || mfaRequired) return;
     (async () => {
       try {
-        // Check existing factors
-        const { data: factors } = await supabase.auth.mfa.listFactors();
-        const hasVerified = factors?.all?.some((f) => f.status === "verified");
-        if (hasVerified) return;
+        // Already protected?
+        const { verified } = await listTotpFactors();
+        if (verified.length > 0) return;
 
         // Check snooze
         const { data: profile } = await supabase.from("profiles")
@@ -41,16 +41,15 @@ export default function MFASetupDialog() {
         setOpen(true);
       } catch (e) { /* silent */ }
     })();
-  }, [user]);
+  }, [user, mfaRequired]);
 
   const startEnrol = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase.auth.mfa.enroll({ factorType: "totp" });
-      if (error) throw error;
-      setFactorId(data.id);
-      setQr(data.totp.qr_code);
-      setSecret(data.totp.secret);
+      const res = await startTotpEnrolment();
+      setFactorId(res.factorId);
+      setQr(res.qr);
+      setSecret(res.secret);
       setStep("verify");
     } catch (e) {
       toast({ title: "Could not start MFA setup", description: e.message, variant: "destructive" });
@@ -60,12 +59,7 @@ export default function MFASetupDialog() {
   const verify = async () => {
     setLoading(true);
     try {
-      const { data: challenge, error: cErr } = await supabase.auth.mfa.challenge({ factorId });
-      if (cErr) throw cErr;
-      const { error: vErr } = await supabase.auth.mfa.verify({
-        factorId, challengeId: challenge.id, code: code.trim(),
-      });
-      if (vErr) throw vErr;
+      await verifyTotp(factorId, code);
       toast({ title: "MFA enabled" });
       setStep("done");
       setTimeout(() => setOpen(false), 1500);
@@ -74,17 +68,19 @@ export default function MFASetupDialog() {
     } finally { setLoading(false); }
   };
 
+
   const snooze = async () => {
     const until = new Date(Date.now() + SNOOZE_DAYS * 86400_000).toISOString();
     try {
       await supabase.from("profiles").update({ mfa_prompt_snoozed_until: until }).eq("user_id", user.id);
     } catch { /* ignore */ }
+    if (step === "verify") await cleanupUnverifiedFactors();
     setOpen(false);
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent className="max-w-md">
+    <Dialog open={open} onOpenChange={(next) => { if (!next) snooze(); else setOpen(true); }}>
+      <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto pb-24 sm:pb-6">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <ShieldCheck className="h-5 w-5 text-primary" /> Protect your account
@@ -97,7 +93,8 @@ export default function MFASetupDialog() {
         {step === "intro" && (
           <div className="space-y-3 text-sm">
             <p>You'll need an authenticator app (Google Authenticator, 1Password, Authy, etc.).</p>
-            <p className="text-muted-foreground">Optional — you can enable it later from settings.</p>
+            <p className="text-muted-foreground">Optional — you can also turn it on later from My Profile.</p>
+
           </div>
         )}
 
