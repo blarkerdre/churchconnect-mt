@@ -1,5 +1,7 @@
 import { createContext, useContext, useEffect, useState, useCallback, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { isMfaChallengeRequired, clearMfaPassed } from "@/hooks/useMfa";
+
 
 const noop = async () => ({ data: null, error: new Error("Auth not initialized") });
 const SESSION_RESTORE_TIMEOUT_MS = 6000;
