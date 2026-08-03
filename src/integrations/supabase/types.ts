@@ -7910,7 +7910,12 @@ export type Database = {
         Args: { _tenant_id: string; _unit_name: string; _user_id: string }
         Returns: boolean
       }
-      wofbi_checkin: { Args: { _qr_token: string }; Returns: Json }
+      wofbi_checkin:
+        | { Args: { _qr_token: string }; Returns: Json }
+        | {
+            Args: { _confirm_checkout?: boolean; _qr_token: string }
+            Returns: Json
+          }
       write_audit: {
         Args: {
           _action: string
