@@ -337,6 +337,7 @@ function ExamManagementInner() {
             </h1>
             <p className="text-sm text-muted-foreground mt-1">Record and review lecturer QC checks.</p>
           </div>
+          <SessionFilterBar />
           <QcReport />
         </div>
       );
