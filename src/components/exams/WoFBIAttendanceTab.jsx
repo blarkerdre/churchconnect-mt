@@ -671,6 +671,7 @@ export default function WoFBIAttendanceTab() {
               <TableBody>
                 {sessions.map((s) => {
                   const c = recordsBySession[s.id] || { present: 0, late: 0 };
+                  const todayStr = new Date().toISOString().slice(0, 10);
                   return (
                     <TableRow key={s.id}>
                       <TableCell className="whitespace-nowrap">{s.session_date}</TableCell>
