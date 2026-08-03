@@ -10,12 +10,10 @@ import { Switch } from "@/components/ui/switch";
 import { Loader2, UserPlus, CheckCircle2, XCircle, Trash2 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
-import { useConfirmDelete } from "@/components/shared/DeleteConfirmProvider";
 
 export default function RegistrationsDialog({ open, onOpenChange, event }) {
   const { user } = useAuth();
   const { tenantId, withTenant } = useTenantQuery();
-  const confirmDelete = useConfirmDelete();
   const [newName, setNewName] = useState("");
   const [newEmail, setNewEmail] = useState("");
   const [adding, setAdding] = useState(false);
@@ -132,11 +130,7 @@ export default function RegistrationsDialog({ open, onOpenChange, event }) {
                         onCheckedChange={v => updateMutation.mutate({ id: r.id, data: { status: v ? "attended" : "registered" } })}
                       />
                     </div>
-                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => confirmDelete({
-                      title: "Delete registration",
-                      description: `Permanently delete the registration for "${r.guest_name || "this guest"}"? This cannot be undone.`,
-                      onConfirm: () => deleteMutation.mutate(r.id),
-                    })}>
+                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => deleteMutation.mutate(r.id)}>
                       <Trash2 className="h-3.5 w-3.5 text-destructive" />
                     </Button>
                   </div>

@@ -7,8 +7,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Folder, FolderOpen, Inbox, Layers, Plus, Pencil, Trash2, Check, X } from "lucide-react";
 import { toast } from "sonner";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel,
+  AlertDialogContent, AlertDialogDescription, AlertDialogFooter,
+  AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
-import { useConfirmDelete } from "@/components/shared/DeleteConfirmProvider";
 
 export default function SermonFolderSidebar({
   folders,
@@ -19,11 +23,11 @@ export default function SermonFolderSidebar({
   const { user } = useAuth();
   const { tenantId } = useTenantQuery();
   const queryClient = useQueryClient();
-  const confirmDelete = useConfirmDelete();
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState("");
   const [editingId, setEditingId] = useState(null);
   const [editName, setEditName] = useState("");
+  const [deleteFolder, setDeleteFolder] = useState(null);
 
   const refresh = () => {
     queryClient.invalidateQueries({ queryKey: ["sermon_note_folders"] });
@@ -75,29 +79,22 @@ export default function SermonFolderSidebar({
     refresh();
   };
 
-  const performDeleteFolder = async (folder) => {
+  const handleDelete = async () => {
+    if (!deleteFolder) return;
     const { error } = await supabase
       .from("sermon_note_folders")
       .delete()
-      .eq("id", folder.id)
+      .eq("id", deleteFolder.id)
       .eq("user_id", user.id)
       .eq("tenant_id", tenantId);
     if (error) {
       toast.error("Failed to delete folder.");
     } else {
       toast.success("Folder deleted. Notes moved to Unfiled.");
-      if (selectedFolder === folder.id) onSelectFolder("all");
+      if (selectedFolder === deleteFolder.id) onSelectFolder("all");
       refresh();
     }
-  };
-
-  const handleDelete = (folder) => {
-    confirmDelete({
-      title: "Delete folder",
-      description: `The folder "${folder.name}" will be removed. Any notes inside will be moved to Unfiled — your notes are not deleted.`,
-      confirmLabel: "Delete folder",
-      onConfirm: () => performDeleteFolder(folder),
-    });
+    setDeleteFolder(null);
   };
 
   const item = (key, label, Icon, count, onClick, extras = null) => (
@@ -168,7 +165,7 @@ export default function SermonFolderSidebar({
               size="icon"
               variant="ghost"
               className="h-6 w-6 text-destructive"
-              onClick={(e) => { e.stopPropagation(); handleDelete(f); }}
+              onClick={(e) => { e.stopPropagation(); setDeleteFolder(f); }}
             >
               <Trash2 className="h-3 w-3" />
             </Button>
@@ -207,6 +204,21 @@ export default function SermonFolderSidebar({
           <Plus className="h-4 w-4 mr-1.5" /> New Folder
         </Button>
       )}
+
+      <AlertDialog open={!!deleteFolder} onOpenChange={(o) => !o && setDeleteFolder(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete folder "{deleteFolder?.name}"?</AlertDialogTitle>
+            <AlertDialogDescription>
+              The folder will be removed. Any notes inside will be moved to <strong>Unfiled</strong> — your notes are not deleted.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete}>Delete folder</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </aside>
   );
 }

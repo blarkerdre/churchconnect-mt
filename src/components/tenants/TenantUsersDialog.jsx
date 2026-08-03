@@ -25,7 +25,6 @@ import { UserPlus, Trash2, Shield, Crown, User, Mail, Clock, CheckCircle2, XCirc
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
-import { useConfirmDelete } from "@/components/shared/DeleteConfirmProvider";
 
 const ROLE_CONFIG = {
   owner: { label: "Owner", icon: Crown, color: "text-amber-600 bg-amber-50 border-amber-200" },
@@ -73,7 +72,6 @@ function describeAction(action) {
 
 export default function TenantUsersDialog({ tenant, open, onOpenChange }) {
   const { toast } = useToast();
-  const confirmDelete = useConfirmDelete();
   const { user, roles: userRoles, tenantMemberships } = useAuth();
   const isSuperAdmin = userRoles.includes("super_admin");
   const isOwnerOfThisTenant = (tenantMemberships || []).some(
@@ -226,16 +224,6 @@ export default function TenantUsersDialog({ tenant, open, onOpenChange }) {
   };
 
   const requestAction = (action) => {
-    if (action.type === "remove") {
-      const name = action.membership?.profiles?.full_name || action.membership?.profiles?.email || "this user";
-      confirmDelete({
-        title: `Remove ${name} from this church?`,
-        description: "They will immediately lose all access to this church's data and dashboards.",
-        confirmLabel: "Remove",
-        onConfirm: () => removeMutation.mutate(action.membership.id),
-      });
-      return;
-    }
     setConfirmToken("");
     setPendingAction(action);
   };

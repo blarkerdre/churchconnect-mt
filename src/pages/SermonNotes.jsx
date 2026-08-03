@@ -20,7 +20,11 @@ import SermonNoteFormDialog from "@/components/sermons/SermonNoteFormDialog";
 import SermonFolderSidebar from "@/components/sermons/SermonFolderSidebar";
 import { cn } from "@/lib/utils";
 import ModuleTour from "@/components/tour/ModuleTour";
-import { useConfirmDelete } from "@/components/shared/DeleteConfirmProvider";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel,
+  AlertDialogContent, AlertDialogDescription, AlertDialogFooter,
+  AlertDialogHeader, AlertDialogTitle
+} from "@/components/ui/alert-dialog";
 
 const SORT_OPTIONS = [
   { value: "date_desc", label: "Date (newest)" },
@@ -33,15 +37,16 @@ export default function SermonNotes() {
   const { user } = useAuth();
   const { tenantId } = useTenantQuery();
   const queryClient = useQueryClient();
-  const confirmDelete = useConfirmDelete();
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState("date_desc");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [selectedFolder, setSelectedFolder] = useState("all");
   const [formOpen, setFormOpen] = useState(false);
   const [editNote, setEditNote] = useState(null);
+  const [deleteId, setDeleteId] = useState(null);
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState(() => new Set());
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
 
   const { data: notes = [], isLoading } = useQuery({
     queryKey: ["sermon_notes", user?.id, tenantId],
@@ -127,23 +132,16 @@ export default function SermonNotes() {
     return sorted;
   }, [notes, search, sortBy, categoryFilter, selectedFolder]);
 
-  const performDeleteNote = async (noteId) => {
-    const { error } = await supabase.from("sermon_notes").delete().eq("id", noteId).eq("user_id", user.id);
+  const handleDelete = async () => {
+    if (!deleteId) return;
+    const { error } = await supabase.from("sermon_notes").delete().eq("id", deleteId).eq("user_id", user.id);
     if (error) {
       toast.error("Failed to delete note.");
     } else {
       toast.success("Note deleted.");
       queryClient.invalidateQueries({ queryKey: ["sermon_notes"] });
     }
-  };
-
-  const handleDelete = (note) => {
-    confirmDelete({
-      title: "Delete note",
-      description: `Permanently delete "${note.title || "Untitled"}"? This cannot be undone.`,
-      confirmLabel: "Delete note",
-      onConfirm: () => performDeleteNote(note.id),
-    });
+    setDeleteId(null);
   };
 
   const handleMoveToFolder = async (noteId, folderId) => {
@@ -203,9 +201,9 @@ export default function SermonNotes() {
     exitSelection();
   };
 
-  const performBulkDelete = async () => {
+  const handleBulkDelete = async () => {
     const ids = Array.from(selectedIds);
-    if (ids.length === 0) return;
+    if (ids.length === 0) { setBulkDeleteOpen(false); return; }
     const { error } = await supabase
       .from("sermon_notes")
       .delete()
@@ -219,17 +217,7 @@ export default function SermonNotes() {
       queryClient.invalidateQueries({ queryKey: ["sermon_notes"] });
       exitSelection();
     }
-  };
-
-  const handleBulkDelete = () => {
-    const count = selectedIds.size;
-    if (count === 0) return;
-    confirmDelete({
-      title: "Delete notes",
-      description: `Permanently delete ${count} note${count === 1 ? "" : "s"}? This cannot be undone.`,
-      confirmLabel: "Delete",
-      onConfirm: performBulkDelete,
-    });
+    setBulkDeleteOpen(false);
   };
 
   const headerLabel =
@@ -341,7 +329,7 @@ export default function SermonNotes() {
                 size="sm"
                 variant="destructive"
                 disabled={selectedCount === 0}
-                onClick={handleBulkDelete}
+                onClick={() => setBulkDeleteOpen(true)}
               >
                 <Trash2 className="h-3.5 w-3.5 mr-1" /> Delete
               </Button>
@@ -417,7 +405,7 @@ export default function SermonNotes() {
                                   </DropdownMenuItem>
                                 ))}
                                 <DropdownMenuSeparator />
-                                <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(n)}>
+                                <DropdownMenuItem className="text-destructive" onClick={() => setDeleteId(n.id)}>
                                   <Trash2 className="h-3.5 w-3.5 mr-2" /> Delete note
                                 </DropdownMenuItem>
                               </DropdownMenuContent>
@@ -456,6 +444,32 @@ export default function SermonNotes() {
         }
         onSaved={refresh}
       />
+
+      <AlertDialog open={!!deleteId} onOpenChange={(o) => !o && setDeleteId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Note?</AlertDialogTitle>
+            <AlertDialogDescription>This action cannot be undone.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete}>Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={bulkDeleteOpen} onOpenChange={setBulkDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete {selectedCount} note{selectedCount === 1 ? "" : "s"}?</AlertDialogTitle>
+            <AlertDialogDescription>This action cannot be undone.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleBulkDelete}>Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

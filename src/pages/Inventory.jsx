@@ -27,7 +27,6 @@ import InspectionHistoryDialog from "@/components/inventory/InspectionHistoryDia
 import PrintReportButton from "@/components/PrintReportButton";
 import { logAudit } from "@/lib/audit";
 import ModuleTour from "@/components/tour/ModuleTour";
-import { useConfirmDelete } from "@/components/shared/DeleteConfirmProvider";
 
 const conditionColor = {
   good: "bg-chart-3/10 text-chart-3",
@@ -51,7 +50,6 @@ export default function Inventory() {
   const { tenantId, withTenant } = useTenantQuery();
   const { tenantSlug } = useParams();
   const queryClient = useQueryClient();
-  const confirmDelete = useConfirmDelete();
 
   const { isMemberOfUnit: isOfficeMember, isLoading: officeLoading } = useUnitMembership("Church Office");
   const { isAdmin, isSuperAdmin, leaderUnits = [] } = useAuth();
@@ -118,20 +116,13 @@ export default function Inventory() {
     queryClient.invalidateQueries({ queryKey: ["inv-categories", tenantId] });
   };
 
-  const doDeleteItem = async (item) => {
+  const handleDeleteItem = async (item) => {
+    if (!confirm(`Delete "${item.name}"? This also removes its inspection history.`)) return;
     const { error } = await supabase.from("inventory_items").delete().eq("id", item.id).eq("tenant_id", tenantId);
     if (error) { toast.error(error.message); return; }
     await logAudit("inventory.item_deleted", "inventory_items", item.id, { name: item.name }, tenantId);
     toast.success("Item deleted");
     refresh();
-  };
-
-  const handleDeleteItem = (item) => {
-    confirmDelete({
-      title: "Delete item",
-      description: `Permanently delete "${item.name}"? This also removes its inspection history. This cannot be undone.`,
-      onConfirm: () => doDeleteItem(item),
-    });
   };
 
   if (officeLoading) return <div className="p-6 text-muted-foreground">Loading...</div>;
@@ -332,16 +323,13 @@ export default function Inventory() {
                         <Button size="sm" variant="ghost" onClick={() => setCatDialog({ open: true, cat: c })}>
                           <Pencil className="h-3.5 w-3.5" />
                         </Button>
-                        <Button size="sm" variant="ghost" onClick={() => confirmDelete({
-                          title: "Delete category",
-                          description: `Permanently delete category "${c.name}"? This cannot be undone.`,
-                          onConfirm: async () => {
-                            const { error } = await supabase.from("inventory_categories").delete().eq("id", c.id).eq("tenant_id", tenantId);
-                            if (error) { toast.error(error.message); return; }
-                            toast.success("Category deleted");
-                            refresh();
-                          },
-                        })}>
+                        <Button size="sm" variant="ghost" onClick={async () => {
+                          if (!confirm(`Delete category "${c.name}"?`)) return;
+                          const { error } = await supabase.from("inventory_categories").delete().eq("id", c.id).eq("tenant_id", tenantId);
+                          if (error) { toast.error(error.message); return; }
+                          toast.success("Category deleted");
+                          refresh();
+                        }}>
                           <Trash2 className="h-3.5 w-3.5 text-destructive" />
                         </Button>
                       </div>

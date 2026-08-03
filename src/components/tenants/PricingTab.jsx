@@ -14,7 +14,6 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/components/ui/use-toast";
 import { Plus, Pencil, Trash2, Calculator, BarChart3, Package, RefreshCw, Sparkles } from "lucide-react";
-import { useConfirmDelete } from "@/components/shared/DeleteConfirmProvider";
 
 const METRICS = [
   { key: "base_infra", label: "Base infrastructure / tenant", unit: "per month" },
@@ -63,7 +62,6 @@ const emptyPlan = {
 function PlansSubTab() {
   const qc = useQueryClient();
   const { toast } = useToast();
-  const confirmDelete = useConfirmDelete();
   const [editing, setEditing] = useState(null);
 
   const { data: plans = [], isLoading } = useQuery({
@@ -149,7 +147,7 @@ function PlansSubTab() {
                   </TableCell>
                   <TableCell className="text-right space-x-1">
                     <Button size="sm" variant="ghost" onClick={() => setEditing(p)}><Pencil className="h-3.5 w-3.5" /></Button>
-                    <Button size="sm" variant="ghost" onClick={() => confirmDelete({ title: "Delete plan", description: `Permanently delete "${p.name}"? This cannot be undone.`, onConfirm: () => remove.mutate(p.id) })}><Trash2 className="h-3.5 w-3.5 text-destructive" /></Button>
+                    <Button size="sm" variant="ghost" onClick={() => { if (confirm(`Delete ${p.name}?`)) remove.mutate(p.id); }}><Trash2 className="h-3.5 w-3.5 text-destructive" /></Button>
                   </TableCell>
                 </TableRow>
               ))}

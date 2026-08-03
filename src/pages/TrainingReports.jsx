@@ -24,7 +24,6 @@ import TrainingAttendeesPanel from "@/components/training/TrainingAttendeesPanel
 import PrintReportButton from "@/components/PrintReportButton";
 import { useSubFeature } from "@/hooks/useSubFeature";
 import ModuleTour from "@/components/tour/ModuleTour";
-import { useConfirmDelete } from "@/components/shared/DeleteConfirmProvider";
 
 const ICON_MAP = {
   "Water Baptism": { icon: Droplets, color: "text-blue-500" },
@@ -69,7 +68,6 @@ export default function TrainingReports() {
   const [attendees, setAttendees] = useState({}); // { memberId: { completed, reason, signpost } }
   const { user, isAdmin } = useAuth();
   const { tenantSlug } = useParams();
-  const confirmDelete = useConfirmDelete();
   const certReportPath = tenantSlug ? `/t/${tenantSlug}/certificates-report` : "/certificates-report";
   const certApprovalsPath = tenantSlug ? `/t/${tenantSlug}/certificate-approvals` : "/certificate-approvals";
   const qc = useQueryClient();
@@ -592,11 +590,11 @@ export default function TrainingReports() {
                                     variant="ghost"
                                     size="icon"
                                     className="h-7 w-7 text-destructive hover:text-destructive"
-                                    onClick={() => confirmDelete({
-                                      title: "Delete training session",
-                                      description: "Delete this training session and its attendee records? This cannot be undone.",
-                                      onConfirm: () => deleteMutation.mutate(r.id),
-                                    })}
+                                    onClick={() => {
+                                      if (window.confirm("Delete this training session and its attendee records? This cannot be undone.")) {
+                                        deleteMutation.mutate(r.id);
+                                      }
+                                    }}
                                     title="Delete"
                                   >
                                     <Trash2 className="h-3.5 w-3.5" />
