@@ -516,6 +516,7 @@ const ACTION_LABELS = {
   role_remove: "removed role",
   role_change: "changed role",
   user_delete: "deleted user",
+  mfa_reset: "reset two-factor authentication",
   child_dropoff: "dropped off child",
   child_pickup: "picked up child",
   join_request_approve: "approved join request",

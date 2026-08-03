@@ -7922,6 +7922,12 @@ export type Database = {
         Args: { _tenant_id: string; _unit_name: string; _user_id: string }
         Returns: boolean
       }
+      users_with_mfa: {
+        Args: { _tenant_id: string }
+        Returns: {
+          user_id: string
+        }[]
+      }
       wofbi_checkin: {
         Args: { _confirm_checkout?: boolean; _qr_token: string }
         Returns: Json

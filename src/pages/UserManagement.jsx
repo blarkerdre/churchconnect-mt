@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Loader2, Shield, ShieldCheck, UserCog, User, Plus, Trash2, Globe, UsersRound, Ban, CheckCircle2, Search, FileText } from "lucide-react";
+import { Loader2, Shield, ShieldCheck, UserCog, User, Plus, Trash2, Globe, UsersRound, Ban, CheckCircle2, Search, FileText, KeyRound } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
@@ -19,6 +19,7 @@ import BulkUnitAssignDialog from "@/components/users/BulkUnitAssignDialog";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
 import DangerConfirmDialog from "@/components/exams/DangerConfirmDialog";
 import ModuleTour from "@/components/tour/ModuleTour";
+import { useConfirmDelete } from "@/components/shared/DeleteConfirmProvider";
 
 // NOTE: super_admin is intentionally NOT assignable from the per-tenant role picker.
 // It is a platform-wide role (tenant_id IS NULL) and must be granted via the
@@ -55,6 +56,7 @@ const roleLabels = {
 
 export default function UserManagement() {
   const { isAdmin, roles, user } = useAuth();
+  const confirmDelete = useConfirmDelete();
   const isSuperAdmin = roles.includes("super_admin");
   const queryClient = useQueryClient();
   const { tenantId, scopeQuery, withTenant } = useTenantQuery();
@@ -125,6 +127,52 @@ export default function UserManagement() {
   });
 
   const disabledUsers = Object.fromEntries(bannedUserIds.map(id => [id, true]));
+
+  // Which users have a verified authenticator (admin-only lookup)
+  const { data: mfaUserIds = [] } = useQuery({
+    queryKey: ["users-with-mfa", tenantId],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("users_with_mfa", { _tenant_id: tenantId });
+      if (error) {
+        console.warn("users_with_mfa failed:", error.message);
+        return [];
+      }
+      return (data || []).map(r => r.user_id);
+    },
+    enabled: !!tenantId,
+    retry: false,
+  });
+  const mfaUsers = Object.fromEntries(mfaUserIds.map(id => [id, true]));
+
+  const resetMfaMutation = useMutation({
+    mutationFn: async ({ userId, targetName }) => {
+      const { data, error } = await supabase.functions.invoke("admin-reset-mfa", {
+        body: { user_id: userId, tenant_id: tenantId },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      await logAudit("mfa_reset", "profiles", userId, { target_name: targetName, factors_removed: data?.removed ?? 0 }, tenantId);
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["users-with-mfa"] });
+      toast({ title: "Two-factor authentication reset", description: "The user can sign in with their password and set up 2FA again." });
+    },
+    onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+  });
+
+  const handleResetMfa = async (p) => {
+    const targetName = p.full_name || p.email;
+    const ok = await confirmDelete({
+      title: "Reset two-factor authentication",
+      itemName: targetName,
+      highImpact: true,
+      impacts: ["This user will be able to sign in with just their password until they set up 2FA again."],
+      confirmLabel: "Reset 2FA",
+    });
+    if (ok) resetMfaMutation.mutate({ userId: p.user_id, targetName });
+  };
+
 
   const toggleRoleMutation = useMutation({
     mutationFn: async ({ userId, role, add, targetName }) => {
@@ -322,6 +370,7 @@ export default function UserManagement() {
                   const canChange = isCurrentUser ? false : (isSuperAdmin || (!hasAdminRole && isAdmin));
                   const isDisabled = disabledUsers[p.user_id] === true;
                   const targetIsSuperAdmin = userRoles.includes("super_admin");
+                  const hasMfa = mfaUsers[p.user_id] === true;
 
                   const availableRoles = ROLES;
 
@@ -335,11 +384,19 @@ export default function UserManagement() {
                           <div className="min-w-0">
                             <p className="font-medium text-foreground truncate">{p.full_name || "—"}</p>
                             <p className="text-xs text-muted-foreground truncate md:hidden">{p.email || ""}</p>
-                            {isDisabled && (
-                              <Badge variant="outline" className="text-destructive border-destructive/30 text-[10px] mt-0.5">
-                                <Ban className="h-2.5 w-2.5 mr-1" /> Disabled
-                              </Badge>
-                            )}
+                            <div className="flex flex-wrap gap-1 mt-0.5">
+                              {isDisabled && (
+                                <Badge variant="outline" className="text-destructive border-destructive/30 text-[10px]">
+                                  <Ban className="h-2.5 w-2.5 mr-1" /> Disabled
+                                </Badge>
+                              )}
+                              {hasMfa && (
+                                <Badge variant="outline" className="text-[10px] border-primary/30 text-primary">
+                                  <KeyRound className="h-2.5 w-2.5 mr-1" /> 2FA
+                                </Badge>
+                              )}
+                            </div>
+
                           </div>
                         </div>
                       </td>
@@ -427,6 +484,18 @@ export default function UserManagement() {
                               ) : (
                                 <Ban className="h-4 w-4 text-amber-500" />
                               )}
+                            </Button>
+                          )}
+                          {/* Reset 2FA - only when the user actually has an authenticator */}
+                          {hasMfa && !isCurrentUser && !(targetIsSuperAdmin && !isSuperAdmin) && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              title="Reset two-factor authentication"
+                              disabled={resetMfaMutation.isPending}
+                              onClick={() => handleResetMfa(p)}
+                            >
+                              <KeyRound className="h-4 w-4 text-amber-600" />
                             </Button>
                           )}
                           {/* Delete - super_admin only */}
