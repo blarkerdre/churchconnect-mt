@@ -370,6 +370,7 @@ export default function UserManagement() {
                   const canChange = isCurrentUser ? false : (isSuperAdmin || (!hasAdminRole && isAdmin));
                   const isDisabled = disabledUsers[p.user_id] === true;
                   const targetIsSuperAdmin = userRoles.includes("super_admin");
+                  const hasMfa = mfaUsers[p.user_id] === true;
 
                   const availableRoles = ROLES;
 
