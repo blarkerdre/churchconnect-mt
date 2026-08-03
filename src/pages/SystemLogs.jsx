@@ -528,7 +528,16 @@ const ACTION_LABELS = {
   sms_sent: "sent SMS",
   tenant_settings_update: "updated church settings",
   transport_status_change: "changed transport status",
+  wofbi_checkin: "checked in to Bible School",
+  wofbi_checkout: "checked out of Bible School",
+  wofbi_feedback_submitted: "submitted Bible School feedback",
+  wofbi_lecturer_rating_submitted: "submitted lecturer feedback",
+  wofbi_lecturer_rating_updated: "updated lecturer feedback",
+  wofbi_exam_submitted: "submitted a Bible School exam",
+  wofbi_qc_check_recorded: "recorded a QC check",
+  wofbi_qc_check_updated: "updated a QC check",
 };
+
 
 const humanAction = (a) => ACTION_LABELS[a] || String(a || "").replace(/[._]/g, " ");
 const humanEntity = (e) => String(e || "").replace(/[._]/g, " ");

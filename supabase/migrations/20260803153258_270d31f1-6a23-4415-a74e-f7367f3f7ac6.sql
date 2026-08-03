@@ -1,0 +1,2 @@
+REVOKE EXECUTE ON FUNCTION public.log_wofbi_activity(uuid, text, text, text, text, text, jsonb) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.log_wofbi_activity(uuid, text, text, text, text, text, jsonb) TO authenticated;

@@ -105,6 +105,8 @@ export default function QcReport() {
   const [editRecord, setEditRecord] = useState(null);
   const [viewRecord, setViewRecord] = useState(null);
   const [deleteId, setDeleteId] = useState(null);
+  const [qcPrefill, setQcPrefill] = useState(null);
+
 
   const { data: checks = [], isLoading } = useQuery({
     queryKey: ["lecturer-qc-checks", tenantId],
@@ -119,6 +121,26 @@ export default function QcReport() {
       return data || [];
     },
   });
+
+  // Subjects with no QC check yet — surfaced as a hint for QC officers
+  const { data: allSubjects = [] } = useQuery({
+    queryKey: ["qc-outstanding-subjects", tenantId],
+    enabled: !!tenantId && canCreate,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("exam_subjects")
+        .select("id, name, course_id, lecturer_id, exam_titles(name)")
+        .eq("tenant_id", tenantId)
+        .eq("is_active", true)
+        .order("sort_order");
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  const checkedSubjectIds = new Set(checks.map((c) => c.exam_subject_id).filter(Boolean));
+  const outstandingQc = allSubjects.filter((s) => !checkedSubjectIds.has(s.id));
+
 
   const deleteMutation = useMutation({
     mutationFn: async (id) => {
@@ -293,7 +315,7 @@ export default function QcReport() {
     URL.revokeObjectURL(url);
   };
 
-  const openNew = () => { setEditRecord(null); setDialogOpen(true); };
+  const openNew = () => { setEditRecord(null); setQcPrefill(null); setDialogOpen(true); };
   const openEdit = (r) => { setEditRecord(r); setDialogOpen(true); };
 
   return (
@@ -322,6 +344,37 @@ export default function QcReport() {
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
+        {canCreate && allSubjects.length > 0 && (
+          <div className="rounded-md border bg-muted/40 p-3 text-xs space-y-2">
+            {outstandingQc.length > 0 ? (
+              <>
+                <p className="font-medium">
+                  {outstandingQc.length} subject{outstandingQc.length === 1 ? "" : "s"} still awaiting a QC check
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  {outstandingQc.map((s) => (
+                    <Button
+                      key={s.id}
+                      size="sm"
+                      variant="outline"
+                      className="h-7 text-xs"
+                      onClick={() => {
+                        setEditRecord(null);
+                        setQcPrefill({ courseId: s.course_id, subjectId: s.id, lecturerId: s.lecturer_id });
+                        setDialogOpen(true);
+                      }}
+                    >
+                      {s.exam_titles?.name ? `${s.exam_titles.name} · ` : ""}{s.name}
+                    </Button>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <p className="text-muted-foreground">All active subjects have a QC check recorded.</p>
+            )}
+          </div>
+        )}
+
         {/* Filters */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 p-3 border rounded-lg bg-muted/30">
           <div>
@@ -556,7 +609,15 @@ export default function QcReport() {
         )}
       </CardContent>
 
-      <QcCheckDialog open={dialogOpen} onOpenChange={setDialogOpen} editRecord={editRecord} />
+      <QcCheckDialog
+        open={dialogOpen}
+        onOpenChange={(v) => { setDialogOpen(v); if (!v) setQcPrefill(null); }}
+        editRecord={editRecord}
+        initialCourseId={qcPrefill?.courseId || null}
+        initialSubjectId={qcPrefill?.subjectId || null}
+        initialLecturerId={qcPrefill?.lecturerId || null}
+      />
+
 
       {/* View detail */}
       <Dialog open={!!viewRecord} onOpenChange={(o) => !o && setViewRecord(null)}>
