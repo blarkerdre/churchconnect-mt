@@ -18,6 +18,7 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGri
 import PasswordConfirmDialog from "@/components/shared/PasswordConfirmDialog";
 import { toast } from "@/components/ui/use-toast";
 import { logAudit } from "@/lib/audit";
+import { useExamSessionFilter } from "@/contexts/ExamSessionFilterContext";
 
 const emptyFilters = {
   courseId: "all",
