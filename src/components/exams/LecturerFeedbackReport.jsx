@@ -293,7 +293,10 @@ export default function LecturerFeedbackReport() {
             <CardTitle className="text-base font-display flex items-center gap-2">
               <BarChart3 className="h-4 w-4 text-primary" /> Feedback Report & Analytics
             </CardTitle>
-            <CardDescription>Filter, analyse and export lecturer feedback.</CardDescription>
+            <CardDescription>
+              Filter, analyse and export lecturer feedback.
+              {!isAll && <> Showing <span className="font-medium text-foreground">{sessionName}</span> only.</>}
+            </CardDescription>
           </div>
           <div className="flex flex-wrap gap-2 shrink-0">
             <Button size="sm" variant="outline" className="gap-1.5 shrink-0" onClick={downloadCSV} disabled={!filtered.length}>
