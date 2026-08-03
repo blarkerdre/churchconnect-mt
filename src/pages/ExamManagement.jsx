@@ -363,6 +363,8 @@ function ExamManagementInner() {
       </div>
       <WoFBIRegistrationQRCode open={qrOpen} onOpenChange={setQrOpen} />
 
+      <SessionFilterBar />
+
       <Tabs defaultValue="management" className="w-full min-w-0">
         <TabsList className="flex flex-nowrap h-auto gap-1 overflow-x-auto w-full justify-start scrollbar-thin">
           <TabsTrigger value="management" className="whitespace-nowrap">Management</TabsTrigger>
