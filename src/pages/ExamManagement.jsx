@@ -41,7 +41,7 @@ import WoFBIFeedbackDialog from "@/components/exams/WoFBIFeedbackDialog";
 import WoFBIAttendanceTab from "@/components/exams/WoFBIAttendanceTab";
 import SessionManager from "@/components/exams/SessionManager";
 import SessionFilterBar from "@/components/exams/SessionFilterBar";
-import { ExamSessionFilterProvider } from "@/contexts/ExamSessionFilterContext";
+import { ExamSessionFilterProvider, useExamSessionFilter } from "@/contexts/ExamSessionFilterContext";
 import ModuleTour from "@/components/tour/ModuleTour";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
