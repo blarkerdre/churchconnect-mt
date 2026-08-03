@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "@/components/ui/use-toast";
 import { Loader2, Send, Trash2, UserPlus, Search } from "lucide-react";
+import { useConfirmDelete } from "@/components/shared/DeleteConfirmProvider";
 
 const STATUS_VARIANT = {
   none: "outline",
@@ -23,6 +24,7 @@ const STATUS_VARIANT = {
 };
 
 export default function TrainingAttendeesPanel({ report }) {
+  const confirmDelete = useConfirmDelete();
   const qc = useQueryClient();
   const { user, isAdmin } = useAuth();
   const { tenantId, scopeQuery, withTenant } = useTenantQuery();
@@ -188,7 +190,7 @@ export default function TrainingAttendeesPanel({ report }) {
                     )}
                     {canEdit && !signposted && (
                       <Button variant="ghost" size="icon" className="h-7 w-7"
-                        onClick={() => { if (confirm("Remove attendee?")) removeMutation.mutate(a.id); }}>
+                        onClick={async () => { if (await confirmDelete({ title: "Remove attendee", description: "This attendee record will be permanently removed.", confirmLabel: "Remove" })) removeMutation.mutate(a.id); }}>
                         <Trash2 className="h-3.5 w-3.5" />
                       </Button>
                     )}

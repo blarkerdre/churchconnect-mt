@@ -14,8 +14,10 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/components/ui/use-toast";
 import { Shield, ShieldOff, Search, Crown } from "lucide-react";
+import { useConfirmDelete } from "@/components/shared/DeleteConfirmProvider";
 
 export default function PlatformUsersTab() {
+  const confirmRevoke = useConfirmDelete();
   const { user } = useAuth();
   const { toast } = useToast();
   const qc = useQueryClient();
@@ -235,8 +237,10 @@ export default function PlatformUsersTab() {
               onClick={(e) => {
                 e.preventDefault();
                 if (!confirm) return;
-                if (confirm.action === "grant") grantMutation.mutate(confirm.user);
-                else revokeMutation.mutate(confirm.user);
+                if (confirm.action === "grant") { grantMutation.mutate(confirm.user); return; }
+                const target = confirm.user;
+                setConfirm(null);
+                confirmRevoke({ title: "Revoke Super Admin", itemName: target.email, highImpact: true, impacts: ["This user loses platform-wide access to every tenant."], confirmLabel: "Revoke" }).then((ok) => { if (ok) revokeMutation.mutate(target); });
               }}
               disabled={grantMutation.isPending || revokeMutation.isPending}
             >

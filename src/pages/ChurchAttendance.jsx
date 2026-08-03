@@ -21,6 +21,7 @@ import { useSubFeature } from "@/hooks/useSubFeature";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
 import PrintReportButton from "@/components/PrintReportButton";
 import ModuleTour from "@/components/tour/ModuleTour";
+import { useConfirmDelete } from "@/components/shared/DeleteConfirmProvider";
 
 const DEFAULT_SERVICE_TYPES = ["Sunday Service", "Midweek Service", "Special Program", "Thanksgiving Service", "Other"];
 
@@ -40,6 +41,7 @@ const emptyForm = {
 };
 
 export default function ChurchAttendance() {
+  const confirmDelete = useConfirmDelete();
   const { data: SERVICE_TYPES } = useAppSetting("service_types", DEFAULT_SERVICE_TYPES);
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
@@ -485,8 +487,8 @@ export default function ChurchAttendance() {
                                   variant="ghost"
                                   size="icon"
                                   className="h-7 w-7 text-destructive hover:text-destructive"
-                                  onClick={() => {
-                                    if (window.confirm("Delete this attendance report? This cannot be undone.")) {
+                                  onClick={async () => {
+                                    if (await confirmDelete({ title: "Delete attendance report", description: "This attendance report will be permanently deleted." })) {
                                       deleteMutation.mutate(r.id);
                                     }
                                   }}

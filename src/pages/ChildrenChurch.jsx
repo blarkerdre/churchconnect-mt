@@ -24,6 +24,7 @@ import { useAppSetting } from "@/hooks/useAppSetting";
 import HelpButton from "@/components/tour/HelpButton";
 import { useTour } from "@/components/tour/TourProvider";
 import { useTourCompletion } from "@/hooks/useTourCompletion";
+import { useConfirmDelete } from "@/components/shared/DeleteConfirmProvider";
 
 const DEFAULT_AGE_GROUPS = ["2-4 years old", "5-7 years old", "8-9 years old"];
 
@@ -1020,6 +1021,7 @@ function PickupPanel({ tenantId, isLeader }) {
 }
 
 function ReportPanel({ tenantId, isAdmin = false }) {
+  const confirmDelete = useConfirmDelete();
   const qc = useQueryClient();
   const [deleteRow, setDeleteRow] = useState(null);
   const deleteRecord = useMutation({
@@ -1244,7 +1246,7 @@ function ReportPanel({ tenantId, isAdmin = false }) {
               <AlertDialogCancel>Cancel</AlertDialogCancel>
               <AlertDialogAction
                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                onClick={(e) => { e.preventDefault(); deleteRecord.mutate(deleteRow); }}
+                onClick={async (e) => { e.preventDefault(); const t = deleteRow; setDeleteRow(null); if (await confirmDelete({ title: "Delete check-in record", description: "This check-in record will be permanently deleted." })) deleteRecord.mutate(t); }}
                 disabled={deleteRecord.isPending}
               >Delete</AlertDialogAction>
             </AlertDialogFooter>

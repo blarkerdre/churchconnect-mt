@@ -21,6 +21,7 @@ import { Loader2, ClipboardCheck, Download, Printer, RotateCcw, Plus, Eye, Edit,
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import QcCheckDialog from "@/components/exams/QcCheckDialog";
 import { YES_NO_FIELDS, SCORE_FIELDS } from "@/lib/qc-options";
+import { useConfirmDelete } from "@/components/shared/DeleteConfirmProvider";
 
 const emptyFilters = {
   courseId: "all",
@@ -92,6 +93,7 @@ function SummaryTile({ label, value }) {
 export default function QcReport() {
   const qc = useQueryClient();
   const { tenantId } = useTenantQuery();
+  const confirmDelete = useConfirmDelete();
   const { user, isAdmin } = useAuth();
   const { currentTenant } = useTenant();
   const { isMemberOfUnit: isTrainingRep } = useUnitMembership("Training Rep");
@@ -612,7 +614,7 @@ export default function QcReport() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={() => deleteMutation.mutate(deleteId)}>Delete</AlertDialogAction>
+            <AlertDialogAction onClick={async (e) => { e.preventDefault(); const id = deleteId; setDeleteId(null); if (await confirmDelete({ title: "Delete QC check", description: "This QC entry will be removed permanently." })) deleteMutation.mutate(id); }}>Delete</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

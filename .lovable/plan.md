@@ -1,35 +1,47 @@
-## What I verified
+## Goal
 
-- The course **Basic Certificate Course (BCC) – August Edition 2026** has **29 approved registrations**, and **all six sessions (Day 1–Day 6) have zero attendance records** — so this is not unique to Day 2, nothing has ever saved for this edition.
-- Day 2 (2026-08-04) is `closed` and, unlike Days 1 and 3–6, has **no auto-open/auto-close times**. The other days are also `closed` because their scheduled windows have already passed.
-- The database write rules allow admins to insert/update attendance regardless of whether a session is open or closed, and the Edit dialog itself has no "session closed" block — so a closed session is not, by itself, what blocks the save.
-- No database errors appear in recent logs from these attempts, and you report **no toast at all** when pressing Save. That points to the Save action never reaching the database rather than being rejected by it — the most likely cause on a 384px-wide phone is the dialog footer/date fields being overlapped by the fixed mobile bottom navigation, so the tap lands on the nav instead of the button.
+Every delete that removes saved data anywhere in the app asks for your account password first. No delete should ever go through on a single tap or a plain browser "OK/Cancel" box.
 
-Because the exact failure point can't be confirmed from data alone, step 1 of the plan is to confirm it on the live page before changing behaviour.
+## Current state (verified)
 
-## Plan
+- A shared password prompt (`PasswordConfirmDialog`) and a stronger type-the-name variant (`DangerConfirmDialog`) already exist and are wired into roughly 24 screens (Members, Events, Followups, Settings, User Management, Transportation, Bible School courses/lecturers/subjects, WSF centres/zones, invoices, certificates).
+- There is **no** global `useConfirmDelete()` hook — each screen wires the dialog by hand, which is why coverage is patchy.
+- Around 40 files delete saved records **without** any password step, and 20+ places still use the browser's plain `confirm()` box, including:
+  - Bible School: attendance sessions and records, application/registration deletes, QC entries, feedback responses, exam sessions/editions, result sends
+  - Children's Church: Early Years, Preteens and Teens sections, attendance sessions and records, self-enrolments
+  - Unit Tasks: task delete, assignee removal, service roster entries
+  - Inventory items and categories
+  - Training reports (session + attendee removal), Church attendance reports
+  - Contacts, event registrations, report attachments, sermon notes and folders
+  - Tenant Admin: platform users, tenant users, pricing plans, API keys
+  - Unit-leader assignments, bulk pastoral re-assignment deletes
 
-### 1. Reproduce and confirm (no behaviour change)
-Open Bible School → Attendance at phone width, expand a student, tap Edit on Day 2, and capture what happens when tapping the date fields and Save. This confirms whether the tap is being intercepted, the form is silently invalid, or a request is actually being sent and rejected.
+## What will be built
 
-### 2. Make the Edit attendance dialog usable on mobile
-- Ensure the dialog content sits above the mobile bottom navigation (bottom padding / safe-area allowance) so the Save and Cancel buttons are reachable and not overlapped.
-- Make the footer stick to the bottom of the scrollable dialog body so Save is always visible on small screens.
-- Stack the "Time in / Time out" fields in a single column on narrow screens so the native date-time pickers get enough width.
+**1. One global confirmation service**
 
-### 3. Never fail silently
-- Show an explicit warning toast when Save is blocked by validation ("Time in is required", "Time out must be after time in") instead of the mutation throwing with no visible feedback.
-- Surface the underlying error text on any rejected write so the reason is visible instead of nothing happening.
+- New `DeleteConfirmProvider` mounted once in `App.jsx`, exposing a `useConfirmDelete()` hook.
+- Call style: `await confirmDelete({ title, description, itemName, impacts, highImpact })` — it returns only after the password (and, when required, the typed name) is verified; otherwise it resolves as cancelled.
+- The provider renders the existing `PasswordConfirmDialog` for standard deletes and `DangerConfirmDialog` (password + type the item's name + cascade impact list) when `highImpact` is set.
 
-### 4. Clarify session state in the UI
-- Show a small "Session closed — you can still edit as an admin" note in the Edit dialog when the session is closed, so it's clear the closed badge isn't what's blocking the save.
-- On the Day 2 session row, show that it has no auto-open/auto-close schedule (the only day missing one), so scheduling gaps are visible at a glance.
+**2. High-impact deletes** (password **and** typing the item's name)
 
-### 5. Re-verify
-Repeat step 1 after the fixes and confirm a Day 2 record is actually written for a test student, then remove that test record.
+Anything that cascades into other records: Bible School sessions/editions and courses, attendance sessions of any kind (church, unit, Bible School, Early Years, Preteens, Teens), training sessions, user and tenant-user accounts, pricing plans, API keys, inventory categories, unit tasks, and any tenant-wide data purge.
+
+**3. Standard deletes** (password only)
+
+Single rows: individual attendance records, contacts, event registrations, attachments, sermon notes/folders, QC entries, feedback responses, assignees, family/child records, applications and registrations.
+
+**4. Exclusions** (stay one-tap, as agreed)
+
+Dismissing a notification, closing/cancelling a meeting or scheduled message, removing an unsaved field from a form builder, clearing device cache, and tour-state resets — none of these delete stored member data.
+
+**5. Cleanup**
+
+Every `confirm()` / `window.confirm()` used for a delete is replaced by the new hook, so the app has one consistent, branded prompt. Dialogs get mobile-safe spacing so the confirm button is never hidden behind the bottom navigation on a phone.
 
 ## Technical notes
 
-- All work is in `src/components/exams/WoFBIAttendanceTab.jsx` — the `saveEdit` mutation (validation/toasts) and the Edit-attendance `Dialog` markup (footer, layout, bottom-nav clearance).
-- No database, policy, or edge-function changes are proposed; existing admin write policies on `wofbi_attendance_records` already permit these saves.
-- No change to how attendance is counted or reported.
+- No database or Edge Function changes; verification reuses `supabase.auth.signInWithPassword` against the signed-in user's email, as the existing dialogs already do.
+- Screens already using the dialogs directly will be migrated to the hook so there is a single implementation to maintain.
+- The rule ("all deletes go through `useConfirmDelete()`, never `window.confirm`") will be recorded in project memory so future features inherit it automatically.

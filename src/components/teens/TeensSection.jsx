@@ -14,6 +14,7 @@ import { Plus, Trash2, User, KeyRound, ShieldCheck, ShieldAlert } from "lucide-r
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { format } from "date-fns";
+import { useConfirmDelete } from "@/components/shared/DeleteConfirmProvider";
 
 
 
@@ -202,6 +203,7 @@ function TeenForm({ open, onOpenChange, teen, memberId, onSaved }) {
 }
 
 export default function TeensSection({ memberId }) {
+  const confirmDelete = useConfirmDelete();
   const { tenantId } = useTenantQuery();
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
@@ -289,7 +291,7 @@ export default function TeensSection({ memberId }) {
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={(e) => { e.preventDefault(); removeTeen.mutate(deleteTeen); }}
+              onClick={async (e) => { e.preventDefault(); const t = deleteTeen; setDeleteTeen(null); if (await confirmDelete({ title: "Delete teenager", itemName: [t?.first_name, t?.last_name].filter(Boolean).join(" "), highImpact: true, impacts: ["Their attendance records will also be removed."] })) removeTeen.mutate(t); }}
               disabled={removeTeen.isPending}
             >Delete</AlertDialogAction>
           </AlertDialogFooter>
