@@ -31,6 +31,8 @@ import { useConsentText, renderConsentText } from "@/hooks/useConsentText";
 import { diffUnitMembership, submitJoinRequests } from "@/hooks/usePendingJoinRequests";
 import { Info as InfoIcon } from "lucide-react";
 import ModuleTour from "@/components/tour/ModuleTour";
+import TwoFactorSection from "@/components/security/TwoFactorSection";
+
 
 const GENDERS = ["Male", "Female"];
 const MEMBERSHIP_STATUSES = ["Active", "First Timer", "New Convert", "Visitor", "Bible School"];
@@ -680,6 +682,10 @@ export default function MyProfile() {
 
       {/* Certificates */}
       {!editing && <MyCertificates memberId={member.id} hiddenCourseNames={hiddenCourseNames} />}
+
+      {/* Security */}
+      {!editing && <TwoFactorSection />}
+
 
 
 
