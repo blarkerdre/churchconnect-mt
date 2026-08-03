@@ -25,6 +25,7 @@ import { UserPlus, Trash2, Shield, Crown, User, Mail, Clock, CheckCircle2, XCirc
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
+import { useConfirmDelete } from "@/components/shared/DeleteConfirmProvider";
 
 const ROLE_CONFIG = {
   owner: { label: "Owner", icon: Crown, color: "text-amber-600 bg-amber-50 border-amber-200" },
@@ -71,6 +72,7 @@ function describeAction(action) {
 }
 
 export default function TenantUsersDialog({ tenant, open, onOpenChange }) {
+  const confirmDelete = useConfirmDelete();
   const { toast } = useToast();
   const { user, roles: userRoles, tenantMemberships } = useAuth();
   const isSuperAdmin = userRoles.includes("super_admin");
@@ -258,7 +260,7 @@ export default function TenantUsersDialog({ tenant, open, onOpenChange }) {
       return;
     }
     if (pendingAction.type === "remove") {
-      removeMutation.mutate(pendingAction.membership.id);
+      { const mid = pendingAction.membership.id; confirmDelete({ title: "Remove user from tenant", description: "This user will lose access to this tenant.", confirmLabel: "Remove" }).then((ok) => { if (ok) removeMutation.mutate(mid); }); }
     } else if (pendingAction.type === "role") {
       updateRoleMutation.mutate({ membershipId: pendingAction.membership.id, role: pendingAction.newRole });
     }

@@ -13,8 +13,10 @@ import {
   AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
+import { useConfirmDelete } from "@/components/shared/DeleteConfirmProvider";
 
 export default function SermonFolderSidebar({
+  const confirmDelete = useConfirmDelete();
   folders,
   notes,
   selectedFolder,
@@ -81,6 +83,7 @@ export default function SermonFolderSidebar({
 
   const handleDelete = async () => {
     if (!deleteFolder) return;
+    if (!(await confirmDelete({ title: "Delete folder", description: `Delete the folder "${deleteFolder.name}"? Its notes move to Unfiled.` }))) { setDeleteFolder(null); return; }
     const { error } = await supabase
       .from("sermon_note_folders")
       .delete()

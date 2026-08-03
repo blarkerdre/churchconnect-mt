@@ -25,6 +25,7 @@ import {
   AlertDialogContent, AlertDialogDescription, AlertDialogFooter,
   AlertDialogHeader, AlertDialogTitle
 } from "@/components/ui/alert-dialog";
+import { useConfirmDelete } from "@/components/shared/DeleteConfirmProvider";
 
 const SORT_OPTIONS = [
   { value: "date_desc", label: "Date (newest)" },
@@ -34,6 +35,7 @@ const SORT_OPTIONS = [
 ];
 
 export default function SermonNotes() {
+  const confirmDelete = useConfirmDelete();
   const { user } = useAuth();
   const { tenantId } = useTenantQuery();
   const queryClient = useQueryClient();
@@ -134,6 +136,9 @@ export default function SermonNotes() {
 
   const handleDelete = async () => {
     if (!deleteId) return;
+    setDeleteId(null);
+    if (!(await confirmDelete({ title: "Delete note", description: "This sermon note will be permanently deleted." }))) return;
+    const noteId = deleteId;
     const { error } = await supabase.from("sermon_notes").delete().eq("id", deleteId).eq("user_id", user.id);
     if (error) {
       toast.error("Failed to delete note.");
@@ -204,6 +209,8 @@ export default function SermonNotes() {
   const handleBulkDelete = async () => {
     const ids = Array.from(selectedIds);
     if (ids.length === 0) { setBulkDeleteOpen(false); return; }
+    setBulkDeleteOpen(false);
+    if (!(await confirmDelete({ title: "Delete notes", description: `Permanently delete ${ids.length} note${ids.length === 1 ? "" : "s"}?`, highImpact: true, itemName: `${ids.length} notes`, impacts: ["The selected sermon notes will be permanently deleted."] }))) return;
     const { error } = await supabase
       .from("sermon_notes")
       .delete()

@@ -16,6 +16,7 @@ import { Plus, QrCode, Calendar, LogIn, LogOut, Users, Pencil, Trash2, FileText,
 import { toast } from "sonner";
 import { format } from "date-fns";
 import PreteensPersistentQRDialog from "@/components/preteens/PreteensPersistentQRDialog";
+import { useConfirmDelete } from "@/components/shared/DeleteConfirmProvider";
 
 const SESSION_TYPES = [
   "Sunday Service",
@@ -880,6 +881,7 @@ function RegisteredPreteensDialog({ open, onOpenChange }) {
 }
 
 export default function PreteensAttendance({ embedded = false }) {
+  const confirmDelete = useConfirmDelete();
   const { tenantId } = useTenantQuery();
   const { user } = useAuth();
   const qc = useQueryClient();
@@ -1073,7 +1075,7 @@ export default function PreteensAttendance({ embedded = false }) {
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={(e) => { e.preventDefault(); removeSession.mutate(deleteSession); }}
+              onClick={async (e) => { e.preventDefault(); const t = deleteSession; setDeleteSession(null); if (await confirmDelete({ title: "Delete session", itemName: t?.title, highImpact: true, impacts: ["All attendance records in this session will be deleted."] })) removeSession.mutate(t); }}
               disabled={removeSession.isPending}
             >Delete</AlertDialogAction>
           </AlertDialogFooter>
