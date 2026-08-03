@@ -102,15 +102,18 @@ export default function LecturerFeedbackReport() {
   };
 
 
+  const { sessionId, sessionName, applySession, isAll } = useExamSessionFilter();
+
   const { data: ratings = [], isLoading } = useQuery({
-    queryKey: ["lecturer-ratings-report", tenantId],
+    queryKey: ["lecturer-ratings-report", tenantId, sessionId],
     enabled: !!tenantId,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("lecturer_ratings")
-        .select("*, lecturers(id,name,level), members(first_name,last_name), exam_titles(id,name), exam_subjects(id,name,course_id)")
-        .eq("tenant_id", tenantId)
-        .order("created_at", { ascending: false });
+      const { data, error } = await applySession(
+        supabase
+          .from("lecturer_ratings")
+          .select("*, lecturers(id,name,level), members(first_name,last_name), exam_titles(id,name), exam_subjects(id,name,course_id), exam_sessions(id,name)")
+          .eq("tenant_id", tenantId)
+      ).order("created_at", { ascending: false });
       if (error) throw error;
       return data || [];
     },
