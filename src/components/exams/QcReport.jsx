@@ -609,7 +609,15 @@ export default function QcReport() {
         )}
       </CardContent>
 
-      <QcCheckDialog open={dialogOpen} onOpenChange={setDialogOpen} editRecord={editRecord} />
+      <QcCheckDialog
+        open={dialogOpen}
+        onOpenChange={(v) => { setDialogOpen(v); if (!v) setQcPrefill(null); }}
+        editRecord={editRecord}
+        initialCourseId={qcPrefill?.courseId || null}
+        initialSubjectId={qcPrefill?.subjectId || null}
+        initialLecturerId={qcPrefill?.lecturerId || null}
+      />
+
 
       {/* View detail */}
       <Dialog open={!!viewRecord} onOpenChange={(o) => !o && setViewRecord(null)}>
