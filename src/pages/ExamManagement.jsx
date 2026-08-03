@@ -1415,6 +1415,7 @@ function CourseRegistrationsView({ course }) {
                           <TableHead className="font-semibold">Name</TableHead>
                           <TableHead className="font-semibold">Email</TableHead>
                           <TableHead className="font-semibold">Phone</TableHead>
+                          <TableHead className="font-semibold">Edition</TableHead>
                           <TableHead className="font-semibold">Source</TableHead>
                           <TableHead className="font-semibold">Status</TableHead>
                           <TableHead className="font-semibold">Exam link</TableHead>
