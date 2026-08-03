@@ -16,6 +16,8 @@ import { Badge } from "@/components/ui/badge";
 import { Loader2, Plus, QrCode, Trash2, Download, CheckCircle2, XCircle, Clock, ChevronDown, ChevronRight, Pencil, Star } from "lucide-react";
 import WoFBIPersistentQRDialog from "./WoFBIPersistentQRDialog";
 import { useConfirmDelete } from "@/components/shared/DeleteConfirmProvider";
+import { useTenant } from "@/contexts/TenantContext";
+import { downloadRosterCsv, printRosterPdf } from "@/lib/attendance-roster";
 
 function pct(num, den) {
   if (!den) return "0%";
