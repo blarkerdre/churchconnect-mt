@@ -775,7 +775,17 @@ export default function WoFBIAttendanceTab() {
           {sessionsLoading ? (
             <div className="py-8 flex justify-center"><Loader2 className="h-5 w-5 animate-spin" /></div>
           ) : sessions.length === 0 ? (
-            <p className="text-sm text-muted-foreground py-6 text-center">No attendance sessions yet for this course.</p>
+            <div className="py-6 text-center space-y-2">
+              <p className="text-sm text-muted-foreground">
+                No attendance sessions yet for this course
+                {!isAllEditions ? ` in ${editionName}` : ""}.
+              </p>
+              {!isAllEditions && (
+                <Button variant="link" size="sm" onClick={() => setEditionId(EXAM_SESSION_ALL)}>
+                  Show all editions
+                </Button>
+              )}
+            </div>
           ) : (
             <div className="overflow-x-auto -mx-3 sm:mx-0">
             <Table className="min-w-[640px]">
