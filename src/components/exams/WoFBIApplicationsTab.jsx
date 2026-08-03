@@ -743,6 +743,7 @@ export default function WoFBIApplicationsTab() {
                     <TableCell className="font-medium">{a.first_name} {a.last_name}</TableCell>
                     <TableCell className="text-xs">{a.email}</TableCell>
                     <TableCell className="text-xs">{a.course?.name || "—"}</TableCell>
+                    <TableCell className="text-xs text-muted-foreground">{a.edition?.name || "—"}</TableCell>
                     <TableCell>
                       <div className="flex flex-col gap-1">
                         <Badge variant={a.source === "direct" ? "outline" : "secondary"} className="text-[10px]">
