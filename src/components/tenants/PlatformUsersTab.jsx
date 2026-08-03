@@ -14,11 +14,13 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/components/ui/use-toast";
 import { Shield, ShieldOff, Search, Crown } from "lucide-react";
+import { useConfirmDelete } from "@/components/shared/DeleteConfirmProvider";
 
 export default function PlatformUsersTab() {
   const { user } = useAuth();
   const { toast } = useToast();
   const qc = useQueryClient();
+  const confirmDelete = useConfirmDelete();
   const [search, setSearch] = useState("");
   const [superOnly, setSuperOnly] = useState(false);
   const [confirm, setConfirm] = useState(null); // { action: 'grant'|'revoke', user }
@@ -192,7 +194,12 @@ export default function PlatformUsersTab() {
                           variant="outline"
                           disabled={isSelf}
                           title={isSelf ? "You can't revoke your own Super Admin role" : ""}
-                          onClick={() => setConfirm({ action: "revoke", user: u })}
+                          onClick={() => confirmDelete({
+                            title: "Revoke Super Admin?",
+                            description: <>This removes platform-wide Super Admin access from <strong>{u.email}</strong>. Their tenant memberships are unchanged.</>,
+                            confirmLabel: "Revoke",
+                            onConfirm: () => revokeMutation.mutate(u),
+                          })}
                         >
                           <ShieldOff className="h-3.5 w-3.5 mr-1" />
                           Revoke
@@ -218,15 +225,9 @@ export default function PlatformUsersTab() {
       <AlertDialog open={!!confirm} onOpenChange={(o) => !o && setConfirm(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>
-              {confirm?.action === "grant" ? "Promote to Super Admin?" : "Revoke Super Admin?"}
-            </AlertDialogTitle>
+            <AlertDialogTitle>Promote to Super Admin?</AlertDialogTitle>
             <AlertDialogDescription>
-              {confirm?.action === "grant" ? (
-                <>This grants <strong>{confirm?.user?.email}</strong> platform-wide access to every tenant, including billing, archival, and all member data. Proceed only if you fully trust this person.</>
-              ) : (
-                <>This removes platform-wide Super Admin access from <strong>{confirm?.user?.email}</strong>. Their tenant memberships are unchanged.</>
-              )}
+              This grants <strong>{confirm?.user?.email}</strong> platform-wide access to every tenant, including billing, archival, and all member data. Proceed only if you fully trust this person.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -235,12 +236,11 @@ export default function PlatformUsersTab() {
               onClick={(e) => {
                 e.preventDefault();
                 if (!confirm) return;
-                if (confirm.action === "grant") grantMutation.mutate(confirm.user);
-                else revokeMutation.mutate(confirm.user);
+                grantMutation.mutate(confirm.user);
               }}
-              disabled={grantMutation.isPending || revokeMutation.isPending}
+              disabled={grantMutation.isPending}
             >
-              {confirm?.action === "grant" ? "Yes, promote" : "Yes, revoke"}
+              Yes, promote
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

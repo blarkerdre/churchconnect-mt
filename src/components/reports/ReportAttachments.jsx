@@ -7,6 +7,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "@/components/ui/use-toast";
 import { assertStorageAvailable } from "@/lib/storageQuota";
 import { Loader2, Upload, Download, Trash2, FileText, Paperclip } from "lucide-react";
+import { useConfirmDelete } from "@/components/shared/DeleteConfirmProvider";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
@@ -16,6 +17,7 @@ export default function ReportAttachments({ relatedTable, relatedId }) {
   const { user } = useAuth();
   const { tenantId, withTenant, scopeQuery } = useTenantQuery();
   const qc = useQueryClient();
+  const confirmDelete = useConfirmDelete();
 
   const { data: docs = [], isLoading } = useQuery({
     queryKey: ["report-attachments", relatedTable, relatedId, tenantId],
@@ -141,7 +143,11 @@ export default function ReportAttachments({ relatedTable, relatedId }) {
             variant="ghost"
             size="icon"
             className="h-7 w-7 text-destructive"
-            onClick={() => deleteMutation.mutate(doc)}
+            onClick={() => confirmDelete({
+              title: "Delete attachment",
+              description: `Permanently delete "${doc.file_name}"? This cannot be undone.`,
+              onConfirm: () => deleteMutation.mutate(doc),
+            })}
             disabled={deleteMutation.isPending}
           >
             <Trash2 className="h-3.5 w-3.5" />
