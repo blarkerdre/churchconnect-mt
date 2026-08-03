@@ -413,6 +413,21 @@ export default function Attendance() {
         <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto sm:ml-auto">
           {canManage && selectedSession && (
             <>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    <ClipboardList className="h-4 w-4" /><span className="hidden sm:inline ml-2">Roster</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => handleRoster("pdf")}>
+                    <FileDown className="h-4 w-4 mr-2" /> Download PDF
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleRoster("csv")}>
+                    <FileSpreadsheet className="h-4 w-4 mr-2" /> Download CSV
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
               <Button variant="outline" size="sm" onClick={generateReport}>
                 <Download className="h-4 w-4" /><span className="hidden sm:inline ml-2">Download</span>
               </Button>
