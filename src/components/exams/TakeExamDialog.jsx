@@ -12,6 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 import { Loader2, CheckCircle2, XCircle, Award, ArrowUp, ArrowDown, Clock } from "lucide-react";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
+import { logWofbiActivity } from "@/lib/wofbi-activity";
 
 const OPTION_LETTERS = ["a", "b", "c", "d"];
 
@@ -156,12 +157,32 @@ export default function TakeExamDialog({ open, onOpenChange, trainingType, membe
       setResult(data);
       setSubmitted(true);
       if (timerRef.current) clearInterval(timerRef.current);
+      if (!previewMode) {
+        const scoreText = data?.total_points ? ` · scored ${data.score}/${data.total_points}` : "";
+        logWofbiActivity(tenantId, {
+          action: "wofbi_exam_submitted",
+          entityType: "exam_attempts",
+          entityId: data?.attempt_id || subjectId || null,
+          title: `Exam submitted — ${subjectName || trainingType || "Bible School"}`,
+          message: `${trainingType || "Bible School"}${scoreText}`,
+          details: {
+            course: trainingType || null,
+            subject: subjectName || null,
+            target_name: subjectName || trainingType || null,
+            score: data?.score ?? null,
+            total_points: data?.total_points ?? null,
+            passed: data?.passed ?? null,
+          },
+        });
+      }
       qc.invalidateQueries({ queryKey: ["exam-attempts"] });
       qc.invalidateQueries({ queryKey: ["course-attempts"] });
       qc.invalidateQueries({ queryKey: ["my-course-attempts"] });
       qc.invalidateQueries({ queryKey: ["my-certificates"] });
       qc.invalidateQueries({ queryKey: ["my-member-profile"] });
+      qc.invalidateQueries({ queryKey: ["notifications"] });
     },
+
     onError: (err) => toast({ title: "Error submitting exam", description: err.message, variant: "destructive" }),
   });
 
