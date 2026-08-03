@@ -332,7 +332,10 @@ export default function QcReport() {
             <CardTitle className="text-base font-display flex items-center gap-2">
               <ClipboardCheck className="h-4 w-4 text-primary" /> Quality Control
             </CardTitle>
-            <CardDescription>Record and analyse lecturer QC checks against the WOFBI checklist.</CardDescription>
+            <CardDescription>
+              Record and analyse lecturer QC checks against the WOFBI checklist.
+              {!isAll && <> Showing <span className="font-medium text-foreground">{sessionName}</span> only.</>}
+            </CardDescription>
           </div>
           <div className="flex gap-2">
             {canCreate && (
