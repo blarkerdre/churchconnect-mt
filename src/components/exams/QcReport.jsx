@@ -92,6 +92,7 @@ function SummaryTile({ label, value }) {
 export default function QcReport() {
   const qc = useQueryClient();
   const { tenantId } = useTenantQuery();
+  const confirmDelete = useConfirmDelete();
   const { user, isAdmin } = useAuth();
   const { currentTenant } = useTenant();
   const { isMemberOfUnit: isTrainingRep } = useUnitMembership("Training Rep");
