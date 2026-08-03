@@ -1043,6 +1043,17 @@ export default function WoFBIAttendanceTab() {
                 <Input type="time" value={form.late_after} onChange={(e) => setForm({ ...form, late_after: e.target.value })} />
               </div>
             </div>
+            {pinnedEdition && form.session_date && (
+              ((pinnedEdition.starts_on && form.session_date < pinnedEdition.starts_on) ||
+                (pinnedEdition.ends_on && form.session_date > pinnedEdition.ends_on)) && (
+                <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md p-2">
+                  This date falls outside <span className="font-medium">{pinnedEdition.name}</span>
+                  {pinnedEdition.starts_on && pinnedEdition.ends_on
+                    ? ` (${pinnedEdition.starts_on} to ${pinnedEdition.ends_on})`
+                    : ""}. The session will still be recorded under this edition.
+                </p>
+              )
+            )}
             {subjects.length > 0 && (
               <div className="space-y-1.5">
                 <Label>Subject (optional)</Label>
