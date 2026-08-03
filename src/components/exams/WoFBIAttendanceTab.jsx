@@ -20,7 +20,7 @@ import WoFBIPersistentQRDialog from "./WoFBIPersistentQRDialog";
 import { useConfirmDelete } from "@/components/shared/DeleteConfirmProvider";
 import { useTenant } from "@/contexts/TenantContext";
 import { downloadRosterCsv, printRosterPdf } from "@/lib/attendance-roster";
-import { useExamSessionFilter } from "@/contexts/ExamSessionFilterContext";
+import { useExamSessionFilter, EXAM_SESSION_ALL } from "@/contexts/ExamSessionFilterContext";
 
 function pct(num, den) {
   if (!den) return "0%";
