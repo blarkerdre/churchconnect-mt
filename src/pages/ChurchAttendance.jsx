@@ -21,6 +21,7 @@ import { useSubFeature } from "@/hooks/useSubFeature";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
 import PrintReportButton from "@/components/PrintReportButton";
 import ModuleTour from "@/components/tour/ModuleTour";
+import { useConfirmDelete } from "@/components/shared/DeleteConfirmProvider";
 
 const DEFAULT_SERVICE_TYPES = ["Sunday Service", "Midweek Service", "Special Program", "Thanksgiving Service", "Other"];
 
@@ -40,6 +41,7 @@ const emptyForm = {
 };
 
 export default function ChurchAttendance() {
+  const confirmDelete = useConfirmDelete();
   const { data: SERVICE_TYPES } = useAppSetting("service_types", DEFAULT_SERVICE_TYPES);
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
