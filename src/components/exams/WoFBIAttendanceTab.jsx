@@ -300,6 +300,7 @@ export default function WoFBIAttendanceTab() {
       const { error } = await supabase
         .from("wofbi_attendance_sessions")
         .update({
+          ...(pinnedEditionId ? { session_id: pinnedEditionId } : {}),
           subject_id: payload.subject_id || null,
           title: payload.title,
           session_date: payload.session_date,
