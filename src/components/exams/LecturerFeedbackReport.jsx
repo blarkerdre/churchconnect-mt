@@ -18,6 +18,7 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGri
 import PasswordConfirmDialog from "@/components/shared/PasswordConfirmDialog";
 import { toast } from "@/components/ui/use-toast";
 import { logAudit } from "@/lib/audit";
+import { useExamSessionFilter } from "@/contexts/ExamSessionFilterContext";
 
 const emptyFilters = {
   courseId: "all",
@@ -33,7 +34,7 @@ const emptyFilters = {
 
 function toCSV(rows) {
   const headers = [
-    "date","course","subject","lecturer","level","student","overall_rating",
+    "date","edition","course","subject","lecturer","level","student","overall_rating",
     "session_description","delivery","time_keeping","class_atmosphere","test_quality","have_again","comments",
   ];
   const esc = (v) => {
@@ -45,6 +46,7 @@ function toCSV(rows) {
   for (const r of rows) {
     lines.push([
       new Date(r.created_at).toISOString().slice(0, 10),
+      r.exam_sessions?.name || "",
       r.exam_titles?.name || "",
       r.exam_subjects?.name || "",
       r.lecturers?.name || "",
@@ -102,15 +104,18 @@ export default function LecturerFeedbackReport() {
   };
 
 
+  const { sessionId, sessionName, applySession, isAll } = useExamSessionFilter();
+
   const { data: ratings = [], isLoading } = useQuery({
-    queryKey: ["lecturer-ratings-report", tenantId],
+    queryKey: ["lecturer-ratings-report", tenantId, sessionId],
     enabled: !!tenantId,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("lecturer_ratings")
-        .select("*, lecturers(id,name,level), members(first_name,last_name), exam_titles(id,name), exam_subjects(id,name,course_id)")
-        .eq("tenant_id", tenantId)
-        .order("created_at", { ascending: false });
+      const { data, error } = await applySession(
+        supabase
+          .from("lecturer_ratings")
+          .select("*, lecturers(id,name,level), members(first_name,last_name), exam_titles(id,name), exam_subjects(id,name,course_id), exam_sessions(id,name)")
+          .eq("tenant_id", tenantId)
+      ).order("created_at", { ascending: false });
       if (error) throw error;
       return data || [];
     },
@@ -275,7 +280,7 @@ export default function LecturerFeedbackReport() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `lecturer-feedback-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.download = `lecturer-feedback-${(sessionName || "all-editions").replace(/[^a-z0-9]+/gi, "-").toLowerCase()}-${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -288,7 +293,10 @@ export default function LecturerFeedbackReport() {
             <CardTitle className="text-base font-display flex items-center gap-2">
               <BarChart3 className="h-4 w-4 text-primary" /> Feedback Report & Analytics
             </CardTitle>
-            <CardDescription>Filter, analyse and export lecturer feedback.</CardDescription>
+            <CardDescription>
+              Filter, analyse and export lecturer feedback.
+              {!isAll && <> Showing <span className="font-medium text-foreground">{sessionName}</span> only.</>}
+            </CardDescription>
           </div>
           <div className="flex flex-wrap gap-2 shrink-0">
             <Button size="sm" variant="outline" className="gap-1.5 shrink-0" onClick={downloadCSV} disabled={!filtered.length}>
@@ -532,6 +540,7 @@ export default function LecturerFeedbackReport() {
                         <TableHeader>
                           <TableRow>
                             <TableHead>Date</TableHead>
+                            <TableHead>Edition</TableHead>
                             <TableHead>Lecturer</TableHead>
                             <TableHead>Subject</TableHead>
                             <TableHead>Student</TableHead>
@@ -545,6 +554,7 @@ export default function LecturerFeedbackReport() {
                           {filtered.map((r) => (
                             <TableRow key={r.id}>
                               <TableCell className="text-xs whitespace-nowrap">{new Date(r.created_at).toLocaleDateString()}</TableCell>
+                              <TableCell className="text-xs whitespace-nowrap text-muted-foreground">{r.exam_sessions?.name || "—"}</TableCell>
                               <TableCell>{r.lecturers?.name || "—"}</TableCell>
                               <TableCell className="text-sm text-muted-foreground">{r.exam_subjects?.name || "—"}</TableCell>
                               <TableCell className="text-sm">{r.members ? `${r.members.first_name} ${r.members.last_name}` : "—"}</TableCell>

@@ -14,6 +14,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "@/components/ui/use-toast";
 import { Loader2, Plus, Trash2, ArrowUp, ArrowDown, Eye, RotateCcw, Save, Download } from "lucide-react";
+import { useExamSessionFilter } from "@/contexts/ExamSessionFilterContext";
 import {
   DEFAULT_WOFBI_FEEDBACK_FIELDS,
   WOFBI_FEEDBACK_FIELD_TYPES,
@@ -71,15 +72,18 @@ export default function WoFBIFeedbackFormEditor() {
     }
   }, [data, tenantId]);
 
+  const { sessionId: editionId, applySession: applyEdition } = useExamSessionFilter();
+
   const { data: responses = [], isLoading: respLoading } = useQuery({
-    queryKey: ["wofbi-feedback-responses", tenantId],
+    queryKey: ["wofbi-feedback-responses", tenantId, editionId],
     enabled: !!tenantId,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("wofbi_feedback_responses")
-        .select("*, members(first_name, last_name, email)")
-        .eq("tenant_id", tenantId)
-        .order("submitted_at", { ascending: false });
+      const { data, error } = await applyEdition(
+        supabase
+          .from("wofbi_feedback_responses")
+          .select("*, members(first_name, last_name, email), edition:exam_sessions(id, name)")
+          .eq("tenant_id", tenantId)
+      ).order("submitted_at", { ascending: false });
       if (error) throw error;
       return data || [];
     },

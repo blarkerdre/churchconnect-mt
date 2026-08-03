@@ -16,6 +16,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { toast } from "@/components/ui/use-toast";
 import { Loader2, Search, Download, Eye, CheckCircle2, XCircle, Trash2, BarChart3, X } from "lucide-react";
 import { useConfirmDelete } from "@/components/shared/DeleteConfirmProvider";
+import { useExamSessionFilter } from "@/contexts/ExamSessionFilterContext";
 
 const STATUS_VARIANT = {
   submitted: "secondary",
@@ -69,31 +70,35 @@ export default function WoFBIApplicationsTab() {
     },
   });
 
+  const { sessionId, sessionName, applySession, isAll } = useExamSessionFilter();
+
   const { data: appRows = [], isLoading: appsLoading } = useQuery({
-    queryKey: ["wofbi-applications", tenantId],
+    queryKey: ["wofbi-applications", tenantId, sessionId],
     enabled: !!tenantId,
     queryFn: async () => {
-      const { data, error } = await scopeQuery(
-        supabase
-          .from("wofbi_applications")
-          .select("*, course:exam_titles(id, name), member:members(id, first_name, last_name)")
-          .order("created_at", { ascending: false })
-      );
+      const { data, error } = await applySession(
+        scopeQuery(
+          supabase
+            .from("wofbi_applications")
+            .select("*, course:exam_titles(id, name), member:members(id, first_name, last_name), edition:exam_sessions(id, name)")
+        )
+      ).order("created_at", { ascending: false });
       if (error) throw error;
       return data || [];
     },
   });
 
   const { data: regRows = [], isLoading: regsLoading } = useQuery({
-    queryKey: ["wofbi-direct-registrations", tenantId],
+    queryKey: ["wofbi-direct-registrations", tenantId, sessionId],
     enabled: !!tenantId,
     queryFn: async () => {
-      const { data, error } = await scopeQuery(
-        supabase
-          .from("course_registrations")
-          .select("id, member_id, course_id, status, registered_at, registration_email_sent_at, exam_link_sent_at, course:exam_titles(id, name), member:members(id, first_name, last_name, email, phone)")
-          .order("registered_at", { ascending: false })
-      );
+      const { data, error } = await applySession(
+        scopeQuery(
+          supabase
+            .from("course_registrations")
+            .select("id, member_id, course_id, session_id, status, registered_at, registration_email_sent_at, exam_link_sent_at, course:exam_titles(id, name), member:members(id, first_name, last_name, email, phone), edition:exam_sessions(id, name)")
+        )
+      ).order("registered_at", { ascending: false });
       if (error) throw error;
       return data || [];
     },
@@ -137,6 +142,7 @@ export default function WoFBIApplicationsTab() {
         status: r.status,
         answers: {},
         created_at: r.registered_at,
+        edition: r.edition || null,
         registration_email_sent_at: r.registration_email_sent_at || null,
         exam_link_sent_at: r.exam_link_sent_at || null,
       }));
@@ -463,6 +469,7 @@ export default function WoFBIApplicationsTab() {
       "Email",
       "Phone",
       "Course",
+      "Edition",
       "Status",
       ...fields.filter((f) => f.type !== "section_heading").map((f) => f.label),
     ];
@@ -474,6 +481,7 @@ export default function WoFBIApplicationsTab() {
       a.email,
       a.phone || "",
       a.course?.name || "",
+      a.edition?.name || "",
       a.status,
       ...fields.filter((f) => f.type !== "section_heading").map((f) => {
         const v = a.answers?.[f.id];
@@ -483,7 +491,8 @@ export default function WoFBIApplicationsTab() {
       }),
     ]);
     const suffix = answerFilters.length > 0 ? "-filtered" : "";
-    downloadCsv([headers, ...rows], `bible-school-applications${suffix}-${new Date().toISOString().slice(0, 10)}.csv`);
+    const edSlug = isAll ? "" : `-${(sessionName || "").replace(/[^a-z0-9]+/gi, "-").toLowerCase()}`;
+    downloadCsv([headers, ...rows], `bible-school-applications${edSlug}${suffix}-${new Date().toISOString().slice(0, 10)}.csv`);
   };
 
   const exportReport = () => {
@@ -715,6 +724,7 @@ export default function WoFBIApplicationsTab() {
                   <TableHead>Applicant</TableHead>
                   <TableHead>Email</TableHead>
                   <TableHead>Course</TableHead>
+                  <TableHead>Edition</TableHead>
                   <TableHead>Source</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
@@ -736,6 +746,7 @@ export default function WoFBIApplicationsTab() {
                     <TableCell className="font-medium">{a.first_name} {a.last_name}</TableCell>
                     <TableCell className="text-xs">{a.email}</TableCell>
                     <TableCell className="text-xs">{a.course?.name || "—"}</TableCell>
+                    <TableCell className="text-xs text-muted-foreground">{a.edition?.name || "—"}</TableCell>
                     <TableCell>
                       <div className="flex flex-col gap-1">
                         <Badge variant={a.source === "direct" ? "outline" : "secondary"} className="text-[10px]">

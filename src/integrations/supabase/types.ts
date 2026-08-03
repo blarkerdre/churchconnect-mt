@@ -3113,6 +3113,7 @@ export type Database = {
           qc_member_id: string | null
           qc_member_name: string | null
           recording_submitted: boolean | null
+          session_id: string | null
           started_on_time: number | null
           student_avg_rating: number | null
           tenant_id: string
@@ -3141,6 +3142,7 @@ export type Database = {
           qc_member_id?: string | null
           qc_member_name?: string | null
           recording_submitted?: boolean | null
+          session_id?: string | null
           started_on_time?: number | null
           student_avg_rating?: number | null
           tenant_id: string
@@ -3169,6 +3171,7 @@ export type Database = {
           qc_member_id?: string | null
           qc_member_name?: string | null
           recording_submitted?: boolean | null
+          session_id?: string | null
           started_on_time?: number | null
           student_avg_rating?: number | null
           tenant_id?: string
@@ -3205,6 +3208,13 @@ export type Database = {
             referencedRelation: "members"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "lecturer_qc_checks_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "exam_sessions"
+            referencedColumns: ["id"]
+          },
         ]
       }
       lecturer_ratings: {
@@ -3221,6 +3231,7 @@ export type Database = {
           member_id: string | null
           overall_rating: number | null
           session_description: string | null
+          session_id: string | null
           subject_id: string | null
           submitted_by: string
           tenant_id: string
@@ -3241,6 +3252,7 @@ export type Database = {
           member_id?: string | null
           overall_rating?: number | null
           session_description?: string | null
+          session_id?: string | null
           subject_id?: string | null
           submitted_by: string
           tenant_id: string
@@ -3261,6 +3273,7 @@ export type Database = {
           member_id?: string | null
           overall_rating?: number | null
           session_description?: string | null
+          session_id?: string | null
           subject_id?: string | null
           submitted_by?: string
           tenant_id?: string
@@ -3288,6 +3301,13 @@ export type Database = {
             columns: ["member_id"]
             isOneToOne: false
             referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lecturer_ratings_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "exam_sessions"
             referencedColumns: ["id"]
           },
           {
@@ -6551,6 +6571,7 @@ export type Database = {
           registration_origin: string | null
           reviewed_at: string | null
           reviewed_by: string | null
+          session_id: string | null
           status: string
           tenant_id: string
           updated_at: string
@@ -6569,6 +6590,7 @@ export type Database = {
           registration_origin?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
+          session_id?: string | null
           status?: string
           tenant_id: string
           updated_at?: string
@@ -6587,6 +6609,7 @@ export type Database = {
           registration_origin?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
+          session_id?: string | null
           status?: string
           tenant_id?: string
           updated_at?: string
@@ -6604,6 +6627,13 @@ export type Database = {
             columns: ["member_id"]
             isOneToOne: false
             referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wofbi_applications_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "exam_sessions"
             referencedColumns: ["id"]
           },
           {
@@ -6693,6 +6723,7 @@ export type Database = {
           scheduled_close_at: string | null
           scheduled_open_at: string | null
           session_date: string
+          session_id: string | null
           status: string
           subject_id: string | null
           tenant_id: string
@@ -6710,6 +6741,7 @@ export type Database = {
           scheduled_close_at?: string | null
           scheduled_open_at?: string | null
           session_date: string
+          session_id?: string | null
           status?: string
           subject_id?: string | null
           tenant_id: string
@@ -6727,6 +6759,7 @@ export type Database = {
           scheduled_close_at?: string | null
           scheduled_open_at?: string | null
           session_date?: string
+          session_id?: string | null
           status?: string
           subject_id?: string | null
           tenant_id?: string
@@ -6739,6 +6772,13 @@ export type Database = {
             columns: ["course_id"]
             isOneToOne: false
             referencedRelation: "exam_titles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wofbi_attendance_sessions_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "exam_sessions"
             referencedColumns: ["id"]
           },
           {
@@ -6860,6 +6900,7 @@ export type Database = {
           id: string
           member_id: string | null
           registration_id: string | null
+          session_id: string | null
           submitted_at: string
           tenant_id: string
           updated_at: string
@@ -6871,6 +6912,7 @@ export type Database = {
           id?: string
           member_id?: string | null
           registration_id?: string | null
+          session_id?: string | null
           submitted_at?: string
           tenant_id: string
           updated_at?: string
@@ -6882,6 +6924,7 @@ export type Database = {
           id?: string
           member_id?: string | null
           registration_id?: string | null
+          session_id?: string | null
           submitted_at?: string
           tenant_id?: string
           updated_at?: string
@@ -6899,6 +6942,13 @@ export type Database = {
             columns: ["registration_id"]
             isOneToOne: true
             referencedRelation: "course_registrations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wofbi_feedback_responses_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "exam_sessions"
             referencedColumns: ["id"]
           },
           {
@@ -7766,6 +7816,10 @@ export type Database = {
       reset_checkin_pin: {
         Args: { _checkin_id: string; _pin: string }
         Returns: undefined
+      }
+      resolve_exam_session_for_course: {
+        Args: { _course_id: string; _on_date: string; _tenant_id: string }
+        Returns: string
       }
       search_tenant_members_for_guardian: {
         Args: { _q: string; _tenant_id: string }
