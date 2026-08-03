@@ -69,31 +69,35 @@ export default function WoFBIApplicationsTab() {
     },
   });
 
+  const { sessionId, sessionName, applySession, isAll } = useExamSessionFilter();
+
   const { data: appRows = [], isLoading: appsLoading } = useQuery({
-    queryKey: ["wofbi-applications", tenantId],
+    queryKey: ["wofbi-applications", tenantId, sessionId],
     enabled: !!tenantId,
     queryFn: async () => {
-      const { data, error } = await scopeQuery(
-        supabase
-          .from("wofbi_applications")
-          .select("*, course:exam_titles(id, name), member:members(id, first_name, last_name)")
-          .order("created_at", { ascending: false })
-      );
+      const { data, error } = await applySession(
+        scopeQuery(
+          supabase
+            .from("wofbi_applications")
+            .select("*, course:exam_titles(id, name), member:members(id, first_name, last_name), edition:exam_sessions(id, name)")
+        )
+      ).order("created_at", { ascending: false });
       if (error) throw error;
       return data || [];
     },
   });
 
   const { data: regRows = [], isLoading: regsLoading } = useQuery({
-    queryKey: ["wofbi-direct-registrations", tenantId],
+    queryKey: ["wofbi-direct-registrations", tenantId, sessionId],
     enabled: !!tenantId,
     queryFn: async () => {
-      const { data, error } = await scopeQuery(
-        supabase
-          .from("course_registrations")
-          .select("id, member_id, course_id, status, registered_at, registration_email_sent_at, exam_link_sent_at, course:exam_titles(id, name), member:members(id, first_name, last_name, email, phone)")
-          .order("registered_at", { ascending: false })
-      );
+      const { data, error } = await applySession(
+        scopeQuery(
+          supabase
+            .from("course_registrations")
+            .select("id, member_id, course_id, session_id, status, registered_at, registration_email_sent_at, exam_link_sent_at, course:exam_titles(id, name), member:members(id, first_name, last_name, email, phone), edition:exam_sessions(id, name)")
+        )
+      ).order("registered_at", { ascending: false });
       if (error) throw error;
       return data || [];
     },
