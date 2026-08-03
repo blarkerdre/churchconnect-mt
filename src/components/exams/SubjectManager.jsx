@@ -14,9 +14,9 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
-import { Loader2, Plus, Trash2, Edit, Layers } from "lucide-react";
+import { Loader2, Plus, Trash2, Edit, Layers, Eye, ChevronDown, ChevronRight } from "lucide-react";
 
-export default function SubjectManager({ course, onSelectSubject, selectedSubjectId }) {
+export default function SubjectManager({ course, onSelectSubject, selectedSubjectId, renderSubjectPanel, onAddQuestion, onPreviewSubject }) {
   const qc = useQueryClient();
   const { tenantId, withTenant, scopeQuery } = useTenantQuery();
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -54,6 +54,25 @@ export default function SubjectManager({ course, onSelectSubject, selectedSubjec
       return data;
     },
     enabled: !!course.id && !!tenantId,
+  });
+
+  // Question counts per subject — powers the row badge and enables/disables
+  // the quick "preview exam" icon.
+  const subjectIds = subjects.map((s) => s.id);
+  const { data: questionCounts = {} } = useQuery({
+    queryKey: ["exam-question-counts", course.id, tenantId, subjectIds.join(",")],
+    enabled: !!tenantId && subjectIds.length > 0,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("exam_questions")
+        .select("id, subject_id")
+        .eq("tenant_id", tenantId)
+        .in("subject_id", subjectIds);
+      if (error) throw error;
+      const map = {};
+      for (const row of data || []) map[row.subject_id] = (map[row.subject_id] || 0) + 1;
+      return map;
+    },
   });
 
   const saveMutation = useMutation({
@@ -115,22 +134,28 @@ export default function SubjectManager({ course, onSelectSubject, selectedSubjec
             <p className="text-sm text-muted-foreground text-center py-4">No subjects yet. Add subjects to this course.</p>
           ) : (
             <div className="space-y-2">
-              {subjects.map((s, idx) => (
+              {subjects.map((s, idx) => {
+                const expanded = selectedSubjectId === s.id;
+                const qCount = questionCounts[s.id] || 0;
+                return (
                 <div
                   key={s.id}
-                  className={`flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-3 rounded-lg border cursor-pointer transition-colors ${
-                    selectedSubjectId === s.id
-                      ? "bg-primary/5 border-primary/30"
-                      : "bg-card border-border hover:bg-muted/50"
+                  className={`rounded-lg border transition-colors ${
+                    expanded ? "bg-primary/5 border-primary/30" : "bg-card border-border"
                   }`}
-                  onClick={() => onSelectSubject(s)}
+                >
+                <div
+                  className={`flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-3 cursor-pointer ${expanded ? "" : "hover:bg-muted/50 rounded-lg"}`}
+                  onClick={() => onSelectSubject(expanded ? null : s)}
                 >
                   <div className="flex items-center gap-2 min-w-0 flex-wrap flex-1">
+                    {expanded ? <ChevronDown className="h-3.5 w-3.5 text-primary shrink-0" /> : <ChevronRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />}
                     <span className="text-xs text-muted-foreground font-mono w-5">{idx + 1}.</span>
                     {s.code && <Badge variant="outline" className="text-[9px] h-4 font-mono">{s.code}</Badge>}
                     <span className="text-sm font-medium text-foreground break-words">{s.name}</span>
                     {s.description && <span className="text-xs text-muted-foreground hidden sm:inline">— {s.description}</span>}
                     <Badge variant="outline" className="text-[9px] h-4">Pass: {s.pass_mark_percentage}%</Badge>
+                    <Badge variant="secondary" className="text-[9px] h-4">{qCount} question{qCount === 1 ? "" : "s"}</Badge>
                     {s.time_limit_minutes && <Badge variant="outline" className="text-[9px] h-4">⏱ {s.time_limit_minutes}min</Badge>}
                     {s.randomize_questions && <Badge variant="outline" className="text-[9px] h-4">🔀 Random</Badge>}
                     {s.is_open
@@ -144,6 +169,16 @@ export default function SubjectManager({ course, onSelectSubject, selectedSubjec
                     </span>
                   </div>
                   <div className="flex items-center gap-1 shrink-0 self-end sm:self-auto">
+                    {onAddQuestion && (
+                      <Button variant="ghost" size="icon" className="h-7 w-7" title="Add question" onClick={(e) => { e.stopPropagation(); if (!expanded) onSelectSubject(s); onAddQuestion(s); }}>
+                        <Plus className="h-3.5 w-3.5" />
+                      </Button>
+                    )}
+                    {onPreviewSubject && (
+                      <Button variant="ghost" size="icon" className="h-7 w-7" title={qCount ? "Preview exam" : "No questions yet"} disabled={!qCount} onClick={(e) => { e.stopPropagation(); if (!expanded) onSelectSubject(s); onPreviewSubject(s); }}>
+                        <Eye className="h-3.5 w-3.5" />
+                      </Button>
+                    )}
                     <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); setEditing(s); setForm({ name: s.name, code: s.code || "", description: s.description || "", lecturer_id: s.lecturer_id || "", pass_mark_percentage: s.pass_mark_percentage ?? 50, time_limit_minutes: s.time_limit_minutes ?? "", randomize_questions: s.randomize_questions ?? false, is_open: !!s.is_open, useCustomGrades: !!(s.grade_classifications && s.grade_classifications.length > 0), grade_classifications: s.grade_classifications || [] }); setDialogOpen(true); }}>
                       <Edit className="h-3.5 w-3.5" />
                     </Button>
@@ -152,7 +187,14 @@ export default function SubjectManager({ course, onSelectSubject, selectedSubjec
                     </Button>
                   </div>
                 </div>
-              ))}
+                {expanded && renderSubjectPanel && (
+                  <div className="border-t border-primary/20 p-3">
+                    {renderSubjectPanel(s)}
+                  </div>
+                )}
+                </div>
+                );
+              })}
             </div>
           )}
         </CardContent>
