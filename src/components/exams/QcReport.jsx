@@ -22,6 +22,7 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGri
 import QcCheckDialog from "@/components/exams/QcCheckDialog";
 import { YES_NO_FIELDS, SCORE_FIELDS } from "@/lib/qc-options";
 import { useConfirmDelete } from "@/components/shared/DeleteConfirmProvider";
+import { useExamSessionFilter } from "@/contexts/ExamSessionFilterContext";
 
 const emptyFilters = {
   courseId: "all",
