@@ -21,6 +21,7 @@ import { useSubFeature } from "@/hooks/useSubFeature";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
 import PrintReportButton from "@/components/PrintReportButton";
 import ModuleTour from "@/components/tour/ModuleTour";
+import { useConfirmDelete } from "@/components/shared/DeleteConfirmProvider";
 
 const DEFAULT_SERVICE_TYPES = ["Sunday Service", "Midweek Service", "Special Program", "Thanksgiving Service", "Other"];
 
@@ -52,6 +53,7 @@ export default function ChurchAttendance() {
   const qc = useQueryClient();
   const { tenantId, scopeQuery, withTenant } = useTenantQuery();
   const { enabled: canRecordAttendance } = useSubFeature("church_attendance.record");
+  const confirmDelete = useConfirmDelete();
 
   const { data: reports = [], isLoading } = useQuery({
     queryKey: ["church-attendance-reports", filterType, tenantId],
@@ -485,11 +487,12 @@ export default function ChurchAttendance() {
                                   variant="ghost"
                                   size="icon"
                                   className="h-7 w-7 text-destructive hover:text-destructive"
-                                  onClick={() => {
-                                    if (window.confirm("Delete this attendance report? This cannot be undone.")) {
-                                      deleteMutation.mutate(r.id);
-                                    }
-                                  }}
+                                  onClick={() => confirmDelete({
+                                    title: "Delete attendance report",
+                                    description: <>Permanently delete this <strong>{r.service_type}</strong> attendance report for {format(parseISO(r.service_date), "dd MMM yyyy")}? This cannot be undone.</>,
+                                    confirmLabel: "Delete report",
+                                    onConfirm: () => deleteMutation.mutateAsync(r.id),
+                                  })}
                                   title="Delete"
                                 >
                                   <Trash2 className="h-3.5 w-3.5" />

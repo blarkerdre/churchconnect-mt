@@ -14,7 +14,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Baby, Search, LogIn, LogOut, ShieldAlert, ShieldCheck, Clock, FileBarChart2, Download, Eye, User, UserPlus, Copy, Plus, Trash2, Mail } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { useConsentText, renderConsentText } from "@/hooks/useConsentText";
@@ -24,6 +23,7 @@ import { useAppSetting } from "@/hooks/useAppSetting";
 import HelpButton from "@/components/tour/HelpButton";
 import { useTour } from "@/components/tour/TourProvider";
 import { useTourCompletion } from "@/hooks/useTourCompletion";
+import { useConfirmDelete } from "@/components/shared/DeleteConfirmProvider";
 
 const DEFAULT_AGE_GROUPS = ["2-4 years old", "5-7 years old", "8-9 years old"];
 
@@ -1021,13 +1021,13 @@ function PickupPanel({ tenantId, isLeader }) {
 
 function ReportPanel({ tenantId, isAdmin = false }) {
   const qc = useQueryClient();
-  const [deleteRow, setDeleteRow] = useState(null);
+  const confirmDelete = useConfirmDelete();
   const deleteRecord = useMutation({
     mutationFn: async (row) => {
       const { error } = await supabase.from("child_checkins").delete().eq("id", row.id).eq("tenant_id", tenantId);
       if (error) throw error;
     },
-    onSuccess: () => { toast.success("Record deleted"); setDeleteRow(null); qc.invalidateQueries({ queryKey: ["cc-report"] }); },
+    onSuccess: () => { toast.success("Record deleted"); qc.invalidateQueries({ queryKey: ["cc-report"] }); },
     onError: (e) => toast.error(e.message),
   });
   const [from, setFrom] = useState(format(new Date(Date.now() - 30*86400000), "yyyy-MM-dd"));
@@ -1218,7 +1218,12 @@ function ReportPanel({ tenantId, isAdmin = false }) {
                     <td className="p-2"><Badge variant={r.status === "flagged" ? "destructive" : r.status === "picked_up" ? "default" : "outline"}>{r.status}</Badge></td>
                     {isAdmin && (
                       <td className="p-2">
-                        <Button size="sm" variant="ghost" className="text-destructive h-7 px-2" onClick={() => setDeleteRow(r)} aria-label="Delete record">
+                        <Button size="sm" variant="ghost" className="text-destructive h-7 px-2" onClick={() => confirmDelete({
+                          title: "Delete check-in record",
+                          description: <>This permanently removes the Children Church record for <strong>{r.children?.first_name} {r.children?.last_name}</strong> on {r.service_date}. This cannot be undone.</>,
+                          confirmLabel: "Delete record",
+                          onConfirm: () => deleteRecord.mutateAsync(r),
+                        })} aria-label="Delete record">
                           <Trash2 className="h-3.5 w-3.5" />
                         </Button>
                       </td>
@@ -1231,26 +1236,6 @@ function ReportPanel({ tenantId, isAdmin = false }) {
           </table>
         </div>
       </CardContent>
-      {isAdmin && (
-        <AlertDialog open={!!deleteRow} onOpenChange={(o) => !o && setDeleteRow(null)}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Delete this check-in record?</AlertDialogTitle>
-              <AlertDialogDescription>
-                This permanently removes the Children Church record for {deleteRow?.children?.first_name} {deleteRow?.children?.last_name} on {deleteRow?.service_date}. This cannot be undone.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction
-                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                onClick={(e) => { e.preventDefault(); deleteRecord.mutate(deleteRow); }}
-                disabled={deleteRecord.isPending}
-              >Delete</AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-      )}
     </Card>
   );
 }

@@ -28,6 +28,7 @@ import MemberJourneyTimeline from "@/components/members/MemberJourneyTimeline";
 import DangerConfirmDialog from "@/components/exams/DangerConfirmDialog";
 import { diffUnitMembership, submitJoinRequests } from "@/hooks/usePendingJoinRequests";
 import { Info as InfoIcon } from "lucide-react";
+import { useConfirmDelete } from "@/components/shared/DeleteConfirmProvider";
 
 const STATUSES = ["Active", "New Convert", "First Timer", "Visitor", "Bible School"];
 const GENDERS = ["Male", "Female"];
@@ -64,6 +65,7 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
   const isSuperAdmin = currentUserRoles.includes("super_admin");
   const canAssignAdminRole = isSuperAdmin || isTenantOwner;
   const queryClient = useQueryClient();
+  const confirmDelete = useConfirmDelete();
   const [form, setForm] = useState(emptyMember);
   const [saving, setSaving] = useState(false);
   const [linkSearch, setLinkSearch] = useState("");
@@ -753,9 +755,12 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
                     size="sm"
                     className="text-destructive border-destructive/30 hover:bg-destructive/10"
                     onClick={() => {
-                      if (window.confirm("Unlink this member from their user account? They will lose access to their profile.")) {
-                        unlinkAccountMutation.mutate({ memberId: member.id });
-                      }
+                      confirmDelete({
+                        title: "Unlink user account",
+                        description: "Unlink this member from their user account? They will lose access to their profile.",
+                        confirmLabel: "Unlink",
+                        onConfirm: () => unlinkAccountMutation.mutateAsync({ memberId: member.id }),
+                      });
                     }}
                     disabled={unlinkAccountMutation.isPending}
                   >
