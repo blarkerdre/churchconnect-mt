@@ -138,7 +138,6 @@ export default function SermonNotes() {
     if (!deleteId) return;
     setDeleteId(null);
     if (!(await confirmDelete({ title: "Delete note", description: "This sermon note will be permanently deleted." }))) return;
-    const noteId = deleteId;
     const { error } = await supabase.from("sermon_notes").delete().eq("id", deleteId).eq("user_id", user.id);
     if (error) {
       toast.error("Failed to delete note.");
