@@ -280,7 +280,7 @@ export default function LecturerFeedbackReport() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `lecturer-feedback-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.download = `lecturer-feedback-${(sessionName || "all-editions").replace(/[^a-z0-9]+/gi, "-").toLowerCase()}-${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   };
