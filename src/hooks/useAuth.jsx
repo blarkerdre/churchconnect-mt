@@ -207,6 +207,7 @@ export function AuthProvider({ children }) {
 
   const signOut = async () => {
     await supabase.auth.signOut();
+    clearMfaPassed();
     setUser(null);
     setProfile(null);
     setRoles([]);
@@ -214,7 +215,9 @@ export function AuthProvider({ children }) {
      setMyMember(null);
      setLeaderCentres([]);
      setTenantMemberships([]);
+     setMfaRequired(false);
   };
+
 
   const resetPassword = async (email, tenantSlug) => {
     const redirectTo = tenantSlug
