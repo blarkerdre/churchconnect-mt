@@ -486,6 +486,18 @@ export default function UserManagement() {
                               )}
                             </Button>
                           )}
+                          {/* Reset 2FA - only when the user actually has an authenticator */}
+                          {hasMfa && !isCurrentUser && !(targetIsSuperAdmin && !isSuperAdmin) && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              title="Reset two-factor authentication"
+                              disabled={resetMfaMutation.isPending}
+                              onClick={() => handleResetMfa(p)}
+                            >
+                              <KeyRound className="h-4 w-4 text-amber-600" />
+                            </Button>
+                          )}
                           {/* Delete - super_admin only */}
                           {isSuperAdmin && !isCurrentUser && (
                             <Button variant="ghost" size="icon" onClick={() => {
