@@ -132,7 +132,7 @@ export default function RegistrationsDialog({ open, onOpenChange, event }) {
                         onCheckedChange={v => updateMutation.mutate({ id: r.id, data: { status: v ? "attended" : "registered" } })}
                       />
                     </div>
-                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => deleteMutation.mutate(r.id)}>
+                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={async () => { if (await confirmDelete({ title: "Remove registration", description: `Remove ${r.guest_name || "this registration"} from this event? This cannot be undone.`, confirmLabel: "Remove" })) deleteMutation.mutate(r.id); }}>
                       <Trash2 className="h-3.5 w-3.5 text-destructive" />
                     </Button>
                   </div>
