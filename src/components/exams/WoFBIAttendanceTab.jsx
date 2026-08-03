@@ -623,6 +623,105 @@ export default function WoFBIAttendanceTab() {
     URL.revokeObjectURL(a.href);
   };
 
+  const courseForExport = courses.find((c) => c.id === selectedCourseId);
+
+  const buildSessionRoster = (session) => {
+    const recs = allRecords.filter((r) => r.session_id === session.id);
+    const byReg = new Map(recs.map((r) => [r.registration_id, r]));
+    const rows = roster.map((reg, i) => {
+      const rec = byReg.get(reg.id);
+      const status = rec ? (rec.status === "late" ? "Late" : rec.status === "excused" ? "Excused" : "Present") : "Absent";
+      return [
+        i + 1,
+        `${reg.members?.first_name || ""} ${reg.members?.last_name || ""}`.trim(),
+        reg.student_number || "—",
+        status,
+        fmtTime(rec?.checked_in_at),
+        fmtTime(rec?.checked_out_at),
+        fmtDuration(rec?.duration_minutes),
+      ];
+    });
+    const present = rows.filter((r) => r[3] === "Present").length;
+    const late = rows.filter((r) => r[3] === "Late").length;
+    const subject = subjects.find((s) => s.id === session.subject_id);
+    return {
+      title: `Attendance Roster — ${session.title || "Session"}`,
+      orgName: currentTenant?.name || "",
+      logoUrl: currentTenant?.logo_url || null,
+      meta: [
+        ["Course", courseForExport?.name || "—"],
+        subject ? ["Subject", subject.name] : null,
+        ["Date", session.session_date],
+        ["Status", session.status === "closed" ? "Closed" : "Open"],
+        session.notes ? ["Notes", session.notes] : null,
+      ].filter(Boolean),
+      summary: [
+        ["Students", rows.length],
+        ["Present", present],
+        ["Late", late],
+        ["Absent", rows.length - present - late],
+        ["Rate", rows.length ? `${Math.round(((present + late) / rows.length) * 100)}%` : "0%"],
+      ],
+      headers: ["#", "Name", "Student no.", "Status", "Time in", "Time out", "Duration"],
+      rows,
+      filename: `roster-${courseForExport?.name || "course"}-${session.title || "session"}-${session.session_date}`,
+    };
+  };
+
+  const buildCourseRoster = () => {
+    const rows = perStudent.map((s, i) => [
+      i + 1,
+      `${s.registration.members?.first_name || ""} ${s.registration.members?.last_name || ""}`.trim(),
+      s.registration.student_number || "—",
+      s.present,
+      s.late,
+      s.absent,
+      s.totalSessions,
+      `${s.percent}%`,
+      `${s.punctualityScore}% (${punctualityGrade(s.punctualityScore).label})`,
+      (s.totalMinutes / 60).toFixed(2),
+      s.missingCheckouts,
+    ]);
+    const fullyPresent = perStudent.filter((s) => s.absent === 0).length;
+    return {
+      title: `Attendance Roster — ${courseForExport?.name || "Course"} (all sessions)`,
+      orgName: currentTenant?.name || "",
+      logoUrl: currentTenant?.logo_url || null,
+      meta: [
+        ["Course", courseForExport?.name || "—"],
+        courseForExport?.course_code ? ["Code", courseForExport.course_code] : null,
+        ["Sessions", sessions.length],
+      ].filter(Boolean),
+      summary: [
+        ["Students", rows.length],
+        ["Sessions", sessions.length],
+        ["Full attendance", fullyPresent],
+      ],
+      headers: ["#", "Name", "Student no.", "Present", "Late", "Absent", "Sessions", "Attendance", "Punctuality", "Hours", "Missing check-outs"],
+      rows,
+      filename: `roster-${courseForExport?.name || "course"}-summary`,
+    };
+  };
+
+  const handleRosterExport = async (format) => {
+    const session = rosterExportScope === "summary" ? null : sessions.find((s) => s.id === rosterExportScope);
+    const data = session ? buildSessionRoster(session) : buildCourseRoster();
+    if (!data.rows.length) {
+      toast({ title: "Nothing to export", description: "No registered students on this roster yet.", variant: "destructive" });
+      return;
+    }
+    setRosterExporting(true);
+    try {
+      if (format === "csv") downloadRosterCsv(data);
+      else await printRosterPdf(data);
+      setRosterExportOpen(false);
+    } catch (e) {
+      toast({ title: "Roster export failed", description: e?.message || "Please try again.", variant: "destructive" });
+    } finally {
+      setRosterExporting(false);
+    }
+  };
+
   if (!isAdmin) {
     return <p className="text-sm text-muted-foreground">You do not have permission to view Bible School attendance.</p>;
   }
