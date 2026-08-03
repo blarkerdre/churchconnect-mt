@@ -1247,6 +1247,40 @@ export default function WoFBIAttendanceTab() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Roster download */}
+      <Dialog open={rosterExportOpen} onOpenChange={setRosterExportOpen}>
+        <DialogContent className="max-w-md">
+          <TenantDialogHeader title="Download attendance roster" subtitle={selectedCourse?.name || "Course"} />
+          <div className="space-y-3 px-1 py-2">
+            <div className="space-y-1.5">
+              <Label>Roster</Label>
+              <Select value={rosterExportScope} onValueChange={setRosterExportScope}>
+                <SelectTrigger><SelectValue placeholder="Choose a roster" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="summary">Course summary (all sessions)</SelectItem>
+                  {sessions.map((s) => (
+                    <SelectItem key={s.id} value={s.id}>
+                      {s.title || "Session"} — {s.session_date}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Every registered student is listed, including those marked absent.
+              </p>
+            </div>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => handleRosterExport("csv")} disabled={rosterExporting} className="gap-2">
+              <Download className="h-4 w-4" /> CSV
+            </Button>
+            <Button onClick={() => handleRosterExport("pdf")} disabled={rosterExporting} className="gap-2">
+              {rosterExporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />} PDF
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
