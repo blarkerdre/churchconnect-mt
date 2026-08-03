@@ -1225,11 +1225,12 @@ function CourseRegistrationsView({ course }) {
   });
 
   const downloadCSV = () => {
-    const headers = ["Name", "Email", "Phone", "Source", "Status", "Student No.", "Registered At", "Approved At"];
+    const headers = ["Name", "Email", "Phone", "Edition", "Source", "Status", "Student No.", "Registered At", "Approved At"];
     const rows = filteredRegistrations.map(r => [
       `${r.members?.first_name || ""} ${r.members?.last_name || ""}`.trim(),
       r.members?.email || "",
       r.members?.phone || "",
+      r.edition?.name || "",
       originLabel(originOf(r)),
       r.status || "pending",
       r.student_number || "",
@@ -1242,6 +1243,7 @@ function CourseRegistrationsView({ course }) {
     const a = document.createElement("a");
     a.href = url;
     const parts = [course.name, "registrations"];
+    if (!isAllEditions) parts.push(sessionNameForExport);
     if (dateFrom) parts.push(`from-${dateFrom}`);
     if (dateTo) parts.push(`to-${dateTo}`);
     a.download = `${parts.join("_")}.csv`;
