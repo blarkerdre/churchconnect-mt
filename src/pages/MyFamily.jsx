@@ -24,6 +24,7 @@ import { useTour } from "@/components/tour/TourProvider";
 import { useTourCompletion } from "@/hooks/useTourCompletion";
 import TeensSection from "@/components/teens/TeensSection";
 import PreteensSection from "@/components/preteens/PreteensSection";
+import { useConfirmDelete } from "@/components/shared/DeleteConfirmProvider";
 
 const DEFAULT_AGE_GROUPS = ["2-4 years old", "5-7 years old", "8-9 years old"];
 
@@ -283,6 +284,7 @@ function ChildForm({ open, onOpenChange, child, memberId, onSaved }) {
 
 
 function GuardianManager({ open, onOpenChange, child }) {
+  const confirmDelete = useConfirmDelete();
   const { tenantId, withTenant } = useTenantQuery();
   const qc = useQueryClient();
   const [search, setSearch] = useState("");
@@ -356,7 +358,7 @@ function GuardianManager({ open, onOpenChange, child }) {
                   <p className="text-sm font-medium">{g.first_name} {g.last_name}</p>
                   <p className="text-xs text-muted-foreground">{g.relationship}</p>
                 </div>
-                <Button variant="ghost" size="sm" onClick={() => removeGuardian.mutate(g.id)}><Trash2 className="h-4 w-4" /></Button>
+                <Button variant="ghost" size="sm" onClick={async () => { if (await confirmDelete({ title: "Remove authorised adult", description: "This adult will no longer be authorised to collect this child.", confirmLabel: "Remove" })) removeGuardian.mutate(g.id); }}><Trash2 className="h-4 w-4" /></Button>
               </div>
             ))}
             {guardians.length === 0 && <p className="text-xs text-muted-foreground">No additional adults yet.</p>}
@@ -485,6 +487,7 @@ function DelegationDialog({ open, onOpenChange, child }) {
 }
 
 export default function MyFamily() {
+  const confirmDelete = useConfirmDelete();
   const { user, isAdmin } = useAuth();
   const { isSuperAdmin } = useTenant();
   const { tenantId } = useTenantQuery();
@@ -741,7 +744,7 @@ export default function MyFamily() {
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={(e) => { e.preventDefault(); removeChild.mutate(deleteChild); }}
+              onClick={async (e) => { e.preventDefault(); const t = deleteChild; setDeleteChild(null); if (await confirmDelete({ title: "Remove child", itemName: [t?.first_name, t?.last_name].filter(Boolean).join(" ") || t?.name, highImpact: true, impacts: ["This child record will be permanently deleted."] })) removeChild.mutate(t); }}
               disabled={removeChild.isPending}
             >Delete</AlertDialogAction>
           </AlertDialogFooter>

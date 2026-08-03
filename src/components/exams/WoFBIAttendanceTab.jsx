@@ -15,6 +15,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Plus, QrCode, Trash2, Download, CheckCircle2, XCircle, Clock, ChevronDown, ChevronRight, Pencil, Star } from "lucide-react";
 import WoFBIPersistentQRDialog from "./WoFBIPersistentQRDialog";
+import { useConfirmDelete } from "@/components/shared/DeleteConfirmProvider";
 
 function pct(num, den) {
   if (!den) return "0%";
@@ -77,6 +78,7 @@ function StarRating({ value, onChange, disabled }) {
 
 
 export default function WoFBIAttendanceTab() {
+  const confirmDelete = useConfirmDelete();
   const { user, isAdmin } = useAuth();
   const qc = useQueryClient();
   const { tenantId, scopeQuery, withTenant } = useTenantQuery();
@@ -716,8 +718,8 @@ export default function WoFBIAttendanceTab() {
                         <Button
                           size="sm"
                           variant="ghost"
-                          onClick={() => {
-                            if (confirm("Delete this attendance session and all its check-ins?")) deleteSession.mutate(s.id);
+                          onClick={async () => {
+                            if (await confirmDelete({ title: "Delete attendance session", itemName: s.title, highImpact: true, impacts: ["All check-ins recorded in this session will be deleted."] })) deleteSession.mutate(s.id);
                           }}
                         >
                           <Trash2 className="h-3.5 w-3.5" />
@@ -856,8 +858,8 @@ export default function WoFBIAttendanceTab() {
                                             <Button
                                               size="sm"
                                               variant="ghost"
-                                              onClick={() => {
-                                                if (confirm("Delete this attendance record?")) deleteRecord.mutate(rec.id);
+                                              onClick={async () => {
+                                                if (await confirmDelete({ title: "Delete attendance record", description: "This check-in record will be permanently deleted." })) deleteRecord.mutate(rec.id);
                                               }}
                                             >
                                               <Trash2 className="h-3 w-3" />

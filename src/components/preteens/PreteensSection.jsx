@@ -14,6 +14,7 @@ import { Plus, Trash2, User, KeyRound, ShieldCheck, ShieldAlert, ArrowUpCircle }
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { format } from "date-fns";
+import { useConfirmDelete } from "@/components/shared/DeleteConfirmProvider";
 
 
 
@@ -202,6 +203,7 @@ function PreteenForm({ open, onOpenChange, preteen, memberId, onSaved }) {
 }
 
 export default function PreteensSection({ memberId }) {
+  const confirmDelete = useConfirmDelete();
   const { tenantId } = useTenantQuery();
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
@@ -341,7 +343,7 @@ export default function PreteensSection({ memberId }) {
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={(e) => { e.preventDefault(); removePreteen.mutate(deletePreteen); }}
+              onClick={async (e) => { e.preventDefault(); const t = deletePreteen; setDeletePreteen(null); if (await confirmDelete({ title: "Delete preteen", itemName: [t?.first_name, t?.last_name].filter(Boolean).join(" "), highImpact: true, impacts: ["Their attendance records will also be removed."] })) removePreteen.mutate(t); }}
               disabled={removePreteen.isPending}
             >Delete</AlertDialogAction>
           </AlertDialogFooter>

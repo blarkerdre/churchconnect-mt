@@ -19,6 +19,7 @@ import { toast } from "@/components/ui/use-toast";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
 import { useAuth } from "@/hooks/useAuth";
 import { Loader2, Plus, Trash2, Edit, Play, Square, RotateCcw, CalendarClock } from "lucide-react";
+import { useConfirmDelete } from "@/components/shared/DeleteConfirmProvider";
 
 const emptyForm = {
   name: "",
@@ -51,6 +52,7 @@ function fmt(d) {
 export default function SessionManager() {
   const qc = useQueryClient();
   const { tenantId } = useTenantQuery();
+  const confirmDelete = useConfirmDelete();
   const { user, isAdmin } = useAuth();
 
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -566,7 +568,24 @@ export default function SessionManager() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction className="bg-destructive text-destructive-foreground" onClick={() => deleteMutation.mutate(deleteTarget.id)}>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground"
+              onClick={async (e) => {
+                e.preventDefault();
+                const target = deleteTarget;
+                setDeleteTarget(null);
+                const ok = await confirmDelete({
+                  title: "Delete session",
+                  itemName: target?.name,
+                  highImpact: true,
+                  impacts: [
+                    `${counts[target?.id]?.regs || 0} registration(s) keep their data but lose the edition label.`,
+                    `${counts[target?.id]?.reports || 0} course final report(s) for this edition will be deleted permanently.`,
+                  ],
+                });
+                if (ok) deleteMutation.mutate(target.id);
+              }}
+            >
               Delete
             </AlertDialogAction>
           </AlertDialogFooter>

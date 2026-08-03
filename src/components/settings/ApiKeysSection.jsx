@@ -12,8 +12,10 @@ import { toast } from "@/components/ui/use-toast";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
 import { useAuth } from "@/hooks/useAuth";
 import { Key, Plus, Copy, Trash2, Loader2, AlertTriangle } from "lucide-react";
+import { useConfirmDelete } from "@/components/shared/DeleteConfirmProvider";
 
 export default function ApiKeysSection() {
+  const confirmDelete = useConfirmDelete();
   const { tenantId } = useTenantQuery();
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -147,7 +149,7 @@ export default function ApiKeysSection() {
                           Revoke
                         </Button>
                       )}
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => deleteMutation.mutate(k.id)}>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={async () => { if (await confirmDelete({ title: "Delete API key", itemName: k.name, highImpact: true, impacts: ["Any integration using this key will stop working immediately."] })) deleteMutation.mutate(k.id); }}>
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </TableCell>

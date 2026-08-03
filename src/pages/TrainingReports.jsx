@@ -24,6 +24,7 @@ import TrainingAttendeesPanel from "@/components/training/TrainingAttendeesPanel
 import PrintReportButton from "@/components/PrintReportButton";
 import { useSubFeature } from "@/hooks/useSubFeature";
 import ModuleTour from "@/components/tour/ModuleTour";
+import { useConfirmDelete } from "@/components/shared/DeleteConfirmProvider";
 
 const ICON_MAP = {
   "Water Baptism": { icon: Droplets, color: "text-blue-500" },
@@ -50,6 +51,7 @@ const emptyForm = {
 };
 
 export default function TrainingReports() {
+  const confirmDelete = useConfirmDelete();
   const { data: trainingTypeValues } = useAppSetting("training_types", DEFAULT_TRAINING_TYPES);
   const TRAINING_TYPES = trainingTypeValues.map(v => ({
     value: v,
@@ -590,8 +592,8 @@ export default function TrainingReports() {
                                     variant="ghost"
                                     size="icon"
                                     className="h-7 w-7 text-destructive hover:text-destructive"
-                                    onClick={() => {
-                                      if (window.confirm("Delete this training session and its attendee records? This cannot be undone.")) {
+                                    onClick={async () => {
+                                      if (await confirmDelete({ title: "Delete training session", itemName: r.training_type || "this session", highImpact: true, impacts: ["All attendee records for this session will be deleted."] })) {
                                         deleteMutation.mutate(r.id);
                                       }
                                     }}
