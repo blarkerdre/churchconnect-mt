@@ -82,6 +82,7 @@ export default function WoFBIAttendanceTab() {
   const { user, isAdmin } = useAuth();
   const qc = useQueryClient();
   const { tenantId, scopeQuery, withTenant } = useTenantQuery();
+  const { currentTenant } = useTenant();
 
   const [selectedCourseId, setSelectedCourseId] = useState("");
   const [newOpen, setNewOpen] = useState(false);
@@ -91,6 +92,9 @@ export default function WoFBIAttendanceTab() {
   const [expandedStudents, setExpandedStudents] = useState({});
   const [editRecord, setEditRecord] = useState(null); // { record, session, registration }
   const [editForm, setEditForm] = useState({ status: "present", checked_in_at: "", checked_out_at: "", punctuality_rating: null, punctuality_note: "" });
+  const [rosterExportOpen, setRosterExportOpen] = useState(false);
+  const [rosterExportScope, setRosterExportScope] = useState("summary"); // "summary" | session id
+  const [rosterExporting, setRosterExporting] = useState(false);
 
   const emptySessionForm = () => ({
     title: "",
