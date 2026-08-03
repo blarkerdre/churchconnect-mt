@@ -612,7 +612,7 @@ export default function QcReport() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={() => deleteMutation.mutate(deleteId)}>Delete</AlertDialogAction>
+            <AlertDialogAction onClick={async (e) => { e.preventDefault(); const id = deleteId; setDeleteId(null); if (await confirmDelete({ title: "Delete QC check", description: "This QC entry will be removed permanently." })) deleteMutation.mutate(id); }}>Delete</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
