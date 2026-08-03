@@ -43,7 +43,7 @@ function fmtBool(v) {
 
 function toCSV(rows) {
   const headers = [
-    "date","lecturer","course","subject","tier","qc_member",
+    "date","edition","lecturer","course","subject","tier","qc_member",
     "started_on_time","finished_on_time","introduced_self",
     "orderliness_score","orderliness_note","content_focus_score","content_focus_note",
     "conducted_test","qa_observations","general_observations",
@@ -58,6 +58,7 @@ function toCSV(rows) {
   for (const r of rows) {
     lines.push([
       r.check_date,
+      r.exam_sessions?.name || "",
       r.lecturers?.name || "",
       r.exam_titles?.name || "",
       r.exam_subjects?.name || "",
