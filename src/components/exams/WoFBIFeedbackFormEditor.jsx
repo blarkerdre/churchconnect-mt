@@ -367,7 +367,7 @@ export default function WoFBIFeedbackFormEditor() {
                       </p>
                     </div>
                     <Button size="sm" variant="outline" onClick={() => setViewing(r)}>View</Button>
-                    <Button size="icon" variant="ghost" onClick={() => confirm("Delete this response?") && deleteResponse.mutate(r.id)}>
+                    <Button size="icon" variant="ghost" onClick={async () => { if (await confirmDelete({ title: "Delete response", description: "This feedback response will be permanently deleted." })) deleteResponse.mutate(r.id); }}>
                       <Trash2 className="h-4 w-4 text-destructive" />
                     </Button>
                   </div>

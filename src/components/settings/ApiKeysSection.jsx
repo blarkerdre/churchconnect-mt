@@ -149,7 +149,7 @@ export default function ApiKeysSection() {
                           Revoke
                         </Button>
                       )}
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => deleteMutation.mutate(k.id)}>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={async () => { if (await confirmDelete({ title: "Delete API key", itemName: k.name, highImpact: true, impacts: ["Any integration using this key will stop working immediately."] })) deleteMutation.mutate(k.id); }}>
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </TableCell>

@@ -917,7 +917,10 @@ export default function WoFBIApplicationsTab() {
               disabled={deleteApplications.isPending}
               onClick={(e) => {
                 e.preventDefault();
-                if (confirmDelete) deleteApplications.mutate(confirmDelete.ids);
+                const t = confirmDelete;
+                setConfirmDelete(null);
+                if (!t) return;
+                requireDeleteConfirm({ title: `Delete application${t.ids.length > 1 ? 's' : ''}`, description: `This will permanently delete the application for ${t.label}.` }).then((ok) => { if (ok) deleteApplications.mutate(t.ids); });
               }}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >

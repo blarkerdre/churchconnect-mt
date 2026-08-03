@@ -718,8 +718,8 @@ export default function WoFBIAttendanceTab() {
                         <Button
                           size="sm"
                           variant="ghost"
-                          onClick={() => {
-                            if (confirm("Delete this attendance session and all its check-ins?")) deleteSession.mutate(s.id);
+                          onClick={async () => {
+                            if (await confirmDelete({ title: "Delete attendance session", itemName: s.title, highImpact: true, impacts: ["All check-ins recorded in this session will be deleted."] })) deleteSession.mutate(s.id);
                           }}
                         >
                           <Trash2 className="h-3.5 w-3.5" />
@@ -858,8 +858,8 @@ export default function WoFBIAttendanceTab() {
                                             <Button
                                               size="sm"
                                               variant="ghost"
-                                              onClick={() => {
-                                                if (confirm("Delete this attendance record?")) deleteRecord.mutate(rec.id);
+                                              onClick={async () => {
+                                                if (await confirmDelete({ title: "Delete attendance record", description: "This check-in record will be permanently deleted." })) deleteRecord.mutate(rec.id);
                                               }}
                                             >
                                               <Trash2 className="h-3 w-3" />

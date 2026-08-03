@@ -143,7 +143,7 @@ export default function ReportAttachments({ relatedTable, relatedId }) {
             variant="ghost"
             size="icon"
             className="h-7 w-7 text-destructive"
-            onClick={() => deleteMutation.mutate(doc)}
+            onClick={async () => { if (await confirmDelete({ title: "Delete attachment", description: `Delete ${doc.title || doc.file_name || "this file"}? This cannot be undone.` })) deleteMutation.mutate(doc); }}
             disabled={deleteMutation.isPending}
           >
             <Trash2 className="h-3.5 w-3.5" />
