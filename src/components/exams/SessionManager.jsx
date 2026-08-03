@@ -52,6 +52,7 @@ function fmt(d) {
 export default function SessionManager() {
   const qc = useQueryClient();
   const { tenantId } = useTenantQuery();
+  const confirmDelete = useConfirmDelete();
   const { user, isAdmin } = useAuth();
 
   const [dialogOpen, setDialogOpen] = useState(false);
