@@ -964,6 +964,15 @@ function ExamManagementInner() {
   );
 }
 
+export default function ExamManagement() {
+  return (
+    <ExamSessionFilterProvider>
+      <ExamManagementInner />
+    </ExamSessionFilterProvider>
+  );
+}
+
+
 function CourseRegistrationsView({ course }) {
   const qc = useQueryClient();
   const { tenantId } = useTenantQuery();
