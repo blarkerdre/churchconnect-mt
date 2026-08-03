@@ -658,6 +658,7 @@ export default function WoFBIAttendanceTab() {
       logoUrl: currentTenant?.logo_url || null,
       meta: [
         ["Course", courseForExport?.name || "—"],
+        session.edition?.name ? ["Edition", session.edition.name] : (!isAllEditions ? ["Edition", editionName] : null),
         subject ? ["Subject", subject.name] : null,
         ["Date", session.session_date],
         ["Status", session.status === "closed" ? "Closed" : "Open"],
