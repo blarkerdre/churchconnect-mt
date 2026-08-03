@@ -992,16 +992,18 @@ function CourseRegistrationsView({ course }) {
   const [selectedIds, setSelectedIds] = useState(() => new Set());
   const [bulkConfirmOpen, setBulkConfirmOpen] = useState(false);
 
+  const { sessionId: editionId, applySession: applyEdition, isAll: isAllEditions } = useExamSessionFilter();
+
   const { data: registrations = [], isLoading } = useQuery({
-    queryKey: ["course-registrations", tenantId, course.id],
+    queryKey: ["course-registrations", tenantId, course.id, editionId],
     queryFn: async () => {
       let q = supabase
         .from("course_registrations")
-        .select("id, registered_at, member_id, student_number, status, approved_at, exam_link_sent_at, registration_email_sent_at, registration_origin, members(first_name, last_name, email, phone, user_id)")
+        .select("id, registered_at, member_id, student_number, status, approved_at, exam_link_sent_at, registration_email_sent_at, registration_origin, session_id, edition:exam_sessions(id, name), members(first_name, last_name, email, phone, user_id)")
         .eq("course_id", course.id)
-        .in("status", ["approved", "active"])
-        .order("registered_at", { ascending: false });
+        .in("status", ["approved", "active"]);
       if (tenantId) q = q.eq("tenant_id", tenantId);
+      q = applyEdition(q).order("registered_at", { ascending: false });
       const { data, error } = await q;
       if (error) throw error;
       return data;
